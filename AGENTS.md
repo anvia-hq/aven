@@ -45,6 +45,29 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 - Never edit `src/routeTree.gen.ts` (generated).
 - Full rules: `docs/rules/0001-platform-structure.md`.
 
+## Ports
+
+- control-plane (backend): `8000` (`PORT` in `.env`).
+- platform (frontend): `5173`. Vite proxies `/api/*` to `http://localhost:8000` and strips the `/api` prefix, so the frontend calls `/api/users`, never the backend origin directly.
+
+## apps/control-plane
+
+Elysia (Bun) + zod, uses `@aven/db`.
+
+- Modules in `src/modules/<module-name>/` with `router.ts`, `schema.ts` (zod) and `service.ts`.
+- Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
+- Routers call services, services own DB access. Mount routers in `src/index.ts`.
+- Full rules: `docs/rules/0002-control-plane-structure.md`.
+
+## packages/db
+
+Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files.
+
+- Import `db` from `@aven/db/client` and tables from `@aven/db/schema/<table>` (e.g. `@aven/db/schema/users`).
+- One table per file in `src/schema/`, plural snake_case table names, `id` uuid primary key, `created_at`/`updated_at` timestamps with time zone.
+- Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
+- Commit generated migrations in `drizzle/`; never edit them by hand.
+
 ## Docs
 
 Before non-trivial work, check `docs/`:

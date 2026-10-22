@@ -4,7 +4,7 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["node_modules", "dist", "**/routeTree.gen.ts"],
+  "ignorePatterns": ["node_modules", "dist", "**/routeTree.gen.ts", "packages/db/drizzle"],
   "jsPlugins": ["./tooling/oxlint/aven-plugin.mjs"],
   "rules": {
     "aven/no-conditional-spread": "error",
