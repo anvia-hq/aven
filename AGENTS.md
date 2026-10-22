@@ -42,7 +42,9 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 
 React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + jotai.
 
-- Pages are written directly in `src/routes/`. No `pages/` folder.
+- Pages are written directly in `src/routes/` and stay thin. Layering is `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms (use the module's hook). Mutations and their toasts live in hooks.
+- Imports: relative inside a module, the `@/` alias everywhere else (`@/components/*`, `@/lib/*`, `@/modules/*`). Details in `docs/rules/0001-platform-structure.md`.
+- Modules: `threads`, `projects`, `settings`, `activity`, `navigation`, `auth`, `dashboard`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
 - Shared UI primitives live in `src/components/`, not in a module. The full shadcn/ui set (Base UI variant) is installed there; add more with `bunx shadcn@latest add <name> --cwd apps/platform`.
 - Reusable feature code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
 - **No barrel files** (`index.ts` that only re-exports). Import from the exact file.

@@ -1,9 +1,19 @@
-import { Logout } from "@mynaui/icons-react";
+import { Bug, ChevronsUpDown, Cog, Command, Logout, Users } from "@mynaui/icons-react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { toast } from "@/components/toast";
+import { initials } from "@/lib/format";
+import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 
 type Props = {
   name: string;
@@ -11,20 +21,15 @@ type Props = {
   onSignOut: () => void;
 };
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
-
 export function UserCard({ name, email, onSignOut }: Props) {
+  const navigate = useNavigate();
+  const { setOpen: setCommandOpen } = useCommandMenu();
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <Popover>
-          <PopoverTrigger render={<SidebarMenuButton size="lg" />}>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
             <Avatar>
               <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
                 {initials(name)}
@@ -34,18 +39,30 @@ export function UserCard({ name, email, onSignOut }: Props) {
               <span className="truncate font-medium">{name}</span>
               <span className="truncate text-xs text-sidebar-foreground/70">{email}</span>
             </div>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="start" className="w-64">
-            <div className="grid gap-0.5 px-1.5 py-1 text-sm">
-              <span className="truncate font-medium">{name}</span>
-              <span className="truncate text-xs text-muted-foreground">{email}</span>
-            </div>
-            <Button variant="ghost" className="justify-start" onClick={onSignOut}>
-              <Logout />
-              Sign out
-            </Button>
-          </PopoverContent>
-        </Popover>
+            <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-64">
+            <DropdownMenuItem onClick={() => navigate({ to: "/settings/profile" })}>
+              <Cog /> Personal settings
+              <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate({ to: "/settings/members" })}>
+              <Users /> Workspace settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setCommandOpen(true)}>
+              <Command /> Command palette
+              <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toast.add({ title: "Thanks! Bug report is a mock." })}>
+              <Bug /> Report a bug…
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onSignOut}>
+              <Logout /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
   );

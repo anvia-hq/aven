@@ -21,6 +21,30 @@ src/modules/<module-name>/
 - Components and hooks are for **reuse**. Code used by a single page stays in that route file.
 - A module must not import another module's internals through relative `../` paths that reach into its folders sideways; import the specific file by path from `src/modules/<other>/...`. Cross-module imports are fine, but keep dependencies one-directional.
 
+## Layering
+
+Keep concerns separate; each layer only talks to the one below it.
+
+```
+routes/        thin pages: read params, compose components, no state logic
+  -> modules/<name>/components/   UI for one feature
+     -> modules/<name>/hooks/     read and change state, own side effects (toasts, navigation)
+        -> modules/<name>/atoms/  jotai atoms and mock/seed data
+```
+
+- **Routes never import atoms.** Use the module's hook (`useThreads`, `useProjects`, `useMembers`, ...).
+- **Components never import atoms.** They call hooks. Components may import other modules' _hooks and components_, never their atoms.
+- **Hooks own mutations.** Creating, removing or archiving something, and the toast that confirms it, live in a hook, not in a component or route.
+- Keep one hook per file, named `use-<thing>.ts`.
+- Dependencies between modules are one-directional (e.g. `projects` -> `threads`, `navigation` -> `projects`/`threads`, `auth` -> `navigation`). Do not create cycles.
+- Shared, feature-agnostic helpers go in `src/lib/` (`format.ts`: `timeAgo`, `initials`). Shared, feature-agnostic UI goes in `src/components/` (`page-header`, `stat-card`, `text-field`, `form`).
+
+## Imports
+
+- Inside one module: relative (`../hooks/use-threads`).
+- Anywhere else: the `@/` alias (`@/components/button`, `@/lib/format`, `@/modules/threads/hooks/use-threads`).
+- Never reach into another module with `../../`.
+
 ## `src/components/`
 
 Shared, feature-agnostic UI primitives (`button.tsx`, `text-field.tsx`, ...) live in `src/components/`, **not** in a module. They are the only place that imports `@base-ui/react`. Feature components still go in `src/modules/<name>/components/`.

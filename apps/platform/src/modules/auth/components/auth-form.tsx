@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 
-import { authClient } from "../../../lib/auth-client";
-import { Button } from "../../../components/button";
-import { Form } from "../../../components/form";
-import { TextField } from "../../../components/text-field";
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/button";
+import { Form } from "@/components/form";
+import { TextField } from "@/components/text-field";
 
 type Props = {
   mode: "sign-in" | "sign-up";

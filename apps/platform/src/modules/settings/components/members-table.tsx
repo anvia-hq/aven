@@ -1,0 +1,61 @@
+import { Trash } from "@mynaui/icons-react";
+
+import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Badge } from "@/components/badge";
+import { Button } from "@/components/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { initials } from "@/lib/format";
+
+import { useMembers } from "../hooks/use-members";
+
+export function MembersTable() {
+  const { members, remove } = useMembers();
+
+  return (
+    <Table aria-label="Members">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Member</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-12" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {members.map((member) => (
+          <TableRow key={member.id}>
+            <TableCell>
+              <div className="flex items-center gap-3">
+                <Avatar size="sm">
+                  <AvatarFallback>{initials(member.name)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-medium">{member.name}</span>
+                  <span className="text-xs text-muted-foreground">{member.email}</span>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell>{member.role}</TableCell>
+            <TableCell>
+              <Badge variant={member.status === "pending" ? "secondary" : "outline"}>
+                {member.status === "pending" ? "Pending" : "Active"}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              {member.role !== "Owner" && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Remove ${member.name}`}
+                  onClick={() => remove(member.id, member.name)}
+                >
+                  <Trash />
+                </Button>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}

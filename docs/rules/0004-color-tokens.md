@@ -6,7 +6,7 @@ Applies to `apps/platform`.
 
 ## Rule
 
-Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token structure, deep indigo-tinted oklch palette: indigo-black surfaces, darker sidebar, indigo primary and accent). Do not use raw palette classes (`neutral-*`, `red-*`, `white`, `black`) or hex/rgb values in components.
+Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token structure, warm charcoal oklch palette (hue ~55, very low chroma, only a hint of warmth on surfaces) with a soft orange primary). Do not use raw palette classes (`neutral-*`, `red-*`, `white`, `black`) or hex/rgb values in components.
 
 | Token pair                              | Use for                         |
 | --------------------------------------- | ------------------------------- |

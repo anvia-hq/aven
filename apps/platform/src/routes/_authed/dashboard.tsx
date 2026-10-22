@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { api } from "../../lib/api";
-import { StatCard } from "../../modules/dashboard/components/stat-card";
-import { UsersTable } from "../../modules/dashboard/components/users-table";
-import type { DashboardStats, UserRow } from "../../modules/dashboard/types";
+import { api } from "@/lib/api";
+import { StatCard } from "@/components/stat-card";
+import { UsersTable } from "@/modules/dashboard/components/users-table";
+import type { DashboardStats, UserRow } from "@/modules/dashboard/types";
 
 export const Route = createFileRoute("/_authed/dashboard")({
   loader: async () => {

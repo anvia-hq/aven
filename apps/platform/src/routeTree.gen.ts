@@ -13,7 +13,19 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AuthedActivityRouteImport } from './routes/_authed/activity'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
+import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
+import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedSettingsApiKeysRouteImport } from './routes/_authed/settings/api-keys'
+import { Route as AuthedSettingsIntegrationsRouteImport } from './routes/_authed/settings/integrations'
+import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
+import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
+import { Route as AuthedSettingsUsageRouteImport } from './routes/_authed/settings/usage'
+import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
+import { Route as AuthedThreadsThreadIdRouteImport } from './routes/_authed/threads/$threadId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,9 +46,70 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedActivityRoute = AuthedActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedSettingsApiKeysRoute = AuthedSettingsApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedSettingsIntegrationsRoute =
+  AuthedSettingsIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
+const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedSettingsProfileRoute = AuthedSettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedSettingsUsageRoute = AuthedSettingsUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedThreadsIndexRoute = AuthedThreadsIndexRouteImport.update({
+  id: '/threads/',
+  path: '/threads/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedThreadsThreadIdRoute = AuthedThreadsThreadIdRouteImport.update({
+  id: '/threads/$threadId',
+  path: '/threads/$threadId',
   getParentRoute: () => AuthedRoute,
 } as any)
 
@@ -44,13 +117,36 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/activity': typeof AuthedActivityRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/settings': typeof AuthedSettingsRouteWithChildren
+  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/api-keys': typeof AuthedSettingsApiKeysRoute
+  '/settings/integrations': typeof AuthedSettingsIntegrationsRoute
+  '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/profile': typeof AuthedSettingsProfileRoute
+  '/settings/usage': typeof AuthedSettingsUsageRoute
+  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/projects/': typeof AuthedProjectsIndexRoute
+  '/settings/': typeof AuthedSettingsIndexRoute
+  '/threads/': typeof AuthedThreadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/activity': typeof AuthedActivityRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/api-keys': typeof AuthedSettingsApiKeysRoute
+  '/settings/integrations': typeof AuthedSettingsIntegrationsRoute
+  '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/profile': typeof AuthedSettingsProfileRoute
+  '/settings/usage': typeof AuthedSettingsUsageRoute
+  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/projects': typeof AuthedProjectsIndexRoute
+  '/settings': typeof AuthedSettingsIndexRoute
+  '/threads': typeof AuthedThreadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -58,20 +154,75 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authed/activity': typeof AuthedActivityRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/settings': typeof AuthedSettingsRouteWithChildren
+  '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/_authed/settings/api-keys': typeof AuthedSettingsApiKeysRoute
+  '/_authed/settings/integrations': typeof AuthedSettingsIntegrationsRoute
+  '/_authed/settings/members': typeof AuthedSettingsMembersRoute
+  '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
+  '/_authed/settings/usage': typeof AuthedSettingsUsageRoute
+  '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/_authed/projects/': typeof AuthedProjectsIndexRoute
+  '/_authed/settings/': typeof AuthedSettingsIndexRoute
+  '/_authed/threads/': typeof AuthedThreadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/activity'
+    | '/dashboard'
+    | '/settings'
+    | '/projects/$projectId'
+    | '/settings/api-keys'
+    | '/settings/integrations'
+    | '/settings/members'
+    | '/settings/profile'
+    | '/settings/usage'
+    | '/threads/$threadId'
+    | '/projects/'
+    | '/settings/'
+    | '/threads/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/dashboard'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/activity'
+    | '/dashboard'
+    | '/projects/$projectId'
+    | '/settings/api-keys'
+    | '/settings/integrations'
+    | '/settings/members'
+    | '/settings/profile'
+    | '/settings/usage'
+    | '/threads/$threadId'
+    | '/projects'
+    | '/settings'
+    | '/threads'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/login'
     | '/register'
+    | '/_authed/activity'
     | '/_authed/dashboard'
+    | '/_authed/settings'
+    | '/_authed/projects/$projectId'
+    | '/_authed/settings/api-keys'
+    | '/_authed/settings/integrations'
+    | '/_authed/settings/members'
+    | '/_authed/settings/profile'
+    | '/_authed/settings/usage'
+    | '/_authed/threads/$threadId'
+    | '/_authed/projects/'
+    | '/_authed/settings/'
+    | '/_authed/threads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -111,6 +262,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/activity': {
+      id: '/_authed/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AuthedActivityRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/dashboard': {
       id: '/_authed/dashboard'
       path: '/dashboard'
@@ -118,15 +276,126 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/': {
+      id: '/_authed/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthedProjectsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/$projectId': {
+      id: '/_authed/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/settings/': {
+      id: '/_authed/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthedSettingsIndexRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/api-keys': {
+      id: '/_authed/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof AuthedSettingsApiKeysRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/integrations': {
+      id: '/_authed/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof AuthedSettingsIntegrationsRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/members': {
+      id: '/_authed/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof AuthedSettingsMembersRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/profile': {
+      id: '/_authed/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AuthedSettingsProfileRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/usage': {
+      id: '/_authed/settings/usage'
+      path: '/usage'
+      fullPath: '/settings/usage'
+      preLoaderRoute: typeof AuthedSettingsUsageRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/threads/': {
+      id: '/_authed/threads/'
+      path: '/threads'
+      fullPath: '/threads/'
+      preLoaderRoute: typeof AuthedThreadsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/threads/$threadId': {
+      id: '/_authed/threads/$threadId'
+      path: '/threads/$threadId'
+      fullPath: '/threads/$threadId'
+      preLoaderRoute: typeof AuthedThreadsThreadIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
+interface AuthedSettingsRouteChildren {
+  AuthedSettingsApiKeysRoute: typeof AuthedSettingsApiKeysRoute
+  AuthedSettingsIntegrationsRoute: typeof AuthedSettingsIntegrationsRoute
+  AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
+  AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
+  AuthedSettingsUsageRoute: typeof AuthedSettingsUsageRoute
+  AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
+}
+
+const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+  AuthedSettingsApiKeysRoute: AuthedSettingsApiKeysRoute,
+  AuthedSettingsIntegrationsRoute: AuthedSettingsIntegrationsRoute,
+  AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
+  AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
+  AuthedSettingsUsageRoute: AuthedSettingsUsageRoute,
+  AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
+}
+
+const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
+  AuthedSettingsRouteChildren,
+)
+
 interface AuthedRouteChildren {
+  AuthedActivityRoute: typeof AuthedActivityRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
+  AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
+  AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
+  AuthedProjectsIndexRoute: typeof AuthedProjectsIndexRoute
+  AuthedThreadsIndexRoute: typeof AuthedThreadsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedActivityRoute: AuthedActivityRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
+  AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
+  AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
+  AuthedProjectsIndexRoute: AuthedProjectsIndexRoute,
+  AuthedThreadsIndexRoute: AuthedThreadsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

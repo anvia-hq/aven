@@ -12,16 +12,21 @@ test.describe("platform auth and dashboard", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("sign up lands on the dashboard, sign out and sign in again", async ({ page }) => {
+  test("sign up lands on threads, dashboard is reachable, sign out and sign in again", async ({
+    page,
+  }) => {
     const email = unique();
     const password = "password123";
 
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Name").fill("UI User");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Create account" }).click();
 
+    await expect(page).toHaveURL(/\/threads$/);
+    await page.getByRole("link", { name: "Dashboard" }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.locator('[data-slot="sidebar-footer"]').getByText(email)).toBeVisible();
@@ -38,7 +43,7 @@ test.describe("platform auth and dashboard", () => {
       .locator('[data-slot="sidebar-footer"]')
       .getByRole("button", { name: new RegExp(email) })
       .click();
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login$/);
@@ -46,7 +51,7 @@ test.describe("platform auth and dashboard", () => {
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/threads$/);
     await expect(page.locator('[data-slot="sidebar-footer"]').getByText(email)).toBeVisible();
   });
 
@@ -62,13 +67,14 @@ test.describe("platform auth and dashboard", () => {
 
   test("theme defaults to dark and the toggle switches and persists it", async ({ page }) => {
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await expect(page.locator("html")).toHaveClass(/dark/);
 
     await page.getByLabel("Name").fill("Theme User");
     await page.getByLabel("Email").fill(unique());
     await page.getByLabel("Password").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/threads$/);
 
     // Sidebar trigger lives in the sidebar header.
     await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeVisible();
@@ -85,6 +91,7 @@ test.describe("platform auth and dashboard", () => {
 
   test("shows an error for invalid credentials", async ({ page }) => {
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Email").fill(unique());
     await page.getByLabel("Password").fill("password123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -93,15 +100,16 @@ test.describe("platform auth and dashboard", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("a signed-in user visiting /login is redirected to the dashboard", async ({ page }) => {
+  test("a signed-in user visiting /login is redirected to threads", async ({ page }) => {
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Name").fill("Redirect User");
     await page.getByLabel("Email").fill(unique());
     await page.getByLabel("Password").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/threads$/);
 
     await page.goto("/login");
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/threads$/);
   });
 });
