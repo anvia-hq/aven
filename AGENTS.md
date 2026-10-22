@@ -35,6 +35,16 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 - **Dependencies:** add them to the workspace that uses them, not the root (root is for tooling only). Ask before adding a heavy or new dependency.
 - Never commit secrets or `.env` files. Config goes in `.env` (gitignored, loaded automatically by Bun); every variable must also be listed in `.env.example` with a safe placeholder.
 
+## apps/platform
+
+React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + jotai.
+
+- Pages are written directly in `src/routes/`. No `pages/` folder.
+- Reusable code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
+- **No barrel files** (`index.ts` that only re-exports). Import from the exact file.
+- Never edit `src/routeTree.gen.ts` (generated).
+- Full rules: `docs/rules/0001-platform-structure.md`.
+
 ## Docs
 
 Before non-trivial work, check `docs/`:
