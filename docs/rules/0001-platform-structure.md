@@ -21,12 +21,20 @@ src/modules/<module-name>/
 - Components and hooks are for **reuse**. Code used by a single page stays in that route file.
 - A module must not import another module's internals through relative `../` paths that reach into its folders sideways; import the specific file by path from `src/modules/<other>/...`. Cross-module imports are fine, but keep dependencies one-directional.
 
+## `src/components/`
+
+Shared, feature-agnostic UI primitives (`button.tsx`, `text-field.tsx`, ...) live in `src/components/`, **not** in a module. They are the only place that imports `@base-ui/react`. Feature components still go in `src/modules/<name>/components/`.
+
+## `src/lib/`
+
+Singletons and thin clients that are not feature code (`auth-client.ts`, `api.ts`) live in `src/lib/`. Anything with UI, hooks or state belongs in a module.
+
 ## No barrel files
 
 Never create `index.ts` files that only re-export. Import from the exact file:
 
 ```ts
-import { Button } from "../modules/ui/components/button";
+import { Button } from "../components/button";
 ```
 
 Enforced by the `aven/no-barrel-file` lint rule.
@@ -40,5 +48,5 @@ Pages are written directly in the route file (TanStack Router, file-based). Do n
 ## Styling and UI
 
 - Tailwind 4 utility classes only; no CSS modules or CSS-in-JS.
-- Build UI on Base UI (`@base-ui/react`) headless primitives, styled with Tailwind, and wrap them in `src/modules/ui/components/`.
+- Build UI on Base UI (`@base-ui/react`) headless primitives, styled with Tailwind, and wrap them in `src/components/`. Never use native `button`/`input`/`form`/etc.; see `0003-ui-primitives-base-ui.md`.
 - State: local `useState` first; jotai atoms in a module's `atoms/` for shared client state.

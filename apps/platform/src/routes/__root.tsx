@@ -1,14 +1,17 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+
+import { useTheme } from "../modules/theme/hooks/use-theme";
 
 export const Route = createRootRoute({
-  component: () => (
-    <div className="min-h-screen bg-white text-neutral-900">
-      <nav className="flex gap-4 border-b border-neutral-200 p-4">
-        <Link to="/" className="[&.active]:font-semibold">
-          Home
-        </Link>
-      </nav>
+  component: Root,
+});
+
+function Root() {
+  useTheme();
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
       <Outlet />
     </div>
-  ),
-});
+  );
+}

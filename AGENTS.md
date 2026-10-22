@@ -22,6 +22,9 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
+docker compose up -d   # postgres only (host port 54329, volume pg_data_aven)
+docker compose --profile app up -d --build   # + control-plane and platform images
+bun run test:e2e       # Playwright (root). Own ports 8100/5174 and database aven_e2e
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 ```
 
@@ -40,8 +43,15 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + jotai.
 
 - Pages are written directly in `src/routes/`. No `pages/` folder.
-- Reusable code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
+- Shared UI primitives live in `src/components/`, not in a module. The full shadcn/ui set (Base UI variant) is installed there; add more with `bunx shadcn@latest add <name> --cwd apps/platform`.
+- Reusable feature code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
 - **No barrel files** (`index.ts` that only re-exports). Import from the exact file.
+- UI primitives (button, input, form, ...) use **Base UI** through `src/components/`, never native elements (lint-enforced). See `docs/rules/0003-ui-primitives-base-ui.md`.
+- Colors use semantic tokens from `src/index.css` (`bg-background`, `text-muted-foreground`, `bg-primary`, ...), never raw palette colors. See `docs/rules/0004-color-tokens.md`.
+- Icons: `@mynaui/icons-react` only (no lucide). After `shadcn add`, convert any `lucide-react` imports; mapping in `docs/rules/0003-ui-primitives-base-ui.md`.
+- Dark mode is the default; theme state lives in `src/modules/theme` (`useTheme`, `ThemeSelector`).
+- `src/components/` (vendored shadcn) is excluded from lint and formatting rules do not apply to hand edits there; prefer re-running the shadcn CLI over editing.
+- Non-feature singletons (auth client, api fetch helper) go in `src/lib/`.
 - Never edit `src/routeTree.gen.ts` (generated).
 - Full rules: `docs/rules/0001-platform-structure.md`.
 
@@ -57,6 +67,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 - Modules in `src/modules/<module-name>/` with `router.ts`, `schema.ts` (zod) and `service.ts`.
 - Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
 - Routers call services, services own DB access. Mount routers in `src/index.ts`.
+- Auth is Better Auth (`modules/auth`); protect routes with `.use(authRouter)` + `{ auth: true }`.
 - Full rules: `docs/rules/0002-control-plane-structure.md`.
 
 ## packages/db
@@ -64,7 +75,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files.
 
 - Import `db` from `@aven/db/client` and tables from `@aven/db/schema/<table>` (e.g. `@aven/db/schema/users`).
-- One table per file in `src/schema/`, plural snake_case table names, `id` uuid primary key, `created_at`/`updated_at` timestamps with time zone.
+- One table per file in `src/schema/`, plural snake_case table names, `id` primary key (uuid; Better Auth tables use text ids), `created_at`/`updated_at` timestamps with time zone.
 - Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
 - Commit generated migrations in `drizzle/`; never edit them by hand.
 

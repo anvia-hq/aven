@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc -p .",
     "db:generate": "bun --env-file=../../.env run drizzle-kit generate",
-    "db:migrate": "bun --env-file=../../.env run drizzle-kit migrate",
+    "db:migrate": "bun --env-file=../../.env src/migrate.ts",
     "db:push": "bun --env-file=../../.env run drizzle-kit push",
     "db:studio": "bun --env-file=../../.env run drizzle-kit studio"
   },
