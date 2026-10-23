@@ -8,6 +8,13 @@
       "when": 1792677747506,
       "tag": "0000_lovely_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792718019645,
+      "tag": "0001_funny_sprite",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,19 @@
-export type Role = "Owner" | "Admin" | "Member" | "Viewer";
+// Better Auth organization roles. Owners come with the organization and cannot be invited.
+export const ROLES = ["admin", "member"] as const;
 
-export const ROLES: Role[] = ["Admin", "Member", "Viewer"];
+export type InvitableRole = (typeof ROLES)[number];
+
+export const ROLE_LABELS: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  member: "Member",
+};
 
 export type Member = {
   id: string;
   name: string;
   email: string;
-  role: Role;
+  role: string;
   status: "active" | "pending";
 };
 

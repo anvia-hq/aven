@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { initials } from "@/lib/format";
 
 import { useMembers } from "../hooks/use-members";
+import { ROLE_LABELS } from "../types";
 
 export function MembersTable() {
   const { members, remove } = useMembers();
@@ -35,19 +36,19 @@ export function MembersTable() {
                 </div>
               </div>
             </TableCell>
-            <TableCell>{member.role}</TableCell>
+            <TableCell>{ROLE_LABELS[member.role] ?? member.role}</TableCell>
             <TableCell>
               <Badge variant={member.status === "pending" ? "secondary" : "outline"}>
                 {member.status === "pending" ? "Pending" : "Active"}
               </Badge>
             </TableCell>
             <TableCell>
-              {member.role !== "Owner" && (
+              {member.role !== "owner" && (
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`Remove ${member.name}`}
-                  onClick={() => remove(member.id, member.name)}
+                  onClick={() => remove(member)}
                 >
                   <Trash />
                 </Button>

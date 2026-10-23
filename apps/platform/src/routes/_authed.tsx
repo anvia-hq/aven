@@ -18,7 +18,6 @@ import { UserCard } from "@/modules/auth/components/user-card";
 import { CommandMenu } from "@/modules/navigation/components/command-menu";
 import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
-import { WhatsNewCard } from "@/modules/navigation/components/whats-new-card";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 import { ThreadGroups } from "@/modules/threads/components/thread-groups";
 
@@ -46,14 +45,12 @@ function AuthedLayout() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
-            <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+            <span className="px-1 text-lg font-semibold group-data-[collapsible=icon]:hidden">
+              Aven
+            </span>
+            <div className="flex items-center gap-0 group-data-[collapsible=icon]:flex-col">
               <SidebarTrigger />
-              <span className="px-1 text-lg font-semibold group-data-[collapsible=icon]:hidden">
-                Aven
-              </span>
               <ThemeSelector />
-            </div>
-            <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -79,9 +76,8 @@ function AuthedLayout() {
           <ThreadGroups />
         </SidebarContent>
         <SidebarFooter>
-          <WhatsNewCard />
           <SidebarTabs />
-          <UserCard name={user.name} email={user.email} onSignOut={signOut} />
+          <UserCard name={user.name} onSignOut={signOut} />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>

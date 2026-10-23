@@ -17,17 +17,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TextField } from "@/components/text-field";
 
 import { useMembers } from "../hooks/use-members";
-import { ROLES, type Role } from "../types";
+import { ROLE_LABELS, ROLES, type InvitableRole } from "../types";
 
 export function InviteMemberDialog() {
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState<Role>("Member");
+  const [role, setRole] = useState<InvitableRole>("member");
   const { invite } = useMembers();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    invite(String(new FormData(event.currentTarget).get("email")).trim(), role);
-    setOpen(false);
+    const sent = await invite(String(new FormData(event.currentTarget).get("email")).trim(), role);
+    if (sent) setOpen(false);
   }
 
   return (
@@ -50,14 +50,17 @@ export function InviteMemberDialog() {
           />
           <Field>
             <FieldLabel>Role</FieldLabel>
-            <Select value={role} onValueChange={(value) => value && setRole(value as Role)}>
+            <Select
+              value={role}
+              onValueChange={(value) => value && setRole(value as InvitableRole)}
+            >
               <SelectTrigger aria-label="Role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {ROLES.map((item) => (
                   <SelectItem key={item} value={item}>
-                    {item}
+                    {ROLE_LABELS[item]}
                   </SelectItem>
                 ))}
               </SelectContent>

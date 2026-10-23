@@ -1,31 +1,58 @@
-import { useAtom } from "jotai";
-
 import { toast } from "@/components/toast";
+import { authClient } from "@/lib/auth-client";
 
-import { membersAtom } from "../atoms/members-atom";
-import type { Role } from "../types";
+import type { InvitableRole, Member } from "../types";
 
 export function useMembers() {
-  const [members, setMembers] = useAtom(membersAtom);
+  const { data: organization, isPending } = authClient.useActiveOrganization();
 
-  function invite(email: string, role: Role) {
-    setMembers((all) => [
-      ...all,
-      {
-        id: `u-${Math.random().toString(36).slice(2, 8)}`,
-        name: email.split("@")[0] ?? email,
-        email,
-        role,
-        status: "pending",
-      },
-    ]);
+  const members: Member[] = [
+    ...(organization?.members ?? []).map((member) => ({
+      id: member.id,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.role,
+      status: "active" as const,
+    })),
+    ...(organization?.invitations ?? [])
+      .filter((invitation) => invitation.status === "pending")
+      .map((invitation) => ({
+        id: invitation.id,
+        name: invitation.email,
+        email: invitation.email,
+        role: invitation.role,
+        status: "pending" as const,
+      })),
+  ];
+
+  async function invite(email: string, role: InvitableRole) {
+    const { error } = await authClient.organization.inviteMember({ email, role });
+    if (error) {
+      toast.add({ title: "Could not send invite", description: error.message, type: "error" });
+      return false;
+    }
     toast.add({ title: "Invitation sent", description: email, type: "success" });
+    return true;
   }
 
-  function remove(id: string, name: string) {
-    setMembers((all) => all.filter((member) => member.id !== id));
-    toast.add({ title: "Member removed", description: name });
+  async function remove(member: Member) {
+    if (member.status === "pending") {
+      const { error } = await authClient.organization.cancelInvitation({ invitationId: member.id });
+      if (error) {
+        toast.add({ title: "Could not cancel invite", description: error.message, type: "error" });
+        return;
+      }
+      toast.add({ title: "Invitation canceled", description: member.email });
+      return;
+    }
+
+    const { error } = await authClient.organization.removeMember({ memberIdOrEmail: member.id });
+    if (error) {
+      toast.add({ title: "Could not remove member", description: error.message, type: "error" });
+      return;
+    }
+    toast.add({ title: "Member removed", description: member.name });
   }
 
-  return { members, invite, remove };
+  return { members, isPending, invite, remove };
 }
