@@ -35,10 +35,10 @@ export function UserCard({ name, onSignOut }: Props) {
                 {initials(name)}
               </AvatarFallback>
             </Avatar>
-            <span className="flex-1 truncate text-left text-sm font-medium">{name}</span>
+            <span className="flex-1 truncate text-left text-xs font-medium">{name}</span>
             <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-(--anchor-width) p-2">
+          <DropdownMenuContent side="bottom" align="start" className="w-76 p-2">
             <OrganizationMenu />
             <DropdownMenuItem onClick={() => navigate({ to: "/settings/profile" })}>
               <Cog /> Personal settings

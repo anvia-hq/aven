@@ -4,7 +4,6 @@ import { useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/button";
 import { Kbd } from "@/components/kbd";
 import { Textarea } from "@/components/textarea";
-import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
 
 import { MODES, type Mode } from "../types";
 
@@ -41,7 +40,7 @@ export function PromptInput({
   }
 
   return (
-    <div className="rounded-xl border bg-card p-2 shadow-sm focus-within:border-ring">
+    <div className="flex flex-col rounded-2xl border bg-card p-4 focus-within:border-ring">
       <Textarea
         aria-label="Prompt"
         value={value}
@@ -49,27 +48,32 @@ export function PromptInput({
         placeholder={placeholder}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        className="min-h-12 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+        className="min-h-20 resize-none border-0 bg-transparent p-1 text-base shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
-      <div className="flex items-center justify-between gap-2 px-1 pt-1">
-        <ToggleGroup
-          aria-label="Mode"
-          value={[mode]}
-          onValueChange={(next) => next[0] && setMode(next[0] as Mode)}
-          size="sm"
-          spacing={1}
-        >
+      <div className="flex items-center justify-between gap-2 pt-4">
+        <div className="flex items-center gap-1">
           {MODES.map((item) => (
-            <ToggleGroupItem key={item.value} value={item.value} title={item.description}>
+            <Button
+              key={item.value}
+              variant="ghost"
+              size="sm"
+              aria-pressed={mode === item.value}
+              title={item.description}
+              className={`px-3 text-base font-medium text-foreground ${
+                mode === item.value ? "bg-muted" : ""
+              }`}
+              onClick={() => setMode(item.value)}
+            >
               {item.label}
-            </ToggleGroupItem>
+            </Button>
           ))}
-        </ToggleGroup>
-        <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-            <Kbd>↵</Kbd> send
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+            <Kbd>↵</Kbd>
+            send
           </span>
-          <Button size="icon-sm" aria-label="Send" disabled={!canSend} onClick={submit}>
+          <Button size="icon" aria-label="Send" disabled={!canSend} onClick={submit}>
             <ArrowUp />
           </Button>
         </div>

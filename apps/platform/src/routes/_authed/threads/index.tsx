@@ -16,10 +16,10 @@ function NewThread() {
   const recent = useThreads().slice(0, 3);
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col justify-center gap-8 p-6">
+    <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col justify-center gap-10 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">What should we build?</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-4xl font-semibold tracking-tight">What should we build?</h1>
+        <p className="text-base text-muted-foreground">
           Start a thread. The agent reads, edits and runs code in your repo.
         </p>
       </div>
@@ -32,7 +32,7 @@ function NewThread() {
             key={suggestion}
             variant="outline"
             size="sm"
-            className="font-normal"
+            className="rounded-full font-normal text-muted-foreground"
             onClick={() => start(suggestion, "smart")}
           >
             {suggestion}
@@ -40,8 +40,8 @@ function NewThread() {
         ))}
       </div>
 
-      <section aria-label="Recent threads" className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Recent</h2>
+      <section aria-label="Recent threads" className="flex flex-col gap-3">
+        <h2 className="text-sm text-muted-foreground">Recent</h2>
         <ThreadList threads={recent} />
       </section>
     </main>

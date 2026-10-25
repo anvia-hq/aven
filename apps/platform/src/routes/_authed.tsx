@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { Plus, Search } from "@mynaui/icons-react";
+import { Cog, Search } from "@mynaui/icons-react";
 import type { CSSProperties } from "react";
 
 import { Button } from "@/components/button";
@@ -16,10 +16,10 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { CommandMenu } from "@/modules/navigation/components/command-menu";
-import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
+import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
-import { ThreadGroups } from "@/modules/threads/components/thread-groups";
+import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 
 export const Route = createFileRoute("/_authed")({
   beforeLoad: async () => {
@@ -42,13 +42,13 @@ function AuthedLayout() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "20rem" } as CSSProperties}>
-      <Sidebar collapsible="icon">
+      <Sidebar collapsible="icon" className="text-sidebar-foreground/80">
         <SidebarHeader>
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
-            <span className="px-1 text-lg font-semibold group-data-[collapsible=icon]:hidden">
-              Aven
-            </span>
-            <div className="flex items-center gap-0 group-data-[collapsible=icon]:flex-col">
+            <div className="min-w-0 flex-1">
+              <UserCard name={user.name} onSignOut={signOut} />
+            </div>
+            <div className="flex shrink-0 items-center group-data-[collapsible=icon]:flex-col">
               <SidebarTrigger />
               <ThemeSelector />
               <Button
@@ -59,25 +59,22 @@ function AuthedLayout() {
               >
                 <Search />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="New"
-                className="group-data-[collapsible=icon]:px-0"
-                onClick={() => navigate({ to: "/threads" })}
-              >
-                <span className="group-data-[collapsible=icon]:hidden">New</span>
-                <Plus />
-              </Button>
             </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <ThreadGroups />
+          <SidebarTabs />
+          <SidebarThreads />
         </SidebarContent>
         <SidebarFooter>
-          <SidebarTabs />
-          <UserCard name={user.name} onSignOut={signOut} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Settings"
+            onClick={() => navigate({ to: "/settings/profile" })}
+          >
+            <Cog />
+          </Button>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
