@@ -1,4 +1,4 @@
-import { GitBranch } from "@mynaui/icons-react";
+import { Folder } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/badge";
@@ -23,8 +23,8 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
               </Badge>
             )}
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-              <GitBranch className="size-3.5" />
-              {thread.branch}
+              <Folder className="size-3.5" />
+              {thread.projectPath.split("/").filter(Boolean).at(-1)}
             </span>
             <span className="w-24 text-right text-xs text-muted-foreground">
               {timeAgo(thread.updatedAt, true)}

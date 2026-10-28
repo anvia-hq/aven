@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 
-import type { Message } from "../types";
+import type { ChatMessage } from "../types";
 import { ToolCall } from "./tool-call";
 
 // Tiny inline renderer for `code` and **bold**.
@@ -23,7 +23,7 @@ function InlineText({ text }: { text: string }) {
   );
 }
 
-export function ThreadMessage({ message }: { message: Message }) {
+export function ThreadMessage({ message }: { message: ChatMessage }) {
   if (message.role === "user") {
     return (
       <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm leading-6" data-role="user">

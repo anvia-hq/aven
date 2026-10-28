@@ -30,9 +30,6 @@ test.describe("projects", () => {
 
     await list.getByRole("link", { name: /^aven/ }).click();
     await expect(page).toHaveURL(/\/projects\/p-aven$/);
-    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
-      "Add rate limiting to the API",
-    );
     await expect(page.getByRole("region", { name: "Commits" })).toContainText(
       "feat(threads): add mock agent UI",
     );
@@ -59,10 +56,9 @@ test.describe("projects", () => {
     await page.getByRole("button", { name: "Archive", exact: true }).click();
     await expect(page.getByText("Project archived")).toBeVisible();
     await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Start a thread" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Restore" }).click();
-    await expect(page.getByRole("region", { name: "Start a thread" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
   });
 });
 
@@ -116,13 +112,13 @@ test.describe("settings", () => {
     await register(page);
     await page.goto("/settings/members");
     const table = page.getByRole("table", { name: "Members" });
-    await expect(table.getByRole("row")).toHaveCount(5);
+    await expect(table.getByRole("row")).toHaveCount(2);
 
     await page.getByRole("button", { name: "Invite member" }).click();
     await page.getByLabel("Email").fill("new.person@aven.test");
     await page.getByRole("button", { name: "Send invite" }).click();
 
-    await expect(page.getByText("Invitation sent")).toBeVisible();
+    await expect(page.getByText("Invitation created")).toBeVisible();
     await expect(table.getByRole("row", { name: /new\.person@aven\.test/ })).toContainText(
       "Pending",
     );
@@ -177,51 +173,7 @@ test.describe("settings", () => {
   });
 });
 
-test.describe("sidebar, activity and search", () => {
-  test("thread groups show counts and can be expanded", async ({ page }) => {
-    await register(page);
-    const sidebar = page.locator('[data-slot="sidebar"]');
-
-    await expect(sidebar.locator('[data-group="archived"]')).toContainText("1");
-    await sidebar.getByRole("button", { name: /Archived/ }).click();
-    await expect(sidebar.getByRole("link", { name: /Set up GitHub Actions/ })).toBeVisible();
-
-    await sidebar.getByRole("button", { name: /Snoozed/ }).click();
-    await expect(
-      sidebar.getByRole("link", { name: /Rewrite the getting started guide/ }),
-    ).toBeVisible();
-  });
-
-  test("archive and reopen a thread moves it between groups", async ({ page }) => {
-    await register(page);
-    const sidebar = page.locator('[data-slot="sidebar"]');
-    await page.goto("/threads/t-flaky-e2e");
-
-    await page.getByRole("button", { name: "Archive", exact: true }).click();
-    await expect(page.getByText("Thread archived")).toBeVisible();
-    await expect(sidebar.locator('[data-group="archived"]')).toContainText("2");
-    await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible();
-
-    await page.getByRole("button", { name: "Reopen" }).click();
-    await expect(sidebar.locator('[data-group="archived"]')).toContainText("1");
-    await expect(page.getByRole("button", { name: "Snooze", exact: true })).toBeVisible();
-  });
-
-  test("activity feed filters by kind", async ({ page }) => {
-    await register(page);
-    await page.getByRole("link", { name: "Activity" }).click();
-    await expect(page).toHaveURL(/\/activity$/);
-
-    const feed = page.getByRole("list", { name: "Activity feed" });
-    await expect(feed.getByRole("listitem")).toHaveCount(8);
-
-    await page.getByRole("tab", { name: "Commits" }).click();
-    await expect(feed.getByRole("listitem")).toHaveCount(3);
-
-    await page.getByRole("tab", { name: "Team" }).click();
-    await expect(feed.getByRole("listitem")).toHaveCount(2);
-  });
-
+test.describe("sidebar and search", () => {
   test("the command palette opens with the keyboard and navigates", async ({ page }) => {
     await register(page);
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();

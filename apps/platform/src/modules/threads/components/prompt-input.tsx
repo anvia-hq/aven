@@ -5,13 +5,10 @@ import { Button } from "@/components/button";
 import { Kbd } from "@/components/kbd";
 import { Textarea } from "@/components/textarea";
 
-import { MODES, type Mode } from "../types";
-
 type Props = {
-  onSubmit: (prompt: string, mode: Mode) => void;
+  onSubmit: (prompt: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  defaultMode?: Mode;
   autoFocus?: boolean;
 };
 
@@ -19,16 +16,14 @@ export function PromptInput({
   onSubmit,
   placeholder = "Ask anything about the codebase…",
   disabled,
-  defaultMode = "smart",
   autoFocus,
 }: Props) {
   const [value, setValue] = useState("");
-  const [mode, setMode] = useState<Mode>(defaultMode);
   const canSend = value.trim().length > 0 && !disabled;
 
   function submit() {
     if (!canSend) return;
-    onSubmit(value.trim(), mode);
+    onSubmit(value.trim());
     setValue("");
   }
 
@@ -51,23 +46,7 @@ export function PromptInput({
         className="min-h-20 resize-none border-0 bg-transparent p-1 text-base shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
       <div className="flex items-center justify-between gap-2 pt-4">
-        <div className="flex items-center gap-1">
-          {MODES.map((item) => (
-            <Button
-              key={item.value}
-              variant="ghost"
-              size="sm"
-              aria-pressed={mode === item.value}
-              title={item.description}
-              className={`px-3 text-base font-medium text-foreground ${
-                mode === item.value ? "bg-muted" : ""
-              }`}
-              onClick={() => setMode(item.value)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
+        <span />
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
             <Kbd>↵</Kbd>

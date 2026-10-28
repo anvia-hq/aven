@@ -1,4 +1,4 @@
-import { Trash } from "@mynaui/icons-react";
+import { Copy, Trash } from "@mynaui/icons-react";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
 import { Badge } from "@/components/badge";
@@ -10,7 +10,7 @@ import { useMembers } from "../hooks/use-members";
 import { ROLE_LABELS } from "../types";
 
 export function MembersTable() {
-  const { members, remove } = useMembers();
+  const { members, copyLink, remove } = useMembers();
 
   return (
     <Table aria-label="Members">
@@ -19,7 +19,7 @@ export function MembersTable() {
           <TableHead>Member</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="w-12" />
+          <TableHead className="w-24" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -42,7 +42,17 @@ export function MembersTable() {
                 {member.status === "pending" ? "Pending" : "Active"}
               </Badge>
             </TableCell>
-            <TableCell>
+            <TableCell className="flex justify-end">
+              {member.status === "pending" && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Copy invite link for ${member.email}`}
+                  onClick={() => copyLink(member)}
+                >
+                  <Copy />
+                </Button>
+              )}
               {member.role !== "owner" && (
                 <Button
                   variant="ghost"

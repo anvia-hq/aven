@@ -8,7 +8,7 @@ import { useThreads } from "../hooks/use-threads";
 
 export function SidebarThreads() {
   const navigate = useNavigate();
-  const threads = useThreads().filter((thread) => thread.state === "open");
+  const threads = useThreads().threads.filter((thread) => thread.state === "open");
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
@@ -32,7 +32,7 @@ export function SidebarThreads() {
               isActive={pathname === `/threads/${thread.id}`}
             >
               <span className="flex-1 truncate">{thread.title}</span>
-              {thread.status === "running" && <Spinner className="animate-spin" />}
+              {thread.running && <Spinner className="animate-spin" />}
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}

@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test";
 
 const unique = () => `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
 
-test.describe("platform auth and dashboard", () => {
+test.describe("platform auth", () => {
   test("unauthenticated visitors are sent to the login page", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/threads");
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Sign in to Aven" })).toBeVisible();
 
@@ -12,9 +12,7 @@ test.describe("platform auth and dashboard", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("sign up lands on threads, dashboard is reachable, sign out and sign in again", async ({
-    page,
-  }) => {
+  test("sign up lands on threads, sign out and sign in again", async ({ page }) => {
     const email = unique();
     const password = "password123";
 
@@ -26,18 +24,7 @@ test.describe("platform auth and dashboard", () => {
     await page.getByRole("button", { name: "Create account" }).click();
 
     await expect(page).toHaveURL(/\/threads$/);
-    await page.getByRole("link", { name: "Dashboard" }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.locator('[data-slot="sidebar-footer"]').getByText(email)).toBeVisible();
-
-    const stats = page.getByRole("region", { name: "Stats" });
-    await expect(stats.getByText("Users", { exact: true })).toBeVisible();
-    await expect(stats.getByText("Active sessions")).toBeVisible();
-    await expect(stats.getByText("Signups (7 days)")).toBeVisible();
-
-    const users = page.getByRole("region", { name: "Users" });
-    await expect(users.getByRole("row", { name: new RegExp(email) })).toBeVisible();
 
     await page
       .locator('[data-slot="sidebar-footer"]')
@@ -45,7 +32,7 @@ test.describe("platform auth and dashboard", () => {
       .click();
     await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await page.goto("/dashboard");
+    await page.goto("/threads");
     await expect(page).toHaveURL(/\/login$/);
 
     await page.getByLabel("Email").fill(email);

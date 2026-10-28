@@ -2,6 +2,7 @@ import {
   CheckCircle,
   ChevronRight,
   Edit,
+  DangerCircle,
   Eye,
   Search,
   Spinner,
@@ -10,18 +11,29 @@ import {
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
-import type { ToolCall as ToolCallType, ToolName } from "../types";
+import type { ToolPart } from "../types";
 import { DiffBlock } from "./diff-block";
 
-const meta: Record<ToolName, { icon: typeof Eye; running: string; done: string }> = {
+type Meta = { icon: typeof Eye; running: string; done: string };
+
+const meta: Record<string, Meta> = {
   read: { icon: Eye, running: "Reading", done: "Read" },
+  write: { icon: Edit, running: "Writing", done: "Wrote" },
   edit: { icon: Edit, running: "Editing", done: "Edited" },
-  bash: { icon: Terminal, running: "Running", done: "Ran" },
-  search: { icon: Search, running: "Searching", done: "Searched" },
+  shell: { icon: Terminal, running: "Running", done: "Ran" },
+  shell_output: { icon: Terminal, running: "Reading output of", done: "Read output of" },
+  shell_kill: { icon: Terminal, running: "Stopping", done: "Stopped" },
+  web_search: { icon: Search, running: "Searching", done: "Searched" },
 };
 
-export function ToolCall({ tool }: { tool: ToolCallType }) {
-  const { icon: Icon, running, done } = meta[tool.name];
+const fallback = (name: string): Meta => ({
+  icon: Terminal,
+  running: `Running ${name}`,
+  done: `Ran ${name}`,
+});
+
+export function ToolCall({ tool }: { tool: ToolPart }) {
+  const { icon: Icon, running, done } = meta[tool.name] ?? fallback(tool.name);
   const additions = tool.diff?.filter((line) => line.type === "add").length ?? 0;
   const deletions = tool.diff?.filter((line) => line.type === "del").length ?? 0;
   const expandable = Boolean(tool.diff?.length || tool.output);
@@ -41,10 +53,12 @@ export function ToolCall({ tool }: { tool: ToolCallType }) {
             <span className="text-destructive">-{deletions}</span>
           </span>
         )}
-        {tool.status === "running" ? (
+        {tool.status === "running" && (
           <Spinner className="size-4 animate-spin text-muted-foreground" />
-        ) : (
-          <CheckCircle className="size-4 text-success" />
+        )}
+        {tool.status === "done" && <CheckCircle className="size-4 text-success" />}
+        {tool.status === "error" && (
+          <DangerCircle className="size-4 text-destructive" aria-label="Failed" />
         )}
         {expandable && (
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />

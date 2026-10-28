@@ -1,46 +1,21 @@
+import type { ChatMessage, DiffLine, MessagePart, ToolPart } from "@aven/agents/protocol";
+
+// The transcript types are the wire protocol, shared with the control-plane.
+export type { ChatMessage, DiffLine, MessagePart, ToolPart };
+
 export type Mode = "smart" | "rush";
 
-export type ToolName = "read" | "edit" | "bash" | "search";
-
-export type DiffLine = {
-  type: "add" | "del" | "ctx";
-  text: string;
-};
-
-export type ToolCall = {
-  id: string;
-  name: ToolName;
-  target: string;
-  status: "running" | "done" | "error";
-  diff?: DiffLine[];
-  output?: string;
-};
-
-export type MessagePart = { type: "text"; text: string } | { type: "tool"; tool: ToolCall };
-
-export type ReplyStep =
-  | { type: "text"; text: string }
-  | { type: "tool"; tool: ToolCall; result: Partial<ToolCall> };
-
-export type Message = {
-  id: string;
-  role: "user" | "assistant";
-  parts: MessagePart[];
-  createdAt: string;
-};
+export type ThreadState = "open" | "snoozed" | "archived";
 
 export type Thread = {
   id: string;
-  projectId: string;
-  state: "open" | "snoozed" | "archived";
   title: string;
-  repo: string;
-  branch: string;
-  mode: Mode;
-  status: "idle" | "running";
-  contextUsed: number;
+  /** Directory on the machine running control-plane that the agent works in. */
+  projectPath: string;
+  state: ThreadState;
+  running: boolean;
+  createdAt: string;
   updatedAt: string;
-  messages: Message[];
 };
 
 export const MODES: { value: Mode; label: string; description: string }[] = [
@@ -49,8 +24,8 @@ export const MODES: { value: Mode; label: string; description: string }[] = [
 ];
 
 export const SUGGESTIONS = [
-  "Add rate limiting to the control-plane API",
-  "Write e2e tests for the register flow",
-  "Explain how Better Auth sessions work here",
-  "Refactor the dashboard stats into a hook",
+  "Explain how this project is structured",
+  "Find and fix any failing tests",
+  "Add a README section describing how to run it",
+  "Summarize the most recent changes",
 ];

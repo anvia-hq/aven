@@ -13,15 +13,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AuthedActivityRouteImport } from './routes/_authed/activity'
-import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsApiKeysRouteImport } from './routes/_authed/settings/api-keys'
 import { Route as AuthedSettingsIntegrationsRouteImport } from './routes/_authed/settings/integrations'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
+import { Route as AuthedSettingsPlatformRouteImport } from './routes/_authed/settings/platform'
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsUsageRouteImport } from './routes/_authed/settings/usage'
 import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
@@ -46,21 +46,17 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedActivityRoute = AuthedActivityRouteImport.update({
-  id: '/activity',
-  path: '/activity',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AcceptInvitationInvitationIdRoute =
+  AcceptInvitationInvitationIdRouteImport.update({
+    id: '/accept-invitation/$invitationId',
+    path: '/accept-invitation/$invitationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
   id: '/projects/',
   path: '/projects/',
@@ -92,6 +88,11 @@ const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsPlatformRoute = AuthedSettingsPlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsProfileRoute = AuthedSettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -117,13 +118,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/activity': typeof AuthedActivityRoute
-  '/dashboard': typeof AuthedDashboardRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/api-keys': typeof AuthedSettingsApiKeysRoute
   '/settings/integrations': typeof AuthedSettingsIntegrationsRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/usage': typeof AuthedSettingsUsageRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
@@ -135,12 +136,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/activity': typeof AuthedActivityRoute
-  '/dashboard': typeof AuthedDashboardRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/api-keys': typeof AuthedSettingsApiKeysRoute
   '/settings/integrations': typeof AuthedSettingsIntegrationsRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/usage': typeof AuthedSettingsUsageRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
@@ -154,13 +155,13 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authed/activity': typeof AuthedActivityRoute
-  '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/api-keys': typeof AuthedSettingsApiKeysRoute
   '/_authed/settings/integrations': typeof AuthedSettingsIntegrationsRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
+  '/_authed/settings/platform': typeof AuthedSettingsPlatformRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/usage': typeof AuthedSettingsUsageRoute
   '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
@@ -174,13 +175,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
-    | '/activity'
-    | '/dashboard'
     | '/settings'
+    | '/accept-invitation/$invitationId'
     | '/projects/$projectId'
     | '/settings/api-keys'
     | '/settings/integrations'
     | '/settings/members'
+    | '/settings/platform'
     | '/settings/profile'
     | '/settings/usage'
     | '/threads/$threadId'
@@ -192,12 +193,12 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
-    | '/activity'
-    | '/dashboard'
+    | '/accept-invitation/$invitationId'
     | '/projects/$projectId'
     | '/settings/api-keys'
     | '/settings/integrations'
     | '/settings/members'
+    | '/settings/platform'
     | '/settings/profile'
     | '/settings/usage'
     | '/threads/$threadId'
@@ -210,13 +211,13 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/register'
-    | '/_authed/activity'
-    | '/_authed/dashboard'
     | '/_authed/settings'
+    | '/accept-invitation/$invitationId'
     | '/_authed/projects/$projectId'
     | '/_authed/settings/api-keys'
     | '/_authed/settings/integrations'
     | '/_authed/settings/members'
+    | '/_authed/settings/platform'
     | '/_authed/settings/profile'
     | '/_authed/settings/usage'
     | '/_authed/threads/$threadId'
@@ -230,6 +231,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  AcceptInvitationInvitationIdRoute: typeof AcceptInvitationInvitationIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -262,26 +264,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/activity': {
-      id: '/_authed/activity'
-      path: '/activity'
-      fullPath: '/activity'
-      preLoaderRoute: typeof AuthedActivityRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/dashboard': {
-      id: '/_authed/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthedDashboardRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/accept-invitation/$invitationId': {
+      id: '/accept-invitation/$invitationId'
+      path: '/accept-invitation/$invitationId'
+      fullPath: '/accept-invitation/$invitationId'
+      preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authed/projects/': {
       id: '/_authed/projects/'
@@ -325,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsMembersRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/platform': {
+      id: '/_authed/settings/platform'
+      path: '/platform'
+      fullPath: '/settings/platform'
+      preLoaderRoute: typeof AuthedSettingsPlatformRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/profile': {
       id: '/_authed/settings/profile'
       path: '/profile'
@@ -360,6 +362,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsApiKeysRoute: typeof AuthedSettingsApiKeysRoute
   AuthedSettingsIntegrationsRoute: typeof AuthedSettingsIntegrationsRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
+  AuthedSettingsPlatformRoute: typeof AuthedSettingsPlatformRoute
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsUsageRoute: typeof AuthedSettingsUsageRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
@@ -369,6 +372,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsApiKeysRoute: AuthedSettingsApiKeysRoute,
   AuthedSettingsIntegrationsRoute: AuthedSettingsIntegrationsRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
+  AuthedSettingsPlatformRoute: AuthedSettingsPlatformRoute,
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsUsageRoute: AuthedSettingsUsageRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
@@ -379,8 +383,6 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 )
 
 interface AuthedRouteChildren {
-  AuthedActivityRoute: typeof AuthedActivityRoute
-  AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
   AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
@@ -389,8 +391,6 @@ interface AuthedRouteChildren {
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedActivityRoute: AuthedActivityRoute,
-  AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
   AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
@@ -406,6 +406,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AcceptInvitationInvitationIdRoute: AcceptInvitationInvitationIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

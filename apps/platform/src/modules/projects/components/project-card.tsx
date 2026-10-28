@@ -8,10 +8,9 @@ import type { Project } from "../types";
 
 type Props = {
   project: Project;
-  threadCount: number;
 };
 
-export function ProjectCard({ project, threadCount }: Props) {
+export function ProjectCard({ project }: Props) {
   return (
     <Link
       to="/projects/$projectId"
@@ -28,9 +27,6 @@ export function ProjectCard({ project, threadCount }: Props) {
         <span className="flex items-center gap-1">
           <GitBranch className="size-3.5" />
           {project.defaultBranch}
-        </span>
-        <span className="ml-auto">
-          {threadCount} {threadCount === 1 ? "thread" : "threads"}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">Updated {timeAgo(project.updatedAt, true)}</p>

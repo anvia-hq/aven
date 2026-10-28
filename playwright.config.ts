@@ -5,8 +5,7 @@ const API_PORT = 8100;
 const WEB_PORT = 5174;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 const API_URL = `http://localhost:${API_PORT}`;
-const E2E_DATABASE_URL =
-  process.env.E2E_DATABASE_URL ?? "postgres://aven:aven@localhost:54329/aven_e2e";
+const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? "postgres://localhost:5432/aven_e2e";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,6 +30,9 @@ export default defineConfig({
         BETTER_AUTH_SECRET: "kQ8vZ3mR7xT1pL9wY4nB6cD2fH5jS0aG",
         BETTER_AUTH_URL: WEB_URL,
         TRUSTED_ORIGINS: WEB_URL,
+        // Never reach a real provider from e2e: starting an agent fails fast and deterministically.
+        AGENT_PROVIDER: "anthropic",
+        ANTHROPIC_API_KEY: "",
       },
     },
     {

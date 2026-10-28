@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 
-import { useThreads } from "@/modules/threads/hooks/use-threads";
 import { useProjects } from "../hooks/use-projects";
 import { ProjectCard } from "./project-card";
 
@@ -10,7 +9,6 @@ type Filter = "all" | "active" | "archived";
 
 export function ProjectGrid() {
   const { projects } = useProjects();
-  const threads = useThreads();
   const [filter, setFilter] = useState<Filter>("all");
 
   const visible = projects.filter((project) => filter === "all" || project.status === filter);
@@ -27,11 +25,7 @@ export function ProjectGrid() {
 
       <section aria-label="Project list" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {visible.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            threadCount={threads.filter((thread) => thread.projectId === project.id).length}
-          />
+          <ProjectCard key={project.id} project={project} />
         ))}
         {visible.length === 0 && (
           <p className="text-sm text-muted-foreground">No projects in this view.</p>

@@ -1,4 +1,4 @@
-# Projects, settings, activity and navigation (mock UI)
+# Projects, settings and navigation (mock UI)
 
 Status: mock only, no backend. Builds on `0001-threads-mock-ui.md`.
 
@@ -8,7 +8,7 @@ Shaped after the Amp web app, not copied.
 
 - **Top:** sidebar toggle, brand, theme toggle, search (opens the command palette), **New +**.
 - **Thread groups:** Recent (open, touched in the last 24h), Earlier, Snoozed, Archived. Each group is collapsible and shows a count. Snoozed and archived start collapsed.
-- **Bottom:** a "What's new" card, a tab bar (Threads, Activity, Projects, Dashboard) and the user row.
+- **Bottom:** a "What's new" card, a tab bar (Threads, Projects) and the user row.
 - **User row:** opens a menu with Personal settings (⌘,), Workspace settings, Command palette (⌘K), Report a bug, Sign out.
 - When collapsed, the sidebar keeps only the icon controls and the tab icons.
 
@@ -24,10 +24,6 @@ Threads have a state: open, snoozed or archived. The thread header has **Snooze*
 
 - `/projects`: card grid with All / Active / Archived tabs and **New project** (name, repo).
 - `/projects/$projectId`: breadcrumb (Projects / owner / repo), description, a prompt box that starts a thread in that project, Recent threads, Commits to the default branch (with CI status), a Files table with the last commit per entry, and Archive / Restore.
-
-## Activity
-
-`/activity`: feed of thread, commit and team events with All / Threads / Commits / Team filters.
 
 ## Settings
 
@@ -45,7 +41,7 @@ Toasts confirm saves, invites, key actions and archive/restore.
 
 ## Mock data
 
-All state lives in jotai atoms under `modules/*/atoms/` and resets on reload: `projectsAtom`, `threadsAtom`, `membersAtom`, `apiKeysAtom`, `integrationsAtom`, `usageAtom`, `activityAtom`.
+All state lives in jotai atoms under `modules/*/atoms/` and resets on reload: `projectsAtom`, `threadsAtom`, `membersAtom`, `apiKeysAtom`, `integrationsAtom`, `usageAtom`.
 
 ## Not built
 

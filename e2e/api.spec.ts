@@ -20,7 +20,7 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
   });
 
   test("protected routes return 401 without a session", async ({ request }) => {
-    for (const path of ["/api/dashboard/stats", "/api/users"]) {
+    for (const path of ["/api/users"]) {
       const res = await request.get(path);
       expect(res.status(), path).toBe(401);
     }
@@ -34,13 +34,6 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
     });
     expect(signUp.status()).toBe(200);
 
-    const stats = await request.get("/api/dashboard/stats");
-    expect(stats.status()).toBe(200);
-    const body = await stats.json();
-    expect(body.users).toBeGreaterThanOrEqual(1);
-    expect(body.activeSessions).toBeGreaterThanOrEqual(1);
-    expect(body.signupsLast7Days).toBeGreaterThanOrEqual(1);
-
     const users = await request.get("/api/users");
     expect(users.status()).toBe(200);
     const list: { id: string; email: string }[] = await users.json();
@@ -48,7 +41,7 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
 
     const signOut = await request.post("/api/auth/sign-out", { data: {} });
     expect(signOut.status()).toBe(200);
-    expect((await request.get("/api/dashboard/stats")).status()).toBe(401);
+    expect((await request.get("/api/users")).status()).toBe(401);
   });
 
   test("sign in rejects a wrong password", async ({ request }) => {

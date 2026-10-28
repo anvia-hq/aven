@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@aven/agents": "workspace:*",
     "@aven/db": "workspace:*",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",

@@ -1,16 +1,35 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import type { Mode } from "../types";
-import { useAgent } from "./use-agent";
+import { toast } from "@/components/toast";
+import { ApiError, postJson } from "@/lib/api";
 
-// Creates a thread from a prompt, opens it and lets the mock agent reply.
-export function useStartThread(projectId?: string) {
+import type { Thread } from "../types";
+import { useThreads } from "./use-threads";
+
+const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt);
+
+// Creates a thread in a project directory, opens it and sends the first prompt.
+export function useStartThread() {
   const navigate = useNavigate();
-  const { create, send } = useAgent();
+  const { refresh } = useThreads();
 
-  return async (prompt: string, mode: Mode) => {
-    const threadId = create({ prompt, mode, projectId });
-    await navigate({ to: "/threads/$threadId", params: { threadId } });
-    void send({ threadId, prompt });
+  return async (projectPath: string, prompt: string) => {
+    let thread: Thread;
+    try {
+      thread = await postJson<Thread>("/threads", { projectPath, title: titleFrom(prompt) });
+    } catch (failure) {
+      const message = failure instanceof ApiError ? failure.message : "Could not reach the server";
+      toast.add({ title: "Could not start thread", description: message, type: "error" });
+      return;
+    }
+
+    await refresh();
+    await navigate({ to: "/threads/$threadId", params: { threadId: thread.id } });
+    try {
+      await postJson(`/threads/${thread.id}/messages`, { prompt });
+    } catch (failure) {
+      const message = failure instanceof ApiError ? failure.message : "Could not reach the server";
+      toast.add({ title: "The agent did not start", description: message, type: "error" });
+    }
   };
 }

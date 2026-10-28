@@ -3,6 +3,18 @@ import { authClient } from "@/lib/auth-client";
 
 import type { InvitableRole, Member } from "../types";
 
+const inviteLink = (invitationId: string) =>
+  `${window.location.origin}/accept-invitation/${invitationId}`;
+
+async function copyInviteLink(invitationId: string) {
+  try {
+    await navigator.clipboard.writeText(inviteLink(invitationId));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useMembers() {
   const { data: organization, isPending } = authClient.useActiveOrganization();
 
@@ -26,13 +38,29 @@ export function useMembers() {
   ];
 
   async function invite(email: string, role: InvitableRole) {
-    const { error } = await authClient.organization.inviteMember({ email, role });
+    const { data, error } = await authClient.organization.inviteMember({ email, role });
     if (error) {
-      toast.add({ title: "Could not send invite", description: error.message, type: "error" });
+      toast.add({ title: "Could not create invite", description: error.message, type: "error" });
       return false;
     }
-    toast.add({ title: "Invitation sent", description: email, type: "success" });
+    const copied = await copyInviteLink(data.id);
+    toast.add({
+      title: "Invitation created",
+      description: copied
+        ? `Invite link for ${email} copied`
+        : `Copy the invite link for ${email} from the list`,
+      type: "success",
+    });
     return true;
+  }
+
+  async function copyLink(member: Member) {
+    const copied = await copyInviteLink(member.id);
+    toast.add(
+      copied
+        ? { title: "Invite link copied", description: member.email, type: "success" }
+        : { title: "Could not copy the link", type: "error" },
+    );
   }
 
   async function remove(member: Member) {
@@ -54,5 +82,5 @@ export function useMembers() {
     toast.add({ title: "Member removed", description: member.name });
   }
 
-  return { members, isPending, invite, remove };
+  return { members, isPending, invite, copyLink, remove };
 }

@@ -8,7 +8,7 @@ Bun workspace monorepo (TypeScript, ESM).
 
 ```
 apps/              Applications (none yet)
-packages/          Shared internal packages (none yet)
+packages/          Shared internal packages (db, agents)
 docs/              Project knowledge (see docs/README.md)
 ```
 
@@ -22,8 +22,7 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
-docker compose up -d   # postgres only (host port 54329, volume pg_data_aven)
-docker compose --profile app up -d --build   # + control-plane and platform images
+createdb aven          # one-time: uses your local Postgres (localhost:5432)
 bun run test:e2e       # Playwright (root). Own ports 8100/5174 and database aven_e2e
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 ```
@@ -44,7 +43,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 
 - Pages are written directly in `src/routes/` and stay thin. Layering is `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms (use the module's hook). Mutations and their toasts live in hooks.
 - Imports: relative inside a module, the `@/` alias everywhere else (`@/components/*`, `@/lib/*`, `@/modules/*`). Details in `docs/rules/0001-platform-structure.md`.
-- Modules: `threads`, `projects`, `settings`, `activity`, `navigation`, `auth`, `dashboard`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
+- Modules: `threads` (API-backed: list, live thread view over SSE, start-thread with a project path), `projects` (still mock UI, not connected to threads), `settings`, `navigation`, `auth`, `platform`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
 - Shared UI primitives live in `src/components/`, not in a module. The full shadcn/ui set (Base UI variant) is installed there; add more with `bunx shadcn@latest add <name> --cwd apps/platform`.
 - Reusable feature code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
 - **No barrel files** (`index.ts` that only re-exports). Import from the exact file.
@@ -70,6 +69,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 - Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
 - Routers call services, services own DB access. Mount routers in `src/index.ts`.
 - Auth is Better Auth (`modules/auth`); protect routes with `.use(authRouter)` + `{ auth: true }`.
+- `threads` (CRUD, scoped to `session.activeOrganizationId`; another organization's thread is 404) and `runs` (service only: `RunManager`). A thread has a `project_path` (validated: absolute, existing directory, stored as the real path). Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. Agent provider comes from `AGENT_PROVIDER` / `AGENT_MODEL`. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
 - Full rules: `docs/rules/0002-control-plane-structure.md`.
 
 ## packages/db
@@ -79,7 +79,20 @@ Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files
 - Import `db` from `@aven/db/client` and tables from `@aven/db/schema/<table>` (e.g. `@aven/db/schema/users`).
 - One table per file in `src/schema/`, plural snake_case table names, `id` primary key (uuid; Better Auth tables use text ids), `created_at`/`updated_at` timestamps with time zone.
 - Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
-- Commit generated migrations in `drizzle/`; never edit them by hand.
+- Commit generated migrations in `drizzle/`; never edit them by hand. drizzle-kit runs on the Bun runtime (`bun --bun` in the `db:*` scripts) because it loads schema files with `require` and `@anvia/memory-drizzle` is ESM-only (`import` condition only), which fails under Node with `ERR_PACKAGE_PATH_NOT_EXPORTED`. Don't call `drizzle-kit` directly.
+
+## packages/agents
+
+The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llms.txt). Source-only, no barrel files; import from `@aven/agents/tools/<name>`.
+
+- Tools live in `src/tools/<name>.ts` and are made with `createTool` (zod input schema). Keep them free of app and HTTP concerns; take config as options with env fallbacks and make `fetch` injectable so tests never hit the network.
+- `web_search` (`tools/web-search.ts`) uses Tavily over plain `fetch`; needs `TAVILY_API_KEY`.
+- `read`, `write`, `edit` take `{ root }` and refuse paths outside it (symlinks included). `shell`, `shell_output`, `shell_kill` run commands through `JobRegistry` (`jobs/job-registry.ts`): foreground calls wait (2 min default timeout), `background: true` returns a `jobId` at once. Jobs are process groups, so kills reach children. The shell is **not** confined to `root`.
+- The wire protocol shared with every client is `protocol.ts` (event types plus the pure `applyEvent` reducer; the platform imports it); `projection.ts` turns Anvia stream events and stored messages into it. Tests that must not hit a provider use `testing/scripted-model.ts`.
+- A finished background job is delivered by the host (control-plane `RunManager` does this): `jobs.onComplete` -> `formatJobNotice(job)` -> `stream.steer({ prompt })` while the run is live, or a new run if it ended.
+- Memory: `createMemoryStore(db)` (`memory.ts`, `@anvia/memory-drizzle`) persists conversations in Postgres; pass `{ memory }` to `createCodingAgent` and a `session: { sessionId, metadata: { organizationId } }` on every run. Its tables live in `packages/db/src/schema/anvia-memory.ts`.
+- `createCodingAgent({ provider: "openai" | "anthropic", root })` (`coding-agent.ts`) assembles model + tools; `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
+- Tests are `bun:test` next to the code (`bun test packages/agents`).
 
 ## Docs
 

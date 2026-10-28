@@ -18,8 +18,6 @@ import { useCommandMenu } from "../hooks/use-command-menu";
 const pages = [
   { label: "New thread", to: "/threads" },
   { label: "Projects", to: "/projects" },
-  { label: "Activity", to: "/activity" },
-  { label: "Dashboard", to: "/dashboard" },
   { label: "Personal settings", to: "/settings/profile" },
   { label: "API keys", to: "/settings/api-keys" },
   { label: "Workspace members", to: "/settings/members" },
@@ -29,7 +27,7 @@ const pages = [
 
 export function CommandMenu() {
   const { open, setOpen } = useCommandMenu();
-  const threads = useThreads();
+  const { threads } = useThreads();
   const { projects } = useProjects();
   const navigate = useNavigate();
 

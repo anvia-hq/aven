@@ -8,8 +8,11 @@ import { users } from "@aven/db/schema/users";
 import { verifications } from "@aven/db/schema/verifications";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { organization } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
+
+import { platformService } from "../platform/service";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
@@ -56,6 +59,15 @@ export const auth = betterAuth({
   emailAndPassword: { enabled: true },
   plugins: [organization()],
   databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (!(await platformService.canRegister(user.email))) {
+            throw new APIError("FORBIDDEN", { message: "Registration is closed" });
+          }
+        },
+      },
+    },
     session: {
       create: {
         before: async (session) => ({

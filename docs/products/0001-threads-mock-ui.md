@@ -1,6 +1,6 @@
 # Threads (mock UI)
 
-Status: mock only, no backend
+Status: superseded by 0003 (threads are now real: see `0003-threads-and-agent.md`)
 
 An Amp-style coding agent UI in `apps/platform`. Everything is client-side mock data; nothing is persisted and no real agent runs.
 
@@ -8,8 +8,8 @@ An Amp-style coding agent UI in `apps/platform`. Everything is client-side mock 
 
 - `/threads`: new thread page. Prompt box with Smart/Rush mode, suggestion chips, recent threads.
 - `/threads/$threadId`: thread view. Header (title, repo/branch, mode, context used), message list, prompt input pinned to the bottom.
-- Sidebar: Threads and Dashboard links, a "Threads" list (newest first, spinner while the agent is running), and the **New +** button that opens `/threads`.
-- Signing in or registering lands on `/threads`. `/dashboard` is still reachable from the sidebar.
+- Sidebar: Threads and Projects links, a "Threads" list (newest first, spinner while the agent is running), and the **New +** button that opens `/threads`.
+- Signing in or registering lands on `/threads`.
 
 ## Thread view
 

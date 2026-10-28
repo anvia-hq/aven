@@ -1,13 +1,11 @@
-import { Activity, Chat, Folder, Grid } from "@mynaui/icons-react";
+import { Chat, Folder } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 
 const tabs = [
   { to: "/threads", label: "Threads", icon: Chat },
-  { to: "/activity", label: "Activity", icon: Activity },
   { to: "/projects", label: "Projects", icon: Folder },
-  { to: "/dashboard", label: "Dashboard", icon: Grid },
 ] as const;
 
 export function SidebarTabs() {
