@@ -15,6 +15,27 @@
       "when": 1792718019645,
       "tag": "0001_funny_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793158264878,
+      "tag": "0002_watery_silvermane",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793161156455,
+      "tag": "0003_icy_spot",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793162087234,
+      "tag": "0004_material_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
