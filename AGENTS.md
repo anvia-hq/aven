@@ -43,7 +43,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 
 - Pages are written directly in `src/routes/` and stay thin. Layering is `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms (use the module's hook). Mutations and their toasts live in hooks.
 - Imports: relative inside a module, the `@/` alias everywhere else (`@/components/*`, `@/lib/*`, `@/modules/*`). Details in `docs/rules/0001-platform-structure.md`.
-- Modules: `threads` (API-backed: list, live thread view over SSE, start-thread with a project path), `projects` (still mock UI, not connected to threads), `settings`, `navigation`, `auth`, `platform`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
+- Modules: `threads` (API-backed: list, live thread view over SSE, a new thread always starts inside a project), `projects` (API-backed: create, list; threads belong to one), `settings`, `navigation`, `auth`, `platform`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
 - Shared UI primitives live in `src/components/`, not in a module. The full shadcn/ui set (Base UI variant) is installed there; add more with `bunx shadcn@latest add <name> --cwd apps/platform`.
 - Reusable feature code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
 - **No barrel files** (`index.ts` that only re-exports). Import from the exact file.
@@ -69,7 +69,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 - Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
 - Routers call services, services own DB access. Mount routers in `src/index.ts`.
 - Auth is Better Auth (`modules/auth`); protect routes with `.use(authRouter)` + `{ auth: true }`.
-- `threads` (CRUD, scoped to `session.activeOrganizationId`; another organization's thread is 404) and `runs` (service only: `RunManager`). A thread has a `project_path` (validated: absolute, existing directory, stored as the real path). Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. Agent provider comes from `AGENT_PROVIDER` / `AGENT_MODEL`. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
+- `projects` (CRUD-lite: create, list, get; scoped to `session.activeOrganizationId`, path validated: absolute, existing directory, stored as the real path) and `threads` (CRUD, scoped the same way; another organization's project or thread is 404/422) and `runs` (service only: `RunManager`). A thread always belongs to a project (`project_id`) and snapshots its `project_path` at creation. Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. Agent provider comes from `AGENT_PROVIDER` / `AGENT_MODEL`. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
 - Full rules: `docs/rules/0002-control-plane-structure.md`.
 
 ## packages/db

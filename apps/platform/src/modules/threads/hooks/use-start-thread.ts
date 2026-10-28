@@ -8,15 +8,15 @@ import { useThreads } from "./use-threads";
 
 const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt);
 
-// Creates a thread in a project directory, opens it and sends the first prompt.
+// Creates a thread in a project, opens it and sends the first prompt.
 export function useStartThread() {
   const navigate = useNavigate();
   const { refresh } = useThreads();
 
-  return async (projectPath: string, prompt: string) => {
+  return async (projectId: string, prompt: string) => {
     let thread: Thread;
     try {
-      thread = await postJson<Thread>("/threads", { projectPath, title: titleFrom(prompt) });
+      thread = await postJson<Thread>("/threads", { projectId, title: titleFrom(prompt) });
     } catch (failure) {
       const message = failure instanceof ApiError ? failure.message : "Could not reach the server";
       toast.add({ title: "Could not start thread", description: message, type: "error" });

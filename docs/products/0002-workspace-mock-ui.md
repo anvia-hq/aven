@@ -1,6 +1,6 @@
 # Projects, settings and navigation (mock UI)
 
-Status: mock only, no backend. Builds on `0001-threads-mock-ui.md`.
+Status: superseded for Projects by decision `0005-projects-are-real-threads-belong-to-them.md` — projects are now real and persisted, with a minimal `{ name, projectPath }` model, no archive, and no commits/files/CI. Settings and navigation below are still mock only, no backend. Builds on `0001-threads-mock-ui.md`.
 
 ## Sidebar
 

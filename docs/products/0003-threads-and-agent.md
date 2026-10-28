@@ -1,14 +1,14 @@
 # Threads and the coding agent
 
-Status: built. Supersedes `0001-threads-mock-ui.md`; the Projects pages in `0002` are still mock UI and are not connected to threads.
+Status: built. Supersedes `0001-threads-mock-ui.md`. Updated by decision `0005-projects-are-real-threads-belong-to-them.md`: projects are now real and a thread always belongs to one (see `0002` for what changed on the Projects pages).
 
 ## What a thread is
 
-A thread is one agent session, stored in `threads` and scoped to an organization. Each has a **project path**: an absolute directory on the machine running control-plane. The agent's `read`/`write`/`edit` tools are confined to it and its shell starts there. There is no tool approval: the agent acts without asking.
+A thread is one agent session, stored in `threads`, scoped to an organization and always belonging to a project (`threads.project_id`). Its `project_path` is a snapshot of that project's absolute directory (on the machine running control-plane) taken when the thread was created. The agent's `read`/`write`/`edit` tools are confined to it and its shell starts there. There is no tool approval: the agent acts without asking.
 
 ## Flow
 
-1. `/threads`: type the project path (or pick a recent one), then a prompt. The server rejects relative paths and paths that are not existing directories (422) and stores the resolved real path.
+1. `/threads`: pick an existing project (or create one), then a prompt. Projects reject relative paths and paths that are not existing directories (422) and store the resolved real path.
 2. The thread opens at `/threads/<id>`. The first prompt starts a run on the server.
 3. The page attaches to the run over server-sent events: a snapshot of the transcript, then text, tool calls (read, write, edit with a diff, shell, web search) and results as they happen. **Stop** cancels the run.
 4. Reloading, closing the tab or opening it elsewhere never stops the agent; reattaching shows the run in progress. Only one run per thread at a time (a second message while running is rejected).

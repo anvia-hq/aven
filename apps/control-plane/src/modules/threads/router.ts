@@ -3,48 +3,33 @@ import { Elysia, sse, status } from "elysia";
 import { authRouter } from "../auth/router";
 import { RunBusyError, runsService } from "../runs/service";
 import { createThreadBody, sendMessageBody, threadParams, updateThreadBody } from "./schema";
-import { InvalidProjectPathError, threadsService } from "./service";
+import { ProjectNotFoundError, threadsService } from "./service";
 
 export const threadsRouter = new Elysia({ prefix: "/threads" })
   .use(authRouter)
   .get(
     "/",
-    async ({ session }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ organizationId }) => {
       const rows = await threadsService.list(organizationId);
       return rows.map((thread) => ({ ...thread, running: runsService.isRunning(thread.id) }));
     },
-    { auth: true },
-  )
-  .get(
-    "/paths",
-    async ({ session }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
-      return threadsService.recentPaths(organizationId);
-    },
-    { auth: true },
+    { auth: true, org: true },
   )
   .post(
     "/",
-    async ({ body, session, user }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ body, organizationId, user }) => {
       try {
         return await threadsService.create(organizationId, user.id, body);
       } catch (error) {
-        if (error instanceof InvalidProjectPathError) return status(422, error.message);
+        if (error instanceof ProjectNotFoundError) return status(422, error.message);
         throw error;
       }
     },
-    { auth: true, body: createThreadBody },
+    { auth: true, org: true, body: createThreadBody },
   )
   .get(
     "/:id",
-    async ({ params, session }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ params, organizationId }) => {
       const thread = await threadsService.get(organizationId, params.id);
       if (!thread) return status(404, "Thread not found");
       return {
@@ -53,25 +38,21 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
         messages: await runsService.history(thread),
       };
     },
-    { auth: true, params: threadParams },
+    { auth: true, org: true, params: threadParams },
   )
   .patch(
     "/:id",
-    async ({ params, body, session }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ params, body, organizationId }) => {
       return (
         (await threadsService.update(organizationId, params.id, body)) ??
         status(404, "Thread not found")
       );
     },
-    { auth: true, params: threadParams, body: updateThreadBody },
+    { auth: true, org: true, params: threadParams, body: updateThreadBody },
   )
   .post(
     "/:id/messages",
-    async ({ params, body, session, set }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ params, body, organizationId, set }) => {
       const thread = await threadsService.get(organizationId, params.id);
       if (!thread) return status(404, "Thread not found");
       try {
@@ -83,30 +64,27 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
       set.status = 202;
       return { ok: true };
     },
-    { auth: true, params: threadParams, body: sendMessageBody },
+    { auth: true, org: true, params: threadParams, body: sendMessageBody },
   )
   .post(
     "/:id/cancel",
-    async ({ params, session }) => {
-      const organizationId = session.activeOrganizationId;
-      if (!organizationId) return status(400, "No active organization");
+    async ({ params, organizationId }) => {
       const thread = await threadsService.get(organizationId, params.id);
       if (!thread) return status(404, "Thread not found");
       return { cancelled: runsService.cancel(thread.id) };
     },
-    { auth: true, params: threadParams },
+    { auth: true, org: true, params: threadParams },
   )
   // Server-sent events: a snapshot first, then live run events. Closing the connection never
   // affects a running agent.
   .get(
     "/:id/events",
-    async function* ({ params, session, request }) {
-      const organizationId = session.activeOrganizationId;
-      const thread = organizationId ? await threadsService.get(organizationId, params.id) : null;
+    async function* ({ params, organizationId, request }) {
+      const thread = await threadsService.get(organizationId, params.id);
       if (!thread) return status(404, "Thread not found");
       for await (const event of runsService.events(thread, request.signal)) {
         yield event ? sse({ data: event }) : sse({ event: "ping", data: "" });
       }
     },
-    { auth: true, params: threadParams },
+    { auth: true, org: true, params: threadParams },
   );

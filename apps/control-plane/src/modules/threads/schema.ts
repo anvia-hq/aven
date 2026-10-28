@@ -3,7 +3,7 @@ import { z } from "zod";
 export const threadParams = z.object({ id: z.uuid() });
 
 export const createThreadBody = z.object({
-  projectPath: z.string().trim().min(1),
+  projectId: z.uuid(),
   title: z.string().trim().min(1).max(200).optional(),
 });
 

@@ -1,28 +1,19 @@
-export type Commit = {
-  hash: string;
-  message: string;
-  author: string;
-  at: string;
-  ci: "pass" | "fail" | null;
-};
-
-export type FileEntry = {
-  name: string;
-  type: "dir" | "file";
-  message: string;
-  at: string;
-};
-
 export type Project = {
   id: string;
   name: string;
-  repo: string;
-  description: string;
-  language: string;
-  defaultBranch: string;
-  status: "active" | "archived";
+  /** Directory on the machine running control-plane that threads in this project work in. */
+  projectPath: string;
   createdAt: string;
   updatedAt: string;
-  commits: Commit[];
-  files: FileEntry[];
+};
+
+export type DirectoryEntry = {
+  name: string;
+  path: string;
+};
+
+export type DirectoryListing = {
+  path: string;
+  parent: string | null;
+  entries: DirectoryEntry[];
 };

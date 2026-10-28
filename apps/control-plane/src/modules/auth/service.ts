@@ -21,7 +21,7 @@ if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
 // from the user id and inserts do nothing on conflict, so concurrent sign-ins create only one.
 // This runs in `session.create.before` rather than `user.create.after`: Better Auth runs `after`
 // hooks once the transaction ends, which is after the sign-up session has been created.
-async function ensurePersonalOrganization(userId: string) {
+export async function ensurePersonalOrganization(userId: string) {
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
   const organizationId = `personal-${userId}`;
   await db.transaction(async (tx) => {

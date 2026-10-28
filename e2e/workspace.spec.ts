@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const unique = () => `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
 
@@ -12,53 +15,92 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
+// A browser can't hand a page a real OS path, so "Project path" opens a folder browser backed
+// by the server's filesystem; typing a path and pressing Enter browses straight to it.
+async function chooseFolder(page: Page, path: string) {
+  await page.getByRole("button", { name: /Choose a folder/ }).click();
+  const pathField = page.getByLabel("Path");
+  await pathField.fill(path);
+  await pathField.press("Enter");
+  await page.getByRole("button", { name: "Choose this folder" }).click();
+}
+
 test.describe("projects", () => {
-  test("lists projects, filters by status and opens a project", async ({ page }) => {
-    await register(page);
-    await page.getByRole("link", { name: "Projects" }).click();
-    await expect(page).toHaveURL(/\/projects$/);
-
-    const list = page.getByRole("region", { name: "Project list" });
-    await expect(list.getByRole("link")).toHaveCount(4);
-
-    await page.getByRole("tab", { name: "Archived" }).click();
-    await expect(list.getByRole("link")).toHaveCount(1);
-    await expect(list.getByText("infra")).toBeVisible();
-
-    await page.getByRole("tab", { name: "Active" }).click();
-    await expect(list.getByRole("link")).toHaveCount(3);
-
-    await list.getByRole("link", { name: /^aven/ }).click();
-    await expect(page).toHaveURL(/\/projects\/p-aven$/);
-    await expect(page.getByRole("region", { name: "Commits" })).toContainText(
-      "feat(threads): add mock agent UI",
-    );
-    await expect(page.getByRole("region", { name: "Files" })).toContainText("docker-compose.yml");
-  });
-
-  test("creates a project", async ({ page }) => {
+  test("creates a project, lists it and opens it", async ({ page }) => {
     await register(page);
     await page.goto("/projects");
     await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Name").fill("shiny-app");
-    await page.getByLabel("Repository").fill("me/shiny-app");
+    await chooseFolder(page, process.cwd());
     await page.getByRole("button", { name: "Create project" }).click();
 
     await expect(page.getByText("Project created")).toBeVisible();
-    await expect(
-      page.getByRole("region", { name: "Project list" }).getByText("shiny-app"),
-    ).toBeVisible();
+    const list = page.getByRole("region", { name: "Project list" });
+    await expect(list.getByRole("link")).toHaveCount(1);
+
+    await list.getByRole("link", { name: "shiny-app" }).click();
+    await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
+    await expect(page.locator("header")).toContainText("shiny-app");
+    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
+      "No threads in this project yet.",
+    );
+
+    // A cold reload re-fetches the project list; it must not flash "Project not found".
+    await page.reload();
+    await expect(page.locator("header")).toContainText("shiny-app");
+    await expect(page.getByRole("heading", { name: "Project not found" })).toHaveCount(0);
   });
 
-  test("a project can be archived and restored", async ({ page }) => {
-    await register(page);
-    await page.goto("/projects/p-docs");
-    await page.getByRole("button", { name: "Archive", exact: true }).click();
-    await expect(page.getByText("Project archived")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+  test("creates a new folder from the picker and browses into it", async ({ page }) => {
+    const dir = await mkdtemp(join(tmpdir(), "aven-new-folder-"));
+    try {
+      await register(page);
+      await page.goto("/projects");
+      await page.getByRole("button", { name: "New project" }).click();
+      await page.getByLabel("Name").fill("fresh-project");
+      await page.getByRole("button", { name: /Choose a folder/ }).click();
+      const pathField = page.getByLabel("Path");
+      await pathField.fill(dir);
+      await pathField.press("Enter");
 
-    await page.getByRole("button", { name: "Restore" }).click();
-    await expect(page.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "New folder" }).click();
+      await page.getByLabel("New folder name").fill("sub-project");
+      await page.getByLabel("New folder name").press("Enter");
+      await expect(page.getByRole("button", { name: "sub-project" })).toBeVisible();
+
+      await page.getByRole("button", { name: "sub-project" }).click();
+      await expect(page.getByText("No subfolders")).toBeVisible();
+      await expect(pathField).toHaveValue(join(await realpath(dir), "sub-project"));
+
+      // Creating the same folder again from a directory that already has it is rejected.
+      await page.getByRole("button", { name: "Up" }).click();
+      await page.getByRole("button", { name: "New folder" }).click();
+      await page.getByLabel("New folder name").fill("sub-project");
+      await page.getByLabel("New folder name").press("Enter");
+      await expect(page.getByText("already exists")).toBeVisible();
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("starts a thread from the project page", async ({ page }) => {
+    await register(page);
+    await page.goto("/projects");
+    await page.getByRole("button", { name: "New project" }).click();
+    await page.getByLabel("Name").fill("shiny-app");
+    await chooseFolder(page, process.cwd());
+    await page.getByRole("button", { name: "Create project" }).click();
+    await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
+
+    await page.getByLabel("Prompt").fill("Explain the project layout");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();
+
+    await page.goBack();
+    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
+      "Explain the project layout",
+    );
   });
 });
 
@@ -176,6 +218,12 @@ test.describe("settings", () => {
 test.describe("sidebar and search", () => {
   test("the command palette opens with the keyboard and navigates", async ({ page }) => {
     await register(page);
+    await page.getByRole("button", { name: "New project" }).click();
+    await page.getByLabel("Name").fill("docs-site");
+    await chooseFolder(page, process.cwd());
+    await page.getByRole("button", { name: "Create project" }).click();
+    await expect(page.getByText("Project created")).toBeVisible();
+
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+k");
     await expect(page.getByPlaceholder("Search threads, projects and pages…")).toBeVisible();
@@ -187,6 +235,6 @@ test.describe("sidebar and search", () => {
     await page.getByRole("button", { name: "Search" }).click();
     await page.keyboard.type("docs-site");
     await page.getByRole("option", { name: "docs-site", exact: true }).click();
-    await expect(page).toHaveURL(/\/projects\/p-docs$/);
+    await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
   });
 });

@@ -15,49 +15,84 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
-async function startThread(page: Page, path: string, prompt: string) {
-  await page.getByLabel("Project path").fill(path);
+// Starting a project's "Project path" field opens a folder browser backed by the server's
+// filesystem (a browser can't hand a page a real OS path); typing a path and pressing Enter
+// browses straight to it, same as clicking through subdirectories would.
+async function chooseFolder(page: Page, path: string) {
+  await page.getByRole("button", { name: /Choose a folder/ }).click();
+  const pathField = page.getByLabel("Path");
+  await pathField.fill(path);
+  await pathField.press("Enter");
+  await page.getByRole("button", { name: "Choose this folder" }).click();
+}
+
+async function createProject(page: Page, name: string, path: string) {
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByLabel("Name").fill(name);
+  await chooseFolder(page, path);
+  await page.getByRole("button", { name: "Create project" }).click();
+}
+
+// Creates a project (which is auto-selected) and sends the first prompt.
+async function startThread(page: Page, prompt: string, path = PROJECT_PATH) {
+  await createProject(page, "project", path);
   await page.getByLabel("Prompt").fill(prompt);
   await page.getByRole("button", { name: "Send" }).click();
 }
 
 test.describe("threads", () => {
-  test("the new thread page asks for a project path and offers suggestions", async ({ page }) => {
+  test("the new thread page asks to create a project first", async ({ page }) => {
     await register(page);
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByLabel("Project path")).toBeVisible();
-    await expect(page.getByLabel("Suggestions").getByRole("button")).toHaveCount(4);
+    await expect(page.getByText("Create a project to get started.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
   });
 
-  test("a prompt without a project path is refused", async ({ page }) => {
+  test("a relative or missing project path is rejected while browsing to it", async ({ page }) => {
     await register(page);
-    await page.getByLabel("Prompt").fill("hello");
-    await page.getByRole("button", { name: "Send" }).click();
+    await page.getByRole("button", { name: "New project" }).click();
+    await page.getByLabel("Name").fill("project");
+    await page.getByRole("button", { name: /Choose a folder/ }).click();
 
-    await expect(page.getByText("Choose a project path first")).toBeVisible();
-    await expect(page).toHaveURL(/\/threads$/);
-  });
-
-  test("a path that is not an existing directory is rejected by the server", async ({ page }) => {
-    await register(page);
-    await startThread(page, "/definitely/not/a/real/dir", "hello");
-
+    const pathField = page.getByLabel("Path");
+    await pathField.fill("/definitely/not/a/real/dir");
+    await pathField.press("Enter");
     await expect(page.getByText("Directory does not exist")).toBeVisible();
-    await expect(page).toHaveURL(/\/threads$/);
 
-    await startThread(page, "relative/path", "hello");
+    await pathField.fill("relative/path");
+    await pathField.press("Enter");
     await expect(page.getByText("Project path must be an absolute path")).toBeVisible();
   });
 
-  test("a valid path opens the thread; without a model key the agent reports why", async ({
+  test("a prompt without choosing a project is refused", async ({ page }) => {
+    await register(page);
+    await createProject(page, "project", PROJECT_PATH);
+    await page.getByLabel("Prompt").fill("hello");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    // `_authed`'s beforeLoad re-checks the session on every navigation, so the URL can update
+    // before the route actually swaps content; wait for the thread's own content to render
+    // before navigating away again, rather than racing that swap.
+    await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
+
+    // Back on the new-thread page, the project the agent just worked in is no longer pre-selected.
+    await page.getByRole("button", { name: "New thread" }).click();
+    await expect(page.getByLabel("Project")).toBeVisible();
+    await page.getByLabel("Prompt").fill("hello again");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    await expect(page.getByText("Choose a project first")).toBeVisible();
+    await expect(page).toHaveURL(/\/threads$/);
+  });
+
+  test("creating a project opens the thread once prompted; without a model key the agent reports why", async ({
     page,
   }) => {
     await register(page);
-    await startThread(page, PROJECT_PATH, "Explain the project layout");
+    await startThread(page, "Explain the project layout");
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect(page.getByText("ANTHROPIC_API_KEY is not set")).toBeVisible();
@@ -68,11 +103,10 @@ test.describe("threads", () => {
     ).toBeVisible();
     await expect(page.getByLabel("Prompt")).toBeEnabled();
 
-    // The path is remembered as a shortcut for the next thread.
+    // The project is offered again as a shortcut for the next thread.
     await page.getByRole("button", { name: "New thread" }).click();
-    await expect(page.getByLabel("Recent project paths").getByRole("button")).toContainText(
-      PROJECT_PATH,
-    );
+    await page.getByLabel("Project").click();
+    await expect(page.getByRole("option", { name: "project" })).toBeVisible();
   });
 
   test("a thread from another organization is not found", async ({ page }) => {
@@ -144,7 +178,7 @@ test.describe("threads", () => {
     );
 
     await register(page);
-    await startThread(page, PROJECT_PATH, "Rename hello to bye");
+    await startThread(page, "Rename hello to bye");
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await expect(page.locator('[data-role="user"]')).toContainText("Rename hello to bye");
@@ -183,7 +217,7 @@ test.describe("threads", () => {
     });
 
     await register(page);
-    await startThread(page, PROJECT_PATH, "long task");
+    await startThread(page, "long task");
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await page.getByLabel("Prompt").fill("one more thing");

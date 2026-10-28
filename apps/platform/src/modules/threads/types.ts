@@ -9,6 +9,7 @@ export type ThreadState = "open" | "snoozed" | "archived";
 
 export type Thread = {
   id: string;
+  projectId: string;
   title: string;
   /** Directory on the machine running control-plane that the agent works in. */
   projectPath: string;
