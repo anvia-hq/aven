@@ -1,13 +1,43 @@
 import { db } from "@aven/db/client";
 import { providers, type ProviderRow } from "@aven/db/schema/providers";
-import type { ModelConfig } from "@aven/agents/model";
+import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "./crypto";
+import { modelCatalog } from "./model-catalog";
 import type { CreateProviderBody, UpdateProviderBody } from "./schema";
 
 export class InvalidProviderError extends Error {}
 export class ModelListError extends Error {}
+// A message asked for a provider, model or effort the user cannot run with.
+export class InvalidSelectionError extends Error {}
+
+// What a message may choose beyond the user's default: one of their own providers, a model of it
+// and a reasoning effort that model supports.
+export type ModelSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
+
+// A model's effort levels: the SDK's own list, or for a model newer than the SDK the one models.dev
+// lists (`effortLevels`, which the model must then be built with for the SDK to accept it).
+async function effortsFor(kind: ModelConfig["provider"], modelId: string | undefined) {
+  const sdk = reasoningControlsFor({ provider: kind, modelId });
+  if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
+  const effortLevels = (await modelCatalog.efforts(kind, modelId)) ?? undefined;
+  return {
+    controls: reasoningControlsFor({ provider: kind, modelId, effortLevels }),
+    effortLevels,
+  };
+}
+
+// The effort levels of each listed model that has any; models without the control are left out.
+export async function effortsByModel(kind: ModelConfig["provider"], ids: string[]) {
+  const entries = await Promise.all(
+    ids.map(async (id) => [id, (await effortsFor(kind, id)).controls] as const),
+  );
+  return Object.fromEntries(entries.filter(([, controls]) => controls)) as Record<
+    string,
+    ReasoningControls
+  >;
+}
 
 type ModelSource = { kind: string; apiKey?: string; baseUrl?: string };
 
@@ -46,6 +76,12 @@ export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = f
     typeof item?.id === "string" ? [item.id] : [],
   );
   return [...new Set(ids)].sort();
+}
+
+// A provider's models that can drive the agent (see `model-catalog.ts`).
+export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetch) {
+  const ids = await fetchModels(source, fetchFn);
+  return modelCatalog.chatModels(source.kind as ModelConfig["provider"], ids);
 }
 
 // What the API returns: never the key itself, only a hint.
@@ -174,26 +210,52 @@ export const providersService = {
       .from(providers)
       .where(and(eq(providers.id, id), eq(providers.userId, userId)));
     if (!row) return null;
-    return fetchModels({
+    const models = await listAgentModels({
       kind: row.kind,
       baseUrl: row.baseUrl ?? undefined,
       apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
     });
+    return { models, efforts: await effortsByModel(row.kind as ModelConfig["provider"], models) };
   },
 
-  // The model configuration for a user's default provider, or null if they have none. Decrypts
-  // the key, so call it only where a run is being started.
-  async resolveModel(userId: string): Promise<ModelConfig | null> {
+  // The model configuration for a run: the provider the message chose (it must be the user's own)
+  // or else their default, or null if they have neither. Decrypts the key, so call it only where
+  // a run is being started. Throws InvalidSelectionError for a choice that cannot run.
+  async resolveModel(userId: string, selection: ModelSelection = {}): Promise<ModelConfig | null> {
     const [row] = await db
       .select()
       .from(providers)
-      .where(and(eq(providers.userId, userId), eq(providers.isDefault, true)));
-    if (!row) return null;
-    return {
+      .where(
+        selection.providerId
+          ? and(eq(providers.id, selection.providerId), eq(providers.userId, userId))
+          : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
+      );
+    if (!row) {
+      if (selection.providerId) throw new InvalidSelectionError("Provider not found");
+      if (selection.modelId || selection.reasoningEffort) {
+        throw new InvalidSelectionError("Add a provider to choose a model");
+      }
+      return null;
+    }
+    const config: ModelConfig = {
       provider: row.kind as ModelConfig["provider"],
-      modelId: row.modelId ?? undefined,
+      modelId: selection.modelId ?? row.modelId ?? undefined,
       baseUrl: row.baseUrl ?? undefined,
       apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
     };
+    if (selection.modelId && !(await modelCatalog.canRun(config.provider, selection.modelId))) {
+      throw new InvalidSelectionError(`${selection.modelId} cannot be used to run the agent`);
+    }
+    if (selection.reasoningEffort) {
+      const { controls, effortLevels } = await effortsFor(config.provider, config.modelId);
+      if (!controls?.options.includes(selection.reasoningEffort)) {
+        throw new InvalidSelectionError(
+          `This model does not support the "${selection.reasoningEffort}" reasoning effort`,
+        );
+      }
+      config.reasoningEffort = selection.reasoningEffort;
+      config.effortLevels = effortLevels;
+    }
+    return config;
   },
 };

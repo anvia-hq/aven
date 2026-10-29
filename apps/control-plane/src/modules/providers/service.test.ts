@@ -6,7 +6,7 @@ run("providersService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
-  const { providersService } = await import("./service");
+  const { InvalidSelectionError, effortsByModel, providersService } = await import("./service");
 
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
@@ -15,6 +15,7 @@ run("providersService (postgres)", async () => {
 
   beforeAll(async () => {
     previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
+    process.env.MODEL_CATALOG_URL = "";
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString("base64");
     await db.insert(users).values([
       { id: alice, name: "Alice", email: `${alice}@aven.test` },
@@ -59,6 +60,45 @@ run("providersService (postgres)", async () => {
     });
   });
 
+  test("a message may choose its own provider, model and effort, but never someone else's", async () => {
+    const [mine] = await providersService.list(alice);
+    const chosen = await providersService.resolveModel(alice, {
+      providerId: mine!.id,
+      modelId: "o3",
+      reasoningEffort: "low",
+    });
+    expect(chosen).toMatchObject({ provider: "openai", modelId: "o3", reasoningEffort: "low" });
+
+    await expect(providersService.resolveModel(bob, { providerId: mine!.id })).rejects.toThrow(
+      InvalidSelectionError,
+    );
+    await expect(
+      providersService.resolveModel(alice, {
+        providerId: mine!.id,
+        modelId: "o3",
+        reasoningEffort: "max",
+      }),
+    ).rejects.toThrow("does not support");
+    await expect(
+      providersService.resolveModel(alice, {
+        providerId: mine!.id,
+        modelId: "gpt-4o",
+        reasoningEffort: "low",
+      }),
+    ).rejects.toThrow("does not support");
+    // Models that are not chat models are refused before a run starts.
+    await expect(
+      providersService.resolveModel(alice, {
+        providerId: mine!.id,
+        modelId: "text-embedding-3-small",
+      }),
+    ).rejects.toThrow("cannot be used");
+    // A choice with no provider to apply it to is refused rather than silently dropped.
+    await expect(providersService.resolveModel(bob, { reasoningEffort: "low" })).rejects.toThrow(
+      "Add a provider",
+    );
+  });
+
   test("a second default replaces the first, and an omitted key is kept", async () => {
     const second = await providersService.create(alice, {
       kind: "openai-compatible",
@@ -98,5 +138,12 @@ run("providersService (postgres)", async () => {
     await expect(providersService.update(alice, compat.id, { modelId: null })).rejects.toThrow(
       "needs a model id",
     );
+  });
+
+  test("model efforts come from the SDK and leave out models without the control", async () => {
+    expect(await effortsByModel("openai", ["gpt-4o", "o3"])).toEqual({
+      o3: { options: ["low", "medium", "high"], defaultValue: "medium" },
+    });
+    expect(await effortsByModel("openai-compatible", ["llama3"])).toEqual({});
   });
 });

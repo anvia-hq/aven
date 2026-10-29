@@ -3,7 +3,8 @@ import type { ChatMessage, DiffLine, MessagePart, ToolPart } from "@aven/agents/
 // The transcript types are the wire protocol, shared with the control-plane.
 export type { ChatMessage, DiffLine, MessagePart, ToolPart };
 
-export type Mode = "smart" | "rush";
+/** What a message asks to run with; omitted fields fall back to the sender's default provider. */
+export type RunSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
 
 export type ThreadState = "open" | "snoozed" | "archived";
 
@@ -18,11 +19,6 @@ export type Thread = {
   createdAt: string;
   updatedAt: string;
 };
-
-export const MODES: { value: Mode; label: string; description: string }[] = [
-  { value: "smart", label: "Smart", description: "Best quality, unconstrained" },
-  { value: "rush", label: "Rush", description: "Faster and cheaper for small tasks" },
-];
 
 export const SUGGESTIONS = [
   "Explain how this project is structured",

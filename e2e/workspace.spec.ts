@@ -119,13 +119,15 @@ test.describe("settings", () => {
     await expect(page).toHaveURL(/\/settings\/members$/);
   });
 
-  test("profile saves and the dark mode switch changes the theme", async ({ page }) => {
+  test("the profile name saves and the dark mode switch changes the theme", async ({ page }) => {
     await register(page);
     await page.goto("/settings/profile");
     await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
 
+    await page.getByLabel("Name").fill("Renamed Person");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Profile saved")).toBeVisible();
+    await expect(page.getByText("Renamed Person")).toBeVisible();
 
     await expect(page.locator("html")).toHaveClass(/dark/);
     await page.getByRole("switch", { name: "Dark mode" }).click();
@@ -139,10 +141,8 @@ test.describe("settings", () => {
 
     const nav = page.getByRole("navigation", { name: "Settings" });
     for (const [name, url] of [
-      ["API keys", /api-keys$/],
+      ["Providers", /providers$/],
       ["Members", /members$/],
-      ["Usage", /usage$/],
-      ["Integrations", /integrations$/],
       ["Profile", /profile$/],
     ] as const) {
       await nav.getByRole("link", { name }).click();
@@ -168,51 +168,6 @@ test.describe("settings", () => {
     await page.getByRole("button", { name: "Remove new.person" }).click();
     await expect(table.getByText("new.person@aven.test")).toHaveCount(0);
   });
-
-  test("create an API key, see the secret once, then revoke it", async ({ page }) => {
-    await register(page);
-    await page.goto("/settings/api-keys");
-    const table = page.getByRole("table", { name: "API keys" });
-    await expect(table.getByRole("row")).toHaveCount(4);
-
-    await page.getByRole("button", { name: "Create key" }).click();
-    await page.getByLabel("Name").fill("e2e key");
-    await page.getByRole("button", { name: "Create key" }).last().click();
-
-    await expect(page.getByTestId("new-api-key")).toHaveText(/^avn_[0-9a-f]{32}$/);
-    await page.getByRole("button", { name: "Done" }).click();
-
-    await expect(table.getByRole("row", { name: /e2e key/ })).toContainText("Never");
-    await page.getByRole("button", { name: "Revoke e2e key" }).click();
-    await expect(table.getByText("e2e key")).toHaveCount(0);
-  });
-
-  test("usage totals change with the range", async ({ page }) => {
-    await register(page);
-    await page.goto("/settings/usage");
-
-    const totals = page.getByRole("region", { name: "Totals" });
-    const before = await totals.innerText();
-    await page.getByRole("button", { name: "7 days" }).click();
-    await expect.poll(() => totals.innerText()).not.toBe(before);
-    await expect(page.getByRole("img", { name: /over 7 days/ })).toBeVisible();
-  });
-
-  test("integrations can be connected and disconnected", async ({ page }) => {
-    await register(page);
-    await page.goto("/settings/integrations");
-
-    const slack = page.getByRole("switch", { name: "Slack" });
-    await expect(slack).not.toBeChecked();
-    await slack.click();
-    await expect(slack).toBeChecked();
-    await expect(page.getByText("Slack connected")).toBeVisible();
-
-    const github = page.getByRole("switch", { name: "GitHub" });
-    await expect(github).toBeChecked();
-    await github.click();
-    await expect(github).not.toBeChecked();
-  });
 });
 
 test.describe("sidebar and search", () => {
@@ -228,9 +183,9 @@ test.describe("sidebar and search", () => {
     await page.keyboard.press("ControlOrMeta+k");
     await expect(page.getByPlaceholder("Search threads, projects and pages…")).toBeVisible();
 
-    await page.keyboard.type("usage");
+    await page.keyboard.type("members");
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/settings\/usage$/);
+    await expect(page).toHaveURL(/\/settings\/members$/);
 
     await page.getByRole("button", { name: "Search" }).click();
     await page.keyboard.type("docs-site");

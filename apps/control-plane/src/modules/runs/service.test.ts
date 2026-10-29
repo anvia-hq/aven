@@ -13,6 +13,7 @@ import { createCodingAgent } from "@aven/agents/coding-agent";
 import { createMemoryStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/agents/protocol";
 
+import type { ModelSelection } from "../providers/service";
 import { RunBusyError, RunManager, type RunThread } from "./service";
 
 // Needs the migrated Postgres from DATABASE_URL; skipped when there is none.
@@ -213,6 +214,35 @@ run("RunManager (scripted model, real postgres)", async () => {
     expect(history[2]!.parts[0]).toMatchObject({ type: "text" });
     expect(JSON.stringify(history[2])).toContain("Background command finished");
     expect(JSON.stringify(history[2])).toContain("bg-output");
+  });
+
+  test("a restarted run reuses what the last sender chose, or their default if it is gone", async () => {
+    const asked: (ModelSelection | undefined)[] = [];
+    let providerGone = false;
+    const model = scriptedModel([
+      [toolCall("shell", { command: "sleep 0.3; echo bg", background: true }, "c1")],
+      [text("started it")],
+      [text("got the notice")],
+    ]);
+    const manager = new RunManager({
+      store,
+      resolveModel: async (_userId, selection) => {
+        asked.push(selection);
+        if (selection && providerGone) throw new Error("Provider not found");
+        return null;
+      },
+      createAgent: (thread, jobs, memory) =>
+        createCodingAgent({ root: thread.projectPath, jobs, memory, webSearch: false, model }),
+    });
+    const thread = newThread();
+    const selection = { providerId: crypto.randomUUID(), reasoningEffort: "low" };
+    await manager.start(thread, "run it", { userId: "u1", model: null, selection });
+    providerGone = true;
+
+    await until(async () =>
+      JSON.stringify(await manager.history(thread)).includes("got the notice"),
+    );
+    expect(asked).toEqual([selection, undefined]);
   });
 
   test("a notice steered into a run that is about to end is not lost", async () => {

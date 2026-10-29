@@ -8,9 +8,10 @@ import { NewProjectDialog } from "@/modules/projects/components/new-project-dial
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
+import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import { SUGGESTIONS } from "@/modules/threads/types";
+import { SUGGESTIONS, type RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/threads/")({
   component: NewThread,
@@ -29,7 +30,11 @@ function ProjectPicker({
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={value ?? ""} onValueChange={(next) => next && onChange(next)}>
+      <Select
+        items={projects.map((project) => ({ value: project.id, label: project.name }))}
+        value={value ?? ""}
+        onValueChange={(next) => next && onChange(next)}
+      >
         <SelectTrigger aria-label="Project" className="w-full">
           <SelectValue placeholder="Choose a project" />
         </SelectTrigger>
@@ -48,16 +53,17 @@ function ProjectPicker({
 
 function NewThread() {
   const startThread = useStartThread();
+  const { selection } = useModelSelection();
   const { projects, loaded } = useProjects();
   const recent = useThreads().threads.slice(0, 3);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
 
-  function start(prompt: string) {
+  function start(prompt: string, selection: RunSelection) {
     if (!projectId) {
       toast.add({ title: "Choose a project first", type: "error" });
       return;
     }
-    void startThread(projectId, prompt);
+    void startThread(projectId, prompt, selection);
   }
 
   return (
@@ -87,7 +93,7 @@ function NewThread() {
                 variant="outline"
                 size="sm"
                 className="rounded-full font-normal text-muted-foreground"
-                onClick={() => start(suggestion)}
+                onClick={() => start(suggestion, selection)}
               >
                 {suggestion}
               </Button>

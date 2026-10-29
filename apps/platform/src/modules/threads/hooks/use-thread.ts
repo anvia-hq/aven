@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { api, ApiError, postJson } from "@/lib/api";
 
-import type { ChatMessage } from "../types";
+import type { ChatMessage, RunSelection } from "../types";
 import { useThreads } from "./use-threads";
 
 // A live view of one thread. The server owns the run: this attaches over server-sent events,
@@ -36,9 +36,9 @@ export function useThread(threadId: string) {
   }, [threadId, refresh]);
 
   const send = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, selection: RunSelection = {}) => {
       try {
-        await postJson(`/threads/${threadId}/messages`, { prompt });
+        await postJson(`/threads/${threadId}/messages`, { prompt, ...selection });
       } catch (failure) {
         const message =
           failure instanceof ApiError ? failure.message : "Could not reach the server";

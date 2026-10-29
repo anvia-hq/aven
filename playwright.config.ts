@@ -34,6 +34,7 @@ export default defineConfig({
         AGENT_PROVIDER: "anthropic",
         ANTHROPIC_API_KEY: "",
         PROVIDER_ENCRYPTION_KEY: "ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=",
+        MODEL_CATALOG_URL: "",
       },
     },
     {

@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
-import { fetchModels, InvalidProviderError, ModelListError, providersService } from "./service";
+import { InvalidProviderError, ModelListError, listAgentModels, providersService } from "./service";
 
 // Providers belong to the signed-in user, not to the active organization, so no `org: true`.
 export const providersRouter = new Elysia({ prefix: "/providers" })
@@ -16,7 +16,7 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     "/models",
     async ({ body }) => {
       try {
-        return { models: await fetchModels(body) };
+        return { models: await listAgentModels(body) };
       } catch (error) {
         if (error instanceof ModelListError) return status(422, error.message);
         throw error;
@@ -28,8 +28,9 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     "/:id/models",
     async ({ params, user }) => {
       try {
-        const models = await providersService.listModels(user.id, params.id);
-        return models ? { models } : status(404, "Provider not found");
+        // `efforts` maps a model id to the reasoning levels it accepts; absent means none.
+        const listing = await providersService.listModels(user.id, params.id);
+        return listing ?? status(404, "Provider not found");
       } catch (error) {
         if (error instanceof ModelListError) return status(422, error.message);
         throw error;

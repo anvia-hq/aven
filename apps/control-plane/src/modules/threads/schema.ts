@@ -18,6 +18,10 @@ export const updateThreadBody = z
 
 export const sendMessageBody = z.object({
   prompt: z.string().trim().min(1).max(20_000),
+  // Optional per-message choice; without it the sender's default provider runs.
+  providerId: z.uuid().optional(),
+  modelId: z.string().trim().min(1).max(200).optional(),
+  reasoningEffort: z.string().trim().min(1).max(20).optional(),
 });
 
 export type CreateThreadBody = z.infer<typeof createThreadBody>;

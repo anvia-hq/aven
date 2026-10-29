@@ -4,12 +4,14 @@ import { useCallback, useEffect } from "react";
 import { toast } from "@/components/toast";
 import { ApiError, api, postJson } from "@/lib/api";
 
+import { providerModelsAtom } from "../atoms/provider-models-atom";
 import { providersAtom } from "../atoms/providers-atom";
 import type { NewProvider, Provider } from "../types";
 
 // Providers belong to the signed-in user, so drop them on sign-out; the next user refetches.
 export function clearProviders() {
   getDefaultStore().set(providersAtom, null);
+  getDefaultStore().set(providerModelsAtom, {});
 }
 
 const messageOf = (failure: unknown) =>

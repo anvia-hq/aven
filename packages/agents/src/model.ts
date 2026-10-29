@@ -1,4 +1,5 @@
 import { AnthropicClient } from "@anvia/anthropic";
+import { defineCompletionModelControls, type CompletionModelControls } from "@anvia/core";
 import { OpenAIClient } from "@anvia/openai";
 
 export type Provider = "openai" | "anthropic" | "openai-compatible";
@@ -11,6 +12,14 @@ export type ModelConfig = {
   apiKey?: string;
   /** Required for `openai-compatible`: the server's API root, e.g. http://localhost:11434/v1. */
   baseUrl?: string;
+  /** One of the levels `reasoningControlsFor` reports for the model; unsupported values make the run fail. */
+  reasoningEffort?: string;
+  /**
+   * Effort levels for a model the SDK does not know yet, vouched for by the host (for example from
+   * models.dev). They replace the SDK's list, so pass them only when `reasoningControlsFor`
+   * finds none.
+   */
+  effortLevels?: readonly string[];
 };
 
 // `openai-compatible` has no default: every server names its own models.
@@ -18,6 +27,18 @@ export const DEFAULT_MODEL_IDS = {
   openai: "gpt-5.6",
   anthropic: "claude-sonnet-5",
 } as const satisfies Partial<Record<Provider, string>>;
+
+// Controls for a model the SDK has none for, built from levels the host supplies.
+function controlsFromLevels(levels: readonly string[] | undefined) {
+  if (!levels?.length) return undefined;
+  return defineCompletionModelControls({
+    reasoningEffort: {
+      type: "select",
+      label: "Reasoning effort",
+      options: [...levels],
+    },
+  });
+}
 
 export function createModel(config: ModelConfig) {
   if (config.provider === "openai-compatible") {
@@ -37,6 +58,7 @@ export function createModel(config: ModelConfig) {
     return new OpenAIClient({ apiKey }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.openai,
       api: "responses",
+      controls: controlsFromLevels(config.effortLevels),
     });
   }
 
@@ -44,6 +66,7 @@ export function createModel(config: ModelConfig) {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
   return new AnthropicClient({ apiKey }).completionModel({
     modelId: config.modelId ?? DEFAULT_MODEL_IDS.anthropic,
+    controls: controlsFromLevels(config.effortLevels),
   });
 }
 
@@ -54,4 +77,22 @@ export function createModel(config: ModelConfig) {
 // cached. Only Anthropic's own API takes it; other providers get no extra options.
 export function providerOptionsFor(provider: Provider) {
   return provider === "anthropic" ? { cache_control: { type: "ephemeral" } } : undefined;
+}
+
+export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
+
+// The reasoning effort levels a model accepts, read from the SDK's own per-model controls, or null
+// when it has none (older Anthropic and OpenAI models, and every OpenAI-compatible server, which
+// must not be sent a `reasoning_effort` they may reject). Builds the model offline with a
+// placeholder key, so nothing leaves the process.
+export function reasoningControlsFor(
+  config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
+): ReasoningControls | null {
+  if (config.provider === "openai-compatible") return null;
+  const controls: CompletionModelControls | undefined = createModel({
+    ...config,
+    apiKey: "unused",
+  }).controls;
+  const control = controls?.reasoningEffort;
+  return control ? { options: control.options, defaultValue: control.defaultValue ?? null } : null;
 }

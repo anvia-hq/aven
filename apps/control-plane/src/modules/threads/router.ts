@@ -1,7 +1,7 @@
 import { Elysia, sse, status } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { providersService } from "../providers/service";
+import { InvalidSelectionError, providersService } from "../providers/service";
 import { RunBusyError, runsService } from "../runs/service";
 import { createThreadBody, sendMessageBody, threadParams, updateThreadBody } from "./schema";
 import { ProjectNotFoundError, threadsService } from "./service";
@@ -56,11 +56,13 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
     async ({ params, body, organizationId, user, set }) => {
       const thread = await threadsService.get(organizationId, params.id);
       if (!thread) return status(404, "Thread not found");
+      const { prompt, ...selection } = body;
       try {
         // The sender's own provider; null falls back to the environment's shared one.
-        const model = await providersService.resolveModel(user.id);
-        await runsService.start(thread, body.prompt, { userId: user.id, model });
+        const model = await providersService.resolveModel(user.id, selection);
+        await runsService.start(thread, prompt, { userId: user.id, model, selection });
       } catch (error) {
+        if (error instanceof InvalidSelectionError) return status(422, error.message);
         if (error instanceof RunBusyError) return status(409, error.message);
         return status(503, error instanceof Error ? error.message : "Could not start the agent");
       }

@@ -17,30 +17,6 @@ export type Member = {
   status: "active" | "pending";
 };
 
-export type ApiKey = {
-  id: string;
-  name: string;
-  prefix: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-};
-
-export type IntegrationIcon = "github" | "slack" | "linear" | "sentry" | "postgres" | "browser";
-
-export type Integration = {
-  id: string;
-  name: string;
-  description: string;
-  icon: IntegrationIcon;
-  connected: boolean;
-};
-
-export type UsagePoint = {
-  date: string;
-  tokens: number;
-  cost: number;
-};
-
 export const PROVIDER_KINDS = ["openai", "anthropic", "openai-compatible"] as const;
 
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
@@ -71,3 +47,9 @@ export type NewProvider = {
   baseUrl?: string;
   modelId?: string;
 };
+
+/** The reasoning levels a model accepts, lowest first, and the one it uses when none is sent. */
+export type ModelEfforts = { options: string[]; defaultValue: string | null };
+
+/** What a provider offers: its model ids, and the effort levels of those that have any. */
+export type ProviderModels = { models: string[]; efforts: Record<string, ModelEfforts> };

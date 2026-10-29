@@ -49,6 +49,10 @@ export function createCodingAgent(options: CodingAgentOptions) {
     model: "model" in options ? options.model : createModel(options),
     instructions: INSTRUCTIONS,
     providerOptions: "provider" in options ? providerOptionsFor(options.provider) : undefined,
+    controls:
+      "provider" in options && options.reasoningEffort
+        ? { reasoningEffort: options.reasoningEffort }
+        : undefined,
     maxTurns: options.maxTurns ?? 50,
     tools,
     memory: options.memory && { store: options.memory, savePolicy: "turn" },

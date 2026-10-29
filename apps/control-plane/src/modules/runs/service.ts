@@ -10,7 +10,7 @@ import { messagesToChat, projectStreamEvent } from "@aven/agents/projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/agents/protocol";
 import type { ModelConfig, Provider } from "@aven/agents/model";
 
-import { providersService } from "../providers/service";
+import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
 
 export type RunThread = { id: string; organizationId: string; projectPath: string };
@@ -38,8 +38,8 @@ type Channel = {
   jobs: JobRegistry;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
-  /** Who sent the last message; a run restarted by a finished background job uses their provider. */
-  lastUserId?: string;
+  /** Who sent the last message and what they chose; a run restarted by a finished background job reuses it. */
+  lastSender?: { userId: string; selection?: ModelSelection };
 };
 
 export class RunBusyError extends Error {
@@ -75,14 +75,16 @@ export class RunManager {
   #disposed = false;
   #store: MemoryStore;
   #createAgent: CreateAgent;
-  #resolveModel: ((userId: string) => Promise<ModelConfig | null>) | undefined;
+  #resolveModel:
+    | ((userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>)
+    | undefined;
   #onRunFinished: ((thread: RunThread) => void | Promise<void>) | undefined;
 
   constructor(deps: {
     store: MemoryStore;
     createAgent?: CreateAgent;
     /** Looks up a user's provider when a background job restarts a run on their behalf. */
-    resolveModel?: (userId: string) => Promise<ModelConfig | null>;
+    resolveModel?: (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
     /** Called after every run, e.g. to bump the thread in the list. */
     onRunFinished?: (thread: RunThread) => void | Promise<void>;
   }) {
@@ -102,11 +104,11 @@ export class RunManager {
   async start(
     thread: RunThread,
     prompt: string,
-    sender?: { userId: string; model?: ModelConfig | null },
+    sender?: { userId: string; model?: ModelConfig | null; selection?: ModelSelection },
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
-    if (sender) channel.lastUserId = sender.userId;
+    if (sender) channel.lastSender = { userId: sender.userId, selection: sender.selection };
 
     const scope = this.#scope(thread);
     const agent = this.#createAgent(
@@ -241,12 +243,19 @@ export class RunManager {
     return channel;
   }
 
-  // Starts a run for a finished background job, with the provider of whoever last sent a message.
+  // Starts a run for a finished background job, with whatever whoever last sent a message chose.
+  // If that provider or model has since gone, their default runs it instead.
   async #restart(channel: Channel, thread: RunThread, notice: string) {
     try {
-      const userId = channel.lastUserId;
-      const model = userId ? await this.#resolveModel?.(userId) : null;
-      await this.start(thread, notice, userId ? { userId, model } : undefined);
+      const sender = channel.lastSender;
+      let model: ModelConfig | null = null;
+      if (sender) {
+        model =
+          (await this.#resolveModel?.(sender.userId, sender.selection).catch(() =>
+            this.#resolveModel?.(sender.userId),
+          )) ?? null;
+      }
+      await this.start(thread, notice, sender && { ...sender, model });
     } catch {
       // Nothing is listening; the notice is lost, as it was before when start failed.
     }
@@ -311,6 +320,6 @@ function errorMessage(error: unknown) {
 
 export const runsService = new RunManager({
   store: createMemoryStore(db),
-  resolveModel: (userId) => providersService.resolveModel(userId),
+  resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });
