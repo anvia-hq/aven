@@ -1,10 +1,11 @@
 #!/bin/sh
-# Chromium for the sandbox desktop. Run it from a terminal or with xdotool; it draws on the
+# The browser for the sandbox desktop: Google Chrome where it is installed (amd64), else Chromium
+# (arm64, where Google ships no Chrome). Run it from a terminal or with xdotool; it draws on the
 # daemon's display.
 #
-# Chromium's own sandbox needs user namespaces, which Docker's default seccomp profile blocks. The
-# container is already the isolation boundary, so this starts Chromium with --no-sandbox. Set
-# ANVIA_CHROMIUM_SANDBOX=1 to keep Chromium's sandbox instead (run the container with a seccomp
+# The browser's own sandbox needs user namespaces, which Docker's default seccomp profile blocks. The
+# container is already the isolation boundary, so this starts it with --no-sandbox. Set
+# ANVIA_CHROMIUM_SANDBOX=1 to keep the browser's sandbox instead (run the container with a seccomp
 # profile that allows user namespaces, or with --cap-add SYS_ADMIN).
 #
 # --test-type hides the "unsupported command-line flag: --no-sandbox" banner, which would otherwise
@@ -14,13 +15,13 @@ if [ "${ANVIA_CHROMIUM_SANDBOX:-0}" = "1" ]; then
 else
   sandbox_flags="--no-sandbox --test-type"
 fi
+browser=$(command -v google-chrome-stable || command -v chromium)
 # shellcheck disable=SC2086  # the flags are meant to be split
-exec chromium \
-  --class=chromium \
+exec "$browser" \
   --no-first-run \
   --no-default-browser-check \
   --password-store=basic \
   --disable-dev-shm-usage \
   $sandbox_flags \
-  --user-data-dir="${ANVIA_BROWSER_PROFILE:-$HOME/.chromium-profile}" \
+  --user-data-dir="${ANVIA_BROWSER_PROFILE:-$HOME/.chrome-profile}" \
   "$@"
