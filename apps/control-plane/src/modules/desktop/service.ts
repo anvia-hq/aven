@@ -6,15 +6,15 @@ import { threadsService } from "../threads/service";
 import { desktopControl, desktopInfo } from "./schema";
 
 /** How long a takeover lasts unless the page renews it, so a closed tab gives control back. */
-export const TAKEOVER_LEASE_MS = 60_000;
+const TAKEOVER_LEASE_MS = 60_000;
 
-export class SandboxNotRunningError extends ConflictError {
+class SandboxNotRunningError extends ConflictError {
   constructor() {
     super("The thread's sandbox is not running");
   }
 }
 
-export class DesktopTakenError extends ConflictError {
+class DesktopTakenError extends ConflictError {
   constructor() {
     super("Someone else is controlling the desktop");
   }

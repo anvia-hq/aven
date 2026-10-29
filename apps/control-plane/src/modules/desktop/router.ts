@@ -69,7 +69,6 @@ export const desktopRouter = (hub: RuntimeHub) => {
         const { organizationId, params } = ws.data;
         try {
           const handle = await service.openViewer(organizationId, params.id, {
-            opened: () => undefined,
             data(bytes) {
               if (bufferedAmount(ws.raw) > MAX_BROWSER_BUFFER_BYTES) {
                 ws.close(POLICY_VIOLATION, "The viewer is too slow");
@@ -80,7 +79,9 @@ export const desktopRouter = (hub: RuntimeHub) => {
             },
             closed: (reason) => ws.close(GOING_AWAY, reason.slice(0, 120)),
           });
-          viewers.set(ws.raw, handle);
+          // The browser may have left while the runner was answering; nothing would close this.
+          if (ws.raw.readyState !== WebSocket.OPEN) handle.close();
+          else viewers.set(ws.raw, handle);
         } catch (error) {
           ws.close(
             INTERNAL_ERROR,

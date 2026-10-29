@@ -133,6 +133,20 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect((await ask(ws, received, "repo.access", { runId: "run-git" })).ok).toBe(false);
   });
 
+  test("a runtime is asked for only so many viewers at once", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "v" });
+    await open(server.server?.port, token);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const sink = { data: () => undefined, closed: () => undefined };
+
+    const handles = Array.from({ length: 32 }, () => connection.openViewer("t", sink));
+
+    expect(() => connection.openViewer("t", sink)).toThrow("Too many desktops");
+    handles[0]!.close();
+    expect(() => connection.openViewer("t", sink)).not.toThrow();
+  });
+
   test("a runtime can only touch runs the control plane started on it", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
     const ws = await open(server.server?.port, token);

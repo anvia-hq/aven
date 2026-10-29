@@ -35,8 +35,6 @@ type Run = { thread: RunThreadInfo; sink: RunSink };
 
 /** What a viewer's stream reports to whoever opened it (decision 0015). */
 export type ViewerSink = {
-  /** The runtime is streaming; `data` follows. */
-  opened(): void;
   data(bytes: Uint8Array): void;
   /** The viewer ended or could not start, or the connection dropped; `reason` says why. */
   closed(reason: string): void;
@@ -52,6 +50,8 @@ type Viewer = { sink: ViewerSink; ready: boolean };
 type PendingCall = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 
 const CALL_TIMEOUT_MS = 10_000;
+// Each viewer is a connection into a sandbox, so a runner is asked for only so many at once.
+const MAX_VIEWERS = 32;
 
 // One connected runtime. The runtime is not trusted: it may only touch runs this connection
 // started, only while they are live, and the conversation scope always comes from our own record
@@ -92,6 +92,9 @@ export class RuntimeConnection {
   // Starts streaming a thread's desktop. Throws when the runtime is offline; whether the thread has
   // a running sandbox is the runtime's answer, through `sink.closed`.
   openViewer(threadId: string, sink: ViewerSink): ViewerHandle {
+    if (this.#viewers.size >= MAX_VIEWERS) {
+      throw new UnavailableError("Too many desktops are open on this runner");
+    }
     const viewerId = crypto.randomUUID();
     this.post({ type: "desktop.open", viewerId, threadId });
     this.#viewers.set(viewerId, { sink, ready: false });
@@ -186,7 +189,6 @@ export class RuntimeConnection {
         const viewer = this.#viewers.get(message.viewerId);
         if (!viewer) return;
         viewer.ready = true;
-        viewer.sink.opened();
         return;
       }
       case "desktop.closed": {

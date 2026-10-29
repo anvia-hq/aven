@@ -199,6 +199,17 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
     await until(() => seen.messages.some((message) => message.type === "desktop.close"));
   });
 
+  test("a browser that leaves while the viewer is still opening does not leave it open", async () => {
+    const { thread, seen } = await setup();
+    const { ws } = view(thread.id, owner.token);
+
+    // As soon as the socket is up, before the thread lookup and the runner's answer.
+    ws.onopen = () => ws.close();
+
+    await until(() => seen.messages.some((message) => message.type === "desktop.open"));
+    await until(() => seen.messages.some((message) => message.type === "desktop.close"));
+  });
+
   test("a thread with no running sandbox ends the stream and says so", async () => {
     const { thread } = await setup({ running: false });
     const { events } = view(thread.id, owner.token);

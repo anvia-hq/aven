@@ -22,6 +22,6 @@ A runner only connects out to the control plane, so a browser cannot reach it di
 - **Read-only is enforced in the page, not on the wire.** The relay passes the browser's bytes to the desktop as they are, so a signed-in member who bypasses the page can send input without the lock. They could already instruct the agent to do the same, so this is not new access; the lock exists to stop the agent and a person fighting over the pointer, not to authorize. Filtering RFB input messages in the control plane would enforce it and is not done.
 - **An open Desktop panel keeps a 2 GB container alive** for as long as it is open, because the sandbox is not idle while watched.
 - A member can hold control for up to a minute after closing a tab, since only the lease ends it.
-- There is no limit on how many viewers one person opens.
+- A runner is asked for at most 32 viewers at once. There is no limit per person, so one member can use them all.
 - Every viewer's bytes pass through the control plane; the runner link is the shared bottleneck.
 - e2e checks the browser, the proxy, the control plane and the wire with a fake runner (`e2e/fake-runner.ts`) that serves a pretend VNC desktop. The real KDE desktop was checked by hand, through a real runner and container.
