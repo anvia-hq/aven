@@ -4,6 +4,7 @@ import { authRouter } from "./modules/auth/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
+import { runtimesRouter } from "./modules/runtimes/router";
 import { runsService } from "./modules/runs/service";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
@@ -14,6 +15,7 @@ const app = new Elysia()
   .use(platformRouter)
   .use(projectsRouter)
   .use(providersRouter)
+  .use(runtimesRouter)
   .use(threadsRouter)
   .use(usersRouter);
 
