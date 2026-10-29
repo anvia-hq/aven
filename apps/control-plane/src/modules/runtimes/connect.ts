@@ -20,14 +20,22 @@ export const connectRouter = (hub: RuntimeHub) => {
       .ws("/connect", {
         open(ws) {
           const { runtime } = ws.data;
-          connections.set(
-            ws.raw,
-            hub.attach(
-              runtime.id,
-              runtime.organizationId,
-              (message) => ws.send(message),
-              (code, reason) => ws.close(code, reason),
-            ),
+          const connection = hub.attach(
+            runtime.id,
+            runtime.organizationId,
+            (message) => ws.send(message),
+            (code, reason) => ws.close(code, reason),
+          );
+          connections.set(ws.raw, connection);
+          // A revoke or rotation that landed after the check above found nothing to cut off.
+          runtimesService.stillCurrent(runtime).then(
+            (current) => {
+              if (!current) connection.close(4002, "Revoked or token rotated");
+            },
+            (error: unknown) => {
+              console.warn(`Could not re-check runtime ${runtime.id}:`, error);
+              connection.close(1011, "Could not verify the runtime");
+            },
           );
         },
         async message(ws, message) {

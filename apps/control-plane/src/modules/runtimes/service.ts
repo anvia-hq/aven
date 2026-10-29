@@ -126,6 +126,17 @@ export const runtimesService = {
     return row ?? null;
   },
 
+  // Whether a runner `authenticate` found still holds: not revoked, its token not rotated since.
+  // A socket that was upgraded while a revoke landed asks this once attached; the revoke's own
+  // disconnect only reaches sockets that were already attached.
+  async stillCurrent(runtime: RuntimeRow) {
+    const [row] = await db
+      .select({ revokedAt: runtimes.revokedAt, tokenHash: runtimes.tokenHash })
+      .from(runtimes)
+      .where(eq(runtimes.id, runtime.id));
+    return row !== undefined && row.revokedAt === null && row.tokenHash === runtime.tokenHash;
+  },
+
   async touch(id: string) {
     await db.update(runtimes).set({ lastSeenAt: new Date() }).where(eq(runtimes.id, id));
   },

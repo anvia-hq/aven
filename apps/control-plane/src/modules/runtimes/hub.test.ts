@@ -192,6 +192,53 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await until(() => ended.length > 0);
   });
 
+  test("a socket upgraded while its runtime was being revoked is cut off once attached", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
+      name: "race",
+    });
+    const checked = await runtimesService.authenticate(token);
+    // The revoke lands after the token was checked and before the socket attached.
+    await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
+    const authenticate = runtimesService.authenticate;
+    runtimesService.authenticate = async () => checked;
+    try {
+      const ws = await open(server.server?.port, token);
+      const closed = new Promise<number>((resolve) => {
+        ws.onclose = (event) => resolve(event.code);
+      });
+      expect(await closed).toBe(4002);
+      expect(hub.isOnline(runtime.id)).toBe(false);
+    } finally {
+      runtimesService.authenticate = authenticate;
+    }
+  });
+
+  test("a runtime can send only the events its agent projects, and only a known outcome", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "ev" });
+    const ws = await open(server.server?.port, token);
+    await until(() => hub.isOnline(runtime.id));
+    const events: unknown[] = [];
+    const ended: string[] = [];
+    hub
+      .get(runtime.id)!
+      .startRun(
+        "run-ev",
+        { id: crypto.randomUUID(), organizationId: seed.orgA },
+        { event: (e) => events.push(e), end: (o) => ended.push(o), lost: () => undefined },
+      );
+
+    const forged = { type: "snapshot", messages: [], running: false };
+    ws.send(JSON.stringify({ type: "run.event", runId: "run-ev", event: forged }));
+    ws.send(JSON.stringify({ type: "run.event", runId: "run-ev", event: { type: "done" } }));
+    ws.send(JSON.stringify({ type: "run.end", runId: "run-ev", outcome: "totally-fine" }));
+    ws.send(
+      JSON.stringify({ type: "run.event", runId: "run-ev", event: { type: "text", delta: "ok" } }),
+    );
+    await until(() => events.length > 0);
+    expect(events).toEqual([{ type: "text", delta: "ok" }]);
+    expect(ended).toEqual([]);
+  });
+
   test("a runtime is not online until it says hello with a version we speak", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "h" });
     const silent = await open(server.server?.port, token, "/connect", null);

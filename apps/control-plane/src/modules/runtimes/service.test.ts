@@ -41,6 +41,20 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.get(seed.orgA, runtime.id)).toBeNull();
   });
 
+  test("a runner found by its token is no longer current once it is revoked or rotated", async () => {
+    const revoked = await runtimesService.create(seed.orgA, seed.userId, { name: "r1" });
+    const rotated = await runtimesService.create(seed.orgA, seed.userId, { name: "r2" });
+    const revokedRow = (await runtimesService.authenticate(revoked.token))!;
+    const rotatedRow = (await runtimesService.authenticate(rotated.token))!;
+    expect(await runtimesService.stillCurrent(revokedRow)).toBe(true);
+    expect(await runtimesService.stillCurrent(rotatedRow)).toBe(true);
+
+    await runtimesService.revoke(seed.orgA, seed.userId, revoked.runtime.id);
+    await runtimesService.rotate(seed.orgA, seed.userId, rotated.runtime.id);
+    expect(await runtimesService.stillCurrent(revokedRow)).toBe(false);
+    expect(await runtimesService.stillCurrent(rotatedRow)).toBe(false);
+  });
+
   test("the control plane's own runner is visible to every organization and cannot be changed", async () => {
     await runtimesService.ensureLocal();
     await runtimesService.ensureLocal(); // idempotent

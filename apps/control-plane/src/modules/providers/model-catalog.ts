@@ -18,6 +18,10 @@ type CatalogModel = {
   reasoning_options?: { type?: string; values?: string[] }[];
 };
 
+// Entries come from a third-party document; one that is not an object is skipped, not trusted.
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const isUsable = (model: CatalogModel) =>
   model.tool_call === true && (model.modalities?.output ?? []).includes("text");
 
@@ -65,17 +69,18 @@ export function createModelCatalog(
       for (const kind of ["openai", "anthropic"] as const) {
         const models = json[kind]?.models ?? {};
         next[kind] = new Map(
-          Object.entries(models).map(([id, model]) => {
-            const info = model as CatalogModel;
-            return [
-              id,
-              {
-                usable: isUsable(info),
-                deprecated: info.status === "deprecated",
-                efforts: effortsOf(info),
-              },
-            ];
-          }),
+          Object.entries(models)
+            .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))
+            .map(([id, info]) => {
+              return [
+                id,
+                {
+                  usable: isUsable(info),
+                  deprecated: info.status === "deprecated",
+                  efforts: effortsOf(info),
+                },
+              ];
+            }),
         );
       }
       entries = next;

@@ -38,6 +38,15 @@ const serving = (body: unknown, calls = { n: 0 }) =>
     { calls },
   );
 
+describe("a catalog with entries that are not models", () => {
+  test("skips them and still serves the rest", async () => {
+    const models = { ...catalog.openai.models, "gpt-null": null, "gpt-text": "x" };
+    const served = createModelCatalog(serving({ openai: { models } }), Date.now, url);
+    // The name alone would let the deprecated o4-mini through: only a loaded catalog drops it.
+    expect(await served.chatModels("openai", ["o4-mini", "gpt-5.6"])).toEqual(["gpt-5.6"]);
+  });
+});
+
 describe("modelCatalog", () => {
   test("keeps models that call tools and answer in text, and drops the rest", async () => {
     const models = createModelCatalog(serving(catalog), Date.now, url);
