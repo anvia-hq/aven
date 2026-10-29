@@ -236,6 +236,16 @@ live("a sandbox (real docker)", () => {
     expect((await run("ls private.txt 2>&1", other)).stdout).toContain("No such file");
   }, 60_000);
 
+  test("the thread's desktop streams VNC to a viewer, and only a running sandbox has one", async () => {
+    expect(sandboxes.desktop(crypto.randomUUID())).toBeUndefined();
+    const viewer = await sandboxes.desktop(threadId)!.openViewer();
+    const first = await viewer.output[Symbol.asyncIterator]().next();
+    expect(new TextDecoder().decode((first.value as Uint8Array).subarray(0, 11))).toBe(
+      "RFB 003.008",
+    );
+    viewer.close();
+  }, 90_000);
+
   test("it is not the host: no host paths, and no credentials in the environment", async () => {
     expect((await run(`ls ${root} 2>&1`)).stdout).toContain("No such file");
     const env = (await run("env")).stdout;

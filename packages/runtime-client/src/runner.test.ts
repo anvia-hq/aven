@@ -1,14 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import {
+  decodeViewerFrame,
+  encodeViewerFrame,
+  type RuntimeToControlPlane,
+} from "@aven/protocol/runtime-wire";
 
 import { startRuntime, type CreateRuntimeAgent } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { fakeDesktop } from "./testing/fake-desktop";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
 function fakeControlPlane() {
   const received: RuntimeToControlPlane[] = [];
-  let client: { send(data: string): void } | undefined;
+  const receivedBinary: Uint8Array[] = [];
+  let client: { send(data: string | Uint8Array): void } | undefined;
   const opened = Promise.withResolvers<void>();
   const server = Bun.serve({
     port: 0,
@@ -20,15 +26,18 @@ function fakeControlPlane() {
         opened.resolve();
       },
       message(_ws, data) {
-        received.push(JSON.parse(String(data)) as RuntimeToControlPlane);
+        if (typeof data === "string") received.push(JSON.parse(data) as RuntimeToControlPlane);
+        else receivedBinary.push(new Uint8Array(data));
       },
     },
   });
   return {
     url: `ws://localhost:${server.port}`,
     received,
+    receivedBinary,
     opened: opened.promise,
     send: (message: unknown) => client?.send(JSON.stringify(message)),
+    sendBinary: (frame: Uint8Array) => client?.send(frame),
     stop: () => server.stop(true),
   };
 }
@@ -46,6 +55,7 @@ function slowSandbox() {
       await gate.promise;
       return { tools: [], hasRunningProcesses: async () => busy.now };
     },
+    desktop: () => undefined,
     async release(threadId) {
       released.push(threadId);
     },
@@ -100,6 +110,77 @@ function connect(
   return { plane, runtime };
 }
 
+describe("startRuntime desktops", () => {
+  const viewerId = crypto.randomUUID();
+  const withDesktop = (desktop: ReturnType<typeof fakeDesktop>["desktop"] | undefined) => {
+    const { sandbox, ...rest } = slowSandbox();
+    return { sandbox: { ...sandbox, desktop: () => desktop }, ...rest };
+  };
+
+  test("streams a thread's desktop to a viewer and relays the viewer's bytes back", async () => {
+    const fake = fakeDesktop();
+    const { plane, runtime } = connect({ sandbox: withDesktop(fake.desktop).sandbox });
+    await runtime.ready;
+
+    plane.send({ type: "desktop.open", viewerId, threadId: "thread-1" });
+    await until(() => plane.received.some((message) => message.type === "desktop.opened"));
+    await fake.push(new Uint8Array([82, 70, 66]));
+    await until(() => plane.receivedBinary.length === 1);
+    expect(decodeViewerFrame(plane.receivedBinary[0]!)).toEqual({
+      viewerId,
+      payload: new Uint8Array([82, 70, 66]),
+    });
+
+    plane.sendBinary(encodeViewerFrame(viewerId, new Uint8Array([9])));
+    await until(() => fake.record.written.length === 1);
+    expect(fake.record.written[0]).toEqual(new Uint8Array([9]));
+
+    plane.send({ type: "desktop.close", viewerId });
+    await until(() => fake.record.closed);
+  });
+
+  test("answers a desktop call with its result, or with why it failed", async () => {
+    const { plane, runtime } = connect({ sandbox: withDesktop(fakeDesktop().desktop).sandbox });
+    await runtime.ready;
+
+    plane.send({ type: "call", id: "c1", method: "desktop.status", params: { threadId: "t1" } });
+    plane.send({ type: "call", id: "c2", method: "desktop.takeover", params: { threadId: "t1" } });
+
+    await until(() => plane.received.filter((message) => message.type === "reply").length === 2);
+    const replies = plane.received.filter((message) => message.type === "reply");
+    expect(replies.find((reply) => reply.id === "c1")).toMatchObject({
+      ok: true,
+      result: { state: "running", control: { held: false } },
+    });
+    expect(replies.find((reply) => reply.id === "c2")).toMatchObject({
+      ok: false,
+      error: "Invalid parameters",
+    });
+  });
+
+  test("a sandbox someone is watching is not released as idle", async () => {
+    const fake = fakeDesktop();
+    const { sandbox, up, released } = withDesktop(fake.desktop);
+    const { plane, runtime } = connect({
+      sandbox,
+      idleReleaseMs: 50,
+      createAgent: agentThat(() => noEvents),
+    });
+    await runtime.ready;
+    up();
+    plane.send(runStart);
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    plane.send({ type: "desktop.open", viewerId, threadId: "thread-1" });
+    await until(() => plane.received.some((message) => message.type === "desktop.opened"));
+
+    await Bun.sleep(250);
+    expect(released).toEqual([]);
+
+    plane.send({ type: "desktop.close", viewerId });
+    await until(() => released.length === 1);
+  });
+});
+
 describe("startRuntime", () => {
   test("the sandbox gets the repository's access by asking the control plane about the run", async () => {
     const access = {
@@ -113,6 +194,7 @@ describe("startRuntime", () => {
         given = await repo();
         return { tools: [], hasRunningProcesses: async () => false };
       },
+      desktop: () => undefined,
       async release() {},
       async dispose() {},
     };

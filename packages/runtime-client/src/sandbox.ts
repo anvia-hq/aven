@@ -6,6 +6,7 @@ import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
 
+import type { SandboxDesktop } from "@anvia/sandbox";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
@@ -122,6 +123,8 @@ export interface ThreadWorkspaces {
    * workspace holds no clone yet (decision 0013).
    */
   acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
+  /** The desktop of the thread's sandbox while its container is running; never starts one. */
+  desktop(threadId: string): SandboxDesktop | undefined;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
   dispose(): Promise<void>;
@@ -213,6 +216,10 @@ export class Sandboxes implements ThreadWorkspaces {
       hasRunningProcesses: async () =>
         this.#hub.isConnected(thread.id) && (await hasRunningProcesses(runtime)),
     };
+  }
+
+  desktop(threadId: string) {
+    return this.#hub.isConnected(threadId) ? this.#hub.desktop(threadId) : undefined;
   }
 
   async release(threadId: string) {

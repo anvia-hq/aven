@@ -277,6 +277,7 @@ export function directoryWorkspaces(
         hasRunningProcesses: () => hasRunningProcesses(current),
       };
     },
+    desktop: () => undefined,
     release: free,
     async dispose() {
       await Promise.all([...sandboxes.keys()].map(free));

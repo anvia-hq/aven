@@ -3,6 +3,7 @@ import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
 import { projectStreamEvent } from "@aven/agents/projection";
 import {
   WIRE_VERSION,
+  decodeViewerFrame,
   type ControlPlaneToRuntime,
   type CallMethod,
   type RepoAccess,
@@ -11,6 +12,7 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { DesktopViewers } from "./desktop-viewers";
 import { createRemoteMemory } from "./remote-memory";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
@@ -107,6 +109,17 @@ export function startRuntime(options: RuntimeOptions) {
     return true;
   };
 
+  const sendBinary = (frame: Uint8Array) => {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(frame);
+  };
+
+  // Streams thread desktops to the viewers the control plane opens (decision 0015).
+  const viewers = new DesktopViewers(options.sandbox, {
+    send: (message) => void send(message),
+    sendBinary,
+    buffered: () => socket?.bufferedAmount ?? 0,
+  });
+
   const sendOrWarn = (message: RuntimeToControlPlane) => {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
@@ -143,10 +156,12 @@ export function startRuntime(options: RuntimeOptions) {
   async function releaseIfIdle(threadId: string) {
     idleTimers.delete(threadId);
     if (stopped || hasRun(threadId)) return;
-    const busy = await boxes
-      .get(threadId)
-      ?.hasRunningProcesses()
-      .catch(() => false);
+    const busy =
+      viewers.watching(threadId) > 0 ||
+      (await boxes
+        .get(threadId)
+        ?.hasRunningProcesses()
+        .catch(() => false));
     if (stopped || hasRun(threadId)) return;
     if (busy) {
       scheduleIdleRelease(threadId);
@@ -204,6 +219,16 @@ export function startRuntime(options: RuntimeOptions) {
     }
   }
 
+  // Answers a call of the control plane's with what `work` returns, or with why it failed.
+  async function answer(id: string, work: () => Promise<unknown>) {
+    try {
+      sendOrWarn({ type: "reply", id, ok: true, result: await work() });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      sendOrWarn({ type: "reply", id, ok: false, error: text });
+    }
+  }
+
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {
       case "run.start":
@@ -214,6 +239,15 @@ export function startRuntime(options: RuntimeOptions) {
         if (run) cancelRun(run, message.reason);
         return;
       }
+      case "desktop.open":
+        void viewers.open(message.viewerId, message.threadId);
+        return;
+      case "desktop.close":
+        viewers.close(message.viewerId);
+        return;
+      case "call":
+        await answer(message.id, () => viewers.call(message.method, message.params));
+        return;
       case "reply": {
         const waiting = pending.get(message.id);
         if (!waiting) return;
@@ -231,6 +265,7 @@ export function startRuntime(options: RuntimeOptions) {
     // here only know the protocols form.
     const init = { headers: { authorization: `Bearer ${options.token}` } };
     const ws = new WebSocket(options.url, init as unknown as string[]);
+    ws.binaryType = "arraybuffer";
     socket = ws;
     ws.onopen = () => {
       backoff = RECONNECT_MIN_MS;
@@ -238,6 +273,11 @@ export function startRuntime(options: RuntimeOptions) {
       connected.resolve();
     };
     ws.onmessage = (event) => {
+      if (event.data instanceof ArrayBuffer) {
+        const frame = decodeViewerFrame(new Uint8Array(event.data));
+        if (frame) viewers.write(frame.viewerId, frame.payload);
+        return;
+      }
       let message: ControlPlaneToRuntime;
       try {
         message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
@@ -253,6 +293,7 @@ export function startRuntime(options: RuntimeOptions) {
       for (const [, waiting] of pending) waiting.reject(new Error("Disconnected"));
       pending.clear();
       for (const run of runs.values()) cancelRun(run, "Disconnected from the control plane");
+      viewers.closeAll();
       if (event.code === 4000 || event.code === 4002) {
         stopped = true;
         options.onRefused?.(event.reason || "Refused by the control plane");
@@ -275,6 +316,7 @@ export function startRuntime(options: RuntimeOptions) {
       stopped = true;
       clearTimeout(retry);
       for (const timer of idleTimers.values()) clearTimeout(timer);
+      viewers.closeAll();
       socket?.close();
       await Promise.all(releasing.values());
       await options.sandbox.dispose();
