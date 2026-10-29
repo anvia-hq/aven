@@ -2,10 +2,11 @@ import { db } from "@aven/db/client";
 import { projects } from "@aven/db/schema/projects";
 import { and, desc, eq } from "drizzle-orm";
 
+import { UnprocessableError } from "../../errors";
 import { runtimesService } from "../runtimes/service";
 import type { CreateProjectBody } from "./schema";
 
-export class RuntimeNotFoundError extends Error {}
+export class RuntimeNotFoundError extends UnprocessableError {}
 
 export const projectsService = {
   list: (organizationId: string) =>

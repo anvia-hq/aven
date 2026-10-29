@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { runtimes, type RuntimeRow } from "@aven/db/schema/runtimes";
@@ -19,9 +19,25 @@ const localToken = `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")
 const visibleTo = (organizationId: string) =>
   or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
 
-const newToken = () => `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
-
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+// A fresh connection token and what is stored of it: the hash to check it by and a hint to show.
+function issueToken() {
+  const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+  return { token, columns: { tokenHash: hashToken(token), tokenHint: token.slice(-4) } };
+}
+
+// A runner an organization's member owns and has not revoked: what only its owner may change.
+const ownedBy = (organizationId: string, ownerId: string, id: string) =>
+  and(
+    eq(runtimes.organizationId, organizationId),
+    eq(runtimes.ownerId, ownerId),
+    eq(runtimes.id, id),
+    isNull(runtimes.revokedAt),
+  );
+
+const sameToken = (a: string, b: string) =>
+  timingSafeEqual(Buffer.from(hashToken(a)), Buffer.from(hashToken(b)));
 
 // Never returns the token hash.
 const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => runtime;
@@ -63,16 +79,10 @@ export const runtimesService = {
 
   // The token is returned once, here, and only its hash is stored.
   async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
-    const token = newToken();
+    const { token, columns } = issueToken();
     const [row] = await db
       .insert(runtimes)
-      .values({
-        organizationId,
-        ownerId,
-        name: body.name,
-        tokenHash: hashToken(token),
-        tokenHint: token.slice(-4),
-      })
+      .values({ organizationId, ownerId, name: body.name, ...columns })
       .returning();
     return { runtime: publicRuntime(row!), token };
   },
@@ -82,14 +92,7 @@ export const runtimesService = {
     const [row] = await db
       .update(runtimes)
       .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(runtimes.organizationId, organizationId),
-          eq(runtimes.ownerId, ownerId),
-          eq(runtimes.id, id),
-          isNull(runtimes.revokedAt),
-        ),
-      )
+      .where(ownedBy(organizationId, ownerId, id))
       .returning();
     if (row) runtimeHub.disconnect(id, "Revoked");
     return row ? publicRuntime(row) : null;
@@ -98,18 +101,11 @@ export const runtimesService = {
   // Replaces the token. The old one stops working at once and the runtime is cut off, so it must
   // be restarted with the new one. Owner only.
   async rotate(organizationId: string, ownerId: string, id: string) {
-    const token = newToken();
+    const { token, columns } = issueToken();
     const [row] = await db
       .update(runtimes)
-      .set({ tokenHash: hashToken(token), tokenHint: token.slice(-4) })
-      .where(
-        and(
-          eq(runtimes.organizationId, organizationId),
-          eq(runtimes.ownerId, ownerId),
-          eq(runtimes.id, id),
-          isNull(runtimes.revokedAt),
-        ),
-      )
+      .set(columns)
+      .where(ownedBy(organizationId, ownerId, id))
       .returning();
     if (!row) return null;
     runtimeHub.disconnect(id, "Token rotated");
@@ -119,7 +115,7 @@ export const runtimesService = {
   // Resolves a connection token; a revoked or unknown token is simply not found.
   async authenticate(token: string) {
     if (!token.startsWith(TOKEN_PREFIX)) return null;
-    if (token === localToken) {
+    if (sameToken(token, localToken)) {
       const [local] = await db.select().from(runtimes).where(eq(runtimes.id, LOCAL_RUNTIME_ID));
       return local ?? null;
     }

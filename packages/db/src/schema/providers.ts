@@ -12,8 +12,7 @@ export const providers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** "openai" | "anthropic" | "openai-compatible" */
-    kind: text("kind").notNull(),
+    kind: text("kind", { enum: ["openai", "anthropic", "openai-compatible"] }).notNull(),
     name: text("name").notNull(),
     /** Only for "openai-compatible". */
     baseUrl: text("base_url"),

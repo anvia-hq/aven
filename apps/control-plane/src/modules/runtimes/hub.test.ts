@@ -5,7 +5,7 @@ import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 
-import { seedOrgPair } from "../../test-support";
+import { seedOrgPair } from "../../testing/seed-org-pair";
 import { runtimesRouter } from "./router";
 import { connectRouter } from "./connect";
 import { RuntimeHub, runtimeHub } from "./hub";
@@ -152,6 +152,44 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       messages: [],
     });
     expect(late.ok).toBe(false);
+  });
+
+  test("a malformed frame is dropped and malformed call parameters are answered, not thrown", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
+      name: "bad",
+    });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const ended: string[] = [];
+    hub
+      .get(runtime.id)!
+      .startRun(
+        "run-bad",
+        { id: crypto.randomUUID(), organizationId: seed.orgA },
+        { event: () => undefined, end: (outcome) => ended.push(outcome), lost: () => undefined },
+      );
+
+    for (const frame of [
+      "not json",
+      "null",
+      "{}",
+      '{"type":"run.end"}',
+      '{"type":"run.end","runId":7}',
+    ]) {
+      ws.send(frame);
+    }
+    const noParams = await ask(ws, received, "memory.load", undefined);
+    expect(noParams.ok).toBe(false);
+    const badAppend = await ask(ws, received, "memory.append", { runId: "run-bad", turn: "0" });
+    expect(badAppend.ok).toBe(false);
+    expect(badAppend.error).toContain("Invalid parameters");
+
+    // The connection survived all of it, and the run is still live.
+    expect(hub.isOnline(runtime.id)).toBe(true);
+    expect(ended).toEqual([]);
+    ws.send(JSON.stringify({ type: "run.end", runId: "run-bad", outcome: "response" }));
+    await until(() => ended.length > 0);
   });
 
   test("a runtime is not online until it says hello with a version we speak", async () => {

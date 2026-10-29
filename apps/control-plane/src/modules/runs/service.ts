@@ -1,9 +1,10 @@
-import { db } from "@aven/db/client";
-import { createMemoryStore, type MemoryStore } from "@aven/agents/memory";
+import type { ConversationStore } from "@aven/agents/memory";
+import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
-import type { ModelConfig } from "@aven/agents/model";
 
+import { ConflictError } from "../../errors";
+import { memoryStore } from "../../memory-store";
 import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
@@ -16,9 +17,8 @@ type ActiveRun = {
   /** The whole transcript so far: history plus this run, kept current by applying events. */
   messages: ChatMessage[];
   cancelled: boolean;
-  /** Resolves once history is loaded into `messages`; never rejects (see `loadError`). */
+  /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
-  loadError?: unknown;
 };
 
 type Channel = {
@@ -29,11 +29,13 @@ type Channel = {
   lastSender?: { userId: string; selection?: ModelSelection };
 };
 
-export class RunBusyError extends Error {
+export class RunBusyError extends ConflictError {
   constructor() {
     super("A run is already in progress for this thread");
   }
 }
+
+type ResolveModel = (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
 
 const PING_MS = 5_000;
 
@@ -43,21 +45,19 @@ const PING_MS = 5_000;
 export class RunManager {
   #channels = new Map<string, Channel>();
   #disposed = false;
-  #store: MemoryStore;
+  #store: ConversationStore;
   #runtime: Runtime;
-  #resolveModel:
-    | ((userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>)
-    | undefined;
-  #onRunFinished: ((thread: RunThread) => void | Promise<void>) | undefined;
+  #resolveModel: ResolveModel;
+  #onRunFinished: (thread: RunThread) => void | Promise<void>;
 
   constructor(deps: {
-    store: MemoryStore;
+    store: ConversationStore;
     /** Where runs execute. */
     runtime: Runtime;
     /** Looks up a user's provider when a background job restarts a run on their behalf. */
-    resolveModel?: (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
+    resolveModel: ResolveModel;
     /** Called after every run, e.g. to bump the thread in the list. */
-    onRunFinished?: (thread: RunThread) => void | Promise<void>;
+    onRunFinished: (thread: RunThread) => void | Promise<void>;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
@@ -82,25 +82,20 @@ export class RunManager {
     if (channel.run) throw new RunBusyError();
     if (sender) channel.lastSender = { userId: sender.userId, selection: sender.selection };
 
-    const scope = this.#scope(thread);
     const handle = this.#runtime.start({ thread, prompt, model: sender?.model ?? undefined });
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
     const run: ActiveRun = { handle, messages: [], cancelled: false, ready: Promise.resolve() };
     channel.run = run;
-    run.ready = this.#store.load({ scope }).then(
-      (history) => {
-        run.messages = messagesToChat(history);
-      },
-      (error) => {
-        run.loadError = error;
-      },
-    );
-
-    await run.ready;
-    if (run.loadError !== undefined) {
+    const loaded = this.#store.load({ scope: this.#scope(thread) }).then((history) => {
+      run.messages = messagesToChat(history);
+    });
+    run.ready = loaded.catch(() => undefined);
+    try {
+      await loaded;
+    } catch (error) {
       channel.run = undefined;
       handle.cancel("history load failed");
-      throw run.loadError;
+      throw error;
     }
     this.#emit(channel, { type: "run_start", prompt });
     void this.#consume(channel, run);
@@ -115,7 +110,7 @@ export class RunManager {
       run.cancelled = true;
       run.handle.cancel("Cancelled by user");
     }
-    void this.#runtime.stopJobs(channel.thread);
+    this.#runtime.stopJobs(channel.thread);
     return run !== undefined;
   }
 
@@ -162,14 +157,10 @@ export class RunManager {
   }
 
   // Stops every running job and run. Call on host shutdown.
-  async dispose() {
+  dispose() {
     this.#disposed = true;
     for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
-    await this.#runtime.dispose();
-  }
-
-  killAllJobsNow() {
-    this.#runtime.killAllNow();
+    this.#runtime.dispose();
   }
 
   #scope(thread: RunThread) {
@@ -203,20 +194,24 @@ export class RunManager {
   }
 
   // Starts a run for a finished background job, with whatever whoever last sent a message chose.
-  // If that provider or model has since gone, their default runs it instead.
   async #restart(channel: Channel, thread: RunThread, notice: string) {
+    const sender = channel.lastSender;
     try {
-      const sender = channel.lastSender;
-      let model: ModelConfig | null = null;
-      if (sender) {
-        model =
-          (await this.#resolveModel?.(sender.userId, sender.selection).catch(() =>
-            this.#resolveModel?.(sender.userId),
-          )) ?? null;
-      }
+      const model = sender ? await this.#modelForRestart(sender) : null;
       await this.start(thread, notice, sender && { ...sender, model });
+    } catch (error) {
+      // A run that started meanwhile already has the notice's context; anything else is lost.
+      if (error instanceof RunBusyError) return;
+      console.warn(`Could not start a run for a finished job on thread ${thread.id}:`, error);
+    }
+  }
+
+  // If the provider or model the sender chose has since gone, their default runs it instead.
+  async #modelForRestart(sender: NonNullable<Channel["lastSender"]>) {
+    try {
+      return await this.#resolveModel(sender.userId, sender.selection);
     } catch {
-      // Nothing is listening; the notice is lost, as it was before when start failed.
+      return this.#resolveModel(sender.userId);
     }
   }
 
@@ -246,26 +241,28 @@ export class RunManager {
   }
 
   async #consume(channel: Channel, run: ActiveRun) {
+    let failure: string | undefined;
     try {
       for await (const event of run.handle.events) this.#emit(channel, event);
       const outcome = await run.handle.result;
-      if (outcome.type === "response" || run.cancelled)
-        this.#finish(channel, run, { type: "done" });
-      else
-        this.#finish(channel, run, {
-          type: "error",
-          message: `Run ended without a response (${outcome.type})`,
-        });
+      if (outcome.type !== "response") failure = `Run ended without a response (${outcome.type})`;
     } catch (error) {
-      if (run.cancelled) this.#finish(channel, run, { type: "done" });
-      else this.#finish(channel, run, { type: "error", message: errorMessage(error) });
+      failure = errorMessage(error);
     }
+    // A run the user cancelled ends quietly, whatever the runtime reported.
+    const ended: RunEvent =
+      failure === undefined || run.cancelled
+        ? { type: "done" }
+        : { type: "error", message: failure };
+    this.#finish(channel, run, ended);
   }
 
   #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
     this.#emit(channel, event);
     if (channel.run === run) channel.run = undefined;
-    Promise.resolve(this.#onRunFinished?.(channel.thread)).catch(() => undefined);
+    Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
+      console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
+    });
   }
 }
 
@@ -274,10 +271,8 @@ function errorMessage(error: unknown) {
   return message.length > 300 ? `${message.slice(0, 300)}…` : message;
 }
 
-const store = createMemoryStore(db);
-
 export const runsService = new RunManager({
-  store,
+  store: memoryStore,
   runtime: new RemoteRuntime(runtimeHub, runGateway),
   resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),

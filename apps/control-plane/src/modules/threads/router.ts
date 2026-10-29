@@ -1,10 +1,10 @@
 import { Elysia, sse, status } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { InvalidSelectionError, providersService } from "../providers/service";
-import { RunBusyError, runsService } from "../runs/service";
+import { providersService } from "../providers/service";
+import { runsService } from "../runs/service";
 import { createThreadBody, sendMessageBody, threadParams, updateThreadBody } from "./schema";
-import { ProjectHasNoRunnerError, ProjectNotFoundError, threadsService } from "./service";
+import { threadsService } from "./service";
 
 export const threadsRouter = new Elysia({ prefix: "/threads" })
   .use(authRouter)
@@ -18,22 +18,13 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
   )
   .post(
     "/",
-    async ({ body, organizationId, user }) => {
-      try {
-        return await threadsService.create(organizationId, user.id, body);
-      } catch (error) {
-        if (error instanceof ProjectNotFoundError) return status(422, error.message);
-        if (error instanceof ProjectHasNoRunnerError) return status(422, error.message);
-        throw error;
-      }
-    },
+    ({ body, organizationId, user }) => threadsService.create(organizationId, user.id, body),
     { auth: true, org: true, body: createThreadBody },
   )
   .get(
     "/:id",
     async ({ params, organizationId }) => {
-      const thread = await threadsService.get(organizationId, params.id);
-      if (!thread) return status(404, "Thread not found");
+      const thread = await threadsService.require(organizationId, params.id);
       return {
         ...thread,
         running: runsService.isRunning(thread.id),
@@ -54,29 +45,20 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
   )
   .post(
     "/:id/messages",
-    async ({ params, body, organizationId, user, set }) => {
-      const thread = await threadsService.get(organizationId, params.id);
-      if (!thread) return status(404, "Thread not found");
+    async ({ params, body, organizationId, user }) => {
+      const thread = await threadsService.require(organizationId, params.id);
       const { prompt, ...selection } = body;
-      try {
-        // The sender's own provider; null falls back to the environment's shared one.
-        const model = await providersService.resolveModel(user.id, selection);
-        await runsService.start(thread, prompt, { userId: user.id, model, selection });
-      } catch (error) {
-        if (error instanceof InvalidSelectionError) return status(422, error.message);
-        if (error instanceof RunBusyError) return status(409, error.message);
-        return status(503, error instanceof Error ? error.message : "Could not start the agent");
-      }
-      set.status = 202;
-      return { ok: true };
+      // The sender's own provider; null falls back to the environment's shared one.
+      const model = await providersService.resolveModel(user.id, selection);
+      await runsService.start(thread, prompt, { userId: user.id, model, selection });
+      return status(202, { ok: true });
     },
     { auth: true, org: true, params: threadParams, body: sendMessageBody },
   )
   .post(
     "/:id/cancel",
     async ({ params, organizationId }) => {
-      const thread = await threadsService.get(organizationId, params.id);
-      if (!thread) return status(404, "Thread not found");
+      const thread = await threadsService.require(organizationId, params.id);
       return { cancelled: runsService.cancel(thread.id) };
     },
     { auth: true, org: true, params: threadParams },

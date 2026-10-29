@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { seedOrgPair } from "../../test-support";
+import { seedOrgPair } from "../../testing/seed-org-pair";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;

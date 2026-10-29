@@ -24,7 +24,10 @@ export const projects = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt)],
+  (table) => [
+    index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
+    index("projects_runtime_idx").on(table.runtimeId),
+  ],
 );
 
 export type Project = typeof projects.$inferSelect;

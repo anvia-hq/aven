@@ -2,11 +2,17 @@ import { db } from "@aven/db/client";
 import { threads } from "@aven/db/schema/threads";
 import { and, desc, eq } from "drizzle-orm";
 
+import { NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 
-export class ProjectNotFoundError extends Error {}
-export class ProjectHasNoRunnerError extends Error {}
+export class ProjectNotFoundError extends UnprocessableError {}
+export class ProjectHasNoRunnerError extends UnprocessableError {}
+export class ThreadNotFoundError extends NotFoundError {
+  constructor() {
+    super("Thread not found");
+  }
+}
 
 export const threadsService = {
   list: (organizationId: string) =>
@@ -23,6 +29,13 @@ export const threadsService = {
       .from(threads)
       .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
     return thread ?? null;
+  },
+
+  // Like `get`, for a route that cannot go on without the thread.
+  async require(organizationId: string, id: string) {
+    const thread = await this.get(organizationId, id);
+    if (!thread) throw new ThreadNotFoundError();
+    return thread;
   },
 
   async create(organizationId: string, userId: string, body: CreateThreadBody) {

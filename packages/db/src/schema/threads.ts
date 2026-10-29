@@ -36,6 +36,7 @@ export const threads = pgTable(
   (table) => [
     index("threads_organization_updated_idx").on(table.organizationId, table.updatedAt),
     index("threads_project_idx").on(table.projectId),
+    index("threads_runtime_idx").on(table.runtimeId),
   ],
 );
 

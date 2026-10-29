@@ -13,8 +13,10 @@ function ownerEmails() {
     .filter(Boolean);
 }
 
+const isOwner = (email: string) => ownerEmails().includes(email.toLowerCase());
+
 export const platformService = {
-  isOwner: (email: string) => ownerEmails().includes(email.toLowerCase()),
+  isOwner,
 
   // Registration is open until an owner closes it.
   async isRegistrationEnabled() {
@@ -35,7 +37,7 @@ export const platformService = {
 
   // Closed registration still admits owners and people holding a pending, unexpired invitation.
   async canRegister(email: string) {
-    if (this.isOwner(email) || (await this.isRegistrationEnabled())) return true;
+    if (isOwner(email) || (await this.isRegistrationEnabled())) return true;
     const [invitation] = await db
       .select({ id: invitations.id })
       .from(invitations)

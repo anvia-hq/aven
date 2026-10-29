@@ -23,6 +23,7 @@ if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
 // hooks once the transaction ends, which is after the sign-up session has been created.
 export async function ensurePersonalOrganization(userId: string) {
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
+  if (!user) throw new Error(`Cannot create an organization: user ${userId} does not exist`);
   const organizationId = `personal-${userId}`;
   await db.transaction(async (tx) => {
     await tx

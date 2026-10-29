@@ -78,6 +78,13 @@
       "when": 1793258677726,
       "tag": "0010_mysterious_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793259465536,
+      "tag": "0011_pale_shaman",
+      "breakpoints": true
     }
   ]
 }

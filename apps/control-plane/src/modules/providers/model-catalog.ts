@@ -53,8 +53,11 @@ export function createModelCatalog(
 
   async function refresh() {
     const url = catalogUrl();
+    if (!url) {
+      nextTry = now() + RETRY_MS;
+      return;
+    }
     try {
-      if (!url) throw new Error("catalog disabled");
       const res = await fetchFn(url, { signal: AbortSignal.timeout(8_000) });
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;

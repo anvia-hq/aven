@@ -6,8 +6,10 @@ export type RunThread = {
   id: string;
   organizationId: string;
   /** The runner the thread's sandbox runs on; null only on a project from before sandboxes. */
-  runtimeId?: string | null;
+  runtimeId: string | null;
 };
+
+export type StartRunInput = { thread: RunThread; prompt: string; model?: ModelConfig };
 
 // One agent run as the control plane sees it. Everything a run needs from the machine it runs on
 // (the agent loop, its tools, the sandbox) stays behind this handle (decisions 0008 and 0010).
@@ -27,11 +29,10 @@ export interface Runtime {
    * cannot be used) before anything is persisted. `model` is the sender's provider; undefined
    * means the environment's.
    */
-  start(input: { thread: RunThread; prompt: string; model?: ModelConfig }): RuntimeRun;
+  start(input: StartRunInput): RuntimeRun;
   /** Kills the background commands a thread started. */
-  stopJobs(thread: RunThread): Promise<void>;
+  stopJobs(thread: RunThread): void;
   /** Called when a background command finishes with a notice for the agent; returns an unsubscribe. */
   onJobNotice(listener: (threadId: string, notice: string) => void): () => void;
-  dispose(): Promise<void>;
-  killAllNow(): void;
+  dispose(): void;
 }

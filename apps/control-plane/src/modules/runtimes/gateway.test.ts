@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import { JobRegistry } from "@aven/agents/jobs/job-registry";
 
 import { RunGateway } from "./gateway";
 
@@ -62,6 +63,7 @@ describe("RunGateway", () => {
     });
     const before = seen.length;
     const { agent } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider: "anthropic",
       modelId: "whatever-the-runtime-wants",
       apiKey: run.gatewayToken,
@@ -91,6 +93,7 @@ describe("RunGateway", () => {
     });
     const before = seen.length;
     const { agent } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider: "openai",
       modelId: "gpt-5.6",
       apiKey: run.gatewayToken,

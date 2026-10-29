@@ -6,7 +6,7 @@ import { startRuntime } from "@aven/runtime-client/runner";
 import { hostWorkspaces } from "@aven/runtime-client/testing/host-workspaces";
 import { Elysia } from "elysia";
 
-import { seedOrgPair } from "../../test-support";
+import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RunGateway } from "../runtimes/gateway";
 import { RuntimeHub } from "../runtimes/hub";
@@ -109,7 +109,12 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     await seed.cleanup();
   });
 
-  const manager = new RunManager({ store, runtime: new RemoteRuntime(hub, pointed) });
+  const manager = new RunManager({
+    store,
+    runtime: new RemoteRuntime(hub, pointed),
+    resolveModel: async () => null,
+    onRunFinished: () => undefined,
+  });
   const thread = {
     id: threadId,
     organizationId: seed.orgA,

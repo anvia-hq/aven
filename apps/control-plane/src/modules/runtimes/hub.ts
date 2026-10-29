@@ -1,19 +1,19 @@
-import type { Message, MemoryStore } from "@anvia/core";
-import { db } from "@aven/db/client";
-import { createMemoryStore } from "@aven/agents/memory";
+import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
   ControlPlaneToRuntime,
-  MemoryAppendParams,
   MemoryCallMethod,
   RuntimeToControlPlane,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
+import { memoryStore } from "../../memory-store";
+import { UnavailableError } from "../../errors";
 import { runtimesService } from "./service";
+import { parseAppendParams, parseMemoryParams, parseRuntimeFrame } from "./wire";
 
-export class RuntimeOfflineError extends Error {
+export class RuntimeOfflineError extends UnavailableError {
   constructor() {
     super("The runtime for this project is offline");
   }
@@ -38,6 +38,8 @@ export class RuntimeConnection {
   /** Threads this connection has run, so a job notice can only reach one of them. */
   #threads = new Set<string>();
   #closed = false;
+  /** Set once the runtime has said hello with a wire version we speak. */
+  #ready = false;
 
   constructor(
     readonly runtimeId: string,
@@ -46,9 +48,6 @@ export class RuntimeConnection {
     private closeSocket: (code?: number, reason?: string) => void,
     private hub: RuntimeHub,
   ) {}
-
-  /** Set once the runtime has said hello with a wire version we speak. */
-  #ready = false;
 
   get ready() {
     return this.#ready && !this.#closed;
@@ -78,74 +77,69 @@ export class RuntimeConnection {
   }
 
   async receive(raw: string) {
-    let message: RuntimeToControlPlane;
-    try {
-      message = JSON.parse(raw) as RuntimeToControlPlane;
-    } catch {
-      return;
-    }
-    if (message.type === "hello") {
-      if (message.version === WIRE_VERSION) {
-        this.#ready = true;
-        void runtimesService.touch(this.runtimeId);
-      } else {
-        // An incompatible runtime is refused with a reason it can show, not left to fail oddly.
-        this.close(
-          4000,
-          `Unsupported runtime version ${message.version}; this control plane speaks ${WIRE_VERSION}`,
-        );
-      }
-      return;
-    }
+    const message = parseRuntimeFrame(raw);
+    if (!message) return;
+    if (message.type === "hello") return this.#hello(message.version);
     // Nothing else is accepted from a runtime that has not introduced itself.
     if (!this.#ready) return;
+    await this.#dispatch(message);
+  }
+
+  #hello(version: number) {
+    if (version === WIRE_VERSION) {
+      this.#ready = true;
+      void runtimesService.touch(this.runtimeId);
+      return;
+    }
+    // An incompatible runtime is refused with a reason it can show, not left to fail oddly.
+    this.close(
+      4000,
+      `Unsupported runtime version ${version}; this control plane speaks ${WIRE_VERSION}`,
+    );
+  }
+
+  async #dispatch(message: RuntimeToControlPlane) {
     switch (message.type) {
       case "run.event":
         this.#runs.get(message.runId)?.sink.event(message.event);
         return;
-      case "run.end": {
-        const run = this.#runs.get(message.runId);
-        if (!run) return;
-        this.#runs.delete(message.runId);
-        run.sink.end(message.outcome, message.error);
+      case "run.end":
+        this.#endRun(message.runId, message.outcome, message.error);
         return;
-      }
-      case "job.notice": {
+      case "job.notice":
         if (this.#threads.has(message.threadId)) {
           this.hub.emitJobNotice(message.threadId, message.notice);
         }
         return;
-      }
       case "call":
         await this.#answer(message.id, message.method, message.params);
         return;
-      default:
-        return;
     }
+  }
+
+  #endRun(runId: string, outcome: string, error?: string) {
+    const run = this.#runs.get(runId);
+    if (!run) return;
+    this.#runs.delete(runId);
+    run.sink.end(outcome, error);
   }
 
   async #answer(id: string, method: MemoryCallMethod, params: unknown) {
     try {
-      const result = await this.#memory(method, params);
-      this.send(
-        JSON.stringify({ type: "reply", id, ok: true, result } satisfies ControlPlaneToRuntime),
-      );
+      this.#reply({ type: "reply", id, ok: true, result: await this.#memory(method, params) });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      this.send(
-        JSON.stringify({
-          type: "reply",
-          id,
-          ok: false,
-          error: text,
-        } satisfies ControlPlaneToRuntime),
-      );
+      this.#reply({ type: "reply", id, ok: false, error: text });
     }
   }
 
+  #reply(reply: ControlPlaneToRuntime) {
+    this.send(JSON.stringify(reply));
+  }
+
   async #memory(method: MemoryCallMethod, params: unknown) {
-    const { runId } = (params ?? {}) as { runId?: unknown };
-    const run = typeof runId === "string" ? this.#runs.get(runId) : undefined;
+    const { runId } = parseMemoryParams(params);
+    const run = this.#runs.get(runId);
     if (!run) throw new Error("Unknown or finished run");
     const scope = {
       sessionId: run.thread.id,
@@ -156,13 +150,8 @@ export class RuntimeConnection {
       case "memory.load":
         return store.load({ scope });
       case "memory.append": {
-        const { turn, messages } = params as MemoryAppendParams;
-        await store.append({
-          scope,
-          runId: runId as string,
-          turn,
-          messages: messages as Message[],
-        });
+        const { turn, messages } = parseAppendParams(params);
+        await store.append({ scope, runId, turn, messages });
         return null;
       }
       case "memory.clear":
@@ -237,4 +226,4 @@ export class RuntimeHub {
   }
 }
 
-export const runtimeHub = new RuntimeHub(createMemoryStore(db));
+export const runtimeHub = new RuntimeHub(memoryStore);

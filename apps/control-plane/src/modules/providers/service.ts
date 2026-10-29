@@ -3,14 +3,17 @@ import { providers, type ProviderRow } from "@aven/db/schema/providers";
 import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
+import { UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { modelCatalog } from "./model-catalog";
 import type { CreateProviderBody, UpdateProviderBody } from "./schema";
 
-export class InvalidProviderError extends Error {}
-export class ModelListError extends Error {}
+export class InvalidProviderError extends UnprocessableError {}
+export class ModelListError extends UnprocessableError {}
 // A message asked for a provider, model or effort the user cannot run with.
-export class InvalidSelectionError extends Error {}
+export class InvalidSelectionError extends UnprocessableError {}
+
+type ProviderKind = ModelConfig["provider"];
 
 // What a message may choose beyond the user's default: one of their own providers, a model of it
 // and a reasoning effort that model supports.
@@ -18,7 +21,7 @@ export type ModelSelection = { providerId?: string; modelId?: string; reasoningE
 
 // A model's effort levels: the SDK's own list, or for a model newer than the SDK the one models.dev
 // lists (`effortLevels`, which the model must then be built with for the SDK to accept it).
-async function effortsFor(kind: ModelConfig["provider"], modelId: string | undefined) {
+async function effortsFor(kind: ProviderKind, modelId: string | undefined) {
   const sdk = reasoningControlsFor({ provider: kind, modelId });
   if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
   const effortLevels = (await modelCatalog.efforts(kind, modelId)) ?? undefined;
@@ -29,7 +32,7 @@ async function effortsFor(kind: ModelConfig["provider"], modelId: string | undef
 }
 
 // The effort levels of each listed model that has any; models without the control are left out.
-export async function effortsByModel(kind: ModelConfig["provider"], ids: string[]) {
+export async function effortsByModel(kind: ProviderKind, ids: string[]) {
   const entries = await Promise.all(
     ids.map(async (id) => [id, (await effortsFor(kind, id)).controls] as const),
   );
@@ -39,37 +42,32 @@ export async function effortsByModel(kind: ModelConfig["provider"], ids: string[
   >;
 }
 
-type ModelSource = { kind: string; apiKey?: string; baseUrl?: string };
+type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: string };
 
-// Asks the provider itself which models the key can use (`GET <base>/models`). `fetchFn` is
-// injectable so tests never hit the network.
-export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = fetch) {
-  let url: string;
-  const headers: Record<string, string> = {};
+function requireApiKey({ apiKey }: ModelSource) {
+  if (!apiKey) throw new ModelListError("An API key is needed to list models");
+  return apiKey;
+}
+
+// Where a provider's model list is and how to ask for it.
+function modelsRequest(source: ModelSource) {
   if (source.kind === "anthropic") {
-    if (!source.apiKey) throw new ModelListError("An API key is needed to list models");
-    url = "https://api.anthropic.com/v1/models?limit=1000";
-    headers["x-api-key"] = source.apiKey;
-    headers["anthropic-version"] = "2023-06-01";
-  } else {
-    if (source.kind === "openai") {
-      if (!source.apiKey) throw new ModelListError("An API key is needed to list models");
-      url = "https://api.openai.com/v1/models";
-    } else {
-      if (!source.baseUrl) throw new ModelListError("A base URL is needed to list models");
-      url = `${source.baseUrl.replace(/\/+$/, "")}/models`;
-    }
-    if (source.apiKey) headers.authorization = `Bearer ${source.apiKey}`;
+    return {
+      url: "https://api.anthropic.com/v1/models?limit=1000",
+      headers: { "x-api-key": requireApiKey(source), "anthropic-version": "2023-06-01" },
+    };
   }
+  const headers: Record<string, string> = {};
+  if (source.apiKey) headers.authorization = `Bearer ${source.apiKey}`;
+  if (source.kind === "openai") {
+    requireApiKey(source);
+    return { url: "https://api.openai.com/v1/models", headers };
+  }
+  if (!source.baseUrl) throw new ModelListError("A base URL is needed to list models");
+  return { url: `${source.baseUrl.replace(/\/+$/, "")}/models`, headers };
+}
 
-  let res: Response;
-  try {
-    res = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000) });
-  } catch {
-    throw new ModelListError("Could not reach the provider");
-  }
-  if (!res.ok) throw new ModelListError(`The provider answered ${res.status} listing models`);
-  const json: unknown = await res.json().catch(() => null);
+function parseModelIds(json: unknown) {
   const data = (json as { data?: unknown } | null)?.data;
   if (!Array.isArray(data)) throw new ModelListError("The provider returned no model list");
   const ids = data.flatMap((item: { id?: unknown }) =>
@@ -78,31 +76,50 @@ export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = f
   return [...new Set(ids)].sort();
 }
 
+// Asks the provider itself which models the key can use (`GET <base>/models`). `fetchFn` is
+// injectable so tests never hit the network.
+export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = fetch) {
+  const { url, headers } = modelsRequest(source);
+  let res: Response;
+  try {
+    res = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000) });
+  } catch {
+    throw new ModelListError("Could not reach the provider");
+  }
+  if (!res.ok) throw new ModelListError(`The provider answered ${res.status} listing models`);
+  return parseModelIds(await res.json().catch(() => null));
+}
+
 // A provider's models that can drive the agent (see `model-catalog.ts`).
 export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetch) {
   const ids = await fetchModels(source, fetchFn);
-  return modelCatalog.chatModels(source.kind as ModelConfig["provider"], ids);
+  return modelCatalog.chatModels(source.kind, ids);
 }
 
 // What the API returns: never the key itself, only a hint.
 export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
 
-function view(row: ProviderRow): ProviderView {
-  return {
-    id: row.id,
-    kind: row.kind,
-    name: row.name,
-    baseUrl: row.baseUrl,
-    modelId: row.modelId,
-    keyHint: row.keyHint,
-    isDefault: row.isDefault,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    hasKey: row.apiKeyEncrypted !== null,
-  };
+function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): ProviderView {
+  return { ...row, hasKey: apiKeyEncrypted !== null };
 }
 
 const hint = (apiKey: string) => apiKey.slice(-4);
+
+// The stored form of an API key; empty when there is none to set, which leaves a stored one alone.
+const secretColumns = (apiKey: string | undefined) =>
+  apiKey ? { apiKeyEncrypted: encryptSecret(apiKey), keyHint: hint(apiKey) } : {};
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// A user has at most one default provider; call this before making another one the default.
+const clearDefault = (tx: Tx, userId: string) =>
+  tx
+    .update(providers)
+    .set({ isDefault: false })
+    .where(and(eq(providers.userId, userId), eq(providers.isDefault, true)));
+
+const ownProvider = (userId: string, id: string) =>
+  and(eq(providers.id, id), eq(providers.userId, userId));
 
 export const providersService = {
   async list(userId: string) {
@@ -123,12 +140,7 @@ export const providersService = {
         .where(eq(providers.userId, userId))
         .limit(1);
       const isDefault = body.isDefault ?? existing.length === 0;
-      if (isDefault) {
-        await tx
-          .update(providers)
-          .set({ isDefault: false })
-          .where(and(eq(providers.userId, userId), eq(providers.isDefault, true)));
-      }
+      if (isDefault) await clearDefault(tx, userId);
       const [row] = await tx
         .insert(providers)
         .values({
@@ -137,8 +149,7 @@ export const providersService = {
           name: body.name,
           baseUrl: body.kind === "openai-compatible" ? body.baseUrl : null,
           modelId: body.modelId ?? null,
-          apiKeyEncrypted: body.apiKey ? encryptSecret(body.apiKey) : null,
-          keyHint: body.apiKey ? hint(body.apiKey) : null,
+          ...secretColumns(body.apiKey),
           isDefault,
         })
         .returning();
@@ -148,10 +159,7 @@ export const providersService = {
 
   async update(userId: string, id: string, body: UpdateProviderBody) {
     return db.transaction(async (tx) => {
-      const [current] = await tx
-        .select()
-        .from(providers)
-        .where(and(eq(providers.id, id), eq(providers.userId, userId)));
+      const [current] = await tx.select().from(providers).where(ownProvider(userId, id));
       if (!current) return null;
       if (body.baseUrl !== undefined && current.kind !== "openai-compatible") {
         throw new InvalidProviderError("Only OpenAI-compatible providers have a base URL");
@@ -159,12 +167,7 @@ export const providersService = {
       if (body.modelId === null && current.kind === "openai-compatible") {
         throw new InvalidProviderError("An OpenAI-compatible provider needs a model id");
       }
-      if (body.isDefault === true) {
-        await tx
-          .update(providers)
-          .set({ isDefault: false })
-          .where(and(eq(providers.userId, userId), eq(providers.isDefault, true)));
-      }
+      if (body.isDefault === true) await clearDefault(tx, userId);
       const [row] = await tx
         .update(providers)
         .set({
@@ -172,10 +175,9 @@ export const providersService = {
           baseUrl: body.baseUrl,
           modelId: body.modelId,
           isDefault: body.isDefault,
-          apiKeyEncrypted: body.apiKey ? encryptSecret(body.apiKey) : undefined,
-          keyHint: body.apiKey ? hint(body.apiKey) : undefined,
+          ...secretColumns(body.apiKey),
         })
-        .where(eq(providers.id, id))
+        .where(ownProvider(userId, id))
         .returning();
       return view(row!);
     });
@@ -185,7 +187,7 @@ export const providersService = {
     return db.transaction(async (tx) => {
       const [row] = await tx
         .delete(providers)
-        .where(and(eq(providers.id, id), eq(providers.userId, userId)))
+        .where(ownProvider(userId, id))
         .returning({ isDefault: providers.isDefault });
       if (!row) return false;
       // Deleting the default hands the role to the oldest remaining provider.
@@ -205,57 +207,68 @@ export const providersService = {
 
   // Lists models using a saved provider's own stored key.
   async listModels(userId: string, id: string) {
-    const [row] = await db
-      .select()
-      .from(providers)
-      .where(and(eq(providers.id, id), eq(providers.userId, userId)));
+    const [row] = await db.select().from(providers).where(ownProvider(userId, id));
     if (!row) return null;
     const models = await listAgentModels({
       kind: row.kind,
       baseUrl: row.baseUrl ?? undefined,
       apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
     });
-    return { models, efforts: await effortsByModel(row.kind as ModelConfig["provider"], models) };
+    return { models, efforts: await effortsByModel(row.kind, models) };
   },
 
   // The model configuration for a run: the provider the message chose (it must be the user's own)
   // or else their default, or null if they have neither. Decrypts the key, so call it only where
   // a run is being started. Throws InvalidSelectionError for a choice that cannot run.
   async resolveModel(userId: string, selection: ModelSelection = {}): Promise<ModelConfig | null> {
-    const [row] = await db
-      .select()
-      .from(providers)
-      .where(
-        selection.providerId
-          ? and(eq(providers.id, selection.providerId), eq(providers.userId, userId))
-          : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
-      );
-    if (!row) {
-      if (selection.providerId) throw new InvalidSelectionError("Provider not found");
-      if (selection.modelId || selection.reasoningEffort) {
-        throw new InvalidSelectionError("Add a provider to choose a model");
-      }
-      return null;
-    }
+    const row = await findSelectedProvider(userId, selection);
+    if (!row) return noProvider(selection);
     const config: ModelConfig = {
-      provider: row.kind as ModelConfig["provider"],
+      provider: row.kind,
       modelId: selection.modelId ?? row.modelId ?? undefined,
       baseUrl: row.baseUrl ?? undefined,
       apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
     };
-    if (selection.modelId && !(await modelCatalog.canRun(config.provider, selection.modelId))) {
-      throw new InvalidSelectionError(`${selection.modelId} cannot be used to run the agent`);
-    }
-    if (selection.reasoningEffort) {
-      const { controls, effortLevels } = await effortsFor(config.provider, config.modelId);
-      if (!controls?.options.includes(selection.reasoningEffort)) {
-        throw new InvalidSelectionError(
-          `This model does not support the "${selection.reasoningEffort}" reasoning effort`,
-        );
-      }
-      config.reasoningEffort = selection.reasoningEffort;
-      config.effortLevels = effortLevels;
-    }
+    if (selection.modelId) await assertRunnable(config.provider, selection.modelId);
+    if (selection.reasoningEffort) await applyEffort(config, selection.reasoningEffort);
     return config;
   },
 };
+
+async function findSelectedProvider(userId: string, selection: ModelSelection) {
+  const [row] = await db
+    .select()
+    .from(providers)
+    .where(
+      selection.providerId
+        ? ownProvider(userId, selection.providerId)
+        : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
+    );
+  return row;
+}
+
+// With no provider found, a message that chose nothing runs on the environment's.
+function noProvider(selection: ModelSelection) {
+  if (selection.providerId) throw new InvalidSelectionError("Provider not found");
+  if (selection.modelId || selection.reasoningEffort) {
+    throw new InvalidSelectionError("Add a provider to choose a model");
+  }
+  return null;
+}
+
+async function assertRunnable(kind: ProviderKind, modelId: string) {
+  if (!(await modelCatalog.canRun(kind, modelId))) {
+    throw new InvalidSelectionError(`${modelId} cannot be used to run the agent`);
+  }
+}
+
+async function applyEffort(config: ModelConfig, reasoningEffort: string) {
+  const { controls, effortLevels } = await effortsFor(config.provider, config.modelId);
+  if (!controls?.options.includes(reasoningEffort)) {
+    throw new InvalidSelectionError(
+      `This model does not support the "${reasoningEffort}" reasoning effort`,
+    );
+  }
+  config.reasoningEffort = reasoningEffort;
+  config.effortLevels = effortLevels;
+}

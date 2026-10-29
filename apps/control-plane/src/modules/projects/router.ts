@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { createProjectBody, projectParams } from "./schema";
-import { projectsService, RuntimeNotFoundError } from "./service";
+import { projectsService } from "./service";
 
 export const projectsRouter = new Elysia({ prefix: "/projects" })
   .use(authRouter)
@@ -12,14 +12,7 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
   })
   .post(
     "/",
-    async ({ body, organizationId, user }) => {
-      try {
-        return await projectsService.create(organizationId, user.id, body);
-      } catch (error) {
-        if (error instanceof RuntimeNotFoundError) return status(422, error.message);
-        throw error;
-      }
-    },
+    ({ body, organizationId, user }) => projectsService.create(organizationId, user.id, body),
     { auth: true, org: true, body: createProjectBody },
   )
   .get(

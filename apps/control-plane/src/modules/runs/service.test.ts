@@ -16,7 +16,8 @@ import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { hostWorkspaces } from "@aven/runtime-client/testing/host-workspaces";
 
-import { seedOrgPair } from "../../test-support";
+import { UnavailableError } from "../../errors";
+import { seedOrgPair } from "../../testing/seed-org-pair";
 import type { ModelSelection } from "../providers/service";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
@@ -79,6 +80,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     return new RunManager({
       store,
       runtime: new RemoteRuntime(hub, scriptedGateway),
+      resolveModel: async () => null,
       onRunFinished,
       ...extra,
     });
@@ -364,6 +366,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       const manager = await managerWith([], { runtime: new RemoteRuntime(hub, new RunGateway()) });
       const thread = newThread();
       await expect(manager.start(thread, "hi")).rejects.toThrow("ANTHROPIC_API_KEY is not set");
+      await expect(manager.start(thread, "hi")).rejects.toBeInstanceOf(UnavailableError);
       expect(manager.isRunning(thread.id)).toBe(false);
       expect(await manager.history(thread)).toEqual([]);
     } finally {
@@ -377,6 +380,9 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await expect(manager.start(orphan, "hi")).rejects.toThrow("has no runner");
     const offline = { ...newThread(), runtimeId: crypto.randomUUID() };
     await expect(manager.start(offline, "hi")).rejects.toThrow("offline");
+    // These are what the API answers with 503; any other error is not.
+    await expect(manager.start(orphan, "hi")).rejects.toBeInstanceOf(UnavailableError);
+    await expect(manager.start(offline, "hi")).rejects.toBeInstanceOf(UnavailableError);
     expect(await manager.history(offline)).toEqual([]);
   });
 });

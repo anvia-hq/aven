@@ -1,9 +1,18 @@
-import type { ModelConfig } from "@aven/agents/model";
 import type { RunEvent } from "@aven/protocol/events";
+import type { ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 
+import { UnavailableError } from "../../errors";
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
-import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
-import type { Runtime, RunThread, RuntimeRun } from "./runtime";
+import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import type { Runtime, RunThread, RuntimeRun, StartRunInput } from "./runtime";
+
+export class ThreadHasNoRunnerError extends UnavailableError {
+  constructor() {
+    super("This project has no runner. Create a new project on one of your runners.");
+  }
+}
+
+type RunResult = { type: string };
 
 // A minimal async queue: `events` for a run is fed by the connection and consumed by RunManager.
 class EventQueue implements AsyncIterable<RunEvent> {
@@ -55,65 +64,28 @@ export class RemoteRuntime implements Runtime {
     private gateway: Pick<RunGateway, "issue" | "revoke">,
   ) {}
 
-  start({
-    thread,
-    prompt,
-    model,
-  }: {
-    thread: RunThread;
-    prompt: string;
-    model?: ModelConfig;
-  }): RuntimeRun {
-    if (!thread.runtimeId) {
-      throw new Error("This project has no runner. Create a new project on one of your runners.");
-    }
-    const connection = this.hub.get(thread.runtimeId);
-    if (!connection) throw new RuntimeOfflineError();
-
+  start({ thread, prompt, model }: StartRunInput): RuntimeRun {
+    const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
     // Throws before anything starts if the model cannot be used (no key); the runtime gets a token, not the key.
     const runModel = this.gateway.issue(runId, model ?? environmentModel());
     const queue = new EventQueue();
-    let settle!: { resolve: (value: { type: string }) => void; reject: (error: Error) => void };
-    const result = new Promise<{ type: string }>((resolve, reject) => {
-      settle = { resolve, reject };
-    });
+    const result = Promise.withResolvers<RunResult>();
     // A run nobody awaits (cancelled early) must not surface as an unhandled rejection.
-    result.catch(() => undefined);
+    result.promise.catch(() => undefined);
 
-    connection.startRun(runId, thread, {
-      event: (event) => queue.push(event),
-      end: (outcome, error) => {
-        this.gateway.revoke(runId);
-        queue.close();
-        if (error) settle.reject(new Error(error));
-        else settle.resolve({ type: outcome });
-      },
-      lost: (error) => {
-        this.gateway.revoke(runId);
-        queue.fail(error);
-        settle.reject(error);
-      },
+    connection.startRun(runId, thread, this.#sink(runId, queue, result));
+    this.#post(connection, runId, {
+      type: "run.start",
+      runId,
+      thread: { id: thread.id, organizationId: thread.organizationId },
+      prompt,
+      model: runModel,
     });
-    try {
-      connection.post({
-        type: "run.start",
-        runId,
-        thread: { id: thread.id, organizationId: thread.organizationId },
-        prompt,
-        model: runModel,
-      });
-    } catch (error) {
-      this.gateway.revoke(runId);
-      connection.endRun(runId);
-      throw error;
-    }
 
     return {
       events: queue,
-      get result() {
-        return result;
-      },
+      result: result.promise,
       cancel: (reason) => {
         if (connection.hasRun(runId)) connection.post({ type: "run.cancel", runId, reason });
       },
@@ -124,7 +96,7 @@ export class RemoteRuntime implements Runtime {
     };
   }
 
-  async stopJobs(thread: RunThread) {
+  stopJobs(thread: RunThread) {
     const connection = thread.runtimeId ? this.hub.get(thread.runtimeId) : undefined;
     connection?.post({ type: "jobs.stop", threadId: thread.id });
   }
@@ -133,9 +105,43 @@ export class RemoteRuntime implements Runtime {
     return this.hub.onJobNotice(listener);
   }
 
-  async dispose() {
+  dispose() {
     this.hub.closeAll();
   }
 
-  killAllNow() {}
+  #connectionFor(thread: RunThread) {
+    if (!thread.runtimeId) throw new ThreadHasNoRunnerError();
+    const connection = this.hub.get(thread.runtimeId);
+    if (!connection) throw new RuntimeOfflineError();
+    return connection;
+  }
+
+  // What the connection reports back: events feed the queue, and the run's end (or loss) settles
+  // the result and ends the model grant.
+  #sink(runId: string, queue: EventQueue, result: PromiseWithResolvers<RunResult>) {
+    return {
+      event: (event: RunEvent) => queue.push(event),
+      end: (outcome: string, error?: string) => {
+        this.gateway.revoke(runId);
+        queue.close();
+        if (error) result.reject(new Error(error));
+        else result.resolve({ type: outcome });
+      },
+      lost: (error: Error) => {
+        this.gateway.revoke(runId);
+        queue.fail(error);
+        result.reject(error);
+      },
+    };
+  }
+
+  #post(connection: RuntimeConnection, runId: string, message: ControlPlaneToRuntime) {
+    try {
+      connection.post(message);
+    } catch (error) {
+      this.gateway.revoke(runId);
+      connection.endRun(runId);
+      throw error;
+    }
+  }
 }

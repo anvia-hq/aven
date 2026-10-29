@@ -6,7 +6,7 @@ import { projectsService, RuntimeNotFoundError } from "./service";
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("projectsService (postgres)", async () => {
-  const { seedOrgPair } = await import("../../test-support");
+  const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
   const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
