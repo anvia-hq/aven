@@ -1,6 +1,6 @@
 # Projects run in per-thread sandboxes on a runner
 
-Status: accepted. Supersedes the host-folder parts of 0005 (a project is a path) and 0009 (sandboxing is an option on a runtime); builds on 0008.
+Status: accepted. Supersedes the host-folder parts of 0005 (a project is a path) and 0009 (sandboxing is an option on a runtime); builds on 0008. The runner-less projects it kept are removed by 0011.
 
 ## Context
 

@@ -22,7 +22,9 @@ export const threads = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     /** The runner the thread's sandbox runs on, copied from the project when the thread is created. */
-    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
+    runtimeId: uuid("runtime_id")
+      .notNull()
+      .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()

@@ -15,8 +15,10 @@ export const projects = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** The runner that hosts the project's sandboxes. Null only on projects from before sandboxes (decision 0010); they cannot run. */
-    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
+    /** The runner that hosts the project's sandboxes (decision 0010). */
+    runtimeId: uuid("runtime_id")
+      .notNull()
+      .references(() => runtimes.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

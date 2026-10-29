@@ -5,8 +5,8 @@ import type { RunEvent } from "@aven/protocol/events";
 export type RunThread = {
   id: string;
   organizationId: string;
-  /** The runner the thread's sandbox runs on; null only on a project from before sandboxes. */
-  runtimeId: string | null;
+  /** The runner the thread's sandbox runs on. */
+  runtimeId: string;
 };
 
 export type StartRunInput = { thread: RunThread; prompt: string; model?: ModelConfig };

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { runtimesService } from "../runtimes/service";
-import { ProjectHasNoRunnerError, ProjectNotFoundError, threadsService } from "./service";
+import { ProjectNotFoundError, threadsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -45,17 +45,5 @@ run("threadsService (postgres)", async () => {
       threadsService.create(orgA, userId, { projectId: projectB.id }),
     ).rejects.toBeInstanceOf(ProjectNotFoundError);
     expect((await threadsService.list(orgA)).length).toBe(before);
-  });
-
-  test("a project from before sandboxes has no runner and cannot start a thread", async () => {
-    const { db } = await import("@aven/db/client");
-    const { projects } = await import("@aven/db/schema/projects");
-    const [legacy] = await db
-      .insert(projects)
-      .values({ organizationId: orgA, createdBy: userId, name: "legacy", runtimeId: null })
-      .returning();
-    await expect(
-      threadsService.create(orgA, userId, { projectId: legacy!.id }),
-    ).rejects.toBeInstanceOf(ProjectHasNoRunnerError);
   });
 });

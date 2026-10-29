@@ -1,16 +1,9 @@
 import type { RunEvent } from "@aven/protocol/events";
 import type { ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 
-import { UnavailableError } from "../../errors";
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
 import type { Runtime, RunThread, RuntimeRun, StartRunInput } from "./runtime";
-
-export class ThreadHasNoRunnerError extends UnavailableError {
-  constructor() {
-    super("This project has no runner. Create a new project on one of your runners.");
-  }
-}
 
 type RunResult = { type: string };
 
@@ -97,8 +90,7 @@ export class RemoteRuntime implements Runtime {
   }
 
   stopJobs(thread: RunThread) {
-    const connection = thread.runtimeId ? this.hub.get(thread.runtimeId) : undefined;
-    connection?.post({ type: "jobs.stop", threadId: thread.id });
+    this.hub.get(thread.runtimeId)?.post({ type: "jobs.stop", threadId: thread.id });
   }
 
   onJobNotice(listener: (threadId: string, notice: string) => void) {
@@ -110,7 +102,6 @@ export class RemoteRuntime implements Runtime {
   }
 
   #connectionFor(thread: RunThread) {
-    if (!thread.runtimeId) throw new ThreadHasNoRunnerError();
     const connection = this.hub.get(thread.runtimeId);
     if (!connection) throw new RuntimeOfflineError();
     return connection;

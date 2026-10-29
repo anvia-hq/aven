@@ -13,7 +13,7 @@ export type Thread = {
   projectId: string;
   title: string;
   /** The runtime that machine is; null means the control plane's own. */
-  runtimeId: string | null;
+  runtimeId: string;
   state: ThreadState;
   running: boolean;
   createdAt: string;

@@ -90,7 +90,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const thread = {
       id: crypto.randomUUID(),
       organizationId: "org-test",
-      runtimeId,
+      runtimeId: runtimeId!,
     };
     threads.push(thread);
     return thread;
@@ -374,14 +374,11 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     }
   });
 
-  test("a thread with no runner, or whose runner is offline, says so and persists nothing", async () => {
+  test("a thread whose runner is offline says so and persists nothing", async () => {
     const manager = await managerWith([]);
-    const orphan = { ...newThread(), runtimeId: null };
-    await expect(manager.start(orphan, "hi")).rejects.toThrow("has no runner");
     const offline = { ...newThread(), runtimeId: crypto.randomUUID() };
     await expect(manager.start(offline, "hi")).rejects.toThrow("offline");
-    // These are what the API answers with 503; any other error is not.
-    await expect(manager.start(orphan, "hi")).rejects.toBeInstanceOf(UnavailableError);
+    // This is what the API answers with 503; any other error is not.
     await expect(manager.start(offline, "hi")).rejects.toBeInstanceOf(UnavailableError);
     expect(await manager.history(offline)).toEqual([]);
   });

@@ -13,11 +13,11 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 
 ## Data
 
-- `GET /projects` returns `[{ id, name, runtimeId | null, createdAt, updatedAt }]`. A project is a name and the runner that hosts its sandboxes; `runtimeId` is null only on a project from before sandboxes, which cannot run.
+- `GET /projects` returns `[{ id, name, runtimeId, createdAt, updatedAt }]`. A project is a name and the runner that hosts its sandboxes.
 - `POST /projects` `{ name, runtimeId }` creates one. `422` if the runner is not in the organization or is revoked. It need not be online.
 - `GET /runtimes` returns `[{ id, name, online, ... }]` (the runners).
-- `GET /threads` returns `[{ id, projectId, title, runtimeId | null, state, running, createdAt, updatedAt }]`, newest first.
-- `POST /threads` `{ projectId, title? }` creates a thread, which gets its own sandbox with an empty workspace on first run. `422` if the project is not in the organization or has no runner.
+- `GET /threads` returns `[{ id, projectId, title, runtimeId, state, running, createdAt, updatedAt }]`, newest first.
+- `POST /threads` `{ projectId, title? }` creates a thread, which gets its own sandbox with an empty workspace on first run. `422` if the project is not in the organization.
 - `GET /threads/:id` returns the thread plus `running` and `messages` (the transcript, see below).
 - `POST /threads/:id/messages` `{ prompt, providerId?, modelId?, reasoningEffort? }` starts a run and returns `202`. Without a choice the sender's default provider runs. `409` a run is already live, `422` the choice is unusable, `503` the agent could not start (no provider, runtime offline).
 - `POST /threads/:id/cancel` stops the run and its background commands.

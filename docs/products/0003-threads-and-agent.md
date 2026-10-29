@@ -8,7 +8,7 @@ A thread is one agent session, stored in `threads`, scoped to an organization an
 
 ## Flow
 
-1. `/threads`: pick an existing project (or create one: a name and one of the organization's runners), then a prompt. A project with no runner, or whose runner is offline, cannot start a run and says so.
+1. `/threads`: pick an existing project (or create one: a name and one of the organization's runners), then a prompt. A project whose runner is offline cannot start a run and says so.
 2. The thread opens at `/threads/<id>`. The first prompt starts a run on the server.
 3. The page attaches to the run over server-sent events: a snapshot of the transcript, then text, tool calls (read, write, edit with a diff, shell, web search) and results as they happen. **Stop** cancels the run.
 4. Reloading, closing the tab or opening it elsewhere never stops the agent; reattaching shows the run in progress. Only one run per thread at a time (a second message while running is rejected).

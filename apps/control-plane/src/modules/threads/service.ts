@@ -7,7 +7,6 @@ import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 
 export class ProjectNotFoundError extends UnprocessableError {}
-export class ProjectHasNoRunnerError extends UnprocessableError {}
 export class ThreadNotFoundError extends NotFoundError {
   constructor() {
     super("Thread not found");
@@ -41,11 +40,6 @@ export const threadsService = {
   async create(organizationId: string, userId: string, body: CreateThreadBody) {
     const project = await projectsService.get(organizationId, body.projectId);
     if (!project) throw new ProjectNotFoundError("Project not found");
-    if (!project.runtimeId) {
-      throw new ProjectHasNoRunnerError(
-        "This project has no runner. Create a new project on one of your runners.",
-      );
-    }
     const [thread] = await db
       .insert(threads)
       .values({
