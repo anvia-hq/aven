@@ -24,9 +24,54 @@ export type StartJobOptions = {
   env?: Record<string, string>;
 };
 
+// A started command, however it is run: on this machine, or inside a sandbox.
+export type RunningProcess = {
+  stdout: ReadableStream<Uint8Array>;
+  stderr: ReadableStream<Uint8Array>;
+  /** The exit code once the command is over. */
+  exited: Promise<number>;
+  /** Asks the command, and what it spawned, to stop. Calling it again after the process is gone is harmless. */
+  signal(signal: "SIGTERM" | "SIGKILL"): void;
+};
+
+/** Starts `command` in `cwd`. Replace it to run commands somewhere other than this machine. */
+export type Launcher = (input: {
+  command: string;
+  cwd: string;
+  env?: Record<string, string>;
+}) => RunningProcess;
+
+// Runs the command as a process group on this machine, so a signal reaches its children too.
+export const hostLauncher: Launcher = ({ command, cwd, env }) => {
+  const proc = Bun.spawn([Bun.which("bash") ?? "/bin/sh", "-c", command], {
+    cwd,
+    env: { ...process.env, ...env, AGENT: "1" },
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    detached: true,
+  });
+  return {
+    stdout: proc.stdout,
+    stderr: proc.stderr,
+    exited: proc.exited,
+    signal(signal) {
+      try {
+        process.kill(-proc.pid, signal);
+      } catch {
+        try {
+          proc.kill(signal);
+        } catch {
+          // Already gone.
+        }
+      }
+    },
+  };
+};
+
 type Entry = {
   snapshot: JobSnapshot;
-  proc: Bun.Subprocess;
+  proc: RunningProcess;
   done: Promise<JobSnapshot>;
   killed: boolean;
   timedOut: boolean;
@@ -43,8 +88,13 @@ const MAX_FINISHED_JOBS = 50;
 // Runs shell commands as process groups, so killing a job also kills what it spawned
 // (e.g. the children of `bun run dev`). Owns the lifecycle; the shell tools are thin wrappers.
 export class JobRegistry {
+  #launch: Launcher;
   #entries = new Map<string, Entry>();
   #listeners = new Set<(job: JobSnapshot) => void>();
+
+  constructor(options: { launcher?: Launcher } = {}) {
+    this.#launch = options.launcher ?? hostLauncher;
+  }
 
   start(options: StartJobOptions) {
     const id = `job_${crypto.randomUUID().slice(0, 8)}`;
@@ -60,14 +110,7 @@ export class JobRegistry {
       output: "",
     };
 
-    const proc = Bun.spawn([Bun.which("bash") ?? "/bin/sh", "-c", options.command], {
-      cwd: options.cwd,
-      env: { ...process.env, ...options.env, AGENT: "1" },
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe",
-      detached: true,
-    });
+    const proc = this.#launch({ command: options.command, cwd: options.cwd, env: options.env });
 
     const entry: Entry = {
       snapshot,
@@ -173,16 +216,8 @@ export class JobRegistry {
     entry.killTimer ??= setTimeout(() => this.#signal(entry, "SIGKILL"), KILL_GRACE_MS);
   }
 
-  #signal(entry: Entry, signal: NodeJS.Signals) {
-    try {
-      process.kill(-entry.proc.pid, signal);
-    } catch {
-      try {
-        entry.proc.kill(signal);
-      } catch {
-        // Already gone.
-      }
-    }
+  #signal(entry: Entry, signal: "SIGTERM" | "SIGKILL") {
+    entry.proc.signal(signal);
   }
 
   #prune() {

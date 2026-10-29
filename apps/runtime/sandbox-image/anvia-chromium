@@ -1,0 +1,26 @@
+#!/bin/sh
+# Chromium for the sandbox desktop. Run it from a terminal or with xdotool; it draws on the
+# daemon's display.
+#
+# Chromium's own sandbox needs user namespaces, which Docker's default seccomp profile blocks. The
+# container is already the isolation boundary, so this starts Chromium with --no-sandbox. Set
+# ANVIA_CHROMIUM_SANDBOX=1 to keep Chromium's sandbox instead (run the container with a seccomp
+# profile that allows user namespaces, or with --cap-add SYS_ADMIN).
+#
+# --test-type hides the "unsupported command-line flag: --no-sandbox" banner, which would otherwise
+# sit at the top of every screenshot an agent takes.
+if [ "${ANVIA_CHROMIUM_SANDBOX:-0}" = "1" ]; then
+  sandbox_flags="--disable-setuid-sandbox"
+else
+  sandbox_flags="--no-sandbox --test-type"
+fi
+# shellcheck disable=SC2086  # the flags are meant to be split
+exec chromium \
+  --class=chromium \
+  --no-first-run \
+  --no-default-browser-check \
+  --password-store=basic \
+  --disable-dev-shm-usage \
+  $sandbox_flags \
+  --user-data-dir="${ANVIA_BROWSER_PROFILE:-$HOME/.chromium-profile}" \
+  "$@"
