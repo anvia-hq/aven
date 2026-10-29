@@ -1,6 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
+import type { AnyTool } from "@anvia/core";
 import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
-import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
+import { formatJobNotice, JobRegistry, type Launcher } from "@aven/agents/jobs/job-registry";
 import { projectStreamEvent } from "@aven/agents/projection";
 import { handleFsCall, WorkspaceError } from "@aven/agents/workspace";
 import {
@@ -13,19 +14,22 @@ import {
 } from "@aven/protocol/runtime-wire";
 
 import { createRemoteMemory } from "./remote-memory";
+import type { Sandboxes } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
   jobs: JobRegistry;
   memory: MemoryStore;
   model?: RunModel;
+  /** Extra tools from the sandbox, if the runtime has one. */
+  extraTools?: readonly AnyTool[];
 }) => { agent: Pick<CodingAgent, "stream"> };
 
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
 // run's token; this process never holds a provider key.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ thread, jobs, memory, model }) => {
+  ({ thread, jobs, memory, model, extraTools }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       provider: model.provider,
@@ -37,6 +41,7 @@ const defaultCreateAgent =
       root: thread.projectPath,
       jobs,
       memory,
+      extraTools,
     });
   };
 
@@ -48,6 +53,8 @@ export type RuntimeOptions = {
   /** The registration token shown once when the runtime was created. */
   token: string;
   createAgent?: CreateRuntimeAgent;
+  /** Run commands in containers instead of on this machine (decision 0009). */
+  sandbox?: Sandboxes;
   /**
    * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
    * version), so reconnecting would not help. `reason` says why.
@@ -93,10 +100,10 @@ export function startRuntime(options: RuntimeOptions) {
       send({ type: "call", id, method, params });
     });
 
-  const jobsFor = (threadId: string) => {
+  const jobsFor = (threadId: string, launcher?: Launcher) => {
     let registry = jobs.get(threadId);
     if (registry) return registry;
-    registry = new JobRegistry();
+    registry = new JobRegistry({ launcher });
     registry.onComplete((job) => {
       // A killed job was stopped on purpose: nothing to report.
       if (!job.background || job.status === "killed" || stopped) return;
@@ -109,9 +116,12 @@ export function startRuntime(options: RuntimeOptions) {
   async function runAgent(message: Extract<ControlPlaneToRuntime, { type: "run.start" }>) {
     const { runId, thread, prompt, model } = message;
     try {
+      // Starts the thread's container on first use; a failure ends the run with a clear error.
+      const box = await options.sandbox?.acquire(thread);
       const { agent } = createAgent({
         thread,
-        jobs: jobsFor(thread.id),
+        jobs: jobsFor(thread.id, box?.launcher),
+        extraTools: box?.tools,
         memory: createRemoteMemory(call, runId),
         model,
       });
@@ -224,6 +234,7 @@ export function startRuntime(options: RuntimeOptions) {
       clearTimeout(retry);
       socket?.close();
       await Promise.all([...jobs.values()].map((registry) => registry.disposeAll()));
+      await options.sandbox?.dispose();
     },
   };
 }

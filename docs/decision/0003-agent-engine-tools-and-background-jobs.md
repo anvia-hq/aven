@@ -12,7 +12,7 @@ Status: accepted
 - **Direct `Bun.spawn`, not bun-pty.** Pipes with stdout and stderr merged, no new native dependency. Bun's `terminal` spawn option is available if interactive PTY support is needed later.
 - **`JobRegistry` owns processes.** Each job is its own process group (`detached`), so timeouts, aborts and `shell_kill` also kill children such as `bun run dev` workers. Foreground calls wait (2 min default timeout) and are killed if the tool call is aborted. Background calls return a `jobId` immediately and outlive the call; `disposeAll()` stops everything on host shutdown.
 - **Completion is delivered by the host, not the tool.** A tool call cannot push into a running turn. `jobs.onComplete` fires when a job exits; the host sends `formatJobNotice(job)` with `stream.steer()` (applied at the next turn boundary) while the run is live, or starts a new run if it ended. `shell_output` only inspects a running job; tool descriptions tell the model not to poll.
-- **File tools are confined to `root`** (symlinks resolved). **The shell is not**: it runs as the server's user in any directory it can reach. Real isolation (`@anvia/sandbox`, containers, per-thread worktrees) is a separate decision and must be made before running agents on untrusted prompts.
+- **File tools are confined to `root`** (symlinks resolved). **The shell is not**: it runs as the server's user in any directory it can reach. Real isolation (`@anvia/sandbox`, containers, per-thread worktrees) is a separate decision and must be made before running agents on untrusted prompts. (Decision 0009 adds an opt-in container sandbox for runtimes.)
 
 ## Consequences
 

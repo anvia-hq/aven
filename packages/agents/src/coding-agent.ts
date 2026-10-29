@@ -15,6 +15,8 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   jobs?: JobRegistry;
   /** Enable `web_search`. Defaults to whether `TAVILY_API_KEY` is set. */
   webSearch?: boolean;
+  /** More tools for the agent, such as a sandbox's desktop. */
+  extraTools?: readonly AnyTool[];
   maxTurns?: number;
   /** Persist conversations; see `createMemoryStore`. Omit for stateless runs. */
   memory?: MemoryStore;
@@ -42,6 +44,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     shellKill,
   ];
   if (options.webSearch ?? Boolean(process.env.TAVILY_API_KEY)) tools.push(createWebSearchTool());
+  if (options.extraTools) tools.push(...options.extraTools);
 
   const agent = new Agent({
     id: "coding",

@@ -86,7 +86,12 @@ export function projectToolOutput(output: ToolResultOutput): {
     case "content":
       return {
         status: "done",
-        output: clip(output.value.map((part) => (part.type === "text" ? part.text : "")).join("")),
+        // Images and files (a desktop screenshot) are not sent to clients; say that one was there.
+        output: clip(
+          output.value
+            .map((part) => (part.type === "text" ? part.text : `[${part.type}]`))
+            .join(""),
+        ),
       };
     default:
       return { status: "error", output: output.reason ?? "Tool call was denied" };
