@@ -1,4 +1,4 @@
-import { Check, Copy, Plus } from "@mynaui/icons-react";
+import { Plus } from "@mynaui/icons-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/button";
@@ -14,6 +14,7 @@ import {
 import { Form } from "@/components/form";
 import { TextField } from "@/components/text-field";
 
+import { RuntimeCommand } from "./runtime-command";
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { CreatedRuntime } from "../types";
 
@@ -22,21 +23,13 @@ export function NewRuntimeDialog() {
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [created, setCreated] = useState<CreatedRuntime | null>(null);
-  const [copied, setCopied] = useState(false);
   const { create } = useRuntimes();
-
-  // Where a runtime on another machine reaches this control plane: this app's address, whose
-  // /api path is proxied to it.
-  const command = created
-    ? `AVEN_URL=${window.location.origin}/api AVEN_RUNTIME_TOKEN=${created.token} bun run start --cwd apps/runtime`
-    : "";
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (!next) {
       setName("");
       setCreated(null);
-      setCopied(false);
     }
   }
 
@@ -45,11 +38,6 @@ export function NewRuntimeDialog() {
     setSubmitting(true);
     setCreated(await create(name.trim()));
     setSubmitting(false);
-  }
-
-  async function copy() {
-    await navigator.clipboard.writeText(command);
-    setCopied(true);
   }
 
   return (
@@ -67,16 +55,8 @@ export function NewRuntimeDialog() {
                 revoke the runtime and add a new one.
               </DialogDescription>
             </DialogHeader>
-            <pre
-              aria-label="Runtime command"
-              className="overflow-x-auto rounded-md border bg-muted p-3 font-mono text-xs whitespace-pre-wrap break-all"
-            >
-              {command}
-            </pre>
+            <RuntimeCommand token={created.token} />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => void copy()}>
-                {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy command"}
-              </Button>
               <Button type="button" onClick={() => handleOpenChange(false)}>
                 Done
               </Button>

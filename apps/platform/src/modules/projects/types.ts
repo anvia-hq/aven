@@ -1,7 +1,7 @@
 export type Project = {
   id: string;
   name: string;
-  /** Directory on the machine running control-plane that threads in this project work in. */
+  /** Directory that threads in this project work in, on the machine of its runtime. */
   projectPath: string;
   /** The runtime the directory is on; null means the control plane's own machine. */
   runtimeId: string | null;

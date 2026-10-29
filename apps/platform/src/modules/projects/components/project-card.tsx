@@ -2,6 +2,7 @@ import { Folder } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { timeAgo } from "@/lib/format";
+import { RuntimeBadge } from "@/modules/runtimes/components/runtime-badge";
 
 import type { Project } from "../types";
 
@@ -24,6 +25,7 @@ export function ProjectCard({ project }: Props) {
         <Folder className="size-3.5 shrink-0" />
         {project.projectPath}
       </span>
+      <RuntimeBadge runtimeId={project.runtimeId} />
       <p className="text-xs text-muted-foreground">Updated {timeAgo(project.updatedAt, true)}</p>
     </Link>
   );

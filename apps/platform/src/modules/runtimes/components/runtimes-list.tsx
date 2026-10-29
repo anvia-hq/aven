@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { authClient } from "@/lib/auth-client";
 import { timeAgo } from "@/lib/format";
 
+import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
+
 import { useRuntimes } from "../hooks/use-runtimes";
 
 export function RuntimesList() {
@@ -29,7 +31,7 @@ export function RuntimesList() {
           <TableHead>Status</TableHead>
           <TableHead>Token</TableHead>
           <TableHead>Last seen</TableHead>
-          <TableHead className="w-16" />
+          <TableHead className="w-24" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -47,14 +49,17 @@ export function RuntimesList() {
             </TableCell>
             <TableCell>
               {runtime.ownerId === session?.user.id && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Revoke ${runtime.name}`}
-                  onClick={() => void revoke(runtime)}
-                >
-                  <Trash />
-                </Button>
+                <div className="flex items-center justify-end gap-1">
+                  <RotateRuntimeDialog runtime={runtime} />
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Revoke ${runtime.name}`}
+                    onClick={() => void revoke(runtime)}
+                  >
+                    <Trash />
+                  </Button>
+                </div>
               )}
             </TableCell>
           </TableRow>

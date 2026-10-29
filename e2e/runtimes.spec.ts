@@ -53,6 +53,24 @@ test.describe("runtimes", () => {
       await expect(row).toContainText("Online", { timeout: 1000 });
     }).toPass({ timeout: 15_000 });
 
+    // Rotating cuts it off; the old process is refused and exits, and the new token reconnects.
+    const refused = new Promise<number | null>((resolve) => runtime?.once("exit", resolve));
+    await page.getByRole("button", { name: "Rotate token for e2e-laptop" }).click();
+    await page.getByRole("button", { name: "Rotate token", exact: true }).click();
+    const rotatedCommand = await page.getByLabel("Runtime command").innerText();
+    const rotatedToken = /AVEN_RUNTIME_TOKEN=(\S+)/.exec(rotatedCommand)?.[1];
+    expect(rotatedToken).not.toBe(token);
+    expect(await refused).toBe(1);
+    await page.getByRole("button", { name: "Done" }).click();
+    runtime = spawn("bun", ["apps/runtime/src/main.ts"], {
+      env: { ...process.env, AVEN_URL: url, AVEN_RUNTIME_TOKEN: rotatedToken },
+      stdio: "ignore",
+    });
+    await expect(async () => {
+      await page.reload();
+      await expect(row).toContainText("Online", { timeout: 1000 });
+    }).toPass({ timeout: 15_000 });
+
     // Projects can now be put on it.
     await page.goto("/threads");
     await page.getByRole("button", { name: "New project" }).click();

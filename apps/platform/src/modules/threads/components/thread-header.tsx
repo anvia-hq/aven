@@ -1,6 +1,7 @@
 import { Folder, Spinner, Stop } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
+import { RuntimeBadge } from "@/modules/runtimes/components/runtime-badge";
 
 import type { Thread } from "../types";
 
@@ -21,6 +22,7 @@ export function ThreadHeader({ thread, running, onCancel }: Props) {
         <Folder className="size-3.5 shrink-0" />
         <span className="truncate font-mono">{thread.projectPath}</span>
       </span>
+      <RuntimeBadge runtimeId={thread.runtimeId} />
       {running && (
         <>
           <Spinner className="size-4 animate-spin text-muted-foreground" aria-label="Running" />

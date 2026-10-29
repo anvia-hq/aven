@@ -58,6 +58,23 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     return created;
   }
 
+  // Gives the runtime a new token and cuts it off; returns the token, shown once.
+  async function rotate(runtime: Runtime) {
+    let rotated: CreatedRuntime;
+    try {
+      rotated = await postJson<CreatedRuntime>(`/runtimes/${runtime.id}/rotate`, {});
+    } catch (failure) {
+      toast.add({
+        title: "Could not rotate token",
+        description: messageOf(failure),
+        type: "error",
+      });
+      return null;
+    }
+    await refresh();
+    return rotated;
+  }
+
   async function revoke(runtime: Runtime) {
     try {
       await api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" });
@@ -73,5 +90,5 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     toast.add({ title: "Runtime revoked", description: runtime.name });
   }
 
-  return { runtimes: runtimes ?? [], loaded: runtimes !== null, refresh, create, revoke };
+  return { runtimes: runtimes ?? [], loaded: runtimes !== null, refresh, create, rotate, revoke };
 }
