@@ -7,7 +7,8 @@ Guidance for AI agents and contributors working in this repo.
 Bun workspace monorepo (TypeScript, ESM).
 
 ```
-apps/              Applications (none yet)
+apps/              Applications (control-plane, platform, runtime)
+clients/           Native clients (macos: SwiftPM, no TypeScript)
 packages/          Shared internal packages (db, agents, protocol)
 docs/              Project knowledge (see docs/README.md)
 ```
@@ -69,7 +70,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 - Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
 - Routers call services, services own DB access. Mount routers in `src/index.ts`.
 - Auth is Better Auth (`modules/auth`); protect routes with `.use(authRouter)` + `{ auth: true }`.
-- `providers` (per user, not per organization: create, list, update, delete, list models from `<base>/models`, filtered through models.dev to those that can drive the agent, with each model's reasoning levels; never returns keys; see `docs/decision/0006-user-scoped-providers.md`), `projects` (CRUD-lite: create, list, get; scoped to `session.activeOrganizationId`, path validated: absolute, existing directory, stored as the real path) and `threads` (CRUD, scoped the same way; another organization's project or thread is 404/422) and `runs` (`RunManager` owns channels, the transcript and event fan-out; the `Runtime` interface in `runs/runtime.ts` is what executes a run, and `BuiltinRuntime` is the in-process implementation, see decision 0008). A thread always belongs to a project (`project_id`) and snapshots its `project_path` at creation. Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. The model comes from the provider the message chose (`providerId`, `modelId`, `reasoningEffort`; it must be the sender's own) or else their default (`providers` module, per user, keys encrypted with `PROVIDER_ENCRYPTION_KEY`); with none, it falls back to `AGENT_PROVIDER` / `AGENT_MODEL` and the env keys. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
+- `providers` (per user, not per organization: create, list, update, delete, list models from `<base>/models`, filtered through models.dev to those that can drive the agent, with each model's reasoning levels; never returns keys; see `docs/decision/0006-user-scoped-providers.md`), `projects` (CRUD-lite: create, list, get; scoped to `session.activeOrganizationId`, path validated: absolute, existing directory, stored as the real path) and `threads` (CRUD, scoped the same way; another organization's project or thread is 404/422) `runtimes` (per organization, shared with every member, only the owner revokes: create returns a token once and stores its hash; list shows `online`; `/runtimes/connect` is the WebSocket a runtime opens with that token; `/runtimes/gateway/*` is the model gateway runs authenticate to with a per-run token; see decision 0008) and `runs` (`RunManager` owns channels, the transcript and event fan-out; the `Runtime` interface in `runs/runtime.ts` is what executes a run, and `BuiltinRuntime` is the in-process implementation, see decision 0008). A thread always belongs to a project (`project_id`) and snapshots its `project_path` and `runtime_id` at creation; a project's `runtime_id` null means the control plane's own machine, and path validation and the folder browser are asked of that runtime. Native clients send `Authorization: Bearer` (Better Auth `bearer`). Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. The model comes from the provider the message chose (`providerId`, `modelId`, `reasoningEffort`; it must be the sender's own) or else their default (`providers` module, per user, keys encrypted with `PROVIDER_ENCRYPTION_KEY`); with none, it falls back to `AGENT_PROVIDER` / `AGENT_MODEL` and the env keys. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
 - Full rules: `docs/rules/0002-control-plane-structure.md`.
 
 ## packages/db
@@ -81,9 +82,13 @@ Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files
 - Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
 - Commit generated migrations in `drizzle/`; never edit them by hand. drizzle-kit runs on the Bun runtime (`bun --bun` in the `db:*` scripts) because it loads schema files with `require` and `@anvia/memory-drizzle` is ESM-only (`import` condition only), which fails under Node with `ERR_PACKAGE_PATH_NOT_EXPORTED`. Don't call `drizzle-kit` directly.
 
+## apps/runtime and packages/runtime-client
+
+A runtime is a process that connects out to a control plane (`AVEN_URL`, `AVEN_RUNTIME_TOKEN`, `bun run --cwd apps/runtime start`) and runs agents on its own machine; see decision 0008. The logic lives in `packages/runtime-client` (`runner.ts`: connection, runs, jobs; `remote-memory.ts`: the conversation is the control plane's). It holds no provider key: model calls go to the control plane's gateway with a per-run token. Filesystem helpers shared with the control plane's own machine are in `packages/agents/src/workspace.ts`.
+
 ## packages/protocol
 
-The wire protocol shared by the control plane, runtimes and every client (see decision 0008): run event types plus the pure `applyEvent` reducer, no runtime imports. Import from `@aven/protocol/events`. Clients (the platform) depend on this, never on `@aven/agents`.
+The wire protocol shared by the control plane, runtimes and every client (see decision 0008): run event types plus the pure `applyEvent` reducer (`events.ts`), and the runtime WebSocket messages (`runtime-wire.ts`). No runtime imports. Non-TypeScript clients follow `docs/products/0004-native-client-contract.md`. Clients (the platform) depend on this, never on `@aven/agents`.
 
 ## packages/agents
 
