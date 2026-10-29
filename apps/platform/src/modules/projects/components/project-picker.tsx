@@ -2,14 +2,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { useProjects } from "../hooks/use-projects";
 import type { Project } from "../types";
-import { NewProjectDialog } from "./new-project-dialog";
+import { ImportRepositoryDialog } from "./import-repository-dialog";
 
 type Props = {
   value: string | undefined;
   onChange: (projectId: string) => void;
 };
 
-// Every thread belongs to a project; this picks one, or creates one and picks that.
+// Every thread belongs to a project; this picks one, or imports a repository and picks that.
 export function ProjectPicker({ value, onChange }: Props) {
   const { projects } = useProjects();
 
@@ -31,7 +31,7 @@ export function ProjectPicker({ value, onChange }: Props) {
           ))}
         </SelectContent>
       </Select>
-      <NewProjectDialog onCreated={(project: Project) => onChange(project.id)} />
+      <ImportRepositoryDialog onImported={(project: Project) => onChange(project.id)} />
     </div>
   );
 }

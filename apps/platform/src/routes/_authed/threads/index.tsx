@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/button";
 import { toast } from "@/components/toast";
-import { NewProjectDialog } from "@/modules/projects/components/new-project-dialog";
+import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -45,8 +45,8 @@ function NewThread() {
       {loaded &&
         (projects.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-10 text-center">
-            <p className="text-sm text-muted-foreground">Create a project to get started.</p>
-            <NewProjectDialog onCreated={(project) => setProjectId(project.id)} />
+            <p className="text-sm text-muted-foreground">Import a repository to get started.</p>
+            <ImportRepositoryDialog onImported={(project) => setProjectId(project.id)} />
           </div>
         ) : (
           <>

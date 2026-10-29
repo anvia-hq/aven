@@ -17,6 +17,7 @@ export function ProjectCard({ project }: Props) {
       className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
     >
       <span className="truncate font-medium">{project.name}</span>
+      <span className="truncate text-xs text-muted-foreground">{project.repoFullName}</span>
       <RuntimeBadge runtimeId={project.runtimeId} />
       <p className="text-xs text-muted-foreground">Updated {timeAgo(project.updatedAt, true)}</p>
     </Link>

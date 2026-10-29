@@ -26,13 +26,17 @@ export function useProjects() {
     if (projects === null) void projectsStore.refresh();
   }, [projects]);
 
-  async function create(input: { name: string; runtimeId: string }) {
+  async function importRepository(input: {
+    installationId: string;
+    repository: string;
+    runtimeId: string;
+  }) {
     let project: Project;
     try {
       project = await postJson<Project>("/projects", input);
     } catch (failure) {
       toast.add({
-        title: "Could not create project",
+        title: "Could not import repository",
         description: errorMessage(failure),
         type: "error",
       });
@@ -42,7 +46,7 @@ export function useProjects() {
       const list = current ?? [];
       return [project, ...list];
     });
-    toast.add({ title: "Project created", description: project.name, type: "success" });
+    toast.add({ title: "Repository imported", description: project.name, type: "success" });
     return project;
   }
 
@@ -50,6 +54,6 @@ export function useProjects() {
     projects: projects ?? [],
     loaded: projects !== null,
     refresh: projectsStore.refresh,
-    create,
+    importRepository,
   };
 }
