@@ -4,6 +4,7 @@ import { toast } from "@/components/toast";
 import { authClient } from "@/lib/auth-client";
 import { projectsAtom } from "@/modules/projects/atoms/projects-atom";
 import { invalidateProjects } from "@/modules/projects/hooks/use-projects";
+import { clearRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { threadsAtom } from "@/modules/threads/atoms/threads-atom";
 import { invalidateThreads } from "@/modules/threads/hooks/use-threads";
 
@@ -29,6 +30,7 @@ export function useOrganizations() {
     setProjects(null);
     invalidateThreads();
     setThreads(null);
+    clearRuntimes();
   }
 
   return { organizations: organizations ?? [], activeOrganization, switchTo };

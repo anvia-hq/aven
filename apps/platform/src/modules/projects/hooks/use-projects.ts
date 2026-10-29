@@ -45,7 +45,7 @@ export function useProjects() {
     if (projects === null) void refresh();
   }, [projects, refresh]);
 
-  async function create(input: { name: string; projectPath: string }) {
+  async function create(input: { name: string; projectPath: string; runtimeId?: string }) {
     let project: Project;
     try {
       project = await postJson<Project>("/projects", input);

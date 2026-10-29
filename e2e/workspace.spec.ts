@@ -143,6 +143,7 @@ test.describe("settings", () => {
     for (const [name, url] of [
       ["Providers", /providers$/],
       ["Members", /members$/],
+      ["Runtimes", /runtimes$/],
       ["Profile", /profile$/],
     ] as const) {
       await nav.getByRole("link", { name }).click();

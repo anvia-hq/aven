@@ -12,14 +12,16 @@ import type { DirectoryListing } from "../types";
 type Props = {
   value: string;
   onChange: (path: string) => void;
+  /** Browse this runtime's disk; omitted means the control plane's own. */
+  runtimeId?: string;
 };
 
-// Browsers cannot hand a web page a real OS path, so this walks the control-plane machine's
-// filesystem instead. Browsing swaps in place inside the same dialog (not a nested Dialog) since
+// Browsers cannot hand a web page a real OS path, so this walks the chosen machine's (the
+// control plane's, or a runtime's) filesystem instead. Browsing swaps in place inside the same dialog (not a nested Dialog) since
 // Base UI doesn't stack two Dialog roots the way this needs. Typing a path (not just clicking)
 // matters: a project can live outside the home directory entirely (another mounted volume),
 // which a click-only picker could never reach.
-export function FolderPicker({ value, onChange }: Props) {
+export function FolderPicker({ value, onChange, runtimeId }: Props) {
   const [browsing, setBrowsing] = useState(false);
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [pathInput, setPathInput] = useState("");
@@ -42,7 +44,10 @@ export function FolderPicker({ value, onChange }: Props) {
     editedSincePathLoad.current = false;
     setLoading(true);
     try {
-      const query = path ? `?path=${encodeURIComponent(path)}` : "";
+      const params = new URLSearchParams();
+      if (path) params.set("path", path);
+      if (runtimeId) params.set("runtimeId", runtimeId);
+      const query = params.size > 0 ? `?${params}` : "";
       const result = await api<DirectoryListing>(`/projects/browse${query}`);
       if (requestId !== latestRequest.current) return;
       setListing(result);
@@ -91,6 +96,7 @@ export function FolderPicker({ value, onChange }: Props) {
       const result = await postJson<DirectoryListing>("/projects/browse", {
         path: listing.path,
         name,
+        runtimeId,
       });
       setListing(result);
       cancelCreatingFolder();

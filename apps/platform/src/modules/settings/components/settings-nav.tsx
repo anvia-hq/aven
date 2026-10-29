@@ -1,4 +1,4 @@
-import { Cog, Servers, Sparkles, Users } from "@mynaui/icons-react";
+import { Cog, Servers, Sparkles, Terminal, Users } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
@@ -13,7 +13,10 @@ const groups = [
   },
   {
     label: "Workspace",
-    items: [{ to: "/settings/members", label: "Members", icon: Users }],
+    items: [
+      { to: "/settings/members", label: "Members", icon: Users },
+      { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
+    ],
   },
 ] as const;
 

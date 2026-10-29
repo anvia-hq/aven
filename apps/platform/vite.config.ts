@@ -14,6 +14,8 @@ export default defineConfig({
       "/api": {
         target: process.env.API_URL ?? "http://localhost:8000",
         changeOrigin: true,
+        // Runtimes connect to /api/runtimes/connect over a WebSocket.
+        ws: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
