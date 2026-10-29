@@ -1,0 +1,553 @@
+[
+  {
+    "name": "a snapshot replaces whatever the client had",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "x"
+      },
+      {
+        "type": "snapshot",
+        "messages": [
+          {
+            "id": "m-0",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "earlier"
+              }
+            ]
+          },
+          {
+            "id": "m-1",
+            "role": "assistant",
+            "parts": [
+              {
+                "type": "text",
+                "text": "answer"
+              }
+            ]
+          }
+        ],
+        "running": false
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "earlier"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "answer"
+            }
+          ]
+        }
+      ],
+      "running": false
+    }
+  },
+  {
+    "name": "a snapshot of a live run says it is running",
+    "events": [
+      {
+        "type": "snapshot",
+        "messages": [
+          {
+            "id": "m-0",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "earlier"
+              }
+            ]
+          },
+          {
+            "id": "m-1",
+            "role": "assistant",
+            "parts": [
+              {
+                "type": "text",
+                "text": "answer"
+              }
+            ]
+          }
+        ],
+        "running": true
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "earlier"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "answer"
+            }
+          ]
+        }
+      ],
+      "running": true
+    }
+  },
+  {
+    "name": "a run streams text and a tool call",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "what is in a.txt?"
+      },
+      {
+        "type": "text",
+        "delta": "Look"
+      },
+      {
+        "type": "text",
+        "delta": "ing."
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t1",
+          "name": "read",
+          "target": "a.txt",
+          "status": "running"
+        }
+      },
+      {
+        "type": "tool_end",
+        "id": "t1",
+        "status": "done",
+        "output": "hello"
+      },
+      {
+        "type": "text",
+        "delta": "It says hello."
+      },
+      {
+        "type": "done"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "what is in a.txt?"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "Looking."
+            },
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t1",
+                "name": "read",
+                "target": "a.txt",
+                "status": "done",
+                "output": "hello"
+              }
+            },
+            {
+              "type": "text",
+              "text": "It says hello."
+            }
+          ]
+        }
+      ],
+      "running": false
+    }
+  },
+  {
+    "name": "text after a tool call starts a new text part",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "p"
+      },
+      {
+        "type": "text",
+        "delta": "a"
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t2",
+          "name": "edit",
+          "target": "b.ts",
+          "status": "running",
+          "diff": [
+            {
+              "type": "del",
+              "text": "old"
+            },
+            {
+              "type": "add",
+              "text": "new"
+            }
+          ]
+        }
+      },
+      {
+        "type": "text",
+        "delta": "b"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "p"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "a"
+            },
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t2",
+                "name": "edit",
+                "target": "b.ts",
+                "status": "running",
+                "diff": [
+                  {
+                    "type": "del",
+                    "text": "old"
+                  },
+                  {
+                    "type": "add",
+                    "text": "new"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "text",
+              "text": "b"
+            }
+          ]
+        }
+      ],
+      "running": true
+    }
+  },
+  {
+    "name": "tool_end only changes the tool with that id",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "p"
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t1",
+          "name": "read",
+          "target": "a.txt",
+          "status": "running"
+        }
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t2",
+          "name": "edit",
+          "target": "b.ts",
+          "status": "running",
+          "diff": [
+            {
+              "type": "del",
+              "text": "old"
+            },
+            {
+              "type": "add",
+              "text": "new"
+            }
+          ]
+        }
+      },
+      {
+        "type": "tool_end",
+        "id": "t2",
+        "status": "error",
+        "output": "boom"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "p"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t1",
+                "name": "read",
+                "target": "a.txt",
+                "status": "running"
+              }
+            },
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t2",
+                "name": "edit",
+                "target": "b.ts",
+                "status": "error",
+                "diff": [
+                  {
+                    "type": "del",
+                    "text": "old"
+                  },
+                  {
+                    "type": "add",
+                    "text": "new"
+                  }
+                ],
+                "output": "boom"
+              }
+            }
+          ]
+        }
+      ],
+      "running": true
+    }
+  },
+  {
+    "name": "events before any run_start change nothing",
+    "events": [
+      {
+        "type": "text",
+        "delta": "orphan"
+      },
+      {
+        "type": "tool_end",
+        "id": "t1",
+        "status": "done"
+      }
+    ],
+    "expected": {
+      "messages": [],
+      "running": false
+    }
+  },
+  {
+    "name": "a second run appends after the first",
+    "events": [
+      {
+        "type": "snapshot",
+        "messages": [
+          {
+            "id": "m-0",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "earlier"
+              }
+            ]
+          },
+          {
+            "id": "m-1",
+            "role": "assistant",
+            "parts": [
+              {
+                "type": "text",
+                "text": "answer"
+              }
+            ]
+          }
+        ],
+        "running": false
+      },
+      {
+        "type": "run_start",
+        "prompt": "again"
+      },
+      {
+        "type": "text",
+        "delta": "ok"
+      },
+      {
+        "type": "done"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "earlier"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "answer"
+            }
+          ]
+        },
+        {
+          "id": "m-2",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "again"
+            }
+          ]
+        },
+        {
+          "id": "m-3",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "ok"
+            }
+          ]
+        }
+      ],
+      "running": false
+    }
+  },
+  {
+    "name": "an error ends the run",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "p"
+      },
+      {
+        "type": "error",
+        "message": "nope"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "p"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": []
+        }
+      ],
+      "running": false
+    }
+  },
+  {
+    "name": "an unknown event type is ignored",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "p"
+      },
+      {
+        "type": "something_new",
+        "x": 1
+      },
+      {
+        "type": "text",
+        "delta": "still works"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "p"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "still works"
+            }
+          ]
+        }
+      ],
+      "running": true
+    }
+  }
+]

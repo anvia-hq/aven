@@ -12,7 +12,8 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:macos": "cd clients/macos/AvenKit && swift test"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
