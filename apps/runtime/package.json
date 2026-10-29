@@ -1,0 +1,13 @@
+{
+  "name": "@aven/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun --env-file=../../.env src/main.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@aven/runtime-client": "workspace:*"
+  }
+}

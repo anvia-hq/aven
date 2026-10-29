@@ -1,0 +1,2 @@
+ALTER TABLE "threads" ADD COLUMN "runtime_id" uuid;--> statement-breakpoint
+ALTER TABLE "threads" ADD CONSTRAINT "threads_runtime_id_runtimes_id_fk" FOREIGN KEY ("runtime_id") REFERENCES "public"."runtimes"("id") ON DELETE restrict ON UPDATE no action;

@@ -10,7 +10,11 @@ export type ModelConfig = {
   modelId?: string;
   /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. */
   apiKey?: string;
-  /** Required for `openai-compatible`: the server's API root, e.g. http://localhost:11434/v1. */
+  /**
+   * Required for `openai-compatible`: the server's API root, e.g. http://localhost:11434/v1.
+   * For the other providers it overrides the API root, which is how a runtime reaches the
+   * control plane's gateway instead of the vendor.
+   */
   baseUrl?: string;
   /** One of the levels `reasoningControlsFor` reports for the model; unsupported values make the run fail. */
   reasoningEffort?: string;
@@ -55,7 +59,7 @@ export function createModel(config: ModelConfig) {
   if (config.provider === "openai") {
     const apiKey = config.apiKey ?? process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-    return new OpenAIClient({ apiKey }).completionModel({
+    return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.openai,
       api: "responses",
       controls: controlsFromLevels(config.effortLevels),
@@ -64,7 +68,7 @@ export function createModel(config: ModelConfig) {
 
   const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  return new AnthropicClient({ apiKey }).completionModel({
+  return new AnthropicClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
     modelId: config.modelId ?? DEFAULT_MODEL_IDS.anthropic,
     controls: controlsFromLevels(config.effortLevels),
   });

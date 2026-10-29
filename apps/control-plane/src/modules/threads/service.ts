@@ -34,6 +34,7 @@ export const threadsService = {
         projectId: project.id,
         createdBy: userId,
         projectPath: project.projectPath,
+        runtimeId: project.runtimeId,
         title: body.title ?? project.name,
       })
       .returning();

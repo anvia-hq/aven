@@ -1,7 +1,6 @@
-import { Agent, type AnyTool, type CompletionModel } from "@anvia/core";
+import { Agent, type AnyTool, type CompletionModel, type MemoryStore } from "@anvia/core";
 
 import { JobRegistry } from "./jobs/job-registry";
-import type { MemoryStore } from "./memory";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { createEditTool } from "./tools/edit";
 import { createReadTool } from "./tools/read";

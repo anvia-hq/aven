@@ -2,6 +2,7 @@ import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { projects } from "./projects";
+import { runtimes } from "./runtimes";
 import { users } from "./users";
 
 // A thread is one agent session, and always belongs to a project. Its conversation lives in the
@@ -21,6 +22,8 @@ export const threads = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Snapshot of the project's runtime, like `projectPath`: where the agent runs; null is the control plane. */
+    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     projectPath: text("project_path").notNull(),
     state: text("state", { enum: ["open", "snoozed", "archived"] })

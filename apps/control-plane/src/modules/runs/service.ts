@@ -13,6 +13,9 @@ import {
   type RunThread,
   type RuntimeRun,
 } from "./runtime";
+import { RemoteRuntime } from "./remote-runtime";
+import { RoutingRuntime } from "./routing-runtime";
+import { runtimeHub } from "../runtimes/hub";
 
 type ActiveRun = {
   handle: RuntimeRun;
@@ -120,7 +123,7 @@ export class RunManager {
       run.cancelled = true;
       run.handle.cancel("Cancelled by user");
     }
-    void this.#runtime.stopJobs(threadId);
+    void this.#runtime.stopJobs(channel.thread);
     return run !== undefined;
   }
 
@@ -279,8 +282,11 @@ function errorMessage(error: unknown) {
   return message.length > 300 ? `${message.slice(0, 300)}…` : message;
 }
 
+const store = createMemoryStore(db);
+
 export const runsService = new RunManager({
-  store: createMemoryStore(db),
+  store,
+  runtime: new RoutingRuntime(new BuiltinRuntime(store), new RemoteRuntime(runtimeHub)),
   resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });

@@ -4,12 +4,19 @@ import {
   type CodingAgentStream,
 } from "@aven/agents/coding-agent";
 import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
-import type { MemoryStore } from "@aven/agents/memory";
+import type { MemoryStore } from "@anvia/core";
+import type { MemoryStore as PostgresMemoryStore } from "@aven/agents/memory";
 import type { ModelConfig, Provider } from "@aven/agents/model";
 import { projectStreamEvent } from "@aven/agents/projection";
 import type { RunEvent } from "@aven/protocol/events";
 
-export type RunThread = { id: string; organizationId: string; projectPath: string };
+export type RunThread = {
+  id: string;
+  organizationId: string;
+  projectPath: string;
+  /** The runtime the project lives on; null or absent means the control plane's own machine. */
+  runtimeId?: string | null;
+};
 
 // One agent run as the control plane sees it. Everything a run needs from the machine it runs on
 // (the agent loop, its tools, the shell, the project's files) stays behind this handle, so a
@@ -31,7 +38,7 @@ export interface Runtime {
    */
   start(input: { thread: RunThread; prompt: string; model?: ModelConfig }): RuntimeRun;
   /** Kills the background commands a thread started. */
-  stopJobs(threadId: string): Promise<void>;
+  stopJobs(thread: RunThread): Promise<void>;
   /** Called when a background command finishes with a notice for the agent; returns an unsubscribe. */
   onJobNotice(listener: (threadId: string, notice: string) => void): () => void;
   dispose(): Promise<void>;
@@ -78,7 +85,7 @@ export class BuiltinRuntime implements Runtime {
   #disposed = false;
 
   constructor(
-    private store: MemoryStore,
+    private store: PostgresMemoryStore,
     private createAgent: CreateAgent = defaultCreateAgent,
   ) {}
 
@@ -108,8 +115,8 @@ export class BuiltinRuntime implements Runtime {
     };
   }
 
-  async stopJobs(threadId: string) {
-    const jobs = this.#jobs.get(threadId);
+  async stopJobs(thread: RunThread) {
+    const jobs = this.#jobs.get(thread.id);
     if (!jobs) return;
     await Promise.all(
       jobs

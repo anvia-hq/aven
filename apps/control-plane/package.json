@@ -10,9 +10,11 @@
     "backfill:active-organizations": "bun --env-file=../../.env scripts/backfill-active-organizations.ts"
   },
   "dependencies": {
+    "@anvia/core": "^1.17.2",
     "@aven/agents": "workspace:*",
     "@aven/db": "workspace:*",
     "@aven/protocol": "workspace:*",
+    "@aven/runtime-client": "workspace:*",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",
     "elysia": "^1.4.30",
