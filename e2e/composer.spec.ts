@@ -1,22 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const unique = () => `cmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
-
-async function register(page: Page) {
-  await page.goto("/register");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Name").fill("Composer User");
-  await page.getByLabel("Email").fill(unique());
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/threads$/);
-}
+import { addRunner, registerUser } from "./helpers";
 
 // The composer only shows once there is a project; creating one on /threads also selects it. A
 // project needs a runner, and one that never connects is enough here.
 async function createProject(page: Page) {
-  const runner = await page.request.post("/api/runtimes", { data: { name: "runner" } });
-  expect(runner.ok()).toBe(true);
+  await addRunner(page);
   await page.getByRole("button", { name: "New project" }).click();
   await page.getByLabel("Name").fill("composer-app");
   await page.getByRole("button", { name: "Create project" }).click();
@@ -25,7 +14,7 @@ async function createProject(page: Page) {
 
 test.describe("prompt composer", () => {
   test("without a provider it offers to add one", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "cmp", "Composer User");
     await createProject(page);
     await expect(
       page.getByRole("link", { name: "Add a provider to choose a model" }),
@@ -34,7 +23,7 @@ test.describe("prompt composer", () => {
   });
 
   test("the model and reasoning effort picked are sent with the message", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "cmp", "Composer User");
     const saved = await page.request.post("/api/providers", {
       data: { kind: "openai", name: "Work", apiKey: "sk-test-1234" },
     });

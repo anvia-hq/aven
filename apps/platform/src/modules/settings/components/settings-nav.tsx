@@ -1,5 +1,6 @@
 import { Cog, Servers, Sparkles, Terminal, Users } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { cn } from "cn";
 
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
@@ -39,9 +40,10 @@ export function SettingsNav() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted ${
-                pathname === item.to ? "bg-muted font-medium" : "text-muted-foreground"
-              }`}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                pathname === item.to ? "bg-muted font-medium" : "text-muted-foreground",
+              )}
             >
               <item.icon className="size-4" />
               {item.label}

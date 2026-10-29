@@ -1,26 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const unique = () => `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
-
-async function register(page: Page) {
-  await page.goto("/register");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Name").fill("Workspace User");
-  await page.getByLabel("Email").fill(unique());
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/threads$/);
-}
-
-// A project lives on a runner; one that never connects is enough to create projects and threads.
-async function addRunner(page: Page) {
-  const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
-  expect(response.ok()).toBe(true);
-}
+import { addRunner, registerUser } from "./helpers";
 
 test.describe("projects", () => {
   test("creates a project, lists it and opens it", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
     await page.goto("/projects");
     await page.getByRole("button", { name: "New project" }).click();
@@ -45,7 +29,7 @@ test.describe("projects", () => {
   });
 
   test("starts a thread from the project page", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
     await page.goto("/projects");
     await page.getByRole("button", { name: "New project" }).click();
@@ -67,21 +51,22 @@ test.describe("projects", () => {
 
 test.describe("settings", () => {
   test("user menu opens personal and workspace settings", async ({ page }) => {
-    await register(page);
-    const footer = page.locator('[data-slot="sidebar-footer"]');
+    await registerUser(page, "ws", "Workspace User");
+    const userCard = page.locator('[data-slot="sidebar-header"]');
 
-    await footer.getByRole("button", { name: /Workspace User/ }).click();
+    await userCard.getByRole("button", { name: /Workspace User/ }).click();
     await page.getByRole("menuitem", { name: /Personal settings/ }).click();
     await expect(page).toHaveURL(/\/settings\/profile$/);
     await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
 
-    await footer.getByRole("button", { name: /Workspace User/ }).click();
-    await page.getByRole("menuitem", { name: /Workspace settings/ }).click();
+    await userCard.getByRole("button", { name: /Workspace User/ }).click();
+    // The organization section of the menu has its own Settings button.
+    await page.getByRole("menu").getByRole("button", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings\/members$/);
   });
 
   test("the profile name saves and the dark mode switch changes the theme", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/profile");
     await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
 
@@ -96,7 +81,7 @@ test.describe("settings", () => {
   });
 
   test("settings navigation reaches every page", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings");
     await expect(page).toHaveURL(/\/settings\/profile$/);
 
@@ -113,7 +98,7 @@ test.describe("settings", () => {
   });
 
   test("invite and remove a member", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/members");
     const table = page.getByRole("table", { name: "Members" });
     await expect(table.getByRole("row")).toHaveCount(2);
@@ -134,7 +119,7 @@ test.describe("settings", () => {
 
 test.describe("sidebar and search", () => {
   test("the command palette opens with the keyboard and navigates", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
     await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Name").fill("docs-site");

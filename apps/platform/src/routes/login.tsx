@@ -1,39 +1,20 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { authClient } from "@/lib/auth-client";
+import { useContinueAfterAuth } from "@/modules/auth/hooks/use-continue-after-auth";
 import { validateInvitationSearch } from "@/modules/auth/invitation-search";
+import { redirectIfSignedIn } from "@/modules/auth/redirect-if-signed-in";
 import { AuthForm } from "@/modules/auth/components/auth-form";
 
 export const Route = createFileRoute("/login")({
   validateSearch: validateInvitationSearch,
-  beforeLoad: async ({ search }) => {
-    const { data } = await authClient.getSession();
-    if (!data) return;
-    if (search.invitation) {
-      throw redirect({
-        to: "/accept-invitation/$invitationId",
-        params: { invitationId: search.invitation },
-      });
-    }
-    throw redirect({ to: "/threads" });
-  },
+  beforeLoad: ({ search }) => redirectIfSignedIn(search),
   component: Login,
 });
 
 function Login() {
-  const navigate = useNavigate();
-  const { invitation } = Route.useSearch();
-
-  function onSuccess() {
-    if (invitation) {
-      return navigate({
-        to: "/accept-invitation/$invitationId",
-        params: { invitationId: invitation },
-      });
-    }
-    return navigate({ to: "/threads" });
-  }
-
+  const search = Route.useSearch();
+  const { invitation } = search;
+  const onSuccess = useContinueAfterAuth(search);
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-8">
       <h1 className="text-2xl font-bold">Sign in to Aven</h1>

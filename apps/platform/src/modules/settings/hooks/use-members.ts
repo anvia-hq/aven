@@ -1,19 +1,13 @@
 import { toast } from "@/components/toast";
 import { authClient } from "@/lib/auth-client";
+import { copyToClipboard } from "@/lib/clipboard";
 
 import type { InvitableRole, Member } from "../types";
 
 const inviteLink = (invitationId: string) =>
   `${window.location.origin}/accept-invitation/${invitationId}`;
 
-async function copyInviteLink(invitationId: string) {
-  try {
-    await navigator.clipboard.writeText(inviteLink(invitationId));
-    return true;
-  } catch {
-    return false;
-  }
-}
+const copyInviteLink = (invitationId: string) => copyToClipboard(inviteLink(invitationId));
 
 export function useMembers() {
   const { data: organization, isPending } = authClient.useActiveOrganization();

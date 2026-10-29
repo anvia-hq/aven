@@ -1,7 +1,6 @@
 import { Check, Copy } from "@mynaui/icons-react";
-import { useState } from "react";
-
 import { Button } from "@/components/button";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 type Props = {
   token: string;
@@ -10,13 +9,8 @@ type Props = {
 // The command that starts a runtime with its token. Where a runtime on another machine reaches
 // this control plane is this app's address, whose /api path is proxied to it.
 export function RuntimeCommand({ token }: Props) {
-  const [copied, setCopied] = useState(false);
-  const command = `AVEN_URL=${window.location.origin}/api AVEN_RUNTIME_TOKEN=${token} bun run start --cwd apps/runtime`;
-
-  async function copy() {
-    await navigator.clipboard.writeText(command);
-    setCopied(true);
-  }
+  const { copied, copy } = useClipboard();
+  const command = `AVEN_URL=${window.location.origin}/api AVEN_RUNTIME_TOKEN=${token} bun run --cwd apps/runtime start`;
 
   return (
     <div className="flex flex-col gap-3">
@@ -27,7 +21,7 @@ export function RuntimeCommand({ token }: Props) {
         {command}
       </pre>
       <div>
-        <Button type="button" variant="outline" onClick={() => void copy()}>
+        <Button type="button" variant="outline" onClick={() => void copy(command)}>
           {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy command"}
         </Button>
       </div>

@@ -1,22 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const unique = () => `thr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
-
-async function register(page: Page) {
-  await page.goto("/register");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Name").fill("Thread User");
-  await page.getByLabel("Email").fill(unique());
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/threads$/);
-}
-
-// A project lives on a runner; one that never connects is enough to create projects and threads.
-async function addRunner(page: Page) {
-  const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
-  expect(response.ok()).toBe(true);
-}
+import { addRunner, registerUser } from "./helpers";
 
 async function createProject(page: Page, name: string) {
   await page.getByRole("button", { name: "New project" }).click();
@@ -34,7 +18,7 @@ async function startThread(page: Page, prompt: string) {
 
 test.describe("threads", () => {
   test("the new thread page asks to create a project first", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
     await expect(page.getByText("Create a project to get started.")).toBeVisible();
@@ -44,20 +28,30 @@ test.describe("threads", () => {
   });
 
   test("a project needs a runner, and the dialog says where to add one", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
     await page.getByRole("button", { name: "New project" }).click();
     await expect(page.getByText("A project needs a runner")).toBeVisible();
     await expect(page.getByRole("link", { name: "Add a runner" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Create project" })).toBeDisabled();
   });
 
-  test("a prompt without choosing a project is refused", async ({ page }) => {
-    await register(page);
+  test("a thread started from a project opens with its prompt as the title", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
     await addRunner(page);
     await createProject(page, "project");
     await page.getByLabel("Prompt").fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
+
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
+  });
+
+  test("a prompt without choosing a project is refused and kept", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
+    await addRunner(page);
+    await createProject(page, "project");
+    await page.getByLabel("Prompt").fill("hello");
+    await page.getByRole("button", { name: "Send" }).click();
     // `_authed`'s beforeLoad re-checks the session on every navigation, so the URL can update
     // before the route actually swaps content; wait for the thread's own content to render
     // before navigating away again, rather than racing that swap.
@@ -71,12 +65,14 @@ test.describe("threads", () => {
 
     await expect(page.getByText("Choose a project first")).toBeVisible();
     await expect(page).toHaveURL(/\/threads$/);
+    // The refused prompt is still there to send once a project is chosen.
+    await expect(page.getByLabel("Prompt")).toHaveValue("hello again");
   });
 
   test("creating a project opens the thread once prompted; with its runner offline the agent reports why", async ({
     page,
   }) => {
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
     await startThread(page, "Explain the project layout");
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
@@ -95,7 +91,7 @@ test.describe("threads", () => {
   });
 
   test("a thread from another organization is not found", async ({ page }) => {
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
     await page.goto("/threads/00000000-0000-4000-8000-000000000000");
     await expect(page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
   });
@@ -162,7 +158,7 @@ test.describe("threads", () => {
       }),
     );
 
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
     await startThread(page, "Rename hello to bye");
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
@@ -201,7 +197,7 @@ test.describe("threads", () => {
       return route.fulfill({ json: { cancelled: true } });
     });
 
-    await register(page);
+    await registerUser(page, "thr", "Thread User");
     await startThread(page, "long task");
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 

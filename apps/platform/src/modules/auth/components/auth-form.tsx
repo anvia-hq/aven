@@ -1,9 +1,8 @@
-import { useState, type FormEvent } from "react";
-
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/button";
 import { Form } from "@/components/form";
 import { TextField } from "@/components/text-field";
+
+import { useAuthForm } from "../hooks/use-auth-form";
 
 type Props = {
   mode: "sign-in" | "sign-up";
@@ -11,32 +10,10 @@ type Props = {
 };
 
 export function AuthForm({ mode, onSuccess }: Props) {
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const email = String(data.get("email"));
-    const password = String(data.get("password"));
-
-    setError(null);
-    setPending(true);
-    const result =
-      mode === "sign-up"
-        ? await authClient.signUp.email({ email, password, name: String(data.get("name")) })
-        : await authClient.signIn.email({ email, password });
-    setPending(false);
-
-    if (result.error) {
-      setError(result.error.message ?? "Something went wrong");
-      return;
-    }
-    onSuccess();
-  }
+  const { error, pending, submit } = useAuthForm(mode, onSuccess);
 
   return (
-    <Form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Form onSubmit={submit} className="flex flex-col gap-4">
       {mode === "sign-up" && <TextField label="Name" name="name" required autoComplete="name" />}
       <TextField label="Email" name="email" type="email" required autoComplete="email" />
       <TextField

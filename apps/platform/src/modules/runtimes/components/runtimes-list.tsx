@@ -3,7 +3,6 @@ import { Trash } from "@mynaui/icons-react";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
-import { authClient } from "@/lib/auth-client";
 import { timeAgo } from "@/lib/format";
 
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
@@ -11,8 +10,7 @@ import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
 import { useRuntimes } from "../hooks/use-runtimes";
 
 export function RuntimesList() {
-  const { runtimes, loaded, revoke } = useRuntimes({ poll: true });
-  const { data: session } = authClient.useSession();
+  const { runtimes, loaded, revoke, isOwnedByMe } = useRuntimes({ poll: true });
 
   if (!loaded) return null;
   if (runtimes.length === 0) {
@@ -46,7 +44,7 @@ export function RuntimesList() {
               {runtime.lastSeenAt ? timeAgo(runtime.lastSeenAt, true) : "Never"}
             </TableCell>
             <TableCell>
-              {runtime.ownerId === session?.user.id && (
+              {isOwnedByMe(runtime) && (
                 <div className="flex items-center justify-end gap-1">
                   <RotateRuntimeDialog runtime={runtime} />
                   <Button

@@ -1,39 +1,32 @@
-import { getDefaultStore, useAtom } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useAtom } from "jotai";
+import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
-import { ApiError, api, postJson } from "@/lib/api";
+import { api, errorMessage, postJson } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
+import { createListStore } from "@/lib/list-store";
 
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import type { CreatedRuntime, Runtime } from "../types";
 
-// Runtimes are scoped to the active organization: drop them on a switch so the next read refetches.
-export function clearRuntimes() {
-  getDefaultStore().set(runtimesAtom, null);
-}
+const runtimesStore = createListStore<Runtime>({
+  path: "/runtimes",
+  atom: runtimesAtom,
+  label: "runtimes",
+});
 
-const messageOf = (failure: unknown) =>
-  failure instanceof ApiError ? failure.message : "Could not reach the server";
+// Runtimes are scoped to the active organization: drop them on a switch or sign-out so the next
+// read refetches.
+export const resetRuntimes = runtimesStore.reset;
 
 const POLL_MS = 10_000;
 
 // The organization's runtimes. Loads on first use. With `poll`, online status refreshes while the
 // caller is mounted, since a runtime comes and goes without the page doing anything.
 export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
-  const [runtimes, setRuntimes] = useAtom(runtimesAtom);
-
-  const refresh = useCallback(async () => {
-    try {
-      setRuntimes(await api<Runtime[]>("/runtimes"));
-    } catch (failure) {
-      toast.add({
-        title: "Could not load runtimes",
-        description: messageOf(failure),
-        type: "error",
-      });
-      setRuntimes((current) => current ?? []);
-    }
-  }, [setRuntimes]);
+  const [runtimes] = useAtom(runtimesAtom);
+  const { data: session } = authClient.useSession();
+  const { refresh } = runtimesStore;
 
   useEffect(() => {
     if (runtimes === null) void refresh();
@@ -45,50 +38,51 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     return () => clearInterval(timer);
   }, [poll, refresh]);
 
-  // Returns the new runtime with its token, shown once; null on failure (already toasted).
-  async function create(name: string) {
-    let created: CreatedRuntime;
+  // The first runtime that is online, else the first at all: where a new project should go.
+  const defaultRunner = (runtimes ?? []).find((runtime) => runtime.online) ?? runtimes?.[0];
+
+  // Only the owner can rotate or revoke a runtime.
+  const isOwnedByMe = (runtime: Runtime) => runtime.ownerId === session?.user.id;
+
+  // Runs a request that changes a runtime and reloads the list; null on failure (already toasted).
+  async function change<T>(failureTitle: string, request: () => Promise<T>) {
     try {
-      created = await postJson<CreatedRuntime>("/runtimes", { name });
+      const result = await request();
+      await refresh();
+      return result;
     } catch (failure) {
-      toast.add({ title: "Could not add runtime", description: messageOf(failure), type: "error" });
+      toast.add({ title: failureTitle, description: errorMessage(failure), type: "error" });
       return null;
     }
-    await refresh();
-    return created;
+  }
+
+  // Returns the new runtime with its token, shown once.
+  function create(name: string) {
+    return change("Could not add runtime", () => postJson<CreatedRuntime>("/runtimes", { name }));
   }
 
   // Gives the runtime a new token and cuts it off; returns the token, shown once.
-  async function rotate(runtime: Runtime) {
-    let rotated: CreatedRuntime;
-    try {
-      rotated = await postJson<CreatedRuntime>(`/runtimes/${runtime.id}/rotate`, {});
-    } catch (failure) {
-      toast.add({
-        title: "Could not rotate token",
-        description: messageOf(failure),
-        type: "error",
-      });
-      return null;
-    }
-    await refresh();
-    return rotated;
+  function rotate(runtime: Runtime) {
+    return change("Could not rotate token", () =>
+      postJson<CreatedRuntime>(`/runtimes/${runtime.id}/rotate`, {}),
+    );
   }
 
   async function revoke(runtime: Runtime) {
-    try {
-      await api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" });
-    } catch (failure) {
-      toast.add({
-        title: "Could not revoke runtime",
-        description: messageOf(failure),
-        type: "error",
-      });
-      return;
-    }
-    await refresh();
-    toast.add({ title: "Runtime revoked", description: runtime.name });
+    const revoked = await change("Could not revoke runtime", () =>
+      api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" }),
+    );
+    if (revoked !== null) toast.add({ title: "Runtime revoked", description: runtime.name });
   }
 
-  return { runtimes: runtimes ?? [], loaded: runtimes !== null, refresh, create, rotate, revoke };
+  return {
+    runtimes: runtimes ?? [],
+    loaded: runtimes !== null,
+    defaultRunner,
+    isOwnedByMe,
+    refresh,
+    create,
+    rotate,
+    revoke,
+  };
 }

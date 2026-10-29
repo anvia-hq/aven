@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/dialog";
 import { Form } from "@/components/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { LabeledSelect } from "@/components/labeled-select";
 import { TextField } from "@/components/text-field";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
@@ -30,17 +30,18 @@ export function NewProjectDialog({ onCreated }: Props) {
   const [name, setName] = useState("");
   const [runtimeId, setRuntimeId] = useState("");
   const { create } = useProjects();
-  const { runtimes, loaded } = useRuntimes();
+  const { runtimes, loaded, defaultRunner, refresh: refreshRuntimes } = useRuntimes();
   const runners = runtimes.map((runtime) => ({
     value: runtime.id,
     label: runtime.online ? runtime.name : `${runtime.name} (offline)`,
   }));
-  // Until one is picked, offer the first that is online (or the first at all).
-  const fallback = (runtimes.find((runtime) => runtime.online) ?? runtimes[0])?.id ?? "";
-  const chosen = runtimeId || fallback;
+  // Until one is picked, offer the default runner.
+  const chosen = runtimeId || (defaultRunner?.id ?? "");
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
+    // A runner may have been added or have come online since the list was last loaded.
+    if (next) void refreshRuntimes();
     if (!next) {
       setName("");
       setRuntimeId("");
@@ -89,25 +90,13 @@ export function NewProjectDialog({ onCreated }: Props) {
               first.
             </p>
           ) : (
-            <div className="flex flex-col gap-1 text-sm">
-              <span>Runner</span>
-              <Select
-                items={runners}
-                value={chosen}
-                onValueChange={(next) => setRuntimeId(next ?? "")}
-              >
-                <SelectTrigger aria-label="Runner" className="w-full">
-                  <SelectValue placeholder="Choose a runner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {runners.map((runner) => (
-                    <SelectItem key={runner.value} value={runner.value}>
-                      {runner.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <LabeledSelect
+              label="Runner"
+              options={runners}
+              value={chosen}
+              onChange={setRuntimeId}
+              placeholder="Choose a runner"
+            />
           )}
           <DialogFooter>
             <Button type="submit" disabled={submitting || !chosen || !name.trim()}>

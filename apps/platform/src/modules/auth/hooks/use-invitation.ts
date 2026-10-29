@@ -20,10 +20,20 @@ export function useInvitation(invitationId: string) {
 
   useEffect(() => {
     if (!signedIn) return;
-    authClient.organization.getInvitation({ query: { id: invitationId } }).then((result) => {
-      if (result.error) setError(result.error.message ?? "This invitation is not valid");
-      else setInvitation(result.data);
-    });
+    let current = true;
+    authClient.organization.getInvitation({ query: { id: invitationId } }).then(
+      (result) => {
+        if (!current) return;
+        if (result.error) setError(result.error.message ?? "This invitation is not valid");
+        else setInvitation(result.data);
+      },
+      () => {
+        if (current) setError("Could not reach the server");
+      },
+    );
+    return () => {
+      current = false;
+    };
   }, [signedIn, invitationId]);
 
   async function accept() {

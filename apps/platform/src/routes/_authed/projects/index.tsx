@@ -13,7 +13,7 @@ function Projects() {
     <main className="flex w-full flex-col gap-6 p-6 lg:p-8">
       <PageHeader
         title="Projects"
-        description="Repositories the agent can work in."
+        description="Where threads run: each project is a name and a runner."
         actions={<NewProjectDialog />}
       />
       <ProjectGrid />

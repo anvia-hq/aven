@@ -1,40 +1,21 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { authClient } from "@/lib/auth-client";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
+import { useContinueAfterAuth } from "@/modules/auth/hooks/use-continue-after-auth";
 import { validateInvitationSearch } from "@/modules/auth/invitation-search";
+import { redirectIfSignedIn } from "@/modules/auth/redirect-if-signed-in";
 import { AuthForm } from "@/modules/auth/components/auth-form";
 
 export const Route = createFileRoute("/register")({
   validateSearch: validateInvitationSearch,
-  beforeLoad: async ({ search }) => {
-    const { data } = await authClient.getSession();
-    if (!data) return;
-    if (search.invitation) {
-      throw redirect({
-        to: "/accept-invitation/$invitationId",
-        params: { invitationId: search.invitation },
-      });
-    }
-    throw redirect({ to: "/threads" });
-  },
+  beforeLoad: ({ search }) => redirectIfSignedIn(search),
   component: Register,
 });
 
 function Register() {
-  const navigate = useNavigate();
-  const { invitation } = Route.useSearch();
-
-  function onSuccess() {
-    if (invitation) {
-      return navigate({
-        to: "/accept-invitation/$invitationId",
-        params: { invitationId: invitation },
-      });
-    }
-    return navigate({ to: "/threads" });
-  }
-
+  const search = Route.useSearch();
+  const { invitation } = search;
+  const onSuccess = useContinueAfterAuth(search);
   const { config } = usePlatformConfig();
   const closed = Boolean(config && !config.registrationEnabled && !invitation);
 

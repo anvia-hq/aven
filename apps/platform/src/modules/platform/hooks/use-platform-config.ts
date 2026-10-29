@@ -1,19 +1,40 @@
-import { useEffect, useState } from "react";
+import { getDefaultStore, useAtom } from "jotai";
+import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
 import { api, postJson } from "@/lib/api";
 
+import { platformConfigAtom } from "../atoms/platform-config-atom";
 import type { PlatformConfig } from "../types";
 
+// If the config can't be loaded, assume open; the backend enforces registration anyway.
+const FALLBACK: PlatformConfig = { registrationEnabled: true, isOwner: false };
+
+// One in-flight request shared by every component that asks for the config.
+let inflight: Promise<PlatformConfig> | undefined;
+
+function loadConfig() {
+  inflight ??= api<PlatformConfig>("/platform/config")
+    .catch(() => FALLBACK)
+    .finally(() => {
+      inflight = undefined;
+    });
+  return inflight;
+}
+
+// Whether the config says the user owns the platform depends on who is signed in, so drop it on
+// sign-in and sign-out.
+export function resetPlatformConfig() {
+  inflight = undefined;
+  getDefaultStore().set(platformConfigAtom, null);
+}
+
 export function usePlatformConfig() {
-  const [config, setConfig] = useState<PlatformConfig | null>(null);
+  const [config, setConfig] = useAtom(platformConfigAtom);
 
   useEffect(() => {
-    // If the config can't be loaded, assume open; the backend enforces registration anyway.
-    api<PlatformConfig>("/platform/config")
-      .then(setConfig)
-      .catch(() => setConfig({ registrationEnabled: true, isOwner: false }));
-  }, []);
+    if (config === null) void loadConfig().then(setConfig);
+  }, [config, setConfig]);
 
   async function setRegistrationEnabled(registrationEnabled: boolean) {
     try {

@@ -34,7 +34,7 @@ function ThreadPage() {
         <PromptInput
           disabled={running}
           placeholder={running ? "Agent is working…" : "Reply to the agent…"}
-          onSubmit={(prompt, selection) => void send(prompt, selection)}
+          onSubmit={send}
         />
       </div>
     </div>

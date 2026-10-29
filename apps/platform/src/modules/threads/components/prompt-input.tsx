@@ -11,7 +11,8 @@ import { EffortSlider } from "./effort-slider";
 import { ModelPicker } from "./model-picker";
 
 type Props = {
-  onSubmit: (prompt: string, selection: RunSelection) => void;
+  // Resolves to whether the prompt was taken; the text is only cleared when it was.
+  onSubmit: (prompt: string, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
   disabled?: boolean;
   autoFocus?: boolean;
@@ -24,19 +25,24 @@ export function PromptInput({
   autoFocus,
 }: Props) {
   const [value, setValue] = useState("");
+  const [sending, setSending] = useState(false);
   const model = useModelSelection();
-  const canSend = value.trim().length > 0 && !disabled;
+  const canSend = value.trim().length > 0 && !disabled && !sending;
 
-  function submit() {
+  async function submit() {
     if (!canSend) return;
-    onSubmit(value.trim(), model.selection);
-    setValue("");
+    setSending(true);
+    const sent = await onSubmit(value.trim(), model.selection);
+    setSending(false);
+    if (sent) setValue("");
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter while composing text with an input method confirms a candidate; it is not a send.
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      submit();
+      void submit();
     }
   }
 
@@ -75,7 +81,7 @@ export function PromptInput({
             <Kbd>↵</Kbd>
             send
           </span>
-          <Button size="icon" aria-label="Send" disabled={!canSend} onClick={submit}>
+          <Button size="icon" aria-label="Send" disabled={!canSend} onClick={() => void submit()}>
             <ArrowUp />
           </Button>
         </div>

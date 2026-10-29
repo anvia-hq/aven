@@ -6,7 +6,7 @@ import { useProviders } from "@/modules/settings/hooks/use-providers";
 import { modelSelectionAtom } from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
 
-export function clearModelSelection() {
+export function resetModelSelection() {
   getDefaultStore().set(modelSelectionAtom, null);
 }
 

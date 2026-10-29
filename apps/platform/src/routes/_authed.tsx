@@ -13,9 +13,8 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/sidebar";
-import { clearProviders } from "@/modules/settings/hooks/use-providers";
-import { clearModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { authClient } from "@/lib/auth-client";
+import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { CommandMenu } from "@/modules/navigation/components/command-menu";
 import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
@@ -37,12 +36,7 @@ function AuthedLayout() {
   const navigate = useNavigate();
   const { setOpen: setCommandOpen } = useCommandMenu();
 
-  async function signOut() {
-    await authClient.signOut();
-    clearProviders();
-    clearModelSelection();
-    await navigate({ to: "/login" });
-  }
+  const signOut = useSignOut();
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "20rem" } as CSSProperties}>

@@ -1,18 +1,8 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const unique = () => `rt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
-
-async function register(page: Page) {
-  await page.goto("/register");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Name").fill("Runtime User");
-  await page.getByLabel("Email").fill(unique());
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/threads$/);
-}
+import { registerUser } from "./helpers";
 
 // A runner refuses to start without Docker and the sandbox image (decision 0010).
 const hasSandboxImage =
@@ -30,7 +20,7 @@ test.describe("runtimes", () => {
   test("add a runtime, start it with the shown command, see it online, revoke it", async ({
     page,
   }) => {
-    await register(page);
+    await registerUser(page, "rt", "Runtime User");
     await page.goto("/settings/runtimes");
     await expect(page.getByText("No runtimes yet.")).toBeVisible();
 
