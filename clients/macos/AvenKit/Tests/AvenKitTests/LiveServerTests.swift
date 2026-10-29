@@ -3,6 +3,11 @@ import Testing
 
 @testable import AvenKit
 
+private struct CreatedRunner: Decodable {
+    struct Runner: Decodable { var id: String }
+    var runtime: Runner
+}
+
 // Runs against a real control plane when AVEN_TEST_URL is set (for example http://localhost:8000);
 // otherwise it passes without doing anything. It signs up a throwaway user.
 @Suite struct LiveServerTests {
@@ -20,15 +25,18 @@ import Testing
         let stranger = APIClient(baseURL: client.baseURL, token: "nope")
         await #expect(throws: APIError.self) { try await stranger.projects() }
 
-        // The client cannot create projects yet; make one the way the web app does.
-        var request = URLRequest(url: client.baseURL.appendingPathComponent("/projects"))
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "name": "swift", "projectPath": NSTemporaryDirectory(),
-        ])
-        _ = try await URLSession.shared.data(for: request)
+        // The client cannot create runners or projects yet; make them the way the web app does.
+        func post(_ path: String, _ body: [String: Any]) async throws -> Data {
+            var request = URLRequest(url: client.baseURL.appendingPathComponent(path))
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            return try await URLSession.shared.data(for: request).0
+        }
+        let runner = try JSONDecoder().decode(
+            CreatedRunner.self, from: try await post("/runtimes", ["name": "swift-test"]))
+        _ = try await post("/projects", ["name": "swift", "runtimeId": runner.runtime.id])
 
         let project = try #require(try await client.projects().first)
         let thread = try await client.createThread(projectId: project.id)

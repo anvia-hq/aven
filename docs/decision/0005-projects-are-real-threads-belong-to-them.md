@@ -1,6 +1,6 @@
 # Projects are real; threads always belong to one
 
-Status: accepted
+Status: accepted, except that a project is no longer a directory: superseded in that part by 0010 (a project is a name and a runner).
 
 ## Context
 

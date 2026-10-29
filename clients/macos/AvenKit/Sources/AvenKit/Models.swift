@@ -99,7 +99,7 @@ public enum RunEvent: Equatable, Sendable, Decodable {
 public struct Project: Codable, Equatable, Sendable, Identifiable {
     public var id: String
     public var name: String
-    public var projectPath: String
+    /// The runner that hosts the project's sandboxes; nil only on a project from before sandboxes.
     public var runtimeId: String?
 }
 
@@ -107,13 +107,12 @@ public struct ThreadSummary: Codable, Equatable, Sendable, Identifiable {
     public var id: String
     public var projectId: String
     public var title: String
-    public var projectPath: String
     /// Absent on a thread that was just created, which cannot be running yet.
     public var running: Bool
     public var updatedAt: String
 
     private enum CodingKeys: String, CodingKey {
-        case id, projectId, title, projectPath, running, updatedAt
+        case id, projectId, title, running, updatedAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -121,7 +120,6 @@ public struct ThreadSummary: Codable, Equatable, Sendable, Identifiable {
         id = try c.decode(String.self, forKey: .id)
         projectId = try c.decode(String.self, forKey: .projectId)
         title = try c.decode(String.self, forKey: .title)
-        projectPath = try c.decode(String.self, forKey: .projectPath)
         running = try c.decodeIfPresent(Bool.self, forKey: .running) ?? false
         updatedAt = try c.decode(String.self, forKey: .updatedAt)
     }
