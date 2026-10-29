@@ -30,8 +30,8 @@ app.listen(port);
 // The control plane hosts sandboxes on its own machine too.
 const localRunner = await startLocalRunner(port);
 
-// Agent jobs run as their own process groups, so they must be stopped when the server goes down
-// (including `bun --watch` restarts), or dev servers started by an agent would be orphaned.
+// The built-in runner's sandboxes are containers; stopping it removes them, including on
+// `bun --watch` restarts.
 const shutdown = async () => {
   await localRunner?.stop();
   runsService.dispose();

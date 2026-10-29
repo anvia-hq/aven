@@ -135,14 +135,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       }),
     ).toEqual([]);
 
-    // A notice for a thread this runtime never ran goes nowhere.
-    const notices: string[] = [];
-    hub.onJobNotice((threadId) => notices.push(threadId));
-    ws.send(JSON.stringify({ type: "job.notice", threadId: "stranger", notice: "x" }));
-    ws.send(JSON.stringify({ type: "job.notice", threadId: thread.id, notice: "y" }));
-    await until(() => notices.length > 0);
-    expect(notices).toEqual([thread.id]);
-
     // Once the run ends, the runtime can no longer write to it.
     ws.send(JSON.stringify({ type: "run.end", runId: "run-1", outcome: "response" }));
     await until(() => ended.length > 0);

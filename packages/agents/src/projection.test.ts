@@ -1,35 +1,43 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, test } from "bun:test";
+import { createTool } from "@anvia/core";
+import { z } from "zod";
 
 import { createCodingAgent } from "./coding-agent";
-import { JobRegistry } from "./jobs/job-registry";
-import { messagesToChat, projectStreamEvent } from "./projection";
+import { messagesToChat, projectStreamEvent, projectToolOutput, toolTarget } from "./projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
+import { createEditTool } from "./tools/edit";
 
-let root: string;
+// Stand-ins for the sandbox's tools: they return what @anvia/sandbox's tools return.
+const files = new Map([["a.txt", "hello"]]);
 
-beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "aven-proj-"));
-  await writeFile(join(root, "a.txt"), "hello\n");
+const readFile = createTool({
+  name: "read_file",
+  description: "Reads a file.",
+  inputSchema: z.object({ path: z.string() }),
+  execute: ({ path }) => {
+    const content = files.get(path);
+    if (content === undefined) throw new Error(`File not found: ${path}`);
+    return { content, startLine: 1, endLine: 1, nextStartLine: null, truncated: false };
+  },
 });
 
-afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+const edit = createEditTool({
+  workdir: "/workspace",
+  readTextFile: async ({ path }) => files.get(path) ?? "",
+  writeTextFile: async ({ path, text }) => void files.set(path, text),
 });
 
 async function run(prompt: string) {
+  files.set("a.txt", "hello");
   const { agent } = createCodingAgent({
-    jobs: new JobRegistry(),
-    root,
+    tools: [readFile, edit],
     webSearch: false,
     model: scriptedModel([
-      [text("Let me look."), toolCall("read", { path: "a.txt" }, "c1")],
+      [text("Let me look."), toolCall("read_file", { path: "a.txt" }, "c1")],
       [
         toolCall("edit", { path: "a.txt", oldString: "hello", newString: "bye" }, "c2"),
-        toolCall("read", { path: "missing.txt" }, "c3"),
+        toolCall("read_file", { path: "missing.txt" }, "c3"),
       ],
       [text("All done.")],
     ]),
@@ -61,7 +69,9 @@ describe("projection", () => {
   test("tool events carry target, diff and a human-readable output", async () => {
     const { events } = await run("go");
     const starts = events.filter((event) => event.type === "tool_start");
-    expect(starts[0]).toMatchObject({ tool: { name: "read", target: "a.txt", status: "running" } });
+    expect(starts[0]).toMatchObject({
+      tool: { name: "read_file", target: "a.txt", status: "running" },
+    });
     expect(starts[1]).toMatchObject({
       tool: {
         name: "edit",
@@ -73,7 +83,7 @@ describe("projection", () => {
     });
     const ends = events.filter((event) => event.type === "tool_end");
     expect(ends[0]).toMatchObject({ id: "c1", status: "done" });
-    expect((ends[0] as { output: string }).output).toContain("1: hello");
+    expect((ends[0] as { output: string }).output).toBe("hello");
     // A failing tool is reported as an error the model can see, and does not end the run.
     expect(ends.find((end) => end.id === "c3")).toMatchObject({ status: "error" });
   });
@@ -95,5 +105,49 @@ describe("projection", () => {
     ]);
     expect(stored.map((message) => message.role)).toEqual(["user", "assistant"]);
     expect(stored[1]).toEqual({ ...live[1]!, id: stored[1]!.id });
+  });
+});
+
+describe("the sandbox's tools", () => {
+  test("each shows what it acts on", () => {
+    const target = (name: string, input: unknown) => toolTarget(name, input);
+    expect(target("read_file", { path: "a.txt" })).toBe("a.txt");
+    expect(target("write_file", { path: "b.txt", content: "x" })).toBe("b.txt");
+    expect(target("edit", { path: "c.txt" })).toBe("c.txt");
+    expect(target("list_files", { path: "src" })).toBe("src");
+    expect(target("list_files", {})).toBe("");
+    expect(target("exec_command", { command: "bun test" })).toBe("bun test");
+    expect(target("start_process", { command: "bun run dev" })).toBe("bun run dev");
+    expect(target("read_process_logs", { processId: "p1" })).toBe("p1");
+    expect(target("stop_process", { processId: "p1" })).toBe("p1");
+    expect(target("wait_for_port", { containerPort: 3000 })).toBe("3000");
+    expect(target("web_search", { query: "bun" })).toBe("bun");
+    expect(target("desktop_click", { x: 1, y: 2 })).toBe("");
+  });
+
+  test("their results read as text, not as JSON payloads", () => {
+    const json = (value: unknown) => projectToolOutput({ type: "json", value: value as never });
+    const base = { durationMs: 1, stdoutTruncated: false, stderrTruncated: false };
+    expect(json({ status: "exited", exitCode: 0, stdout: "hi\n", stderr: "", ...base })).toEqual({
+      status: "done",
+      output: "hi\n",
+    });
+    expect(
+      json({ status: "exited", exitCode: 2, stdout: "", stderr: "boom", ...base }).output,
+    ).toBe("boom\n[exit 2]");
+    expect(json({ status: "timed_out", stdout: "", stderr: "", ...base }).output).toBe(
+      "[timed out]",
+    );
+    expect(json({ path: "a.txt", bytesWritten: 5 }).output).toBe("Wrote 5 bytes to a.txt");
+    expect(
+      json({
+        path: ".",
+        entries: [
+          { path: "src", type: "directory" },
+          { path: "a.txt", type: "file" },
+        ],
+      }).output,
+    ).toBe("directory\tsrc\nfile\ta.txt");
+    expect(json({ id: "p1", status: "running" }).output).toBe('{"id":"p1","status":"running"}');
   });
 });

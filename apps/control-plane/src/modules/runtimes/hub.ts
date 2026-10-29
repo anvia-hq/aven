@@ -35,8 +35,6 @@ type Run = { thread: RunThreadInfo; sink: RunSink };
 // of the run, never from what the runtime sends.
 export class RuntimeConnection {
   #runs = new Map<string, Run>();
-  /** Threads this connection has run, so a job notice can only reach one of them. */
-  #threads = new Set<string>();
   #closed = false;
   /** Set once the runtime has said hello with a wire version we speak. */
   #ready = false;
@@ -64,7 +62,6 @@ export class RuntimeConnection {
 
   startRun(runId: string, thread: RunThreadInfo, sink: RunSink) {
     this.#runs.set(runId, { thread, sink });
-    this.#threads.add(thread.id);
   }
 
   hasRun(runId: string) {
@@ -105,11 +102,6 @@ export class RuntimeConnection {
         return;
       case "run.end":
         this.#endRun(message.runId, message.outcome, message.error);
-        return;
-      case "job.notice":
-        if (this.#threads.has(message.threadId)) {
-          this.hub.emitJobNotice(message.threadId, message.notice);
-        }
         return;
       case "call":
         await this.#answer(message.id, message.method, message.params);
@@ -175,7 +167,6 @@ export class RuntimeConnection {
 // Tracks which runtimes are connected right now.
 export class RuntimeHub {
   #connections = new Map<string, RuntimeConnection>();
-  #jobListeners = new Set<(threadId: string, notice: string) => void>();
 
   constructor(readonly store: MemoryStore) {}
 
@@ -210,15 +201,6 @@ export class RuntimeHub {
 
   isOnline(runtimeId: string) {
     return this.get(runtimeId) !== undefined;
-  }
-
-  onJobNotice(listener: (threadId: string, notice: string) => void) {
-    this.#jobListeners.add(listener);
-    return () => this.#jobListeners.delete(listener);
-  }
-
-  emitJobNotice(threadId: string, notice: string) {
-    for (const listener of this.#jobListeners) listener(threadId, notice);
   }
 
   closeAll() {

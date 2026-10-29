@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { startRuntime } from "@aven/runtime-client/runner";
-import { hostWorkspaces } from "@aven/runtime-client/testing/host-workspaces";
+import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
 import { Elysia } from "elysia";
 
 import { seedOrgPair } from "../../testing/seed-org-pair";
@@ -91,7 +91,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     .listen({ port: 0 });
 
   const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "e2e" });
-  const workspaces = hostWorkspaces();
+  const workspaces = directoryWorkspaces();
   const client = startRuntime({
     url: `ws://localhost:${controlPlane.server?.port}/connect`,
     token,
@@ -112,7 +112,6 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
   const manager = new RunManager({
     store,
     runtime: new RemoteRuntime(hub, pointed),
-    resolveModel: async () => null,
     onRunFinished: () => undefined,
   });
   const thread = {
@@ -138,7 +137,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     await client.ready;
     await until(() => hub.isOnline(runtime.id));
 
-    await manager.start(thread, "first question", { userId: seed.userId, model });
+    await manager.start(thread, "first question", model);
     await until(() => !manager.isRunning(thread.id) && requests.length === 1);
 
     expect(requests[0]!.headers.get("x-api-key")).toBe("sk-the-real-key");
@@ -147,7 +146,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
 
     // The runtime never held the key, and has no memory of its own: the next run's history comes
     // from the control plane.
-    await manager.start(thread, "second question", { userId: seed.userId, model });
+    await manager.start(thread, "second question", model);
     await until(() => !manager.isRunning(thread.id) && requests.length === 2);
     const second = JSON.stringify(requests[1]!.body);
     expect(second).toContain("first question");

@@ -38,7 +38,6 @@ const frame = z.discriminatedUnion("type", [
     outcome: z.enum(["response", "blocked", "interaction", "error"]),
     error: z.string().optional(),
   }),
-  z.object({ type: z.literal("job.notice"), threadId: z.string().min(1), notice: z.string() }),
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),

@@ -19,8 +19,6 @@ export type RuntimeRun = {
   /** How the run ended; `type` is "response" for a normal finish. */
   result: Promise<{ type: string }>;
   cancel(reason: string): void;
-  /** Delivers a message into the live run; throws if it has just ended. */
-  steer(prompt: string): void;
 };
 
 export interface Runtime {
@@ -30,9 +28,5 @@ export interface Runtime {
    * means the environment's.
    */
   start(input: StartRunInput): RuntimeRun;
-  /** Kills the background commands a thread started. */
-  stopJobs(thread: RunThread): void;
-  /** Called when a background command finishes with a notice for the agent; returns an unsubscribe. */
-  onJobNotice(listener: (threadId: string, notice: string) => void): () => void;
   dispose(): void;
 }

@@ -1,6 +1,5 @@
 import type { AnyTool, MemoryStore } from "@anvia/core";
 import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
-import { formatJobNotice, JobRegistry, type Launcher } from "@aven/agents/jobs/job-registry";
 import { projectStreamEvent } from "@aven/agents/projection";
 import {
   WIRE_VERSION,
@@ -12,24 +11,21 @@ import {
 } from "@aven/protocol/runtime-wire";
 
 import { createRemoteMemory } from "./remote-memory";
-import type { ThreadWorkspaces } from "./sandbox";
+import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
-  /** The thread's workspace on this machine; the file tools are confined to it. */
-  root: string;
-  jobs: JobRegistry;
+  /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
+  tools: readonly AnyTool[];
   memory: MemoryStore;
   model?: RunModel;
-  /** Extra tools from the thread's sandbox: a desktop the agent can see and drive. */
-  extraTools?: readonly AnyTool[];
 }) => { agent: Pick<CodingAgent, "stream"> };
 
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
 // run's token; this process never holds a provider key.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ root, jobs, memory, model, extraTools }) => {
+  ({ tools, memory, model }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       provider: model.provider,
@@ -38,10 +34,8 @@ const defaultCreateAgent =
       baseUrl: `${origin}${model.gatewayPath}`,
       reasoningEffort: model.reasoningEffort,
       effortLevels: model.effortLevels,
-      root,
-      jobs,
+      tools,
       memory,
-      extraTools,
     });
   };
 
@@ -74,7 +68,7 @@ export type RuntimeOptions = {
   /** How long to wait for the control plane to answer a memory call. Default 30 seconds. */
   callTimeoutMs?: number;
   /**
-   * A thread with no run and no running command for this long gives up its sandbox (its files
+   * A thread with no run and no running process for this long gives up its sandbox (its files
    * stay). Default 15 minutes.
    */
   idleReleaseMs?: number;
@@ -94,9 +88,8 @@ export function startRuntime(options: RuntimeOptions) {
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
   const runs = new Map<string, LiveRun>();
-  const jobs = new Map<string, JobRegistry>();
-  // Where each thread's commands run now; a registry outlives restarts of the container.
-  const launchers = new Map<string, Launcher>();
+  // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.
+  const boxes = new Map<string, ThreadSandbox>();
   const idleTimers = new Map<string, Timer>();
   const releasing = new Map<string, Promise<void>>();
   const pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
@@ -133,53 +126,39 @@ export function startRuntime(options: RuntimeOptions) {
       pending.delete(id);
     });
 
-  const jobsFor = (threadId: string) => {
-    let registry = jobs.get(threadId);
-    if (registry) return registry;
-    registry = new JobRegistry({
-      launcher: (input) => {
-        const launch = launchers.get(threadId);
-        if (!launch) throw new Error("This thread's sandbox is gone");
-        return launch(input);
-      },
-    });
-    registry.onComplete((job) => {
-      // Not for the jobs killed while this thread's registry is being released.
-      if (jobs.get(threadId) === registry) scheduleIdleRelease(threadId);
-      // A killed job was stopped on purpose: nothing to report.
-      if (!job.background || job.status === "killed" || stopped) return;
-      sendOrWarn({ type: "job.notice", threadId, notice: formatJobNotice(job) });
-    });
-    jobs.set(threadId, registry);
-    return registry;
-  };
-
   function scheduleIdleRelease(threadId: string) {
     clearTimeout(idleTimers.get(threadId));
     if (stopped) return;
     idleTimers.set(
       threadId,
-      setTimeout(() => releaseIfIdle(threadId), idleReleaseMs),
+      setTimeout(() => void releaseIfIdle(threadId), idleReleaseMs),
     );
   }
 
-  function releaseIfIdle(threadId: string) {
+  const hasRun = (threadId: string) => [...runs.values()].some((run) => run.threadId === threadId);
+
+  // A run, or a process the agent left running (a dev server), keeps the sandbox; the check comes
+  // round again after another idle period.
+  async function releaseIfIdle(threadId: string) {
     idleTimers.delete(threadId);
-    const registry = jobs.get(threadId);
-    const hasRun = [...runs.values()].some((run) => run.threadId === threadId);
-    const hasJob = registry?.list().some((job) => job.status === "running");
-    // A run or command that ends later schedules the release again.
-    if (stopped || hasRun || hasJob) return;
-    const release = freeThread(threadId, registry)
+    if (stopped || hasRun(threadId)) return;
+    const busy = await boxes
+      .get(threadId)
+      ?.hasRunningProcesses()
+      .catch(() => false);
+    if (stopped || hasRun(threadId)) return;
+    if (busy) {
+      scheduleIdleRelease(threadId);
+      return;
+    }
+    const release = freeThread(threadId)
       .catch((error: unknown) => console.error(`Could not release thread ${threadId}:`, error))
       .finally(() => releasing.delete(threadId));
     releasing.set(threadId, release);
   }
 
-  async function freeThread(threadId: string, registry: JobRegistry | undefined) {
-    jobs.delete(threadId);
-    launchers.delete(threadId);
-    await registry?.disposeAll();
+  async function freeThread(threadId: string) {
+    boxes.delete(threadId);
     await options.sandbox.release(threadId);
   }
 
@@ -194,12 +173,10 @@ export function startRuntime(options: RuntimeOptions) {
       // Starts the thread's container on first use; a failure ends the run with a clear error.
       const box = await options.sandbox.acquire(thread);
       if (live.cancelReason) throw new Error(live.cancelReason);
-      launchers.set(thread.id, box.launcher);
+      boxes.set(thread.id, box);
       const { agent } = createAgent({
         thread,
-        root: box.root,
-        jobs: jobsFor(thread.id),
-        extraTools: box.tools,
+        tools: box.tools,
         memory: createRemoteMemory(call, runId),
         model,
       });
@@ -231,20 +208,6 @@ export function startRuntime(options: RuntimeOptions) {
       case "run.cancel": {
         const run = runs.get(message.runId);
         if (run) cancelRun(run, message.reason);
-        return;
-      }
-      case "run.steer":
-        try {
-          runs.get(message.runId)?.stream?.steer({ prompt: message.prompt });
-        } catch {
-          // The run just ended; the control plane starts a new one if it still matters.
-        }
-        return;
-      case "jobs.stop": {
-        const registry = jobs.get(message.threadId);
-        for (const job of registry?.list() ?? []) {
-          if (job.status === "running") void registry?.kill(job.id);
-        }
         return;
       }
       case "reply": {
@@ -309,7 +272,6 @@ export function startRuntime(options: RuntimeOptions) {
       clearTimeout(retry);
       for (const timer of idleTimers.values()) clearTimeout(timer);
       socket?.close();
-      await Promise.all([...jobs.values()].map((registry) => registry.disposeAll()));
       await Promise.all(releasing.values());
       await options.sandbox.dispose();
     },

@@ -1,6 +1,6 @@
 # Agent engine: tools and background jobs
 
-Status: accepted
+Status: accepted; the tools and the job registry are superseded by 0012 (the agent's tools come from the sandbox).
 
 ## Context
 

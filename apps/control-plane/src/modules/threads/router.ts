@@ -50,7 +50,7 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
       const { prompt, ...selection } = body;
       // The sender's own provider; null falls back to the environment's shared one.
       const model = await providersService.resolveModel(user.id, selection);
-      await runsService.start(thread, prompt, { userId: user.id, model, selection });
+      await runsService.start(thread, prompt, model);
       return status(202, { ok: true });
     },
     { auth: true, org: true, params: threadParams, body: sendMessageBody },

@@ -5,7 +5,6 @@ import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/even
 
 import { ConflictError, UnavailableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
-import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";
@@ -25,8 +24,6 @@ type Channel = {
   thread: RunThread;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
-  /** Who sent the last message and what they chose; a run restarted by a finished background job reuses it. */
-  lastSender?: { userId: string; selection?: ModelSelection };
 };
 
 export class RunBusyError extends ConflictError {
@@ -35,35 +32,26 @@ export class RunBusyError extends ConflictError {
   }
 }
 
-type ResolveModel = (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
-
 const PING_MS = 5_000;
 
-// Runs belong to the server, not to an HTTP request: a client can disconnect, reload or never
-// connect at all (a background job finishing starts a run with nobody watching) and the agent
-// keeps working. Clients attach with `events()` and get a snapshot, then live events.
+// Runs belong to the server, not to an HTTP request: a client can disconnect or reload and the
+// agent keeps working. Clients attach with `events()` and get a snapshot, then live events.
 export class RunManager {
   #channels = new Map<string, Channel>();
-  #disposed = false;
   #store: ConversationStore;
   #runtime: Runtime;
-  #resolveModel: ResolveModel;
   #onRunFinished: (thread: RunThread) => void | Promise<void>;
 
   constructor(deps: {
     store: ConversationStore;
     /** Where runs execute. */
     runtime: Runtime;
-    /** Looks up a user's provider when a background job restarts a run on their behalf. */
-    resolveModel: ResolveModel;
     /** Called after every run, e.g. to bump the thread in the list. */
     onRunFinished: (thread: RunThread) => void | Promise<void>;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
-    this.#runtime.onJobNotice((threadId, notice) => this.#jobNotice(threadId, notice));
-    this.#resolveModel = deps.resolveModel;
   }
 
   isRunning(threadId: string) {
@@ -71,18 +59,14 @@ export class RunManager {
   }
 
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
-  // missing API key) before anything is persisted. `sender` is who is sending the message and the
-  // provider to run it with; callers resolve it first because this must claim the slot synchronously.
-  async start(
-    thread: RunThread,
-    prompt: string,
-    sender?: { userId: string; model?: ModelConfig | null; selection?: ModelSelection },
-  ) {
+  // missing API key) before anything is persisted. `model` is the sender's provider; callers
+  // resolve it first because this must claim the slot synchronously. Without one, the
+  // environment's is used.
+  async start(thread: RunThread, prompt: string, model?: ModelConfig | null) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
-    if (sender) channel.lastSender = { userId: sender.userId, selection: sender.selection };
 
-    const handle = this.#runtime.start({ thread, prompt, model: sender?.model ?? undefined });
+    const handle = this.#runtime.start({ thread, prompt, model: model ?? undefined });
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
     const run: ActiveRun = { handle, messages: [], cancelled: false, ready: Promise.resolve() };
     channel.run = run;
@@ -102,17 +86,13 @@ export class RunManager {
     void this.#consume(channel, run);
   }
 
-  // Stops the run and everything it started in the background, so nothing resumes it afterwards.
+  // Stops the run. What it left running in its sandbox, such as a dev server, is not touched.
   cancel(threadId: string) {
-    const channel = this.#channels.get(threadId);
-    if (!channel) return false;
-    const run = channel.run;
-    if (run) {
-      run.cancelled = true;
-      run.handle.cancel("Cancelled by user");
-    }
-    this.#runtime.stopJobs(channel.thread);
-    return run !== undefined;
+    const run = this.#channels.get(threadId)?.run;
+    if (!run) return false;
+    run.cancelled = true;
+    run.handle.cancel("Cancelled by user");
+    return true;
   }
 
   // Attaches a client: yields a snapshot, then live events, with `null` as a keep-alive tick.
@@ -157,9 +137,8 @@ export class RunManager {
     return messagesToChat(await this.#store.load({ scope: this.#scope(thread) }));
   }
 
-  // Stops every running job and run. Call on host shutdown.
+  // Stops every run. Call on host shutdown.
   dispose() {
-    this.#disposed = true;
     for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
     this.#runtime.dispose();
   }
@@ -177,48 +156,6 @@ export class RunManager {
     this.#channels.set(thread.id, created);
     channel = created;
     return channel;
-  }
-
-  // A background job finished: its notice goes into the live run, or starts a new one if it ended.
-  #jobNotice(threadId: string, notice: string) {
-    const channel = this.#channels.get(threadId);
-    if (!channel || this.#disposed) return;
-    if (this.#steerLive(channel, notice)) return;
-    void this.#restart(channel, channel.thread, notice);
-  }
-
-  // False when there is no live run to take the message, or it has just ended.
-  #steerLive(channel: Channel, notice: string) {
-    if (!channel.run) return false;
-    try {
-      channel.run.handle.steer(notice);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // Starts a run for a finished background job, with whatever whoever last sent a message chose.
-  async #restart(channel: Channel, thread: RunThread, notice: string) {
-    const sender = channel.lastSender;
-    try {
-      const model = sender ? await this.#modelForRestart(sender) : null;
-      await this.start(thread, notice, sender && { ...sender, model });
-    } catch (error) {
-      // A run that started meanwhile has not seen the notice: hand it over.
-      const delivered = error instanceof RunBusyError && this.#steerLive(channel, notice);
-      if (delivered) return;
-      console.warn(`Could not deliver a finished job's notice on thread ${thread.id}:`, error);
-    }
-  }
-
-  // If the provider or model the sender chose has since gone, their default runs it instead.
-  async #modelForRestart(sender: NonNullable<Channel["lastSender"]>) {
-    try {
-      return await this.#resolveModel(sender.userId, sender.selection);
-    } catch {
-      return this.#resolveModel(sender.userId);
-    }
   }
 
   // Picks the transcript a new client starts from, and drops events it already contains. The read
@@ -280,6 +217,5 @@ function errorMessage(error: unknown) {
 export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(runtimeHub, runGateway),
-  resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });

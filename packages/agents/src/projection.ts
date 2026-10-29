@@ -16,12 +16,9 @@ import {
 } from "@aven/protocol/events";
 
 import { EDIT_TOOL_NAME } from "./tools/edit";
-import { READ_TOOL_NAME } from "./tools/read";
-import { SHELL_KILL_TOOL_NAME, SHELL_OUTPUT_TOOL_NAME, SHELL_TOOL_NAME } from "./tools/shell";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
-import { WRITE_TOOL_NAME } from "./tools/write";
 
-// What a client is sent of a tool result; the model sees the full output (see MAX_OUTPUT_CHARS in lib/truncate).
+// What a client is sent of a tool result; the model sees the full output.
 const MAX_UI_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;
 
@@ -30,23 +27,19 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
 
+// The sandbox's tools (from @anvia/sandbox) and what each one acts on, for the line a client shows.
+const PATH_TOOLS = new Set(["read_file", "write_file", "list_files", EDIT_TOOL_NAME]);
+const COMMAND_TOOLS = new Set(["exec_command", "start_process"]);
+const PROCESS_TOOLS = new Set(["read_process_logs", "stop_process"]);
+
 export function toolTarget(name: string, input: unknown) {
   const args = asRecord(input);
-  switch (name) {
-    case READ_TOOL_NAME:
-    case WRITE_TOOL_NAME:
-    case EDIT_TOOL_NAME:
-      return asString(args.path);
-    case SHELL_TOOL_NAME:
-      return asString(args.command);
-    case WEB_SEARCH_TOOL_NAME:
-      return asString(args.query);
-    case SHELL_OUTPUT_TOOL_NAME:
-    case SHELL_KILL_TOOL_NAME:
-      return asString(args.jobId);
-    default:
-      return "";
-  }
+  if (PATH_TOOLS.has(name)) return asString(args.path);
+  if (COMMAND_TOOLS.has(name)) return asString(args.command);
+  if (PROCESS_TOOLS.has(name)) return asString(args.processId);
+  if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
+  if (name === "wait_for_port") return String(args.containerPort ?? "");
+  return "";
 }
 
 function editDiff(input: unknown): DiffLine[] | undefined {
@@ -80,6 +73,29 @@ function clip(text: string) {
     : text;
 }
 
+// The text a human would read from a tool's structured result; anything unfamiliar is shown as JSON.
+function jsonText(value: unknown) {
+  const result = asRecord(value);
+  if (result.status === "exited" || result.status === "timed_out") return commandText(result);
+  if (typeof result.content === "string") return result.content;
+  if (typeof result.bytesWritten === "number") {
+    return `Wrote ${result.bytesWritten} bytes to ${asString(result.path)}`;
+  }
+  if (Array.isArray(result.entries)) {
+    return result.entries
+      .map((entry) => `${asString(asRecord(entry).type)}\t${asString(asRecord(entry).path)}`)
+      .join("\n");
+  }
+  return JSON.stringify(value);
+}
+
+function commandText(result: Record<string, unknown>) {
+  const parts = [asString(result.stdout), asString(result.stderr)].filter(Boolean);
+  if (result.status === "timed_out") parts.push("[timed out]");
+  else if (result.exitCode !== 0) parts.push(`[exit ${String(result.exitCode)}]`);
+  return parts.join("\n");
+}
+
 // What the UI shows for a tool result: the text a human would read, never the raw payload.
 export function projectToolOutput(output: ToolResultOutput): {
   status: "done" | "error";
@@ -90,11 +106,8 @@ export function projectToolOutput(output: ToolResultOutput): {
       return { status: "done", output: clip(output.value) };
     case "error-text":
       return { status: "error", output: clip(output.value) };
-    case "json": {
-      const value = asRecord(output.value);
-      const text = typeof value.output === "string" ? value.output : JSON.stringify(output.value);
-      return { status: "done", output: clip(text) };
-    }
+    case "json":
+      return { status: "done", output: clip(jsonText(output.value)) };
     case "error-json":
       return { status: "error", output: clip(JSON.stringify(output.value)) };
     case "content":

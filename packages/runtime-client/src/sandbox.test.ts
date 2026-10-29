@@ -3,21 +3,7 @@ import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { JobRegistry } from "@aven/agents/jobs/job-registry";
-
-import { containerPath, dockerRunArgs, Sandboxes } from "./sandbox";
-
-describe("containerPath", () => {
-  test("maps the project directory and what is under it to a path inside the workspace", () => {
-    expect(containerPath("/home/me/app", "/home/me/app")).toBe(".");
-    expect(containerPath("/home/me/app", "/home/me/app/src/lib")).toBe("src/lib");
-  });
-
-  test("refuses a path outside the project instead of running somewhere else", () => {
-    expect(() => containerPath("/home/me/app", "/etc")).toThrow("outside the workspace");
-    expect(() => containerPath("/home/me/app", "/home/me/app-other")).toThrow("outside");
-  });
-});
+import { dockerRunArgs, Sandboxes, type ThreadSandbox } from "./sandbox";
 
 describe("dockerRunArgs", () => {
   const input = {
@@ -120,72 +106,102 @@ live("a sandbox (real docker)", () => {
   // Set up in beforeAll: a skipped describe still runs its body, which must not touch Docker.
   let sandboxes: Sandboxes;
   let home: string;
+  let threadId: string;
   let root: string;
-  let box: Awaited<ReturnType<Sandboxes["acquire"]>>;
-  let jobs: JobRegistry;
+  let box: ThreadSandbox;
 
   beforeAll(async () => {
     home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
     sandboxes = await Sandboxes.start({ image: image!, home });
-    box = await sandboxes.acquire({ id: crypto.randomUUID() });
-    root = box.root;
-    jobs = new JobRegistry({ launcher: box.launcher });
+    threadId = crypto.randomUUID();
+    root = join(home, "workspaces", threadId);
+    box = await sandboxes.acquire({ id: threadId });
   }, 120_000);
 
   afterAll(async () => {
-    await jobs.disposeAll();
     await sandboxes.dispose();
     await rm(home, { recursive: true, force: true });
   });
 
-  const run = async (command: string, cwd = root) =>
-    (await jobs.start({ command, cwd }).done).output;
+  // Calls a tool the way the agent does, with the shape its result is expected to have.
+  const call = async <Result = unknown>(from: ThreadSandbox, name: string, input: unknown) => {
+    const tool = from.tools.find((candidate) => candidate.name === name);
+    if (!tool) throw new Error(`No tool ${name}`);
+    return (await tool.call(input as never)) as Result;
+  };
+  const run = (command: string, from = box) =>
+    call<{ exitCode: number; stdout: string; stderr: string }>(from, "exec_command", { command });
 
-  test("commands run in the container, in the project mounted at /workspace", async () => {
-    expect(await run("pwd")).toContain("/workspace");
+  test("the agent gets every sandbox tool, our edit, and the desktop", () => {
+    expect(box.tools.map((tool) => tool.name).sort()).toEqual(
+      expect.arrayContaining([
+        "exec_command",
+        "read_file",
+        "write_file",
+        "list_files",
+        "list_ports",
+        "start_process",
+        "list_processes",
+        "read_process_logs",
+        "stop_process",
+        "wait_for_port",
+        "edit",
+        "desktop_screenshot",
+      ]),
+    );
+  });
+
+  test("commands run in the container, in the workspace mounted at /workspace", async () => {
+    expect((await run("pwd")).stdout).toContain("/workspace");
     await run("echo from-the-container > made.txt");
     expect(await readFile(join(root, "made.txt"), "utf8")).toBe("from-the-container\n");
+  }, 60_000);
+
+  test("files are written, read and edited inside the container, and the host sees them", async () => {
+    await call(box, "write_file", { path: "hello.txt", content: "hello world\n" });
+    expect(await readFile(join(root, "hello.txt"), "utf8")).toBe("hello world\n");
+    await call(box, "edit", { path: "hello.txt", oldString: "world", newString: "there" });
+    const page = await call<{ content: string }>(box, "read_file", { path: "hello.txt" });
+    expect(page.content).toBe("hello there\n");
+    const listing = await call<{ entries: { path: string }[] }>(box, "list_files", {});
+    expect(listing.entries.map((entry) => entry.path)).toContain("hello.txt");
   }, 60_000);
 
   test("each thread gets its own empty workspace under the runner's home", async () => {
     expect(root.startsWith(join(home, "workspaces"))).toBe(true);
     const other = await sandboxes.acquire({ id: crypto.randomUUID() });
-    expect(other.root).not.toBe(root);
-    const otherJobs = new JobRegistry({ launcher: other.launcher });
-    const listing = (await otherJobs.start({ command: "ls -A", cwd: other.root }).done).output;
-    expect(listing.trim()).toBe("");
+    expect((await run("ls -A", other)).stdout.trim()).toBe("");
     await run("echo mine > private.txt");
-    expect(
-      (await otherJobs.start({ command: "ls private.txt 2>&1", cwd: other.root }).done).output,
-    ).toContain("No such file");
+    expect((await run("ls private.txt 2>&1", other)).stdout).toContain("No such file");
   }, 60_000);
 
   test("it is not the host: no host paths, and no credentials in the environment", async () => {
-    expect(await run(`ls ${root}`)).toContain("No such file");
-    expect(await run("env")).not.toContain("ANVIA_SANDBOX_TOKEN");
-    expect(await run("env")).not.toContain("ANVIA_CONTROL_URL");
+    expect((await run(`ls ${root} 2>&1`)).stdout).toContain("No such file");
+    const env = (await run("env")).stdout;
+    expect(env).not.toContain("ANVIA_SANDBOX_TOKEN");
+    expect(env).not.toContain("ANVIA_CONTROL_URL");
   });
 
   test("exit codes and stderr come back", async () => {
-    const job = await jobs.start({ command: "echo oops >&2; exit 7", cwd: root }).done;
-    expect(job.exitCode).toBe(7);
-    expect(job.status).toBe("failed");
-    expect(job.output).toContain("oops");
+    const result = await run("echo oops >&2; exit 7");
+    expect(result.exitCode).toBe(7);
+    expect(result.stderr).toContain("oops");
   });
 
-  test("killing a background command stops it inside the container", async () => {
-    const { id, done } = jobs.start({ command: "sleep 313", cwd: root, background: true });
-    await Bun.sleep(500);
-    expect(await run("pgrep -f 'sleep 313' | wc -l")).toMatch(/[12]/);
-    await jobs.kill(id);
-    expect((await done).status).toBe("killed");
-    await Bun.sleep(500);
-    expect((await run("pgrep -fc 'sleep 313' || true")).trim()).toMatch(/^[01]$/);
+  test("a process the agent starts keeps the sandbox busy until it is stopped", async () => {
+    expect(await box.hasRunningProcesses()).toBe(false);
+    const started = await call<{ id: string; status: string }>(box, "start_process", {
+      command: "sleep 313",
+    });
+    expect(started.status).toBe("running");
+    expect(await box.hasRunningProcesses()).toBe(true);
+    const listed = await call<{ processes: unknown[] }>(box, "list_processes", {});
+    expect(listed.processes).toHaveLength(1);
+
+    const stopped = await call<{ status: string }>(box, "stop_process", { processId: started.id });
+    expect(stopped.status).toBe("stopped");
+    expect(await box.hasRunningProcesses()).toBe(false);
   }, 30_000);
-
-  test("the agent gets desktop tools", () => {
-    expect(box.tools.map((tool) => tool.name)).toContain("desktop_screenshot");
-  });
 });
 
 describe("Sandboxes.start", () => {

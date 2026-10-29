@@ -82,19 +82,7 @@ export class RemoteRuntime implements Runtime {
       cancel: (reason) => {
         if (connection.hasRun(runId)) connection.post({ type: "run.cancel", runId, reason });
       },
-      steer: (message) => {
-        if (!connection.hasRun(runId)) throw new Error("The run has ended");
-        connection.post({ type: "run.steer", runId, prompt: message });
-      },
     };
-  }
-
-  stopJobs(thread: RunThread) {
-    this.hub.get(thread.runtimeId)?.post({ type: "jobs.stop", threadId: thread.id });
-  }
-
-  onJobNotice(listener: (threadId: string, notice: string) => void) {
-    return this.hub.onJobNotice(listener);
   }
 
   dispose() {

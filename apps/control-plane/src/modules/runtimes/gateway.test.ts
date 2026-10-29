@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import { JobRegistry } from "@aven/agents/jobs/job-registry";
 
 import { RunGateway } from "./gateway";
 
@@ -63,14 +62,13 @@ describe("RunGateway", () => {
     });
     const before = seen.length;
     const { agent } = createCodingAgent({
-      jobs: new JobRegistry(),
+      tools: [],
       provider: "anthropic",
       modelId: "whatever-the-runtime-wants",
       apiKey: run.gatewayToken,
       baseUrl: `${base}${run.gatewayPath}`,
       reasoningEffort: "high",
       effortLevels: ["low", "high"],
-      root: process.cwd(),
     });
     await agent
       .generate({ prompt: "hi", controls: { reasoningEffort: "high" } as never })
@@ -93,12 +91,11 @@ describe("RunGateway", () => {
     });
     const before = seen.length;
     const { agent } = createCodingAgent({
-      jobs: new JobRegistry(),
+      tools: [],
       provider: "openai",
       modelId: "gpt-5.6",
       apiKey: run.gatewayToken,
       baseUrl: `${base}${run.gatewayPath}`,
-      root: process.cwd(),
     });
     await agent.generate({ prompt: "hi" }).catch(() => undefined);
 

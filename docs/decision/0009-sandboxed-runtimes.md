@@ -1,6 +1,6 @@
 # Sandboxed runtimes: Anvia sandbox with a desktop image
 
-Status: accepted and built; the "opt-in per runtime" and "project directory mounted in" parts are superseded by 0010 (sandboxing is how every runner works, with an empty per-thread workspace). Resolves the "real isolation" question left open by 0003 and narrows the risk named in 0008.
+Status: accepted and built; the "opt-in per runtime" and "project directory mounted in" parts are superseded by 0010 (sandboxing is how every runner works, with an empty per-thread workspace). The seam being `JobRegistry`'s launcher is superseded by 0012. Resolves the "real isolation" question left open by 0003 and narrows the risk named in 0008.
 
 ## Context
 

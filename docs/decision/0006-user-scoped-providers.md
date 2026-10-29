@@ -1,6 +1,6 @@
 # Model providers belong to the user
 
-Status: accepted. The "whoever sends the message" rule is extended by `0007` (model and reasoning effort chosen per message).
+Status: accepted. The "whoever sends the message" rule is extended by `0007` (model and reasoning effort chosen per message); what it says about background jobs and restarting a run is superseded by 0012.
 
 ## Context
 

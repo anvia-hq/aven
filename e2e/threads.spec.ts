@@ -116,10 +116,10 @@ test.describe("threads", () => {
                 type: "tool",
                 tool: {
                   id: "c1",
-                  name: "read",
+                  name: "read_file",
                   target: "a.txt",
                   status: "done",
-                  output: "Read file a.txt, lines 1-1 of 1\n1: hello",
+                  output: "hello",
                 },
               },
             ],
@@ -142,7 +142,7 @@ test.describe("threads", () => {
       { type: "tool_end", id: "c2", status: "done", output: "Edited a.txt: 1 replacement(s)" },
       {
         type: "tool_start",
-        tool: { id: "c3", name: "read", target: "missing.txt", status: "running" },
+        tool: { id: "c3", name: "read_file", target: "missing.txt", status: "running" },
       },
       { type: "tool_end", id: "c3", status: "error", output: "File not found: missing.txt" },
       { type: "text", delta: "All " },

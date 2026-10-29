@@ -1,6 +1,6 @@
 # The model and reasoning effort are chosen per message
 
-Status: accepted. Supersedes the "Whoever sends the message pays" rule of `0006`.
+Status: accepted. Supersedes the "Whoever sends the message pays" rule of `0006`; what it says about background jobs and restarting a run is superseded by 0012.
 
 ## Context
 

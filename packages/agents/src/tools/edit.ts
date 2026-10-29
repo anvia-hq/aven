@@ -1,13 +1,16 @@
+import { posix } from "node:path";
+
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
-import { resolveWithin } from "../lib/paths";
-
 export const EDIT_TOOL_NAME = "edit";
 
-export type EditToolOptions = {
-  /** Directory the tool is confined to. Relative paths resolve against it. */
-  root: string;
+/** The part of a sandbox runtime the edit tool needs; any `SandboxRuntime` has it. */
+export type EditableFiles = {
+  /** Absolute directory the sandbox treats as its workspace. */
+  workdir: string;
+  readTextFile(options: { path: string; abortSignal?: AbortSignal }): Promise<string>;
+  writeTextFile(options: { path: string; text: string; abortSignal?: AbortSignal }): Promise<void>;
 };
 
 function countOccurrences(text: string, search: string) {
@@ -18,7 +21,18 @@ function countOccurrences(text: string, search: string) {
   return count;
 }
 
-export function createEditTool({ root }: EditToolOptions) {
+// The workspace-relative form the sandbox expects, for a relative path or an absolute one inside
+// the workspace; anything that leaves it is refused.
+function workspacePath(workdir: string, input: string) {
+  const normalized = posix.normalize(input.replaceAll("\\", "/"));
+  const relative = posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) : normalized;
+  if (relative === "" || relative === "." || relative === ".." || relative.startsWith("../")) {
+    throw new Error(`Path is not a file inside the workspace: ${input}`);
+  }
+  return relative;
+}
+
+export function createEditTool(files: EditableFiles) {
   return createTool({
     name: EDIT_TOOL_NAME,
     description:
@@ -29,22 +43,22 @@ export function createEditTool({ root }: EditToolOptions) {
       newString: z.string().describe("Replacement text; must differ from oldString."),
       replaceAll: z.boolean().optional().describe("Replace every occurrence (default false)."),
     }),
-    async execute({ path, oldString, newString, replaceAll = false }) {
-      if (oldString === "")
-        throw new Error("oldString must not be empty; use `write` to create files");
+    async execute({ path, oldString, newString, replaceAll = false }, context) {
+      if (oldString === "") {
+        throw new Error("oldString must not be empty; use `write_file` to create files");
+      }
       if (oldString === newString) throw new Error("oldString and newString are identical");
 
-      const target = await resolveWithin(root, path);
-      const file = Bun.file(target.absolute);
-      if (!(await file.exists())) throw new Error(`File not found: ${path}`);
-      const text = await file.text();
+      const target = workspacePath(files.workdir, path);
+      const abortSignal = context?.abortSignal;
+      const text = await files.readTextFile({ path: target, abortSignal });
 
       const firstMatch = text.indexOf(oldString);
       const count = firstMatch === -1 ? 0 : countOccurrences(text, oldString);
-      if (count === 0) throw new Error(`oldString was not found in ${target.relative}`);
+      if (count === 0) throw new Error(`oldString was not found in ${target}`);
       if (count > 1 && !replaceAll) {
         throw new Error(
-          `oldString matches ${count} places in ${target.relative}; add surrounding context to make it unique, or set replaceAll`,
+          `oldString matches ${count} places in ${target}; add surrounding context to make it unique, or set replaceAll`,
         );
       }
 
@@ -52,8 +66,8 @@ export function createEditTool({ root }: EditToolOptions) {
       const next = replaceAll
         ? text.split(oldString).join(newString)
         : text.slice(0, firstMatch) + newString + text.slice(firstMatch + oldString.length);
-      await Bun.write(target.absolute, next);
-      return `Edited ${target.relative}: ${replaceAll ? count : 1} replacement(s)`;
+      await files.writeTextFile({ path: target, text: next, abortSignal });
+      return `Edited ${target}: ${replaceAll ? count : 1} replacement(s)`;
     },
   });
 }

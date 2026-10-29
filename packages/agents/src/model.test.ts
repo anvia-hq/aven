@@ -3,7 +3,6 @@ import { Agent, defineCompletionModelControls } from "@anvia/core";
 import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
-import { JobRegistry } from "./jobs/job-registry";
 import { providerOptionsFor, reasoningControlsFor } from "./model";
 
 describe("providerOptionsFor", () => {
@@ -77,7 +76,6 @@ describe("anthropic request", () => {
   test("an effort on a model the SDK does not know is sent as output_config.effort", async () => {
     const before = bodies.length;
     const { agent } = createCodingAgent({
-      jobs: new JobRegistry(),
       model: new AnthropicClient({
         apiKey: "k",
         baseUrl: `http://localhost:${server.port}`,
@@ -87,7 +85,7 @@ describe("anthropic request", () => {
           reasoningEffort: { type: "select", label: "Reasoning effort", options: ["low", "high"] },
         }) as never,
       }),
-      root: process.cwd(),
+      tools: [],
     });
     await agent
       .generate({ prompt: "hi", controls: { reasoningEffort: "low" } as never })
@@ -97,12 +95,11 @@ describe("anthropic request", () => {
 
   test("the coding agent carries the chosen reasoning effort", async () => {
     const { agent } = createCodingAgent({
-      jobs: new JobRegistry(),
       provider: "anthropic",
       modelId: "claude-sonnet-5",
       apiKey: "k",
       reasoningEffort: "low",
-      root: process.cwd(),
+      tools: [],
     });
     expect(agent.controls).toEqual({ reasoningEffort: "low" });
   });

@@ -14,11 +14,10 @@ import type { RunEvent } from "@aven/protocol/events";
 
 import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
-import { hostWorkspaces } from "@aven/runtime-client/testing/host-workspaces";
+import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
 
 import { UnavailableError } from "../../errors";
 import { seedOrgPair } from "../../testing/seed-org-pair";
-import type { ModelSelection } from "../providers/service";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
@@ -65,13 +64,13 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
       name: "loopback",
     });
-    const workspaces = hostWorkspaces((root) => writeFile(join(root, "a.txt"), "hello\n"));
+    const workspaces = directoryWorkspaces((root) => writeFile(join(root, "a.txt"), "hello\n"));
     const client = startRuntime({
       url: `ws://localhost:${server.server!.port}/connect`,
       token,
       sandbox: workspaces,
-      createAgent: ({ root, jobs, memory }) =>
-        createCodingAgent({ root, jobs, memory, webSearch: false, model }),
+      createAgent: ({ tools, memory }) =>
+        createCodingAgent({ tools, memory, webSearch: false, model }),
     });
     clients.push(client);
     await client.ready;
@@ -80,7 +79,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     return new RunManager({
       store,
       runtime: new RemoteRuntime(hub, scriptedGateway),
-      resolveModel: async () => null,
       onRunFinished,
       ...extra,
     });
@@ -139,7 +137,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
 
   test("streams a snapshot, then ordered run events, and reloads as history", async () => {
     const manager = await managerWith([
-      [text("Looking."), toolCall("read", { path: "a.txt" }, "c1")],
+      [text("Looking."), toolCall("read_file", { path: "a.txt" }, "c1")],
       [text("It says hello.")],
     ]);
     const thread = newThread();
@@ -166,14 +164,14 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(history[1]!.parts.map((part) => part.type)).toEqual(["text", "tool", "text"]);
     expect(history[1]!.parts[1]).toMatchObject({
       type: "tool",
-      tool: { name: "read", target: "a.txt", status: "done" },
+      tool: { name: "read_file", target: "a.txt", status: "done" },
     });
     await until(() => finished > 0);
   });
 
   test("a client that joins mid-run gets the transcript so far, then the rest", async () => {
     const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 0.6; echo slow" }, "c1")],
+      [toolCall("exec_command", { command: "sleep 0.6; echo slow" }, "c1")],
       [text("finished")],
     ]);
     const thread = newThread();
@@ -193,7 +191,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
 
   test("dropping every client does not cancel the run", async () => {
     const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 0.5; echo survived" }, "c1")],
+      [toolCall("exec_command", { command: "sleep 0.5; echo survived" }, "c1")],
       [text("still here")],
     ]);
     const thread = newThread();
@@ -211,7 +209,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
 
   test("a second start while running is rejected", async () => {
     const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 0.4" })],
+      [toolCall("exec_command", { command: "sleep 0.4" })],
       [text("ok")],
     ]);
     const thread = newThread();
@@ -220,9 +218,9 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await until(async () => !manager.isRunning(thread.id));
   });
 
-  test("cancel stops the run and kills its command", async () => {
+  test("cancel stops the run and the command it is waiting on", async () => {
     const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 41" })],
+      [toolCall("exec_command", { command: "sleep 41" })],
       [text("never")],
     ]);
     const thread = newThread();
@@ -238,123 +236,27 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(manager.isRunning(thread.id)).toBe(false);
   });
 
-  test("a finished background job starts a new run with its notice", async () => {
+  test("cancel leaves a process the agent started running in its sandbox", async () => {
     const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 0.3; echo bg-output", background: true }, "c1")],
-      [text("started it")],
-      [text("got the notice")],
-    ]);
-    const thread = newThread();
-    await manager.start(thread, "run it");
-
-    await until(async () =>
-      JSON.stringify(await manager.history(thread)).includes("got the notice"),
-    );
-    const history = await manager.history(thread);
-    expect(history.map((message) => message.role)).toEqual([
-      "user",
-      "assistant",
-      "user",
-      "assistant",
-    ]);
-    expect(history[2]!.parts[0]).toMatchObject({ type: "text" });
-    expect(JSON.stringify(history[2])).toContain("Background command finished");
-    expect(JSON.stringify(history[2])).toContain("bg-output");
-  });
-
-  test("a restarted run reuses what the last sender chose, or their default if it is gone", async () => {
-    const asked: (ModelSelection | undefined)[] = [];
-    let providerGone = false;
-    const manager = await managerWith(
-      [
-        [toolCall("shell", { command: "sleep 0.3; echo bg", background: true }, "c1")],
-        [text("started it")],
-        [text("got the notice")],
-      ],
-      {
-        resolveModel: async (_userId, selection) => {
-          asked.push(selection);
-          if (selection && providerGone) throw new Error("Provider not found");
-          return null;
-        },
-      },
-    );
-    const thread = newThread();
-    const selection = { providerId: crypto.randomUUID(), reasoningEffort: "low" };
-    await manager.start(thread, "run it", { userId: "u1", model: null, selection });
-    providerGone = true;
-
-    await until(async () =>
-      JSON.stringify(await manager.history(thread)).includes("got the notice"),
-    );
-    expect(asked).toEqual([selection, undefined]);
-  });
-
-  test("a notice steered into a run that is about to end is not lost", async () => {
-    let sawNotice = false;
-    const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 0.2; echo late-bg", background: true }, "c1")],
-      // The job finishes while this final model call is still in flight.
-      async () => {
-        await Bun.sleep(700);
-        return [text("final")];
-      },
-      (request) => {
-        sawNotice = JSON.stringify(request.chatHistory).includes("Background command finished");
-        return [text("noticed")];
-      },
-    ]);
-    const thread = newThread();
-    await manager.start(thread, "go");
-
-    await until(async () => JSON.stringify(await manager.history(thread)).includes("noticed"));
-    expect(sawNotice).toBe(true);
-    await until(async () => !manager.isRunning(thread.id));
-  });
-
-  test("stopping a run also stops its background jobs and nothing resumes", async () => {
-    const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 43", background: true }, "c1")],
-      [toolCall("shell", { command: "sleep 3" }, "c2")],
+      [toolCall("start_process", { command: "sleep 43" }, "c1")],
+      [toolCall("exec_command", { command: "sleep 3" }, "c2")],
       [text("never reached")],
-      [text("must not run")],
     ]);
     const thread = newThread();
     const client = attach(manager, thread);
     await until(() => client.events.length > 0);
     await manager.start(thread, "go");
-    await until(() => alive("sleep 43"));
+    await until(() => alive("sleep 3"));
 
     manager.cancel(thread.id);
     await until(() => client.events.some((event) => event.type === "done"));
-    await until(async () => !(await alive("sleep 43")));
-    await Bun.sleep(1000);
     await client.detach();
 
-    expect(manager.isRunning(thread.id)).toBe(false);
-    expect(client.events.filter((event) => event.type === "run_start")).toHaveLength(1);
-    expect(JSON.stringify(await manager.history(thread))).not.toContain("must not run");
-  });
-
-  test("a job the agent kills itself does not start a notice turn", async () => {
-    const manager = await managerWith([
-      [toolCall("shell", { command: "sleep 44", background: true }, "c1")],
-      (request) => {
-        const text0 = JSON.stringify(request.chatHistory);
-        const jobId = /job_[0-9a-f]{8}/.exec(text0)?.[0] ?? "missing";
-        return [toolCall("shell_kill", { jobId }, "c2")];
-      },
-      [text("killed it")],
-      [text("must not run")],
-    ]);
-    const thread = newThread();
-    await manager.start(thread, "go");
-    await until(async () => !manager.isRunning(thread.id));
-    await Bun.sleep(800);
-
-    expect(JSON.stringify(await manager.history(thread))).not.toContain("must not run");
-    expect(await alive("sleep 44")).toBe(false);
-    expect(manager.isRunning(thread.id)).toBe(false);
+    // The foreground command was part of the run and is gone; the server-like process is not.
+    await until(async () => !(await alive("sleep 3")));
+    expect(await alive("sleep 43")).toBe(true);
+    expect(JSON.stringify(await manager.history(thread))).not.toContain("never reached");
+    await Bun.$`pkill -f ${"sleep 43"}`.nothrow().quiet();
   });
 
   test("a setup failure (no API key) surfaces from start and persists nothing", async () => {

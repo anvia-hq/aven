@@ -36,27 +36,22 @@ function fakeControlPlane() {
 const thread = { id: "thread-1", organizationId: "org-1" };
 const runStart = { type: "run.start", runId: "run-1", thread, prompt: "hi" };
 
-// Sandboxes that come up when the test says so.
+// Sandboxes that come up when the test says so, and report a running process while `busy.now`.
 function slowSandbox() {
   const gate = Promise.withResolvers<void>();
   const released: string[] = [];
+  const busy = { now: false };
   const sandbox: ThreadWorkspaces = {
     async acquire(): Promise<ThreadSandbox> {
       await gate.promise;
-      return {
-        root: "/tmp",
-        launcher: () => {
-          throw new Error("unused");
-        },
-        tools: [],
-      };
+      return { tools: [], hasRunningProcesses: async () => busy.now };
     },
     async release(threadId) {
       released.push(threadId);
     },
     async dispose() {},
   };
-  return { sandbox, up: gate.resolve, released };
+  return { sandbox, up: gate.resolve, released, busy };
 }
 
 // An agent whose stream is a stand-in: the runner only iterates it, awaits `result` and cancels.
@@ -71,7 +66,6 @@ const agentThat =
         Object.assign(events(memory), {
           result: Promise.resolve({ type: "response" as const }),
           cancel: () => undefined,
-          steer: () => undefined,
         }) as never,
     },
   });
@@ -162,5 +156,63 @@ describe("startRuntime", () => {
 
     await until(() => released.includes("thread-1"));
     expect(plane.received.some((message) => message.type === "run.end")).toBe(true);
+  });
+
+  test("a thread whose sandbox still has a running process keeps it until the process ends", async () => {
+    const { sandbox, up, released, busy } = slowSandbox();
+    up();
+    busy.now = true;
+    const { plane, runtime } = connect({
+      sandbox,
+      idleReleaseMs: 40,
+      createAgent: agentThat(() => noEvents),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+
+    // Several idle periods pass with a dev server still up.
+    await Bun.sleep(250);
+    expect(released).toEqual([]);
+
+    busy.now = false;
+    await until(() => released.includes("thread-1"));
+  });
+
+  test("a run that starts while the idle check is asking keeps the sandbox", async () => {
+    const { sandbox, up, released } = slowSandbox();
+    up();
+    const asking = Promise.withResolvers<void>();
+    const hold = Promise.withResolvers<void>();
+    const asked = Promise.withResolvers<void>();
+    const checking: ThreadWorkspaces = {
+      ...sandbox,
+      acquire: async () => ({
+        tools: [],
+        hasRunningProcesses: async () => {
+          asked.resolve();
+          await asking.promise;
+          return false;
+        },
+      }),
+    };
+    let runs = 0;
+    const { plane, runtime } = connect({
+      sandbox: checking,
+      idleReleaseMs: 30,
+      // The first run ends at once; the second is still going when the idle check comes back.
+      createAgent: (input) =>
+        agentThat(() => (++runs === 1 ? noEvents : iterableThat(() => hold.promise)))(input),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await asked.promise;
+
+    plane.send({ ...runStart, runId: "run-2" });
+    await Bun.sleep(50);
+    asking.resolve();
+    await Bun.sleep(100);
+    expect(released).toEqual([]);
+    hold.resolve();
   });
 });

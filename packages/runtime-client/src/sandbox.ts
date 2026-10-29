@@ -2,10 +2,11 @@ import { randomBytes } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { createDesktopTools, type SandboxExecStreamEvent } from "@anvia/sandbox";
+import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
-import type { Launcher, RunningProcess } from "@aven/agents/jobs/job-registry";
+
+import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
@@ -24,12 +25,10 @@ export type SandboxConfig = {
 };
 
 export type ThreadSandbox = {
-  /** The thread's workspace on this machine, mounted at /workspace in its container. */
-  root: string;
-  /** Runs a command inside the thread's container; hand it to a `JobRegistry`. */
-  launcher: Launcher;
-  /** What else the agent gets there: a desktop it can see and drive. */
+  /** What the agent can do in the thread's container: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
+  /** Whether a process the agent started there, such as a dev server, is still running. */
+  hasRunningProcesses(): Promise<boolean>;
 };
 
 type Docker = NonNullable<SandboxConfig["docker"]>;
@@ -37,11 +36,6 @@ type Docker = NonNullable<SandboxConfig["docker"]>;
 const WORKDIR = "/workspace";
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
-// What a command reports when the sandbox went away under it, or its own limit ended it.
-const SANDBOX_LOST_EXIT_CODE = 255;
-const SANDBOX_TIMEOUT_EXIT_CODE = 124;
-// Long enough that a job's own timeout, not the daemon's default, decides when a command ends.
-const DAEMON_COMMAND_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 async function docker(args: string[]) {
   const proc = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
@@ -51,75 +45,6 @@ async function docker(args: string[]) {
     proc.exited,
   ]);
   return { code, stdout, stderr };
-}
-
-// Where a host path lands in the sandbox: its working directory is the project directory
-// (mounted at /workspace), and the exec API takes paths relative to it.
-export function containerPath(root: string, path: string) {
-  if (path === root) return ".";
-  if (path.startsWith(`${root}/`)) return path.slice(root.length + 1);
-  throw new Error(`${path} is outside the workspace ${root}, which is all the sandbox can reach`);
-}
-
-// A stream the sandbox's output is pushed into; pushing after the reader is gone is harmless.
-function byteChannel() {
-  let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
-  const stream = new ReadableStream<Uint8Array>({ start: (c) => void (controller = c) });
-  return {
-    stream,
-    push(data: Uint8Array) {
-      try {
-        controller?.enqueue(data);
-      } catch {
-        // The reader cancelled.
-      }
-    },
-    close() {
-      try {
-        controller?.close();
-      } catch {
-        // Already closed.
-      }
-    },
-  };
-}
-
-// Adapts a sandbox exec stream to the process shape a JobRegistry expects.
-function toProcess(events: AsyncIterable<SandboxExecStreamEvent>, abort: AbortController) {
-  const out = byteChannel();
-  const err = byteChannel();
-  const exited = (async () => {
-    let code = SANDBOX_LOST_EXIT_CODE;
-    try {
-      for await (const event of events) {
-        if (event.type === "stdout") out.push(event.data);
-        else if (event.type === "stderr") err.push(event.data);
-        else {
-          code =
-            event.result.status === "exited" ? event.result.exitCode : SANDBOX_TIMEOUT_EXIT_CODE;
-        }
-      }
-    } catch (error) {
-      // A command we aborted on purpose is not an error worth reporting to the agent.
-      if (!abort.signal.aborted) {
-        // The sandbox went away mid-command: report it where the agent will read it.
-        const text = error instanceof Error ? error.message : String(error);
-        err.push(new TextEncoder().encode(`\nsandbox error: ${text}\n`));
-      }
-    } finally {
-      out.close();
-      err.close();
-    }
-    return code;
-  })();
-  const process: RunningProcess = {
-    stdout: out.stream,
-    stderr: err.stream,
-    exited,
-    // Aborting the call has the daemon stop the command; SIGTERM and SIGKILL are the same to it.
-    signal: () => abort.abort(),
-  };
-  return process;
 }
 
 type DockerRunInput = {
@@ -170,15 +95,13 @@ export function dockerRunArgs(input: DockerRunInput) {
     `ANVIA_SANDBOX_TOKEN=${input.token}`,
     "-e",
     `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
-    "-e",
-    `ANVIA_SANDBOX_COMMAND_TIMEOUT_MS=${DAEMON_COMMAND_TIMEOUT_MS}`,
   ];
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;
 }
 
-/** What a runner needs to run a thread: its workspace, where commands run, and extra tools. */
+/** What a runner needs to run a thread: the sandbox its agent works in. */
 export interface ThreadWorkspaces {
   acquire(thread: { id: string }): Promise<ThreadSandbox>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
@@ -186,10 +109,10 @@ export interface ThreadWorkspaces {
   dispose(): Promise<void>;
 }
 
-// Runs an agent's commands in a Docker container instead of on the host (decisions 0009, 0010). Each
-// thread gets its own container from a desktop image, with an empty workspace directory the runner
-// manages mounted at /workspace, so the file tools (on the runner, confined to that directory) and
-// the shell (in the container) see the same files and nothing else of the runner's.
+// Gives an agent a Docker container to work in instead of the host (decisions 0009, 0010, 0012).
+// Each thread gets its own container from a desktop image, with an empty workspace directory the
+// runner manages mounted at /workspace; every tool the agent has acts inside the container, so it
+// sees that directory and nothing else of the runner's.
 // A daemon in the container dials out to a hub in this process, authenticated by a one-container
 // token; the control plane is not involved.
 export class Sandboxes implements ThreadWorkspaces {
@@ -249,21 +172,14 @@ export class Sandboxes implements ThreadWorkspaces {
     const root = await this.#workspace(thread.id);
     await this.#ensure(thread.id, root);
     const runtime = this.#hub.runtime(thread.id, { workdir: WORKDIR });
-    const launcher: Launcher = ({ command, cwd, env }) => {
-      const abort = new AbortController();
-      const events = runtime.execStream({
-        command: "bash",
-        args: ["-c", command],
-        cwd: containerPath(root, cwd),
-        env: { ...env, AGENT: "1" },
-        abortSignal: abort.signal,
-      });
-      return toProcess(events, abort);
-    };
     return {
-      root,
-      launcher,
-      tools: createDesktopTools({ sandbox: this.#hub.desktop(thread.id) }),
+      tools: [
+        ...sandboxTools(runtime),
+        ...createDesktopTools({ sandbox: this.#hub.desktop(thread.id) }),
+      ],
+      // A container that is gone has nothing running, and asking it would wait for a daemon.
+      hasRunningProcesses: async () =>
+        this.#hub.isConnected(thread.id) && (await hasRunningProcesses(runtime)),
     };
   }
 

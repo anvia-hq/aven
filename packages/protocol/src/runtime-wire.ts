@@ -44,9 +44,6 @@ export type ControlPlaneToRuntime =
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
-  | { type: "run.steer"; runId: string; prompt: string }
-  /** Kills the background commands a thread started. */
-  | { type: "jobs.stop"; threadId: string }
   | Reply;
 
 export type RuntimeToControlPlane =
@@ -54,7 +51,6 @@ export type RuntimeToControlPlane =
   | { type: "run.event"; runId: string; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error". */
   | { type: "run.end"; runId: string; outcome: RunOutcome; error?: string }
-  | { type: "job.notice"; threadId: string; notice: string }
   | { type: "call"; id: string; method: MemoryCallMethod; params: unknown }
   | Reply;
 
@@ -68,5 +64,6 @@ export type MemoryAppendParams = {
   messages: unknown[];
 };
 
-// Version 2: no filesystem calls and no project path; a thread's workspace is the runner's own.
-export const WIRE_VERSION = 2;
+// Version 3: a run is only started and cancelled; commands and processes are the sandbox's, so no
+// job notices, job stops or steering (decision 0012).
+export const WIRE_VERSION = 3;

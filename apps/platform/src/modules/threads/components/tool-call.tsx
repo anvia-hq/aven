@@ -16,21 +16,30 @@ import { DiffBlock } from "./diff-block";
 
 type Meta = { icon: typeof Eye; running: string; done: string };
 
+// The agent's tools: the sandbox's own (@anvia/sandbox), our edit, and web search.
 const meta: Record<string, Meta> = {
-  read: { icon: Eye, running: "Reading", done: "Read" },
-  write: { icon: Edit, running: "Writing", done: "Wrote" },
+  read_file: { icon: Eye, running: "Reading", done: "Read" },
+  write_file: { icon: Edit, running: "Writing", done: "Wrote" },
   edit: { icon: Edit, running: "Editing", done: "Edited" },
-  shell: { icon: Terminal, running: "Running", done: "Ran" },
-  shell_output: { icon: Terminal, running: "Reading output of", done: "Read output of" },
-  shell_kill: { icon: Terminal, running: "Stopping", done: "Stopped" },
+  list_files: { icon: Eye, running: "Listing", done: "Listed" },
+  exec_command: { icon: Terminal, running: "Running", done: "Ran" },
+  start_process: { icon: Terminal, running: "Starting", done: "Started" },
+  list_processes: { icon: Terminal, running: "Listing processes", done: "Listed processes" },
+  read_process_logs: { icon: Terminal, running: "Reading logs of", done: "Read logs of" },
+  stop_process: { icon: Terminal, running: "Stopping", done: "Stopped" },
+  wait_for_port: { icon: Terminal, running: "Waiting for port", done: "Port ready" },
+  list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
   web_search: { icon: Search, running: "Searching", done: "Searched" },
 };
 
-const fallback = (name: string): Meta => ({
-  icon: Terminal,
-  running: `Running ${name}`,
-  done: `Ran ${name}`,
-});
+// The desktop tools are `desktop_<action>`; anything else unknown is shown by its name.
+const fallback = (name: string): Meta => {
+  if (!name.startsWith("desktop_")) {
+    return { icon: Terminal, running: `Running ${name}`, done: `Ran ${name}` };
+  }
+  const action = name.slice("desktop_".length).replaceAll("_", " ");
+  return { icon: Eye, running: `Desktop: ${action}`, done: `Desktop: ${action}` };
+};
 
 export function ToolCall({ tool }: { tool: ToolPart }) {
   const { icon: Icon, running, done } = meta[tool.name] ?? fallback(tool.name);
