@@ -3,10 +3,13 @@ import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/badge";
 import { timeAgo } from "@/lib/format";
+import { useProjects } from "@/modules/projects/hooks/use-projects";
 
 import type { Thread } from "../types";
 
 export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: string }) {
+  const { projects } = useProjects();
+
   return (
     <ul className="flex flex-col divide-y overflow-hidden rounded-xl border">
       {threads.map((thread) => (
@@ -24,7 +27,7 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
             )}
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
               <Folder className="size-3.5" />
-              {thread.projectPath.split("/").filter(Boolean).at(-1)}
+              {projects.find((project) => project.id === thread.projectId)?.name}
             </span>
             <span className="w-24 text-right text-xs text-muted-foreground">
               {timeAgo(thread.updatedAt, true)}

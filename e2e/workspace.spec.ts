@@ -1,7 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 const unique = () => `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
 
@@ -15,23 +12,19 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
-// A browser can't hand a page a real OS path, so "Project path" opens a folder browser backed
-// by the server's filesystem; typing a path and pressing Enter browses straight to it.
-async function chooseFolder(page: Page, path: string) {
-  await page.getByRole("button", { name: /Choose a folder/ }).click();
-  const pathField = page.getByLabel("Path");
-  await pathField.fill(path);
-  await pathField.press("Enter");
-  await page.getByRole("button", { name: "Choose this folder" }).click();
+// A project lives on a runner; one that never connects is enough to create projects and threads.
+async function addRunner(page: Page) {
+  const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
+  expect(response.ok()).toBe(true);
 }
 
 test.describe("projects", () => {
   test("creates a project, lists it and opens it", async ({ page }) => {
     await register(page);
+    await addRunner(page);
     await page.goto("/projects");
     await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Name").fill("shiny-app");
-    await chooseFolder(page, process.cwd());
     await page.getByRole("button", { name: "Create project" }).click();
 
     await expect(page.getByText("Project created")).toBeVisible();
@@ -51,44 +44,12 @@ test.describe("projects", () => {
     await expect(page.getByRole("heading", { name: "Project not found" })).toHaveCount(0);
   });
 
-  test("creates a new folder from the picker and browses into it", async ({ page }) => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-new-folder-"));
-    try {
-      await register(page);
-      await page.goto("/projects");
-      await page.getByRole("button", { name: "New project" }).click();
-      await page.getByLabel("Name").fill("fresh-project");
-      await page.getByRole("button", { name: /Choose a folder/ }).click();
-      const pathField = page.getByLabel("Path");
-      await pathField.fill(dir);
-      await pathField.press("Enter");
-
-      await page.getByRole("button", { name: "New folder" }).click();
-      await page.getByLabel("New folder name").fill("sub-project");
-      await page.getByLabel("New folder name").press("Enter");
-      await expect(page.getByRole("button", { name: "sub-project" })).toBeVisible();
-
-      await page.getByRole("button", { name: "sub-project" }).click();
-      await expect(page.getByText("No subfolders")).toBeVisible();
-      await expect(pathField).toHaveValue(join(await realpath(dir), "sub-project"));
-
-      // Creating the same folder again from a directory that already has it is rejected.
-      await page.getByRole("button", { name: "Up" }).click();
-      await page.getByRole("button", { name: "New folder" }).click();
-      await page.getByLabel("New folder name").fill("sub-project");
-      await page.getByLabel("New folder name").press("Enter");
-      await expect(page.getByText("already exists")).toBeVisible();
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-
   test("starts a thread from the project page", async ({ page }) => {
     await register(page);
+    await addRunner(page);
     await page.goto("/projects");
     await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Name").fill("shiny-app");
-    await chooseFolder(page, process.cwd());
     await page.getByRole("button", { name: "Create project" }).click();
     await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
 
@@ -174,9 +135,9 @@ test.describe("settings", () => {
 test.describe("sidebar and search", () => {
   test("the command palette opens with the keyboard and navigates", async ({ page }) => {
     await register(page);
+    await addRunner(page);
     await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Name").fill("docs-site");
-    await chooseFolder(page, process.cwd());
     await page.getByRole("button", { name: "Create project" }).click();
     await expect(page.getByText("Project created")).toBeVisible();
 

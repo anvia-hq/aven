@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -14,7 +14,13 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
+// A runner refuses to start without Docker and the sandbox image (decision 0010).
+const hasSandboxImage =
+  spawnSync("docker", ["image", "inspect", "aven-sandbox-desktop:dev"]).status === 0;
+
 test.describe("runtimes", () => {
+  test.skip(!hasSandboxImage, "needs Docker and the aven-sandbox-desktop:dev image");
+
   let runtime: ChildProcess | undefined;
   test.afterEach(() => {
     runtime?.kill();
@@ -74,7 +80,7 @@ test.describe("runtimes", () => {
     // Projects can now be put on it.
     await page.goto("/threads");
     await page.getByRole("button", { name: "New project" }).click();
-    await expect(page.getByRole("combobox", { name: "Machine" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Runner" })).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.goto("/settings/runtimes");

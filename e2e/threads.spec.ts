@@ -2,9 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 const unique = () => `thr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
 
-// The backend runs on this machine, so the repository itself is a valid project directory.
-const PROJECT_PATH = process.cwd();
-
 async function register(page: Page) {
   await page.goto("/register");
   await page.waitForLoadState("networkidle");
@@ -15,27 +12,22 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
-// Starting a project's "Project path" field opens a folder browser backed by the server's
-// filesystem (a browser can't hand a page a real OS path); typing a path and pressing Enter
-// browses straight to it, same as clicking through subdirectories would.
-async function chooseFolder(page: Page, path: string) {
-  await page.getByRole("button", { name: /Choose a folder/ }).click();
-  const pathField = page.getByLabel("Path");
-  await pathField.fill(path);
-  await pathField.press("Enter");
-  await page.getByRole("button", { name: "Choose this folder" }).click();
+// A project lives on a runner; one that never connects is enough to create projects and threads.
+async function addRunner(page: Page) {
+  const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
+  expect(response.ok()).toBe(true);
 }
 
-async function createProject(page: Page, name: string, path: string) {
+async function createProject(page: Page, name: string) {
   await page.getByRole("button", { name: "New project" }).click();
   await page.getByLabel("Name").fill(name);
-  await chooseFolder(page, path);
   await page.getByRole("button", { name: "Create project" }).click();
 }
 
 // Creates a project (which is auto-selected) and sends the first prompt.
-async function startThread(page: Page, prompt: string, path = PROJECT_PATH) {
-  await createProject(page, "project", path);
+async function startThread(page: Page, prompt: string) {
+  await addRunner(page);
+  await createProject(page, "project");
   await page.getByLabel("Prompt").fill(prompt);
   await page.getByRole("button", { name: "Send" }).click();
 }
@@ -51,25 +43,18 @@ test.describe("threads", () => {
     );
   });
 
-  test("a relative or missing project path is rejected while browsing to it", async ({ page }) => {
+  test("a project needs a runner, and the dialog says where to add one", async ({ page }) => {
     await register(page);
     await page.getByRole("button", { name: "New project" }).click();
-    await page.getByLabel("Name").fill("project");
-    await page.getByRole("button", { name: /Choose a folder/ }).click();
-
-    const pathField = page.getByLabel("Path");
-    await pathField.fill("/definitely/not/a/real/dir");
-    await pathField.press("Enter");
-    await expect(page.getByText("Directory does not exist")).toBeVisible();
-
-    await pathField.fill("relative/path");
-    await pathField.press("Enter");
-    await expect(page.getByText("Project path must be an absolute path")).toBeVisible();
+    await expect(page.getByText("A project needs a runner")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Add a runner" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create project" })).toBeDisabled();
   });
 
   test("a prompt without choosing a project is refused", async ({ page }) => {
     await register(page);
-    await createProject(page, "project", PROJECT_PATH);
+    await addRunner(page);
+    await createProject(page, "project");
     await page.getByLabel("Prompt").fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
@@ -88,16 +73,16 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads$/);
   });
 
-  test("creating a project opens the thread once prompted; without a model key the agent reports why", async ({
+  test("creating a project opens the thread once prompted; with its runner offline the agent reports why", async ({
     page,
   }) => {
     await register(page);
     await startThread(page, "Explain the project layout");
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
-    await expect(page.getByText("ANTHROPIC_API_KEY is not set")).toBeVisible();
+    await expect(page.getByText("The runtime for this project is offline")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();
-    await expect(page.locator("header").getByText(PROJECT_PATH)).toBeVisible();
+    await expect(page.locator("header").getByText("runner · offline")).toBeVisible();
     await expect(
       page.locator('[data-slot="sidebar"]').getByText("Explain the project layout"),
     ).toBeVisible();

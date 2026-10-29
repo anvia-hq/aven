@@ -12,8 +12,6 @@ export type Thread = {
   id: string;
   projectId: string;
   title: string;
-  /** Directory the agent works in, on the machine of its runtime. */
-  projectPath: string;
   /** The runtime that machine is; null means the control plane's own. */
   runtimeId: string | null;
   state: ThreadState;

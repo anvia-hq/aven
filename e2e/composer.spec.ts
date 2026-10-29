@@ -12,15 +12,13 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/threads$/);
 }
 
-// The composer only shows once there is a project; creating one on /threads also selects it.
+// The composer only shows once there is a project; creating one on /threads also selects it. A
+// project needs a runner, and one that never connects is enough here.
 async function createProject(page: Page) {
+  const runner = await page.request.post("/api/runtimes", { data: { name: "runner" } });
+  expect(runner.ok()).toBe(true);
   await page.getByRole("button", { name: "New project" }).click();
   await page.getByLabel("Name").fill("composer-app");
-  await page.getByRole("button", { name: /Choose a folder/ }).click();
-  const pathField = page.getByLabel("Path");
-  await pathField.fill(process.cwd());
-  await pathField.press("Enter");
-  await page.getByRole("button", { name: "Choose this folder" }).click();
   await page.getByRole("button", { name: "Create project" }).click();
   await expect(page.getByText("Project created")).toBeVisible();
 }
