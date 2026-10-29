@@ -9,7 +9,7 @@ import { verifications } from "@aven/db/schema/verifications";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { organization } from "better-auth/plugins";
+import { bearer, organization } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 
 import { platformService } from "../platform/service";
@@ -57,7 +57,9 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: { enabled: true },
-  plugins: [organization()],
+  // `bearer` lets a native client (no cookie jar) send its session token as `Authorization: Bearer`;
+  // sign-in returns it in the `set-auth-token` header.
+  plugins: [organization(), bearer()],
   databaseHooks: {
     user: {
       create: {
