@@ -1,4 +1,4 @@
-import { Bug, ChevronsUpDown, Cog, Command, Logout } from "@mynaui/icons-react";
+import { ChevronsUpDown, Cog, Command, Logout } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
-import { toast } from "@/components/toast";
 import { initials } from "@/lib/format";
 import { OrganizationMenu } from "@/modules/organizations/components/organization-menu";
 import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
@@ -48,9 +47,6 @@ export function UserCard({ name, onSignOut }: Props) {
             <DropdownMenuItem onClick={() => setCommandOpen(true)}>
               <Command /> Command palette
               <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.add({ title: "Thanks! Bug report is a mock." })}>
-              <Bug /> Report a bug…
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onSignOut}>

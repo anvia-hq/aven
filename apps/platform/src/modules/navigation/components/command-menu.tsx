@@ -19,10 +19,7 @@ const pages = [
   { label: "New thread", to: "/threads" },
   { label: "Projects", to: "/projects" },
   { label: "Personal settings", to: "/settings/profile" },
-  { label: "API keys", to: "/settings/api-keys" },
   { label: "Workspace members", to: "/settings/members" },
-  { label: "Usage", to: "/settings/usage" },
-  { label: "Integrations", to: "/settings/integrations" },
 ] as const;
 
 export function CommandMenu() {
