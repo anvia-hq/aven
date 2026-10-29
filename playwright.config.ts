@@ -33,6 +33,7 @@ export default defineConfig({
         // Never reach a real provider from e2e: starting an agent fails fast and deterministically.
         AGENT_PROVIDER: "anthropic",
         ANTHROPIC_API_KEY: "",
+        PROVIDER_ENCRYPTION_KEY: "ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=",
       },
     },
     {

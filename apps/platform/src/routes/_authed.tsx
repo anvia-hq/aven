@@ -13,6 +13,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/sidebar";
+import { clearProviders } from "@/modules/settings/hooks/use-providers";
 import { authClient } from "@/lib/auth-client";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { CommandMenu } from "@/modules/navigation/components/command-menu";
@@ -37,6 +38,7 @@ function AuthedLayout() {
 
   async function signOut() {
     await authClient.signOut();
+    clearProviders();
     await navigate({ to: "/login" });
   }
 

@@ -40,3 +40,34 @@ export type UsagePoint = {
   tokens: number;
   cost: number;
 };
+
+export const PROVIDER_KINDS = ["openai", "anthropic", "openai-compatible"] as const;
+
+export type ProviderKind = (typeof PROVIDER_KINDS)[number];
+
+export const PROVIDER_LABELS: Record<ProviderKind, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  "openai-compatible": "OpenAI-compatible",
+};
+
+// Providers belong to the signed-in user. The API never returns the key, only its last characters.
+export type Provider = {
+  id: string;
+  kind: ProviderKind;
+  name: string;
+  baseUrl: string | null;
+  modelId: string | null;
+  hasKey: boolean;
+  keyHint: string | null;
+  isDefault: boolean;
+  createdAt: string;
+};
+
+export type NewProvider = {
+  kind: ProviderKind;
+  name: string;
+  apiKey?: string;
+  baseUrl?: string;
+  modelId?: string;
+};

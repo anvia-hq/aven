@@ -2,7 +2,7 @@ import { Agent, type AnyTool, type CompletionModel } from "@anvia/core";
 
 import { JobRegistry } from "./jobs/job-registry";
 import type { MemoryStore } from "./memory";
-import { createModel, type ModelConfig } from "./model";
+import { createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { createEditTool } from "./tools/edit";
 import { createReadTool } from "./tools/read";
 import { createShellTools } from "./tools/shell";
@@ -48,6 +48,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     id: "coding",
     model: "model" in options ? options.model : createModel(options),
     instructions: INSTRUCTIONS,
+    providerOptions: "provider" in options ? providerOptionsFor(options.provider) : undefined,
     maxTurns: options.maxTurns ?? 50,
     tools,
     memory: options.memory && { store: options.memory, savePolicy: "turn" },

@@ -43,6 +43,13 @@
       "when": 1793165153050,
       "tag": "0005_silent_martin_li",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793251637722,
+      "tag": "0006_volatile_sinister_six",
+      "breakpoints": true
     }
   ]
 }

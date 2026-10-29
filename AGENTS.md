@@ -43,7 +43,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 
 - Pages are written directly in `src/routes/` and stay thin. Layering is `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms (use the module's hook). Mutations and their toasts live in hooks.
 - Imports: relative inside a module, the `@/` alias everywhere else (`@/components/*`, `@/lib/*`, `@/modules/*`). Details in `docs/rules/0001-platform-structure.md`.
-- Modules: `threads` (API-backed: list, live thread view over SSE, a new thread always starts inside a project), `projects` (API-backed: create, list; threads belong to one), `settings`, `navigation`, `auth`, `platform`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
+- Modules: `threads` (API-backed: list, live thread view over SSE, a new thread always starts inside a project), `projects` (API-backed: create, list; threads belong to one), `settings` (including Providers), `navigation`, `auth`, `platform`, `theme`. Shared helpers in `src/lib/` (`format.ts`).
 - Shared UI primitives live in `src/components/`, not in a module. The full shadcn/ui set (Base UI variant) is installed there; add more with `bunx shadcn@latest add <name> --cwd apps/platform`.
 - Reusable feature code goes in `src/modules/<module-name>/{components,hooks,atoms}/` plus `types.ts`.
 - **No barrel files** (`index.ts` that only re-exports). Import from the exact file.
@@ -69,7 +69,7 @@ Elysia (Bun) + zod, uses `@aven/db`.
 - Routers use method chaining: `new Elysia({ prefix }).get().post().patch()`.
 - Routers call services, services own DB access. Mount routers in `src/index.ts`.
 - Auth is Better Auth (`modules/auth`); protect routes with `.use(authRouter)` + `{ auth: true }`.
-- `projects` (CRUD-lite: create, list, get; scoped to `session.activeOrganizationId`, path validated: absolute, existing directory, stored as the real path) and `threads` (CRUD, scoped the same way; another organization's project or thread is 404/422) and `runs` (service only: `RunManager`). A thread always belongs to a project (`project_id`) and snapshots its `project_path` at creation. Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. Agent provider comes from `AGENT_PROVIDER` / `AGENT_MODEL`. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
+- `providers` (per user, not per organization: create, list, update, delete, list models from `<base>/models`; never returns keys; see `docs/decision/0006-user-scoped-providers.md`), `projects` (CRUD-lite: create, list, get; scoped to `session.activeOrganizationId`, path validated: absolute, existing directory, stored as the real path) and `threads` (CRUD, scoped the same way; another organization's project or thread is 404/422) and `runs` (service only: `RunManager`). A thread always belongs to a project (`project_id`) and snapshots its `project_path` at creation. Runs belong to the server, not to a request: `POST /threads/:id/messages` returns 202 and starts one, `GET /threads/:id/events` is SSE (snapshot, then live events, ping every 5s) and disconnecting never stops the agent, `POST /threads/:id/cancel` stops it. Background shell jobs that finish are steered into the live run, or start a new one. The model comes from the sender's default provider (`providers` module, per user, keys encrypted with `PROVIDER_ENCRYPTION_KEY`); with none, it falls back to `AGENT_PROVIDER` / `AGENT_MODEL` and the env keys. `index.ts` stops all agent jobs on SIGINT/SIGTERM/exit.
 - Full rules: `docs/rules/0002-control-plane-structure.md`.
 
 ## packages/db
@@ -91,7 +91,7 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 - The wire protocol shared with every client is `protocol.ts` (event types plus the pure `applyEvent` reducer; the platform imports it); `projection.ts` turns Anvia stream events and stored messages into it. Tests that must not hit a provider use `testing/scripted-model.ts`.
 - A finished background job is delivered by the host (control-plane `RunManager` does this): `jobs.onComplete` -> `formatJobNotice(job)` -> `stream.steer({ prompt })` while the run is live, or a new run if it ended.
 - Memory: `createMemoryStore(db)` (`memory.ts`, `@anvia/memory-drizzle`) persists conversations in Postgres; pass `{ memory }` to `createCodingAgent` and a `session: { sessionId, metadata: { organizationId } }` on every run. Its tables live in `packages/db/src/schema/anvia-memory.ts`.
-- `createCodingAgent({ provider: "openai" | "anthropic", root })` (`coding-agent.ts`) assembles model + tools; `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
+- `createCodingAgent({ provider: "openai" | "anthropic" | "openai-compatible", root })` (`coding-agent.ts`) assembles model + tools; `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
 - Tests are `bun:test` next to the code (`bun test packages/agents`).
 
 ## Docs

@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { authRouter } from "./modules/auth/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
+import { providersRouter } from "./modules/providers/router";
 import { runsService } from "./modules/runs/service";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
@@ -12,6 +13,7 @@ const app = new Elysia()
   .use(authRouter)
   .use(platformRouter)
   .use(projectsRouter)
+  .use(providersRouter)
   .use(threadsRouter)
   .use(usersRouter);
 

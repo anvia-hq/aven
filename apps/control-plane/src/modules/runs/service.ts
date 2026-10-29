@@ -8,8 +8,9 @@ import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
 import { createMemoryStore, type MemoryStore } from "@aven/agents/memory";
 import { messagesToChat, projectStreamEvent } from "@aven/agents/projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/agents/protocol";
-import type { Provider } from "@aven/agents/model";
+import type { ModelConfig, Provider } from "@aven/agents/model";
 
+import { providersService } from "../providers/service";
 import { threadsService } from "../threads/service";
 
 export type RunThread = { id: string; organizationId: string; projectPath: string };
@@ -18,6 +19,8 @@ type CreateAgent = (
   thread: RunThread,
   jobs: JobRegistry,
   memory: MemoryStore,
+  /** The sender's provider; undefined means fall back to the environment. */
+  model?: ModelConfig,
 ) => { agent: Pick<CodingAgent, "stream"> };
 
 type ActiveRun = {
@@ -35,6 +38,8 @@ type Channel = {
   jobs: JobRegistry;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
+  /** Who sent the last message; a run restarted by a finished background job uses their provider. */
+  lastUserId?: string;
 };
 
 export class RunBusyError extends Error {
@@ -45,8 +50,10 @@ export class RunBusyError extends Error {
 
 const PING_MS = 5_000;
 
-// The model provider comes from the environment so every client shares one configuration.
-const defaultCreateAgent: CreateAgent = (thread, jobs, memory) => {
+// The sender's own provider is used when they have one. Otherwise the environment supplies a
+// shared one (AGENT_PROVIDER / AGENT_MODEL plus the matching API key).
+const defaultCreateAgent: CreateAgent = (thread, jobs, memory, model) => {
+  if (model) return createCodingAgent({ ...model, root: thread.projectPath, jobs, memory });
   const provider = (process.env.AGENT_PROVIDER ?? "anthropic") as Provider;
   if (provider !== "openai" && provider !== "anthropic") {
     throw new Error(`AGENT_PROVIDER must be "openai" or "anthropic", got "${provider}"`);
@@ -68,17 +75,21 @@ export class RunManager {
   #disposed = false;
   #store: MemoryStore;
   #createAgent: CreateAgent;
+  #resolveModel: ((userId: string) => Promise<ModelConfig | null>) | undefined;
   #onRunFinished: ((thread: RunThread) => void | Promise<void>) | undefined;
 
   constructor(deps: {
     store: MemoryStore;
     createAgent?: CreateAgent;
+    /** Looks up a user's provider when a background job restarts a run on their behalf. */
+    resolveModel?: (userId: string) => Promise<ModelConfig | null>;
     /** Called after every run, e.g. to bump the thread in the list. */
     onRunFinished?: (thread: RunThread) => void | Promise<void>;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
     this.#createAgent = deps.createAgent ?? defaultCreateAgent;
+    this.#resolveModel = deps.resolveModel;
   }
 
   isRunning(threadId: string) {
@@ -86,13 +97,24 @@ export class RunManager {
   }
 
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
-  // missing API key) before anything is persisted.
-  async start(thread: RunThread, prompt: string) {
+  // missing API key) before anything is persisted. `sender` is who is sending the message and the
+  // provider to run it with; callers resolve it first because this must claim the slot synchronously.
+  async start(
+    thread: RunThread,
+    prompt: string,
+    sender?: { userId: string; model?: ModelConfig | null },
+  ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
+    if (sender) channel.lastUserId = sender.userId;
 
     const scope = this.#scope(thread);
-    const agent = this.#createAgent(thread, channel.jobs, this.#store).agent;
+    const agent = this.#createAgent(
+      thread,
+      channel.jobs,
+      this.#store,
+      sender?.model ?? undefined,
+    ).agent;
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
     const stream = agent.stream({ prompt, session: scope });
     const run: ActiveRun = { stream, messages: [], cancelled: false, ready: Promise.resolve() };
@@ -212,11 +234,22 @@ export class RunManager {
           // The run just ended; fall through and start a new one.
         }
       }
-      this.start(thread, notice).catch(() => undefined);
+      void this.#restart(created, thread, notice);
     });
     this.#channels.set(thread.id, created);
     channel = created;
     return channel;
+  }
+
+  // Starts a run for a finished background job, with the provider of whoever last sent a message.
+  async #restart(channel: Channel, thread: RunThread, notice: string) {
+    try {
+      const userId = channel.lastUserId;
+      const model = userId ? await this.#resolveModel?.(userId) : null;
+      await this.start(thread, notice, userId ? { userId, model } : undefined);
+    } catch {
+      // Nothing is listening; the notice is lost, as it was before when start failed.
+    }
   }
 
   // Picks the transcript a new client starts from, and drops events it already contains. The read
@@ -278,5 +311,6 @@ function errorMessage(error: unknown) {
 
 export const runsService = new RunManager({
   store: createMemoryStore(db),
+  resolveModel: (userId) => providersService.resolveModel(userId),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });
