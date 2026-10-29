@@ -7,7 +7,7 @@ import {
 import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
 import { createMemoryStore, type MemoryStore } from "@aven/agents/memory";
 import { messagesToChat, projectStreamEvent } from "@aven/agents/projection";
-import { applyEvent, type ChatMessage, type RunEvent } from "@aven/agents/protocol";
+import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 import type { ModelConfig, Provider } from "@aven/agents/model";
 
 import { providersService, type ModelSelection } from "../providers/service";

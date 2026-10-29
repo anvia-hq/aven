@@ -11,7 +11,7 @@ import {
 } from "@aven/agents/testing/scripted-model";
 import { createCodingAgent } from "@aven/agents/coding-agent";
 import { createMemoryStore } from "@aven/agents/memory";
-import type { RunEvent } from "@aven/agents/protocol";
+import type { RunEvent } from "@aven/protocol/events";
 
 import type { ModelSelection } from "../providers/service";
 import { RunBusyError, RunManager, type RunThread } from "./service";

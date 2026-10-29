@@ -1,4 +1,4 @@
-import { applyEvent, isRunning, type RunEvent } from "@aven/agents/protocol";
+import { applyEvent, isRunning, type RunEvent } from "@aven/protocol/events";
 import { useCallback, useEffect, useState } from "react";
 
 import { toast } from "@/components/toast";

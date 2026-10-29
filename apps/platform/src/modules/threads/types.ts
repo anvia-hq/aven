@@ -1,4 +1,4 @@
-import type { ChatMessage, DiffLine, MessagePart, ToolPart } from "@aven/agents/protocol";
+import type { ChatMessage, DiffLine, MessagePart, ToolPart } from "@aven/protocol/events";
 
 // The transcript types are the wire protocol, shared with the control-plane.
 export type { ChatMessage, DiffLine, MessagePart, ToolPart };

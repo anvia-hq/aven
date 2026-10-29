@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { createCodingAgent } from "./coding-agent";
 import { messagesToChat, projectStreamEvent } from "./projection";
-import { applyEvent, type ChatMessage, type RunEvent } from "./protocol";
+import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 
 let root: string;

@@ -1,4 +1,4 @@
-// The wire protocol between the control-plane and every client (web, desktop, mobile).
+// The wire protocol between the control plane and every client (web, macOS, ...) and runtime.
 // Types plus a pure reducer, with no runtime imports, so clients can bundle it.
 
 export type DiffLine = { type: "add" | "del" | "ctx"; text: string };

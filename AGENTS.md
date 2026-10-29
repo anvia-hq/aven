@@ -8,7 +8,7 @@ Bun workspace monorepo (TypeScript, ESM).
 
 ```
 apps/              Applications (none yet)
-packages/          Shared internal packages (db, agents)
+packages/          Shared internal packages (db, agents, protocol)
 docs/              Project knowledge (see docs/README.md)
 ```
 
@@ -81,6 +81,10 @@ Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files
 - Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
 - Commit generated migrations in `drizzle/`; never edit them by hand. drizzle-kit runs on the Bun runtime (`bun --bun` in the `db:*` scripts) because it loads schema files with `require` and `@anvia/memory-drizzle` is ESM-only (`import` condition only), which fails under Node with `ERR_PACKAGE_PATH_NOT_EXPORTED`. Don't call `drizzle-kit` directly.
 
+## packages/protocol
+
+The wire protocol shared by the control plane, runtimes and every client (see decision 0008): run event types plus the pure `applyEvent` reducer, no runtime imports. Import from `@aven/protocol/events`. Clients (the platform) depend on this, never on `@aven/agents`.
+
 ## packages/agents
 
 The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llms.txt). Source-only, no barrel files; import from `@aven/agents/tools/<name>`.
@@ -88,7 +92,7 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 - Tools live in `src/tools/<name>.ts` and are made with `createTool` (zod input schema). Keep them free of app and HTTP concerns; take config as options with env fallbacks and make `fetch` injectable so tests never hit the network.
 - `web_search` (`tools/web-search.ts`) uses Tavily over plain `fetch`; needs `TAVILY_API_KEY`.
 - `read`, `write`, `edit` take `{ root }` and refuse paths outside it (symlinks included). `shell`, `shell_output`, `shell_kill` run commands through `JobRegistry` (`jobs/job-registry.ts`): foreground calls wait (2 min default timeout), `background: true` returns a `jobId` at once. Jobs are process groups, so kills reach children. The shell is **not** confined to `root`.
-- The wire protocol shared with every client is `protocol.ts` (event types plus the pure `applyEvent` reducer; the platform imports it); `projection.ts` turns Anvia stream events and stored messages into it. Tests that must not hit a provider use `testing/scripted-model.ts`.
+- `projection.ts` turns Anvia stream events and stored messages into the `@aven/protocol` events. Tests that must not hit a provider use `testing/scripted-model.ts`.
 - A finished background job is delivered by the host (control-plane `RunManager` does this): `jobs.onComplete` -> `formatJobNotice(job)` -> `stream.steer({ prompt })` while the run is live, or a new run if it ended.
 - Memory: `createMemoryStore(db)` (`memory.ts`, `@anvia/memory-drizzle`) persists conversations in Postgres; pass `{ memory }` to `createCodingAgent` and a `session: { sessionId, metadata: { organizationId } }` on every run. Its tables live in `packages/db/src/schema/anvia-memory.ts`.
 - `createCodingAgent({ provider: "openai" | "anthropic" | "openai-compatible", root })` (`coding-agent.ts`) assembles model + tools; `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.

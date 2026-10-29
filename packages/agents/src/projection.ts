@@ -6,7 +6,7 @@ import type {
   ToolResultOutput,
 } from "@anvia/core";
 
-import type { ChatMessage, DiffLine, MessagePart, RunEvent, ToolPart } from "./protocol";
+import type { ChatMessage, DiffLine, MessagePart, RunEvent, ToolPart } from "@aven/protocol/events";
 
 const MAX_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;
