@@ -1,9 +1,10 @@
 import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
-import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION, decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/runtime-wire";
 import type {
   ControlPlaneToRuntime,
   CallMethod,
+  DesktopCallMethod,
   RepoAccess,
   RuntimeToControlPlane,
   RunThreadInfo,
@@ -32,11 +33,33 @@ export type RunSink = {
 
 type Run = { thread: RunThreadInfo; sink: RunSink };
 
+/** What a viewer's stream reports to whoever opened it (decision 0015). */
+export type ViewerSink = {
+  /** The runtime is streaming; `data` follows. */
+  opened(): void;
+  data(bytes: Uint8Array): void;
+  /** The viewer ended or could not start, or the connection dropped; `reason` says why. */
+  closed(reason: string): void;
+};
+
+export type ViewerHandle = {
+  /** The browser's bytes for the desktop; dropped until the stream has opened. */
+  write(bytes: Uint8Array): void;
+  close(): void;
+};
+
+type Viewer = { sink: ViewerSink; ready: boolean };
+type PendingCall = { resolve: (value: unknown) => void; reject: (error: Error) => void };
+
+const CALL_TIMEOUT_MS = 10_000;
+
 // One connected runtime. The runtime is not trusted: it may only touch runs this connection
 // started, only while they are live, and the conversation scope always comes from our own record
 // of the run, never from what the runtime sends.
 export class RuntimeConnection {
   #runs = new Map<string, Run>();
+  #viewers = new Map<string, Viewer>();
+  #calls = new Map<string, PendingCall>();
   #closed = false;
   /** Set once the runtime has said hello with a wire version we speak. */
   #ready = false;
@@ -44,7 +67,7 @@ export class RuntimeConnection {
   constructor(
     readonly runtimeId: string,
     readonly organizationId: string | null,
-    private send: (message: string) => void,
+    private send: (message: string | Uint8Array) => void,
     private closeSocket: (code?: number, reason?: string) => void,
     private hub: RuntimeHub,
   ) {}
@@ -66,6 +89,48 @@ export class RuntimeConnection {
     this.#runs.set(runId, { thread, sink });
   }
 
+  // Starts streaming a thread's desktop. Throws when the runtime is offline; whether the thread has
+  // a running sandbox is the runtime's answer, through `sink.closed`.
+  openViewer(threadId: string, sink: ViewerSink): ViewerHandle {
+    const viewerId = crypto.randomUUID();
+    this.post({ type: "desktop.open", viewerId, threadId });
+    this.#viewers.set(viewerId, { sink, ready: false });
+    return {
+      write: (bytes) => {
+        if (this.#viewers.get(viewerId)?.ready) this.send(encodeViewerFrame(viewerId, bytes));
+      },
+      close: () => {
+        if (!this.#viewers.delete(viewerId) || this.#closed) return;
+        this.post({ type: "desktop.close", viewerId });
+      },
+    };
+  }
+
+  // Asks the runtime about a thread's desktop. Rejects with the runtime's own error, or when it
+  // does not answer in time.
+  call(method: DesktopCallMethod, params: unknown, timeoutMs = CALL_TIMEOUT_MS) {
+    return new Promise<unknown>((resolve, reject) => {
+      const id = crypto.randomUUID();
+      const finish = () => {
+        clearTimeout(timer);
+        this.#calls.delete(id);
+      };
+      const timer = setTimeout(() => {
+        finish();
+        reject(new Error(`The runtime did not answer ${method}`));
+      }, timeoutMs);
+      this.#calls.set(id, {
+        resolve: (value) => (finish(), resolve(value)),
+        reject: (error) => (finish(), reject(error)),
+      });
+      try {
+        this.post({ type: "call", id, method, params });
+      } catch (error) {
+        this.#calls.get(id)?.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  }
+
   hasRun(runId: string) {
     return this.#runs.has(runId);
   }
@@ -82,6 +147,15 @@ export class RuntimeConnection {
     // Nothing else is accepted from a runtime that has not introduced itself.
     if (!this.#ready) return;
     await this.#dispatch(message);
+  }
+
+  // A binary frame: a viewer's VNC bytes. Only a viewer this connection opened is heard.
+  receiveBinary(frame: Uint8Array) {
+    if (!this.#ready) return;
+    const decoded = decodeViewerFrame(frame);
+    if (!decoded) return;
+    const viewer = this.#viewers.get(decoded.viewerId);
+    if (viewer?.ready) viewer.sink.data(decoded.payload);
   }
 
   #hello(version: number) {
@@ -108,6 +182,26 @@ export class RuntimeConnection {
       case "call":
         await this.#answer(message.id, message.method, message.params);
         return;
+      case "desktop.opened": {
+        const viewer = this.#viewers.get(message.viewerId);
+        if (!viewer) return;
+        viewer.ready = true;
+        viewer.sink.opened();
+        return;
+      }
+      case "desktop.closed": {
+        const viewer = this.#viewers.get(message.viewerId);
+        if (!this.#viewers.delete(message.viewerId)) return;
+        viewer?.sink.closed(message.reason);
+        return;
+      }
+      case "reply": {
+        const waiting = this.#calls.get(message.id);
+        if (!waiting) return;
+        if (message.ok) waiting.resolve(message.result);
+        else waiting.reject(new Error(message.error ?? "The runtime reported an error"));
+        return;
+      }
     }
   }
 
@@ -172,6 +266,13 @@ export class RuntimeConnection {
     const runs = [...this.#runs.values()];
     this.#runs.clear();
     for (const run of runs) run.sink.lost(new Error("The runtime disconnected"));
+    const viewers = [...this.#viewers.values()];
+    this.#viewers.clear();
+    for (const viewer of viewers) viewer.sink.closed("The runtime disconnected");
+    // Settling a call takes it out of the map, which is safe to do while walking it.
+    for (const waiting of this.#calls.values()) {
+      waiting.reject(new Error("The runtime disconnected"));
+    }
     this.hub.detach(this);
   }
 }
@@ -191,7 +292,7 @@ export class RuntimeHub {
   attach(
     runtimeId: string,
     organizationId: string | null,
-    send: (message: string) => void,
+    send: (message: string | Uint8Array) => void,
     closeSocket: (code?: number, reason?: string) => void,
   ) {
     this.#connections.get(runtimeId)?.close(4001, "Replaced by a newer connection");

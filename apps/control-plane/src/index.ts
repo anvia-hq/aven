@@ -2,10 +2,12 @@ import { Elysia } from "elysia";
 
 import { errorsRouter } from "./errors";
 import { authRouter } from "./modules/auth/router";
+import { desktopRouter } from "./modules/desktop/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
+import { runtimeHub } from "./modules/runtimes/hub";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
 import { runsService } from "./modules/runs/service";
@@ -16,6 +18,7 @@ const app = new Elysia()
   .use(errorsRouter)
   .get("/health", () => ({ status: "ok" }))
   .use(authRouter)
+  .use(desktopRouter(runtimeHub))
   .use(githubRouter)
   .use(platformRouter)
   .use(projectsRouter)

@@ -38,6 +38,12 @@ const frame = z.discriminatedUnion("type", [
     outcome: z.enum(["response", "blocked", "interaction", "error"]),
     error: z.string().optional(),
   }),
+  z.object({ type: z.literal("desktop.opened"), viewerId: z.string().min(1) }),
+  z.object({
+    type: z.literal("desktop.closed"),
+    viewerId: z.string().min(1),
+    reason: z.string(),
+  }),
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),

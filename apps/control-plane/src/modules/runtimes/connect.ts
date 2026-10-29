@@ -23,7 +23,8 @@ export const connectRouter = (hub: RuntimeHub) => {
           const connection = hub.attach(
             runtime.id,
             runtime.organizationId,
-            (message) => ws.send(message),
+            // Elysia would encode a Uint8Array as JSON text; the native socket sends bytes as bytes.
+            (message) => ws.raw.send(message),
             (code, reason) => ws.close(code, reason),
           );
           connections.set(ws.raw, connection);
@@ -39,8 +40,17 @@ export const connectRouter = (hub: RuntimeHub) => {
           );
         },
         async message(ws, message) {
+          const connection = connections.get(ws.raw);
+          // Binary frames carry a viewer's VNC bytes; anything else is JSON, which Elysia may
+          // already have parsed.
+          if (ArrayBuffer.isView(message)) {
+            connection?.receiveBinary(
+              new Uint8Array(message.buffer, message.byteOffset, message.byteLength),
+            );
+            return;
+          }
           const text = typeof message === "string" ? message : JSON.stringify(message);
-          await connections.get(ws.raw)?.receive(text);
+          await connection?.receive(text);
         },
         close(ws) {
           const connection = connections.get(ws.raw);

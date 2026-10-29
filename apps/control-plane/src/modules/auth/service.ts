@@ -40,11 +40,14 @@ export async function ensurePersonalOrganization(userId: string) {
 
 // The backend is reached through the platform's `/api` proxy, which strips the prefix,
 // so Better Auth lives at `/auth` here and `/api/auth` in the browser.
+/** Origins a browser may call from: the ones Better Auth trusts, also checked on sockets. */
+export const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "http://localhost:5173").split(",");
+
 export const auth = betterAuth({
   secret,
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:5173",
   basePath: "/auth",
-  trustedOrigins: (process.env.TRUSTED_ORIGINS ?? "http://localhost:5173").split(","),
+  trustedOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
