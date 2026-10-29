@@ -3,13 +3,15 @@ import type { RunEvent } from "@aven/protocol/events";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
   ControlPlaneToRuntime,
-  MemoryCallMethod,
+  CallMethod,
+  RepoAccess,
   RuntimeToControlPlane,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
 import { memoryStore } from "../../memory-store";
 import { UnavailableError } from "../../errors";
+import { projectsService } from "../projects/service";
 import { runtimesService } from "./service";
 import { parseAppendParams, parseMemoryParams, parseRuntimeFrame } from "./wire";
 
@@ -116,9 +118,11 @@ export class RuntimeConnection {
     run.sink.end(outcome, error);
   }
 
-  async #answer(id: string, method: MemoryCallMethod, params: unknown) {
+  async #answer(id: string, method: CallMethod, params: unknown) {
     try {
-      this.#reply({ type: "reply", id, ok: true, result: await this.#memory(method, params) });
+      const result =
+        method === "repo.access" ? await this.#repo(params) : await this.#memory(method, params);
+      this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       this.#reply({ type: "reply", id, ok: false, error: text });
@@ -129,7 +133,15 @@ export class RuntimeConnection {
     this.send(JSON.stringify(reply));
   }
 
-  async #memory(method: MemoryCallMethod, params: unknown) {
+  // Only for a live run of this connection, and only the repository of that run's own thread.
+  async #repo(params: unknown) {
+    const { runId } = parseMemoryParams(params);
+    const run = this.#runs.get(runId);
+    if (!run) throw new Error("Unknown or finished run");
+    return this.hub.repoAccess(run.thread.id);
+  }
+
+  async #memory(method: Exclude<CallMethod, "repo.access">, params: unknown) {
     const { runId } = parseMemoryParams(params);
     const run = this.#runs.get(runId);
     if (!run) throw new Error("Unknown or finished run");
@@ -168,7 +180,12 @@ export class RuntimeConnection {
 export class RuntimeHub {
   #connections = new Map<string, RuntimeConnection>();
 
-  constructor(readonly store: MemoryStore) {}
+  constructor(
+    readonly store: MemoryStore,
+    /** How a runtime gets to clone a thread's repository (decision 0013). */
+    readonly repoAccess: (threadId: string) => Promise<RepoAccess> = () =>
+      Promise.reject(new Error("Repository access is not available")),
+  ) {}
 
   // A runtime that reconnects replaces its previous connection.
   attach(
@@ -208,4 +225,6 @@ export class RuntimeHub {
   }
 }
 
-export const runtimeHub = new RuntimeHub(memoryStore);
+export const runtimeHub = new RuntimeHub(memoryStore, (threadId) =>
+  projectsService.repoAccess(threadId),
+);

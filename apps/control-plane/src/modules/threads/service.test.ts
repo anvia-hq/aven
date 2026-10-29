@@ -6,19 +6,13 @@ import { ProjectNotFoundError, threadsService } from "./service";
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("threadsService (postgres)", async () => {
-  const { projectsService } = await import("../projects/service");
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
   const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
-  const projectA = await projectsService.create(orgA, userId, {
-    name: "proj",
-    runtimeId: runnerA.id,
-  });
-  const projectB = await projectsService.create(orgB, userId, {
-    name: "proj-b",
-    runtimeId: runnerB.id,
-  });
+  const { seedProject } = await import("../../testing/seed-project");
+  const { project: projectA } = await seedProject(orgA, userId, runnerA.id, "proj");
+  const { project: projectB } = await seedProject(orgB, userId, runnerB.id, "proj-b");
 
   afterAll(() => cleanup());
 

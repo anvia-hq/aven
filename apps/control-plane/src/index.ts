@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 
 import { errorsRouter } from "./errors";
 import { authRouter } from "./modules/auth/router";
+import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
@@ -15,6 +16,7 @@ const app = new Elysia()
   .use(errorsRouter)
   .get("/health", () => ({ status: "ok" }))
   .use(authRouter)
+  .use(githubRouter)
   .use(platformRouter)
   .use(projectsRouter)
   .use(providersRouter)

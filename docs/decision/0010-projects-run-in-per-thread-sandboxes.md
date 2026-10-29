@@ -1,6 +1,6 @@
 # Projects run in per-thread sandboxes on a runner
 
-Status: accepted. Supersedes the host-folder parts of 0005 (a project is a path) and 0009 (sandboxing is an option on a runtime); builds on 0008. The runner-less projects it kept are removed by 0011; the file tools working on the workspace from the runner are superseded by 0012.
+Status: accepted; the "name and a runner" project and the empty workspace are superseded by 0013 (a project is an imported GitHub repository, cloned into each thread). Supersedes the host-folder parts of 0005 (a project is a path) and 0009 (sandboxing is an option on a runtime); builds on 0008. The runner-less projects it kept are removed by 0011; the file tools working on the workspace from the runner are superseded by 0012.
 
 ## Context
 

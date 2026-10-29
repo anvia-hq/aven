@@ -16,7 +16,16 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 run("runtime connection (real postgres, real WebSocket)", async () => {
   const seed = await seedOrgPair();
   const store = createMemoryStore(db);
-  const hub = new RuntimeHub(store);
+  const cloned: string[] = [];
+  const repoAccess = {
+    cloneUrl: "https://github.com/acme/web.git",
+    defaultBranch: "main",
+    token: "t",
+  };
+  const hub = new RuntimeHub(store, async (threadId) => {
+    cloned.push(threadId);
+    return repoAccess;
+  });
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
   const full = new Elysia().use(runtimesRouter).listen({ port: 0 });
   const sockets: WebSocket[] = [];
@@ -96,6 +105,32 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "r" });
     await open(full.server?.port, token, "/runtimes/connect");
     await until(() => runtimeHub.isOnline(runtime.id));
+  });
+
+  test("repository access is only given for a live run, and for that run's own thread", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "g" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
+    connection.startRun("run-git", thread, {
+      event: () => undefined,
+      end: () => undefined,
+      lost: () => undefined,
+    });
+
+    const unknown = await ask(ws, received, "repo.access", { runId: "someone-elses" });
+    expect(unknown.ok).toBe(false);
+    expect(cloned).toEqual([]);
+
+    // A thread named by the runtime is ignored; the run's own thread is what counts.
+    const given = await ask(ws, received, "repo.access", { runId: "run-git", threadId: "other" });
+    expect(given).toMatchObject({ ok: true, result: repoAccess });
+    expect(cloned).toEqual([thread.id]);
+
+    connection.endRun("run-git");
+    expect((await ask(ws, received, "repo.access", { runId: "run-git" })).ok).toBe(false);
   });
 
   test("a runtime can only touch runs the control plane started on it", async () => {

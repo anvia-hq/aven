@@ -1,10 +1,12 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
+import { githubInstallations } from "./github-installations";
 import { organizations } from "./organizations";
 import { runtimes } from "./runtimes";
 import { users } from "./users";
 
-// A project is a name and the runner its threads' sandboxes run on. Threads always belong to one.
+// A project is an imported GitHub repository and the runner its threads' sandboxes run on (decision
+// 0013). Threads always belong to one; each clones the repository into its own sandbox.
 export const projects = pgTable(
   "projects",
   {
@@ -19,6 +21,14 @@ export const projects = pgTable(
     runtimeId: uuid("runtime_id")
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
+    /** The installation that gives the control plane read access to the repository. */
+    githubInstallationId: uuid("github_installation_id")
+      .notNull()
+      .references(() => githubInstallations.id, { onDelete: "restrict" }),
+    /** `owner/name`, as GitHub spells it. */
+    repoFullName: text("repo_full_name").notNull(),
+    cloneUrl: text("clone_url").notNull(),
+    defaultBranch: text("default_branch").notNull(),
     name: text("name").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -29,6 +39,7 @@ export const projects = pgTable(
   (table) => [
     index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
     index("projects_runtime_idx").on(table.runtimeId),
+    uniqueIndex("projects_org_repo_idx").on(table.organizationId, table.repoFullName),
   ],
 );
 

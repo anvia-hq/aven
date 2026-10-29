@@ -51,11 +51,23 @@ export type RuntimeToControlPlane =
   | { type: "run.event"; runId: string; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error". */
   | { type: "run.end"; runId: string; outcome: RunOutcome; error?: string }
-  | { type: "call"; id: string; method: MemoryCallMethod; params: unknown }
+  | { type: "call"; id: string; method: CallMethod; params: unknown }
   | Reply;
 
 /** The runtime reads and writes the conversation, which the control plane owns. */
 export type MemoryCallMethod = "memory.load" | "memory.append" | "memory.clear";
+
+/** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
+export type RepoCallMethod = "repo.access";
+
+export type CallMethod = MemoryCallMethod | RepoCallMethod;
+
+/** What a runtime needs to clone a thread's repository. The token is short-lived and read-only. */
+export type RepoAccess = {
+  cloneUrl: string;
+  defaultBranch: string;
+  token: string;
+};
 
 export type MemoryAppendParams = {
   runId: string;
@@ -64,6 +76,7 @@ export type MemoryAppendParams = {
   messages: unknown[];
 };
 
-// Version 3: a run is only started and cancelled; commands and processes are the sandbox's, so no
-// job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 3;
+// Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
+// 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
+// so no job notices, job stops or steering (decision 0012).
+export const WIRE_VERSION = 4;

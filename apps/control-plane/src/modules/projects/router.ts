@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { createProjectBody, projectParams } from "./schema";
+import { importProjectBody, projectParams } from "./schema";
 import { projectsService } from "./service";
 
 export const projectsRouter = new Elysia({ prefix: "/projects" })
@@ -12,8 +12,8 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
   })
   .post(
     "/",
-    ({ body, organizationId, user }) => projectsService.create(organizationId, user.id, body),
-    { auth: true, org: true, body: createProjectBody },
+    ({ body, organizationId, user }) => projectsService.import(organizationId, user.id, body),
+    { auth: true, org: true, body: importProjectBody },
   )
   .get(
     "/:id",

@@ -41,7 +41,7 @@ const frame = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),
-    method: z.enum(["memory.load", "memory.append", "memory.clear"]),
+    method: z.enum(["memory.load", "memory.append", "memory.clear", "repo.access"]),
     params: z.unknown().optional(),
   }),
   z.object({ type: z.literal("reply"), id: z.string() }).loose(),
