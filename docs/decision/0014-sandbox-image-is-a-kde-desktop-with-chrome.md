@@ -16,6 +16,6 @@ The sandbox image (`aven-sandbox-desktop:dev`) had a hand-themed openbox and pla
 ## Consequences
 
 - The image is about 7.3 GB, up from 3.2 GB, and a desktop with a browser open uses about 520 MB.
-- Chrome 156 runs on the amd64 image under OrbStack's emulation on Apple Silicon: the daemon connects in about a second, and with a window open the container uses about 1.1 GiB of its 2 GiB. It is slower than native. On that run the panel's browser icon showed only its tooltip for 40 seconds and no window; a launch through `anvia-chromium` opened Chrome. Whether the panel launcher is slow or failed under emulation is not known.
-- A runner starts containers for its own architecture. Nothing yet tells it to start the amd64 image on an arm64 host (`docker run --platform`), so Chrome on Apple Silicon is only reachable by building and running the amd64 image by hand.
+- Chrome 156 runs on the amd64 image under OrbStack's emulation on Apple Silicon: the daemon connects in about a second, and with a window open the container uses about 1.1 GiB of its 2 GiB. It is slower than native. The panel's browser icon works there: it starts Chrome through `anvia-chromium` at once, but under emulation the first window takes between 40 and 60 seconds to appear, so a screenshot taken sooner shows only the panel. Native amd64 was not measured.
+- A runner starts containers for its own architecture unless `AVEN_SANDBOX_PLATFORM` is set. `AVEN_SANDBOX_PLATFORM=linux/amd64` with `AVEN_SANDBOX_IMAGE` pointing at an image built with `docker build --platform linux/amd64` runs Chrome on an arm64 host.
 - A new webtop release is only picked up by changing the pinned digest.
