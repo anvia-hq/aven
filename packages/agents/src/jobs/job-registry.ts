@@ -176,13 +176,6 @@ export class JobRegistry {
     await Promise.all([...this.#entries.keys()].map((id) => this.kill(id)));
   }
 
-  // Synchronous SIGKILL of every running job, for `process.on("exit")` where nothing can be awaited.
-  killAllNow() {
-    for (const entry of this.#entries.values()) {
-      if (entry.snapshot.status === "running") entry.proc.signal("SIGKILL");
-    }
-  }
-
   // Follows the process to its end and settles the job: output, status, listeners.
   async #watch(entry: Entry, timeoutMs: number | undefined) {
     const { proc, output } = entry;

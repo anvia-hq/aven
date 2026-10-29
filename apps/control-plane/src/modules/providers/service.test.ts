@@ -6,6 +6,7 @@ run("providersService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
+  const { UnavailableError } = await import("../../errors");
   const { InvalidSelectionError, effortsByModel, providersService } = await import("./service");
 
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -58,6 +59,19 @@ run("providersService (postgres)", async () => {
       baseUrl: undefined,
       apiKey: "sk-secret-abcd",
     });
+  });
+
+  test("a key that cannot be decrypted makes the provider unavailable, not a server error", async () => {
+    const original = process.env.PROVIDER_ENCRYPTION_KEY;
+    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+    const silenced = console.error;
+    console.error = () => undefined;
+    try {
+      await expect(providersService.resolveModel(alice)).rejects.toBeInstanceOf(UnavailableError);
+    } finally {
+      console.error = silenced;
+      process.env.PROVIDER_ENCRYPTION_KEY = original;
+    }
   });
 
   test("a message may choose its own provider, model and effort, but never someone else's", async () => {

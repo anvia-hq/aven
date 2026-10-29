@@ -3,7 +3,7 @@ import { providers, type ProviderRow } from "@aven/db/schema/providers";
 import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
-import { UnprocessableError } from "../../errors";
+import { UnavailableError, UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { modelCatalog } from "./model-catalog";
 import type { CreateProviderBody, UpdateProviderBody } from "./schema";
@@ -212,7 +212,7 @@ export const providersService = {
     const models = await listAgentModels({
       kind: row.kind,
       baseUrl: row.baseUrl ?? undefined,
-      apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
+      apiKey: readKey(row),
     });
     return { models, efforts: await effortsByModel(row.kind, models) };
   },
@@ -227,13 +227,25 @@ export const providersService = {
       provider: row.kind,
       modelId: selection.modelId ?? row.modelId ?? undefined,
       baseUrl: row.baseUrl ?? undefined,
-      apiKey: row.apiKeyEncrypted ? decryptSecret(row.apiKeyEncrypted) : undefined,
+      apiKey: readKey(row),
     };
     if (selection.modelId) await assertRunnable(config.provider, selection.modelId);
     if (selection.reasoningEffort) await applyEffort(config, selection.reasoningEffort);
     return config;
   },
 };
+
+// A key that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is an
+// unavailable provider, not a server bug: the owner fixes it by entering the key again.
+function readKey(row: ProviderRow) {
+  if (!row.apiKeyEncrypted) return undefined;
+  try {
+    return decryptSecret(row.apiKeyEncrypted);
+  } catch (error) {
+    console.error(`Could not decrypt the key of provider ${row.id}:`, error);
+    throw new UnavailableError("This provider's saved key could not be read; enter it again");
+  }
+}
 
 async function findSelectedProvider(userId: string, selection: ModelSelection) {
   const [row] = await db

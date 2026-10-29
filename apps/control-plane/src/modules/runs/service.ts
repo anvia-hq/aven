@@ -3,7 +3,7 @@ import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 
-import { ConflictError } from "../../errors";
+import { ConflictError, UnavailableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
 import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
@@ -95,7 +95,8 @@ export class RunManager {
     } catch (error) {
       channel.run = undefined;
       handle.cancel("history load failed");
-      throw error;
+      console.warn(`Could not load the history of thread ${thread.id}:`, error);
+      throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
     this.#emit(channel, { type: "run_start", prompt });
     void this.#consume(channel, run);
@@ -182,15 +183,19 @@ export class RunManager {
   #jobNotice(threadId: string, notice: string) {
     const channel = this.#channels.get(threadId);
     if (!channel || this.#disposed) return;
-    try {
-      if (channel.run) {
-        channel.run.handle.steer(notice);
-        return;
-      }
-    } catch {
-      // The run just ended; fall through and start a new one.
-    }
+    if (this.#steerLive(channel, notice)) return;
     void this.#restart(channel, channel.thread, notice);
+  }
+
+  // False when there is no live run to take the message, or it has just ended.
+  #steerLive(channel: Channel, notice: string) {
+    if (!channel.run) return false;
+    try {
+      channel.run.handle.steer(notice);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Starts a run for a finished background job, with whatever whoever last sent a message chose.
@@ -200,9 +205,10 @@ export class RunManager {
       const model = sender ? await this.#modelForRestart(sender) : null;
       await this.start(thread, notice, sender && { ...sender, model });
     } catch (error) {
-      // A run that started meanwhile already has the notice's context; anything else is lost.
-      if (error instanceof RunBusyError) return;
-      console.warn(`Could not start a run for a finished job on thread ${thread.id}:`, error);
+      // A run that started meanwhile has not seen the notice: hand it over.
+      const delivered = error instanceof RunBusyError && this.#steerLive(channel, notice);
+      if (delivered) return;
+      console.warn(`Could not deliver a finished job's notice on thread ${thread.id}:`, error);
     }
   }
 

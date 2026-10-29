@@ -78,6 +78,29 @@ describe("Sandboxes starting a container", () => {
     await rm(home, { recursive: true, force: true });
   });
 
+  test("dispose finishes even when a container will not be removed", async () => {
+    const { docker: base } = fakeDocker();
+    let started = false;
+    const docker: typeof base = async (args) => {
+      if (args[0] === "run") started = true;
+      if (args[0] === "rm" && started) throw new Error("docker went away");
+      return base(args);
+    };
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 300 });
+    const acquiring = sandboxes.acquire({ id: "t3" }).catch(() => undefined);
+    await Bun.sleep(100);
+    const silenced = console.error;
+    console.error = () => undefined;
+    try {
+      await expect(sandboxes.dispose()).resolves.toBeUndefined();
+    } finally {
+      console.error = silenced;
+    }
+    await acquiring;
+    await rm(home, { recursive: true, force: true });
+  });
+
   test("gives up on a container whose daemon never connects and removes it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));

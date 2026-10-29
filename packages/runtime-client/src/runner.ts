@@ -144,7 +144,8 @@ export function startRuntime(options: RuntimeOptions) {
       },
     });
     registry.onComplete((job) => {
-      scheduleIdleRelease(threadId);
+      // Not for the jobs killed while this thread's registry is being released.
+      if (jobs.get(threadId) === registry) scheduleIdleRelease(threadId);
       // A killed job was stopped on purpose: nothing to report.
       if (!job.background || job.status === "killed" || stopped) return;
       sendOrWarn({ type: "job.notice", threadId, notice: formatJobNotice(job) });

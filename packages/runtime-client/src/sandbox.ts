@@ -283,7 +283,13 @@ export class Sandboxes implements ThreadWorkspaces {
 
   async dispose() {
     const threads = new Set([...this.#running, ...this.#starting.keys()]);
-    await Promise.all([...threads].map((id) => this.release(id)));
+    // One container that will not go must not keep the hub open.
+    const released = [...threads].map((id) =>
+      this.release(id).catch((error: unknown) => {
+        console.error(`Could not remove the sandbox of thread ${id}:`, error);
+      }),
+    );
+    await Promise.all(released);
     await this.#hub.close();
   }
 
