@@ -19,6 +19,16 @@ export class RuntimeOfflineError extends Error {
   }
 }
 
+/** The runtime answered a call with an error; `code` names known failures. */
+export class RuntimeCallError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
 /** What a started run reports back to whoever started it. */
 export type RunSink = {
   event(event: RunEvent): void;
@@ -119,7 +129,11 @@ export class RuntimeConnection {
         this.#pending.delete(message.id);
         clearTimeout(pending.timer);
         if (message.ok) pending.resolve(message.result);
-        else pending.reject(new Error(message.error ?? "The runtime reported an error"));
+        else {
+          pending.reject(
+            new RuntimeCallError(message.error ?? "The runtime reported an error", message.code),
+          );
+        }
         return;
       }
       case "call":

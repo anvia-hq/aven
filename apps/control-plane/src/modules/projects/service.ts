@@ -1,37 +1,59 @@
-import { mkdir, readdir, realpath, stat } from "node:fs/promises";
-import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
-
 import { db } from "@aven/db/client";
 import { projects } from "@aven/db/schema/projects";
+import {
+  browseDirectory,
+  createDirectory,
+  resolveProjectPath,
+  workspaceErrorFrom,
+} from "@aven/agents/workspace";
+import type { DirectoryListing } from "@aven/protocol/runtime-wire";
 import { and, desc, eq } from "drizzle-orm";
 
+import { RuntimeCallError, RuntimeOfflineError, runtimeHub } from "../runtimes/hub";
+import { runtimesService } from "../runtimes/service";
 import type { CreateProjectBody } from "./schema";
 
-export class InvalidProjectPathError extends Error {}
 export class DuplicateProjectPathError extends Error {}
-export class InvalidFolderNameError extends Error {}
-export class DirectoryExistsError extends Error {}
+export class RuntimeNotFoundError extends Error {}
 
-// A project path must be an existing absolute directory on this machine. The stored value is
-// the resolved real path, so symlinks and `..` segments cannot change what a project points at.
-export async function resolveProjectPath(input: string) {
-  let expanded = input;
-  if (input === "~") expanded = homedir();
-  else if (input.startsWith("~/")) expanded = join(homedir(), input.slice(2));
-  if (!isAbsolute(expanded)) {
-    throw new InvalidProjectPathError("Project path must be an absolute path");
+// Where project folders live: this machine, or a runtime's. Both answer the same three questions.
+type Workspace = {
+  resolve(path: string): Promise<string>;
+  browse(path?: string): Promise<DirectoryListing>;
+  mkdir(path: string, name: string): Promise<DirectoryListing>;
+};
+
+const localWorkspace: Workspace = {
+  resolve: resolveProjectPath,
+  browse: browseDirectory,
+  mkdir: createDirectory,
+};
+
+function remoteWorkspace(runtimeId: string): Workspace {
+  const ask = async <T>(method: "fs.resolve" | "fs.browse" | "fs.mkdir", params: unknown) => {
+    const connection = runtimeHub.get(runtimeId);
+    if (!connection) throw new RuntimeOfflineError();
+    try {
+      return (await connection.call(method, params)) as T;
+    } catch (error) {
+      if (error instanceof RuntimeCallError) throw workspaceErrorFrom(error.code, error.message);
+      throw error;
+    }
+  };
+  return {
+    resolve: (path) => ask<string>("fs.resolve", { path }),
+    browse: (path) => ask<DirectoryListing>("fs.browse", { path }),
+    mkdir: (path, name) => ask<DirectoryListing>("fs.mkdir", { path, name }),
+  };
+}
+
+// A runtime must belong to the organization (and not be revoked) before anything is asked of it.
+async function workspaceFor(organizationId: string, runtimeId: string | null | undefined) {
+  if (!runtimeId) return localWorkspace;
+  if (!(await runtimesService.get(organizationId, runtimeId))) {
+    throw new RuntimeNotFoundError("Runtime not found");
   }
-  let real: string;
-  try {
-    real = await realpath(expanded);
-  } catch {
-    throw new InvalidProjectPathError(`Directory does not exist: ${input}`);
-  }
-  if (!(await stat(real)).isDirectory()) {
-    throw new InvalidProjectPathError(`Not a directory: ${input}`);
-  }
-  return real;
+  return remoteWorkspace(runtimeId);
 }
 
 // Drizzle wraps the driver error in a DrizzleQueryError; the Postgres error code is on `.cause`.
@@ -39,23 +61,6 @@ const isUniqueViolation = (error: unknown): boolean => {
   const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
   return typeof cause === "object" && cause !== null && "code" in cause && cause.code === "23505";
 };
-
-// Lists the subdirectories of an already-resolved path. Dot-prefixed entries are hidden
-// (`.cache`, `.config`, ...) to keep the listing readable.
-async function listDirectory(resolved: string) {
-  const dirents = await readdir(resolved, { withFileTypes: true });
-  const entries = dirents
-    .filter((dirent) => dirent.isDirectory() && !dirent.name.startsWith("."))
-    .map((dirent) => ({ name: dirent.name, path: join(resolved, dirent.name) }))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-  const parent = dirname(resolved);
-  return { path: resolved, parent: parent === resolved ? null : parent, entries };
-}
-
-// A folder name is a single path segment: no separators, and not `.`/`..`, which would
-// otherwise let a "new folder" request escape the chosen directory.
-const isValidFolderName = (name: string) =>
-  name.length > 0 && name !== "." && name !== ".." && !name.includes("/");
 
 export const projectsService = {
   list: (organizationId: string) =>
@@ -75,11 +80,18 @@ export const projectsService = {
   },
 
   async create(organizationId: string, userId: string, body: CreateProjectBody) {
-    const projectPath = await resolveProjectPath(body.projectPath);
+    const workspace = await workspaceFor(organizationId, body.runtimeId);
+    const projectPath = await workspace.resolve(body.projectPath);
     try {
       const [project] = await db
         .insert(projects)
-        .values({ organizationId, createdBy: userId, name: body.name, projectPath })
+        .values({
+          organizationId,
+          createdBy: userId,
+          name: body.name,
+          projectPath,
+          runtimeId: body.runtimeId ?? null,
+        })
         .returning();
       return project!;
     } catch (error) {
@@ -90,32 +102,16 @@ export const projectsService = {
     }
   },
 
-  // Defaults to the home directory for the folder picker's first screen.
-  async browse(path?: string) {
-    const resolved = await resolveProjectPath(path && path.length > 0 ? path : homedir());
-    return listDirectory(resolved);
+  async browse(organizationId: string, runtimeId: string | undefined, path?: string) {
+    return (await workspaceFor(organizationId, runtimeId)).browse(path);
   },
 
-  // Creates a subfolder of an existing directory and returns that directory's listing again, so
-  // the picker can show the new folder without a second round trip.
-  async createDirectory(parentPath: string, name: string) {
-    const parent = await resolveProjectPath(parentPath);
-    if (!isValidFolderName(name)) {
-      throw new InvalidFolderNameError("Folder name can't be empty or contain a path separator");
-    }
-    try {
-      await mkdir(join(parent, name));
-    } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "EEXIST"
-      ) {
-        throw new DirectoryExistsError(`${name} already exists`);
-      }
-      throw error;
-    }
-    return listDirectory(parent);
+  async createDirectory(
+    organizationId: string,
+    runtimeId: string | undefined,
+    parentPath: string,
+    name: string,
+  ) {
+    return (await workspaceFor(organizationId, runtimeId)).mkdir(parentPath, name);
   },
 };

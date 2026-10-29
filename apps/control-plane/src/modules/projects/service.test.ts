@@ -1,138 +1,16 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import {
-  DirectoryExistsError,
-  DuplicateProjectPathError,
-  InvalidFolderNameError,
-  InvalidProjectPathError,
-  projectsService,
-  resolveProjectPath,
-} from "./service";
+import { InvalidProjectPathError } from "@aven/agents/workspace";
+import { startRuntime } from "@aven/runtime-client/runner";
+import { Elysia } from "elysia";
 
-describe("resolveProjectPath", () => {
-  test("accepts a directory and stores its real path", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-path-"));
-    const link = `${dir}-link`;
-    await symlink(dir, link);
-    try {
-      expect(await resolveProjectPath(link)).toBe(await realpath(dir));
-      expect(await resolveProjectPath(join(dir, "..", dir.split("/").pop()!))).toBe(
-        await realpath(dir),
-      );
-    } finally {
-      await rm(link);
-      await rm(dir, { recursive: true });
-    }
-  });
-
-  test("rejects relative, missing and non-directory paths", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-path-"));
-    await writeFile(join(dir, "file.txt"), "x");
-    try {
-      await expect(resolveProjectPath("relative/dir")).rejects.toBeInstanceOf(
-        InvalidProjectPathError,
-      );
-      await expect(resolveProjectPath(join(dir, "nope"))).rejects.toThrow("does not exist");
-      await expect(resolveProjectPath(join(dir, "file.txt"))).rejects.toThrow("Not a directory");
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-});
-
-describe("projectsService.browse", () => {
-  test("lists only subdirectories, hides dot-directories and sorts case-insensitively", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-browse-"));
-    await mkdir(join(dir, "Banana"));
-    await mkdir(join(dir, "apple"));
-    await mkdir(join(dir, ".hidden"));
-    await writeFile(join(dir, "file.txt"), "x");
-    try {
-      const listing = await projectsService.browse(dir);
-      expect(listing.path).toBe(await realpath(dir));
-      expect(listing.entries.map((entry) => entry.name)).toEqual(["apple", "Banana"]);
-      expect(listing.entries[0]!.path).toBe(join(await realpath(dir), "apple"));
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-
-  test("defaults to the home directory when no path is given", async () => {
-    const listing = await projectsService.browse();
-    expect(listing.path).toBe(await realpath(homedir()));
-  });
-
-  test("parent is null at the filesystem root", async () => {
-    const listing = await projectsService.browse("/");
-    expect(listing.parent).toBeNull();
-  });
-
-  test("rejects an invalid path the same way create does", async () => {
-    await expect(projectsService.browse("relative/dir")).rejects.toBeInstanceOf(
-      InvalidProjectPathError,
-    );
-    await expect(projectsService.browse("/definitely/not/a/real/dir")).rejects.toBeInstanceOf(
-      InvalidProjectPathError,
-    );
-  });
-});
-
-describe("projectsService.createDirectory", () => {
-  test("creates a subfolder and returns the parent's updated listing", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-mkdir-"));
-    try {
-      const listing = await projectsService.createDirectory(dir, "new-folder");
-      expect(listing.path).toBe(await realpath(dir));
-      expect(listing.entries.map((entry) => entry.name)).toContain("new-folder");
-      expect(listing.entries.find((entry) => entry.name === "new-folder")?.path).toBe(
-        join(await realpath(dir), "new-folder"),
-      );
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-
-  test("rejects a name that is empty, '.', '..' or contains a path separator", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-mkdir-"));
-    try {
-      await expect(projectsService.createDirectory(dir, "")).rejects.toBeInstanceOf(
-        InvalidFolderNameError,
-      );
-      await expect(projectsService.createDirectory(dir, ".")).rejects.toBeInstanceOf(
-        InvalidFolderNameError,
-      );
-      await expect(projectsService.createDirectory(dir, "..")).rejects.toBeInstanceOf(
-        InvalidFolderNameError,
-      );
-      await expect(projectsService.createDirectory(dir, "a/b")).rejects.toBeInstanceOf(
-        InvalidFolderNameError,
-      );
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-
-  test("rejects a folder that already exists", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "aven-mkdir-"));
-    await mkdir(join(dir, "existing"));
-    try {
-      await expect(projectsService.createDirectory(dir, "existing")).rejects.toBeInstanceOf(
-        DirectoryExistsError,
-      );
-    } finally {
-      await rm(dir, { recursive: true });
-    }
-  });
-
-  test("rejects an invalid parent path", async () => {
-    await expect(projectsService.createDirectory("relative/dir", "x")).rejects.toBeInstanceOf(
-      InvalidProjectPathError,
-    );
-  });
-});
+import { connectRouter } from "../runtimes/connect";
+import { runtimeHub } from "../runtimes/hub";
+import { runtimesService } from "../runtimes/service";
+import { DuplicateProjectPathError, projectsService, RuntimeNotFoundError } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -179,5 +57,65 @@ run("projectsService (postgres)", async () => {
     await expect(
       projectsService.create(orgB, userId, { name: "first", projectPath: fresh }),
     ).resolves.toBeDefined();
+  });
+
+  describe("on a runtime", () => {
+    const server = new Elysia().use(connectRouter(runtimeHub)).listen({ port: 0 });
+    let runtimeId: string;
+    let client: ReturnType<typeof startRuntime>;
+
+    afterAll(async () => {
+      await client?.stop();
+      await server.stop(true);
+    });
+
+    test("the runtime validates paths on its own disk", async () => {
+      const { runtime, token } = await runtimesService.create(orgA, userId, { name: "disk" });
+      runtimeId = runtime.id;
+      client = startRuntime({ url: `ws://localhost:${server.server?.port}/connect`, token });
+      await client.ready;
+      for (let i = 0; i < 100 && !runtimeHub.isOnline(runtimeId); i++) await Bun.sleep(20);
+
+      const fresh = await mkdtemp(join(tmpdir(), "aven-runtime-project-"));
+      const project = await projectsService.create(orgA, userId, {
+        name: "remote",
+        projectPath: fresh,
+        runtimeId,
+      });
+      expect(project.runtimeId).toBe(runtimeId);
+      expect(project.projectPath).toBe(await realpath(fresh));
+      // The same path on the control plane is a different project.
+      await expect(
+        projectsService.create(orgA, userId, { name: "local", projectPath: fresh }),
+      ).resolves.toMatchObject({ runtimeId: null });
+      await expect(
+        projectsService.create(orgA, userId, { name: "again", projectPath: fresh, runtimeId }),
+      ).rejects.toBeInstanceOf(DuplicateProjectPathError);
+      // A bad path is reported the same way as for a local project.
+      await expect(
+        projectsService.create(orgA, userId, {
+          name: "bad",
+          projectPath: join(fresh, "missing"),
+          runtimeId,
+        }),
+      ).rejects.toBeInstanceOf(InvalidProjectPathError);
+    });
+
+    test("browsing goes through the runtime", async () => {
+      const listing = await projectsService.browse(orgA, runtimeId, tmpdir());
+      expect(listing.path).toBe(await realpath(tmpdir()));
+    });
+
+    test("another organization cannot use the runtime", async () => {
+      await expect(projectsService.browse(orgB, runtimeId, tmpdir())).rejects.toBeInstanceOf(
+        RuntimeNotFoundError,
+      );
+    });
+
+    test("an offline runtime is reported, not guessed at", async () => {
+      await client.stop();
+      for (let i = 0; i < 100 && runtimeHub.isOnline(runtimeId); i++) await Bun.sleep(20);
+      await expect(projectsService.browse(orgA, runtimeId, tmpdir())).rejects.toThrow("offline");
+    });
   });
 });

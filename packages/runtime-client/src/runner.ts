@@ -2,6 +2,7 @@ import type { MemoryStore } from "@anvia/core";
 import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
 import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
 import { projectStreamEvent } from "@aven/agents/projection";
+import { handleFsCall, WorkspaceError } from "@aven/agents/workspace";
 import {
   WIRE_VERSION,
   type ControlPlaneToRuntime,
@@ -47,7 +48,7 @@ export type RuntimeOptions = {
   /** The registration token shown once when the runtime was created. */
   token: string;
   createAgent?: CreateRuntimeAgent;
-  /** Handles the control plane's filesystem calls. */
+  /** Answers the control plane's filesystem calls; defaults to this machine's disk. */
   onCall?: (method: string, params: unknown) => Promise<unknown>;
 };
 
@@ -160,12 +161,12 @@ export function startRuntime(options: RuntimeOptions) {
       }
       case "call": {
         try {
-          if (!options.onCall) throw new Error(`Unsupported: ${message.method}`);
-          const result = await options.onCall(message.method, message.params);
+          const result = await (options.onCall ?? handleFsCall)(message.method, message.params);
           send({ type: "reply", id: message.id, ok: true, result });
         } catch (error) {
           const text = error instanceof Error ? error.message : String(error);
-          send({ type: "reply", id: message.id, ok: false, error: text });
+          const code = error instanceof WorkspaceError ? error.code : undefined;
+          send({ type: "reply", id: message.id, ok: false, error: text, code });
         }
         return;
       }

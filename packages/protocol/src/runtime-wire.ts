@@ -49,7 +49,15 @@ export type RuntimeToControlPlane =
   | { type: "call"; id: string; method: MemoryCallMethod; params: unknown }
   | Reply;
 
-export type Reply = { type: "reply"; id: string; ok: boolean; result?: unknown; error?: string };
+export type Reply = {
+  type: "reply";
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+  /** A stable reason for known failures, so the caller can rebuild the right error. */
+  code?: string;
+};
 
 /** The control plane asks the runtime about its filesystem. */
 export type RuntimeCallMethod = "fs.resolve" | "fs.browse" | "fs.mkdir";
