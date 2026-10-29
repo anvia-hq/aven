@@ -14,6 +14,11 @@ import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
   image: string;
+  /**
+   * The platform containers are started for, e.g. `linux/amd64` to run the image with Google
+   * Chrome on an arm64 host under emulation (decision 0014). Default: the host's own.
+   */
+  platform?: string;
   /** Where the runner keeps thread workspaces, in `workspaces/<thread id>`. Default `~/.aven/runtime`. */
   home?: string;
   memoryMb?: number;
@@ -39,6 +44,7 @@ export type ThreadSandbox = {
 type Docker = NonNullable<SandboxConfig["docker"]>;
 
 const WORKDIR = "/workspace";
+const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
 
@@ -65,6 +71,8 @@ type DockerRunInput = {
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
+  /** Passed to `docker run --platform`; the host's own when not set. */
+  platform?: string;
   /** `uid:gid` to run as, so files written to the bind mount belong to the host user. */
   user?: string;
 };
@@ -101,6 +109,7 @@ export function dockerRunArgs(input: DockerRunInput) {
     "-e",
     `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
   ];
+  if (input.platform) args.push("--platform", input.platform);
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;
@@ -169,6 +178,11 @@ export class Sandboxes implements ThreadWorkspaces {
     }));
     if (gitCheck.code !== 0) {
       throw new Error("git is required to clone each thread's repository but was not found");
+    }
+    if (config.platform !== undefined && !PLATFORM_PATTERN.test(config.platform)) {
+      throw new Error(
+        `The sandbox platform "${config.platform}" is not one Docker knows; use linux/amd64 or linux/arm64`,
+      );
     }
     const tokens = new Map<string, string>();
     const hub = new RemoteSandboxHub({
@@ -292,6 +306,7 @@ export class Sandboxes implements ThreadWorkspaces {
       memoryMb,
       cpus,
       pidsLimit,
+      platform: this.#config.platform,
       user: hostUser(),
     });
     const started = await this.#run(args);

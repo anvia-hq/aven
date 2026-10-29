@@ -27,6 +27,7 @@ export async function startLocalRunner(port: number) {
   try {
     const sandbox = await Sandboxes.start({
       image: process.env.AVEN_SANDBOX_IMAGE || "aven-sandbox-desktop:dev",
+      platform: process.env.AVEN_SANDBOX_PLATFORM || undefined,
       home: process.env.AVEN_RUNTIME_HOME || undefined,
       memoryMb,
       cpus,

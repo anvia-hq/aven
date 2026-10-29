@@ -39,6 +39,12 @@ describe("dockerRunArgs", () => {
     expect(args).not.toContain("--user");
   });
 
+  test("passes the platform to docker when one is set", () => {
+    expect(dockerRunArgs(input)).not.toContain("--platform");
+    const args = dockerRunArgs({ ...input, platform: "linux/amd64" });
+    expect(args.slice(-3)).toEqual(["--platform", "linux/amd64", "img:dev"]);
+  });
+
   test("runs as the host user when given one", () => {
     const args = dockerRunArgs({ ...input, user: "1000:1000" });
     expect(args.slice(-3)).toEqual(["--user", "1000:1000", "img:dev"]);
@@ -260,6 +266,13 @@ live("a sandbox (real docker)", () => {
 });
 
 describe("Sandboxes.start", () => {
+  test("refuses a platform Docker does not know", async () => {
+    const docker = async () => ({ code: 0, stdout: "", stderr: "" });
+    await expect(
+      Sandboxes.start({ image: "img", docker, git: fakeGit, platform: "windows/386" }),
+    ).rejects.toThrow("use linux/amd64 or linux/arm64");
+  });
+
   test("refuses to start when the image is missing, and says how to build it", async () => {
     const docker = async () => ({ code: 1, stdout: "", stderr: "No such image: nope" });
     await expect(Sandboxes.start({ image: "nope:latest", docker })).rejects.toThrow(

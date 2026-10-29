@@ -44,6 +44,7 @@ process.on("SIGTERM", () => void exit(0));
 
 const sandbox = await Sandboxes.start({
   image,
+  platform: process.env.AVEN_SANDBOX_PLATFORM || undefined,
   home: process.env.AVEN_RUNTIME_HOME || undefined,
   memoryMb: positiveNumber("AVEN_SANDBOX_MEMORY_MB"),
   cpus: positiveNumber("AVEN_SANDBOX_CPUS"),
