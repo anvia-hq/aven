@@ -11,7 +11,14 @@ if (!base || !token) {
 }
 
 const url = `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;
-const runtime = startRuntime({ url, token });
+const runtime = startRuntime({
+  url,
+  token,
+  onRefused: (reason) => {
+    console.error(`The control plane refused this runtime: ${reason}`);
+    process.exit(1);
+  },
+});
 
 await runtime.ready;
 console.log(`runtime connected to ${base}`);

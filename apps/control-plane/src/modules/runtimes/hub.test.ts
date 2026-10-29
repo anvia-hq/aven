@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 
 import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
-import type { ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 
 import { seedOrgPair } from "../../test-support";
 import { runtimesRouter } from "./router";
@@ -34,12 +34,21 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await seed.cleanup();
   });
 
-  const open = (port: number | undefined, token: string, path = "/connect") =>
+  // Connects and, like a real runtime, says hello the moment the socket opens.
+  const open = (
+    port: number | undefined,
+    token: string,
+    path = "/connect",
+    version: number | null = WIRE_VERSION,
+  ) =>
     new Promise<WebSocket>((resolve, reject) => {
       const init = { headers: { authorization: `Bearer ${token}` } };
       const ws = new WebSocket(`ws://localhost:${port}${path}`, init as unknown as string[]);
       sockets.push(ws);
-      ws.onopen = () => resolve(ws);
+      ws.onopen = () => {
+        if (version !== null) ws.send(JSON.stringify({ type: "hello", version }));
+        resolve(ws);
+      };
       ws.onerror = () => reject(new Error("connect failed"));
     });
 
@@ -143,6 +152,68 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       messages: [],
     });
     expect(late.ok).toBe(false);
+  });
+
+  test("a runtime is not online until it says hello with a version we speak", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "h" });
+    const silent = await open(server.server?.port, token, "/connect", null);
+    await Bun.sleep(150);
+    expect(hub.isOnline(runtime.id)).toBe(false);
+    silent.send(JSON.stringify({ type: "hello", version: WIRE_VERSION }));
+    await until(() => hub.isOnline(runtime.id));
+
+    const other = await runtimesService.create(seed.orgA, seed.userId, { name: "old" });
+    const closed = new Promise<{ code: number; reason: string }>((resolve) => {
+      open(server.server?.port, other.token, "/connect", WIRE_VERSION + 1).then((ws) => {
+        ws.onclose = (event) => resolve({ code: event.code, reason: event.reason });
+      });
+    });
+    const { code, reason } = await closed;
+    expect(code).toBe(4000);
+    expect(reason).toContain("Unsupported runtime version");
+    expect(hub.isOnline(other.runtime.id)).toBe(false);
+  });
+
+  // These go through the service, which acts on the real hub, so they use the full app.
+  test("revoking cuts a connected runtime off and fails its live runs", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "x" });
+    const ws = await open(full.server?.port, token, "/runtimes/connect");
+    await until(() => runtimeHub.isOnline(runtime.id));
+    const lost: Error[] = [];
+    runtimeHub
+      .get(runtime.id)!
+      .startRun(
+        "run-revoke",
+        { id: crypto.randomUUID(), organizationId: seed.orgA, projectPath: "/tmp" },
+        { event: () => undefined, end: () => undefined, lost: (error) => lost.push(error) },
+      );
+    const closed = new Promise<number>((resolve) => {
+      ws.onclose = (event) => resolve(event.code);
+    });
+    await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
+    expect(await closed).toBe(4002);
+    expect(lost).toHaveLength(1);
+    expect(runtimeHub.isOnline(runtime.id)).toBe(false);
+  });
+
+  test("rotating the token cuts the runtime off and only the new token connects", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "r" });
+    const ws = await open(full.server?.port, token, "/runtimes/connect");
+    await until(() => runtimeHub.isOnline(runtime.id));
+    const closed = new Promise<number>((resolve) => {
+      ws.onclose = (event) => resolve(event.code);
+    });
+
+    expect(await runtimesService.rotate(seed.orgA, "someone-else", runtime.id)).toBeNull();
+    const rotated = await runtimesService.rotate(seed.orgA, seed.userId, runtime.id);
+    expect(rotated?.token).not.toBe(token);
+    expect(rotated?.runtime.tokenHint).toBe(rotated?.token.slice(-4));
+    expect(await closed).toBe(4002);
+
+    await expect(open(full.server?.port, token, "/runtimes/connect")).rejects.toThrow();
+    await open(full.server?.port, rotated!.token, "/runtimes/connect");
+    await until(() => runtimeHub.isOnline(runtime.id));
+    expect(JSON.stringify(await runtimesService.list(seed.orgA))).not.toContain(rotated!.token);
   });
 
   test("dropping the connection fails its live runs", async () => {

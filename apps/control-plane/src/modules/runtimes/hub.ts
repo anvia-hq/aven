@@ -2,6 +2,7 @@ import type { Message, MemoryStore } from "@anvia/core";
 import { db } from "@aven/db/client";
 import { createMemoryStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/protocol/events";
+import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
   ControlPlaneToRuntime,
   MemoryAppendParams,
@@ -10,6 +11,8 @@ import type {
   RuntimeToControlPlane,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
+
+import { runtimesService } from "./service";
 
 const CALL_TIMEOUT_MS = 30_000;
 
@@ -57,9 +60,16 @@ export class RuntimeConnection {
     readonly runtimeId: string,
     readonly organizationId: string,
     private send: (message: string) => void,
-    private closeSocket: () => void,
+    private closeSocket: (code?: number, reason?: string) => void,
     private hub: RuntimeHub,
   ) {}
+
+  /** Set once the runtime has said hello with a wire version we speak. */
+  #ready = false;
+
+  get ready() {
+    return this.#ready && !this.#closed;
+  }
 
   get closed() {
     return this.#closed;
@@ -106,6 +116,21 @@ export class RuntimeConnection {
     } catch {
       return;
     }
+    if (message.type === "hello") {
+      if (message.version === WIRE_VERSION) {
+        this.#ready = true;
+        void runtimesService.touch(this.runtimeId);
+      } else {
+        // An incompatible runtime is refused with a reason it can show, not left to fail oddly.
+        this.close(
+          4000,
+          `Unsupported runtime version ${message.version}; this control plane speaks ${WIRE_VERSION}`,
+        );
+      }
+      return;
+    }
+    // Nothing else is accepted from a runtime that has not introduced itself.
+    if (!this.#ready) return;
     switch (message.type) {
       case "run.event":
         this.#runs.get(message.runId)?.sink.event(message.event);
@@ -192,10 +217,10 @@ export class RuntimeConnection {
   }
 
   // The socket closed: in-flight runs are lost, calls in flight fail.
-  close() {
+  close(code?: number, reason?: string) {
     if (this.#closed) return;
     this.#closed = true;
-    this.closeSocket();
+    this.closeSocket(code, reason);
     for (const [, pending] of this.#pending) {
       clearTimeout(pending.timer);
       pending.reject(new RuntimeOfflineError());
@@ -220,9 +245,9 @@ export class RuntimeHub {
     runtimeId: string,
     organizationId: string,
     send: (message: string) => void,
-    closeSocket: () => void,
+    closeSocket: (code?: number, reason?: string) => void,
   ) {
-    this.#connections.get(runtimeId)?.close();
+    this.#connections.get(runtimeId)?.close(4001, "Replaced by a newer connection");
     const connection = new RuntimeConnection(runtimeId, organizationId, send, closeSocket, this);
     this.#connections.set(runtimeId, connection);
     return connection;
@@ -236,7 +261,12 @@ export class RuntimeHub {
 
   get(runtimeId: string) {
     const connection = this.#connections.get(runtimeId);
-    return connection && !connection.closed ? connection : undefined;
+    return connection?.ready ? connection : undefined;
+  }
+
+  // Cuts a runtime off, e.g. when it is revoked or its token rotated.
+  disconnect(runtimeId: string, reason: string) {
+    this.#connections.get(runtimeId)?.close(4002, reason);
   }
 
   isOnline(runtimeId: string) {

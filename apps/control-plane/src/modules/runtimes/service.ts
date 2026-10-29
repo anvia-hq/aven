@@ -4,9 +4,12 @@ import { db } from "@aven/db/client";
 import { runtimes, type RuntimeRow } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
+import { runtimeHub } from "./hub";
 import type { CreateRuntimeBody } from "./schema";
 
 const TOKEN_PREFIX = "avrt_";
+
+const newToken = () => `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -40,7 +43,7 @@ export const runtimesService = {
 
   // The token is returned once, here, and only its hash is stored.
   async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
-    const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+    const token = newToken();
     const [row] = await db
       .insert(runtimes)
       .values({
@@ -68,7 +71,29 @@ export const runtimesService = {
         ),
       )
       .returning();
+    if (row) runtimeHub.disconnect(id, "Revoked");
     return row ? publicRuntime(row) : null;
+  },
+
+  // Replaces the token. The old one stops working at once and the runtime is cut off, so it must
+  // be restarted with the new one. Owner only.
+  async rotate(organizationId: string, ownerId: string, id: string) {
+    const token = newToken();
+    const [row] = await db
+      .update(runtimes)
+      .set({ tokenHash: hashToken(token), tokenHint: token.slice(-4) })
+      .where(
+        and(
+          eq(runtimes.organizationId, organizationId),
+          eq(runtimes.ownerId, ownerId),
+          eq(runtimes.id, id),
+          isNull(runtimes.revokedAt),
+        ),
+      )
+      .returning();
+    if (!row) return null;
+    runtimeHub.disconnect(id, "Token rotated");
+    return { runtime: publicRuntime(row), token };
   },
 
   // Resolves a connection token; a revoked or unknown token is simply not found.

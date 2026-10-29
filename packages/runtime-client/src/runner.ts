@@ -48,6 +48,11 @@ export type RuntimeOptions = {
   /** The registration token shown once when the runtime was created. */
   token: string;
   createAgent?: CreateRuntimeAgent;
+  /**
+   * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
+   * version), so reconnecting would not help. `reason` says why.
+   */
+  onRefused?: (reason: string) => void;
   /** Answers the control plane's filesystem calls; defaults to this machine's disk. */
   onCall?: (method: string, params: unknown) => Promise<unknown>;
 };
@@ -192,10 +197,14 @@ export function startRuntime(options: RuntimeOptions) {
         // Ignore frames that are not valid JSON.
       }
     };
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       for (const [, waiting] of pending) waiting.reject(new Error("Disconnected"));
       pending.clear();
       for (const [, run] of runs) run.stream.cancel("Disconnected from the control plane");
+      if (event.code === 4000 || event.code === 4002) {
+        stopped = true;
+        options.onRefused?.(event.reason || "Refused by the control plane");
+      }
       if (stopped) return;
       retry = setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);

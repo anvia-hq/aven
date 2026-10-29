@@ -30,6 +30,14 @@ export const runtimesRouter = new Elysia({ prefix: "/runtimes" })
     ({ request, params }) => runGateway.forward(request, params.segment, params["*"]),
     { parse: "none" },
   )
+  // Owner only. The old token stops working immediately; the response carries the new one once.
+  .post(
+    "/:id/rotate",
+    async ({ params, organizationId, user }) =>
+      (await runtimesService.rotate(organizationId, user.id, params.id)) ??
+      status(404, "Runtime not found"),
+    { auth: true, org: true, params: runtimeParams },
+  )
   .delete(
     "/:id",
     async ({ params, organizationId, user }) =>
