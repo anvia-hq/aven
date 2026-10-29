@@ -93,7 +93,7 @@ The native macOS client (Swift, no web view; decision 0008). Two SwiftPM package
 
 ## apps/runtime and packages/runtime-client
 
-A runtime is a process that connects out to a control plane (`AVEN_URL`, `AVEN_RUNTIME_TOKEN`, `bun run --cwd apps/runtime start`) and runs agents on its own machine; see decision 0008. The logic lives in `packages/runtime-client` (`runner.ts`: connection, runs, jobs; `remote-memory.ts`: the conversation is the control plane's). It holds no provider key: model calls go to the control plane's gateway with a per-run token. Filesystem helpers shared with the control plane's own machine are in `packages/agents/src/workspace.ts`.
+A runtime is a process that connects out to a control plane (`AVEN_URL`, `AVEN_RUNTIME_TOKEN`, `bun run --cwd apps/runtime start`, or `bun run --cwd apps/runtime build` for a single self-contained binary at `apps/runtime/dist/aven-runtime`; `@valibot/to-json-schema` is marked external because Anvia imports it lazily) and runs agents on its own machine; see decision 0008. The logic lives in `packages/runtime-client` (`runner.ts`: connection, runs, jobs; `remote-memory.ts`: the conversation is the control plane's). It holds no provider key: model calls go to the control plane's gateway with a per-run token. Filesystem helpers shared with the control plane's own machine are in `packages/agents/src/workspace.ts`.
 
 ## packages/protocol
 

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "bun --env-file=../../.env src/main.ts",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "build": "bun build --compile --external @valibot/to-json-schema src/main.ts --outfile dist/aven-runtime"
   },
   "dependencies": {
     "@aven/runtime-client": "workspace:*"
