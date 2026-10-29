@@ -6,9 +6,8 @@ import { runtimes } from "./runtimes";
 import { users } from "./users";
 
 // A thread is one agent session, and always belongs to a project. Its conversation lives in the
-// agent memory tables, keyed by this id. `project_path` is a snapshot of the project's directory
-// (on the machine running control-plane) taken when the thread was created, so the agent's root
-// and the thread's displayed path never change even if the project is edited later.
+// agent memory tables, keyed by this id, and its sandbox (an empty workspace on the project's
+// runner) is keyed by it too.
 export const threads = pgTable(
   "threads",
   {
@@ -22,10 +21,9 @@ export const threads = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** Snapshot of the project's runtime, like `projectPath`: where the agent runs; null is the control plane. */
+    /** The runner the thread's sandbox runs on, copied from the project when the thread is created. */
     runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
-    projectPath: text("project_path").notNull(),
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),

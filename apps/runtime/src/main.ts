@@ -1,7 +1,7 @@
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes } from "@aven/runtime-client/sandbox";
 
-// A runtime: connects out to a control plane and runs agents on this machine. Create one in the
+// A runner: connects out to a control plane and hosts the sandboxes its threads run in. Create one in the
 // control plane's settings to get its token (shown once), then:
 //   AVEN_URL=https://aven.example.com AVEN_RUNTIME_TOKEN=avrt_... bun run start
 const base = process.env.AVEN_URL;
@@ -12,22 +12,19 @@ if (!base || !token) {
 }
 
 const url = `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;
-// With a sandbox image, every command the agent runs happens in a container (decision 0009).
-// Without one they run directly on this machine, as the user running this process.
-const image = process.env.AVEN_SANDBOX_IMAGE;
+// Every thread runs in its own container on this machine (decision 0010): Docker and the sandbox
+// image are required, and there is no mode that runs the agent's commands directly on this machine.
+const image = process.env.AVEN_SANDBOX_IMAGE || "aven-sandbox-desktop:dev";
 const number = (value: string | undefined) => (value ? Number(value) : undefined);
-const sandbox = image
-  ? await Sandboxes.start({
-      image,
-      memoryMb: number(process.env.AVEN_SANDBOX_MEMORY_MB),
-      cpus: number(process.env.AVEN_SANDBOX_CPUS),
-    })
-  : undefined;
-if (!sandbox) {
-  console.warn(
-    "No AVEN_SANDBOX_IMAGE set: the agent's commands run directly on this machine, as you.",
-  );
-}
+const sandbox = await Sandboxes.start({
+  image,
+  home: process.env.AVEN_RUNTIME_HOME || undefined,
+  memoryMb: number(process.env.AVEN_SANDBOX_MEMORY_MB),
+  cpus: number(process.env.AVEN_SANDBOX_CPUS),
+}).catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
 
 // Background commands the agent started are process groups; stop them with the runtime.
 async function exit(code: number) {

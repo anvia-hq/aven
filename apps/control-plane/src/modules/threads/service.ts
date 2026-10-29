@@ -6,6 +6,7 @@ import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 
 export class ProjectNotFoundError extends Error {}
+export class ProjectHasNoRunnerError extends Error {}
 
 export const threadsService = {
   list: (organizationId: string) =>
@@ -27,13 +28,17 @@ export const threadsService = {
   async create(organizationId: string, userId: string, body: CreateThreadBody) {
     const project = await projectsService.get(organizationId, body.projectId);
     if (!project) throw new ProjectNotFoundError("Project not found");
+    if (!project.runtimeId) {
+      throw new ProjectHasNoRunnerError(
+        "This project has no runner. Create a new project on one of your runners.",
+      );
+    }
     const [thread] = await db
       .insert(threads)
       .values({
         organizationId,
         projectId: project.id,
         createdBy: userId,
-        projectPath: project.projectPath,
         runtimeId: project.runtimeId,
         title: body.title ?? project.name,
       })

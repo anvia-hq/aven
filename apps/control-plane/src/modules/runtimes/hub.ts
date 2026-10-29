@@ -7,28 +7,15 @@ import type {
   ControlPlaneToRuntime,
   MemoryAppendParams,
   MemoryCallMethod,
-  RuntimeCallMethod,
   RuntimeToControlPlane,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
 import { runtimesService } from "./service";
 
-const CALL_TIMEOUT_MS = 30_000;
-
 export class RuntimeOfflineError extends Error {
   constructor() {
     super("The runtime for this project is offline");
-  }
-}
-
-/** The runtime answered a call with an error; `code` names known failures. */
-export class RuntimeCallError extends Error {
-  constructor(
-    message: string,
-    readonly code?: string,
-  ) {
-    super(message);
   }
 }
 
@@ -50,10 +37,6 @@ export class RuntimeConnection {
   #runs = new Map<string, Run>();
   /** Threads this connection has run, so a job notice can only reach one of them. */
   #threads = new Set<string>();
-  #pending = new Map<
-    string,
-    { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: Timer }
-  >();
   #closed = false;
 
   constructor(
@@ -94,21 +77,6 @@ export class RuntimeConnection {
     this.#runs.delete(runId);
   }
 
-  call(method: RuntimeCallMethod, params: unknown): Promise<unknown> {
-    if (this.#closed) return Promise.reject(new RuntimeOfflineError());
-    const id = crypto.randomUUID();
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.#pending.delete(id);
-        reject(new Error(`The runtime did not answer ${method}`));
-      }, CALL_TIMEOUT_MS);
-      this.#pending.set(id, { resolve, reject, timer });
-      this.send(
-        JSON.stringify({ type: "call", id, method, params } satisfies ControlPlaneToRuntime),
-      );
-    });
-  }
-
   async receive(raw: string) {
     let message: RuntimeToControlPlane;
     try {
@@ -145,19 +113,6 @@ export class RuntimeConnection {
       case "job.notice": {
         if (this.#threads.has(message.threadId)) {
           this.hub.emitJobNotice(message.threadId, message.notice);
-        }
-        return;
-      }
-      case "reply": {
-        const pending = this.#pending.get(message.id);
-        if (!pending) return;
-        this.#pending.delete(message.id);
-        clearTimeout(pending.timer);
-        if (message.ok) pending.resolve(message.result);
-        else {
-          pending.reject(
-            new RuntimeCallError(message.error ?? "The runtime reported an error", message.code),
-          );
         }
         return;
       }
@@ -221,11 +176,6 @@ export class RuntimeConnection {
     if (this.#closed) return;
     this.#closed = true;
     this.closeSocket(code, reason);
-    for (const [, pending] of this.#pending) {
-      clearTimeout(pending.timer);
-      pending.reject(new RuntimeOfflineError());
-    }
-    this.#pending.clear();
     const runs = [...this.#runs.values()];
     this.#runs.clear();
     for (const run of runs) run.sink.lost(new Error("The runtime disconnected"));

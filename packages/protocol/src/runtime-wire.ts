@@ -7,8 +7,6 @@ import type { RunEvent } from "./events";
 export type RunThreadInfo = {
   id: string;
   organizationId: string;
-  /** Absolute path on the runtime's machine. */
-  projectPath: string;
 };
 
 /** How a runtime reaches a model. The key stays on the control plane; the token only works for one run. */
@@ -37,7 +35,6 @@ export type ControlPlaneToRuntime =
   | { type: "run.steer"; runId: string; prompt: string }
   /** Kills the background commands a thread started. */
   | { type: "jobs.stop"; threadId: string }
-  | { type: "call"; id: string; method: RuntimeCallMethod; params: unknown }
   | Reply;
 
 export type RuntimeToControlPlane =
@@ -59,27 +56,14 @@ export type Reply = {
   code?: string;
 };
 
-/** The control plane asks the runtime about its filesystem. */
-export type RuntimeCallMethod = "fs.resolve" | "fs.browse" | "fs.mkdir";
-
 /** The runtime reads and writes the conversation, which the control plane owns. */
 export type MemoryCallMethod = "memory.load" | "memory.append" | "memory.clear";
 
-export type MemoryLoadParams = { runId: string };
 export type MemoryAppendParams = {
   runId: string;
   turn: number;
   messages: StoredMessage[];
 };
-export type MemoryClearParams = { runId: string };
 
-export type FsResolveParams = { path: string };
-export type FsBrowseParams = { path?: string };
-export type FsMkdirParams = { path: string; name: string };
-export type DirectoryListing = {
-  path: string;
-  parent: string | null;
-  entries: { name: string; path: string }[];
-};
-
-export const WIRE_VERSION = 1;
+// Version 2: no filesystem calls and no project path; a thread's workspace is the runner's own.
+export const WIRE_VERSION = 2;

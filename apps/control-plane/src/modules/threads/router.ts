@@ -4,7 +4,7 @@ import { authRouter } from "../auth/router";
 import { InvalidSelectionError, providersService } from "../providers/service";
 import { RunBusyError, runsService } from "../runs/service";
 import { createThreadBody, sendMessageBody, threadParams, updateThreadBody } from "./schema";
-import { ProjectNotFoundError, threadsService } from "./service";
+import { ProjectHasNoRunnerError, ProjectNotFoundError, threadsService } from "./service";
 
 export const threadsRouter = new Elysia({ prefix: "/threads" })
   .use(authRouter)
@@ -23,6 +23,7 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
         return await threadsService.create(organizationId, user.id, body);
       } catch (error) {
         if (error instanceof ProjectNotFoundError) return status(422, error.message);
+        if (error instanceof ProjectHasNoRunnerError) return status(422, error.message);
         throw error;
       }
     },

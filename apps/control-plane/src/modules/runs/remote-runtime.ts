@@ -64,7 +64,10 @@ export class RemoteRuntime implements Runtime {
     prompt: string;
     model?: ModelConfig;
   }): RuntimeRun {
-    const connection = thread.runtimeId ? this.hub.get(thread.runtimeId) : undefined;
+    if (!thread.runtimeId) {
+      throw new Error("This project has no runner. Create a new project on one of your runners.");
+    }
+    const connection = this.hub.get(thread.runtimeId);
     if (!connection) throw new RuntimeOfflineError();
 
     const runId = crypto.randomUUID();
@@ -96,11 +99,7 @@ export class RemoteRuntime implements Runtime {
       connection.post({
         type: "run.start",
         runId,
-        thread: {
-          id: thread.id,
-          organizationId: thread.organizationId,
-          projectPath: thread.projectPath,
-        },
+        thread: { id: thread.id, organizationId: thread.organizationId },
         prompt,
         model: runModel,
       });

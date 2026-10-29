@@ -1,11 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { startRuntime } from "@aven/runtime-client/runner";
+import { hostWorkspaces } from "@aven/runtime-client/testing/host-workspaces";
 import { Elysia } from "elysia";
 
 import { seedOrgPair } from "../../test-support";
@@ -65,7 +63,6 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
   const seed = await seedOrgPair();
   const store = createMemoryStore(db);
   const hub = new RuntimeHub(store);
-  const root = await mkdtemp(join(tmpdir(), "aven-remote-run-"));
   const threadId = crypto.randomUUID();
   const requests: { headers: Headers; body: Record<string, unknown> }[] = [];
 
@@ -94,9 +91,11 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     .listen({ port: 0 });
 
   const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "e2e" });
+  const workspaces = hostWorkspaces();
   const client = startRuntime({
     url: `ws://localhost:${controlPlane.server?.port}/connect`,
     token,
+    sandbox: workspaces,
   });
 
   afterAll(async () => {
@@ -108,14 +107,12 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
       scope: { sessionId: threadId, metadata: { organizationId: seed.orgA } },
     });
     await seed.cleanup();
-    await rm(root, { recursive: true, force: true });
   });
 
   const manager = new RunManager({ store, runtime: new RemoteRuntime(hub, pointed) });
   const thread = {
     id: threadId,
     organizationId: seed.orgA,
-    projectPath: root,
     runtimeId: runtime.id,
   };
   const model = {

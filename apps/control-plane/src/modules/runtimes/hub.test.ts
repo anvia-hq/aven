@@ -105,7 +105,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await until(() => hub.isOnline(runtime.id));
     const connection = hub.get(runtime.id)!;
 
-    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA, projectPath: "/tmp" };
+    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
     threadIds.push(thread.id);
     const ended: string[] = [];
     connection.startRun("run-1", thread, {
@@ -184,7 +184,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       .get(runtime.id)!
       .startRun(
         "run-revoke",
-        { id: crypto.randomUUID(), organizationId: seed.orgA, projectPath: "/tmp" },
+        { id: crypto.randomUUID(), organizationId: seed.orgA },
         { event: () => undefined, end: () => undefined, lost: (error) => lost.push(error) },
       );
     const closed = new Promise<number>((resolve) => {
@@ -225,7 +225,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       .get(runtime.id)!
       .startRun(
         "run-2",
-        { id: crypto.randomUUID(), organizationId: seed.orgA, projectPath: "/tmp" },
+        { id: crypto.randomUUID(), organizationId: seed.orgA },
         { event: () => undefined, end: () => undefined, lost: (error) => lost.push(error) },
       );
     ws.close();

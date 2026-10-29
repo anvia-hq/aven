@@ -3,7 +3,6 @@ import type { AnyTool } from "@anvia/core";
 import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
 import { formatJobNotice, JobRegistry, type Launcher } from "@aven/agents/jobs/job-registry";
 import { projectStreamEvent } from "@aven/agents/projection";
-import { handleFsCall, WorkspaceError } from "@aven/agents/workspace";
 import {
   WIRE_VERSION,
   type ControlPlaneToRuntime,
@@ -14,14 +13,16 @@ import {
 } from "@aven/protocol/runtime-wire";
 
 import { createRemoteMemory } from "./remote-memory";
-import type { Sandboxes } from "./sandbox";
+import type { ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
+  /** The thread's workspace on this machine; the file tools are confined to it. */
+  root: string;
   jobs: JobRegistry;
   memory: MemoryStore;
   model?: RunModel;
-  /** Extra tools from the sandbox, if the runtime has one. */
+  /** Extra tools from the thread's sandbox: a desktop the agent can see and drive. */
   extraTools?: readonly AnyTool[];
 }) => { agent: Pick<CodingAgent, "stream"> };
 
@@ -29,7 +30,7 @@ export type CreateRuntimeAgent = (input: {
 // run's token; this process never holds a provider key.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ thread, jobs, memory, model, extraTools }) => {
+  ({ root, jobs, memory, model, extraTools }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       provider: model.provider,
@@ -38,7 +39,7 @@ const defaultCreateAgent =
       baseUrl: `${origin}${model.gatewayPath}`,
       reasoningEffort: model.reasoningEffort,
       effortLevels: model.effortLevels,
-      root: thread.projectPath,
+      root,
       jobs,
       memory,
       extraTools,
@@ -53,15 +54,13 @@ export type RuntimeOptions = {
   /** The registration token shown once when the runtime was created. */
   token: string;
   createAgent?: CreateRuntimeAgent;
-  /** Run commands in containers instead of on this machine (decision 0009). */
-  sandbox?: Sandboxes;
+  /** Gives each thread its sandbox and workspace (decision 0010). */
+  sandbox: ThreadWorkspaces;
   /**
    * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
    * version), so reconnecting would not help. `reason` says why.
    */
   onRefused?: (reason: string) => void;
-  /** Answers the control plane's filesystem calls; defaults to this machine's disk. */
-  onCall?: (method: string, params: unknown) => Promise<unknown>;
 };
 
 const RECONNECT_MIN_MS = 1_000;
@@ -117,11 +116,12 @@ export function startRuntime(options: RuntimeOptions) {
     const { runId, thread, prompt, model } = message;
     try {
       // Starts the thread's container on first use; a failure ends the run with a clear error.
-      const box = await options.sandbox?.acquire(thread);
+      const box = await options.sandbox.acquire(thread);
       const { agent } = createAgent({
         thread,
-        jobs: jobsFor(thread.id, box?.launcher),
-        extraTools: box?.tools,
+        root: box.root,
+        jobs: jobsFor(thread.id, box.launcher),
+        extraTools: box.tools,
         memory: createRemoteMemory(call, runId),
         model,
       });
@@ -174,17 +174,6 @@ export function startRuntime(options: RuntimeOptions) {
         else waiting.reject(new Error(message.error ?? "The control plane reported an error"));
         return;
       }
-      case "call": {
-        try {
-          const result = await (options.onCall ?? handleFsCall)(message.method, message.params);
-          send({ type: "reply", id: message.id, ok: true, result });
-        } catch (error) {
-          const text = error instanceof Error ? error.message : String(error);
-          const code = error instanceof WorkspaceError ? error.code : undefined;
-          send({ type: "reply", id: message.id, ok: false, error: text, code });
-        }
-        return;
-      }
     }
   }
 
@@ -234,7 +223,7 @@ export function startRuntime(options: RuntimeOptions) {
       clearTimeout(retry);
       socket?.close();
       await Promise.all([...jobs.values()].map((registry) => registry.disposeAll()));
-      await options.sandbox?.dispose();
+      await options.sandbox.dispose();
     },
   };
 }

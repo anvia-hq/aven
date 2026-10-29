@@ -1,4 +1,7 @@
 import { randomBytes } from "node:crypto";
+import { mkdir, realpath } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { createDesktopTools, type SandboxExecStreamEvent } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
@@ -7,6 +10,8 @@ import type { Launcher, RunningProcess } from "@aven/agents/jobs/job-registry";
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
   image: string;
+  /** Where the runner keeps thread workspaces, in `workspaces/<thread id>`. Default `~/.aven/runtime`. */
+  home?: string;
   memoryMb?: number;
   cpus?: number;
   pidsLimit?: number;
@@ -17,6 +22,8 @@ export type SandboxConfig = {
 };
 
 export type ThreadSandbox = {
+  /** The thread's workspace on this machine, mounted at /workspace in its container. */
+  root: string;
   /** Runs a command inside the thread's container; hand it to a `JobRegistry`. */
   launcher: Launcher;
   /** What else the agent gets there: a desktop it can see and drive. */
@@ -79,16 +86,24 @@ function toProcess(events: AsyncIterable<SandboxExecStreamEvent>, abort: AbortCo
   return process;
 }
 
-// Runs an agent's commands in a Docker container instead of on the host (decision 0009). Each
-// thread gets its own container from a desktop image, with the project directory mounted at
-// /workspace, so the file tools (on the host) and the shell (in the container) see the same files.
+/** What a runner needs to run a thread: its workspace, where commands run, and extra tools. */
+export interface ThreadWorkspaces {
+  acquire(thread: { id: string }): Promise<ThreadSandbox>;
+  dispose(): Promise<void>;
+}
+
+// Runs an agent's commands in a Docker container instead of on the host (decisions 0009, 0010). Each
+// thread gets its own container from a desktop image, with an empty workspace directory the runner
+// manages mounted at /workspace, so the file tools (on the runner, confined to that directory) and
+// the shell (in the container) see the same files and nothing else of the runner's.
 // A daemon in the container dials out to a hub in this process, authenticated by a one-container
 // token; the control plane is not involved.
-export class Sandboxes {
+export class Sandboxes implements ThreadWorkspaces {
   #hub: RemoteSandboxHub;
   #port: number;
   #tokens = new Map<string, string>();
-  #running = new Map<string, string>();
+  #running = new Set<string>();
+  #roots = new Map<string, string>();
   #starting = new Map<string, Promise<void>>();
   #run: NonNullable<SandboxConfig["docker"]>;
 
@@ -102,7 +117,19 @@ export class Sandboxes {
     this.#run = config.docker ?? docker;
   }
 
+  // Fails now, with what to do about it, rather than on the first run.
   static async start(config: SandboxConfig) {
+    const check = await (config.docker ?? docker)(["image", "inspect", config.image]).catch(() => ({
+      code: 1,
+      stdout: "",
+      stderr: "docker is not installed or not running",
+    }));
+    if (check.code !== 0) {
+      throw new Error(
+        `The sandbox image ${config.image} is not available (${check.stderr.trim() || "unknown error"}). ` +
+          `Docker must be running; build the image with: docker build -t ${config.image} apps/runtime/sandbox-image`,
+      );
+    }
     const tokens = new Map<string, string>();
     const hub = new RemoteSandboxHub({
       authorize: (token) => {
@@ -120,21 +147,23 @@ export class Sandboxes {
     return sandboxes;
   }
 
-  async acquire(thread: { id: string; projectPath: string }): Promise<ThreadSandbox> {
-    await this.#ensure(thread);
+  async acquire(thread: { id: string }): Promise<ThreadSandbox> {
+    const root = await this.#workspace(thread.id);
+    await this.#ensure(thread.id, root);
     const runtime = this.#hub.runtime(thread.id, { workdir: WORKDIR });
     const launcher: Launcher = ({ command, cwd, env }) => {
       const abort = new AbortController();
       const events = runtime.execStream({
         command: "bash",
         args: ["-c", command],
-        cwd: containerPath(thread.projectPath, cwd),
+        cwd: containerPath(root, cwd),
         env: { ...env, AGENT: "1" },
         abortSignal: abort.signal,
       });
       return toProcess(events, abort);
     };
     return {
+      root,
       launcher,
       tools: createDesktopTools({ sandbox: this.#hub.desktop(thread.id) }),
     };
@@ -142,6 +171,7 @@ export class Sandboxes {
 
   async release(threadId: string) {
     this.#running.delete(threadId);
+    this.#roots.delete(threadId);
     for (const [token, id] of this.#tokens) if (id === threadId) this.#tokens.delete(token);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
@@ -150,6 +180,19 @@ export class Sandboxes {
   async dispose() {
     await Promise.all([...this.#running.keys()].map((id) => this.release(id)));
     await this.#hub.close();
+  }
+
+  // The thread's empty workspace, created on first use and kept for its later runs. Real path,
+  // so the file tools' confinement and the bind mount agree on what the directory is.
+  async #workspace(threadId: string) {
+    const known = this.#roots.get(threadId);
+    if (known) return known;
+    const home = this.config.home ?? join(homedir(), ".aven", "runtime");
+    const dir = join(home, "workspaces", threadId);
+    await mkdir(dir, { recursive: true });
+    const root = await realpath(dir);
+    this.#roots.set(threadId, root);
+    return root;
   }
 
   #name(threadId: string) {
@@ -163,23 +206,23 @@ export class Sandboxes {
   }
 
   // Starts the thread's container once, even when several runs ask at the same time.
-  #ensure(thread: { id: string; projectPath: string }) {
-    if (this.#running.get(thread.id) === thread.projectPath && this.#hub.isConnected(thread.id)) {
-      return Promise.resolve();
-    }
-    let starting = this.#starting.get(thread.id);
+  #ensure(threadId: string, root: string) {
+    if (this.#running.has(threadId) && this.#hub.isConnected(threadId)) return Promise.resolve();
+    let starting = this.#starting.get(threadId);
     if (!starting) {
-      starting = this.#startContainer(thread).finally(() => this.#starting.delete(thread.id));
-      this.#starting.set(thread.id, starting);
+      starting = this.#startContainer(threadId, root).finally(() =>
+        this.#starting.delete(threadId),
+      );
+      this.#starting.set(threadId, starting);
     }
     return starting;
   }
 
-  async #startContainer(thread: { id: string; projectPath: string }) {
-    const name = this.#name(thread.id);
+  async #startContainer(threadId: string, root: string) {
+    const name = this.#name(threadId);
     await this.#run(["rm", "-f", name]);
     const token = randomBytes(24).toString("base64url");
-    this.#tokens.set(token, thread.id);
+    this.#tokens.set(token, threadId);
     const { memoryMb = 2048, cpus = 2, pidsLimit = 512 } = this.config;
     const host = this.config.hostName ?? "host.docker.internal";
     const args = [
@@ -190,7 +233,7 @@ export class Sandboxes {
       "--label",
       "aven.sandbox=1",
       "--label",
-      `aven.thread=${thread.id}`,
+      `aven.thread=${threadId}`,
       "--add-host",
       `${host}:host-gateway`,
       "--memory",
@@ -204,7 +247,7 @@ export class Sandboxes {
       "--security-opt",
       "no-new-privileges",
       "-v",
-      `${thread.projectPath}:${WORKDIR}`,
+      `${root}:${WORKDIR}`,
       "-e",
       `ANVIA_CONTROL_URL=ws://${host}:${this.#port}/daemon`,
       "-e",
@@ -225,6 +268,6 @@ export class Sandboxes {
       this.#tokens.delete(token);
       throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
     }
-    this.#running.set(thread.id, thread.projectPath);
+    this.#running.add(threadId);
   }
 }

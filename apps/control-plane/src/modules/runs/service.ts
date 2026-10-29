@@ -6,15 +6,8 @@ import type { ModelConfig } from "@aven/agents/model";
 
 import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
-import {
-  BuiltinRuntime,
-  type CreateAgent,
-  type Runtime,
-  type RunThread,
-  type RuntimeRun,
-} from "./runtime";
+import type { Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";
-import { RoutingRuntime } from "./routing-runtime";
 import { runGateway } from "../runtimes/gateway";
 import { runtimeHub } from "../runtimes/hub";
 
@@ -59,10 +52,8 @@ export class RunManager {
 
   constructor(deps: {
     store: MemoryStore;
-    /** Where runs execute; defaults to the built-in runtime on this machine. */
-    runtime?: Runtime;
-    /** Customises the built-in runtime's agent (tests); ignored when `runtime` is given. */
-    createAgent?: CreateAgent;
+    /** Where runs execute. */
+    runtime: Runtime;
     /** Looks up a user's provider when a background job restarts a run on their behalf. */
     resolveModel?: (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
     /** Called after every run, e.g. to bump the thread in the list. */
@@ -70,7 +61,7 @@ export class RunManager {
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
-    this.#runtime = deps.runtime ?? new BuiltinRuntime(deps.store, deps.createAgent);
+    this.#runtime = deps.runtime;
     this.#runtime.onJobNotice((threadId, notice) => this.#jobNotice(threadId, notice));
     this.#resolveModel = deps.resolveModel;
   }
@@ -287,7 +278,7 @@ const store = createMemoryStore(db);
 
 export const runsService = new RunManager({
   store,
-  runtime: new RoutingRuntime(new BuiltinRuntime(store), new RemoteRuntime(runtimeHub, runGateway)),
+  runtime: new RemoteRuntime(runtimeHub, runGateway),
   resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });

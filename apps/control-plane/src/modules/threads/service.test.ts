@@ -1,9 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
-import { ProjectNotFoundError, threadsService } from "./service";
+import { runtimesService } from "../runtimes/service";
+import { ProjectHasNoRunnerError, ProjectNotFoundError, threadsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -11,20 +9,25 @@ run("threadsService (postgres)", async () => {
   const { projectsService } = await import("../projects/service");
   const { seedOrgPair } = await import("../../test-support");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
-  const dir = await mkdtemp(join(tmpdir(), "aven-threads-"));
-  const projectA = await projectsService.create(orgA, userId, { name: "proj", projectPath: dir });
-  const projectB = await projectsService.create(orgB, userId, { name: "proj-b", projectPath: dir });
-
-  afterAll(async () => {
-    await cleanup();
-    await rm(dir, { recursive: true });
+  const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
+  const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
+  const projectA = await projectsService.create(orgA, userId, {
+    name: "proj",
+    runtimeId: runnerA.id,
   });
+  const projectB = await projectsService.create(orgB, userId, {
+    name: "proj-b",
+    runtimeId: runnerB.id,
+  });
+
+  afterAll(() => cleanup());
 
   test("creates a thread titled after the project and lists it", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     expect(thread.title).toBe("proj");
     expect(thread.projectId).toBe(projectA.id);
-    expect(thread.projectPath).toBe(await realpath(dir));
+    expect(thread.runtimeId).toBe(runnerA.id);
+    expect(thread).not.toHaveProperty("projectPath");
     expect((await threadsService.list(orgA)).map((row) => row.id)).toContain(thread.id);
   });
 
@@ -42,5 +45,17 @@ run("threadsService (postgres)", async () => {
       threadsService.create(orgA, userId, { projectId: projectB.id }),
     ).rejects.toBeInstanceOf(ProjectNotFoundError);
     expect((await threadsService.list(orgA)).length).toBe(before);
+  });
+
+  test("a project from before sandboxes has no runner and cannot start a thread", async () => {
+    const { db } = await import("@aven/db/client");
+    const { projects } = await import("@aven/db/schema/projects");
+    const [legacy] = await db
+      .insert(projects)
+      .values({ organizationId: orgA, createdBy: userId, name: "legacy", runtimeId: null })
+      .returning();
+    await expect(
+      threadsService.create(orgA, userId, { projectId: legacy!.id }),
+    ).rejects.toBeInstanceOf(ProjectHasNoRunnerError);
   });
 });

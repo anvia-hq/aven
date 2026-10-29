@@ -24,21 +24,23 @@ const live = image ? describe : describe.skip;
 live("a sandbox (real docker)", () => {
   // Set up in beforeAll: a skipped describe still runs its body, which must not touch Docker.
   let sandboxes: Sandboxes;
+  let home: string;
   let root: string;
   let box: Awaited<ReturnType<Sandboxes["acquire"]>>;
   let jobs: JobRegistry;
 
   beforeAll(async () => {
-    sandboxes = await Sandboxes.start({ image: image! });
-    root = await realpath(await mkdtemp(join(tmpdir(), "aven-sandbox-")));
-    box = await sandboxes.acquire({ id: crypto.randomUUID(), projectPath: root });
+    home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
+    sandboxes = await Sandboxes.start({ image: image!, home });
+    box = await sandboxes.acquire({ id: crypto.randomUUID() });
+    root = box.root;
     jobs = new JobRegistry({ launcher: box.launcher });
   }, 120_000);
 
   afterAll(async () => {
     await jobs.disposeAll();
     await sandboxes.dispose();
-    await rm(root, { recursive: true, force: true });
+    await rm(home, { recursive: true, force: true });
   });
 
   const run = async (command: string, cwd = root) =>
@@ -48,6 +50,19 @@ live("a sandbox (real docker)", () => {
     expect(await run("pwd")).toContain("/workspace");
     await run("echo from-the-container > made.txt");
     expect(await readFile(join(root, "made.txt"), "utf8")).toBe("from-the-container\n");
+  }, 60_000);
+
+  test("each thread gets its own empty workspace under the runner's home", async () => {
+    expect(root.startsWith(join(home, "workspaces"))).toBe(true);
+    const other = await sandboxes.acquire({ id: crypto.randomUUID() });
+    expect(other.root).not.toBe(root);
+    const otherJobs = new JobRegistry({ launcher: other.launcher });
+    const listing = (await otherJobs.start({ command: "ls -A", cwd: other.root }).done).output;
+    expect(listing.trim()).toBe("");
+    await run("echo mine > private.txt");
+    expect(
+      (await otherJobs.start({ command: "ls private.txt 2>&1", cwd: other.root }).done).output,
+    ).toContain("No such file");
   }, 60_000);
 
   test("it is not the host: no host paths, and no credentials in the environment", async () => {
@@ -75,5 +90,14 @@ live("a sandbox (real docker)", () => {
 
   test("the agent gets desktop tools", () => {
     expect(box.tools.map((tool) => tool.name)).toContain("desktop_screenshot");
+  });
+});
+
+describe("Sandboxes.start", () => {
+  test("refuses to start when the image is missing, and says how to build it", async () => {
+    const docker = async () => ({ code: 1, stdout: "", stderr: "No such image: nope" });
+    await expect(Sandboxes.start({ image: "nope:latest", docker })).rejects.toThrow(
+      "docker build -t nope:latest apps/runtime/sandbox-image",
+    );
   });
 });

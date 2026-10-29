@@ -1,11 +1,10 @@
-import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { runtimes } from "./runtimes";
 import { users } from "./users";
 
-// A project is a named, reusable working directory. Threads always belong to one.
+// A project is a name and the runner its threads' sandboxes run on. Threads always belong to one.
 export const projects = pgTable(
   "projects",
   {
@@ -16,26 +15,16 @@ export const projects = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** The runtime whose disk `projectPath` is on; null means the control plane's own machine. */
+    /** The runner that hosts the project's sandboxes. Null only on projects from before sandboxes (decision 0010); they cannot run. */
     runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
-    projectPath: text("project_path").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
-    // The same path on two machines is two projects.
-    uniqueIndex("projects_local_path_idx")
-      .on(table.organizationId, table.projectPath)
-      .where(sql`${table.runtimeId} is null`),
-    uniqueIndex("projects_runtime_path_idx")
-      .on(table.organizationId, table.runtimeId, table.projectPath)
-      .where(sql`${table.runtimeId} is not null`),
-  ],
+  (table) => [index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt)],
 );
 
 export type Project = typeof projects.$inferSelect;

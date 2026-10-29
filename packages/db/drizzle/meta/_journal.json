@@ -64,6 +64,13 @@
       "when": 1793254678834,
       "tag": "0008_cold_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793257947562,
+      "tag": "0009_little_loa",
+      "breakpoints": true
     }
   ]
 }
