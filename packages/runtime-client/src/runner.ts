@@ -4,7 +4,8 @@ import { projectStreamEvent } from "@aven/agents/projection";
 import {
   WIRE_VERSION,
   type ControlPlaneToRuntime,
-  type MemoryCallMethod,
+  type CallMethod,
+  type RepoAccess,
   type RunModel,
   type RunThreadInfo,
   type RuntimeToControlPlane,
@@ -110,7 +111,7 @@ export function startRuntime(options: RuntimeOptions) {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
 
-  const call = (method: MemoryCallMethod, params: unknown) =>
+  const call = (method: CallMethod, params: unknown) =>
     new Promise<unknown>((resolve, reject) => {
       const id = crypto.randomUUID();
       const timer = setTimeout(() => {
@@ -170,8 +171,11 @@ export function startRuntime(options: RuntimeOptions) {
     clearTimeout(idleTimers.get(thread.id));
     try {
       await releasing.get(thread.id);
-      // Starts the thread's container on first use; a failure ends the run with a clear error.
-      const box = await options.sandbox.acquire(thread);
+      // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
+      const box = await options.sandbox.acquire(
+        thread,
+        () => call("repo.access", { runId }) as Promise<RepoAccess>,
+      );
       if (live.cancelReason) throw new Error(live.cancelReason);
       boxes.set(thread.id, box);
       const { agent } = createAgent({

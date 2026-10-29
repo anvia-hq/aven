@@ -6,6 +6,9 @@ import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
 
+import type { RepoAccess } from "@aven/protocol/runtime-wire";
+
+import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 
 export type SandboxConfig = {
@@ -20,6 +23,8 @@ export type SandboxConfig = {
   hostName?: string;
   /** How long to wait for a started container's daemon to dial in. Default 90 seconds. */
   connectTimeoutMs?: number;
+  /** Replaced in tests. */
+  git?: Git;
   /** Replaced in tests. */
   docker?: (args: string[]) => Promise<{ code: number; stdout: string; stderr: string }>;
 };
@@ -103,7 +108,11 @@ export function dockerRunArgs(input: DockerRunInput) {
 
 /** What a runner needs to run a thread: the sandbox its agent works in. */
 export interface ThreadWorkspaces {
-  acquire(thread: { id: string }): Promise<ThreadSandbox>;
+  /**
+   * `repo` asks the control plane how to clone the thread's repository; it is called only when the
+   * workspace holds no clone yet (decision 0013).
+   */
+  acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
   dispose(): Promise<void>;
@@ -122,7 +131,8 @@ export class Sandboxes implements ThreadWorkspaces {
   #tokens: Map<string, string>;
   #run: Docker;
   #running = new Set<string>();
-  #roots = new Map<string, string>();
+  // A thread's workspace, while it is being cloned or once it is ready, so two runs never clone twice.
+  #roots = new Map<string, Promise<string>>();
   #starting = new Map<string, Promise<void>>();
 
   private constructor(
@@ -152,6 +162,14 @@ export class Sandboxes implements ThreadWorkspaces {
           `Docker must be running; build the image with: docker build -t ${config.image} apps/runtime/sandbox-image`,
       );
     }
+    const gitCheck = await (config.git ?? git)(["--version"], { cwd: "." }).catch(() => ({
+      code: 1,
+      stdout: "",
+      stderr: "git is not installed",
+    }));
+    if (gitCheck.code !== 0) {
+      throw new Error("git is required to clone each thread's repository but was not found");
+    }
     const tokens = new Map<string, string>();
     const hub = new RemoteSandboxHub({
       authorize: (token) => {
@@ -168,8 +186,8 @@ export class Sandboxes implements ThreadWorkspaces {
     return sandboxes;
   }
 
-  async acquire(thread: { id: string }): Promise<ThreadSandbox> {
-    const root = await this.#workspace(thread.id);
+  async acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox> {
+    const root = await this.#workspace(thread.id, repo);
     await this.#ensure(thread.id, root);
     const runtime = this.#hub.runtime(thread.id, { workdir: WORKDIR });
     return {
@@ -209,16 +227,25 @@ export class Sandboxes implements ThreadWorkspaces {
     await this.#hub.close();
   }
 
-  // The thread's empty workspace, created on first use and kept for its later runs. Real path,
-  // so the file tools' confinement and the bind mount agree on what the directory is.
-  async #workspace(threadId: string) {
+  // The thread's workspace: the repository cloned on first use and kept for its later runs. Real
+  // path, so the file tools' confinement and the bind mount agree on what the directory is.
+  #workspace(threadId: string, repo: () => Promise<RepoAccess>) {
     const known = this.#roots.get(threadId);
     if (known) return known;
+    const preparing = this.#prepare(threadId, repo);
+    this.#roots.set(threadId, preparing);
+    // A failed clone is tried again by the next run.
+    preparing.catch(() => this.#roots.delete(threadId));
+    return preparing;
+  }
+
+  async #prepare(threadId: string, repo: () => Promise<RepoAccess>) {
     const home = this.#config.home ?? join(homedir(), ".aven", "runtime");
     const dir = join(home, "workspaces", threadId);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
-    this.#roots.set(threadId, root);
+    if (await isCloned(root)) return root;
+    await cloneRepository(root, threadId, await repo(), this.#config.git ?? git);
     return root;
   }
 

@@ -4,6 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { dockerRunArgs, Sandboxes, type ThreadSandbox } from "./sandbox";
+import { createRemoteRepo } from "./testing/remote-repo";
+
+// Stands in for git where a test is about the container: a clone is just a `.git` directory.
+const fakeGit = async (args: string[], { cwd }: { cwd: string }) => {
+  if (args[0] === "clone") await Bun.write(join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");
+  return { code: 0, stdout: "", stderr: "" };
+};
+const access = { cloneUrl: "https://github.com/acme/web.git", defaultBranch: "main", token: "t" };
+const repo = async () => access;
 
 describe("dockerRunArgs", () => {
   const input = {
@@ -46,15 +55,47 @@ describe("Sandboxes starting a container", () => {
     return { calls, docker };
   };
 
+  test("two runs on a thread that has no clone yet clone it once", async () => {
+    const { docker } = fakeDocker();
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const clones: string[][] = [];
+    const slowGit = async (args: string[], options: { cwd: string }) => {
+      if (args[0] === "clone") clones.push(args);
+      await Bun.sleep(100);
+      return fakeGit(args, options);
+    };
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: slowGit,
+      connectTimeoutMs: 300,
+    });
+
+    const attempts = [1, 2].map(() =>
+      sandboxes.acquire({ id: "t-clone" }, repo).catch(() => undefined),
+    );
+    await Promise.all(attempts);
+
+    expect(clones).toHaveLength(1);
+    await sandboxes.dispose();
+  });
+
   test("a second acquire while the container is starting waits for it and does not restart it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
     // No daemon ever dials in here, so both give up on the connect timeout.
-    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 400 });
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: fakeGit,
+      connectTimeoutMs: 400,
+    });
     const thread = { id: "thread-1" };
-    const first = sandboxes.acquire(thread);
+    const first = sandboxes.acquire(thread, repo);
     await Bun.sleep(150);
-    const second = sandboxes.acquire(thread);
+    const second = sandboxes.acquire(thread, repo);
     const results = await Promise.allSettled([first, second]);
 
     expect(results.map((result) => result.status)).toEqual(["rejected", "rejected"]);
@@ -73,8 +114,14 @@ describe("Sandboxes starting a container", () => {
       return base(args);
     };
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
-    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 300 });
-    const acquiring = sandboxes.acquire({ id: "t3" }).catch(() => undefined);
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: fakeGit,
+      connectTimeoutMs: 300,
+    });
+    const acquiring = sandboxes.acquire({ id: "t3" }, repo).catch(() => undefined);
     await Bun.sleep(100);
     const silenced = console.error;
     console.error = () => undefined;
@@ -90,8 +137,14 @@ describe("Sandboxes starting a container", () => {
   test("gives up on a container whose daemon never connects and removes it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
-    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 100 });
-    await expect(sandboxes.acquire({ id: "t2" })).rejects.toThrow("did not connect");
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: fakeGit,
+      connectTimeoutMs: 100,
+    });
+    await expect(sandboxes.acquire({ id: "t2" }, repo)).rejects.toThrow("did not connect");
     expect(calls.at(-1)).toEqual(["rm", "-f", "aven-sandbox-t2"]);
     await sandboxes.dispose();
     await rm(home, { recursive: true, force: true });
@@ -109,13 +162,15 @@ live("a sandbox (real docker)", () => {
   let threadId: string;
   let root: string;
   let box: ThreadSandbox;
+  let remote: Awaited<ReturnType<typeof createRemoteRepo>>["access"];
 
   beforeAll(async () => {
     home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
     sandboxes = await Sandboxes.start({ image: image!, home });
+    remote = (await createRemoteRepo()).access;
     threadId = crypto.randomUUID();
     root = join(home, "workspaces", threadId);
-    box = await sandboxes.acquire({ id: threadId });
+    box = await sandboxes.acquire({ id: threadId }, async () => remote);
   }, 120_000);
 
   afterAll(async () => {
@@ -167,10 +222,10 @@ live("a sandbox (real docker)", () => {
     expect(listing.entries.map((entry) => entry.path)).toContain("hello.txt");
   }, 60_000);
 
-  test("each thread gets its own empty workspace under the runner's home", async () => {
+  test("each thread gets its own clone of the repository under the runner's home", async () => {
     expect(root.startsWith(join(home, "workspaces"))).toBe(true);
-    const other = await sandboxes.acquire({ id: crypto.randomUUID() });
-    expect((await run("ls -A", other)).stdout.trim()).toBe("");
+    const other = await sandboxes.acquire({ id: crypto.randomUUID() }, async () => remote);
+    expect((await run("ls -A", other)).stdout).toContain("README.md");
     await run("echo mine > private.txt");
     expect((await run("ls private.txt 2>&1", other)).stdout).toContain("No such file");
   }, 60_000);

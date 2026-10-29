@@ -1,0 +1,79 @@
+import { readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import type { RepoAccess } from "@aven/protocol/runtime-wire";
+
+export type Git = (
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> },
+) => Promise<{ code: number; stdout: string; stderr: string }>;
+
+export const git: Git = async (args, { cwd, env }) => {
+  const proc = Bun.spawn(["git", ...args], {
+    cwd,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return { code, stdout, stderr };
+};
+
+/** The branch a thread works on, so threads of one project do not share a branch name. */
+export const threadBranch = (threadId: string) => `aven/${threadId.slice(0, 8)}`;
+
+// The header is limited to the clone URL's own origin, so a redirect elsewhere never sees the token.
+// A path (a local test remote) has no origin and gets the unscoped key.
+function headerKey(cloneUrl: string) {
+  return URL.canParse(cloneUrl)
+    ? `http.${new URL(cloneUrl).origin}/.extraHeader`
+    : "http.extraHeader";
+}
+
+// The token travels in git's environment configuration, so it is neither in the process's
+// arguments nor written to .git/config (decision 0013).
+function authEnv({ token, cloneUrl }: RepoAccess) {
+  const basic = Buffer.from(`x-access-token:${token}`).toString("base64");
+  return {
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: headerKey(cloneUrl),
+    GIT_CONFIG_VALUE_0: `Authorization: Basic ${basic}`,
+  };
+}
+
+/** Whether `dir` already holds a clone. */
+export async function isCloned(dir: string) {
+  return (await readdir(dir).catch(() => [] as string[])).includes(".git");
+}
+
+// Clones the repository's default branch into the empty `dir` and moves onto the thread's own
+// branch. A failed clone leaves `dir` empty again, so the next run tries afresh.
+export async function cloneRepository(
+  dir: string,
+  threadId: string,
+  access: RepoAccess,
+  run: Git = git,
+) {
+  const env = authEnv(access);
+  const redact = (text: string) => text.replaceAll(access.token, "***").trim();
+  try {
+    const cloned = await run(
+      ["clone", "--single-branch", "--branch", access.defaultBranch, "--", access.cloneUrl, "."],
+      { cwd: dir, env },
+    );
+    if (cloned.code !== 0) throw new Error(redact(cloned.stderr || cloned.stdout));
+    const branched = await run(["checkout", "-b", threadBranch(threadId)], { cwd: dir });
+    if (branched.code !== 0) throw new Error(redact(branched.stderr || branched.stdout));
+  } catch (error) {
+    await Promise.all(
+      (await readdir(dir).catch(() => [] as string[])).map((entry) =>
+        rm(join(dir, entry), { recursive: true, force: true }),
+      ),
+    );
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not clone ${access.cloneUrl}: ${reason}`);
+  }
+}

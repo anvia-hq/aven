@@ -101,6 +101,34 @@ function connect(
 }
 
 describe("startRuntime", () => {
+  test("the sandbox gets the repository's access by asking the control plane about the run", async () => {
+    const access = {
+      cloneUrl: "https://github.com/acme/web.git",
+      defaultBranch: "main",
+      token: "t",
+    };
+    let given: unknown;
+    const sandbox: ThreadWorkspaces = {
+      async acquire(_thread, repo): Promise<ThreadSandbox> {
+        given = await repo();
+        return { tools: [], hasRunningProcesses: async () => false };
+      },
+      async release() {},
+      async dispose() {},
+    };
+    const { plane, runtime } = connect({ sandbox, createAgent: agentThat(() => noEvents) });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => plane.received.some((message) => message.type === "call"));
+    const call = plane.received.find((message) => message.type === "call");
+    expect(call).toMatchObject({ method: "repo.access", params: { runId: "run-1" } });
+    plane.send({ type: "reply", id: (call as { id: string }).id, ok: true, result: access });
+
+    await until(() => given !== undefined);
+    expect(given).toEqual(access);
+  });
+
   test("a cancel that arrives while the sandbox is still starting ends the run before it begins", async () => {
     const { sandbox, up } = slowSandbox();
     let created = false;
