@@ -82,6 +82,15 @@ Drizzle ORM + Postgres (`postgres` driver). Source-only package, no barrel files
 - Needs `DATABASE_URL` (root `.env`). Run scripts from the package: `bun run db:generate` (writes SQL to `drizzle/`), `db:migrate`, `db:push`, `db:studio`.
 - Commit generated migrations in `drizzle/`; never edit them by hand. drizzle-kit runs on the Bun runtime (`bun --bun` in the `db:*` scripts) because it loads schema files with `require` and `@anvia/memory-drizzle` is ESM-only (`import` condition only), which fails under Node with `ERR_PACKAGE_PATH_NOT_EXPORTED`. Don't call `drizzle-kit` directly.
 
+## clients/macos
+
+The native macOS client (Swift, no web view; decision 0008). Two SwiftPM packages: `AvenKit` (Foundation only: wire models, the `Transcript` reducer, SSE parsing, the bearer-token `APIClient`, a Keychain `TokenStore`) and `AvenMac` (the SwiftUI app on top of it). Contract: `docs/products/0004-native-client-contract.md`.
+
+- `bun run test:macos` runs AvenKit's tests with just the Swift toolchain. They include `packages/protocol/fixtures/reducer.json`, the same fixtures the TypeScript reducer is tested with, so the two reducers cannot drift. Set `AVEN_TEST_URL=http://localhost:8000` to also run the live-server test (it signs up a throwaway user).
+- If SwiftPM says `plugin for module 'TestingMacros' not found`, a stale build service is running: `pkill -f SWBBuildService; pkill -f swift-build`, then `rm -rf .build` and retry.
+- `AvenMac` needs full Xcode (SwiftUI's macros are not in the Command Line Tools); it has only been written, not compiled, on a machine without Xcode. Build it with `xcodebuild` or open the folder in Xcode.
+- Use `URLSession` without cookies for the API (`APIClient.cookielessSession()`), and never `bytes.lines` for SSE: it drops the empty lines that end a message (`LineSplitter` exists for that).
+
 ## apps/runtime and packages/runtime-client
 
 A runtime is a process that connects out to a control plane (`AVEN_URL`, `AVEN_RUNTIME_TOKEN`, `bun run --cwd apps/runtime start`) and runs agents on its own machine; see decision 0008. The logic lives in `packages/runtime-client` (`runner.ts`: connection, runs, jobs; `remote-memory.ts`: the conversation is the control plane's). It holds no provider key: model calls go to the control plane's gateway with a per-run token. Filesystem helpers shared with the control plane's own machine are in `packages/agents/src/workspace.ts`.

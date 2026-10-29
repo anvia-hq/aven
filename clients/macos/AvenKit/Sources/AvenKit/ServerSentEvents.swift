@@ -32,3 +32,22 @@ public struct ServerSentEventParser: Sendable {
         return (field, String(value))
     }
 }
+
+/// Splits a byte stream into lines, keeping empty ones. `URLSession.AsyncBytes.lines` drops them,
+/// and an empty line is what ends a server-sent event, so it cannot be used here.
+public struct LineSplitter: Sendable {
+    private var buffer: [UInt8] = []
+
+    public init() {}
+
+    /// Returns a completed line (without `\n` or `\r\n`) when `byte` ends one.
+    public mutating func feed(byte: UInt8) -> String? {
+        guard byte == 0x0A else {
+            buffer.append(byte)
+            return nil
+        }
+        if buffer.last == 0x0D { buffer.removeLast() }
+        defer { buffer.removeAll(keepingCapacity: true) }
+        return String(decoding: buffer, as: UTF8.self)
+    }
+}

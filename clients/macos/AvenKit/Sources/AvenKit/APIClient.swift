@@ -105,9 +105,12 @@ public final class APIClient: @unchecked Sendable {
                     let (bytes, response) = try await session.bytes(for: request)
                     try Self.check(response, data: nil)
                     var parser = ServerSentEventParser()
+                    var splitter = LineSplitter()
                     let decoder = JSONDecoder()
-                    for try await line in bytes.lines {
-                        guard let payload = parser.feed(line: line) else { continue }
+                    for try await byte in bytes {
+                        guard let line = splitter.feed(byte: byte),
+                            let payload = parser.feed(line: line)
+                        else { continue }
                         if let event = try? decoder.decode(RunEvent.self, from: Data(payload.utf8)) {
                             continuation.yield(event)
                         }

@@ -58,6 +58,27 @@ private func fixtures() throws -> [Fixture] {
     }
 }
 
+@Suite struct LineSplitterTests {
+    @Test func keepsEmptyLinesAndHandlesCRLF() {
+        var splitter = LineSplitter()
+        let bytes = Array("data: a\r\n\r\ndata: b\n\n".utf8)
+        let lines = bytes.compactMap { splitter.feed(byte: $0) }
+        #expect(lines == ["data: a", "", "data: b", ""])
+    }
+
+    @Test func aMessageSplitAcrossReadsStillParses() {
+        var splitter = LineSplitter()
+        var parser = ServerSentEventParser()
+        var payloads: [String] = []
+        for byte in Array("data: {\"type\":\"done\"}\n\n".utf8) {
+            if let line = splitter.feed(byte: byte), let payload = parser.feed(line: line) {
+                payloads.append(payload)
+            }
+        }
+        #expect(payloads == [#"{"type":"done"}"#])
+    }
+}
+
 @Suite struct APIClientTests {
     @Test func normalizesWhatAPersonTypes() throws {
         #expect(try APIClient.normalize(server: "localhost:8000").absoluteString == "http://localhost:8000")
