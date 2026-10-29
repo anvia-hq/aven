@@ -1,17 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-import { addRunner, registerUser } from "./helpers";
+import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
 test.describe("projects", () => {
-  test("creates a project, lists it and opens it", async ({ page }) => {
+  test("imports a repository as a project, lists it and opens it", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
-    await page.goto("/projects");
-    await page.getByRole("button", { name: "New project" }).click();
-    await page.getByLabel("Name").fill("shiny-app");
-    await page.getByRole("button", { name: "Create project" }).click();
+    await connectGithub(page);
+    await importRepository(page, "shiny-app");
 
-    await expect(page.getByText("Project created")).toBeVisible();
     const list = page.getByRole("region", { name: "Project list" });
     await expect(list.getByRole("link")).toHaveCount(1);
 
@@ -31,10 +28,8 @@ test.describe("projects", () => {
   test("starts a thread from the project page", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
-    await page.goto("/projects");
-    await page.getByRole("button", { name: "New project" }).click();
-    await page.getByLabel("Name").fill("shiny-app");
-    await page.getByRole("button", { name: "Create project" }).click();
+    await connectGithub(page);
+    await importRepository(page, "shiny-app");
     await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
 
     await page.getByLabel("Prompt").fill("Explain the project layout");
@@ -121,10 +116,9 @@ test.describe("sidebar and search", () => {
   test("the command palette opens with the keyboard and navigates", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
-    await page.getByRole("button", { name: "New project" }).click();
-    await page.getByLabel("Name").fill("docs-site");
-    await page.getByRole("button", { name: "Create project" }).click();
-    await expect(page.getByText("Project created")).toBeVisible();
+    await connectGithub(page);
+    await page.goto("/threads");
+    await importRepository(page, "docs-site");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+k");

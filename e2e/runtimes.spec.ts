@@ -2,7 +2,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { connectGithub, registerUser } from "./helpers";
 
 // A runner refuses to start without Docker and the sandbox image (decision 0010).
 const hasSandboxImage =
@@ -68,8 +68,9 @@ test.describe("runtimes", () => {
     }).toPass({ timeout: 15_000 });
 
     // Projects can now be put on it.
+    await connectGithub(page);
     await page.goto("/threads");
-    await page.getByRole("button", { name: "New project" }).click();
+    await page.getByRole("button", { name: "Import repository" }).click();
     await expect(page.getByRole("combobox", { name: "Runner" })).toBeVisible();
     await page.keyboard.press("Escape");
 

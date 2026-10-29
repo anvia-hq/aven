@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from "node:crypto";
+
 import { defineConfig } from "@playwright/test";
 
 // Separate ports and database so e2e never touches the dev servers or dev data.
@@ -5,6 +7,12 @@ const API_PORT = 8100;
 const WEB_PORT = 5174;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 const API_URL = `http://localhost:${API_PORT}`;
+const GITHUB_PORT = 8101;
+const GITHUB_URL = `http://localhost:${GITHUB_PORT}`;
+// The control plane signs its GitHub App requests; the fake GitHub does not check the signature.
+const GITHUB_APP_PRIVATE_KEY = generateKeyPairSync("rsa", { modulusLength: 2048 })
+  .privateKey.export({ type: "pkcs8", format: "pem" })
+  .toString();
 const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? "postgres://localhost:5432/aven_e2e";
 
 export default defineConfig({
@@ -37,7 +45,21 @@ export default defineConfig({
         MODEL_CATALOG_URL: "",
         // No built-in runner: e2e must not start containers, and a project then needs a runner.
         AVEN_LOCAL_RUNNER: "off",
+        // GitHub is the fake one below, so importing a repository never reaches the real one.
+        GITHUB_APP_ID: "1",
+        GITHUB_APP_SLUG: "aven-e2e",
+        GITHUB_APP_CLIENT_ID: "Iv1.e2e",
+        GITHUB_APP_CLIENT_SECRET: "e2e-secret",
+        GITHUB_APP_PRIVATE_KEY,
+        GITHUB_API_URL: GITHUB_URL,
+        GITHUB_WEB_URL: GITHUB_URL,
       },
+    },
+    {
+      command: "bun e2e/fake-github.ts",
+      url: `${GITHUB_URL}/health`,
+      reuseExistingServer: false,
+      env: { FAKE_GITHUB_PORT: String(GITHUB_PORT) },
     },
     {
       command: "bun run --cwd apps/platform dev",

@@ -1,11 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, registerUser } from "./helpers";
+import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
 async function createProject(page: Page, name: string) {
-  await page.getByRole("button", { name: "New project" }).click();
-  await page.getByLabel("Name").fill(name);
-  await page.getByRole("button", { name: "Create project" }).click();
+  await connectGithub(page);
+  await page.goto("/threads");
+  await importRepository(page, name);
 }
 
 // Creates a project (which is auto-selected) and sends the first prompt.
@@ -17,11 +17,11 @@ async function startThread(page: Page, prompt: string) {
 }
 
 test.describe("threads", () => {
-  test("the new thread page asks to create a project first", async ({ page }) => {
+  test("the new thread page asks to import a repository first", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByText("Create a project to get started.")).toBeVisible();
+    await expect(page.getByText("Import a repository to get started.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
@@ -29,10 +29,11 @@ test.describe("threads", () => {
 
   test("a project needs a runner, and the dialog says where to add one", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
-    await page.getByRole("button", { name: "New project" }).click();
+    await connectGithub(page);
+    await page.goto("/threads");
+    await page.getByRole("button", { name: "Import repository" }).click();
     await expect(page.getByText("A project needs a runner")).toBeVisible();
     await expect(page.getByRole("link", { name: "Add a runner" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create project" })).toBeDisabled();
   });
 
   test("a thread started from a project opens with its prompt as the title", async ({ page }) => {

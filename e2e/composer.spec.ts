@@ -1,15 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, registerUser } from "./helpers";
+import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
-// The composer only shows once there is a project; creating one on /threads also selects it. A
+// The composer only shows once there is a project; importing one on /threads also selects it. A
 // project needs a runner, and one that never connects is enough here.
 async function createProject(page: Page) {
   await addRunner(page);
-  await page.getByRole("button", { name: "New project" }).click();
-  await page.getByLabel("Name").fill("composer-app");
-  await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByText("Project created")).toBeVisible();
+  await connectGithub(page);
+  await page.goto("/threads");
+  await importRepository(page, "composer-app");
 }
 
 test.describe("prompt composer", () => {
