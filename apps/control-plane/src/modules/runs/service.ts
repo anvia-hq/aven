@@ -1,30 +1,21 @@
 import { db } from "@aven/db/client";
-import {
-  createCodingAgent,
-  type CodingAgent,
-  type CodingAgentStream,
-} from "@aven/agents/coding-agent";
-import { formatJobNotice, JobRegistry } from "@aven/agents/jobs/job-registry";
 import { createMemoryStore, type MemoryStore } from "@aven/agents/memory";
-import { messagesToChat, projectStreamEvent } from "@aven/agents/projection";
+import { messagesToChat } from "@aven/agents/projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
-import type { ModelConfig, Provider } from "@aven/agents/model";
+import type { ModelConfig } from "@aven/agents/model";
 
 import { providersService, type ModelSelection } from "../providers/service";
 import { threadsService } from "../threads/service";
-
-export type RunThread = { id: string; organizationId: string; projectPath: string };
-
-type CreateAgent = (
-  thread: RunThread,
-  jobs: JobRegistry,
-  memory: MemoryStore,
-  /** The sender's provider; undefined means fall back to the environment. */
-  model?: ModelConfig,
-) => { agent: Pick<CodingAgent, "stream"> };
+import {
+  BuiltinRuntime,
+  type CreateAgent,
+  type Runtime,
+  type RunThread,
+  type RuntimeRun,
+} from "./runtime";
 
 type ActiveRun = {
-  stream: CodingAgentStream;
+  handle: RuntimeRun;
   /** The whole transcript so far: history plus this run, kept current by applying events. */
   messages: ChatMessage[];
   cancelled: boolean;
@@ -35,7 +26,6 @@ type ActiveRun = {
 
 type Channel = {
   thread: RunThread;
-  jobs: JobRegistry;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
   /** Who sent the last message and what they chose; a run restarted by a finished background job reuses it. */
@@ -50,23 +40,6 @@ export class RunBusyError extends Error {
 
 const PING_MS = 5_000;
 
-// The sender's own provider is used when they have one. Otherwise the environment supplies a
-// shared one (AGENT_PROVIDER / AGENT_MODEL plus the matching API key).
-const defaultCreateAgent: CreateAgent = (thread, jobs, memory, model) => {
-  if (model) return createCodingAgent({ ...model, root: thread.projectPath, jobs, memory });
-  const provider = (process.env.AGENT_PROVIDER ?? "anthropic") as Provider;
-  if (provider !== "openai" && provider !== "anthropic") {
-    throw new Error(`AGENT_PROVIDER must be "openai" or "anthropic", got "${provider}"`);
-  }
-  return createCodingAgent({
-    provider,
-    modelId: process.env.AGENT_MODEL || undefined,
-    root: thread.projectPath,
-    jobs,
-    memory,
-  });
-};
-
 // Runs belong to the server, not to an HTTP request: a client can disconnect, reload or never
 // connect at all (a background job finishing starts a run with nobody watching) and the agent
 // keeps working. Clients attach with `events()` and get a snapshot, then live events.
@@ -74,7 +47,7 @@ export class RunManager {
   #channels = new Map<string, Channel>();
   #disposed = false;
   #store: MemoryStore;
-  #createAgent: CreateAgent;
+  #runtime: Runtime;
   #resolveModel:
     | ((userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>)
     | undefined;
@@ -82,6 +55,9 @@ export class RunManager {
 
   constructor(deps: {
     store: MemoryStore;
+    /** Where runs execute; defaults to the built-in runtime on this machine. */
+    runtime?: Runtime;
+    /** Customises the built-in runtime's agent (tests); ignored when `runtime` is given. */
     createAgent?: CreateAgent;
     /** Looks up a user's provider when a background job restarts a run on their behalf. */
     resolveModel?: (userId: string, selection?: ModelSelection) => Promise<ModelConfig | null>;
@@ -90,7 +66,8 @@ export class RunManager {
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
-    this.#createAgent = deps.createAgent ?? defaultCreateAgent;
+    this.#runtime = deps.runtime ?? new BuiltinRuntime(deps.store, deps.createAgent);
+    this.#runtime.onJobNotice((threadId, notice) => this.#jobNotice(threadId, notice));
     this.#resolveModel = deps.resolveModel;
   }
 
@@ -111,15 +88,9 @@ export class RunManager {
     if (sender) channel.lastSender = { userId: sender.userId, selection: sender.selection };
 
     const scope = this.#scope(thread);
-    const agent = this.#createAgent(
-      thread,
-      channel.jobs,
-      this.#store,
-      sender?.model ?? undefined,
-    ).agent;
+    const handle = this.#runtime.start({ thread, prompt, model: sender?.model ?? undefined });
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
-    const stream = agent.stream({ prompt, session: scope });
-    const run: ActiveRun = { stream, messages: [], cancelled: false, ready: Promise.resolve() };
+    const run: ActiveRun = { handle, messages: [], cancelled: false, ready: Promise.resolve() };
     channel.run = run;
     run.ready = this.#store.load({ scope }).then(
       (history) => {
@@ -133,7 +104,7 @@ export class RunManager {
     await run.ready;
     if (run.loadError !== undefined) {
       channel.run = undefined;
-      stream.cancel("history load failed");
+      handle.cancel("history load failed");
       throw run.loadError;
     }
     this.#emit(channel, { type: "run_start", prompt });
@@ -147,11 +118,9 @@ export class RunManager {
     const run = channel.run;
     if (run) {
       run.cancelled = true;
-      run.stream.cancel("Cancelled by user");
+      run.handle.cancel("Cancelled by user");
     }
-    for (const job of channel.jobs.list()) {
-      if (job.status === "running") void channel.jobs.kill(job.id);
-    }
+    void this.#runtime.stopJobs(threadId);
     return run !== undefined;
   }
 
@@ -200,12 +169,12 @@ export class RunManager {
   // Stops every running job and run. Call on host shutdown.
   async dispose() {
     this.#disposed = true;
-    for (const channel of this.#channels.values()) channel.run?.stream.cancel("Shutting down");
-    await Promise.all([...this.#channels.values()].map((channel) => channel.jobs.disposeAll()));
+    for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
+    await this.#runtime.dispose();
   }
 
   killAllJobsNow() {
-    for (const channel of this.#channels.values()) channel.jobs.killAllNow();
+    this.#runtime.killAllNow();
   }
 
   #scope(thread: RunThread) {
@@ -217,30 +186,25 @@ export class RunManager {
     let channel = this.#channels.get(thread.id);
     if (channel) return channel;
 
-    const created: Channel = {
-      thread,
-      jobs: new JobRegistry(),
-      subscribers: new Set(),
-    };
-    // A background job finishing is delivered into the live run, or starts a new one if it ended.
-    created.jobs.onComplete((job) => {
-      // A killed job was stopped on purpose (by the agent, a Stop, or shutdown): nothing to report.
-      if (!job.background || job.status === "killed" || this.#disposed) return;
-      const notice = formatJobNotice(job);
-      const live = created.run;
-      if (live) {
-        try {
-          live.stream.steer({ prompt: notice });
-          return;
-        } catch {
-          // The run just ended; fall through and start a new one.
-        }
-      }
-      void this.#restart(created, thread, notice);
-    });
+    const created: Channel = { thread, subscribers: new Set() };
     this.#channels.set(thread.id, created);
     channel = created;
     return channel;
+  }
+
+  // A background job finished: its notice goes into the live run, or starts a new one if it ended.
+  #jobNotice(threadId: string, notice: string) {
+    const channel = this.#channels.get(threadId);
+    if (!channel || this.#disposed) return;
+    try {
+      if (channel.run) {
+        channel.run.handle.steer(notice);
+        return;
+      }
+    } catch {
+      // The run just ended; fall through and start a new one.
+    }
+    void this.#restart(channel, channel.thread, notice);
   }
 
   // Starts a run for a finished background job, with whatever whoever last sent a message chose.
@@ -288,11 +252,8 @@ export class RunManager {
 
   async #consume(channel: Channel, run: ActiveRun) {
     try {
-      for await (const event of run.stream) {
-        const projected = projectStreamEvent(event);
-        if (projected) this.#emit(channel, projected);
-      }
-      const outcome = await run.stream.result;
+      for await (const event of run.handle.events) this.#emit(channel, event);
+      const outcome = await run.handle.result;
       if (outcome.type === "response" || run.cancelled)
         this.#finish(channel, run, { type: "done" });
       else

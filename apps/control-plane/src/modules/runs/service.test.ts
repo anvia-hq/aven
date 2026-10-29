@@ -14,7 +14,8 @@ import { createMemoryStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/protocol/events";
 
 import type { ModelSelection } from "../providers/service";
-import { RunBusyError, RunManager, type RunThread } from "./service";
+import type { RunThread } from "./runtime";
+import { RunBusyError, RunManager } from "./service";
 
 // Needs the migrated Postgres from DATABASE_URL; skipped when there is none.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
