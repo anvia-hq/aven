@@ -41,7 +41,7 @@ export class RuntimeConnection {
 
   constructor(
     readonly runtimeId: string,
-    readonly organizationId: string,
+    readonly organizationId: string | null,
     private send: (message: string) => void,
     private closeSocket: (code?: number, reason?: string) => void,
     private hub: RuntimeHub,
@@ -193,7 +193,7 @@ export class RuntimeHub {
   // A runtime that reconnects replaces its previous connection.
   attach(
     runtimeId: string,
-    organizationId: string,
+    organizationId: string | null,
     send: (message: string) => void,
     closeSocket: (code?: number, reason?: string) => void,
   ) {

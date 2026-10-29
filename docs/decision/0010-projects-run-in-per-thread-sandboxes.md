@@ -8,11 +8,12 @@ Status: accepted. Supersedes the host-folder parts of 0005 (a project is a path)
 
 ## Decision
 
-- **A runner** (the runtime of 0008, now always sandboxed) is a computer or VM. It has no project folders. Agents never run commands on its own disk; the control plane's own machine no longer runs agents at all.
+- **A runner** (the runtime of 0008, now always sandboxed) is a computer or VM. It has no project folders. Agents never run commands on its own disk.
 - **A project is a name and a runner**, chosen when it is created. It has no path. (A GitHub repository will be attached to it later; creating a project then clones nothing yet.)
 - **A sandbox is per thread.** The first run of a thread starts a container from the desktop image on the project's runner, with an **empty workspace** that belongs to that thread. Threads do not share files. Carrying work between threads will be done with git once repositories can be attached.
 - **The workspace is a directory the runner manages** (`<runner home>/workspaces/<thread id>`), mounted at `/workspace`. The file tools (`read`, `write`, `edit`) work on it from the runner and stay confined to it; the shell and the desktop run in the container. Nothing on the runner outside that directory is visible to the agent. This keeps the tool set, diffs and projection from 0003 unchanged.
-- **A runner needs Docker and the sandbox image** and refuses to start without them. There is no unsandboxed mode.
+- **The control plane is a runner too.** It starts a built-in runner in its own process (`AVEN_LOCAL_RUNNER`, on by default) that connects to itself like any other runner, with a token that exists only in memory. It is one row (`Control plane`, no organization, no owner) that every organization sees and nobody can revoke or rotate, so a project works with no runner set up. It hosts its sandboxes on the control plane's machine.
+- **Every runner, built-in or not, needs Docker and the sandbox image.** An external runner refuses to start without them; the built-in one stays offline and logs why. There is no unsandboxed mode.
 - **The folder picker, `project_path`, path validation on a runtime and the `fs.*` calls of the runtime wire are removed.** Threads still record their runner (`threads.runtime_id`), copied from the project when created.
 
 ## Consequences

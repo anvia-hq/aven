@@ -2,12 +2,22 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { runtimes, type RuntimeRow } from "@aven/db/schema/runtimes";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 
 import { runtimeHub } from "./hub";
 import type { CreateRuntimeBody } from "./schema";
 
 const TOKEN_PREFIX = "avrt_";
+
+/** The control plane's own runner, the same row for every organization. */
+export const LOCAL_RUNTIME_ID = "00000000-0000-4000-8000-000000000001";
+
+// What the in-process runner presents to connect; it exists only in this process's memory.
+const localToken = `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
+
+// An organization's own runners, and the built-in one.
+const visibleTo = (organizationId: string) =>
+  or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
 
 const newToken = () => `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
 
@@ -17,12 +27,28 @@ const hashToken = (token: string) => createHash("sha256").update(token).digest("
 const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => runtime;
 
 export const runtimesService = {
-  // Runtimes are shared with the whole organization, so listing is by organization.
+  localToken,
+
+  // Makes sure the built-in runner's row exists. Its token hash matches nothing anyone can send:
+  // it connects with `localToken`, which `authenticate` recognizes.
+  async ensureLocal() {
+    await db
+      .insert(runtimes)
+      .values({
+        id: LOCAL_RUNTIME_ID,
+        name: "Control plane",
+        tokenHash: hashToken(randomBytes(32).toString("hex")),
+        tokenHint: "",
+      })
+      .onConflictDoNothing();
+  },
+
+  // Runners are shared with the whole organization, so listing is by organization.
   async list(organizationId: string) {
     const rows = await db
       .select()
       .from(runtimes)
-      .where(and(eq(runtimes.organizationId, organizationId), isNull(runtimes.revokedAt)))
+      .where(and(visibleTo(organizationId), isNull(runtimes.revokedAt)))
       .orderBy(desc(runtimes.createdAt));
     return rows.map(publicRuntime);
   },
@@ -31,13 +57,7 @@ export const runtimesService = {
     const [row] = await db
       .select()
       .from(runtimes)
-      .where(
-        and(
-          eq(runtimes.organizationId, organizationId),
-          eq(runtimes.id, id),
-          isNull(runtimes.revokedAt),
-        ),
-      );
+      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)));
     return row ? publicRuntime(row) : null;
   },
 
@@ -99,6 +119,10 @@ export const runtimesService = {
   // Resolves a connection token; a revoked or unknown token is simply not found.
   async authenticate(token: string) {
     if (!token.startsWith(TOKEN_PREFIX)) return null;
+    if (token === localToken) {
+      const [local] = await db.select().from(runtimes).where(eq(runtimes.id, LOCAL_RUNTIME_ID));
+      return local ?? null;
+    }
     const [row] = await db
       .select()
       .from(runtimes)

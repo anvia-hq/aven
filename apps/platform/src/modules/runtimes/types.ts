@@ -3,7 +3,8 @@
 export type Runtime = {
   id: string;
   name: string;
-  ownerId: string;
+  /** Null on the control plane's own built-in runner. */
+  ownerId: string | null;
   /** Last characters of the token, to tell runtimes apart. */
   tokenHint: string;
   online: boolean;

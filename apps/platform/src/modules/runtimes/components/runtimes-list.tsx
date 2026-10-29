@@ -16,11 +16,7 @@ export function RuntimesList() {
 
   if (!loaded) return null;
   if (runtimes.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No runtimes yet. Threads run on the control plane's own machine until you add one.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">No runtimes yet.</p>;
   }
 
   return (
@@ -43,7 +39,9 @@ export function RuntimesList() {
                 {runtime.online ? "Online" : "Offline"}
               </Badge>
             </TableCell>
-            <TableCell className="font-mono text-xs">…{runtime.tokenHint}</TableCell>
+            <TableCell className="font-mono text-xs">
+              {runtime.ownerId === null ? "Built in" : `…${runtime.tokenHint}`}
+            </TableCell>
             <TableCell className="text-muted-foreground">
               {runtime.lastSeenAt ? timeAgo(runtime.lastSeenAt, true) : "Never"}
             </TableCell>

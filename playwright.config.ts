@@ -35,6 +35,8 @@ export default defineConfig({
         ANTHROPIC_API_KEY: "",
         PROVIDER_ENCRYPTION_KEY: "ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=",
         MODEL_CATALOG_URL: "",
+        // No built-in runner: e2e must not start containers, and a project then needs a runner.
+        AVEN_LOCAL_RUNNER: "off",
       },
     },
     {

@@ -35,8 +35,9 @@ export function NewProjectDialog({ onCreated }: Props) {
     value: runtime.id,
     label: runtime.online ? runtime.name : `${runtime.name} (offline)`,
   }));
-  // With one runner there is nothing to choose.
-  const chosen = runtimeId || (runtimes.length === 1 ? (runtimes[0]?.id ?? "") : "");
+  // Until one is picked, offer the first that is online (or the first at all).
+  const fallback = (runtimes.find((runtime) => runtime.online) ?? runtimes[0])?.id ?? "";
+  const chosen = runtimeId || fallback;
 
   function handleOpenChange(next: boolean) {
     setOpen(next);

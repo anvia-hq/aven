@@ -3,19 +3,17 @@ import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/
 import { organizations } from "./organizations";
 import { users } from "./users";
 
-// A machine a user attached to an organization to run agents on (decision 0008). It belongs to the
-// user who registered it and is shared with the whole organization. Projects point at one;
-// a project with no runtime uses the control plane's own machine.
+// A runner: a computer or VM that hosts sandboxes (decisions 0008 and 0010). One a user attached
+// belongs to them and is shared with the whole organization. The control plane's own built-in
+// runner has no organization and no owner: every organization sees it, nobody can revoke it.
 export const runtimes = pgTable(
   "runtimes",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    ownerId: text("owner_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     /** SHA-256 of the connection token, hex. The token itself is shown once and never stored. */
     tokenHash: text("token_hash").notNull(),

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { seedOrgPair } from "../../test-support";
-import { runtimesService } from "./service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -39,5 +39,25 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.revoke(seed.orgA, seed.userId, runtime.id)).not.toBeNull();
     expect(await runtimesService.authenticate(token)).toBeNull();
     expect(await runtimesService.get(seed.orgA, runtime.id)).toBeNull();
+  });
+
+  test("the control plane's own runner is visible to every organization and cannot be changed", async () => {
+    await runtimesService.ensureLocal();
+    await runtimesService.ensureLocal(); // idempotent
+
+    for (const org of [seed.orgA, seed.orgB]) {
+      const listed = await runtimesService.list(org);
+      expect(listed.map((runtime) => runtime.id)).toContain(LOCAL_RUNTIME_ID);
+      expect((await runtimesService.get(org, LOCAL_RUNTIME_ID))?.name).toBe("Control plane");
+    }
+    // Nobody owns it, so nobody can revoke or rotate it.
+    expect(await runtimesService.revoke(seed.orgA, seed.userId, LOCAL_RUNTIME_ID)).toBeNull();
+    expect(await runtimesService.rotate(seed.orgA, seed.userId, LOCAL_RUNTIME_ID)).toBeNull();
+
+    // It connects with a token only this process knows; no other token reaches it.
+    expect((await runtimesService.authenticate(runtimesService.localToken))?.id).toBe(
+      LOCAL_RUNTIME_ID,
+    );
+    expect(await runtimesService.authenticate("avrt_local_guess")).toBeNull();
   });
 });

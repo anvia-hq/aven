@@ -13,7 +13,7 @@ function Runtimes() {
     <>
       <PageHeader
         title="Runtimes"
-        description="Machines that run agents for this workspace. Projects live on one; without any, threads run on the control plane's own machine."
+        description="Computers and VMs that host sandboxes for this workspace. A project runs on one; the control plane is always available as a built-in runner."
         actions={<NewRuntimeDialog />}
       />
       <RuntimesList />

@@ -71,6 +71,13 @@
       "when": 1793257947562,
       "tag": "0009_little_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793258677726,
+      "tag": "0010_mysterious_newton_destine",
+      "breakpoints": true
     }
   ]
 }
