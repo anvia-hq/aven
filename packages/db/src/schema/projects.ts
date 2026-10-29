@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
+import { runtimes } from "./runtimes";
 import { users } from "./users";
 
 // A project is a named, reusable working directory. Threads always belong to one.
@@ -14,6 +16,8 @@ export const projects = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** The runtime whose disk `projectPath` is on; null means the control plane's own machine. */
+    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     projectPath: text("project_path").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -24,7 +28,13 @@ export const projects = pgTable(
   },
   (table) => [
     index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
-    uniqueIndex("projects_organization_path_idx").on(table.organizationId, table.projectPath),
+    // The same path on two machines is two projects.
+    uniqueIndex("projects_local_path_idx")
+      .on(table.organizationId, table.projectPath)
+      .where(sql`${table.runtimeId} is null`),
+    uniqueIndex("projects_runtime_path_idx")
+      .on(table.organizationId, table.runtimeId, table.projectPath)
+      .where(sql`${table.runtimeId} is not null`),
   ],
 );
 
