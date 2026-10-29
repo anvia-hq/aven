@@ -99,8 +99,8 @@ public enum RunEvent: Equatable, Sendable, Decodable {
 public struct Project: Codable, Equatable, Sendable, Identifiable {
     public var id: String
     public var name: String
-    /// The runner that hosts the project's sandboxes.
-    public var runtimeId: String
+    /// The runner that hosts the project's sandboxes; nil only on a project from before sandboxes.
+    public var runtimeId: String?
 }
 
 public struct ThreadSummary: Codable, Equatable, Sendable, Identifiable {
