@@ -22,20 +22,22 @@ export type CreateRuntimeAgent = (input: {
 
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
 // run's token; this process never holds a provider key.
-const defaultCreateAgent: CreateRuntimeAgent = ({ thread, jobs, memory, model }) => {
-  if (!model) throw new Error("The control plane sent no model for this run");
-  return createCodingAgent({
-    provider: model.provider,
-    modelId: model.modelId,
-    apiKey: model.gatewayToken,
-    baseUrl: model.gatewayUrl,
-    reasoningEffort: model.reasoningEffort,
-    effortLevels: model.effortLevels,
-    root: thread.projectPath,
-    jobs,
-    memory,
-  });
-};
+const defaultCreateAgent =
+  (origin: string): CreateRuntimeAgent =>
+  ({ thread, jobs, memory, model }) => {
+    if (!model) throw new Error("The control plane sent no model for this run");
+    return createCodingAgent({
+      provider: model.provider,
+      modelId: model.modelId,
+      apiKey: model.gatewayToken,
+      baseUrl: `${origin}${model.gatewayPath}`,
+      reasoningEffort: model.reasoningEffort,
+      effortLevels: model.effortLevels,
+      root: thread.projectPath,
+      jobs,
+      memory,
+    });
+  };
 
 type LiveRun = { stream: ReturnType<CodingAgent["stream"]> };
 
@@ -55,7 +57,9 @@ const RECONNECT_MAX_MS = 30_000;
 // Connects out to the control plane and runs whatever it is told to, until stopped. Reconnects
 // with backoff; runs in flight when the link drops are abandoned (the control plane ends them).
 export function startRuntime(options: RuntimeOptions) {
-  const createAgent = options.createAgent ?? defaultCreateAgent;
+  // The control plane's own origin, for its model gateway: the WebSocket URL with an http scheme.
+  const origin = new URL(options.url.replace(/^ws/, "http")).origin;
+  const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const runs = new Map<string, LiveRun>();
   const jobs = new Map<string, JobRegistry>();
   const pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();

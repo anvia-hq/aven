@@ -17,7 +17,8 @@ export type RunModel = {
   modelId?: string;
   reasoningEffort?: string;
   effortLevels?: string[];
-  gatewayUrl: string;
+  /** Path on the control plane the model client uses as its API root; the runtime adds its own origin. */
+  gatewayPath: string;
   gatewayToken: string;
 };
 

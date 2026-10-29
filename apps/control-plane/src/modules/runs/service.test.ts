@@ -40,6 +40,15 @@ for (const mode of ["builtin", "remote"] as const)
     let root: string;
     let finished = 0;
 
+    // The scripted model never calls a provider, so there is nothing for the gateway to guard here.
+    const scriptedGateway = {
+      issue: () => ({
+        provider: "anthropic" as const,
+        gatewayPath: "/unused",
+        gatewayToken: "unused",
+      }),
+      revoke: () => undefined,
+    };
     const hub = new RuntimeHub(store);
     const seed = await seedOrgPair();
     const server =
@@ -79,7 +88,12 @@ for (const mode of ["builtin", "remote"] as const)
       await client.ready;
       await until(() => hub.isOnline(runtime.id));
       runtimeId = runtime.id;
-      return new RunManager({ store, runtime: new RemoteRuntime(hub), onRunFinished, ...extra });
+      return new RunManager({
+        store,
+        runtime: new RemoteRuntime(hub, scriptedGateway),
+        onRunFinished,
+        ...extra,
+      });
     };
 
     const newThread = (): RunThread => {

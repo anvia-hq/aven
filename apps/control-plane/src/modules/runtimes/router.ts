@@ -2,6 +2,7 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { connectRouter } from "./connect";
+import { runGateway } from "./gateway";
 import { runtimeHub } from "./hub";
 import { createRuntimeBody, runtimeParams } from "./schema";
 import { runtimesService } from "./service";
@@ -22,6 +23,12 @@ export const runtimesRouter = new Elysia({ prefix: "/runtimes" })
     "/",
     ({ body, organizationId, user }) => runtimesService.create(organizationId, user.id, body),
     { auth: true, org: true, body: createRuntimeBody },
+  )
+  // Where a run's model calls go; authenticated by the run's own token, not a session.
+  .all(
+    "/gateway/:segment/*",
+    ({ request, params }) => runGateway.forward(request, params.segment, params["*"]),
+    { parse: "none" },
   )
   .delete(
     "/:id",

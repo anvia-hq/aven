@@ -15,6 +15,7 @@ import {
 } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";
 import { RoutingRuntime } from "./routing-runtime";
+import { runGateway } from "../runtimes/gateway";
 import { runtimeHub } from "../runtimes/hub";
 
 type ActiveRun = {
@@ -286,7 +287,7 @@ const store = createMemoryStore(db);
 
 export const runsService = new RunManager({
   store,
-  runtime: new RoutingRuntime(new BuiltinRuntime(store), new RemoteRuntime(runtimeHub)),
+  runtime: new RoutingRuntime(new BuiltinRuntime(store), new RemoteRuntime(runtimeHub, runGateway)),
   resolveModel: (userId, selection) => providersService.resolveModel(userId, selection),
   onRunFinished: (thread) => threadsService.touch(thread.id),
 });
