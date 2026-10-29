@@ -1,8 +1,9 @@
 import { AnthropicClient } from "@anvia/anthropic";
 import { defineCompletionModelControls, type CompletionModelControls } from "@anvia/core";
 import { OpenAIClient } from "@anvia/openai";
+import type { Provider } from "@aven/protocol/runtime-wire";
 
-export type Provider = "openai" | "anthropic" | "openai-compatible";
+export type { Provider };
 
 export type ModelConfig = {
   provider: Provider;

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
 import { createCodingAgent } from "./coding-agent";
+import { JobRegistry } from "./jobs/job-registry";
 import { createMemoryStore } from "./memory";
 import { createModel } from "./model";
 
@@ -12,6 +13,7 @@ const stubDb = { select: noop, insert: noop, delete: noop, transaction: noop, ex
 describe("createCodingAgent", () => {
   test.each(["openai", "anthropic"] as const)("assembles the tools for %s", (provider) => {
     const { agent, jobs } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider,
       apiKey: "test-key",
       root: process.cwd(),
@@ -31,6 +33,7 @@ describe("createCodingAgent", () => {
   test("accepts a memory store", () => {
     const store = createMemoryStore(stubDb);
     const { agent } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider: "openai",
       apiKey: "test-key",
       root: process.cwd(),
@@ -43,6 +46,7 @@ describe("createCodingAgent", () => {
 
   test("adds web_search when enabled", () => {
     const { agent } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider: "openai",
       apiKey: "test-key",
       root: process.cwd(),
@@ -55,6 +59,7 @@ describe("createCodingAgent", () => {
 describe("tool calls through the agent", () => {
   test("parse and run model-style JSON arguments", async () => {
     const { agent } = createCodingAgent({
+      jobs: new JobRegistry(),
       provider: "anthropic",
       apiKey: "test-key",
       root: join(import.meta.dir, ".."),

@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { resolveWithin } from "../lib/paths";
 
+export const EDIT_TOOL_NAME = "edit";
+
 export type EditToolOptions = {
   /** Directory the tool is confined to. Relative paths resolve against it. */
   root: string;
@@ -18,7 +20,7 @@ function countOccurrences(text: string, search: string) {
 
 export function createEditTool({ root }: EditToolOptions) {
   return createTool({
-    name: "edit",
+    name: EDIT_TOOL_NAME,
     description:
       "Replace exact text in a file. `oldString` must match the file exactly (including whitespace) and be unique unless `replaceAll` is true. Read the file first so the text is accurate.",
     inputSchema: z.object({
@@ -37,7 +39,8 @@ export function createEditTool({ root }: EditToolOptions) {
       if (!(await file.exists())) throw new Error(`File not found: ${path}`);
       const text = await file.text();
 
-      const count = countOccurrences(text, oldString);
+      const firstMatch = text.indexOf(oldString);
+      const count = firstMatch === -1 ? 0 : countOccurrences(text, oldString);
       if (count === 0) throw new Error(`oldString was not found in ${target.relative}`);
       if (count > 1 && !replaceAll) {
         throw new Error(
@@ -48,9 +51,7 @@ export function createEditTool({ root }: EditToolOptions) {
       // Split/join and slice avoid `$` replacement patterns that String.replace would interpret.
       const next = replaceAll
         ? text.split(oldString).join(newString)
-        : text.slice(0, text.indexOf(oldString)) +
-          newString +
-          text.slice(text.indexOf(oldString) + oldString.length);
+        : text.slice(0, firstMatch) + newString + text.slice(firstMatch + oldString.length);
       await Bun.write(target.absolute, next);
       return `Edited ${target.relative}: ${replaceAll ? count : 1} replacement(s)`;
     },

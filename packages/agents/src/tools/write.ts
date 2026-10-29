@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import { resolveWithin } from "../lib/paths";
 
+export const WRITE_TOOL_NAME = "write";
+
 export type WriteToolOptions = {
   /** Directory the tool is confined to. Relative paths resolve against it. */
   root: string;
@@ -12,7 +14,7 @@ export type WriteToolOptions = {
 
 export function createWriteTool({ root }: WriteToolOptions) {
   return createTool({
-    name: "write",
+    name: WRITE_TOOL_NAME,
     description:
       "Write a file, overwriting it if it exists. Missing parent directories are created. Use it to create files or replace one wholesale; use `edit` for targeted changes.",
     inputSchema: z.object({

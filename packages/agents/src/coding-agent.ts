@@ -1,6 +1,6 @@
 import { Agent, type AnyTool, type CompletionModel, type MemoryStore } from "@anvia/core";
 
-import { JobRegistry } from "./jobs/job-registry";
+import type { JobRegistry } from "./jobs/job-registry";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { createEditTool } from "./tools/edit";
 import { createReadTool } from "./tools/read";
@@ -11,8 +11,11 @@ import { createWriteTool } from "./tools/write";
 export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   /** Project directory the file tools are confined to and the shell starts in. */
   root: string;
-  /** Share a registry to observe background jobs; one is created when omitted. */
-  jobs?: JobRegistry;
+  /**
+   * Where commands run and background jobs are observed. Required, so no caller falls back to
+   * running the agent's commands on the host by accident; pass `new JobRegistry()` to do so on purpose.
+   */
+  jobs: JobRegistry;
   /** Enable `web_search`. Defaults to whether `TAVILY_API_KEY` is set. */
   webSearch?: boolean;
   /** More tools for the agent, such as a sandbox's desktop. */
@@ -32,7 +35,7 @@ const INSTRUCTIONS = `You are a coding agent working in a project directory.
 // a background job finishes (`jobs.onComplete`), deliver `formatJobNotice(job)` with `stream.steer()`
 // while the run is live, or start a new run if it has ended.
 export function createCodingAgent(options: CodingAgentOptions) {
-  const jobs = options.jobs ?? new JobRegistry();
+  const { jobs } = options;
   const { shell, shellOutput, shellKill } = createShellTools({ root: options.root, jobs });
 
   const tools: AnyTool[] = [
@@ -46,21 +49,31 @@ export function createCodingAgent(options: CodingAgentOptions) {
   if (options.webSearch ?? Boolean(process.env.TAVILY_API_KEY)) tools.push(createWebSearchTool());
   if (options.extraTools) tools.push(...options.extraTools);
 
+  const { model, providerOptions, controls } = resolveModel(options);
   const agent = new Agent({
     id: "coding",
-    model: "model" in options ? options.model : createModel(options),
+    model,
     instructions: INSTRUCTIONS,
-    providerOptions: "provider" in options ? providerOptionsFor(options.provider) : undefined,
-    controls:
-      "provider" in options && options.reasoningEffort
-        ? { reasoningEffort: options.reasoningEffort }
-        : undefined,
+    providerOptions,
+    controls,
     maxTurns: options.maxTurns ?? 50,
     tools,
     memory: options.memory && { store: options.memory, savePolicy: "turn" },
   });
 
   return { agent, jobs };
+}
+
+// A ready model carries no provider settings; a model config also picks the provider's options
+// and the reasoning effort.
+function resolveModel(options: CodingAgentOptions) {
+  if ("model" in options)
+    return { model: options.model, providerOptions: undefined, controls: undefined };
+  return {
+    model: createModel(options),
+    providerOptions: providerOptionsFor(options.provider),
+    controls: options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : undefined,
+  };
 }
 
 export type CodingAgent = ReturnType<typeof createCodingAgent>["agent"];

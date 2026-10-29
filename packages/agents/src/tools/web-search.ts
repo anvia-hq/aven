@@ -1,6 +1,8 @@
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
+export const WEB_SEARCH_TOOL_NAME = "web_search";
+
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 
 export const webSearchInput = z.object({
@@ -46,7 +48,7 @@ export function createWebSearchTool(options: WebSearchOptions = {}) {
   const request = options.fetch ?? fetch;
 
   return createTool({
-    name: "web_search",
+    name: WEB_SEARCH_TOOL_NAME,
     description:
       "Search the web for current information. Returns a short synthesized answer and the top results (title, url, content). Cite urls when you use them.",
     inputSchema: webSearchInput,

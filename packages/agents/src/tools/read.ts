@@ -4,7 +4,11 @@ import { z } from "zod";
 
 import { resolveWithin } from "../lib/paths";
 
+export const READ_TOOL_NAME = "read";
+
 const MAX_LINES = 2000;
+// Reading loads the file into memory, so a huge one (a database, a log) is refused up front.
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_LINE_CHARS = 2000;
 
 export type ReadToolOptions = {
@@ -14,7 +18,7 @@ export type ReadToolOptions = {
 
 export function createReadTool({ root }: ReadToolOptions) {
   return createTool({
-    name: "read",
+    name: READ_TOOL_NAME,
     description:
       "Read a file or list a directory. Text lines are prefixed with their 1-based line number as `N: content`. Reads up to 2000 lines at a time; pass `offset` to continue a long file.",
     inputSchema: z.object({
@@ -40,6 +44,11 @@ export function createReadTool({ root }: ReadToolOptions) {
         return page(`directory ${target.relative}`, "entries", entries, offset, limit);
       }
 
+      if (info.size > MAX_FILE_BYTES) {
+        throw new Error(
+          `File is too large to read (${info.size} bytes, the limit is ${MAX_FILE_BYTES}): ${path}`,
+        );
+      }
       const bytes = new Uint8Array(await Bun.file(target.absolute).arrayBuffer());
       if (bytes.subarray(0, 8192).includes(0)) throw new Error(`Cannot read binary file: ${path}`);
       const lines = new TextDecoder().decode(bytes).split("\n");

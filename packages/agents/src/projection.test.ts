@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createCodingAgent } from "./coding-agent";
+import { JobRegistry } from "./jobs/job-registry";
 import { messagesToChat, projectStreamEvent } from "./projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
@@ -21,6 +22,7 @@ afterEach(async () => {
 
 async function run(prompt: string) {
   const { agent } = createCodingAgent({
+    jobs: new JobRegistry(),
     root,
     webSearch: false,
     model: scriptedModel([

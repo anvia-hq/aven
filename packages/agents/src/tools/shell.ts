@@ -6,6 +6,10 @@ import type { JobRegistry, JobSnapshot } from "../jobs/job-registry";
 import { resolveWithin } from "../lib/paths";
 import { truncateTail } from "../lib/truncate";
 
+export const SHELL_TOOL_NAME = "shell";
+export const SHELL_OUTPUT_TOOL_NAME = "shell_output";
+export const SHELL_KILL_TOOL_NAME = "shell_kill";
+
 export const DEFAULT_TIMEOUT_MS = 2 * 60 * 1000;
 
 const BACKGROUND_NOTICE =
@@ -28,9 +32,53 @@ function result(job: JobSnapshot, maxChars?: number) {
   };
 }
 
+async function resolveWorkdir(root: string, workdir: string | undefined) {
+  const { absolute } = await resolveWithin(root, workdir ?? ".");
+  const info = await stat(absolute).catch(() => undefined);
+  if (!info) throw new Error(`Working directory not found: ${workdir}`);
+  if (!info.isDirectory()) throw new Error(`Working directory is not a directory: ${workdir}`);
+  return absolute;
+}
+
+function startBackground(jobs: JobRegistry, input: { command: string; cwd: string }) {
+  const { id } = jobs.start({ ...input, background: true });
+  return {
+    jobId: id,
+    status: "running" as const,
+    exitCode: null,
+    truncated: false,
+    output: `Command started in the background (job ${id}). ${BACKGROUND_NOTICE}`,
+  };
+}
+
+// Only foreground jobs are tied to the tool call; background jobs outlive it.
+async function runForeground(
+  jobs: JobRegistry,
+  input: { command: string; cwd: string; timeout?: number },
+  abortSignal: AbortSignal | undefined,
+) {
+  const timeoutMs = input.timeout ?? DEFAULT_TIMEOUT_MS;
+  const { id, done } = jobs.start({ command: input.command, cwd: input.cwd, timeoutMs });
+  const kill = () => void jobs.kill(id);
+  // An abort that happened before the job existed fires no event, so check it now.
+  if (abortSignal?.aborted) kill();
+  abortSignal?.addEventListener("abort", kill, { once: true });
+  try {
+    const out = result(await done);
+    if (out.status !== "timeout") return out;
+    return {
+      ...out,
+      output: `${out.output}\n\nCommand exceeded the timeout of ${timeoutMs} ms and was killed. Retry with a larger timeout, or run it in the background.`,
+    };
+  } finally {
+    abortSignal?.removeEventListener("abort", kill);
+    jobs.forget(id);
+  }
+}
+
 export function createShellTools({ root, jobs }: ShellToolsOptions) {
   const shell = createTool({
-    name: "shell",
+    name: SHELL_TOOL_NAME,
     description: [
       "Execute a shell command and return its output.",
       "Prefer the dedicated read, write and edit tools for files.",
@@ -51,49 +99,14 @@ export function createShellTools({ root, jobs }: ShellToolsOptions) {
       background: z.boolean().optional().describe("Run in the background and return immediately."),
     }),
     async execute({ command, workdir, timeout, background = false }, context) {
-      const cwd = await resolveWithin(root, workdir ?? ".");
-      if (!(await stat(cwd.absolute)).isDirectory()) {
-        throw new Error(`Working directory is not a directory: ${workdir}`);
-      }
-
-      const { id, done } = jobs.start({
-        command,
-        cwd: cwd.absolute,
-        background,
-        timeoutMs: background ? 0 : (timeout ?? DEFAULT_TIMEOUT_MS),
-      });
-
-      if (background) {
-        return {
-          jobId: id,
-          status: "running" as const,
-          exitCode: null,
-          truncated: false,
-          output: `Command started in the background (job ${id}). ${BACKGROUND_NOTICE}`,
-        };
-      }
-
-      // Only foreground jobs are tied to the tool call; background jobs outlive it.
-      const onAbort = () => void jobs.kill(id);
-      context?.abortSignal?.addEventListener("abort", onAbort, { once: true });
-      try {
-        const job = await done;
-        const out = result(job);
-        return job.status === "timeout"
-          ? {
-              ...out,
-              output: `${out.output}\n\nCommand exceeded the timeout of ${timeout ?? DEFAULT_TIMEOUT_MS} ms and was killed. Retry with a larger timeout, or run it in the background.`,
-            }
-          : out;
-      } finally {
-        context?.abortSignal?.removeEventListener("abort", onAbort);
-        jobs.forget(id);
-      }
+      const cwd = await resolveWorkdir(root, workdir);
+      if (background) return startBackground(jobs, { command, cwd });
+      return runForeground(jobs, { command, cwd, timeout }, context?.abortSignal);
     },
   });
 
   const shellOutput = createTool({
-    name: "shell_output",
+    name: SHELL_OUTPUT_TOOL_NAME,
     description:
       "Read the current output and status of a background shell job. Use it to inspect a long-running job (e.g. a dev server's logs), not to wait for completion: you are notified automatically when a job finishes.",
     inputSchema: z.object({ jobId: z.string().min(1) }),
@@ -105,7 +118,7 @@ export function createShellTools({ root, jobs }: ShellToolsOptions) {
   });
 
   const shellKill = createTool({
-    name: "shell_kill",
+    name: SHELL_KILL_TOOL_NAME,
     description: "Stop a running background shell job and everything it spawned.",
     inputSchema: z.object({ jobId: z.string().min(1) }),
     async execute({ jobId }) {

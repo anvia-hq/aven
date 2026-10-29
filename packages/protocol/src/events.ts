@@ -31,6 +31,11 @@ export type RunEvent =
   | { type: "done" }
   | { type: "error"; message: string };
 
+/** The id of the message at `index` in a transcript; the reducer and stored-message rebuilds agree on it. */
+export function messageId(index: number) {
+  return `m-${index}`;
+}
+
 export function isRunning(previous: boolean, event: RunEvent) {
   switch (event.type) {
     case "snapshot":
@@ -65,8 +70,12 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
     case "run_start":
       return [
         ...messages,
-        { id: `m-${messages.length}`, role: "user", parts: [{ type: "text", text: event.prompt }] },
-        { id: `m-${messages.length + 1}`, role: "assistant", parts: [] },
+        {
+          id: messageId(messages.length),
+          role: "user",
+          parts: [{ type: "text", text: event.prompt }],
+        },
+        { id: messageId(messages.length + 1), role: "assistant", parts: [] },
       ];
     case "text":
       return updateLastAssistant(messages, (parts) => {
@@ -90,6 +99,8 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         ),
       );
     default:
+      // `done` and `error` do not change the transcript; clients show an error as it arrives
+      // (see isRunning) and every client's reducer must agree, per fixtures/reducer.json.
       return messages;
   }
 }

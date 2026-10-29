@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createEditTool } from "./edit";
-import { createReadTool } from "./read";
+import { createReadTool, MAX_FILE_BYTES } from "./read";
 import { createWriteTool } from "./write";
 
 let root: string;
@@ -24,6 +24,12 @@ afterEach(async () => {
 const run = async <T>(call: () => T | Promise<T>) => call();
 
 describe("read", () => {
+  test("refuses a file too large to load", async () => {
+    await Bun.write(join(root, "big.log"), new Uint8Array(MAX_FILE_BYTES + 1).fill(97));
+    const read = createReadTool({ root });
+    await expect(run(() => read.call({ path: "big.log" }))).rejects.toThrow("too large");
+  });
+
   test("numbers lines and reports the range", async () => {
     await writeFile(join(root, "a.txt"), "one\ntwo\nthree\n");
     const read = createReadTool({ root });

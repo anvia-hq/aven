@@ -17,6 +17,8 @@ export type SandboxConfig = {
   pidsLimit?: number;
   /** Where the container finds this machine; the default works on Docker Desktop and Linux. */
   hostName?: string;
+  /** How long to wait for a started container's daemon to dial in. Default 90 seconds. */
+  connectTimeoutMs?: number;
   /** Replaced in tests. */
   docker?: (args: string[]) => Promise<{ code: number; stdout: string; stderr: string }>;
 };
@@ -30,7 +32,14 @@ export type ThreadSandbox = {
   tools: readonly AnyTool[];
 };
 
+type Docker = NonNullable<SandboxConfig["docker"]>;
+
 const WORKDIR = "/workspace";
+const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
+const CONNECT_POLL_MS = 50;
+// What a command reports when the sandbox went away under it, or its own limit ended it.
+const SANDBOX_LOST_EXIT_CODE = 255;
+const SANDBOX_TIMEOUT_EXIT_CODE = 124;
 // Long enough that a job's own timeout, not the daemon's default, decides when a command ends.
 const DAEMON_COMMAND_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
@@ -49,27 +58,54 @@ async function docker(args: string[]) {
 export function containerPath(root: string, path: string) {
   if (path === root) return ".";
   if (path.startsWith(`${root}/`)) return path.slice(root.length + 1);
-  return ".";
+  throw new Error(`${path} is outside the workspace ${root}, which is all the sandbox can reach`);
+}
+
+// A stream the sandbox's output is pushed into; pushing after the reader is gone is harmless.
+function byteChannel() {
+  let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+  const stream = new ReadableStream<Uint8Array>({ start: (c) => void (controller = c) });
+  return {
+    stream,
+    push(data: Uint8Array) {
+      try {
+        controller?.enqueue(data);
+      } catch {
+        // The reader cancelled.
+      }
+    },
+    close() {
+      try {
+        controller?.close();
+      } catch {
+        // Already closed.
+      }
+    },
+  };
 }
 
 // Adapts a sandbox exec stream to the process shape a JobRegistry expects.
 function toProcess(events: AsyncIterable<SandboxExecStreamEvent>, abort: AbortController) {
-  let out!: ReadableStreamDefaultController<Uint8Array>;
-  let err!: ReadableStreamDefaultController<Uint8Array>;
-  const stdout = new ReadableStream<Uint8Array>({ start: (c) => void (out = c) });
-  const stderr = new ReadableStream<Uint8Array>({ start: (c) => void (err = c) });
+  const out = byteChannel();
+  const err = byteChannel();
   const exited = (async () => {
-    let code = 255;
+    let code = SANDBOX_LOST_EXIT_CODE;
     try {
       for await (const event of events) {
-        if (event.type === "stdout") out.enqueue(event.data);
-        else if (event.type === "stderr") err.enqueue(event.data);
-        else code = event.result.status === "exited" ? event.result.exitCode : 124;
+        if (event.type === "stdout") out.push(event.data);
+        else if (event.type === "stderr") err.push(event.data);
+        else {
+          code =
+            event.result.status === "exited" ? event.result.exitCode : SANDBOX_TIMEOUT_EXIT_CODE;
+        }
       }
     } catch (error) {
-      // The sandbox went away mid-command: report it where the agent will read it.
-      const text = error instanceof Error ? error.message : String(error);
-      err.enqueue(new TextEncoder().encode(`\nsandbox error: ${text}\n`));
+      // A command we aborted on purpose is not an error worth reporting to the agent.
+      if (!abort.signal.aborted) {
+        // The sandbox went away mid-command: report it where the agent will read it.
+        const text = error instanceof Error ? error.message : String(error);
+        err.push(new TextEncoder().encode(`\nsandbox error: ${text}\n`));
+      }
     } finally {
       out.close();
       err.close();
@@ -77,8 +113,8 @@ function toProcess(events: AsyncIterable<SandboxExecStreamEvent>, abort: AbortCo
     return code;
   })();
   const process: RunningProcess = {
-    stdout,
-    stderr,
+    stdout: out.stream,
+    stderr: err.stream,
     exited,
     // Aborting the call has the daemon stop the command; SIGTERM and SIGKILL are the same to it.
     signal: () => abort.abort(),
@@ -86,9 +122,67 @@ function toProcess(events: AsyncIterable<SandboxExecStreamEvent>, abort: AbortCo
   return process;
 }
 
+type DockerRunInput = {
+  name: string;
+  threadId: string;
+  image: string;
+  /** The thread's workspace on this machine. */
+  root: string;
+  /** How the container reaches this machine. */
+  host: string;
+  hubPort: number;
+  token: string;
+  memoryMb: number;
+  cpus: number;
+  pidsLimit: number;
+  /** `uid:gid` to run as, so files written to the bind mount belong to the host user. */
+  user?: string;
+};
+
+// The `docker run` arguments for one thread's container.
+export function dockerRunArgs(input: DockerRunInput) {
+  const args = [
+    "run",
+    "-d",
+    "--name",
+    input.name,
+    "--label",
+    "aven.sandbox=1",
+    "--label",
+    `aven.thread=${input.threadId}`,
+    "--add-host",
+    `${input.host}:host-gateway`,
+    "--memory",
+    `${input.memoryMb}m`,
+    "--cpus",
+    String(input.cpus),
+    "--pids-limit",
+    String(input.pidsLimit),
+    "--shm-size",
+    "512m",
+    "--security-opt",
+    "no-new-privileges",
+    "-v",
+    `${input.root}:${WORKDIR}`,
+    "-e",
+    `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
+    "-e",
+    `ANVIA_SANDBOX_TOKEN=${input.token}`,
+    "-e",
+    `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
+    "-e",
+    `ANVIA_SANDBOX_COMMAND_TIMEOUT_MS=${DAEMON_COMMAND_TIMEOUT_MS}`,
+  ];
+  if (input.user) args.push("--user", input.user);
+  args.push(input.image);
+  return args;
+}
+
 /** What a runner needs to run a thread: its workspace, where commands run, and extra tools. */
 export interface ThreadWorkspaces {
   acquire(thread: { id: string }): Promise<ThreadSandbox>;
+  /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
+  release(threadId: string): Promise<void>;
   dispose(): Promise<void>;
 }
 
@@ -99,27 +193,32 @@ export interface ThreadWorkspaces {
 // A daemon in the container dials out to a hub in this process, authenticated by a one-container
 // token; the control plane is not involved.
 export class Sandboxes implements ThreadWorkspaces {
+  #config: SandboxConfig;
   #hub: RemoteSandboxHub;
   #port: number;
-  #tokens = new Map<string, string>();
+  #tokens: Map<string, string>;
+  #run: Docker;
   #running = new Set<string>();
   #roots = new Map<string, string>();
   #starting = new Map<string, Promise<void>>();
-  #run: NonNullable<SandboxConfig["docker"]>;
 
   private constructor(
-    private config: SandboxConfig,
+    config: SandboxConfig,
     hub: RemoteSandboxHub,
     port: number,
+    tokens: Map<string, string>,
   ) {
+    this.#config = config;
     this.#hub = hub;
     this.#port = port;
+    this.#tokens = tokens;
     this.#run = config.docker ?? docker;
   }
 
   // Fails now, with what to do about it, rather than on the first run.
   static async start(config: SandboxConfig) {
-    const check = await (config.docker ?? docker)(["image", "inspect", config.image]).catch(() => ({
+    const run = config.docker ?? docker;
+    const check = await run(["image", "inspect", config.image]).catch(() => ({
       code: 1,
       stdout: "",
       stderr: "docker is not installed or not running",
@@ -136,12 +235,11 @@ export class Sandboxes implements ThreadWorkspaces {
         const sandboxId = tokens.get(token);
         return sandboxId ? { sandboxId } : null;
       },
-      connectTimeoutMs: 90_000,
+      connectTimeoutMs: config.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS,
     });
     // The container reaches this port through the host gateway, so it cannot be loopback-only.
     const { port } = await hub.listen({ host: "0.0.0.0", port: 0, path: "/daemon" });
-    const sandboxes = new Sandboxes(config, hub, port);
-    sandboxes.#tokens = tokens;
+    const sandboxes = new Sandboxes(config, hub, port, tokens);
     // Containers left by a crashed runtime would hold project directories open.
     await sandboxes.#removeStale();
     return sandboxes;
@@ -170,15 +268,22 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async release(threadId: string) {
-    this.#running.delete(threadId);
+    // A container that is still starting would otherwise come up after we removed it.
+    await this.#starting.get(threadId)?.catch(() => undefined);
     this.#roots.delete(threadId);
-    for (const [token, id] of this.#tokens) if (id === threadId) this.#tokens.delete(token);
+    await this.#teardown(threadId);
+  }
+
+  async #teardown(threadId: string) {
+    this.#running.delete(threadId);
+    this.#dropTokens(threadId);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
   }
 
   async dispose() {
-    await Promise.all([...this.#running.keys()].map((id) => this.release(id)));
+    const threads = new Set([...this.#running, ...this.#starting.keys()]);
+    await Promise.all([...threads].map((id) => this.release(id)));
     await this.#hub.close();
   }
 
@@ -187,7 +292,7 @@ export class Sandboxes implements ThreadWorkspaces {
   async #workspace(threadId: string) {
     const known = this.#roots.get(threadId);
     if (known) return known;
-    const home = this.config.home ?? join(homedir(), ".aven", "runtime");
+    const home = this.#config.home ?? join(homedir(), ".aven", "runtime");
     const dir = join(home, "workspaces", threadId);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
@@ -205,7 +310,9 @@ export class Sandboxes implements ThreadWorkspaces {
     if (ids.length > 0) await this.#run(["rm", "-f", ...ids]);
   }
 
-  // Starts the thread's container once, even when several runs ask at the same time.
+  // Starts the thread's container once, even when several runs ask at the same time, and
+  // resolves only when its daemon is connected: a run that finds the container running but not
+  // yet connected must wait for it, never restart it.
   #ensure(threadId: string, root: string) {
     if (this.#running.has(threadId) && this.#hub.isConnected(threadId)) return Promise.resolve();
     let starting = this.#starting.get(threadId);
@@ -222,52 +329,50 @@ export class Sandboxes implements ThreadWorkspaces {
     const name = this.#name(threadId);
     await this.#run(["rm", "-f", name]);
     const token = randomBytes(24).toString("base64url");
+    this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
-    const { memoryMb = 2048, cpus = 2, pidsLimit = 512 } = this.config;
-    const host = this.config.hostName ?? "host.docker.internal";
-    const args = [
-      "run",
-      "-d",
-      "--name",
+    const { memoryMb = 2048, cpus = 2, pidsLimit = 512 } = this.#config;
+    const args = dockerRunArgs({
       name,
-      "--label",
-      "aven.sandbox=1",
-      "--label",
-      `aven.thread=${threadId}`,
-      "--add-host",
-      `${host}:host-gateway`,
-      "--memory",
-      `${memoryMb}m`,
-      "--cpus",
-      String(cpus),
-      "--pids-limit",
-      String(pidsLimit),
-      "--shm-size",
-      "512m",
-      "--security-opt",
-      "no-new-privileges",
-      "-v",
-      `${root}:${WORKDIR}`,
-      "-e",
-      `ANVIA_CONTROL_URL=ws://${host}:${this.#port}/daemon`,
-      "-e",
-      `ANVIA_SANDBOX_TOKEN=${token}`,
-      "-e",
-      `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
-      "-e",
-      `ANVIA_SANDBOX_COMMAND_TIMEOUT_MS=${DAEMON_COMMAND_TIMEOUT_MS}`,
-    ];
-    // On Linux a bind mount keeps host ownership, so files must be written as the host user.
-    if (process.platform === "linux" && process.getuid && process.getgid) {
-      args.push("--user", `${process.getuid()}:${process.getgid()}`);
-    }
-    args.push(this.config.image);
-
+      threadId,
+      image: this.#config.image,
+      root,
+      host: this.#config.hostName ?? "host.docker.internal",
+      hubPort: this.#port,
+      token,
+      memoryMb,
+      cpus,
+      pidsLimit,
+      user: hostUser(),
+    });
     const started = await this.#run(args);
     if (started.code !== 0) {
       this.#tokens.delete(token);
       throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
     }
     this.#running.add(threadId);
+    await this.#awaitDaemon(threadId);
   }
+
+  async #awaitDaemon(threadId: string) {
+    const timeoutMs = this.#config.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    const deadline = Date.now() + timeoutMs;
+    while (!this.#hub.isConnected(threadId)) {
+      if (Date.now() >= deadline) {
+        await this.#teardown(threadId);
+        throw new Error(`The sandbox did not connect within ${Math.round(timeoutMs / 1000)}s`);
+      }
+      await Bun.sleep(CONNECT_POLL_MS);
+    }
+  }
+
+  #dropTokens(threadId: string) {
+    for (const [token, id] of this.#tokens) if (id === threadId) this.#tokens.delete(token);
+  }
+}
+
+// On Linux a bind mount keeps host ownership, so files must be written as the host user.
+function hostUser() {
+  if (process.platform !== "linux" || !process.getuid || !process.getgid) return undefined;
+  return `${process.getuid()}:${process.getgid()}`;
 }

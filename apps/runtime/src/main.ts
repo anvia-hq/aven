@@ -15,24 +15,44 @@ const url = `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`
 // Every thread runs in its own container on this machine (decision 0010): Docker and the sandbox
 // image are required, and there is no mode that runs the agent's commands directly on this machine.
 const image = process.env.AVEN_SANDBOX_IMAGE || "aven-sandbox-desktop:dev";
-const number = (value: string | undefined) => (value ? Number(value) : undefined);
+
+// An unset variable is fine; a set one that is not a positive number is a mistake worth stopping for.
+function positiveNumber(name: string) {
+  const value = process.env[name];
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(`${name} must be a positive number, got "${value}".`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+// Stopping works whichever comes first: a signal while still connecting, or a refusal.
+let runtime: ReturnType<typeof startRuntime> | undefined;
+let stopping: Promise<void> | undefined;
+function exit(code: number) {
+  stopping ??= (async () => {
+    // Background commands the agent started are process groups; stop them with the runtime.
+    await runtime?.stop();
+    process.exit(code);
+  })();
+  return stopping;
+}
+process.on("SIGINT", () => void exit(0));
+process.on("SIGTERM", () => void exit(0));
+
 const sandbox = await Sandboxes.start({
   image,
   home: process.env.AVEN_RUNTIME_HOME || undefined,
-  memoryMb: number(process.env.AVEN_SANDBOX_MEMORY_MB),
-  cpus: number(process.env.AVEN_SANDBOX_CPUS),
+  memoryMb: positiveNumber("AVEN_SANDBOX_MEMORY_MB"),
+  cpus: positiveNumber("AVEN_SANDBOX_CPUS"),
 }).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
 
-// Background commands the agent started are process groups; stop them with the runtime.
-async function exit(code: number) {
-  await runtime.stop();
-  process.exit(code);
-}
-
-const runtime = startRuntime({
+runtime = startRuntime({
   url,
   token,
   sandbox,
@@ -44,6 +64,3 @@ const runtime = startRuntime({
 
 await runtime.ready;
 console.log(`runtime connected to ${base}`);
-
-process.on("SIGINT", () => void exit(0));
-process.on("SIGTERM", () => void exit(0));

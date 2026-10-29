@@ -6,9 +6,23 @@ import type {
   ToolResultOutput,
 } from "@anvia/core";
 
-import type { ChatMessage, DiffLine, MessagePart, RunEvent, ToolPart } from "@aven/protocol/events";
+import {
+  messageId,
+  type ChatMessage,
+  type DiffLine,
+  type MessagePart,
+  type RunEvent,
+  type ToolPart,
+} from "@aven/protocol/events";
 
-const MAX_OUTPUT_CHARS = 4000;
+import { EDIT_TOOL_NAME } from "./tools/edit";
+import { READ_TOOL_NAME } from "./tools/read";
+import { SHELL_KILL_TOOL_NAME, SHELL_OUTPUT_TOOL_NAME, SHELL_TOOL_NAME } from "./tools/shell";
+import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
+import { WRITE_TOOL_NAME } from "./tools/write";
+
+// What a client is sent of a tool result; the model sees the full output (see MAX_OUTPUT_CHARS in lib/truncate).
+const MAX_UI_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -19,16 +33,16 @@ const asString = (value: unknown) => (typeof value === "string" ? value : "");
 export function toolTarget(name: string, input: unknown) {
   const args = asRecord(input);
   switch (name) {
-    case "read":
-    case "write":
-    case "edit":
+    case READ_TOOL_NAME:
+    case WRITE_TOOL_NAME:
+    case EDIT_TOOL_NAME:
       return asString(args.path);
-    case "shell":
+    case SHELL_TOOL_NAME:
       return asString(args.command);
-    case "web_search":
+    case WEB_SEARCH_TOOL_NAME:
       return asString(args.query);
-    case "shell_output":
-    case "shell_kill":
+    case SHELL_OUTPUT_TOOL_NAME:
+    case SHELL_KILL_TOOL_NAME:
       return asString(args.jobId);
     default:
       return "";
@@ -53,7 +67,7 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
     target: toolTarget(call.toolName, call.input),
     status: "running",
   };
-  if (call.toolName === "edit") {
+  if (call.toolName === EDIT_TOOL_NAME) {
     const diff = editDiff(call.input);
     if (diff) tool.diff = diff;
   }
@@ -61,8 +75,8 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
 }
 
 function clip(text: string) {
-  return text.length > MAX_OUTPUT_CHARS
-    ? `${text.slice(0, MAX_OUTPUT_CHARS)}\n… [truncated]`
+  return text.length > MAX_UI_OUTPUT_CHARS
+    ? `${text.slice(0, MAX_UI_OUTPUT_CHARS)}\n… [truncated]`
     : text;
 }
 
@@ -93,9 +107,15 @@ export function projectToolOutput(output: ToolResultOutput): {
             .join(""),
         ),
       };
-    default:
+    case "execution-denied":
       return { status: "error", output: output.reason ?? "Tool call was denied" };
+    default:
+      return assertNever(output);
   }
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled tool result: ${JSON.stringify(value)}`);
 }
 
 // Only these run events ever reach a client. Turn events carry full history and the system prompt,
@@ -135,7 +155,7 @@ function assistantParts(content: string | readonly AssistantContentPart[]): Mess
 export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
   const chat: ChatMessage[] = [];
   const add = (role: ChatMessage["role"], parts: MessagePart[]) => {
-    chat.push({ id: `m-${chat.length}`, role, parts });
+    chat.push({ id: messageId(chat.length), role, parts });
   };
   const lastAssistant = () => (chat.at(-1)?.role === "assistant" ? chat.at(-1) : undefined);
 
@@ -155,7 +175,9 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
           (candidate) => candidate.type === "tool" && candidate.tool.id === part.toolCallId,
         );
         if (target?.type === "tool") {
-          Object.assign(target.tool, projectToolOutput(part.output));
+          const { status, output } = projectToolOutput(part.output);
+          target.tool.status = status;
+          target.tool.output = output;
         }
       }
     }

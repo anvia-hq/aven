@@ -45,6 +45,23 @@ describe("shell (foreground)", () => {
     );
   });
 
+  test("says when the working directory does not exist", async () => {
+    const { shell } = createShellTools({ root, jobs });
+    await expect(Promise.resolve(shell.call({ command: "pwd", workdir: "nope" }))).rejects.toThrow(
+      "Working directory not found: nope",
+    );
+  });
+
+  test("a call that was already aborted does not leave its command running", async () => {
+    const { shell } = createShellTools({ root, jobs });
+    const abort = new AbortController();
+    abort.abort();
+    const started = Date.now();
+    const result = await shell.call({ command: "sleep 30" }, { abortSignal: abort.signal });
+    expect(result.status).toBe("killed");
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+
   test("kills the whole process group on timeout", async () => {
     const { shell } = createShellTools({ root, jobs });
     const started = Date.now();

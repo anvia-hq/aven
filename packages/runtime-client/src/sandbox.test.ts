@@ -5,15 +5,87 @@ import { join } from "node:path";
 
 import { JobRegistry } from "@aven/agents/jobs/job-registry";
 
-import { containerPath, Sandboxes } from "./sandbox";
+import { containerPath, dockerRunArgs, Sandboxes } from "./sandbox";
 
 describe("containerPath", () => {
   test("maps the project directory and what is under it to a path inside the workspace", () => {
     expect(containerPath("/home/me/app", "/home/me/app")).toBe(".");
     expect(containerPath("/home/me/app", "/home/me/app/src/lib")).toBe("src/lib");
-    // Anything outside the project is not reachable in the container.
-    expect(containerPath("/home/me/app", "/etc")).toBe(".");
-    expect(containerPath("/home/me/app", "/home/me/app-other")).toBe(".");
+  });
+
+  test("refuses a path outside the project instead of running somewhere else", () => {
+    expect(() => containerPath("/home/me/app", "/etc")).toThrow("outside the workspace");
+    expect(() => containerPath("/home/me/app", "/home/me/app-other")).toThrow("outside");
+  });
+});
+
+describe("dockerRunArgs", () => {
+  const input = {
+    name: "aven-sandbox-t1",
+    threadId: "t1",
+    image: "img:dev",
+    root: "/data/t1",
+    host: "host.docker.internal",
+    hubPort: 4321,
+    token: "tok",
+    memoryMb: 1024,
+    cpus: 1,
+    pidsLimit: 64,
+  };
+
+  test("mounts the workspace, limits resources and points the daemon at the hub", () => {
+    const args = dockerRunArgs(input);
+    expect(args.slice(0, 4)).toEqual(["run", "-d", "--name", "aven-sandbox-t1"]);
+    expect(args).toContain("/data/t1:/workspace");
+    expect(args).toContain("1024m");
+    expect(args).toContain("ANVIA_CONTROL_URL=ws://host.docker.internal:4321/daemon");
+    expect(args).toContain("ANVIA_SANDBOX_TOKEN=tok");
+    expect(args.at(-1)).toBe("img:dev");
+    expect(args).not.toContain("--user");
+  });
+
+  test("runs as the host user when given one", () => {
+    const args = dockerRunArgs({ ...input, user: "1000:1000" });
+    expect(args.slice(-3)).toEqual(["--user", "1000:1000", "img:dev"]);
+  });
+});
+
+describe("Sandboxes starting a container", () => {
+  const fakeDocker = () => {
+    const calls: string[][] = [];
+    const docker = async (args: string[]) => {
+      calls.push(args);
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    return { calls, docker };
+  };
+
+  test("a second acquire while the container is starting waits for it and does not restart it", async () => {
+    const { calls, docker } = fakeDocker();
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    // No daemon ever dials in here, so both give up on the connect timeout.
+    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 400 });
+    const thread = { id: "thread-1" };
+    const first = sandboxes.acquire(thread);
+    await Bun.sleep(150);
+    const second = sandboxes.acquire(thread);
+    const results = await Promise.allSettled([first, second]);
+
+    expect(results.map((result) => result.status)).toEqual(["rejected", "rejected"]);
+    expect(String((results[0] as PromiseRejectedResult).reason)).toContain("did not connect");
+    expect(calls.filter((args) => args[0] === "run")).toHaveLength(1);
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+  });
+
+  test("gives up on a container whose daemon never connects and removes it", async () => {
+    const { calls, docker } = fakeDocker();
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const sandboxes = await Sandboxes.start({ image: "img", home, docker, connectTimeoutMs: 100 });
+    await expect(sandboxes.acquire({ id: "t2" })).rejects.toThrow("did not connect");
+    expect(calls.at(-1)).toEqual(["rm", "-f", "aven-sandbox-t2"]);
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
   });
 });
 

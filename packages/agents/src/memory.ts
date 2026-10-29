@@ -1,4 +1,8 @@
-import { DrizzleMemoryStore, drizzleMemorySchema } from "@anvia/memory-drizzle";
+import {
+  DrizzleMemoryStore,
+  drizzleMemorySchema,
+  type DrizzleMemoryDatabaseLike,
+} from "@anvia/memory-drizzle";
 
 // Durable conversation memory in our Postgres (tables live in @aven/db, schema/anvia-memory.ts).
 // The db is passed in so this package never opens a connection of its own.
@@ -6,7 +10,7 @@ import { DrizzleMemoryStore, drizzleMemorySchema } from "@anvia/memory-drizzle";
 // Sessions are keyed by `sessionId` plus `metadata.organizationId`, so a thread id from another
 // organization can never resolve to this one's history. Pass both on every run:
 //   agent.generate({ prompt, session: { sessionId: threadId, metadata: { organizationId } } })
-export function createMemoryStore(db: object) {
+export function createMemoryStore(db: DrizzleMemoryDatabaseLike) {
   return new DrizzleMemoryStore({
     db,
     schema: drizzleMemorySchema,
@@ -14,4 +18,4 @@ export function createMemoryStore(db: object) {
   });
 }
 
-export type MemoryStore = ReturnType<typeof createMemoryStore>;
+export type ConversationStore = ReturnType<typeof createMemoryStore>;

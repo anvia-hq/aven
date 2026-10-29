@@ -24,6 +24,11 @@ export function hostWorkspaces(
       }
       return { root, launcher: hostLauncher, tools: [] };
     },
+    async release(threadId) {
+      const root = roots.get(threadId);
+      roots.delete(threadId);
+      if (root) await rm(root, { recursive: true, force: true });
+    },
     async dispose() {
       await Promise.all(
         [...roots.values()].map((root) => rm(root, { recursive: true, force: true })),
