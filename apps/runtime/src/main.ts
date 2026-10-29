@@ -11,22 +11,23 @@ if (!base || !token) {
 }
 
 const url = `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;
+// Background commands the agent started are process groups; stop them with the runtime.
+async function exit(code: number) {
+  await runtime.stop();
+  process.exit(code);
+}
+
 const runtime = startRuntime({
   url,
   token,
   onRefused: (reason) => {
     console.error(`The control plane refused this runtime: ${reason}`);
-    process.exit(1);
+    void exit(1);
   },
 });
 
 await runtime.ready;
 console.log(`runtime connected to ${base}`);
 
-// Background commands the agent started are process groups; stop them with the runtime.
-const shutdown = async () => {
-  await runtime.stop();
-  process.exit(0);
-};
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void exit(0));
+process.on("SIGTERM", () => void exit(0));
