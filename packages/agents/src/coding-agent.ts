@@ -1,5 +1,6 @@
 import { Agent, type AnyTool, type CompletionModel, type MemoryStore } from "@anvia/core";
 
+import { withoutStoredReasoning } from "./memory";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { createWebSearchTool } from "./tools/web-search";
 
@@ -25,6 +26,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
   if (options.webSearch ?? Boolean(process.env.TAVILY_API_KEY)) tools.push(createWebSearchTool());
 
   const { model, providerOptions, controls } = resolveModel(options);
+  const store = historyStoreFor(options);
   const agent = new Agent({
     id: "coding",
     model,
@@ -33,10 +35,17 @@ export function createCodingAgent(options: CodingAgentOptions) {
     controls,
     maxTurns: options.maxTurns ?? 50,
     tools,
-    memory: options.memory && { store: options.memory, savePolicy: "turn" },
+    memory: store && { store, savePolicy: "turn" },
   });
 
   return { agent };
+}
+
+// Anthropic rejects thinking replayed from an earlier run, so its runs start without it.
+export function historyStoreFor(options: CodingAgentOptions) {
+  const { memory } = options;
+  const anthropic = "provider" in options && options.provider === "anthropic";
+  return memory && anthropic ? withoutStoredReasoning(memory) : memory;
 }
 
 // A ready model carries no provider settings; a model config also picks the provider's options

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createTool } from "@anvia/core";
+import { createTool, type CompletionModel, type MemoryStore, type Message } from "@anvia/core";
 import { z } from "zod";
 
-import { createCodingAgent } from "./coding-agent";
+import { createCodingAgent, historyStoreFor } from "./coding-agent";
 import { createMemoryStore } from "./memory";
 import { createModel } from "./model";
 import { createEditTool } from "./tools/edit";
@@ -101,5 +101,73 @@ describe("createModel", () => {
     } finally {
       Object.assign(process.env, saved);
     }
+  });
+});
+
+describe("history from earlier runs", () => {
+  const reasoning = {
+    type: "reasoning" as const,
+    text: "",
+    details: [{ type: "text" as const, text: "", signature: "sig" }],
+  };
+  const history: Message[] = [
+    { role: "user", content: "What is this app about?" },
+    {
+      role: "assistant",
+      content: [reasoning, { type: "text", text: "It is a monorepo." }],
+    },
+  ];
+  const store: MemoryStore = {
+    load: async () => history,
+    append: async () => undefined,
+    clear: async () => undefined,
+  };
+
+  // What the agent would send to the provider: a local server stands in for it and refuses.
+  async function sentToAnthropic() {
+    const bodies: unknown[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        if (new URL(request.url).pathname.endsWith("/messages")) bodies.push(await request.json());
+        return new Response("refused on purpose", { status: 400 });
+      },
+    });
+    try {
+      const { agent } = createCodingAgent({
+        provider: "anthropic",
+        apiKey: "sk-local",
+        baseUrl: `http://localhost:${server.port}`,
+        tools: [],
+        webSearch: false,
+        memory: store,
+      });
+      const stream = agent.stream({
+        prompt: "Thanks",
+        session: { sessionId: "thread", metadata: { organizationId: "org" } },
+      });
+      await (async () => {
+        for await (const _ of stream) void _;
+        await stream.result;
+      })().catch(() => undefined);
+    } finally {
+      await server.stop(true);
+    }
+    return JSON.stringify(bodies[0]);
+  }
+
+  test("an Anthropic run does not replay thinking from earlier runs", async () => {
+    const body = await sentToAnthropic();
+    expect(body).toContain("It is a monorepo.");
+    expect(body).not.toContain("thinking");
+  });
+
+  test("only an Anthropic run gets the reasoning-free history; every other store is used as it is", () => {
+    const tools = [] as const;
+    expect(historyStoreFor({ provider: "anthropic", tools, memory: store })).not.toBe(store);
+    expect(historyStoreFor({ provider: "openai", tools, memory: store })).toBe(store);
+    expect(historyStoreFor({ provider: "openai-compatible", tools, memory: store })).toBe(store);
+    expect(historyStoreFor({ model: {} as CompletionModel, tools, memory: store })).toBe(store);
+    expect(historyStoreFor({ provider: "anthropic", tools })).toBeUndefined();
   });
 });
