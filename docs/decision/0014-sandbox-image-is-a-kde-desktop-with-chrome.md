@@ -9,8 +9,9 @@ The sandbox image (`aven-sandbox-desktop:dev`) had a hand-themed openbox and pla
 ## Decision
 
 - **The image is built on `lscr.io/linuxserver/webtop:debian-kde`** (pinned by digest) and adds Node, `@anvia/sandbox`, Xvnc, xdotool, ImageMagick, tmux and git. Its own s6 services are not used: `ENTRYPOINT` is reset and the daemon owns the display.
-- **The daemon starts `openbox-session` as its window manager when it finds one.** The image ships a script of that name that starts Plasma (`dbus-run-session -- startplasma-x11`, software rendering). The daemon is unchanged.
+- **The daemon starts `openbox-session` as its window manager when it finds one.** The image ships a script of that name that starts Plasma (software rendering) and KWin. The daemon is unchanged.
 - **The browser is Google Chrome on amd64 and Chromium on arm64**, because Google ships no Chrome for arm64 Linux. `anvia-chromium` picks whichever is installed and adds `--no-sandbox`; the stock launchers are pointed at it so the panel icon works. Real Chrome needs an amd64 image (`docker build --platform linux/amd64`) on an amd64 runner.
+- **KWin is started by `openbox-session`, after `plasmashell` is up.** Plasma starts its window manager through systemd, which a container lacks, so without this windows have no title bar, buttons or way to be moved. `KWIN_COMPOSE` must not be set: forcing an OpenGL mode makes KWin exit, which leaves no window manager.
 - The base image's `dockremap` user (uid 1000) is replaced by `node`, which owns `/workspace` as before.
 
 ## Consequences

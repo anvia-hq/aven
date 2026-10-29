@@ -4,6 +4,14 @@
 export XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true
 export XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
-# No GPU in a container: draw with software rendering.
-export LIBGL_ALWAYS_SOFTWARE=1 KWIN_COMPOSE=O2ES QT_QUICK_BACKEND=software
-exec dbus-run-session -- startplasma-x11
+# No GPU in a container: draw with software rendering. KWIN_COMPOSE must not be forced to an
+# OpenGL mode: KWin then exits, and no window manager is left.
+export LIBGL_ALWAYS_SOFTWARE=1 QT_QUICK_BACKEND=software
+# Plasma starts its window manager (KWin) through systemd, which a container does not have, so
+# without this windows have no title bar, buttons or way to be moved. KWin has to come up after the
+# session has started: one started alongside it does not take over windows.
+# It waits at most two and a half minutes, so a Plasma that never starts does not leave this spinning.
+exec dbus-run-session -- sh -c '
+  (timeout 150 sh -c "until pgrep -x plasmashell >/dev/null; do sleep 0.5; done" &&
+    exec kwin_x11 --replace >/dev/null 2>&1) &
+  exec startplasma-x11'

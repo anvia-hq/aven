@@ -246,6 +246,17 @@ live("a sandbox (real docker)", () => {
     viewer.close();
   }, 90_000);
 
+  test("a window manager keeps running on the desktop, so windows have title bars and can be moved", async () => {
+    await sandboxes.desktop(threadId)!.start();
+    const running = async () => (await run("pgrep -x kwin_x11")).exitCode === 0;
+    // KWin comes up once the Plasma session has; one forced into a mode it cannot run exits at once.
+    const deadline = Date.now() + 80_000;
+    while (!(await running()) && Date.now() < deadline) await Bun.sleep(1_000);
+    expect(await running()).toBe(true);
+    await Bun.sleep(5_000);
+    expect(await running()).toBe(true);
+  }, 120_000);
+
   test("it is not the host: no host paths, and no credentials in the environment", async () => {
     expect((await run(`ls ${root} 2>&1`)).stdout).toContain("No such file");
     const env = (await run("env")).stdout;
