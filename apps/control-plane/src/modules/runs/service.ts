@@ -223,12 +223,11 @@ export class RunManager {
   }
 
   #channel(thread: RunThread): Channel {
-    let channel = this.#channels.get(thread.id);
-    if (channel) return channel;
+    const existing = this.#channels.get(thread.id);
+    if (existing) return existing;
 
-    const created: Channel = { thread, subscribers: new Set() };
-    this.#channels.set(thread.id, created);
-    channel = created;
+    const channel: Channel = { thread, subscribers: new Set() };
+    this.#channels.set(thread.id, channel);
     return channel;
   }
 
@@ -255,9 +254,9 @@ export class RunManager {
   }
 
   #emit(channel: Channel, event: RunEvent) {
-    if (channel.run) channel.run.messages = applyEvent(channel.run.messages, event);
-    if (event.type === "usage" && channel.run)
-      channel.run.usage = applyUsage(channel.run.usage, event);
+    const { run } = channel;
+    if (run) run.messages = applyEvent(run.messages, event);
+    if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 
