@@ -12,6 +12,7 @@ import { toast } from "@/components/toast";
 import { api, errorMessage, postJson } from "@/lib/api";
 
 import type { ChatMessage, QuestionAnswer, RunSelection } from "../types";
+import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
 function parseEvent(data: string): RunEvent | null {
@@ -68,6 +69,7 @@ export function useThread(threadId: string) {
     async (prompt: string, selection: RunSelection = {}) => {
       try {
         await postJson(`/threads/${threadId}/messages`, { prompt, ...selection });
+        rememberModelSelection(threadId, selection);
         return true;
       } catch (failure) {
         toast.add({

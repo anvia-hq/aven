@@ -86,4 +86,46 @@ test.describe("prompt composer", () => {
       reasoningEffort: "high",
     });
   });
+
+  test("each thread keeps its own model, and a new thread starts from the last one picked", async ({
+    page,
+  }) => {
+    await registerUser(page, "cmp", "Composer User");
+    await page.request.post("/api/providers", {
+      data: { kind: "openai", name: "Work", apiKey: "sk-test-1234" },
+    });
+    await page.route("**/api/providers/*/models", (route) =>
+      route.fulfill({ json: { models: ["gpt-4o", "o3"], efforts: {} } }),
+    );
+    await page.route("**/api/threads/*/messages", (route) =>
+      route.fulfill({ status: 202, json: { ok: true } }),
+    );
+    await createProject(page);
+    const menu = page.getByRole("button", { name: "Model and reasoning effort" });
+
+    async function startOn(model: string) {
+      await page.goto("/threads");
+      await page.getByRole("combobox", { name: "Project" }).click();
+      await page.getByRole("option", { name: "composer-app" }).click();
+      await menu.click();
+      await page.getByRole("option", { name: model }).click();
+      await page.keyboard.press("Escape");
+      await page.getByLabel("Prompt").fill(`on ${model}`);
+      await page.getByRole("button", { name: "Send" }).click();
+      await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+      return page.url();
+    }
+
+    const first = await startOn("o3");
+    const second = await startOn("gpt-4o");
+
+    // Picking gpt-4o for the second thread did not move the first one.
+    await page.goto(first);
+    await expect(menu).toContainText("o3");
+    await page.goto(second);
+    await expect(menu).toContainText("gpt-4o");
+    // A new thread starts from the last choice.
+    await page.goto("/threads");
+    await expect(menu).toContainText("gpt-4o");
+  });
 });

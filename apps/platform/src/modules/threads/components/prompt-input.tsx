@@ -16,6 +16,8 @@ type Props = {
   running?: boolean;
   onStop?: () => void;
   autoFocus?: boolean;
+  /** The thread this composer replies in, whose own model choice it uses; none for a new thread. */
+  threadId?: string;
 };
 
 export function PromptInput({
@@ -24,10 +26,11 @@ export function PromptInput({
   running = false,
   onStop,
   autoFocus,
+  threadId,
 }: Props) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
-  const model = useModelSelection();
+  const model = useModelSelection(threadId);
   const canSend = value.trim().length > 0 && !running && !sending;
 
   async function submit() {

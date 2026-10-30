@@ -1,21 +1,66 @@
-import { getDefaultStore, useAtom } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 
 import { useProviderModels } from "@/modules/settings/hooks/use-provider-models";
 import { useProviders } from "@/modules/settings/hooks/use-providers";
 
-import { modelSelectionAtom } from "../atoms/model-selection-atom";
+import {
+  modelSelectionAtom,
+  threadModelSelectionsAtom,
+  type SavedSelection,
+} from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
 
-export function resetModelSelection() {
-  getDefaultStore().set(modelSelectionAtom, null);
+// Threads whose choice is remembered; past this, the least recently used are forgotten.
+const MAX_THREADS = 200;
+
+function withThread(
+  all: Record<string, SavedSelection>,
+  threadId: string,
+  selection: SavedSelection,
+) {
+  const next = { ...all };
+  // Removed first, so it moves to the end as the most recently used.
+  delete next[threadId];
+  next[threadId] = selection;
+  const ids = Object.keys(next);
+  for (const id of ids.slice(0, Math.max(0, ids.length - MAX_THREADS))) delete next[id];
+  return next;
 }
 
-// The composer's provider, model and reasoning effort. The provider is the saved one if it still
-// exists, else the user's default. Effort levels belong to the model, so they come from its
-// listing and reset to the model's own default whenever the model changes.
-export function useModelSelection() {
+// A choice is the thread's own, and also what the next new thread starts with.
+function save(threadId: string | undefined, selection: SavedSelection) {
+  const store = getDefaultStore();
+  store.set(modelSelectionAtom, selection);
+  if (threadId) store.set(threadModelSelectionsAtom, (all) => withThread(all, threadId, selection));
+}
+
+export function resetModelSelection() {
+  const store = getDefaultStore();
+  store.set(modelSelectionAtom, null);
+  store.set(threadModelSelectionsAtom, {});
+}
+
+// Keeps a thread on what its message was sent with, so a choice made in another thread never moves
+// it. Called when a thread is started and when a message is sent in one.
+export function rememberModelSelection(threadId: string, selection: RunSelection) {
+  if (!selection.providerId) return;
+  save(threadId, {
+    providerId: selection.providerId,
+    modelId: selection.modelId,
+    effort: selection.reasoningEffort,
+  });
+}
+
+// The composer's provider, model and reasoning effort, for a thread (`threadId`) or for a new one.
+// A thread uses its own choice, else the last one made anywhere. The provider is the saved one if
+// it still exists, else the user's default. Effort levels belong to the model, so they come from
+// its listing and reset to the model's own default whenever the model changes.
+export function useModelSelection(threadId?: string) {
   const { providers, loaded } = useProviders();
-  const [saved, setSaved] = useAtom(modelSelectionAtom);
+  const last = useAtomValue(modelSelectionAtom);
+  const threads = useAtomValue(threadModelSelectionsAtom);
+  const saved = (threadId ? threads[threadId] : undefined) ?? last;
+  const setSaved = (selection: SavedSelection) => save(threadId, selection);
 
   const provider =
     providers.find((item) => item.id === saved?.providerId) ??

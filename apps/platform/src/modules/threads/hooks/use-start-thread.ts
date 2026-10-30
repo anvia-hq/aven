@@ -4,6 +4,7 @@ import { toast } from "@/components/toast";
 import { errorMessage, postJson } from "@/lib/api";
 
 import type { RunSelection, Thread } from "../types";
+import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
 const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt);
@@ -43,6 +44,7 @@ export function useStartThread() {
   return async (projectId: string, prompt: string, selection: RunSelection = {}) => {
     const thread = await createThread(projectId, prompt);
     if (!thread) return false;
+    rememberModelSelection(thread.id, selection);
     await sendFirstPrompt(thread, prompt, selection);
     await refresh();
     await navigate({ to: "/threads/$threadId", params: { threadId: thread.id } });

@@ -83,9 +83,15 @@ function ThreadPage() {
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
                     {question ? (
-                      <QuestionForm key={question.id} tool={question} onSubmit={answer} />
+                      <QuestionForm
+                        key={question.id}
+                        tool={question}
+                        threadId={thread.id}
+                        onSubmit={answer}
+                      />
                     ) : (
                       <PromptInput
+                        threadId={thread.id}
                         running={running}
                         onStop={cancel}
                         placeholder="Reply to the agent…"
