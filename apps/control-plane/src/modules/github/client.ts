@@ -328,15 +328,24 @@ export class GithubClient {
     return { id: user.id, login: user.login, name: user.name };
   }
 
-  // GitHub answers a refused code or refresh token with a 200 and an `error`, so a grant is what
-  // has an access token in it.
+  // GitHub answers a refused code or refresh token with a 200 (or a 4xx) and an `error`, so a grant
+  // is what has an access token in it.
   async #grant(params: Record<string, string>): Promise<GithubUserGrant | null> {
     const { clientId, clientSecret, webUrl } = this.#config();
     const exchange = await this.fetchImpl(`${webUrl}/login/oauth/access_token`, {
       method: "POST",
       headers: { accept: "application/json", "content-type": "application/json" },
       body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, ...params }),
+    }).catch(() => {
+      throw new UnavailableError("Could not reach GitHub");
     });
+    // A GitHub that is down has not refused anything: the caller must not take it for a refusal.
+    if (exchange.status >= 500) {
+      throw new GithubApiError(
+        `GitHub answered ${exchange.status} for POST /login/oauth/access_token`,
+        exchange.status,
+      );
+    }
     const granted = (await exchange.json().catch(() => ({}))) as {
       access_token?: string;
       expires_in?: number;

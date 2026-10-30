@@ -128,6 +128,38 @@ run("a person's GitHub connection (postgres)", async () => {
     expect(github.refreshed).toEqual(["ghr_one"]);
   });
 
+  test("a GitHub that cannot be reached keeps the connection, and a later try renews it", async () => {
+    const id = await person("h");
+    let down = true;
+    const refreshed: string[] = [];
+    const tokens = createGithubUserTokens({
+      userProfile: async () => profile,
+      refreshGrant: async (token) => {
+        refreshed.push(token);
+        if (down) throw new Error("GitHub is down");
+        return grant({ accessToken: "ghu_back", refreshToken: "ghr_back" });
+      },
+    });
+    await tokens.connect(id, grant({ expiresAt: Date.now() + 5_000 }));
+
+    await expect(tokens.use(id)).rejects.toThrow("GitHub is down");
+    expect(await tokens.status(id)).toEqual({ login: "ada" });
+
+    down = false;
+    expect((await tokens.use(id))?.token).toBe("ghu_back");
+    expect(refreshed).toEqual(["ghr_one", "ghr_one"]);
+  });
+
+  test("a token with minutes left is renewed before a ship that could outlast it", async () => {
+    const id = await person("i");
+    const github = fakeClient(() => grant({ accessToken: "ghu_new", refreshToken: "ghr_new" }));
+    const tokens = createGithubUserTokens(github.client);
+    await tokens.connect(id, grant({ expiresAt: Date.now() + 5 * 60_000 }));
+
+    expect((await tokens.use(id))?.token).toBe("ghu_new");
+    expect(github.refreshed).toEqual(["ghr_one"]);
+  });
+
   test("a token that cannot be read (the key changed) leaves the person not connected", async () => {
     const id = await person("g");
     const tokens = createGithubUserTokens(fakeClient(() => null).client);

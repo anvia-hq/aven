@@ -19,7 +19,7 @@ Status: accepted. Supersedes the "Clone only" bullet of 0013; the rest of 0013 s
 
 ## Consequences
 
-- A leaked clone token still cannot write; a push token is minted per ship, limited to the one repository, and held by the runner only while it pushes (GitHub itself keeps it valid for up to an hour, so it is never cached or logged).
+- A leaked clone token still cannot write. What pushes is the person's own token (0041), held by the runner only while it pushes and never cached or logged.
 - Re-shipping after more work is a fast-forward push to the same branch and updates the same pull request.
 - Every ship costs one model call on the shipper's provider, and a re-ship drafts again (the text of a pull request that is already open is left alone).
 - Wire version 17: runners and control planes must be upgraded together.

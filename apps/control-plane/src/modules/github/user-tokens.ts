@@ -11,8 +11,9 @@ export type GithubIdentity = { id: number; login: string; name: string | null };
 /** A person's usable GitHub token, and whose it is. */
 export type GithubUserToken = { token: string; identity: GithubIdentity };
 
-// A token is renewed when it has less than this left, so one never expires in flight.
-const REFRESH_MARGIN_MS = 60_000;
+// A token is renewed when it has less than this left, so one never expires in the middle of a ship,
+// which can take a few minutes (drafting, then pushing).
+const REFRESH_MARGIN_MS = 10 * 60_000;
 
 const identityOf = (row: GithubUserTokenRow): GithubIdentity => ({
   id: row.githubUserId,
@@ -47,22 +48,30 @@ export function createGithubUserTokens(
       .onConflictDoUpdate({ target: githubUserTokens.userId, set: values });
   };
 
-  // Gets a new token with the stored refresh token. One GitHub refuses, or one that cannot be
-  // read, leaves the person not connected.
+  // A connection that cannot work any more is forgotten: the person connects again.
+  const drop = async (userId: string, reason: unknown) => {
+    console.warn(`The GitHub connection of user ${userId} was dropped:`, reason);
+    await remove(userId);
+    return null;
+  };
+
+  // Gets a new token with the stored refresh token. A refresh token GitHub refuses, one that has
+  // expired or one that cannot be read leaves the person not connected. Not reaching GitHub is
+  // not a refusal: it throws and the connection stays, to be tried again.
   async function renew(row: GithubUserTokenRow) {
     const { userId } = row;
+    const expired = row.refreshExpiresAt !== null && row.refreshExpiresAt.getTime() <= Date.now();
+    if (!row.refreshTokenEncrypted || expired) return drop(userId, "no usable refresh token");
+    let refreshToken: string;
     try {
-      const expired = row.refreshExpiresAt !== null && row.refreshExpiresAt.getTime() <= Date.now();
-      if (!row.refreshTokenEncrypted || expired) throw new Error("no usable refresh token");
-      const grant = await client.refreshGrant(decryptSecret(row.refreshTokenEncrypted));
-      if (!grant) throw new Error("GitHub refused the refresh token");
-      await store(userId, grant, identityOf(row));
-      return { token: grant.accessToken, identity: identityOf(row) };
+      refreshToken = decryptSecret(row.refreshTokenEncrypted);
     } catch (error) {
-      console.warn(`The GitHub connection of user ${userId} was dropped:`, error);
-      await remove(userId);
-      return null;
+      return drop(userId, error);
     }
+    const grant = await client.refreshGrant(refreshToken);
+    if (!grant) return drop(userId, "GitHub refused the refresh token");
+    await store(userId, grant, identityOf(row));
+    return { token: grant.accessToken, identity: identityOf(row) };
   }
 
   return {
@@ -97,9 +106,7 @@ export function createGithubUserTokens(
         try {
           return { token: decryptSecret(row.accessTokenEncrypted), identity: identityOf(row) };
         } catch (error) {
-          console.warn(`The GitHub token of user ${userId} could not be read:`, error);
-          await remove(userId);
-          return null;
+          return drop(userId, error);
         }
       }
       const running = renewing.get(userId) ?? renew(row).finally(() => renewing.delete(userId));

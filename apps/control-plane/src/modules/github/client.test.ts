@@ -188,6 +188,16 @@ describe("a person's GitHub token", () => {
     expect(await client.refreshGrant("bad")).toBeNull();
   });
 
+  test("a GitHub that is down, or cannot be reached, is an error and not a refusal", async () => {
+    const down = new GithubClient(config, async () => new Response("bad gateway", { status: 502 }));
+    await expect(down.refreshGrant("ghr_a")).rejects.toThrow("GitHub answered 502");
+
+    const unreachable = new GithubClient(config, async () => {
+      throw new TypeError("fetch failed");
+    });
+    await expect(unreachable.refreshGrant("ghr_a")).rejects.toThrow("Could not reach GitHub");
+  });
+
   test("a refresh token is exchanged for a new grant", async () => {
     const github = fakeGithub({
       [oauth]: { access_token: "ghu_b", refresh_token: "ghr_b", expires_in: 28800 },

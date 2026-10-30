@@ -112,8 +112,9 @@ export const ARTIFACT_NAME =
 export type ShipCallMethod = "repo.push";
 
 /**
- * Commit what a thread changed and push its branch. `token` is minted for this push and limited to
- * the one repository; the runner never keeps it. `branch` is the thread's own branch.
+ * Commit what a thread changed and push its branch. `token` is the person's own GitHub token
+ * (decision 0041), handed over for this call: the runner never keeps it. `branch` is the thread's
+ * own branch.
  */
 export type RepoPushParams = {
   threadId: string;
