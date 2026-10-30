@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 
 import { errorsRouter } from "./errors";
+import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
@@ -19,6 +20,7 @@ import { usersRouter } from "./modules/users/router";
 const app = new Elysia()
   .use(errorsRouter)
   .get("/health", () => ({ status: "ok" }))
+  .use(artifactsRouter(runtimeHub))
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))

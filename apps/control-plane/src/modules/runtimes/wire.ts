@@ -1,5 +1,11 @@
 import type { MemoryCompactionMessage, Message } from "@anvia/core";
-import type { CallMethod, RunOutcome, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import {
+  ARTIFACT_MEDIA_TYPES,
+  ARTIFACT_NAME,
+  type CallMethod,
+  type RunOutcome,
+  type RuntimeToControlPlane,
+} from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 // A runtime is not trusted, so every frame it sends is checked before anything acts on it.
@@ -23,6 +29,13 @@ const callMethods = [
   "repo.access",
 ] as const satisfies readonly CallMethod[];
 
+// An image the agent showed: a name the runner gave it, so a client can only ask for it by that.
+const toolImage = z.object({
+  name: z.string().regex(ARTIFACT_NAME),
+  mediaType: z.enum(ARTIFACT_MEDIA_TYPES),
+  caption: z.string().max(500).optional(),
+});
+
 // The events a runtime's agent projects. Anything else (a snapshot, `done`) is the control plane's
 // to send, so a runtime cannot forge a client's view of the conversation beyond its own run.
 const toolPart = z.object({
@@ -42,6 +55,7 @@ const toolPart = z.object({
       }),
     )
     .optional(),
+  image: toolImage.optional(),
 });
 
 const tokenCount = z.number().int().nonnegative();
@@ -55,6 +69,7 @@ const runEvent = z.discriminatedUnion("type", [
     id: z.string(),
     status: z.enum(["done", "error"]),
     output: z.string().optional(),
+    image: toolImage.optional(),
   }),
   z.object({
     type: z.literal("usage"),

@@ -1,4 +1,5 @@
 import type {
+  ArtifactsReadParams,
   DesktopCallParams,
   DiffGetParams,
   FilesCallParams,
@@ -13,7 +14,7 @@ import { RuntimeOfflineError, type RuntimeHub } from "./hub";
 /** A runner's answer about a thread that may have no workspace or sandbox yet. */
 export type Available<T> = { available: false } | ({ available: true } & T);
 
-type CallParams = DesktopCallParams | DiffGetParams | FilesCallParams;
+type CallParams = ArtifactsReadParams | DesktopCallParams | DiffGetParams | FilesCallParams;
 
 // Asking the runner that holds a thread about it (its files, changes, desktop). Every call starts
 // from a thread of the caller's organization.
