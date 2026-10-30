@@ -23,6 +23,9 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   memory?: MemoryStore;
 };
 
+// Model requests that fail transiently (rate limits, dropped connections) are tried this many times.
+const MODEL_REQUEST_ATTEMPTS = 5;
+
 const INSTRUCTIONS = `You are a coding agent working in a sandbox with a project workspace.
 - Read files before editing them. Prefer read_file, edit and write_file over shell commands for files.
 - Make small, focused changes and verify them by running the project's checks with exec_command.
@@ -46,6 +49,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     providerOptions,
     controls,
     maxTurns: options.maxTurns ?? 50,
+    retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
     tools,
     memory: store && {
       store,
