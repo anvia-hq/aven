@@ -11,6 +11,7 @@ import type { SandboxDesktop } from "@anvia/sandbox";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
+import { runCommand, type CommandOutput } from "./run-command";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 
 // Where a runner keeps its workspaces and its journal of runs.
@@ -42,7 +43,7 @@ export type SandboxConfig = {
   /** Replaced in tests. */
   git?: Git;
   /** Replaced in tests. */
-  docker?: (args: string[]) => Promise<{ code: number; stdout: string; stderr: string }>;
+  docker?: (args: string[]) => Promise<CommandOutput>;
 };
 
 export type ThreadSandbox = {
@@ -60,15 +61,7 @@ const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
 
-async function docker(args: string[]) {
-  const proc = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  return { code, stdout, stderr };
-}
+const docker: Docker = (args) => runCommand(["docker", ...args]);
 
 type DockerRunInput = {
   name: string;
@@ -138,6 +131,50 @@ function safeJson(text: string): Record<string, unknown> {
   }
 }
 
+/** What a runner runs on its own machine: Docker for the containers, git for the clones. */
+type HostCommands = { docker: Docker; git: Git };
+
+// What a runner needs before it can take a thread: the image, git, and a platform and runtime
+// Docker knows. Each failure says what to do about it.
+async function preflight(config: SandboxConfig, { docker: run, git: gitRun }: HostCommands) {
+  const check = await run(["image", "inspect", config.image]).catch(() => ({
+    code: 1,
+    stdout: "",
+    stderr: "docker is not installed or not running",
+  }));
+  if (check.code !== 0) {
+    throw new Error(
+      `The sandbox image ${config.image} is not available (${check.stderr.trim() || "unknown error"}). ` +
+        `Docker must be running; build the image with: docker build -t ${config.image} apps/runtime/sandbox-image`,
+    );
+  }
+  const gitCheck = await gitRun(["--version"], { cwd: "." }).catch(() => ({
+    code: 1,
+    stdout: "",
+    stderr: "git is not installed",
+  }));
+  if (gitCheck.code !== 0) {
+    throw new Error("git is required to clone each thread's repository but was not found");
+  }
+  if (config.platform !== undefined && !PLATFORM_PATTERN.test(config.platform)) {
+    throw new Error(
+      `The sandbox platform "${config.platform}" is not one Docker knows; use linux/amd64 or linux/arm64`,
+    );
+  }
+  if (config.runtime !== undefined) {
+    if (!RUNTIME_PATTERN.test(config.runtime)) {
+      throw new Error(`The sandbox runtime "${config.runtime}" is not a Docker runtime name`);
+    }
+    const info = await run(["info", "--format", "{{json .Runtimes}}"]);
+    const registered: Record<string, unknown> = info.code === 0 ? safeJson(info.stdout) : {};
+    if (!(config.runtime in registered)) {
+      throw new Error(
+        `The Docker daemon has no runtime "${config.runtime}" (AVEN_SANDBOX_RUNTIME); for gVisor, install runsc and register it with \`runsc install\`, then restart Docker`,
+      );
+    }
+  }
+}
+
 /** What a runner needs to run a thread: the sandbox its agent works in. */
 export interface ThreadWorkspaces {
   /**
@@ -166,6 +203,7 @@ export class Sandboxes implements ThreadWorkspaces {
   #port: number;
   #tokens: Map<string, string>;
   #run: Docker;
+  #git: Git;
   #running = new Set<string>();
   // A thread's workspace, while it is being cloned or once it is ready, so two runs never clone twice.
   #roots = new Map<string, Promise<string>>();
@@ -173,6 +211,7 @@ export class Sandboxes implements ThreadWorkspaces {
 
   private constructor(
     config: SandboxConfig,
+    commands: HostCommands,
     hub: RemoteSandboxHub,
     port: number,
     tokens: Map<string, string>,
@@ -181,48 +220,14 @@ export class Sandboxes implements ThreadWorkspaces {
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
-    this.#run = config.docker ?? docker;
+    this.#run = commands.docker;
+    this.#git = commands.git;
   }
 
   // Fails now, with what to do about it, rather than on the first run.
   static async start(config: SandboxConfig) {
-    const run = config.docker ?? docker;
-    const check = await run(["image", "inspect", config.image]).catch(() => ({
-      code: 1,
-      stdout: "",
-      stderr: "docker is not installed or not running",
-    }));
-    if (check.code !== 0) {
-      throw new Error(
-        `The sandbox image ${config.image} is not available (${check.stderr.trim() || "unknown error"}). ` +
-          `Docker must be running; build the image with: docker build -t ${config.image} apps/runtime/sandbox-image`,
-      );
-    }
-    const gitCheck = await (config.git ?? git)(["--version"], { cwd: "." }).catch(() => ({
-      code: 1,
-      stdout: "",
-      stderr: "git is not installed",
-    }));
-    if (gitCheck.code !== 0) {
-      throw new Error("git is required to clone each thread's repository but was not found");
-    }
-    if (config.platform !== undefined && !PLATFORM_PATTERN.test(config.platform)) {
-      throw new Error(
-        `The sandbox platform "${config.platform}" is not one Docker knows; use linux/amd64 or linux/arm64`,
-      );
-    }
-    if (config.runtime !== undefined) {
-      if (!RUNTIME_PATTERN.test(config.runtime)) {
-        throw new Error(`The sandbox runtime "${config.runtime}" is not a Docker runtime name`);
-      }
-      const info = await run(["info", "--format", "{{json .Runtimes}}"]);
-      const registered: Record<string, unknown> = info.code === 0 ? safeJson(info.stdout) : {};
-      if (!(config.runtime in registered)) {
-        throw new Error(
-          `The Docker daemon has no runtime "${config.runtime}" (AVEN_SANDBOX_RUNTIME); for gVisor, install runsc and register it with \`runsc install\`, then restart Docker`,
-        );
-      }
-    }
+    const commands = { docker: config.docker ?? docker, git: config.git ?? git };
+    await preflight(config, commands);
     const tokens = new Map<string, string>();
     const hub = new RemoteSandboxHub({
       authorize: (token) => {
@@ -233,7 +238,7 @@ export class Sandboxes implements ThreadWorkspaces {
     });
     // The container reaches this port through the host gateway, so it cannot be loopback-only.
     const { port } = await hub.listen({ host: "0.0.0.0", port: 0, path: "/daemon" });
-    const sandboxes = new Sandboxes(config, hub, port, tokens);
+    const sandboxes = new Sandboxes(config, commands, hub, port, tokens);
     // Containers left by a crashed runtime would hold project directories open.
     await sandboxes.#removeStale();
     return sandboxes;
@@ -259,7 +264,7 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async workspace(threadId: string) {
-    const dir = join(runtimeHome(this.#config.home), "workspaces", threadId);
+    const dir = this.#workspaceDir(threadId);
     return (await isCloned(dir)) ? realpath(dir) : undefined;
   }
 
@@ -302,13 +307,16 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async #prepare(threadId: string, repo: () => Promise<RepoAccess>) {
-    const home = runtimeHome(this.#config.home);
-    const dir = join(home, "workspaces", threadId);
+    const dir = this.#workspaceDir(threadId);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
     if (await isCloned(root)) return root;
-    await cloneRepository(root, threadId, await repo(), this.#config.git ?? git);
+    await cloneRepository(root, threadId, await repo(), this.#git);
     return root;
+  }
+
+  #workspaceDir(threadId: string) {
+    return join(runtimeHome(this.#config.home), "workspaces", threadId);
   }
 
   #name(threadId: string) {

@@ -4,25 +4,18 @@ import { errorMessage } from "@aven/agents/values";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
+import { runCommand, type CommandOutput } from "./run-command";
+
 export type Git = (
   args: string[],
   options: { cwd: string; env?: Record<string, string> },
-) => Promise<{ code: number; stdout: string; stderr: string }>;
+) => Promise<CommandOutput>;
 
-export const git: Git = async (args, { cwd, env }) => {
-  const proc = Bun.spawn(["git", ...args], {
+export const git: Git = (args, { cwd, env }) =>
+  runCommand(["git", ...args], {
     cwd,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
-    stdout: "pipe",
-    stderr: "pipe",
   });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  return { code, stdout, stderr };
-};
 
 // The header is limited to the clone URL's own origin, so a redirect elsewhere never sees the token.
 // A path (a local test remote) has no origin and gets the unscoped key.
