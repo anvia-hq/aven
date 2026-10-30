@@ -11,13 +11,21 @@ export type RunThread = {
 
 export type StartRunInput = { thread: RunThread; prompt: string; model?: ModelConfig };
 
+/** A run that suspended on the agent's question, resumed with the user's answers. Both are opaque Anvia values. */
+export type ResumeRunInput = {
+  thread: RunThread;
+  continuation: unknown;
+  response: unknown;
+  model?: ModelConfig;
+};
+
 // One agent run as the control plane sees it. Everything a run needs from the machine it runs on
 // (the agent loop, its tools, the sandbox) stays behind this handle (decisions 0008 and 0010).
 export type RuntimeRun = {
   /** The run's progress as protocol events; ends when the run does. */
   events: AsyncIterable<RunEvent>;
-  /** How the run ended; `type` is "response" for a normal finish. */
-  result: Promise<{ type: string }>;
+  /** How the run ended; `type` is "response" for a normal finish, "interaction" when it waits for the user's answer (with the `continuation` to resume it). */
+  result: Promise<{ type: string; continuation?: unknown }>;
   cancel(reason: string): void;
 };
 
@@ -28,5 +36,7 @@ export interface Runtime {
    * means the environment's.
    */
   start(input: StartRunInput): RuntimeRun;
+  /** Continues a run that ended as "interaction". Throws like `start`. */
+  resume(input: ResumeRunInput): RuntimeRun;
   dispose(): void;
 }

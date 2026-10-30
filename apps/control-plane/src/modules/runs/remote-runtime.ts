@@ -1,11 +1,12 @@
 import type { RunEvent } from "@aven/protocol/events";
-import type { ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import type { ControlPlaneToRuntime, RunModel } from "@aven/protocol/runtime-wire";
+import type { ModelConfig } from "@aven/agents/model";
 
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
-import type { Runtime, RunThread, RuntimeRun, StartRunInput } from "./runtime";
+import type { ResumeRunInput, Runtime, RunThread, RuntimeRun, StartRunInput } from "./runtime";
 
-type RunResult = { type: string };
+type RunResult = { type: string; continuation?: unknown };
 
 // A minimal async queue: `events` for a run is fed by the connection and consumed by RunManager.
 class EventQueue implements AsyncIterable<RunEvent> {
@@ -58,6 +59,31 @@ export class RemoteRuntime implements Runtime {
   ) {}
 
   start({ thread, prompt, model }: StartRunInput): RuntimeRun {
+    return this.#launch(thread, model, (runId, runModel) => ({
+      type: "run.start",
+      runId,
+      thread: { id: thread.id, organizationId: thread.organizationId },
+      prompt,
+      model: runModel,
+    }));
+  }
+
+  resume({ thread, continuation, response, model }: ResumeRunInput): RuntimeRun {
+    return this.#launch(thread, model, (runId, runModel) => ({
+      type: "run.resume",
+      runId,
+      thread: { id: thread.id, organizationId: thread.organizationId },
+      continuation,
+      response,
+      model: runModel,
+    }));
+  }
+
+  #launch(
+    thread: RunThread,
+    model: ModelConfig | undefined,
+    message: (runId: string, runModel: RunModel) => ControlPlaneToRuntime,
+  ): RuntimeRun {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
     // Throws before anything starts if the model cannot be used (no key); the runtime gets a token, not the key.
@@ -68,13 +94,7 @@ export class RemoteRuntime implements Runtime {
     result.promise.catch(() => undefined);
 
     connection.startRun(runId, thread, this.#sink(runId, queue, result));
-    this.#post(connection, runId, {
-      type: "run.start",
-      runId,
-      thread: { id: thread.id, organizationId: thread.organizationId },
-      prompt,
-      model: runModel,
-    });
+    this.#post(connection, runId, message(runId, runModel));
 
     return {
       events: queue,
@@ -100,11 +120,11 @@ export class RemoteRuntime implements Runtime {
   #sink(runId: string, queue: EventQueue, result: PromiseWithResolvers<RunResult>) {
     return {
       event: (event: RunEvent) => queue.push(event),
-      end: (outcome: string, error?: string) => {
+      end: (outcome: string, error?: string, continuation?: unknown) => {
         this.gateway.revoke(runId);
         queue.close();
         if (error) result.reject(new Error(error));
-        else result.resolve({ type: outcome });
+        else result.resolve({ type: outcome, continuation });
       },
       lost: (error: Error) => {
         this.gateway.revoke(runId);

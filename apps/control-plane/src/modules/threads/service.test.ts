@@ -40,4 +40,22 @@ run("threadsService (postgres)", async () => {
     ).rejects.toBeInstanceOf(ProjectNotFoundError);
     expect((await threadsService.list(orgA)).length).toBe(before);
   });
+
+  test("a waiting question is kept server-side: clients only learn that there is one", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    expect(thread.awaitingAnswer).toBe(false);
+
+    await threadsService.saveContinuation(thread.id, { state: "private" });
+    const read = await threadsService.get(orgA, thread.id);
+    expect(read?.awaitingAnswer).toBe(true);
+    expect(read).not.toHaveProperty("pendingContinuation");
+    expect(
+      (await threadsService.list(orgA)).find((row) => row.id === thread.id),
+    ).not.toHaveProperty("pendingContinuation");
+    expect(await threadsService.continuation(thread.id)).toEqual({ state: "private" });
+
+    await threadsService.clearContinuation(thread.id);
+    expect((await threadsService.get(orgA, thread.id))?.awaitingAnswer).toBe(false);
+    expect(await threadsService.continuation(thread.id)).toBeNull();
+  });
 });

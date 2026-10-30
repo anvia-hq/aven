@@ -4,6 +4,7 @@ import type { ConversationStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/protocol/events";
 
 import { UnavailableError } from "../../errors";
+import { memoryContinuations } from "../../testing/memory-continuations";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RunBusyError, RunManager } from "./service";
 
@@ -23,11 +24,12 @@ function liveRun() {
 }
 
 function managerRunning(handle: RuntimeRun, store: Partial<ConversationStore> = {}) {
-  const runtime: Runtime = { start: () => handle, dispose: () => undefined };
+  const runtime: Runtime = { start: () => handle, resume: () => handle, dispose: () => undefined };
   return new RunManager({
     store: { load: async () => [], ...store } as ConversationStore,
     runtime,
     onRunFinished: () => undefined,
+    continuations: memoryContinuations().store,
   });
 }
 

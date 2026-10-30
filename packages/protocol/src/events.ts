@@ -3,6 +3,20 @@
 
 export type DiffLine = { type: "add" | "del" | "ctx"; text: string };
 
+export type QuestionChoice = { label: string; value: string };
+
+/** One thing the agent asks the user. With `choices` the user picks one; `allowCustom` also lets them write their own answer. */
+export type QuestionPrompt = {
+  id: string;
+  text: string;
+  choices?: QuestionChoice[];
+  allowCustom?: boolean;
+};
+
+export type QuestionAnswer = { questionId: string; value: string };
+
+export const QUESTION_TOOL_NAME = "ask_user";
+
 export type ToolPart = {
   id: string;
   name: string;
@@ -11,6 +25,8 @@ export type ToolPart = {
   status: "running" | "done" | "error";
   diff?: DiffLine[];
   output?: string;
+  /** Set on the agent's question tool: what it asks. While `status` is "running" and no run is live, it awaits an answer. */
+  questions?: QuestionPrompt[];
 };
 
 /** How much of the model's context window the conversation fills, as of the latest model call. */
@@ -66,12 +82,41 @@ export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
   | { type: "snapshot"; messages: ChatMessage[]; running: boolean; usage?: ThreadUsage }
   | { type: "run_start"; prompt: string }
+  /** The user answered the agent's question and its run continues in the same assistant message. */
+  | { type: "run_resume" }
   | { type: "text"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
   | { type: "tool_end"; id: string; status: "done" | "error"; output?: string }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "done" }
   | { type: "error"; message: string };
+
+/** The question the agent is waiting on, if the transcript ends in one; answer it to continue the thread. */
+export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | undefined {
+  const part = messages.at(-1)?.parts.at(-1);
+  if (part?.type !== "tool") return undefined;
+  const { tool } = part;
+  return tool.name === QUESTION_TOOL_NAME && tool.questions && tool.status === "running"
+    ? tool
+    : undefined;
+}
+
+/** What the user answered, read from the finished question tool's output; empty if it has none. */
+export function questionAnswers(tool: ToolPart): QuestionAnswer[] {
+  if (tool.status !== "done" || !tool.output) return [];
+  try {
+    const parsed: unknown = JSON.parse(tool.output);
+    const answers = (parsed as { answers?: unknown } | null)?.answers;
+    return Array.isArray(answers)
+      ? answers.filter(
+          (answer): answer is QuestionAnswer =>
+            typeof answer?.questionId === "string" && typeof answer?.value === "string",
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 /** The id of the message at `index` in a transcript; the reducer and stored-message rebuilds agree on it. */
 export function messageId(index: number) {
@@ -83,6 +128,7 @@ export function isRunning(previous: boolean, event: RunEvent) {
     case "snapshot":
       return event.running;
     case "run_start":
+    case "run_resume":
       return true;
     case "done":
     case "error":

@@ -1,0 +1,1 @@
+ALTER TABLE "threads" ADD COLUMN "pending_continuation" jsonb;

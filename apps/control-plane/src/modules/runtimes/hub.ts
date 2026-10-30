@@ -36,7 +36,7 @@ export class RuntimeOfflineError extends UnavailableError {
 export type RunSink = {
   event(event: RunEvent): void;
   /** The run finished; `error` is set when the runtime reports it threw. */
-  end(outcome: string, error?: string): void;
+  end(outcome: string, error?: string, continuation?: unknown): void;
   /** The connection dropped before the run ended. */
   lost(error: Error): void;
 };
@@ -190,7 +190,7 @@ export class RuntimeConnection {
         this.#runs.get(message.runId)?.sink.event(message.event);
         return;
       case "run.end":
-        this.#endRun(message.runId, message.outcome, message.error);
+        this.#endRun(message.runId, message.outcome, message.error, message.continuation);
         return;
       case "call":
         await this.#answer(message.id, message.method, message.params);
@@ -217,11 +217,11 @@ export class RuntimeConnection {
     }
   }
 
-  #endRun(runId: string, outcome: string, error?: string) {
+  #endRun(runId: string, outcome: string, error?: string, continuation?: unknown) {
     const run = this.#runs.get(runId);
     if (!run) return;
     this.#runs.delete(runId);
-    run.sink.end(outcome, error);
+    run.sink.end(outcome, error, continuation);
   }
 
   async #answer(id: string, method: CallMethod, params: unknown) {

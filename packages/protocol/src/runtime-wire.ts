@@ -63,6 +63,15 @@ export type ControlPlaneToRuntime =
       prompt: string;
       model?: RunModel;
     }
+  /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
+  | {
+      type: "run.resume";
+      runId: string;
+      thread: RunThreadInfo;
+      continuation: unknown;
+      response: unknown;
+      model?: RunModel;
+    }
   | { type: "run.cancel"; runId: string; reason: string }
   /** Start streaming the thread's desktop (VNC) as binary frames for `viewerId`. */
   | { type: "desktop.open"; viewerId: string; threadId: string }
@@ -73,8 +82,8 @@ export type ControlPlaneToRuntime =
 export type RuntimeToControlPlane =
   | { type: "hello"; version: number }
   | { type: "run.event"; runId: string; event: RunEvent }
-  /** The run is over. `error` carries the message when `outcome` is "error". */
-  | { type: "run.end"; runId: string; outcome: RunOutcome; error?: string }
+  /** The run is over. `error` carries the message when `outcome` is "error"; `continuation` what resumes a run that is "interaction" (it waits for the user's answer). */
+  | { type: "run.end"; runId: string; outcome: RunOutcome; error?: string; continuation?: unknown }
   | { type: "call"; id: string; method: CallMethod; params: unknown }
   /** The viewer is streaming; its bytes follow as binary frames. */
   | { type: "desktop.opened"; viewerId: string }
@@ -131,10 +140,11 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
-// Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
+// Version 8: a run can suspend on the agent's question and be resumed with the answer, `run.resume`
+// (decision 0020). Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
 // build as an Anthropic client. Version 6: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix`
 // (decision 0018). Version 5: a runtime can stream a thread's desktop to a viewer and answer the control plane's
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 7;
+export const WIRE_VERSION = 8;

@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { projects } from "./projects";
@@ -29,6 +29,11 @@ export const threads = pgTable(
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),
+    /**
+     * What resumes the run that stopped to ask the user a question (Anvia's continuation, opaque
+     * here; decision 0020). Set while the question is unanswered, otherwise null.
+     */
+    pendingContinuation: jsonb("pending_continuation"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

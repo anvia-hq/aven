@@ -6,6 +6,7 @@ import { startRuntime } from "@aven/runtime-client/runner";
 import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
 import { Elysia } from "elysia";
 
+import { memoryContinuations } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RunGateway } from "../runtimes/gateway";
@@ -113,6 +114,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     store,
     runtime: new RemoteRuntime(hub, pointed),
     onRunFinished: () => undefined,
+    continuations: memoryContinuations().store,
   });
   const thread = {
     id: threadId,

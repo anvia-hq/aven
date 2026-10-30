@@ -1,4 +1,8 @@
 import type { AnyTool, MemoryStore } from "@anvia/core";
+import {
+  parseAgentContinuation,
+  parseAgentInteractionResponse,
+} from "@anvia/core/agent/interactions";
 import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
 import { projectStreamEvent } from "@aven/agents/projection";
 import {
@@ -179,8 +183,10 @@ export function startRuntime(options: RuntimeOptions) {
     await options.sandbox.release(threadId);
   }
 
-  async function runAgent(message: Extract<ControlPlaneToRuntime, { type: "run.start" }>) {
-    const { runId, thread, prompt, model } = message;
+  async function runAgent(
+    message: Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>,
+  ) {
+    const { runId, thread, model } = message;
     // Registered before the sandbox is awaited, so a cancel in that window is not lost.
     const live: LiveRun = { threadId: thread.id };
     runs.set(runId, live);
@@ -200,17 +206,34 @@ export function startRuntime(options: RuntimeOptions) {
         memory: createRemoteMemory(call, runId),
         model,
       });
-      const stream = agent.stream({
-        prompt,
-        session: { sessionId: thread.id, metadata: { organizationId: thread.organizationId } },
-      });
+      // A resumed run carries its own conversation state; the answer is delivered as the question's result.
+      const stream = agent.stream(
+        message.type === "run.start"
+          ? {
+              prompt: message.prompt,
+              session: {
+                sessionId: thread.id,
+                metadata: { organizationId: thread.organizationId },
+              },
+            }
+          : {
+              continuation: parseAgentContinuation(message.continuation),
+              response: parseAgentInteractionResponse(message.response),
+            },
+      );
       live.stream = stream;
       for await (const event of stream) {
         const projected = projectStreamEvent(event);
         if (projected) send({ type: "run.event", runId, event: projected });
       }
       const outcome = await stream.result;
-      sendOrWarn({ type: "run.end", runId, outcome: outcome.type });
+      sendOrWarn({
+        type: "run.end",
+        runId,
+        outcome: outcome.type,
+        // What resumes a run that stopped to ask the user; the control plane keeps it.
+        continuation: outcome.type === "interaction" ? outcome.continuation : undefined,
+      });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       sendOrWarn({ type: "run.end", runId, outcome: "error", error: text });
@@ -233,6 +256,7 @@ export function startRuntime(options: RuntimeOptions) {
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {
       case "run.start":
+      case "run.resume":
         void runAgent(message);
         return;
       case "run.cancel": {

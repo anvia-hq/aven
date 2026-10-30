@@ -111,7 +111,7 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 - Compaction: when the store supports it (the control plane's Drizzle store does, and a runner reaches it through `memory.snapshot` / `memory.replacePrefix`), history past 70% of the model's `contextWindow` is summarized by the run's own model (`compactionFor` in `coding-agent.ts`). Without a known context window, history is kept whole.
 - Nothing tells the agent a process ended; its instructions say to look with `read_process_logs`, `list_processes` and `wait_for_port`.
 - Memory: `createMemoryStore(db)` (`memory.ts`, `@anvia/memory-drizzle`) persists conversations in Postgres (an Anthropic run starts from that history without its thinking blocks, which the API rejects across runs: `docs/bugs/0001-anthropic-thinking-signature-across-runs.md`); pass `{ memory }` to `createCodingAgent` and a `session: { sessionId, metadata: { organizationId } }` on every run. Its tables live in `packages/db/src/schema/anvia-memory.ts`.
-- `createCodingAgent({ provider: "openai" | "anthropic" | "openai-compatible", tools })` (`coding-agent.ts`) assembles model + tools; `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
+- `createCodingAgent({ provider: "openai" | "anthropic" | "azure" | "openai-compatible", tools })` (`coding-agent.ts`) assembles model + tools, including `ask_user` (the agent asks the user: the run ends as `interaction`, the control plane keeps the continuation in `threads.pending_continuation`, and `POST /threads/:id/answer` resumes it with `run.resume`; decision 0020); `model.ts` reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
 - Tests are `bun:test` next to the code (`bun test packages/agents`).
 
 ## Docs

@@ -16,7 +16,8 @@ import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
 
-import { UnavailableError } from "../../errors";
+import { UnavailableError, UnprocessableError } from "../../errors";
+import { memoryContinuations } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
@@ -46,6 +47,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     }),
     revoke: () => undefined,
   };
+  const continuations = memoryContinuations();
   const hub = new RuntimeHub(store);
   const seed = await seedOrgPair();
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
@@ -80,6 +82,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       store,
       runtime: new RemoteRuntime(hub, scriptedGateway),
       onRunFinished,
+      continuations: continuations.store,
       ...extra,
     });
   };
@@ -169,6 +172,81 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       tool: { name: "read_file", target: "a.txt", status: "done" },
     });
     await until(() => finished > 0);
+  });
+
+  test("a question suspends the run; the answer resumes it in the same message", async () => {
+    const asked = {
+      id: "color",
+      text: "Which color?",
+      choices: [
+        { label: "Red", value: "red" },
+        { label: "Blue", value: "blue" },
+      ],
+    };
+    const manager = await managerWith([
+      [
+        text("One thing."),
+        {
+          type: "tool-call",
+          toolCallId: "q1",
+          toolName: "ask_user",
+          input: { questions: [asked] },
+        },
+      ],
+      [text("Going with red.")],
+    ]);
+    const thread = newThread();
+    const client = attach(manager, thread);
+    await until(() => client.events.length > 0);
+
+    await manager.start(thread, "paint it");
+    await until(() => client.events.some((event) => event.type === "done"));
+    expect(client.events.map((event) => event.type)).toEqual([
+      "snapshot",
+      "run_start",
+      "text",
+      "tool_start",
+      "usage",
+      "done",
+    ]);
+    expect(manager.isRunning(thread.id)).toBe(false);
+
+    // The question is in the history, unanswered, and what resumes it is kept.
+    const waiting = await manager.history(thread);
+    expect(waiting.at(-1)?.parts.at(-1)).toMatchObject({
+      type: "tool",
+      tool: { name: "ask_user", status: "running", questions: [asked] },
+    });
+    const continuation = continuations.saved.get(thread.id);
+    expect(continuation).toBeDefined();
+
+    // Answers must be the questions' own.
+    await expect(
+      manager.answer(thread, continuation, [{ questionId: "nope", value: "red" }]),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    expect(continuations.saved.has(thread.id)).toBe(true);
+
+    const before = client.events.length;
+    await manager.answer(thread, continuation, [{ questionId: "color", value: "red" }]);
+    await until(() => client.events.slice(before).some((event) => event.type === "done"));
+    await client.detach();
+
+    expect(client.events.slice(before).map((event) => event.type)).toEqual([
+      "run_resume",
+      "tool_end",
+      "text",
+      "usage",
+      "done",
+    ]);
+    expect(continuations.saved.has(thread.id)).toBe(false);
+
+    const history = await manager.history(thread);
+    expect(history.map((message) => message.role)).toEqual(["user", "assistant"]);
+    expect(history[1]!.parts.map((part) => part.type)).toEqual(["text", "tool", "text"]);
+    expect(history[1]!.parts[1]).toMatchObject({
+      type: "tool",
+      tool: { name: "ask_user", status: "done" },
+    });
   });
 
   test("a client that joins mid-run gets the transcript so far, then the rest", async () => {

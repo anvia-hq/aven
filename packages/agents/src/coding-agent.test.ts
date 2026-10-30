@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createCodingAgent, historyStoreFor } from "./coding-agent";
 import { createMemoryStore } from "./memory";
 import { createModel } from "./model";
+import { scriptedModel, text } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 
 // Just enough surface for the store's constructor checks; nothing here touches a database.
@@ -27,6 +28,7 @@ describe("createCodingAgent", () => {
         apiKey: "test-key",
         tools: [echo],
         webSearch: false,
+        questions: false,
       });
       expect(agent.tools.map((tool) => tool.name)).toEqual(["echo"]);
     },
@@ -45,12 +47,60 @@ describe("createCodingAgent", () => {
     expect(agent.memory?.savePolicy).toBe("turn");
   });
 
+  test("gives the agent ask_user unless turned off", () => {
+    const base = { provider: "openai", apiKey: "test-key", tools: [], webSearch: false } as const;
+    expect(createCodingAgent(base).agent.tools.map((tool) => tool.name)).toEqual(["ask_user"]);
+    expect(createCodingAgent({ ...base, questions: false }).agent.tools).toEqual([]);
+  });
+
+  test("a question suspends the run and the answer resumes it", async () => {
+    const model = scriptedModel([
+      [
+        {
+          type: "tool-call",
+          toolCallId: "q1",
+          toolName: "ask_user",
+          input: {
+            questions: [
+              {
+                id: "color",
+                text: "Which color?",
+                choices: [
+                  { label: "Red", value: "red" },
+                  { label: "Blue", value: "blue" },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+      [text("Going with red")],
+    ]);
+    const { agent } = createCodingAgent({ model, tools: [], webSearch: false });
+
+    const first = agent.stream({ prompt: "paint it" });
+    for await (const _event of first);
+    const suspended = await first.result;
+    if (suspended.type !== "interaction")
+      throw new Error(`expected a suspension, got ${suspended.type}`);
+    expect(suspended.interaction.type).toBe("tool-question");
+
+    const second = agent.stream({
+      continuation: suspended.continuation,
+      response: { type: "tool-question", answers: [{ questionId: "color", value: "red" }] },
+    });
+    for await (const _event of second);
+    const done = await second.result;
+    expect(done.type).toBe("response");
+  });
+
   test("adds web_search when enabled", () => {
     const { agent } = createCodingAgent({
       provider: "openai",
       apiKey: "test-key",
       tools: [echo],
       webSearch: true,
+      questions: false,
     });
     expect(agent.tools.map((tool) => tool.name)).toEqual(["echo", "web_search"]);
   });

@@ -12,10 +12,12 @@ import {
   addUsage,
   messageId,
   NO_USAGE,
+  QUESTION_TOOL_NAME,
   type ChatMessage,
   type ContextUsage,
   type DiffLine,
   type MessagePart,
+  type QuestionPrompt,
   type RunEvent,
   type ThreadUsage,
   type TokenUsage,
@@ -60,6 +62,26 @@ function editDiff(input: unknown): DiffLine[] | undefined {
   );
 }
 
+// The questions of an `ask_user` call, as the model wrote them. Anything malformed is left out.
+function questionsOf(input: unknown): QuestionPrompt[] {
+  const { questions } = asRecord(input);
+  if (!Array.isArray(questions)) return [];
+  return questions.flatMap((entry): QuestionPrompt[] => {
+    const question = asRecord(entry);
+    if (typeof question.id !== "string" || typeof question.text !== "string") return [];
+    const choices = Array.isArray(question.choices)
+      ? question.choices.flatMap((choice) => {
+          const { label, value } = asRecord(choice);
+          return typeof label === "string" && typeof value === "string" ? [{ label, value }] : [];
+        })
+      : undefined;
+    const prompt: QuestionPrompt = { id: question.id, text: question.text };
+    if (choices?.length) prompt.choices = choices;
+    if (question.allowCustom === true) prompt.allowCustom = true;
+    return [prompt];
+  });
+}
+
 export function projectToolCall(call: ToolCallPart): ToolPart {
   const tool: ToolPart = {
     id: call.toolCallId,
@@ -71,6 +93,7 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
     const diff = editDiff(call.input);
     if (diff) tool.diff = diff;
   }
+  if (call.toolName === QUESTION_TOOL_NAME) tool.questions = questionsOf(call.input);
   return tool;
 }
 

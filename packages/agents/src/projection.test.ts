@@ -10,7 +10,13 @@ import {
   toolTarget,
   usageFromHistory,
 } from "./projection";
-import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
+import {
+  applyEvent,
+  pendingQuestion,
+  questionAnswers,
+  type ChatMessage,
+  type RunEvent,
+} from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 
@@ -204,5 +210,69 @@ describe("usage", () => {
       },
       context: { usedTokens: 4917, contextWindow: 1_000_000 },
     });
+  });
+});
+
+describe("questions", () => {
+  const asked = {
+    id: "color",
+    text: "Which color?",
+    choices: [
+      { label: "Red", value: "red" },
+      { label: "Blue", value: "blue" },
+    ],
+    allowCustom: true,
+  };
+  const call = {
+    type: "tool-call",
+    toolCallId: "q1",
+    toolName: "ask_user",
+    input: { questions: [asked] },
+  } as const;
+
+  test("an ask_user call carries its questions to clients", () => {
+    const event = projectStreamEvent({ type: "tool_call", toolCall: call } as never);
+    expect(event).toMatchObject({
+      type: "tool_start",
+      tool: { name: "ask_user", questions: [asked] },
+    });
+  });
+
+  test("a stored question without a result is pending, and with one it is answered", () => {
+    const pending = messagesToChat([
+      { role: "user", content: "paint it" },
+      { role: "assistant", content: [call] },
+    ]);
+    const tool = pendingQuestion(pending);
+    expect(tool?.questions).toEqual([asked]);
+
+    const answered = messagesToChat([
+      { role: "user", content: "paint it" },
+      { role: "assistant", content: [call] },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "q1",
+            toolName: "ask_user",
+            output: { type: "json", value: { answers: [{ questionId: "color", value: "red" }] } },
+          },
+        ],
+      },
+    ]);
+    expect(pendingQuestion(answered)).toBeUndefined();
+    const part = answered[1]?.parts[0];
+    expect(part?.type === "tool" && questionAnswers(part.tool)).toEqual([
+      { questionId: "color", value: "red" },
+    ]);
+  });
+
+  test("malformed questions are left out", () => {
+    const event = projectStreamEvent({
+      type: "tool_call",
+      toolCall: { ...call, input: { questions: [{ id: 1 }, { id: "ok", text: "Fine?" }] } },
+    } as never);
+    expect(event).toMatchObject({ tool: { questions: [{ id: "ok", text: "Fine?" }] } });
   });
 });

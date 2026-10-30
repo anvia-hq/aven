@@ -3,7 +3,14 @@ import { Elysia, sse, status } from "elysia";
 import { authRouter } from "../auth/router";
 import { providersService } from "../providers/service";
 import { runsService } from "../runs/service";
-import { createThreadBody, sendMessageBody, threadParams, updateThreadBody } from "./schema";
+import { ConflictError } from "../../errors";
+import {
+  answerQuestionBody,
+  createThreadBody,
+  sendMessageBody,
+  threadParams,
+  updateThreadBody,
+} from "./schema";
 import { threadsService } from "./service";
 
 export const threadsRouter = new Elysia({ prefix: "/threads" })
@@ -47,6 +54,8 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
     "/:id/messages",
     async ({ params, body, organizationId, user }) => {
       const thread = await threadsService.require(organizationId, params.id);
+      // The agent is waiting on its question; a message would leave it unanswered in the history.
+      if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
       const { prompt, ...selection } = body;
       // The sender's own provider; null falls back to the environment's shared one.
       const model = await providersService.resolveModel(user.id, selection);
@@ -54,6 +63,19 @@ export const threadsRouter = new Elysia({ prefix: "/threads" })
       return status(202, { ok: true });
     },
     { auth: true, org: true, params: threadParams, body: sendMessageBody },
+  )
+  .post(
+    "/:id/answer",
+    async ({ params, body, organizationId, user }) => {
+      const thread = await threadsService.require(organizationId, params.id);
+      const continuation = await threadsService.continuation(thread.id);
+      if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
+      const { answers, ...selection } = body;
+      const model = await providersService.resolveModel(user.id, selection);
+      await runsService.answer(thread, continuation, answers, model);
+      return status(202, { ok: true });
+    },
+    { auth: true, org: true, params: threadParams, body: answerQuestionBody },
   )
   .post(
     "/:id/cancel",

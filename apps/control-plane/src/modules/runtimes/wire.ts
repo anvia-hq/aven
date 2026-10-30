@@ -16,6 +16,16 @@ const toolPart = z.object({
   status: z.enum(["running", "done", "error"]),
   diff: z.array(z.object({ type: z.enum(["add", "del", "ctx"]), text: z.string() })).optional(),
   output: z.string().optional(),
+  questions: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+        choices: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+        allowCustom: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const tokenCount = z.number().int().nonnegative();
@@ -51,6 +61,7 @@ const frame = z.discriminatedUnion("type", [
     runId,
     outcome: z.enum(["response", "blocked", "interaction", "error"]),
     error: z.string().optional(),
+    continuation: z.unknown().optional(),
   }),
   z.object({ type: z.literal("desktop.opened"), viewerId: z.string().min(1) }),
   z.object({

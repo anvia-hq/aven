@@ -1,3 +1,7 @@
+import {
+  assertAgentInteractionResponse,
+  parseAgentContinuation,
+} from "@anvia/core/agent/interactions";
 import type { ConversationStore } from "@aven/agents/memory";
 import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat, usageFromHistory } from "@aven/agents/projection";
@@ -5,11 +9,12 @@ import {
   applyEvent,
   applyUsage,
   type ChatMessage,
+  type QuestionAnswer,
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
 
-import { ConflictError, UnavailableError } from "../../errors";
+import { ConflictError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
 import { threadsService } from "../threads/service";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
@@ -34,6 +39,11 @@ type Channel = {
   run?: ActiveRun;
 };
 
+export type ContinuationStore = {
+  save(threadId: string, continuation: unknown): Promise<void>;
+  clear(threadId: string): Promise<void>;
+};
+
 export class RunBusyError extends ConflictError {
   constructor() {
     super("A run is already in progress for this thread");
@@ -49,6 +59,7 @@ export class RunManager {
   #store: ConversationStore;
   #runtime: Runtime;
   #onRunFinished: (thread: RunThread) => void | Promise<void>;
+  #continuations: ContinuationStore;
 
   constructor(deps: {
     store: ConversationStore;
@@ -56,10 +67,13 @@ export class RunManager {
     runtime: Runtime;
     /** Called after every run, e.g. to bump the thread in the list. */
     onRunFinished: (thread: RunThread) => void | Promise<void>;
+    /** Where a run that stopped on the agent's question waits for the answer. */
+    continuations: ContinuationStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
+    this.#continuations = deps.continuations;
   }
 
   isRunning(threadId: string) {
@@ -75,6 +89,49 @@ export class RunManager {
     if (channel.run) throw new RunBusyError();
 
     const handle = this.#runtime.start({ thread, prompt, model: model ?? undefined });
+    await this.#begin(channel, handle, { type: "run_start", prompt });
+  }
+
+  // Continues the run that stopped on the agent's question: `continuation` is what was saved when it
+  // stopped. The answers must be the questions' own, and the run continues in the same assistant
+  // message. Throws like `start`; a failed start leaves the question waiting.
+  async answer(
+    thread: RunThread,
+    continuation: unknown,
+    answers: QuestionAnswer[],
+    model?: ModelConfig | null,
+  ) {
+    const channel = this.#channel(thread);
+    if (channel.run) throw new RunBusyError();
+
+    const saved = parseSaved(continuation);
+    const response = { type: "tool-question", answers } as const;
+    try {
+      assertAgentInteractionResponse(saved.interaction, response);
+    } catch (error) {
+      throw new UnprocessableError(errorMessage(error));
+    }
+
+    const handle = this.#runtime.resume({
+      thread,
+      continuation: saved,
+      response,
+      model: model ?? undefined,
+    });
+    // Consumed: from here the question is answered, whatever becomes of the run.
+    await this.#begin(channel, handle, { type: "run_resume" }, () =>
+      this.#continuations.clear(thread.id),
+    );
+  }
+
+  // Claims the thread for a run, loads its history, and starts relaying it.
+  async #begin(
+    channel: Channel,
+    handle: RuntimeRun,
+    opening: RunEvent,
+    prepare: () => Promise<void> = async () => undefined,
+  ) {
+    const { thread } = channel;
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
     const run: ActiveRun = {
       handle,
@@ -84,10 +141,12 @@ export class RunManager {
       ready: Promise.resolve(),
     };
     channel.run = run;
-    const loaded = this.#store.load({ scope: this.#scope(thread) }).then((history) => {
-      run.messages = messagesToChat(history);
-      run.usage = usageFromHistory(history);
-    });
+    const loaded = prepare()
+      .then(() => this.#store.load({ scope: this.#scope(thread) }))
+      .then((history) => {
+        run.messages = messagesToChat(history);
+        run.usage = usageFromHistory(history);
+      });
     run.ready = loaded.catch(() => undefined);
     try {
       await loaded;
@@ -97,7 +156,7 @@ export class RunManager {
       console.warn(`Could not load the history of thread ${thread.id}:`, error);
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
-    this.#emit(channel, { type: "run_start", prompt });
+    this.#emit(channel, opening);
     void this.#consume(channel, run);
   }
 
@@ -207,7 +266,10 @@ export class RunManager {
     try {
       for await (const event of run.handle.events) this.#emit(channel, event);
       const outcome = await run.handle.result;
-      if (outcome.type !== "response") failure = `Run ended without a response (${outcome.type})`;
+      if (outcome.type === "interaction") await this.#suspend(channel.thread, outcome.continuation);
+      else if (outcome.type !== "response") {
+        failure = `Run ended without a response (${outcome.type})`;
+      }
     } catch (error) {
       failure = errorMessage(error);
     }
@@ -219,12 +281,31 @@ export class RunManager {
     this.#finish(channel, run, ended);
   }
 
+  // The agent asked a question: its run ends here, and what resumes it is kept until it is answered.
+  // The question itself is in the transcript, which the run's events and the history both carry.
+  async #suspend(thread: RunThread, continuation: unknown) {
+    const saved = parseSaved(continuation);
+    if (saved.interaction.type !== "tool-question") {
+      throw new Error(`Run stopped on an unsupported interaction (${saved.interaction.type})`);
+    }
+    await this.#continuations.save(thread.id, saved);
+  }
+
   #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
     this.#emit(channel, event);
     if (channel.run === run) channel.run = undefined;
     Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
+  }
+}
+
+// A runtime is not trusted, and a stored continuation outlives the process that wrote it.
+function parseSaved(continuation: unknown) {
+  try {
+    return parseAgentContinuation(continuation);
+  } catch {
+    throw new ConflictError("The agent's question can no longer be answered; send a new message");
   }
 }
 
@@ -237,4 +318,8 @@ export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(runtimeHub, runGateway),
   onRunFinished: (thread) => threadsService.touch(thread.id),
+  continuations: {
+    save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
+    clear: (threadId) => threadsService.clearContinuation(threadId),
+  },
 });
