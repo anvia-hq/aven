@@ -414,6 +414,24 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
     });
   });
 
+  test("a workspace keeps package stores out of git, new or already there", async () => {
+    const d = docker();
+    const g = git({ setup: false });
+    const { sandboxes, acquire, cleanup, home } = await start(d, g);
+    const exclude = () =>
+      readFile(join(home, "workspaces", "t-store", ".git", "info", "exclude"), "utf8");
+
+    await acquire("t-store");
+    expect(await exclude()).toContain(".pnpm-store/");
+
+    // A workspace made before this existed gets it the next time the thread starts.
+    await Bun.write(join(home, "workspaces", "t-store", ".git", "info", "exclude"), "");
+    await sandboxes.release("t-store");
+    await acquire("t-store");
+    expect(await exclude()).toContain(".pnpm-store/");
+    await cleanup();
+  });
+
   test("a thread keeps the image it started from when the snapshot is replaced", async () => {
     const d = docker();
     const g = git();

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { PACKAGE_STORES } from "./local-excludes";
 import { runCommand } from "./run-command";
 
 /** A snapshot is used for this long, then the next thread that needs one makes a new one (decision 0043). */
@@ -108,6 +109,13 @@ export class SnapshotStore {
     const building = join(this.root, `${key}.building-${randomBytes(4).toString("hex")}`);
     try {
       await copyTree(input.workspace, join(building, "workspace"));
+      // A package manager's store can be hundreds of megabytes and is only a cache: the installed
+      // `node_modules` beside it are what a thread needs, so it is not kept.
+      await Promise.all(
+        PACKAGE_STORES.map((name) =>
+          rm(join(building, "workspace", name), { recursive: true, force: true }),
+        ),
+      );
       const meta: Meta = {
         image: input.image,
         baseImageId: input.baseImageId,

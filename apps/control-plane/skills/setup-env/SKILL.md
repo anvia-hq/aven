@@ -46,6 +46,8 @@ Rules:
 - **No secrets and no `.env` files.** The script is committed to the repository.
 - **No interaction.** `-y`, `--yes`, `CI=true` (already set); nothing that waits for input.
 - **Quiet about what matters.** Print one line for each step so a failure is easy to find in the log.
+- **pnpm: keep its store out of the repository.** With the workspace mounted from the host, pnpm cannot share a disk between its store and the project, so it leaves a `.pnpm-store` folder (hundreds of megabytes) in the repository's root. Put the store in the home folder first: `pnpm config set store-dir "$HOME/.local/share/pnpm/store"`. (Aven keeps `.pnpm-store` out of git and out of snapshots anyway, but a store in the repository still costs disk and time.)
+- **Quiet commands.** Installs and builds can print a great deal; add `--reporter=silent`, `--silent` or `> /dev/null` where a tool allows it, so the log of a failure is short enough to read.
 - Keep it short. Install what a thread needs to start working, not everything the project could ever use.
 
 Then make it executable: `chmod +x .aven/setup`.

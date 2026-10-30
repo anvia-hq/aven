@@ -8,6 +8,10 @@ import type { ArtifactStore } from "./artifacts";
 
 // How long a foreground command may run unless the agent asks for less; the sandbox caps it at 5.
 const EXEC_DEFAULT_TIMEOUT_MS = 2 * 60_000;
+// `read_file` takes up to this many lines in a call, which is what its own schema allows; the
+// sandbox's policy would otherwise stop at 2000 and fail a read the schema invited. How much comes
+// back in one read is still limited in bytes.
+const READ_FILE_MAX_LINES = 10_000;
 
 // What an agent can do in a thread's sandbox: everything @anvia/sandbox offers on files, commands
 // and processes, plus `edit` (the sandbox has no in-place edit) built on its file calls, and
@@ -21,6 +25,7 @@ export function sandboxTools(
       sandbox,
       tools: SANDBOX_TOOL_NAMES,
       exec: { defaultTimeoutMs: EXEC_DEFAULT_TIMEOUT_MS },
+      readFile: { maxLineCount: READ_FILE_MAX_LINES },
     }),
     createEditTool(sandbox),
     createShowImageTool({

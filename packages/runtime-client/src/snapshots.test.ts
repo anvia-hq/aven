@@ -61,6 +61,24 @@ describe("snapshots", () => {
     expect(await readFile(join(published.workspace, "link.json"), "utf8")).toBe("{}");
   });
 
+  test("a package manager's store is not kept: it is a cache that can be hundreds of megabytes", async () => {
+    const store = new SnapshotStore(await temp());
+    const workspace = await preparedWorkspace();
+    await mkdir(join(workspace, ".pnpm-store", "v3"), { recursive: true });
+    await writeFile(join(workspace, ".pnpm-store", "v3", "blob"), "x".repeat(10_000));
+
+    const snapshot = await store.publish("k1", { image: "i", baseImageId: "b", workspace });
+
+    expect((await readdir(snapshot.workspace)).sort()).toEqual([
+      ".aven",
+      "link.json",
+      "node_modules",
+      "package.json",
+    ]);
+    // The workspace it was taken from still has it.
+    expect(await readdir(workspace)).toContain(".pnpm-store");
+  });
+
   test("restoring puts the workspace, hidden files and all, where a thread wants it", async () => {
     const store = new SnapshotStore(await temp());
     const snapshot = await store.publish("k1", {

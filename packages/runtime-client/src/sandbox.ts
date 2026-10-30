@@ -23,6 +23,7 @@ import {
 } from "./environment-setup";
 import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
+import { ensureLocalExcludes } from "./local-excludes";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { runCommand } from "./run-command";
 import { SkillStore } from "./skills";
@@ -373,6 +374,19 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async #prepare(thread: { id: string; organizationId?: string }, repo: () => Promise<RepoAccess>) {
+    const root = await this.#fillWorkspace(thread, repo);
+    // A package manager's store left in the workspace is never a change; for a workspace that
+    // exists already as much as for a new one.
+    await ensureLocalExcludes(root).catch((error: unknown) => {
+      console.warn(`Could not keep package stores out of git in ${root}:`, error);
+    });
+    return root;
+  }
+
+  async #fillWorkspace(
+    thread: { id: string; organizationId?: string },
+    repo: () => Promise<RepoAccess>,
+  ) {
     const dir = this.#workspaceDir(thread.id);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
