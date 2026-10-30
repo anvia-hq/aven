@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createVerify, generateKeyPairSync } from "node:crypto";
 
-import { GithubClient, GithubNotConfiguredError, githubConfigFromEnv } from "./client";
+import {
+  GithubClient,
+  GithubNotConfiguredError,
+  GithubWriteNotGrantedError,
+  githubConfigFromEnv,
+} from "./client";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const config = {
@@ -145,5 +150,85 @@ describe("GithubClient", () => {
       "POST /login/oauth/access_token": { error: "bad_verification_code" },
     });
     expect(await new GithubClient(config, github.fetch).userCanUse("bad", 7)).toBe(false);
+  });
+});
+
+describe("writing to a repository", () => {
+  const tokens = "POST /app/installations/7/access_tokens";
+  const input = {
+    fullName: "acme/app",
+    head: "aven/abc12345",
+    base: "main",
+    title: "Add a thing",
+    body: "Why",
+    draft: true,
+  };
+  const open = "GET /repos/acme/app/pulls?state=open&head=acme%3Aaven%2Fabc12345";
+
+  test("a write token is for one repository and one permission, and is never reused", async () => {
+    const github = fakeGithub({ [tokens]: { token: "ghs_w", expires_at: "2099-01-01T00:00:00Z" } });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.writeToken(7, "acme/app", "contents")).toBe("ghs_w");
+    await client.writeToken(7, "acme/app", "contents");
+
+    expect(github.calls).toHaveLength(2);
+    expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
+      repositories: ["app"],
+      permissions: { contents: "write", metadata: "read" },
+    });
+  });
+
+  test("an installation that has not approved the permission is a conflict that says so", async () => {
+    const fetch = async () => new Response("nope", { status: 422 });
+    const client = new GithubClient(config, fetch);
+
+    await expect(client.writeToken(7, "acme/app", "contents")).rejects.toBeInstanceOf(
+      GithubWriteNotGrantedError,
+    );
+  });
+
+  test("opens a draft pull request when none is open for the branch", async () => {
+    const github = fakeGithub({
+      [tokens]: { token: "ghs_pr", expires_at: "2099-01-01T00:00:00Z" },
+      [open]: [],
+      "POST /repos/acme/app/pulls": { number: 12, html_url: "https://github.com/acme/app/pull/12" },
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.openPullRequest(7, input)).toEqual({
+      number: 12,
+      url: "https://github.com/acme/app/pull/12",
+      created: true,
+    });
+
+    const create = github.calls.at(-1)!;
+    expect(auth(create)).toBe("Bearer ghs_pr");
+    expect(JSON.parse(String(create.init?.body))).toEqual({
+      title: "Add a thing",
+      head: "aven/abc12345",
+      base: "main",
+      body: "Why",
+      draft: true,
+    });
+    expect(JSON.parse(String(github.calls[0]!.init?.body)).permissions).toEqual({
+      pull_requests: "write",
+      metadata: "read",
+    });
+  });
+
+  test("a pull request already open for the branch is returned, not duplicated or edited", async () => {
+    const github = fakeGithub({
+      [tokens]: { token: "ghs_pr", expires_at: "2099-01-01T00:00:00Z" },
+      [open]: [{ number: 9, html_url: "https://github.com/acme/app/pull/9" }],
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.openPullRequest(7, input)).toEqual({
+      number: 9,
+      url: "https://github.com/acme/app/pull/9",
+      created: false,
+    });
+    expect(github.calls.map((call) => call.init?.method ?? "GET")).toEqual(["POST", "GET"]);
   });
 });
