@@ -1,5 +1,6 @@
 import type { AnyTool } from "@anvia/core";
 import { createSandboxTools, type SandboxRuntime } from "@anvia/sandbox";
+import { SANDBOX_TOOL_NAMES } from "@aven/agents/sandbox-tools";
 import { createEditTool } from "@aven/agents/tools/edit";
 
 // How long a foreground command may run unless the agent asks for less; the sandbox caps it at 5.
@@ -11,18 +12,7 @@ export function sandboxTools(sandbox: SandboxRuntime): readonly AnyTool[] {
   return [
     ...createSandboxTools({
       sandbox,
-      tools: [
-        "exec_command",
-        "read_file",
-        "write_file",
-        "list_files",
-        "list_ports",
-        "start_process",
-        "list_processes",
-        "read_process_logs",
-        "stop_process",
-        "wait_for_port",
-      ],
+      tools: SANDBOX_TOOL_NAMES,
       exec: { defaultTimeoutMs: EXEC_DEFAULT_TIMEOUT_MS },
     }),
     createEditTool(sandbox),

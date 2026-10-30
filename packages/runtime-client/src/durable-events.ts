@@ -9,7 +9,7 @@ import type { DurableEvent } from "@anvia/durable";
 import {
   projectStreamEvent,
   projectToolCall,
-  projectToolOutput,
+  projectToolEnd,
   tokenUsageOf,
 } from "@aven/agents/projection";
 import { asRecord } from "@aven/agents/values";
@@ -71,8 +71,7 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         const id = typeof data.operationId === "string" ? calls.get(data.operationId) : undefined;
         const output = asRecord(data.result).output as ToolResultOutput | undefined;
         if (!id || !output) return { events: [] };
-        const { status, output: text } = projectToolOutput(output);
-        return { events: [{ type: "tool_end", id, status, output: text }] };
+        return { events: [projectToolEnd(id, output)] };
       }
       case "status":
         return { events: [], end: endOf(data) };

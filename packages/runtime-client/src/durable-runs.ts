@@ -12,7 +12,8 @@ import {
   type GoalResult,
 } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
-import { projectToolOutput } from "@aven/agents/projection";
+import { projectToolEnd } from "@aven/agents/projection";
+import type { SandboxToolName } from "@aven/agents/sandbox-tools";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
@@ -32,7 +33,7 @@ const AGENT_VERSION = "1";
 
 // Tools that are safe to repeat when the runner stopped while they ran. Everything else (commands,
 // processes, the desktop) is not repeated: the run is told the outcome is unknown.
-const SAFE_TOOLS = new Set([
+const SAFE_TOOLS = new Set<string>([
   "read_file",
   "write_file",
   "list_files",
@@ -40,7 +41,7 @@ const SAFE_TOOLS = new Set([
   "list_processes",
   "read_process_logs",
   "wait_for_port",
-]);
+] satisfies SandboxToolName[]);
 
 // Journals this process has open. Durable refuses a journal whose owner is a live process, and a
 // process that reloads in place (`bun --watch`) keeps its pid: it meets its own earlier lease.
@@ -243,11 +244,9 @@ export class DurableRuns {
     const run = await this.#runtime.getRun(asked.runId);
     // The question's result, as the agent's stream used to report it, so the client sees it answered.
     if (response.type === "tool-question")
-      onEvent({
-        type: "tool_end",
-        id: question.toolCallId,
-        ...projectToolOutput({ type: "json", value: { answers: response.answers } }),
-      });
+      onEvent(
+        projectToolEnd(question.toolCallId, { type: "json", value: { answers: response.answers } }),
+      );
     // Followed from now on, so the answer does not replay the run's earlier events to the client.
     const followed = this.#follow(run, onEvent, {
       agentId: asked.agentId,

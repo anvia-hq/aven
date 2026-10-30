@@ -24,6 +24,7 @@ import {
   type ToolPart,
 } from "@aven/protocol/events";
 
+import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
@@ -36,9 +37,21 @@ const MAX_DIFF_LINES = 60;
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
 
 // The sandbox's tools (from @anvia/sandbox) and what each one acts on, for the line a client shows.
-const PATH_TOOLS = new Set(["read_file", "write_file", "list_files", EDIT_TOOL_NAME]);
-const COMMAND_TOOLS = new Set(["exec_command", "start_process"]);
-const PROCESS_TOOLS = new Set(["read_process_logs", "stop_process"]);
+const PATH_TOOLS = new Set<string>([
+  "read_file",
+  "write_file",
+  "list_files",
+  EDIT_TOOL_NAME,
+] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME)[]);
+const COMMAND_TOOLS = new Set<string>([
+  "exec_command",
+  "start_process",
+] satisfies SandboxToolName[]);
+const PROCESS_TOOLS = new Set<string>([
+  "read_process_logs",
+  "stop_process",
+] satisfies SandboxToolName[]);
+const PORT_TOOL: SandboxToolName = "wait_for_port";
 
 export function toolTarget(name: string, input: unknown) {
   const args = asRecord(input);
@@ -47,7 +60,7 @@ export function toolTarget(name: string, input: unknown) {
   if (PROCESS_TOOLS.has(name)) return asString(args.processId);
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
-  if (name === "wait_for_port") return String(args.containerPort ?? "");
+  if (name === PORT_TOOL) return String(args.containerPort ?? "");
   return "";
 }
 
@@ -157,6 +170,14 @@ export function projectToolOutput(output: ToolResultOutput): {
   }
 }
 
+/** The end of a tool call as a client sees it: how it went and what it said. */
+export function projectToolEnd(
+  id: string,
+  output: ToolResultOutput,
+): Extract<RunEvent, { type: "tool_end" }> {
+  return { type: "tool_end", id, ...projectToolOutput(output) };
+}
+
 function assertNever(value: never): never {
   throw new Error(`Unhandled tool result: ${JSON.stringify(value)}`);
 }
@@ -203,10 +224,8 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
       return { type: "text", delta: event.delta };
     case "tool_call":
       return { type: "tool_start", tool: projectToolCall(event.toolCall) };
-    case "tool_result": {
-      const { status, output } = projectToolOutput(event.output);
-      return { type: "tool_end", id: event.toolCallId, status, output };
-    }
+    case "tool_result":
+      return projectToolEnd(event.toolCallId, event.output);
     case "turn_end":
       return {
         type: "usage",
