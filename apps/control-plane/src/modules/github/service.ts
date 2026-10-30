@@ -68,6 +68,16 @@ export function createGithubService(client: GithubClient = defaultClient) {
     return row ?? null;
   };
 
+  // GitHub's own id of the installation a row stands for.
+  const githubInstallationId = async (installationRowId: string) => {
+    const [row] = await db
+      .select()
+      .from(githubInstallations)
+      .where(eq(githubInstallations.id, installationRowId));
+    if (!row) throw new InstallationNotFoundError();
+    return row.installationId;
+  };
+
   const require = async (organizationId: string, id: string) => {
     const installation = await get(organizationId, id);
     if (!installation) throw new InstallationNotFoundError();
@@ -134,12 +144,20 @@ export function createGithubService(client: GithubClient = defaultClient) {
 
     // A read-only token for cloning a repository of the installation.
     async cloneToken(installationRowId: string) {
-      const [row] = await db
-        .select()
-        .from(githubInstallations)
-        .where(eq(githubInstallations.id, installationRowId));
-      if (!row) throw new InstallationNotFoundError();
-      return (await client.installationToken(row.installationId)).token;
+      return (await client.installationToken(await githubInstallationId(installationRowId))).token;
+    },
+
+    // A token that can push to one repository, minted for this push (decision 0040).
+    async pushToken(installationRowId: string, fullName: string) {
+      return client.writeToken(await githubInstallationId(installationRowId), fullName, "contents");
+    },
+
+    // The open pull request for a branch, opened first when there is none (decision 0040).
+    async openPullRequest(
+      installationRowId: string,
+      input: Parameters<GithubClient["openPullRequest"]>[1],
+    ) {
+      return client.openPullRequest(await githubInstallationId(installationRowId), input);
     },
   };
 }

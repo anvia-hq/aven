@@ -87,6 +87,14 @@ export const threadsService = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
+  // The pull request the thread was shipped as (decision 0040).
+  async setPullRequest(id: string, pullRequest: { number: number; url: string }) {
+    await db
+      .update(threads)
+      .set({ pullRequestNumber: pullRequest.number, pullRequestUrl: pullRequest.url })
+      .where(eq(threads.id, id));
+  },
+
   // Bumps the thread to the top of the list after the agent has worked on it.
   async touch(id: string) {
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, id));

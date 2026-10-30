@@ -5,6 +5,7 @@ import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
+import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
@@ -25,6 +26,7 @@ const app = new Elysia()
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
+  .use(shipRouter(runtimeHub))
   .use(filesRouter(runtimeHub))
   .use(githubRouter)
   .use(platformRouter)

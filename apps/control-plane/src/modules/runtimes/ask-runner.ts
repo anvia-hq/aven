@@ -4,6 +4,7 @@ import type {
   DiffGetParams,
   FilesCallParams,
   FilesSearchParams,
+  RepoPushParams,
   RunnerCallMethod,
 } from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
@@ -20,7 +21,8 @@ type CallParams =
   | DesktopCallParams
   | DiffGetParams
   | FilesCallParams
-  | FilesSearchParams;
+  | FilesSearchParams
+  | RepoPushParams;
 
 // Asking the runner that holds a thread about it (its files, changes, desktop). Every call starts
 // from a thread of the caller's organization.
