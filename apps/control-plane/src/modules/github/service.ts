@@ -4,7 +4,12 @@ import { githubInstallations } from "@aven/db/schema/github-installations";
 import { and, desc, eq } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "../../errors";
-import { github as defaultClient, type GithubClient } from "./client";
+import {
+  github as defaultClient,
+  GithubNoPushAccessError,
+  GithubWriteNotGrantedError,
+  type GithubClient,
+} from "./client";
 import { isLocalPath } from "./schema";
 import { githubUserTokenService } from "./user-tokens";
 
@@ -170,17 +175,26 @@ export function createGithubService(
       return (await client.installationToken(await githubInstallationId(installationRowId))).token;
     },
 
-    // A token that can push to one repository, minted for this push (decision 0040).
-    async pushToken(installationRowId: string, fullName: string) {
-      return client.writeToken(await githubInstallationId(installationRowId), fullName, "contents");
+    // Ships need the app approved to write for the installation's account (decision 0041).
+    async requireWritable(installationRowId: string) {
+      const [row] = await db
+        .select()
+        .from(githubInstallations)
+        .where(eq(githubInstallations.id, installationRowId));
+      if (!row) throw new InstallationNotFoundError();
+      if (!(await client.canWrite(row.installationId))) {
+        throw new GithubWriteNotGrantedError(row.accountLogin);
+      }
     },
 
-    // The open pull request for a branch, opened first when there is none (decision 0040).
-    async openPullRequest(
-      installationRowId: string,
-      input: Parameters<GithubClient["openPullRequest"]>[1],
-    ) {
-      return client.openPullRequest(await githubInstallationId(installationRowId), input);
+    // ...and the person to be allowed to push to the repository themselves.
+    async requirePush(userToken: string, fullName: string) {
+      if (!(await client.canPush(userToken, fullName))) throw new GithubNoPushAccessError(fullName);
+    },
+
+    // The open pull request for a branch, opened first when there is none, as the person.
+    openPullRequest(userToken: string, input: Parameters<GithubClient["openPullRequest"]>[1]) {
+      return client.openPullRequest(userToken, input);
     },
   };
 }

@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 
 import { errorsRouter } from "../../errors";
 import { auth, authService } from "../auth/service";
-import { GithubWriteNotGrantedError } from "../github/client";
+import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "../github/client";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
@@ -26,33 +26,42 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
   const { seedProject } = await import("../../testing/seed-project");
   const hub = new RuntimeHub(createMemoryStore(db));
 
-  // A GitHub that records what it was asked and can refuse to write.
-  const pulled: unknown[] = [];
-  const minted: string[] = [];
-  let refuseWrite = false;
+  // A GitHub that records what it was asked, and can refuse: the app not approved to write, the
+  // person unable to push, or the person not connected.
+  const pulled: { token: string; input: unknown }[] = [];
+  const checked: string[] = [];
+  let approved = true;
+  let canPush = true;
+  let connected = true;
+  const identity = { id: 42, login: "ada", name: "Ada L" };
   const github = {
-    pushToken: async (_installation: string, fullName: string) => {
-      if (refuseWrite) throw new GithubWriteNotGrantedError(fullName);
-      minted.push(fullName);
-      return "ghs_push";
+    requireWritable: async () => {
+      if (!approved) throw new GithubWriteNotGrantedError("acme");
     },
-    openPullRequest: async (_installation: string, input: unknown) => {
-      pulled.push(input);
+    requirePush: async (token: string, fullName: string) => {
+      checked.push(`${token} ${fullName}`);
+      if (!canPush) throw new GithubNoPushAccessError(fullName);
+    },
+    openPullRequest: async (token: string, input: unknown) => {
+      pulled.push({ token, input });
       return { number: 5, url: "https://github.com/acme/app/pull/5", created: true };
     },
+  };
+  const userTokens = {
+    use: async () => (connected ? { token: "ghu_user", identity } : null),
   };
   let running = false;
   const drafted = { title: "Add a greeting", body: "Says hello." };
   const drafts: string[] = [];
-  const service = createShipService(
-    hub,
+  const service = createShipService(hub, {
     github,
-    { isRunning: () => running },
-    async (_org, userId) => {
+    userTokens,
+    runs: { isRunning: () => running },
+    draft: async (_org, userId) => {
       drafts.push(userId);
       return drafted;
     },
-  );
+  });
 
   const server = new Elysia()
     .use(errorsRouter)
@@ -147,12 +156,15 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
 
   const reset = () => {
     pulled.length = 0;
-    minted.length = 0;
-    refuseWrite = false;
+    checked.length = 0;
+    drafts.length = 0;
+    approved = true;
+    canPush = true;
+    connected = true;
     running = false;
   };
 
-  test("pushes through the runner, opens a draft pull request and keeps it on the thread", async () => {
+  test("pushes through the runner as the person, opens a draft pull request as them and keeps it on the thread", async () => {
     reset();
     const { thread, project, calls } = await setup({
       ok: true,
@@ -172,21 +184,25 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
         threadId: thread.id,
         cloneUrl: project.cloneUrl,
         branch: `aven/${thread.id.slice(0, 8)}`,
-        token: "ghs_push",
+        token: "ghu_user",
         commitMessage: "Add a greeting",
-        author: { name: "owner", email: owner.email },
+        // Their GitHub account, not the email of their Aven account.
+        author: { name: "Ada L", email: "42+ada@users.noreply.github.com" },
       },
     ]);
-    expect(minted).toEqual([project.repoFullName]);
+    expect(checked).toEqual([`ghu_user ${project.repoFullName}`]);
     expect(drafts).toEqual([owner.userId]);
     expect(pulled).toEqual([
       {
-        fullName: project.repoFullName,
-        head: `aven/${thread.id.slice(0, 8)}`,
-        base: "main",
-        title: "Add a greeting",
-        body: "Says hello.",
-        draft: true,
+        token: "ghu_user",
+        input: {
+          fullName: project.repoFullName,
+          head: `aven/${thread.id.slice(0, 8)}`,
+          base: "main",
+          title: "Add a greeting",
+          body: "Says hello.",
+          draft: true,
+        },
       },
     ]);
     const saved = await threadsService.get(owner.organizationId, thread.id);
@@ -213,27 +229,54 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
 
     expect((await ship(thread.id, owner.token)).status).toBe(409);
     expect(calls).toEqual([]);
-    expect(minted).toEqual([]);
+    expect(checked).toEqual([]);
   });
 
-  test("an installation that has not approved writing is a 409 and the runner is not asked", async () => {
+  test("a person who has not connected GitHub is told to, and nothing is asked of the runner or GitHub", async () => {
     reset();
-    refuseWrite = true;
+    connected = false;
     const { thread, calls } = await setup({ ok: true, result: { kind: "nothing" } });
 
     const response = await ship(thread.id, owner.token);
 
     expect(response.status).toBe(409);
-    expect(await response.text()).toContain("Approve the Aven app's new permissions");
+    expect(await response.text()).toBe("Connect your GitHub account to ship");
+    expect(calls).toEqual([]);
+    expect(checked).toEqual([]);
+  });
+
+  test("an app that has not been approved to write is a 409, and the runner is not asked", async () => {
+    reset();
+    approved = false;
+    const { thread, calls } = await setup({ ok: true, result: { kind: "nothing" } });
+
+    const response = await ship(thread.id, owner.token);
+
+    expect(response.status).toBe(409);
+    expect(await response.text()).toContain("Approve its new permissions");
+    expect(calls).toEqual([]);
+  });
+
+  test("a person who cannot push to the repository cannot ship to it", async () => {
+    reset();
+    canPush = false;
+    const { thread, project, calls } = await setup({ ok: true, result: { kind: "nothing" } });
+
+    const response = await ship(thread.id, owner.token);
+
+    expect(response.status).toBe(409);
+    expect(await response.text()).toBe(
+      `You do not have write access to ${project.repoFullName} on GitHub`,
+    );
     expect(calls).toEqual([]);
   });
 
   test("hides a runtime's own error and an answer it should not give", async () => {
     reset();
-    const failing = await setup({ ok: false, error: "fatal: token ghs_push at /home/x" });
+    const failing = await setup({ ok: false, error: "fatal: token ghu_user at /home/x" });
     const failed = await ship(failing.thread.id, owner.token);
     expect(failed.status).toBe(503);
-    expect(await failed.text()).not.toContain("ghs_push");
+    expect(await failed.text()).not.toContain("ghu_user");
 
     const odd = await setup({ ok: true, result: { kind: "merged" } });
     expect((await ship(odd.thread.id, owner.token)).status).toBe(503);
@@ -247,6 +290,6 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
     expect((await ship(thread.id, undefined)).status).toBe(401);
     expect((await ship(thread.id, outsider.token)).status).toBe(404);
     expect(calls).toEqual([]);
-    expect(minted).toEqual([]);
+    expect(checked).toEqual([]);
   });
 });

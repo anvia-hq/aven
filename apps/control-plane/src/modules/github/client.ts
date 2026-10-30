@@ -34,9 +34,9 @@ export class GithubNotConfiguredError extends UnavailableError {
 
 /** The installation has not been approved to write to the repository (decision 0040). */
 export class GithubWriteNotGrantedError extends ConflictError {
-  constructor(fullName: string) {
+  constructor(accountLogin: string) {
     super(
-      `GitHub did not grant write access to ${fullName}. Approve the Aven app's new permissions on GitHub, then try again.`,
+      `The Aven app has not been approved to write to ${accountLogin} on GitHub. Approve its new permissions there, then try again.`,
     );
   }
 }
@@ -115,8 +115,6 @@ type RepoPayload = {
   description: string | null;
 };
 
-type WritePermission = "contents" | "pull_requests";
-
 const toRepo = (repo: RepoPayload): GithubRepo => ({
   id: repo.id,
   fullName: repo.full_name,
@@ -129,8 +127,8 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
 const base64url = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 
 // Talks to GitHub as the app (a signed JWT) or as one installation (a short-lived token). The
-// tokens for listing and cloning are read-only (decision 0013); writing takes a token of its own
-// that is minted for one use and limited to one repository (decision 0040). `fetch` is injectable so tests never hit GitHub.
+// tokens for listing and cloning are read-only (decision 0013); writing is done as the person, with
+// their own user access token (decision 0041). `fetch` is injectable so tests never hit GitHub.
 export class GithubClient {
   #tokens = new Map<number, { token: string; expiresAt: number }>();
 
@@ -218,31 +216,6 @@ export class GithubClient {
     return entry;
   }
 
-  /** A token for one repository that may `permission` (write), minted for one use and never kept. */
-  async writeToken(installationId: number, fullName: string, permission: WritePermission) {
-    const name = fullName.split("/")[1]!;
-    try {
-      const issued = await this.#api<{ token: string }>(
-        `/app/installations/${installationId}/access_tokens`,
-        this.#appJwt(),
-        {
-          method: "POST",
-          body: JSON.stringify({
-            repositories: [name],
-            permissions: { [permission]: "write", metadata: "read" },
-          }),
-        },
-      );
-      return issued.token;
-    } catch (error) {
-      // GitHub answers 422 when the installation lacks the permission or the repository.
-      if (error instanceof GithubApiError && error.status === 422) {
-        throw new GithubWriteNotGrantedError(fullName);
-      }
-      throw error;
-    }
-  }
-
   /** The page where a person lets the app act as their GitHub account; GitHub comes back to the app's Callback URL. */
   authorizeUrl(state: string) {
     const { clientId, webUrl } = this.#config();
@@ -272,11 +245,12 @@ export class GithubClient {
   }
 
   /**
-   * The open pull request from `head` into `base`, opened first if there is none. One already open
-   * is left as it is, so a person's edits to its title and description survive a later ship.
+   * The open pull request from `head` into `base`, opened first if there is none, as the person
+   * whose `userToken` it is. One already open is left as it is, so a person's edits to its title
+   * and description survive a later ship.
    */
   async openPullRequest(
-    installationId: number,
+    userToken: string,
     input: {
       fullName: string;
       head: string;
@@ -286,14 +260,13 @@ export class GithubClient {
       draft: boolean;
     },
   ): Promise<GithubPullRequest & { created: boolean }> {
-    const token = await this.writeToken(installationId, input.fullName, "pull_requests");
     const [owner, name] = input.fullName.split("/") as [string, string];
     const pulls = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls`;
     const query = new URLSearchParams({ state: "open", head: `${owner}:${input.head}` });
-    const [existing] = await this.#api<PullPayload[]>(`${pulls}?${query}`, token);
+    const [existing] = await this.#api<PullPayload[]>(`${pulls}?${query}`, userToken);
     if (existing) return { number: existing.number, url: existing.html_url, created: false };
     const { title, head, base, body, draft } = input;
-    const made = await this.#api<PullPayload>(pulls, token, {
+    const made = await this.#api<PullPayload>(pulls, userToken, {
       method: "POST",
       body: JSON.stringify({ title, head, base, body, draft }),
     });

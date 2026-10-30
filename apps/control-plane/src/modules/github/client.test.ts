@@ -219,7 +219,6 @@ describe("a person's GitHub token", () => {
 });
 
 describe("writing to a repository", () => {
-  const tokens = "POST /app/installations/7/access_tokens";
   const input = {
     fullName: "acme/app",
     head: "aven/abc12345",
@@ -256,45 +255,21 @@ describe("writing to a repository", () => {
     expect(auth(github.calls[0]!)).toBe("Bearer ghu_a");
   });
 
-  test("a write token is for one repository and one permission, and is never reused", async () => {
-    const github = fakeGithub({ [tokens]: { token: "ghs_w", expires_at: "2099-01-01T00:00:00Z" } });
-    const client = new GithubClient(config, github.fetch);
-
-    expect(await client.writeToken(7, "acme/app", "contents")).toBe("ghs_w");
-    await client.writeToken(7, "acme/app", "contents");
-
-    expect(github.calls).toHaveLength(2);
-    expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
-      repositories: ["app"],
-      permissions: { contents: "write", metadata: "read" },
-    });
-  });
-
-  test("an installation that has not approved the permission is a conflict that says so", async () => {
-    const fetch = async () => new Response("nope", { status: 422 });
-    const client = new GithubClient(config, fetch);
-
-    await expect(client.writeToken(7, "acme/app", "contents")).rejects.toBeInstanceOf(
-      GithubWriteNotGrantedError,
-    );
-  });
-
-  test("opens a draft pull request when none is open for the branch", async () => {
+  test("opens a draft pull request as the person when none is open for the branch", async () => {
     const github = fakeGithub({
-      [tokens]: { token: "ghs_pr", expires_at: "2099-01-01T00:00:00Z" },
       [open]: [],
       "POST /repos/acme/app/pulls": { number: 12, html_url: "https://github.com/acme/app/pull/12" },
     });
     const client = new GithubClient(config, github.fetch);
 
-    expect(await client.openPullRequest(7, input)).toEqual({
+    expect(await client.openPullRequest("ghu_a", input)).toEqual({
       number: 12,
       url: "https://github.com/acme/app/pull/12",
       created: true,
     });
 
     const create = github.calls.at(-1)!;
-    expect(auth(create)).toBe("Bearer ghs_pr");
+    expect(github.calls.map(auth)).toEqual(["Bearer ghu_a", "Bearer ghu_a"]);
     expect(JSON.parse(String(create.init?.body))).toEqual({
       title: "Add a thing",
       head: "aven/abc12345",
@@ -302,24 +277,19 @@ describe("writing to a repository", () => {
       body: "Why",
       draft: true,
     });
-    expect(JSON.parse(String(github.calls[0]!.init?.body)).permissions).toEqual({
-      pull_requests: "write",
-      metadata: "read",
-    });
   });
 
   test("a pull request already open for the branch is returned, not duplicated or edited", async () => {
     const github = fakeGithub({
-      [tokens]: { token: "ghs_pr", expires_at: "2099-01-01T00:00:00Z" },
       [open]: [{ number: 9, html_url: "https://github.com/acme/app/pull/9" }],
     });
     const client = new GithubClient(config, github.fetch);
 
-    expect(await client.openPullRequest(7, input)).toEqual({
+    expect(await client.openPullRequest("ghu_a", input)).toEqual({
       number: 9,
       url: "https://github.com/acme/app/pull/9",
       created: false,
     });
-    expect(github.calls.map((call) => call.init?.method ?? "GET")).toEqual(["POST", "GET"]);
+    expect(github.calls.map((call) => call.init?.method ?? "GET")).toEqual(["GET"]);
   });
 });

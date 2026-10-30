@@ -2,6 +2,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { ConflictError, describeError, UnavailableError } from "../../errors";
 import { githubService } from "../github/service";
+import { githubUserTokenService, type GithubIdentity } from "../github/user-tokens";
 import { projectsService } from "../projects/service";
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
@@ -20,6 +21,11 @@ export class NoWorkspaceError extends ConflictError {
     super("The thread has no workspace yet; ask the agent to work on it first");
   }
 }
+export class GithubNotConnectedError extends ConflictError {
+  constructor() {
+    super("Connect your GitHub account to ship");
+  }
+}
 export class NothingToShipError extends ConflictError {
   constructor() {
     super("There is nothing to ship yet");
@@ -35,29 +41,44 @@ const refused = (error: unknown): never => {
   throw new UnavailableError("The changes could not be pushed");
 };
 
-/** Who ships: the commit is by them, and the text of the pull request is written with their model. */
-export type Shipper = { id: string; name: string; email: string };
+// What a commit by the person is signed with: their GitHub name and the address GitHub links to
+// their account whatever email their Aven account has.
+const authorOf = ({ id, login, name }: GithubIdentity) => ({
+  name: name ?? login,
+  email: `${id}+${login}@users.noreply.github.com`,
+});
 
-// Ships a thread as a pull request (decision 0040): the runner commits and pushes the thread's
-// branch with a token made for the push, and the control plane opens the pull request. The agent
-// has no part in it, and no GitHub credential reaches a sandbox.
-export function createShipService(
-  hub: RuntimeHub,
-  github: Pick<typeof githubService, "pushToken" | "openPullRequest"> = githubService,
-  runs: Pick<typeof runsService, "isRunning"> = runsService,
-  draft: Drafter = createRunnerDrafter(hub),
-) {
+type ShipDeps = {
+  github: Pick<typeof githubService, "requireWritable" | "requirePush" | "openPullRequest">;
+  userTokens: Pick<typeof githubUserTokenService, "use">;
+  runs: Pick<typeof runsService, "isRunning">;
+  draft: Drafter;
+};
+
+// Ships a thread as a pull request, as the person (decisions 0040 and 0041): the runner commits and
+// pushes the thread's branch with the person's GitHub token, handed over for that one call, and the
+// control plane opens the pull request with it. The agent has no part in it, and no GitHub
+// credential reaches a sandbox.
+export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {}) {
+  const github = deps.github ?? githubService;
+  const userTokens = deps.userTokens ?? githubUserTokenService;
+  const runs = deps.runs ?? runsService;
+  const draft = deps.draft ?? createRunnerDrafter(hub);
   const runner = runnerFor(hub);
   return {
-    async ship(organizationId: string, shipper: Shipper, threadId: string) {
+    async ship(organizationId: string, userId: string, threadId: string) {
       const thread = await threadsService.require(organizationId, threadId);
       if (runs.isRunning(thread.id)) throw new RunInProgressError();
+      const connection = await userTokens.use(userId);
+      if (!connection) throw new GithubNotConnectedError();
       const project = await projectsService.get(organizationId, thread.projectId);
       // A thread's project row is guaranteed by its foreign key.
       if (!project) throw new Error("The thread's project is missing");
+      await github.requireWritable(project.githubInstallationId);
+      await github.requirePush(connection.token, project.repoFullName);
 
       const branch = threadBranch(thread.id);
-      const text = await draft(organizationId, shipper.id, thread);
+      const text = await draft(organizationId, userId, thread);
       const pushed = await runner.ask(
         organizationId,
         "repo.push",
@@ -65,9 +86,9 @@ export function createShipService(
           threadId: thread.id,
           cloneUrl: project.cloneUrl,
           branch,
-          token: await github.pushToken(project.githubInstallationId, project.repoFullName),
+          token: connection.token,
           commitMessage: text.title,
-          author: { name: shipper.name, email: shipper.email },
+          author: authorOf(connection.identity),
         },
         pushResult,
         refused,
@@ -76,7 +97,7 @@ export function createShipService(
       if (!pushed) throw new NoWorkspaceError();
       if (pushed.kind === "nothing") throw new NothingToShipError();
 
-      const pullRequest = await github.openPullRequest(project.githubInstallationId, {
+      const pullRequest = await github.openPullRequest(connection.token, {
         fullName: project.repoFullName,
         head: branch,
         base: project.defaultBranch,

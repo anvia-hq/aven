@@ -3,6 +3,7 @@
 const port = Number(process.env.FAKE_GITHUB_PORT ?? 8101);
 const repositories = ["shiny-app", "docs-site", "composer-app", "project"];
 
+// Both permissions approved, and the person allowed to push (decisions 0040 and 0041).
 const repo = (name: string) => ({
   id: repositories.indexOf(name) + 1,
   full_name: `acme/${name}`,
@@ -10,6 +11,7 @@ const repo = (name: string) => ({
   default_branch: "main",
   clone_url: `https://github.com/acme/${name}.git`,
   description: null,
+  permissions: { push: true },
 });
 
 const pullRequests = new Map<string, { number: number; html_url: string }>();
@@ -29,14 +31,25 @@ Bun.serve({
       return Response.json(opened ? [opened] : []);
     }
     if (pathname === "/health") return new Response("ok");
-    if (pathname === "/login/oauth/access_token")
-      return Response.json({ access_token: "ghu_fake" });
+    if (pathname === "/login/oauth/access_token") {
+      return Response.json({
+        access_token: "ghu_fake",
+        expires_in: 28800,
+        refresh_token: "ghr_fake",
+        refresh_token_expires_in: 15811200,
+      });
+    }
+    if (pathname === "/user") return Response.json({ id: 42, login: "ada", name: "Ada" });
     if (pathname === "/user/installations") return Response.json({ installations: [{ id: 1 }] });
     if (pathname === "/installation/repositories") {
       return Response.json({ repositories: repositories.map(repo) });
     }
     if (/^\/app\/installations\/\d+$/.test(pathname)) {
-      return Response.json({ id: Number(pathname.split("/").pop()), account: { login: "acme" } });
+      return Response.json({
+        id: Number(pathname.split("/").pop()),
+        account: { login: "acme" },
+        permissions: { contents: "write", pull_requests: "write", metadata: "read" },
+      });
     }
     if (pathname.endsWith("/access_tokens")) {
       const expires = new Date(Date.now() + 60 * 60_000).toISOString();
