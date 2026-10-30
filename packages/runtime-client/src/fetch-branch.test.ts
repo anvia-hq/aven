@@ -1,59 +1,21 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { fetchBranch, isBranchName } from "./fetch-branch";
 import { git, type Git } from "./git-clone";
+import { gitFixture, sh } from "./testing/git-fixture";
 
-const dirs: string[] = [];
+const fixtures: (() => Promise<void>)[] = [];
 
-async function sh(cwd: string, ...args: string[]) {
-  const result = await git(args, { cwd });
-  if (result.code !== 0) throw new Error(result.stderr);
-  return result.stdout.trim();
-}
-
-const commit = (cwd: string, message: string) =>
-  sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", message);
-
-// A remote with `main` and `other`, a clone of it made as Aven makes it (one named branch), and a
-// second checkout of the remote to move its branches on.
 async function setup() {
-  const base = await mkdtemp(join(tmpdir(), "aven-fetch-"));
-  dirs.push(base);
-  const remote = join(base, "remote.git");
-  const seed = join(base, "seed");
-  const root = join(base, "work");
-  await Bun.$`mkdir ${seed} ${root}`;
-  await sh(base, "init", "-q", "--bare", "-b", "main", remote);
-  await sh(seed, "init", "-q", "-b", "main");
-  await writeFile(join(seed, "a.txt"), "one\n");
-  await sh(seed, "add", ".");
-  await commit(seed, "first");
-  await sh(seed, "push", "-q", remote, "main");
-  await sh(seed, "checkout", "-q", "-b", "other");
-  await writeFile(join(seed, "b.txt"), "other\n");
-  await sh(seed, "add", ".");
-  await commit(seed, "on other");
-  await sh(seed, "push", "-q", remote, "other");
-  await sh(seed, "checkout", "-q", "main");
-  await sh(root, "clone", "-q", "--single-branch", "--branch", "main", remote, ".");
-  await sh(root, "checkout", "-q", "-b", "aven/test");
-  const access: RepoAccess = { cloneUrl: remote, defaultBranch: "main", token: "secret-token" };
-  // Moves main on in the remote, as a teammate's merge would.
-  const advance = async () => {
-    await writeFile(join(seed, "a.txt"), "two\n");
-    await commit(seed, "second");
-    await sh(seed, "push", "-q", remote, "main");
-    return sh(seed, "rev-parse", "HEAD");
-  };
-  return { root, remote, access, advance };
+  const fixture = await gitFixture();
+  fixtures.push(fixture.cleanup);
+  return fixture;
 }
 
 afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.all(fixtures.splice(0).map((cleanup) => cleanup()));
 });
 
 describe("fetching a branch into the workspace", () => {

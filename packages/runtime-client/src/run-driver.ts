@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
+import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
@@ -19,6 +20,7 @@ import type { GoalEnd } from "./durable-goals";
 import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
 import type { DurableEnd } from "./durable-events";
 import { verifyWith } from "./goal-assessment";
+import { fetchBranch } from "./fetch-branch";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { lateBoundTools } from "./late-bound-tools";
 import type { RunOutbox, Source } from "./run-outbox";
@@ -169,7 +171,14 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
-        const bound: AnyTool[] = lateBoundTools(box.tools, current);
+        // The sandbox has no GitHub credentials, so a fetch is done here, on the host, with the
+        // read-only access the control plane gives this run (decision 0042).
+        const gitFetch = createGitFetchTool(async (branch) => {
+          const root = await context.sandbox.workspace(thread.id);
+          if (!root) throw new Error("The thread has no workspace yet");
+          return fetchBranch(root, await context.call("repo.access", { runId }), branch);
+        });
+        const bound: AnyTool[] = [...lateBoundTools(box.tools, current), gitFetch];
         const { agent, compaction } = context.createAgent({
           thread,
           id,

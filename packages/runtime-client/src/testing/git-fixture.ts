@@ -1,0 +1,56 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { RepoAccess } from "@aven/protocol/runtime-wire";
+
+import { git } from "../git-clone";
+
+export async function sh(cwd: string, ...args: string[]) {
+  const result = await git(args, { cwd });
+  if (result.code !== 0) throw new Error(result.stderr);
+  return result.stdout.trim();
+}
+
+export const commit = (cwd: string, message: string) =>
+  sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", message);
+
+/**
+ * A remote with `main` and `other`, a clone of it made as Aven makes it (one named branch, on the
+ * thread's own branch), and `advance` to move the remote's `main` on as a teammate's merge would.
+ * `cleanup` removes it all.
+ */
+export async function gitFixture() {
+  const base = await mkdtemp(join(tmpdir(), "aven-git-fixture-"));
+  const remote = join(base, "remote.git");
+  const seed = join(base, "seed");
+  const root = join(base, "work");
+  await Bun.$`mkdir ${seed} ${root}`;
+  await sh(base, "init", "-q", "--bare", "-b", "main", remote);
+  await sh(seed, "init", "-q", "-b", "main");
+  await writeFile(join(seed, "a.txt"), "one\n");
+  await sh(seed, "add", ".");
+  await commit(seed, "first");
+  await sh(seed, "push", "-q", remote, "main");
+  await sh(seed, "checkout", "-q", "-b", "other");
+  await writeFile(join(seed, "b.txt"), "other\n");
+  await sh(seed, "add", ".");
+  await commit(seed, "on other");
+  await sh(seed, "push", "-q", remote, "other");
+  await sh(seed, "checkout", "-q", "main");
+  await sh(root, "clone", "-q", "--single-branch", "--branch", "main", remote, ".");
+  await sh(root, "checkout", "-q", "-b", "aven/test");
+  const access: RepoAccess = { cloneUrl: remote, defaultBranch: "main", token: "secret-token" };
+  const advance = async () => {
+    await writeFile(join(seed, "a.txt"), "two\n");
+    await commit(seed, "second");
+    await sh(seed, "push", "-q", remote, "main");
+    return sh(seed, "rev-parse", "HEAD");
+  };
+  return {
+    root,
+    remote,
+    access,
+    advance,
+    cleanup: () => rm(base, { recursive: true, force: true }),
+  };
+}

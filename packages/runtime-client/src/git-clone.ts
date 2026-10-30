@@ -8,13 +8,14 @@ import { runCommand, type CommandOutput } from "./run-command";
 
 export type Git = (
   args: string[],
-  options: { cwd: string; env?: Record<string, string> },
+  options: { cwd: string; env?: Record<string, string>; timeoutMs?: number },
 ) => Promise<CommandOutput>;
 
-export const git: Git = (args, { cwd, env }) =>
+export const git: Git = (args, { cwd, env, timeoutMs }) =>
   runCommand(["git", ...args], {
     cwd,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
+    timeoutMs,
   });
 
 // The header is limited to the clone URL's own origin, so a redirect elsewhere never sees the token.

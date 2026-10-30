@@ -3,6 +3,9 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { authEnv, git, type Git } from "./git-clone";
 import { gitFailure, hardenedGit } from "./host-git";
 
+// A fetch that has not finished by then is stopped, so a stalled connection cannot hold a run.
+const FETCH_TIMEOUT_MS = 2 * 60_000;
+
 // A plain branch name, as a person types one: no leading `-` or `/`, no `..`, no `//`, no trailing
 // `/`, `.` or `.lock`, and not `HEAD`. Anything else is not fetched (decision 0042).
 const BRANCH_NAME = /^(?![-/])[\w./-]+$/;
@@ -44,7 +47,7 @@ export async function fetchBranch(
   const previous = await read();
   const fetched = await hardened(
     ["fetch", "--no-tags", "--", access.cloneUrl, `+refs/heads/${branch}:${ref}`],
-    { cwd: root, env: authEnv(access) },
+    { cwd: root, env: authEnv(access), timeoutMs: FETCH_TIMEOUT_MS },
   );
   if (fetched.code !== 0) throw gitFailure(`Could not fetch ${branch}`, fetched, access.token);
   const commit = await read();

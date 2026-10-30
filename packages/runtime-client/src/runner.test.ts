@@ -20,6 +20,7 @@ import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { fakeDesktop } from "./testing/fake-desktop";
 import { goalSessionMarker } from "./goal-report";
+import { gitFixture, sh } from "./testing/git-fixture";
 import { journalPath } from "./testing/journal-path";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
@@ -268,6 +269,63 @@ describe("startRuntime desktops", () => {
 });
 
 describe("startRuntime", () => {
+  test("the agent's git_fetch brings a branch into the workspace through the host, with the run's own repo access", async () => {
+    const fixture = await gitFixture();
+    cleanups.push(fixture.cleanup);
+    const sandbox: ThreadWorkspaces = {
+      async acquire(): Promise<ThreadSandbox> {
+        return { tools: [], hasRunningProcesses: async () => false };
+      },
+      desktop: () => undefined,
+      workspace: async () => fixture.root,
+      async release() {},
+      async dispose() {},
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [...tools],
+          model: scriptedModel([
+            [
+              {
+                type: "tool-call",
+                toolCallId: "f1",
+                toolName: "git_fetch",
+                input: { branch: "other" },
+              },
+            ],
+            [text("fetched")],
+          ]),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    // The tool asks the control plane for this run's access, as the clone does.
+    await until(() => plane.received.some((message) => message.type === "call"));
+    const call = plane.received.find((message) => message.type === "call");
+    expect(call).toMatchObject({ method: "repo.access", params: { runId: "run-1" } });
+    plane.send({
+      type: "reply",
+      id: (call as { id: string }).id,
+      ok: true,
+      result: fixture.access,
+    });
+
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    expect(await sh(fixture.root, "show", "origin/other:b.txt")).toBe("other");
+    expect(await sh(fixture.root, "rev-parse", "--abbrev-ref", "HEAD")).toBe("aven/test");
+    const ended = plane.received.find((message) => message.type === "run.end");
+    expect(ended).toMatchObject({ outcome: "response" });
+    // The token reached neither the transcript the control plane keeps nor the workspace's config.
+    expect(JSON.stringify(plane.received)).not.toContain("secret-token");
+    expect(await Bun.file(`${fixture.root}/.git/config`).text()).not.toContain("secret-token");
+  });
+
   test("the sandbox gets the repository's access by asking the control plane about the run", async () => {
     const access = {
       cloneUrl: "https://github.com/acme/web.git",
@@ -722,11 +780,12 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
-    // Only the agent with a person to talk to may define a goal, and only it may ask questions.
+    // Every agent of the run can fetch (decision 0042); only the one with a person to talk to may
+    // define a goal, and only it may ask questions.
     expect(made).toEqual([
-      { id: "run-run-1", attended: true, tools: ["define_goal"] },
-      { id: "goal-run-1", attended: false, tools: [] },
-      { id: "run-run-1-report", attended: false, tools: [] },
+      { id: "run-run-1", attended: true, tools: ["git_fetch", "define_goal"] },
+      { id: "goal-run-1", attended: false, tools: ["git_fetch"] },
+      { id: "run-run-1-report", attended: false, tools: ["git_fetch"] },
     ]);
     const texts = plane.received.flatMap((m) =>
       m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
