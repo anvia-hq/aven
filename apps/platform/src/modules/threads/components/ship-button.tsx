@@ -1,17 +1,34 @@
-import { ExternalLink, Rocket } from "@mynaui/icons-react";
+import { ExternalLink, Github, Rocket } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
+import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
 import { useShipThread } from "../hooks/use-ship-thread";
 import type { Thread } from "../types";
 
 type Props = { thread: Thread };
 
-// Ships the thread as a pull request; once there is one, it links to it and ships again as an update.
+// Ships the thread as a pull request, as the person; once there is one, it links to it and ships
+// again as an update.
 export function ShipButton({ thread }: Props) {
   const { shipping, ship } = useShipThread(thread);
+  const account = useGithubAccount();
   const shipped = thread.pullRequestUrl !== null;
   const label = shipped ? "Update PR" : "Ship";
+  // What is shipped is the person's own on GitHub, so their account has to be connected first.
+  if (account?.data && !account.data.connected) {
+    const next = encodeURIComponent(`/threads/${thread.id}`);
+    return (
+      <Button
+        size="sm"
+        nativeButton={false}
+        render={<a href={`/api/github/connect?next=${next}`} />}
+      >
+        <Github />
+        Connect GitHub to ship
+      </Button>
+    );
+  }
   return (
     <>
       {thread.pullRequestUrl && (

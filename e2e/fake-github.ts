@@ -1,6 +1,8 @@
 // A stand-in for GitHub for the e2e run: just the endpoints the control plane calls, with one
 // installation (id 1, account "acme") that can see a few repositories.
 const port = Number(process.env.FAKE_GITHUB_PORT ?? 8101);
+// Where the app is served, which GitHub sends the browser back to after it is authorised.
+const appUrl = process.env.FAKE_GITHUB_APP_URL ?? "http://localhost:5174";
 const repositories = ["shiny-app", "docs-site", "composer-app", "project"];
 
 // Both permissions approved, and the person allowed to push (decisions 0040 and 0041).
@@ -31,6 +33,14 @@ Bun.serve({
       return Response.json(opened ? [opened] : []);
     }
     if (pathname === "/health") return new Response("ok");
+    // The page where a person lets the app act as them: they agree at once and come back.
+    if (pathname === "/login/oauth/authorize") {
+      const state = new URL(request.url).searchParams.get("state") ?? "";
+      const back = new URL("/api/github/callback", appUrl);
+      back.searchParams.set("code", "fake");
+      back.searchParams.set("state", state);
+      return Response.redirect(back.toString(), 302);
+    }
     if (pathname === "/login/oauth/access_token") {
       return Response.json({
         access_token: "ghu_fake",

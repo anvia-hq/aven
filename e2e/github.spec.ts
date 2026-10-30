@@ -41,4 +41,27 @@ test.describe("importing a repository", () => {
     const installations = await page.request.get("/api/github/installations");
     expect(await installations.json()).toEqual([]);
   });
+
+  test("a person connects their own GitHub account and comes back to where they were", async ({
+    page,
+  }) => {
+    await registerUser(page, "gh", "GitHub User");
+    const before = await page.request.get("/api/github/user");
+    expect(await before.json()).toEqual({ connected: false, login: null });
+
+    // GitHub (the fake) sends the browser straight back with a code.
+    await page.goto("/api/github/connect?next=/projects?back=here");
+
+    await expect(page).toHaveURL(/\/projects\?back=here$/);
+    const after = await page.request.get("/api/github/user");
+    expect(await after.json()).toEqual({ connected: true, login: "ada" });
+  });
+
+  test("will not send a person back to another site after connecting", async ({ page }) => {
+    await registerUser(page, "gh", "GitHub User");
+    const response = await page.request.get("/api/github/connect?next=https://evil.test/", {
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(422);
+  });
 });

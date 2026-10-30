@@ -24,6 +24,9 @@ export type GithubStatus = {
   installUrl: string | null;
 };
 
+/** The person's own GitHub account, connected so that what they ship is theirs on GitHub. */
+export type GithubAccount = { connected: boolean; login: string | null };
+
 export type GithubInstallation = {
   id: string;
   accountLogin: string;

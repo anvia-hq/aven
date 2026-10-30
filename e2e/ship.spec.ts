@@ -35,4 +35,24 @@ test.describe("shipping a thread", () => {
     await page.getByRole("button", { name: "Update PR" }).click();
     await expect(page.getByText("Pull request updated")).toBeVisible();
   });
+
+  test("a person who has not connected GitHub is offered to, and comes back to the thread", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+    await page.route("**/api/github/user", (route) =>
+      route.fulfill({ json: { connected: false, login: null } }),
+    );
+
+    await page.goto(`/threads/${threadId}`);
+
+    const connect = page.getByRole("button", { name: "Connect GitHub to ship" });
+    await expect(connect).toHaveAttribute(
+      "href",
+      `/api/github/connect?next=${encodeURIComponent(`/threads/${threadId}`)}`,
+    );
+    await expect(page.getByRole("button", { name: "Ship", exact: true })).toHaveCount(0);
+  });
 });
