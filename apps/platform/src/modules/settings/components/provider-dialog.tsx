@@ -1,4 +1,3 @@
-import { Plus } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -12,24 +11,37 @@ import {
   DialogTrigger,
 } from "@/components/dialog";
 import { Form } from "@/components/form";
-import { LabeledSelect } from "@/components/labeled-select";
 import { TextField } from "@/components/text-field";
 
-import { useAddProviderForm } from "../hooks/use-add-provider-form";
-import { PROVIDER_KINDS, PROVIDER_LABELS, type ProviderKind } from "../types";
+import { useProviderForm } from "../hooks/use-provider-form";
+import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ModelField } from "./model-field";
-
-const kindOptions = PROVIDER_KINDS.map((kind) => ({ value: kind, label: PROVIDER_LABELS[kind] }));
 
 function loadModelsLabel(loading: boolean, loaded: boolean) {
   if (loading) return "Loading…";
   return loaded ? "Reload" : "Load models";
 }
 
-export function AddProviderDialog() {
+const keyPlaceholders: Record<ProviderKind, string> = {
+  openai: "sk-…",
+  anthropic: "sk-ant-…",
+  azure: "Key 1 or Key 2 from the resource",
+  "openai-compatible": "sk-…",
+};
+
+type Props = {
+  kind: ProviderKind;
+  /** Given one, the dialog edits it; without, it adds a provider. */
+  provider?: Provider;
+  /** The trigger's label: "Add" for a kind with many, "Set up" or "Edit" for one with a single. */
+  label: string;
+};
+
+export function ProviderDialog({ kind, provider, label }: Props) {
   const [open, setOpen] = useState(false);
-  const form = useAddProviderForm(() => setOpen(false));
-  const { compatible, kind } = form;
+  const form = useProviderForm(kind, provider, () => setOpen(false));
+  const { compatible, azure } = form;
+  const editing = provider !== undefined;
 
   return (
     <Dialog
@@ -39,31 +51,35 @@ export function AddProviderDialog() {
         if (!next) form.reset();
       }}
     >
-      <DialogTrigger render={<Button />}>
-        <Plus /> Add provider
-      </DialogTrigger>
+      <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
       <DialogContent>
         <Form ref={form.formRef} onSubmit={form.submit} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Add provider</DialogTitle>
+            <DialogTitle>
+              {editing ? "Edit" : label} {PROVIDER_LABELS[kind]}
+            </DialogTitle>
             <DialogDescription>
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
-          <LabeledSelect
-            label="Type"
-            options={kindOptions}
-            value={kind}
-            onChange={(value) => form.changeKind(value as ProviderKind)}
-          />
-          <TextField label="Name" name="name" placeholder={PROVIDER_LABELS[kind]} />
           {compatible && (
             <TextField
-              label="Base URL"
+              label="Name"
+              name="name"
+              defaultValue={provider?.name}
+              placeholder={PROVIDER_LABELS[kind]}
+            />
+          )}
+          {(compatible || azure) && (
+            <TextField
+              label={azure ? "Resource URL" : "Base URL"}
               name="baseUrl"
               type="url"
               required
-              placeholder="http://localhost:11434/v1"
+              defaultValue={provider?.baseUrl ?? undefined}
+              placeholder={
+                azure ? "https://my-resource.openai.azure.com" : "http://localhost:11434/v1"
+              }
             />
           )}
           <TextField
@@ -71,31 +87,47 @@ export function AddProviderDialog() {
             name="apiKey"
             type="password"
             autoComplete="off"
-            required={!compatible}
-            placeholder={kind === "anthropic" ? "sk-ant-…" : "sk-…"}
+            required={!compatible && !editing}
+            placeholder={
+              editing && provider.keyHint
+                ? `Leave blank to keep …${provider.keyHint}`
+                : keyPlaceholders[kind]
+            }
           />
-          <div className="flex items-end gap-2">
-            <div className="min-w-0 flex-1">
-              <ModelField
-                models={form.models}
-                value={form.modelId}
-                onChange={form.selectModel}
-                required={compatible}
-                placeholder={compatible ? "llama3.1" : "Provider default"}
-              />
+          {azure ? (
+            // Azure names models by deployment, and has no list to load.
+            <TextField
+              label="Deployment name"
+              name="modelId"
+              required
+              defaultValue={provider?.modelId ?? undefined}
+              placeholder="my-gpt-deployment"
+            />
+          ) : (
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <ModelField
+                  models={form.models}
+                  value={form.modelId}
+                  onChange={form.selectModel}
+                  required={compatible}
+                  defaultValue={provider?.modelId ?? undefined}
+                  placeholder={compatible ? "llama3.1" : "Provider default"}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={form.loadingModels}
+                onClick={form.loadModels}
+              >
+                {loadModelsLabel(form.loadingModels, form.models !== null)}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={form.loadingModels}
-              onClick={form.loadModels}
-            >
-              {loadModelsLabel(form.loadingModels, form.models !== null)}
-            </Button>
-          </div>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={form.submitting}>
-              Add provider
+              {editing ? "Save changes" : "Add provider"}
             </Button>
           </DialogFooter>
         </Form>

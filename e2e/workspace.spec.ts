@@ -54,6 +54,8 @@ test.describe("settings", () => {
     await expect(page).toHaveURL(/\/settings\/profile$/);
     await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
 
+    // Settings is its own screen; the user menu is in the app, one link back.
+    await page.getByRole("link", { name: "Back to Aven" }).click();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
     // The organization section of the menu has its own Settings button.
     await page.getByRole("menu").getByRole("button", { name: "Settings" }).click();
@@ -92,20 +94,48 @@ test.describe("settings", () => {
     }
   });
 
+  test("a provider with one credential is set up, edited and removed", async ({ page }) => {
+    await registerUser(page, "ws", "Workspace User");
+    await page.goto("/settings/providers");
+    const azure = page.getByRole("region", { name: "Azure OpenAI" });
+
+    await azure.getByRole("button", { name: "Set up" }).click();
+    await page.getByLabel("Resource URL").fill("https://my-resource.openai.azure.com/openai");
+    await page.getByLabel("API key").fill("azure-secret-1234");
+    await page.getByLabel("Deployment name").fill("deploy-one");
+    await page.getByRole("button", { name: "Add provider" }).click();
+
+    // One credential: the row now shows it, with Edit instead of Set up, and the URL kept as an origin.
+    await expect(azure).toContainText("https://my-resource.openai.azure.com · deploy-one · …1234");
+    await expect(azure.getByRole("button", { name: "Set up" })).toHaveCount(0);
+
+    await azure.getByRole("button", { name: "Edit" }).click();
+    await page.getByLabel("Deployment name").fill("deploy-two");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(azure).toContainText("deploy-two · …1234");
+
+    await azure.getByRole("button", { name: "Remove Azure OpenAI" }).click();
+    await expect(azure.getByRole("button", { name: "Set up" })).toBeVisible();
+    // Compatible servers stay many: Add is always there.
+    await expect(
+      page.getByRole("region", { name: "OpenAI-compatible" }).getByRole("button", { name: "Add" }),
+    ).toBeVisible();
+  });
+
   test("invite and remove a member", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/members");
-    const table = page.getByRole("table", { name: "Members" });
-    await expect(table.getByRole("row")).toHaveCount(2);
+    const table = page.getByRole("list", { name: "Members" });
+    await expect(table.getByRole("listitem")).toHaveCount(1);
 
     await page.getByRole("button", { name: "Invite member" }).click();
     await page.getByLabel("Email").fill("new.person@aven.test");
     await page.getByRole("button", { name: "Send invite" }).click();
 
     await expect(page.getByText("Invitation created")).toBeVisible();
-    await expect(table.getByRole("row", { name: /new\.person@aven\.test/ })).toContainText(
-      "Pending",
-    );
+    await expect(
+      table.getByRole("listitem").filter({ hasText: "new.person@aven.test" }),
+    ).toContainText("Pending");
 
     await page.getByRole("button", { name: "Remove new.person" }).click();
     await expect(table.getByText("new.person@aven.test")).toHaveCount(0);
@@ -128,7 +158,8 @@ test.describe("sidebar and search", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/settings\/members$/);
 
-    await page.getByRole("button", { name: "Search" }).click();
+    // Settings has no sidebar, so no Search button; the shortcut works everywhere.
+    await page.keyboard.press("ControlOrMeta+k");
     await page.keyboard.type("docs-site");
     await page.getByRole("option", { name: "docs-site", exact: true }).click();
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);

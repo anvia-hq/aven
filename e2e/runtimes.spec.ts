@@ -34,9 +34,10 @@ test.describe("runtimes", () => {
     const token = /AVEN_RUNTIME_TOKEN=(\S+)/.exec(command)?.[1];
     await page.getByRole("button", { name: "Done" }).click();
 
-    const row = page.getByRole("table", { name: "Runtimes" }).getByRole("row", {
-      name: /e2e-laptop/,
-    });
+    const row = page
+      .getByRole("list", { name: "Runtimes" })
+      .getByRole("listitem")
+      .filter({ hasText: "e2e-laptop" });
     await expect(row).toContainText("Offline");
 
     // The command as shown, through the platform's /api proxy, WebSocket included.

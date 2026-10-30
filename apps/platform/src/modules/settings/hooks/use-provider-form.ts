@@ -1,38 +1,43 @@
 import { useRef, useState, type FormEvent } from "react";
 
-import { PROVIDER_LABELS, type ProviderKind } from "../types";
+import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { useProviders } from "./use-providers";
 
-// The state behind the add-provider dialog: the chosen kind, the model list loaded for it, and
-// submitting. Text fields are uncontrolled; they are read from the form when needed.
-export function useAddProviderForm(onAdded: () => void) {
+// The state behind the provider dialog for one kind: the model list loaded for it, and
+// submitting, which adds a provider or, given one, changes it. Text fields are uncontrolled; they
+// are read from the form when needed.
+export function useProviderForm(
+  kind: ProviderKind,
+  provider: Provider | undefined,
+  onDone: () => void,
+) {
   const [submitting, setSubmitting] = useState(false);
-  const [kind, setKind] = useState<ProviderKind>("openai");
   const [models, setModels] = useState<string[] | null>(null);
-  const [modelId, setModelId] = useState("");
+  const [modelId, setModelId] = useState(provider?.modelId ?? "");
   const [loadingModels, setLoadingModels] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const { create, listModels } = useProviders();
+  const { create, update, listModels, listSavedModels } = useProviders();
   const compatible = kind === "openai-compatible";
+  const azure = kind === "azure";
 
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
 
-  // A model list belongs to one kind and key, so changing the kind (or closing) drops it.
-  function reset(next: ProviderKind = "openai") {
-    setKind(next);
+  // A model list belongs to one key and URL, so closing the dialog drops it.
+  function reset() {
     setModels(null);
-    setModelId("");
+    setModelId(provider?.modelId ?? "");
   }
 
-  // Fetches `<provider>/models` with whatever key and URL are typed so far.
+  // Fetches `<provider>/models` with whatever key and URL are typed so far; an edit with no new
+  // key asks with the stored one.
   async function loadModels() {
     setLoadingModels(true);
-    const list = await listModels({
-      kind,
-      apiKey: readTrimmedField("apiKey"),
-      baseUrl: readTrimmedField("baseUrl"),
-    });
+    const apiKey = readTrimmedField("apiKey");
+    const list =
+      provider && !apiKey
+        ? await listSavedModels(provider)
+        : await listModels({ kind, apiKey, baseUrl: readTrimmedField("baseUrl") });
     setLoadingModels(false);
     if (list) {
       setModels(list);
@@ -43,29 +48,28 @@ export function useAddProviderForm(onAdded: () => void) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    const created = await create({
-      kind,
-      name: readTrimmedField("name") ?? PROVIDER_LABELS[kind],
-      apiKey: readTrimmedField("apiKey"),
-      baseUrl: compatible ? readTrimmedField("baseUrl") : undefined,
-      modelId: (models ? modelId : readTrimmedField("modelId")) || undefined,
-    });
+    const chosenModel = (models ? modelId : readTrimmedField("modelId")) || undefined;
+    const name = readTrimmedField("name") ?? provider?.name ?? PROVIDER_LABELS[kind];
+    const baseUrl = compatible || azure ? readTrimmedField("baseUrl") : undefined;
+    const apiKey = readTrimmedField("apiKey");
+    const done = provider
+      ? await update(provider, { name, apiKey, baseUrl, modelId: chosenModel ?? null })
+      : await create({ kind, name, apiKey, baseUrl, modelId: chosenModel });
     setSubmitting(false);
-    if (created) {
+    if (done) {
       reset();
-      onAdded();
+      onDone();
     }
   }
 
   return {
     formRef,
-    kind,
     compatible,
+    azure,
     models,
     modelId,
     loadingModels,
     submitting,
-    changeKind: reset,
     selectModel: setModelId,
     loadModels,
     reset,

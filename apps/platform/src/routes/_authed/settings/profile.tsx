@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { PageHeader } from "@/components/page-header";
-import { Separator } from "@/components/separator";
+import { SettingsPage, SettingsSection } from "@/components/settings-section";
 import { PreferencesSection } from "@/modules/settings/components/preferences-section";
 import { ProfileForm } from "@/modules/settings/components/profile-form";
 
@@ -13,11 +12,11 @@ function Profile() {
   const { user } = Route.useRouteContext();
 
   return (
-    <>
-      <PageHeader title="Profile" description="Your personal account and preferences." />
-      <ProfileForm name={user.name} email={user.email} />
-      <Separator />
+    <SettingsPage title="Profile" description="Your personal account and preferences.">
+      <SettingsSection title="Account" description="How you appear to others in this workspace.">
+        <ProfileForm name={user.name} email={user.email} />
+      </SettingsSection>
       <PreferencesSection />
-    </>
+    </SettingsPage>
   );
 }

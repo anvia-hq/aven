@@ -7,7 +7,7 @@ import { createListStore } from "@/lib/list-store";
 
 import { providerModelsAtom } from "../atoms/provider-models-atom";
 import { providersAtom } from "../atoms/providers-atom";
-import type { NewProvider, Provider } from "../types";
+import type { NewProvider, Provider, ProviderPatch } from "../types";
 
 const providersStore = createListStore<Provider>({
   path: "/providers",
@@ -66,6 +66,29 @@ export function useProviders() {
     }
   }
 
+  async function update(provider: Provider, patch: ProviderPatch) {
+    const updated = await change("Could not update provider", () =>
+      postJson<Provider>(`/providers/${provider.id}`, patch, "PATCH"),
+    );
+    if (updated)
+      toast.add({ title: "Provider updated", description: provider.name, type: "success" });
+    return updated;
+  }
+
+  // The models a saved provider offers, asked of its stored key. Null on failure (already toasted).
+  async function listSavedModels(provider: Provider) {
+    try {
+      return (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models;
+    } catch (failure) {
+      toast.add({
+        title: "Could not load models",
+        description: errorMessage(failure),
+        type: "error",
+      });
+      return null;
+    }
+  }
+
   async function makeDefault(provider: Provider) {
     const updated = await change("Could not update provider", () =>
       postJson<Provider>(`/providers/${provider.id}`, { isDefault: true }, "PATCH"),
@@ -87,6 +110,8 @@ export function useProviders() {
     loaded: providers !== null,
     create,
     listModels,
+    listSavedModels,
+    update,
     makeDefault,
     remove,
   };

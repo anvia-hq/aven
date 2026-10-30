@@ -1,8 +1,8 @@
 import { Trash } from "@mynaui/icons-react";
+import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { SettingsEmpty, SettingsList, SettingsRow } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
@@ -13,54 +13,52 @@ export function RuntimesList() {
   const { runtimes, loaded, revoke, isOwnedByMe } = useRuntimes({ poll: true });
 
   if (!loaded) return null;
-  if (runtimes.length === 0) {
-    return <p className="text-sm text-muted-foreground">No runtimes yet.</p>;
-  }
+  if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
 
   return (
-    <Table aria-label="Runtimes">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Token</TableHead>
-          <TableHead>Last seen</TableHead>
-          <TableHead className="w-24" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {runtimes.map((runtime) => (
-          <TableRow key={runtime.id}>
-            <TableCell className="font-medium">{runtime.name}</TableCell>
-            <TableCell>
-              <Badge variant={runtime.online ? "secondary" : "outline"}>
-                {runtime.online ? "Online" : "Offline"}
-              </Badge>
-            </TableCell>
-            <TableCell className="font-mono text-xs">
-              {runtime.ownerId === null ? "Built in" : `…${runtime.tokenHint}`}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {runtime.lastSeenAt ? timeAgo(runtime.lastSeenAt, true) : "Never"}
-            </TableCell>
-            <TableCell>
-              {isOwnedByMe(runtime) && (
-                <div className="flex items-center justify-end gap-1">
-                  <RotateRuntimeDialog runtime={runtime} />
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Revoke ${runtime.name}`}
-                    onClick={() => void revoke(runtime)}
-                  >
-                    <Trash />
-                  </Button>
-                </div>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <SettingsList label="Runtimes">
+      {runtimes.map((runtime) => (
+        <div key={runtime.id} role="listitem" className="contents">
+          <SettingsRow
+            leading={
+              <span
+                role="img"
+                aria-label={runtime.online ? "Online" : "Offline"}
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  runtime.online ? "bg-success" : "bg-muted-foreground/40",
+                )}
+              />
+            }
+            title={runtime.name}
+            description={
+              <span className="flex flex-wrap items-center gap-x-2">
+                <span>{runtime.online ? "Online" : "Offline"}</span>
+                <span className="font-mono">
+                  {runtime.ownerId === null ? "Built in" : `token …${runtime.tokenHint}`}
+                </span>
+                <span>
+                  {runtime.lastSeenAt ? `Seen ${timeAgo(runtime.lastSeenAt, true)}` : "Never seen"}
+                </span>
+              </span>
+            }
+          >
+            {isOwnedByMe(runtime) && (
+              <>
+                <RotateRuntimeDialog runtime={runtime} />
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Revoke ${runtime.name}`}
+                  onClick={() => void revoke(runtime)}
+                >
+                  <Trash />
+                </Button>
+              </>
+            )}
+          </SettingsRow>
+        </div>
+      ))}
+    </SettingsList>
   );
 }

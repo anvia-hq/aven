@@ -8,9 +8,17 @@ type Props = {
   onChange: (modelId: string) => void;
   required: boolean;
   placeholder: string;
+  defaultValue?: string;
 };
 
-export function ModelField({ models, value, onChange, required, placeholder }: Props) {
+export function ModelField({
+  models,
+  value,
+  onChange,
+  required,
+  placeholder,
+  defaultValue,
+}: Props) {
   if (models) {
     return (
       <LabeledSelect
@@ -25,6 +33,7 @@ export function ModelField({ models, value, onChange, required, placeholder }: P
     <TextField
       label={required ? "Model" : "Model (optional)"}
       name="modelId"
+      defaultValue={defaultValue}
       required={required}
       placeholder={placeholder}
     />

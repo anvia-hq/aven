@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { PageHeader } from "@/components/page-header";
+import { SettingsPage } from "@/components/settings-section";
 import { InviteMemberDialog } from "@/modules/settings/components/invite-member-dialog";
 import { MembersTable } from "@/modules/settings/components/members-table";
 
@@ -10,13 +10,12 @@ export const Route = createFileRoute("/_authed/settings/members")({
 
 function Members() {
   return (
-    <>
-      <PageHeader
-        title="Members"
-        description="People with access to this workspace."
-        actions={<InviteMemberDialog />}
-      />
+    <SettingsPage
+      title="Members"
+      description="People with access to this workspace."
+      actions={<InviteMemberDialog />}
+    >
       <MembersTable />
-    </>
+    </SettingsPage>
   );
 }

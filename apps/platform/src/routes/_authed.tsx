@@ -1,4 +1,10 @@
-import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Cog, Search } from "@mynaui/icons-react";
 import type { CSSProperties } from "react";
 
@@ -39,6 +45,18 @@ function AuthedLayout() {
 
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
+  const inSettings = useRouterState({ select: (state) => state.location.pathname }).startsWith(
+    "/settings",
+  );
+
+  if (inSettings) {
+    return (
+      <>
+        <Outlet />
+        <CommandMenu />
+      </>
+    );
+  }
 
   return (
     <SidebarProvider style={{ "--sidebar-width": `${sidebarSize.width}px` } as CSSProperties}>

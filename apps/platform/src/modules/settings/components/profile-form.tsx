@@ -21,7 +21,7 @@ export function ProfileForm({ name, email }: Props) {
   }
 
   return (
-    <Form onSubmit={save} className="flex max-w-md flex-col gap-4">
+    <Form onSubmit={save} className="flex max-w-sm flex-col gap-4">
       <TextField label="Name" name="name" defaultValue={name} required />
       <TextField label="Email" name="email" defaultValue={email} disabled />
       <Button type="submit" className="w-fit">
