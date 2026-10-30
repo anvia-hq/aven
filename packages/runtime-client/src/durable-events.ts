@@ -1,6 +1,17 @@
-import type { AgentOutcome, AgentStreamEvent, ToolResultOutput, Usage } from "@anvia/core";
+import type {
+  AgentOutcome,
+  AgentStreamEvent,
+  ToolCallPart,
+  ToolResultOutput,
+  Usage,
+} from "@anvia/core";
 import type { DurableEvent } from "@anvia/durable";
-import { projectStreamEvent, projectToolOutput, tokenUsageOf } from "@aven/agents/projection";
+import {
+  projectStreamEvent,
+  projectToolCall,
+  projectToolOutput,
+  tokenUsageOf,
+} from "@aven/agents/projection";
 import type { RunEvent } from "@aven/protocol/events";
 
 /** How a durable run ended, as far as the control plane is told (see `RunOutcome` on the wire). */
@@ -20,6 +31,8 @@ const record = (value: unknown): Record<string, unknown> =>
 export function createDurableEventMapper(options: { contextWindow?: number } = {}) {
   // A tool's result names its operation, not its call; the call id arrives with `tool_started`.
   const calls = new Map<string, string>();
+  // Some models stream the finished call, others do not: a call is announced once, by whichever comes first.
+  const announced = new Set<string>();
 
   function map(event: DurableEvent): { events: RunEvent[]; end?: DurableEnd } {
     const data = record(event.data);
@@ -28,6 +41,7 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         const delta = record(data.event);
         if (typeof delta.type !== "string" || !DELTAS.has(delta.type)) return { events: [] };
         const projected = projectStreamEvent(delta as unknown as AgentStreamEvent);
+        if (projected?.type === "tool_start") announced.add(projected.tool.id);
         return { events: projected ? [projected] : [] };
       }
       case "model_completed": {
@@ -48,7 +62,12 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         const call = record(record(data.input).toolCall);
         if (typeof data.operationId === "string" && typeof call.toolCallId === "string")
           calls.set(data.operationId, call.toolCallId);
-        return { events: [] };
+        if (typeof call.toolCallId !== "string" || announced.has(call.toolCallId))
+          return { events: [] };
+        announced.add(call.toolCallId);
+        return {
+          events: [{ type: "tool_start", tool: projectToolCall(call as unknown as ToolCallPart) }],
+        };
       }
       case "tool_completed": {
         const id = typeof data.operationId === "string" ? calls.get(data.operationId) : undefined;
