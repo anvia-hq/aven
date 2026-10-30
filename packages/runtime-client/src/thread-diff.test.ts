@@ -1,0 +1,88 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { git } from "./git-clone";
+import { markTurn, threadDiff } from "./thread-diff";
+
+const roots: string[] = [];
+
+// A repository with a remote, a thread branch and one commit on it, as a workspace is after the clone.
+async function workspace() {
+  const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
+  roots.push(base);
+  const remote = join(base, "remote");
+  const root = join(base, "work");
+  const sh = async (cwd: string, ...args: string[]) => {
+    const result = await git(args, { cwd });
+    if (result.code !== 0) throw new Error(result.stderr);
+  };
+  await Bun.$`mkdir ${remote} ${root}`;
+  await sh(remote, "init", "-q", "-b", "main");
+  await writeFile(join(remote, "a.txt"), "one\ntwo\n");
+  await sh(remote, "add", ".");
+  await sh(remote, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first");
+  await sh(root, "clone", "-q", remote, ".");
+  await sh(root, "checkout", "-q", "-b", "aven/test");
+  return { root, sh };
+}
+
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+describe("a thread's changes", () => {
+  test("a folder that is no repository has none", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "aven-not-a-repo-"));
+    roots.push(dir);
+    expect(await markTurn(dir)).toBe(false);
+    expect(await threadDiff(dir, "all")).toBeNull();
+  });
+
+  test("the whole branch shows every change, new files included", async () => {
+    const { root } = await workspace();
+    await writeFile(join(root, "a.txt"), "one\nthree\n");
+    await writeFile(join(root, "b.txt"), "new\n");
+    const diff = await threadDiff(root, "all");
+    expect(diff?.truncated).toBe(false);
+    expect(diff?.patch).toContain("-two\n+three");
+    expect(diff?.patch).toContain("+++ b/b.txt");
+  });
+
+  test("a turn shows only what changed since it was marked, committed or not", async () => {
+    const { root, sh } = await workspace();
+    await writeFile(join(root, "a.txt"), "one\nthree\n");
+    expect(await markTurn(root)).toBe(true);
+    expect((await threadDiff(root, "turn"))?.patch).toBe("");
+
+    await writeFile(join(root, "b.txt"), "new\n");
+    await sh(root, "add", ".");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "work");
+    await writeFile(join(root, "c.txt"), "later\n");
+
+    const turn = (await threadDiff(root, "turn"))?.patch ?? "";
+    expect(turn).toContain("+++ b/b.txt");
+    expect(turn).toContain("+++ b/c.txt");
+    expect(turn).not.toContain("three");
+    // The whole branch still has the earlier change.
+    expect((await threadDiff(root, "all"))?.patch).toContain("+three");
+  });
+
+  test("leaves the thread's own staging area and ignored files alone", async () => {
+    const { root } = await workspace();
+    await writeFile(join(root, ".gitignore"), "ignored.txt\n");
+    await writeFile(join(root, "ignored.txt"), "secret\n");
+    await markTurn(root);
+    await threadDiff(root, "all");
+    const staged = await git(["diff", "--cached", "--name-only"], { cwd: root });
+    expect(staged.stdout).toBe("");
+    expect((await threadDiff(root, "all"))?.patch).not.toContain("secret");
+  });
+
+  test("a thread that never marked a turn has an empty turn", async () => {
+    const { root } = await workspace();
+    await writeFile(join(root, "b.txt"), "x\n");
+    expect(await threadDiff(root, "turn")).toEqual({ patch: "", truncated: false });
+  });
+});

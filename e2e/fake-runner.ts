@@ -252,10 +252,37 @@ ws.onmessage = ({ data }) => {
   }
 };
 
+// What the pretend workspace has changed: one file in the last turn, and one more over the thread.
+const TURN_PATCH = `diff --git a/src/greeting.ts b/src/greeting.ts
+index 1111111..2222222 100644
+--- a/src/greeting.ts
++++ b/src/greeting.ts
+@@ -1,3 +1,3 @@
+ export function greet() {
+-  return "hello";
++  return "hello, world";
+ }
+`;
+const ALL_ONLY_PATCH = `diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1 @@
++# Notes
+`;
+
 let held: { holder: string; expiresAt: string } | null = null;
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { holder?: string; leaseMs?: number };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
+  if (call.method === "diff.get") {
+    const { scope } = call.params as { scope: "turn" | "all" };
+    return reply({
+      patch: scope === "turn" ? TURN_PATCH : TURN_PATCH + ALL_ONLY_PATCH,
+      truncated: false,
+    });
+  }
   if (!sandboxRunning) return reply(null);
   if (call.method === "desktop.takeover") {
     held = {

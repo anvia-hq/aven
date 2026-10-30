@@ -77,6 +77,7 @@ function slowSandbox() {
       return { tools: [], hasRunningProcesses: async () => busy.now };
     },
     desktop: () => undefined,
+    workspace: async () => undefined,
     async release(threadId) {
       released.push(threadId);
     },
@@ -207,6 +208,7 @@ describe("startRuntime", () => {
         return { tools: [], hasRunningProcesses: async () => false };
       },
       desktop: () => undefined,
+      workspace: async () => undefined,
       async release() {},
       async dispose() {},
     };

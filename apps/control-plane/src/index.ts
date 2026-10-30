@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { errorsRouter } from "./errors";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
+import { diffRouter } from "./modules/diff/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
@@ -19,6 +20,7 @@ const app = new Elysia()
   .get("/health", () => ({ status: "ok" }))
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
+  .use(diffRouter(runtimeHub))
   .use(githubRouter)
   .use(platformRouter)
   .use(projectsRouter)

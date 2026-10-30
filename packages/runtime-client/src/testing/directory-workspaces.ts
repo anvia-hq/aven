@@ -278,6 +278,7 @@ export function directoryWorkspaces(
       };
     },
     desktop: () => undefined,
+    workspace: async (threadId) => roots.get(threadId),
     release: free,
     async dispose() {
       await Promise.all([...sandboxes.keys()].map(free));

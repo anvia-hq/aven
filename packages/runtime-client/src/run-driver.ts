@@ -28,6 +28,7 @@ import { lateBoundTools } from "./late-bound-tools";
 import type { RunOutbox, Source } from "./run-outbox";
 import type { RunRecord, RunRecords } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { markTurn } from "./thread-diff";
 
 export type RunMessage = {
   runId: string;
@@ -100,6 +101,12 @@ export function createRunDriver(context: DriverContext) {
       );
       if (run.cancelReason) throw new Error(run.cancelReason);
       context.boxes.set(thread.id, box);
+      // What this turn changes is measured from here; a run picked up again after a restart, or
+      // resumed with an answer, is still the same turn.
+      if (record.kind === "start" && !record.durableId) {
+        const root = await context.sandbox.workspace(thread.id);
+        if (root) await markTurn(root).catch(() => false);
+      }
       const journaled = await context.journal;
       // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
       const current = () => context.boxes.get(thread.id)?.tools;

@@ -5,6 +5,7 @@ import type {
   ControlPlaneToRuntime,
   CallMethod,
   DesktopCallMethod,
+  DiffCallMethod,
   RepoAccess,
   RuntimeToControlPlane,
   RunThreadInfo,
@@ -140,7 +141,7 @@ export class RuntimeConnection {
 
   // Asks the runtime about a thread's desktop. Rejects with the runtime's own error, or when it
   // does not answer in time.
-  call(method: DesktopCallMethod, params: unknown, timeoutMs = CALL_TIMEOUT_MS) {
+  call(method: DesktopCallMethod | DiffCallMethod, params: unknown, timeoutMs = CALL_TIMEOUT_MS) {
     return new Promise<unknown>((resolve, reject) => {
       const id = crypto.randomUUID();
       const finish = () => {

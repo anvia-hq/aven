@@ -1,4 +1,4 @@
-import { LayoutDashboard, Monitor } from "@mynaui/icons-react";
+import { GitDiff, LayoutDashboard, Monitor } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 
@@ -10,6 +10,8 @@ type Props = {
   onToggleOverview: () => void;
   desktopOpen: boolean;
   onToggleDesktop: () => void;
+  diffOpen: boolean;
+  onToggleDiff: () => void;
 };
 
 export function ThreadHeader({
@@ -18,6 +20,8 @@ export function ThreadHeader({
   onToggleOverview,
   desktopOpen,
   onToggleDesktop,
+  diffOpen,
+  onToggleDiff,
 }: Props) {
   return (
     <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
@@ -39,6 +43,15 @@ export function ThreadHeader({
         onClick={onToggleDesktop}
       >
         <Monitor />
+      </Button>
+      <Button
+        variant={diffOpen ? "secondary" : "ghost"}
+        size="icon-sm"
+        aria-label="Changes"
+        aria-pressed={diffOpen}
+        onClick={onToggleDiff}
+      >
+        <GitDiff />
       </Button>
     </header>
   );

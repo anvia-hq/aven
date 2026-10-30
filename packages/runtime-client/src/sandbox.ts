@@ -147,6 +147,8 @@ export interface ThreadWorkspaces {
   acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
+  /** The thread's workspace directory on this machine once it holds a clone; never clones one. */
+  workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
   dispose(): Promise<void>;
@@ -254,6 +256,11 @@ export class Sandboxes implements ThreadWorkspaces {
 
   desktop(threadId: string) {
     return this.#hub.isConnected(threadId) ? this.#hub.desktop(threadId) : undefined;
+  }
+
+  async workspace(threadId: string) {
+    const dir = join(runtimeHome(this.#config.home), "workspaces", threadId);
+    return (await isCloned(dir)) ? realpath(dir) : undefined;
   }
 
   async release(threadId: string) {

@@ -12,6 +12,7 @@ import {
 } from "@aven/protocol/runtime-wire";
 
 import { DesktopViewers } from "./desktop-viewers";
+import { threadDiff } from "./thread-diff";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -234,6 +235,16 @@ export function startRuntime(options: RuntimeOptions) {
     }
   }
 
+  // A thread's changes; null when it has no workspace on this runner yet.
+  async function diffOf(params: unknown) {
+    const { threadId, scope } = (params ?? {}) as Record<string, unknown>;
+    if (typeof threadId !== "string" || (scope !== "turn" && scope !== "all")) {
+      throw new Error("Invalid parameters");
+    }
+    const root = await options.sandbox.workspace(threadId);
+    return root ? threadDiff(root, scope) : null;
+  }
+
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {
       case "run.start":
@@ -259,7 +270,11 @@ export function startRuntime(options: RuntimeOptions) {
         viewers.close(message.viewerId);
         return;
       case "call":
-        await answer(message.id, () => viewers.call(message.method, message.params));
+        await answer(message.id, () =>
+          message.method === "diff.get"
+            ? diffOf(message.params)
+            : viewers.call(message.method, message.params),
+        );
         return;
       case "reply": {
         const waiting = pending.get(message.id);

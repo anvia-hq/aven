@@ -55,6 +55,18 @@ export type DesktopInfo = {
 /** What the control plane asks of a runner about a thread's desktop (decision 0015). */
 export type DesktopCallMethod = "desktop.status" | "desktop.takeover" | "desktop.release";
 
+/** What the control plane asks of a runner about a thread's changes (decision 0030); params are `{ threadId, scope }`. */
+export type DiffCallMethod = "diff.get";
+
+/** `turn` is what the thread's latest run changed, `all` everything since its branch left the default branch. */
+export type DiffScope = "turn" | "all";
+
+/** A thread's changes as a unified patch; `truncated` when the patch was cut to keep it small. */
+export type ThreadDiff = {
+  patch: string;
+  truncated: boolean;
+};
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
@@ -80,7 +92,7 @@ export type ControlPlaneToRuntime =
   /** Start streaming the thread's desktop (VNC) as binary frames for `viewerId`. */
   | { type: "desktop.open"; viewerId: string; threadId: string }
   | { type: "desktop.close"; viewerId: string }
-  | { type: "call"; id: string; method: DesktopCallMethod; params: unknown }
+  | { type: "call"; id: string; method: DesktopCallMethod | DiffCallMethod; params: unknown }
   | Reply;
 
 export type RuntimeToControlPlane =
@@ -153,6 +165,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 10: a runner answers `diff.get` with a thread's changes (decision 0030).
 // Version 9: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
 // Version 8: a run can suspend on the agent's question and be resumed with the answer, `run.resume`
 // (decision 0020). Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
@@ -161,4 +174,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 9;
+export const WIRE_VERSION = 10;
