@@ -50,6 +50,7 @@ const sandbox = await Sandboxes.start({
   home: process.env.AVEN_RUNTIME_HOME || undefined,
   memoryMb: positiveNumber("AVEN_SANDBOX_MEMORY_MB"),
   cpus: positiveNumber("AVEN_SANDBOX_CPUS"),
+  pidsLimit: positiveNumber("AVEN_SANDBOX_PIDS_LIMIT"),
 }).catch((error: unknown) => {
   console.error(errorMessage(error));
   process.exit(1);

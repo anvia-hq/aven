@@ -375,7 +375,7 @@ export class Sandboxes implements ThreadWorkspaces {
     const token = randomBytes(24).toString("base64url");
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
-    const { memoryMb = 2048, cpus = 2, pidsLimit = 512 } = this.#config;
+    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
     const args = dockerRunArgs({
       name,
       threadId,
