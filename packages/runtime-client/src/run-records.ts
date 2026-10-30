@@ -2,6 +2,8 @@ import type { Database } from "bun:sqlite";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunModel, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
+import type { GoalState } from "./durable-runs";
+
 // What a runner needs to take a run up again after it restarts: who asked for what, and how far
 // the run had got. Everything else is in the journal (decision 0024).
 export type RunRecord = {
@@ -17,11 +19,23 @@ export type RunRecord = {
   durableId?: string;
   /** The messages of the run filed with the control plane so far. */
   turn: number;
-  /** A goal the agent handed over, to start when its turn ends. */
+  /** Where the run is: the agent's turn, the goal it handed over, or the report on that goal. */
+  phase: "chat" | "goal" | "report";
+  /** A goal the agent handed over, to start when its turn ends, and how far it has got. */
   goal?: GoalRequest;
+  goalState?: GoalState;
+  /** The report turn's run in the journal, once started. */
+  reportId?: string;
   /** Set once `run.end` is in the outbox: nothing is left to do but wait for it to be acknowledged. */
   done?: boolean;
 };
+
+// Every agent a run uses in the journal, so a restart knows which of the journal's runs are its own.
+export const agentsOf = (record: RunRecord) => [
+  record.agentId,
+  `goal-${record.runId}`,
+  `run-${record.runId}-report`,
+];
 
 export class RunRecords {
   #db: Database;

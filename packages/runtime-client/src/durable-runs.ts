@@ -68,7 +68,19 @@ export type GoalEnd =
   | { type: "paused"; reason: string; summary: string; next: string }
   | { type: "error"; error: string };
 
+/** What a goal needs remembered to be taken up again: its task, and each session it has seen. */
+export type GoalState = {
+  taskId?: string;
+  sessions: Record<string, { number: number; filed: boolean }>;
+};
+
 export type FollowedGoal = { done: Promise<GoalEnd>; cancel(): Promise<void> };
+
+type GoalTracker = {
+  state: GoalState;
+  saveState: (state: GoalState) => void;
+  cursorOf: (durableId: string) => number;
+};
 
 type GoalContext = { verify: () => Promise<CommandResult[]> };
 
@@ -229,16 +241,31 @@ export class DurableRuns {
 
   // Runs a goal: working sessions one after another, each followed for its events, until the verify
   // commands pass or the goal stops short. `onSession` hears each session's messages when it ends.
-  async startGoal(
-    runId: string,
-    request: GoalRequest,
-    input: RunInput,
-    verify: () => Promise<CommandResult[]>,
-    onEvent: Emit,
-    onSession: (session: number, messages: Message[]) => Promise<void>,
-  ): Promise<FollowedGoal> {
+  // With a task in `state` the goal is taken up again where a restart left it (`cursorOf` says how
+  // much of each session was already reported).
+  async startGoal(goal: {
+    runId: string;
+    request: GoalRequest;
+    input: RunInput;
+    verify: () => Promise<CommandResult[]>;
+    onEvent: Emit;
+    onSession: (session: number, messages: Message[]) => Promise<void>;
+    /** What a restart needs remembered; omit for a goal that is not kept. */
+    state?: GoalState;
+    saveState?: (state: GoalState) => void;
+    cursorOf?: (durableId: string) => number;
+  }): Promise<FollowedGoal> {
+    const { runId, request, input, verify, onEvent, onSession } = goal;
+    const state = goal.state ?? { sessions: {} };
+    const saveState = goal.saveState ?? (() => undefined);
+    const cursorOf = goal.cursorOf ?? (() => 0);
     const agentId = input.agent.id;
-    this.#register(input);
+    try {
+      this.#register(input);
+    } catch (error) {
+      // Registered by the process that was working on it before the restart.
+      if (!(error instanceof DurableConflictError)) throw error;
+    }
     this.#contexts.set(agentId, { verify });
     const finished = () => {
       this.#contexts.delete(agentId);
@@ -247,6 +274,7 @@ export class DurableRuns {
     const maxSessions = request.maxSessions ?? DEFAULT_GOAL_SESSIONS;
     let handle: DurableTaskHandle<GoalResult>;
     try {
+      // The same ids give the goal that is already there, if a restart interrupted this call.
       handle = await this.#runtime.submitGoal(this.#goal, {
         sessionId: `goal:${runId}`,
         requestId: runId,
@@ -259,11 +287,16 @@ export class DurableRuns {
           maxConsecutiveNoProgressSessions: NO_PROGRESS_SESSIONS,
         },
       });
+      state.taskId = handle.id;
+      saveState(state);
     } catch (error) {
       finished();
       throw error;
     }
-    const done = this.#followGoal(handle, input, onEvent, onSession).finally(finished);
+    const tracker = { state, saveState, cursorOf };
+    const done = this.#followGoal(handle, input, onEvent, onSession, tracker).finally(finished);
+    // After a restart the goal's sessions wait for their agent, which is registered now.
+    if (Object.keys(state.sessions).length > 0) await this.#revive([agentId]);
     return { done, cancel: () => handle.cancel().catch(() => undefined) };
   }
 
@@ -272,7 +305,9 @@ export class DurableRuns {
     input: RunInput,
     onEvent: Emit,
     onSession: (session: number, messages: Message[]) => Promise<void>,
+    tracker: GoalTracker,
   ): Promise<GoalEnd> {
+    const { state } = tracker;
     const seen = new Set<string>();
     const sessions: Promise<void>[] = [];
     // A session ends before the goal hears of it, and its transcript must be filed first.
@@ -285,9 +320,18 @@ export class DurableRuns {
       if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
         if (!seen.has(wait.runId)) {
           seen.add(wait.runId);
-          const session = seen.size;
-          onEvent({ type: "text", delta: goalSessionMarker(session) });
-          sessions.push(this.#followSession(wait.runId, session, input, onEvent, onSession));
+          const known = state.sessions[wait.runId];
+          // A session a restart interrupted was told to the client up to a point, and has its number.
+          if (known?.filed) continue;
+          const session = known?.number ?? Object.keys(state.sessions).length + 1;
+          if (!known) {
+            state.sessions[wait.runId] = { number: session, filed: false };
+            tracker.saveState(state);
+            onEvent({ type: "text", delta: goalSessionMarker(session) });
+          }
+          sessions.push(
+            this.#followSession(wait.runId, session, input, onEvent, onSession, tracker),
+          );
         }
         continue;
       }
@@ -326,6 +370,7 @@ export class DurableRuns {
     input: RunInput,
     onEvent: Emit,
     onSession: (session: number, messages: Message[]) => Promise<void>,
+    tracker: GoalTracker,
   ) {
     try {
       const run = await this.#runtime.getRun(runId);
@@ -333,9 +378,14 @@ export class DurableRuns {
         agentId: input.agent.id,
         contextWindow: input.contextWindow,
         keepAgent: true,
+        after: tracker.cursorOf(runId),
       });
       const end = await followed.done;
-      if (end.type === "response") await onSession(session, end.messages);
+      if (end.type === "response") {
+        await onSession(session, end.messages);
+        tracker.state.sessions[runId] = { number: session, filed: true };
+        tracker.saveState(tracker.state);
+      }
     } catch {
       // A session that failed is the goal's to report: it pauses as `session_failed`.
     }

@@ -14,7 +14,13 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import type { CreateRuntimeAgent } from "./runner";
-import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
+import {
+  DurableRuns,
+  type Emit,
+  type FollowedRun,
+  type GoalEnd,
+  type RunInput,
+} from "./durable-runs";
 import type { DurableEnd } from "./durable-events";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
@@ -34,6 +40,8 @@ export type RunMessage = {
 
 type Live = {
   threadId: string;
+  /** Records something about the run as it goes. */
+  save(changes: Partial<RunRecord>): void;
   /** Not there until the thread's sandbox is up and the run is in the journal; a goal's, while it works. */
   followed?: Pick<FollowedRun, "cancel">;
   /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
@@ -69,18 +77,20 @@ export type DriverContext = {
 export function createRunDriver(context: DriverContext) {
   const { records, outbox, report } = context;
   const live = new Map<string, Live>();
-  // The goal a thread's agent handed over this run, started once its turn ends.
-  const goals = new Map<string, GoalRequest>();
+  // A thread has one run at a time; the agent of an answered question is the one the asking run built,
+  // so what it hands over reaches the run that is going now, not the one that built it.
+  const activeRun = (threadId: string) =>
+    [...live.values()].find((run) => run.threadId === threadId);
 
   async function execute(initial: RunRecord, message?: RunMessage) {
     let record = initial;
     const { runId, thread, model } = record;
-    const run: Live = { threadId: thread.id };
-    live.set(runId, run);
     const save = (changes: Partial<RunRecord>) => {
       record = { ...record, ...changes };
       if (!context.stopped()) records.save(record);
     };
+    const run: Live = { threadId: thread.id, save };
+    live.set(runId, run);
     try {
       await context.starting(thread.id);
       // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
@@ -102,13 +112,7 @@ export function createRunDriver(context: DriverContext) {
           attended,
           // Only an agent with a person to talk to may take on a goal.
           tools: attended
-            ? [
-                ...bound,
-                createDefineGoalTool((goal) => {
-                  goals.set(thread.id, goal);
-                  save({ goal });
-                }),
-              ]
+            ? [...bound, createDefineGoalTool((goal) => activeRun(thread.id)?.save({ goal }))]
             : bound,
           model,
         });
@@ -134,103 +138,131 @@ export function createRunDriver(context: DriverContext) {
         if (run.cancelReason) throw new Error(run.cancelReason);
       };
 
-      const pursueGoal = async (request: GoalRequest) => {
-        const exec = current()?.find((tool) => tool.name === "exec_command");
-        const working = await journaled.startGoal(
-          runId,
-          request,
-          build(`goal-${runId}`, false),
-          verifyWith(exec, request.verifyCommands ?? []),
-          forward,
-          async (session, messages) =>
-            file([goalSessionMessage(session), ...withoutPrompt(messages)]),
-        );
-        run.followed = working;
-        return working.done;
-      };
-
-      let followed: FollowedRun;
-      if (record.durableId) {
-        // Picked up again after a restart: the run is in the journal, and the control plane has
-        // heard everything of it up to the newest event this run reported.
-        followed = await journaled.rejoin(
-          record.durableId,
-          build(record.agentId, true),
-          outbox.cursor(runId, record.durableId),
-          forward,
-        );
-      } else if (record.kind === "start") {
-        followed = await journaled.start(
-          runId,
-          thread.id,
-          record.prompt ?? "",
-          build(record.agentId, true),
-          forward,
-        );
-      } else {
-        // The question stays parked in the journal; the answer is delivered to it.
-        const asked = await journaled.asked(thread.id);
-        if (!asked) throw new Error("This thread has no question waiting for an answer");
-        // The run in the journal is the one that asked, with the agent it was registered under.
-        save({ agentId: asked.agentId });
-        const { interaction } = parseAgentContinuation(
-          message?.type === "run.resume" ? message.continuation : undefined,
-        );
-        followed = await journaled.answer(
-          asked,
-          interaction,
-          parseAgentInteractionResponse(
-            message?.type === "run.resume" ? message.response : undefined,
-          ),
-          () => build(asked.agentId, true),
-          forward,
-        );
-      }
-      save({ durableId: followed.durableId });
-      run.followed = followed;
-      if (run.cancelReason) void followed.cancel();
-      let end: DurableEnd = await followed.done;
-      if (end.type !== "error") {
-        // A run that stopped on a question and was answered files its second part after the first.
-        save({
-          turn: journaled.transcriptTurn(
-            followed.durableId,
-            end.messages.length,
-            end.type === "response",
-          ),
-        });
-        await file(end.messages);
-      }
-
-      // The turn handed over a goal: work it, then let the agent report on it in the thread.
-      const goal = goals.get(thread.id);
-      goals.delete(thread.id);
-      if (goal && end.type === "response") {
+      const reportOnGoal = async (
+        goal: GoalRequest,
+        goalEnd?: Exclude<GoalEnd, { type: "error" }>,
+      ): Promise<DurableEnd> => {
         stopIfCancelled();
-        const goalEnd = await pursueGoal(goal);
-        if (goalEnd.type === "error") {
-          end = goalEnd;
+        const reportAgent = build(`run-${runId}-report`, false);
+        let closing: FollowedRun;
+        if (record.reportId) {
+          closing = await journaled.rejoin(
+            record.reportId,
+            reportAgent,
+            outbox.cursor(runId, record.reportId),
+            forward,
+          );
         } else {
-          stopIfCancelled();
-          const closing = await journaled.start(
+          if (!goalEnd) throw new Error("The goal's outcome is gone, so it cannot be reported");
+          closing = await journaled.start(
             `${runId}-report`,
             thread.id,
             goalReport(goal.objective, goalEnd),
-            build(`run-${runId}-report`, false),
+            reportAgent,
             forward,
           );
-          run.followed = closing;
-          end = await closing.done;
-          if (end.type !== "error") await file(withoutPrompt(end.messages));
         }
+        save({ reportId: closing.durableId });
+        run.followed = closing;
+        const closed = await closing.done;
+        if (closed.type !== "error") await file(withoutPrompt(closed.messages));
+        return closed;
+      };
+
+      // The agent's turn.
+      let end: DurableEnd = { type: "response", messages: [] };
+      if (record.phase === "chat") {
+        let followed: FollowedRun;
+        if (record.durableId) {
+          // Picked up again after a restart: the run is in the journal, and the control plane has
+          // heard everything of it up to the newest event this run reported.
+          followed = await journaled.rejoin(
+            record.durableId,
+            build(record.agentId, true),
+            outbox.cursor(runId, record.durableId),
+            forward,
+          );
+        } else if (record.kind === "start") {
+          followed = await journaled.start(
+            runId,
+            thread.id,
+            record.prompt ?? "",
+            build(record.agentId, true),
+            forward,
+          );
+        } else {
+          // The question stays parked in the journal; the answer is delivered to it.
+          const asked = await journaled.asked(thread.id);
+          if (!asked) throw new Error("This thread has no question waiting for an answer");
+          // The run in the journal is the one that asked, with the agent it was registered under.
+          save({ agentId: asked.agentId });
+          const { interaction } = parseAgentContinuation(
+            message?.type === "run.resume" ? message.continuation : undefined,
+          );
+          followed = await journaled.answer(
+            asked,
+            interaction,
+            parseAgentInteractionResponse(
+              message?.type === "run.resume" ? message.response : undefined,
+            ),
+            () => build(asked.agentId, true),
+            forward,
+          );
+        }
+        save({ durableId: followed.durableId });
+        run.followed = followed;
+        if (run.cancelReason) void followed.cancel();
+        end = await followed.done;
+        if (end.type !== "error") {
+          // A run that stopped on a question and was answered files its second part after the first.
+          save({
+            turn: journaled.transcriptTurn(
+              followed.durableId,
+              end.messages.length,
+              end.type === "response",
+            ),
+          });
+          await file(end.messages);
+        }
+        // Handed a goal: the rest of the run is the goal and the report on it.
+        if (end.type === "response" && record.goal) save({ phase: "goal" });
+        else save({ goal: undefined });
+      }
+
+      // The goal the turn handed over: sessions until the verify commands pass or it stops short.
+      const goal = record.goal;
+      if (goal && record.phase === "goal") {
+        stopIfCancelled();
+        const exec = current()?.find((tool) => tool.name === "exec_command");
+        const working = await journaled.startGoal({
+          runId,
+          request: goal,
+          input: build(`goal-${runId}`, false),
+          verify: verifyWith(exec, goal.verifyCommands ?? []),
+          onEvent: forward,
+          onSession: async (session, messages) =>
+            file([goalSessionMessage(session), ...withoutPrompt(messages)]),
+          state: record.goalState ?? { sessions: {} },
+          saveState: (goalState) => save({ goalState: structuredClone(goalState) }),
+          cursorOf: (durableId) => outbox.cursor(runId, durableId),
+        });
+        run.followed = working;
+        const goalEnd = await working.done;
+        if (goalEnd.type === "error") {
+          end = goalEnd;
+          save({ goal: undefined });
+        } else {
+          save({ phase: "report" });
+          end = await reportOnGoal(goal, goalEnd);
+        }
+      } else if (goal && record.phase === "report") {
+        end = await reportOnGoal(goal);
       }
       finish(runId, end, run.cancelReason);
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       finish(runId, { type: "error", error: text });
     } finally {
-      // A goal handed over by a run that never got to start it is not the next run's to start.
-      goals.delete(thread.id);
       live.delete(runId);
       context.finished(thread.id);
     }
@@ -269,6 +301,7 @@ export function createRunDriver(context: DriverContext) {
         prompt: message.type === "run.start" ? message.prompt : undefined,
         agentId: `run-${message.runId}`,
         turn: 0,
+        phase: "chat",
       };
       outbox.open(message.runId);
       records.save(record);
@@ -280,14 +313,6 @@ export function createRunDriver(context: DriverContext) {
       const record = records.get(runId);
       // Nothing to take up: it is going, or it is over and only waiting to be acknowledged.
       if (!record || record.done || live.has(runId)) return;
-      if (record.goal) {
-        // A goal does not yet continue across a restart.
-        void this.cancel(
-          runId,
-          "The runner restarted while the goal was working, so it stopped. Ask again to continue.",
-        );
-        return;
-      }
       return execute(record);
     },
 

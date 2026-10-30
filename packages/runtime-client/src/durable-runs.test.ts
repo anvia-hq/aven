@@ -132,15 +132,15 @@ describe("DurableRuns goals", () => {
     const runs = await opened(journalPath());
     const events: RunEvent[] = [];
     const sessions: string[][] = [];
-    const goal = await runs.startGoal(
-      "run-1",
+    const goal = await runs.startGoal({
+      runId: "run-1",
       request,
-      input("goal-run-1", [text("first try")], [text("fixed it")]),
-      results(1, 0),
-      (event) => events.push(event),
-      async (session, messages) =>
+      input: input("goal-run-1", [text("first try")], [text("fixed it")]),
+      verify: results(1, 0),
+      onEvent: (event) => events.push(event),
+      onSession: async (session, messages) =>
         void sessions.push([String(session), ...messages.map((message) => message.role)]),
-    );
+    });
 
     expect(await goal.done).toMatchObject({ type: "complete", evidence: ["`bun test` passed"] });
     // A divider opens each session, then the session's own text.
@@ -159,28 +159,28 @@ describe("DurableRuns goals", () => {
 
   test("a goal whose commands keep failing the same way stops short instead of looping", async () => {
     const runs = await opened(journalPath());
-    const goal = await runs.startGoal(
-      "run-1",
+    const goal = await runs.startGoal({
+      runId: "run-1",
       request,
-      input("goal-run-1", [text("a")], [text("b")], [text("c")], [text("d")]),
-      results(1),
-      () => {},
-      async () => {},
-    );
+      input: input("goal-run-1", [text("a")], [text("b")], [text("c")], [text("d")]),
+      verify: results(1),
+      onEvent: () => {},
+      onSession: async () => {},
+    });
     expect(await goal.done).toMatchObject({ type: "paused", reason: "no_progress" });
   });
 
   test("a goal's agent is released when it ends, so the id can be used again", async () => {
     const runs = await opened(journalPath());
     for (const id of ["a", "b"]) {
-      const goal = await runs.startGoal(
-        `run-${id}`,
-        { ...request, verifyCommands: [] },
-        input("goal-run-1", [text(id)]),
-        async () => [],
-        () => {},
-        async () => {},
-      );
+      const goal = await runs.startGoal({
+        runId: `run-${id}`,
+        request: { ...request, verifyCommands: [] },
+        input: input("goal-run-1", [text(id)]),
+        verify: async () => [],
+        onEvent: () => {},
+        onSession: async () => {},
+      });
       expect((await goal.done).type).toBe("complete");
     }
   });

@@ -19,9 +19,10 @@ Status: accepted. Builds on [0021](0021-runs-go-through-anvia-durable.md) and [0
 - **The control plane gives up on a restart that takes too long.** It holds a run's connection for its grace period (0023); a runner that is not back by then has its runs ended when it reports them.
 - **A control plane that does not follow a run** tells the runner to cancel it. A run this process does not have is cancelled in the journal and its end is reported, so it is acknowledged and forgotten.
 
+- **A goal continues too.** The record has the run's phase (the agent's turn, the goal, the report on it), the goal request, the goal's task in the journal, and each session it has seen (its number, and whether its messages were filed). Taken up again, the goal is submitted with the same ids, which gives the task that is already there; its session runs are revived once the goal's agent is registered and its assessment can use the sandbox again. Sessions already filed are skipped; one a restart interrupted goes on from the last event it reported, under its old number, without a second divider. The report turn is taken up the same way.
+
 ## Consequences
 
 - The model grant in the record is a credential for as long as the control plane holds the run. The state file is the runner's own and is not group- or world-readable.
 - A run's model grant is reused, not re-issued: a restart longer than the control plane's grace period ends the run.
 - Only the runner's restart is covered. A control plane restart still ends its runs (it knows none of them afterwards).
-- A goal does not yet continue across a restart: its run ends with a message saying so.

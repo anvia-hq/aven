@@ -12,6 +12,7 @@ const record: RunRecord = {
   prompt: "go",
   agentId: "run-run-1",
   turn: 0,
+  phase: "chat",
 };
 
 test("records survive the process, and are replaced as a run progresses", () => {

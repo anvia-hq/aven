@@ -15,7 +15,7 @@ import { DesktopViewers } from "./desktop-viewers";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
-import { RunRecords } from "./run-records";
+import { RunRecords, agentsOf } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
@@ -99,7 +99,7 @@ export function startRuntime(options: RuntimeOptions) {
   // a restart interrupted stay in it for the control plane to ask for again.
   const journal = DurableRuns.open(
     options.journalPath,
-    new Set(records.all().flatMap((record) => (record.done ? [] : [record.agentId]))),
+    new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
   journal.catch(() => undefined);
   // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.

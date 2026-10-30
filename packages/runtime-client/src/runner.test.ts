@@ -793,5 +793,121 @@ describe("startRuntime runs", () => {
       await until(() => ended(second.plane).length === 1);
       expect(ended(second.plane)[0]).toMatchObject({ outcome: "error", error: "Not followed" });
     });
+
+    test("a goal goes on from the session it was in, and is checked and reported as usual", async () => {
+      const { sandbox: base, up } = slowSandbox();
+      up();
+      // The goal's check fails after the first session and passes after the second.
+      let checks = 0;
+      const exec = createTool({
+        name: "exec_command",
+        description: "run",
+        inputSchema: z.object({ command: z.string(), timeoutMs: z.number().optional() }),
+        execute: () => ({
+          status: "exited",
+          exitCode: ++checks === 1 ? 1 : 0,
+          stdout: "",
+          stderr: checks === 1 ? "1 failed" : "",
+        }),
+      });
+      const sandbox: ThreadWorkspaces = {
+        ...base,
+        acquire: async () => ({ tools: [exec], hasRunningProcesses: async () => false }),
+      };
+      const hold = Promise.withResolvers<void>();
+      const secondSession = Promise.withResolvers<void>();
+      const paths = { journalPath: journalPath() };
+      const defineGoal: ScriptStep = [
+        {
+          type: "tool-call",
+          toolCallId: "g1",
+          toolName: "define_goal",
+          input: {
+            objective: "Add paging",
+            acceptanceCriteria: ["it pages"],
+            verifyCommands: ["bun test"],
+          },
+        },
+      ];
+
+      const first = connect({
+        sandbox,
+        ...paths,
+        createAgent: ({ id, tools }) => {
+          const steps: ScriptStep[] =
+            id === "run-run-1"
+              ? [defineGoal, [text("Goal started.")]]
+              : [
+                  [text("session one done")],
+                  async () => {
+                    secondSession.resolve();
+                    await hold.promise;
+                    return [text("never")];
+                  },
+                ];
+          return {
+            agent: new Agent({
+              id,
+              instructions: "x",
+              tools: [...tools],
+              model: scriptedModel(steps),
+            }),
+          };
+        },
+      });
+      await first.runtime.ready;
+      first.plane.send(runStart);
+      await secondSession.promise;
+      // Everything up to the second session's divider reached the control plane.
+      await until(() =>
+        first.plane.received.some(
+          (m) =>
+            m.type === "run.event" &&
+            m.event.type === "text" &&
+            m.event.delta === goalSessionMarker(2),
+        ),
+      );
+      const heard = first.plane.received.flatMap((m) => (m.type === "run.event" ? [m.seq] : []));
+
+      const stopping = first.runtime.stop();
+      hold.resolve();
+      await stopping;
+
+      const second = connect({
+        sandbox,
+        ...paths,
+        createAgent: ({ id, tools }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [...tools],
+            model: scriptedModel(
+              id.endsWith("-report")
+                ? [[text("All checked, paging works.")]]
+                : [[text("session two done")]],
+            ),
+          }),
+        }),
+      });
+      await until(() => hellos(second.plane).length === 1);
+      expect(hellos(second.plane)[0]).toMatchObject({ runs: ["run-1"] });
+      second.plane.send({ type: "run.attach", runId: "run-1", after: Math.max(...heard) });
+
+      await until(() => ended(second.plane).length === 1);
+      expect(ended(second.plane)[0]).toMatchObject({ outcome: "response" });
+      const texts = second.plane.received.flatMap((m) =>
+        m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
+      );
+      // The second session and the report: the first session, and the dividers, were told before.
+      expect(texts).toEqual(["session two done", "All checked, paging works."]);
+      expect(checks).toBe(2);
+      const filed = second.plane.received.flatMap((m) =>
+        m.type === "call" && m.method === "memory.append"
+          ? [(m.params as { messages: { role: string }[] }).messages.length]
+          : [],
+      );
+      // The second session (its divider and its reply), then the report.
+      expect(filed).toEqual([2, 1]);
+    });
   });
 });
