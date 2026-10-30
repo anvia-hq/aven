@@ -16,7 +16,7 @@ async function sh(cwd: string, ...args: string[]) {
 }
 
 // A bare remote with one commit on main, and a clone of it on the thread's branch.
-async function workspace() {
+async function workspace({ branchClone = false } = {}) {
   const base = await mkdtemp(join(tmpdir(), "aven-publish-"));
   dirs.push(base);
   const remote = join(base, "remote.git");
@@ -29,7 +29,9 @@ async function workspace() {
   await sh(seed, "add", ".");
   await sh(seed, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first");
   await sh(seed, "push", "-q", remote, "main");
-  await sh(root, "clone", "-q", remote, ".");
+  // Aven clones one named branch, which leaves `origin/HEAD` unset (decision 0013).
+  const clone = branchClone ? ["--single-branch", "--branch", "main"] : [];
+  await sh(root, "clone", "-q", ...clone, remote, ".");
   await sh(root, "checkout", "-q", "-b", "aven/test");
   const params: RepoPushParams = {
     threadId: "thread",
@@ -80,6 +82,13 @@ describe("publishing a thread's branch", () => {
 
     expect((await publishBranch(root, params)).kind).toBe("pushed");
     expect(await sh(remote, "log", "-1", "--format=%s", "aven/test")).toBe("By the agent");
+  });
+
+  test("a branch with no change is not pushed, in a clone made as Aven makes it (no origin/HEAD)", async () => {
+    const { root, remote, params } = await workspace({ branchClone: true });
+
+    expect(await publishBranch(root, params)).toEqual({ kind: "nothing" });
+    expect(await sh(remote, "branch", "--list", "aven/test")).toBe("");
   });
 
   test("a branch with no change is not pushed", async () => {

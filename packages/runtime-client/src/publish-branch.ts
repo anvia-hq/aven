@@ -1,6 +1,7 @@
 import type { RepoPushParams, RepoPushResult } from "@aven/protocol/runtime-wire";
 
 import { authEnv, git, type Git } from "./git-clone";
+import { remoteBase } from "./remote-base";
 
 // The workspace's `.git` is written by the agent and these commands run on the runner's host with
 // a token (decision 0040), so what git could run from it is switched off: hooks, the file system
@@ -31,8 +32,9 @@ export async function publishBranch(
   run: Git = git,
 ): Promise<RepoPushResult> {
   const { branch, token, commitMessage, author } = params;
-  const safe = (args: string[], env: Record<string, string> = {}) =>
-    run([...SAFE_CONFIG, ...args], { cwd: root, env: { ...SAFE_ENV, ...env } });
+  const hardened: Git = (args, options) =>
+    run([...SAFE_CONFIG, ...args], { ...options, env: { ...SAFE_ENV, ...options.env } });
+  const safe = (args: string[], env?: Record<string, string>) => hardened(args, { cwd: root, env });
   const check = async (what: string, args: string[], env?: Record<string, string>) => {
     const done = await safe(args, env);
     if (done.code !== 0) throw failure(what, done, token);
@@ -58,9 +60,10 @@ export async function publishBranch(
     throw failure("Could not look at the changes", staged, token);
   }
 
-  // Without a remote default branch to compare with (a clone always has one), push what there is.
-  const ahead = await safe(["rev-list", "--count", "origin/HEAD..HEAD"]);
-  if (ahead.code === 0 && ahead.stdout.trim() === "0") return { kind: "nothing" };
+  // Without a remote default branch to compare with, push what there is.
+  const base = await remoteBase(root, hardened);
+  const ahead = base && (await safe(["rev-list", "--count", `${base}..HEAD`]));
+  if (ahead && ahead.code === 0 && ahead.stdout.trim() === "0") return { kind: "nothing" };
 
   await check(
     "Could not push the branch",

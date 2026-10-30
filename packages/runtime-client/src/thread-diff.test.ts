@@ -9,7 +9,7 @@ import { markTurn, threadDiff } from "./thread-diff";
 const roots: string[] = [];
 
 // A repository with a remote, a thread branch and one commit on it, as a workspace is after the clone.
-async function workspace() {
+async function workspace({ branchClone = false } = {}) {
   const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
   roots.push(base);
   const remote = join(base, "remote");
@@ -23,7 +23,9 @@ async function workspace() {
   await writeFile(join(remote, "a.txt"), "one\ntwo\n");
   await sh(remote, "add", ".");
   await sh(remote, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first");
-  await sh(root, "clone", "-q", remote, ".");
+  // Aven clones one named branch, which leaves `origin/HEAD` unset (decision 0013).
+  const clone = branchClone ? ["--single-branch", "--branch", "main"] : [];
+  await sh(root, "clone", "-q", ...clone, remote, ".");
   await sh(root, "checkout", "-q", "-b", "aven/test");
   return { root, sh };
 }
@@ -38,6 +40,20 @@ describe("a thread's changes", () => {
     roots.push(dir);
     expect(await markTurn(dir)).toBe(false);
     expect(await threadDiff(dir, "all")).toBeNull();
+  });
+
+  test("the whole branch shows committed work too, in a clone made as Aven makes it (no origin/HEAD)", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    expect(
+      await git(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root }),
+    ).toMatchObject({ code: 1 });
+    await writeFile(join(root, "b.txt"), "new\n");
+    await sh(root, "add", ".");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "work");
+
+    const diff = await threadDiff(root, "all");
+
+    expect(diff?.patch).toContain("+++ b/b.txt");
   });
 
   test("the whole branch shows every change, new files included", async () => {

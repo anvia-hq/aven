@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 
 import { git, type Git } from "./git-clone";
+import { remoteBase } from "./remote-base";
 
 // Where the working tree stood when the thread's latest run began (decision 0030).
 const TURN_REF = "refs/aven/turn";
@@ -47,9 +48,9 @@ export async function markTurn(root: string, run: Git = git) {
 
 // Where the thread's branch left the default branch; HEAD when there is no remote branch to compare with.
 async function branchPoint(root: string, run: Git) {
-  const remote = await run(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root });
-  if (remote.code !== 0) return "HEAD";
-  const base = await run(["merge-base", "HEAD", "origin/HEAD"], { cwd: root });
+  const remote = await remoteBase(root, run);
+  if (!remote) return "HEAD";
+  const base = await run(["merge-base", "HEAD", remote], { cwd: root });
   return base.code === 0 ? base.stdout.trim() : "HEAD";
 }
 
