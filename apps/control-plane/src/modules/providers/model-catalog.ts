@@ -59,12 +59,23 @@ export function looksLikeChatModel(kind: Kind, id: string) {
 // An empty MODEL_CATALOG_URL turns the catalog off (air-gapped installs, tests).
 const configuredUrl = () => process.env.MODEL_CATALOG_URL ?? DEFAULT_URL;
 
+// The window most hosts give a model; hosts that cap it lower are the exception.
+function commonWindow(values: number[] | undefined) {
+  if (!values) return null;
+  const counts = new Map<number, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? null;
+}
+
 export function createModelCatalog(
   fetchFn: typeof fetch = fetch,
   now: () => number = Date.now,
   catalogUrl: () => string = configuredUrl,
 ) {
   let entries: Partial<Record<Kind, Map<string, Entry>>> | null = null;
+  // Context windows of every provider's models by lowercase name: a model has the window it has on
+  // whatever host serves it, which matters where the host's own entry is thin (Azure).
+  let windows = new Map<string, number[]>();
   let nextTry = 0;
   let loading: Promise<void> | null = null;
 
@@ -97,6 +108,18 @@ export function createModelCatalog(
             }),
         );
       }
+      const byName = new Map<string, number[]>();
+      for (const provider of Object.values(json)) {
+        for (const [id, info] of Object.entries(provider?.models ?? {})) {
+          const window = isRecord(info) ? contextWindowOf(info) : null;
+          if (window === null) continue;
+          const name = id.toLowerCase().split("/").pop() ?? id;
+          const seen = byName.get(name) ?? [];
+          seen.push(window);
+          byName.set(name, seen);
+        }
+      }
+      windows = byName;
       entries = next;
       nextTry = now() + TTL_MS;
     } catch {
@@ -133,7 +156,9 @@ export function createModelCatalog(
     // one the agent cannot report how full the context is.
     async contextWindow(kind: Kind, id: string) {
       if (kind === "openai-compatible") return null;
-      return (await lookup(kind))?.get(id)?.contextWindow ?? null;
+      const own = (await lookup(kind))?.get(id)?.contextWindow ?? null;
+      if (own !== null || kind !== "azure") return own;
+      return commonWindow(windows.get(id.toLowerCase()));
     },
     // Whether a model a message names can run: refused only when the catalog says it cannot.
     async canRun(kind: Kind, id: string) {

@@ -135,4 +135,22 @@ describe("contextWindow", () => {
     expect(await models.contextWindow("openai", "not-listed")).toBeNull();
     expect(await models.contextWindow("openai-compatible", "llama")).toBeNull();
   });
+
+  test("an Azure deployment the azure entry lacks gets the window other hosts give the model", async () => {
+    const models = createModelCatalog(
+      serving({
+        ...catalog,
+        azure: { models: { "gpt-5.6": { limit: { context: 1050000 } } } },
+        hostA: { models: { "DeepSeek-V4.1-Flash": { limit: { context: 1048576 } } } },
+        hostB: { models: { "deepseek/deepseek-v4.1-flash": { limit: { context: 1048576 } } } },
+        hostC: { models: { "deepseek-v4.1-flash": { limit: { context: 131072 } } } },
+      }),
+      () => 0,
+      url,
+    );
+    expect(await models.contextWindow("azure", "gpt-5.6")).toBe(1050000);
+    expect(await models.contextWindow("azure", "DeepSeek-V4.1-Flash")).toBe(1048576);
+    expect(await models.contextWindow("azure", "never-heard-of")).toBeNull();
+    expect(await models.contextWindow("openai", "deepseek-v4.1-flash")).toBeNull();
+  });
 });
