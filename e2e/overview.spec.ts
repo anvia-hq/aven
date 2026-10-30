@@ -183,3 +183,32 @@ test("a reader who scrolled up is not pulled back down by the answer streaming i
     stream.close();
   }
 });
+
+// Some providers send many tokens at once, half a second apart (decision 0028). As in a real run,
+// the message exists before its text: the burst comes a second after the run starts (the blank
+// delta only fills the third event, which `serveEvents` sends at once).
+test("text that arrives in one burst is paced out, not shown at once", async ({ page }) => {
+  await registerUser(page, "pace", "Pace User");
+  const words = Array.from({ length: 80 }, (_, index) => `word${index}`);
+  const stream = serveEvents(
+    [
+      { type: "snapshot", running: true, messages: [] },
+      { type: "run_start", prompt: "Stream please" },
+      { type: "text", delta: " " },
+      { type: "text", delta: words.join(" ") },
+      { type: "done" },
+    ],
+    1_000,
+  );
+  try {
+    const threadId = await newThread(page);
+    await page.route("**/api/threads/*/events", (route) => route.continue({ url: stream.url }));
+    await page.goto(`/threads/${threadId}`);
+    const last = page.locator('[data-role="assistant"]').last();
+    await expect(last).toContainText("word0");
+    expect(await last.textContent()).not.toContain(words.at(-1));
+    await expect(last).toContainText(words.at(-1)!);
+  } finally {
+    stream.close();
+  }
+});

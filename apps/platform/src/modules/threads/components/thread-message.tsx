@@ -2,6 +2,7 @@ import { Fragment, memo } from "react";
 
 import { Markdown } from "@/components/markdown";
 
+import { useSmoothParts } from "../hooks/use-smooth-parts";
 import type { ChatMessage, MessagePart, ToolPart } from "../types";
 import { QuestionBlock } from "./question-block";
 import { ToolCall } from "./tool-call";
@@ -59,12 +60,18 @@ export const ThreadMessage = memo(function ThreadMessage({
     );
   }
 
+  return <AssistantMessage message={message} streaming={streaming} />;
+});
+
+function AssistantMessage({ message, streaming }: { message: ChatMessage; streaming: boolean }) {
+  const { parts, draining } = useSmoothParts(message, streaming);
+  const live = streaming || draining;
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
-      {blocks(message.parts).map((block, index, all) => (
-        <AssistantBlock key={index} block={block} live={streaming && index === all.length - 1} />
+      {blocks(parts).map((block, index, all) => (
+        <AssistantBlock key={index} block={block} live={live && index === all.length - 1} />
       ))}
       {message.parts.length === 0 && <p className="text-sm text-muted-foreground">Thinking…</p>}
     </div>
   );
-});
+}

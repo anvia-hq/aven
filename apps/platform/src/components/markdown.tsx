@@ -10,7 +10,8 @@ const components = { a: ExternalLink };
 
 // Markdown as prose. Wide code and tables scroll inside themselves, never the page. While `live`,
 // text arriving at the end fades in (the reveal in index.css) and only the block being written is
-// parsed again, so a streaming answer reads as one continuous flow however its chunks arrive.
+// parsed again, so a streaming answer reads as one continuous flow. Pacing bursty text is the
+// caller's (a thread's `useSmoothParts`, decision 0028).
 export function Markdown({ children, live = false }: { children: string; live?: boolean }) {
   return (
     <StreamMarkdown

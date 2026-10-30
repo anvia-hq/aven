@@ -10,6 +10,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@anvia/react": "^1.1.5",
     "@anvia/react-ui": "^1.3.0",
     "@aven/protocol": "workspace:*",
     "@base-ui/react": "^1.9.0",

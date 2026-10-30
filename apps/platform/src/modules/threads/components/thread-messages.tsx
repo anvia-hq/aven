@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function ThreadMessages({ messages, running = false, error, aside }: Props) {
-  const scrollRef = useScrollToBottom(messages, messages.length);
+  const scrollRef = useScrollToBottom(messages.length);
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">
