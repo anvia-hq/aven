@@ -6,6 +6,7 @@ import { ThreadMessage } from "./thread-message";
 import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
+  threadId: string;
   messages: ChatMessage[];
   /** The agent is writing the last message. */
   running?: boolean;
@@ -14,7 +15,7 @@ type Props = {
   aside?: ReactNode;
 };
 
-export function ThreadMessages({ messages, running = false, error, aside }: Props) {
+export function ThreadMessages({ threadId, messages, running = false, error, aside }: Props) {
   const scrollRef = useScrollToBottom(messages.length);
 
   return (
@@ -29,6 +30,7 @@ export function ThreadMessages({ messages, running = false, error, aside }: Prop
               <ThreadMessage
                 key={message.id}
                 message={message}
+                threadId={threadId}
                 streaming={running && index === messages.length - 1}
               />
             ))}

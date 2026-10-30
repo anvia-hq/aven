@@ -1,4 +1,12 @@
-import { Edit, DangerCircle, Eye, Search, Spinner, Terminal } from "@mynaui/icons-react";
+import {
+  Edit,
+  DangerCircle,
+  Eye,
+  Image as ImageIcon,
+  Search,
+  Spinner,
+  Terminal,
+} from "@mynaui/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 import { DiffStat } from "@/modules/diff/components/diff-stat";
@@ -22,6 +30,7 @@ const meta: Record<string, Meta> = {
   wait_for_port: { icon: Terminal, running: "Waiting for port", done: "Port ready" },
   list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
   web_search: { icon: Search, running: "Searching", done: "Searched" },
+  show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
 };
 
 // The desktop tools are `desktop_<action>`; anything else unknown is shown by its name.

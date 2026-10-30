@@ -90,6 +90,7 @@ function ThreadPage() {
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
                 <ThreadMessages
+                  threadId={thread.id}
                   messages={messages}
                   running={running}
                   error={error}
