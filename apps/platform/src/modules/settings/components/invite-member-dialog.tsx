@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TextField } from "@/components/text-field";
 
 import { useMembers } from "../hooks/use-members";
-import { ROLE_LABELS, ROLES, type InvitableRole } from "../types";
+import { isInvitableRole, ROLE_LABELS, ROLES, type InvitableRole } from "../types";
 
 export function InviteMemberDialog() {
   const [open, setOpen] = useState(false);
@@ -52,7 +52,7 @@ export function InviteMemberDialog() {
             <FieldLabel>Role</FieldLabel>
             <Select
               value={role}
-              onValueChange={(value) => value && setRole(value as InvitableRole)}
+              onValueChange={(value) => isInvitableRole(value) && setRole(value)}
             >
               <SelectTrigger aria-label="Role" className="w-full">
                 <SelectValue />

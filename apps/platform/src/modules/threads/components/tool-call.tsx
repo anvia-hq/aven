@@ -1,6 +1,7 @@
 import { Edit, DangerCircle, Eye, Search, Spinner, Terminal } from "@mynaui/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import type { ToolPart } from "../types";
 import { DiffBlock } from "./diff-block";
@@ -49,8 +50,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         <span className="min-w-0 flex-1 truncate font-mono text-xs">{tool.target}</span>
         {tool.diff && (
           <span className="font-mono text-xs">
-            <span className="text-success">+{additions}</span>{" "}
-            <span className="text-destructive">-{deletions}</span>
+            <DiffStat additions={additions} deletions={deletions} />
           </span>
         )}
         {tool.status === "running" && (

@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 import type { DiffFile, DiffLayout } from "../types";
 import { DiffLines } from "./diff-lines";
+import { DiffStat } from "./diff-stat";
 
 // A file with this many changed lines starts folded, so one huge change does not bury the rest.
 const FOLD_ABOVE = 400;
@@ -30,8 +31,7 @@ export function DiffFileCard({ file, layout }: { file: DiffFile; layout: DiffLay
           {file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
         </span>
         {label && <Badge variant="secondary">{label}</Badge>}
-        {file.additions > 0 && <span className="text-success">+{file.additions}</span>}
-        {file.deletions > 0 && <span className="text-destructive">-{file.deletions}</span>}
+        <DiffStat additions={file.additions} deletions={file.deletions} hideZeros />
       </CollapsibleTrigger>
       <CollapsibleContent>
         {body ? (
