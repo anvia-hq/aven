@@ -26,7 +26,7 @@ ARG PNPM_VERSION=12.16.1
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git tmux procps dbus-x11 build-essential python3 python3-venv \
-    wget jq ripgrep ffmpeg poppler-utils postgresql-client gh unzip \
+    wget jq ripgrep ffmpeg poppler-utils postgresql-client gh unzip sudo \
     tigervnc-standalone-server xdotool imagemagick x11-utils x11-xserver-utils \
   && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
   && apt-get install -y nodejs \
@@ -74,6 +74,10 @@ RUN chmod 0555 /usr/local/bin/anvia-chromium /usr/local/bin/openbox-session \
   userdel dockremap 2>/dev/null; \
   id -u node >/dev/null 2>&1 || useradd -m -u 1000 -N -g users -s /bin/bash node; \
   install -d -o node -g users /workspace /home/node/.anvia-sandbox; \
+  # A repository's .aven/setup installs system packages with sudo (decision 0043). It works only in
+  # the setup container: thread containers run with no-new-privileges, which makes sudo fail there.
+  echo 'node ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/node; \
+  chmod 0440 /etc/sudoers.d/node; \
   chown -R node:users /opt/venv /usr/local/rustup /usr/local/cargo
 
 # The base sets no wallpaper (the screen is black) and its own is an SVG nothing here can draw;

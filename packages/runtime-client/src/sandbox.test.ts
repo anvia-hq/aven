@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { git } from "./git-clone";
 import { dockerRunArgs, Sandboxes, type ThreadSandbox } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
 
@@ -164,6 +165,203 @@ describe("Sandboxes starting a container", () => {
     expect(calls.at(-1)).toEqual(["rm", "-f", "aven-sandbox-t2"]);
     await sandboxes.dispose();
     await rm(home, { recursive: true, force: true });
+  });
+});
+
+// The first word of a git command, past the `-c name=value` pairs the hardened ones start with.
+const verbOf = (args: string[]) => {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-c") i++;
+    else return args[i];
+  }
+};
+
+describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
+  const org = "org-1";
+  const sha = "sha256:base";
+
+  // A Docker that names the sandbox image `sha`, records every command and can make one fail.
+  function docker(fail: (args: string[]) => boolean = () => false) {
+    const calls: string[][] = [];
+    const run = async (args: string[]) => {
+      calls.push(args);
+      if (args[0] === "image") return { code: 0, stdout: `${sha}\n`, stderr: "" };
+      if (fail(args)) return { code: 1, stdout: "", stderr: "boom" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    return { calls, run };
+  }
+
+  // A git whose clone leaves a repository with (or without) an executable setup script.
+  function git(options: { setup?: boolean; failRestore?: boolean } = {}) {
+    const { setup = true, failRestore = false } = options;
+    const calls: string[][] = [];
+    const run = async (args: string[], { cwd }: { cwd: string }) => {
+      calls.push(args);
+      const verb = verbOf(args);
+      if (verb === "clone") {
+        await Bun.write(join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");
+        if (setup) {
+          await Bun.write(join(cwd, ".aven", "setup"), "#!/bin/sh\nexit 0\n");
+          await chmod(join(cwd, ".aven", "setup"), 0o755);
+        }
+      }
+      if (verb === "rev-parse") return { code: 0, stdout: "abc\n", stderr: "" };
+      if (verb === "checkout" && args.includes("-f") && failRestore) {
+        return { code: 1, stdout: "", stderr: "cannot update" };
+      }
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    return { calls, run, verbs: () => calls.map(verbOf) };
+  }
+
+  async function start(fakeDocker: ReturnType<typeof docker>, fakeGit: ReturnType<typeof git>) {
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker: fakeDocker.run,
+      git: fakeGit.run,
+      connectTimeoutMs: 100,
+    });
+    const key = sandboxes.snapshots.keyFor(org, access.cloneUrl);
+    // No daemon dials in, so an acquire ends on the connect timeout: what matters is before that.
+    const acquire = (id: string) =>
+      sandboxes.acquire({ id, organizationId: org }, repo).catch(() => undefined);
+    const cleanup = async () => {
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    };
+    return { sandboxes, key, acquire, cleanup, home };
+  }
+
+  const setupRuns = (calls: string[][]) => calls.filter((args) => args.includes("sleep"));
+  const imageOfThread = (calls: string[][], threadId: string) =>
+    calls.find((args) => args[0] === "run" && args.includes(`aven-sandbox-${threadId}`))?.at(-1);
+
+  test("the first thread on a repository with a setup script sets up, snapshots and runs from the snapshot", async () => {
+    const d = docker();
+    const g = git();
+    const { sandboxes, key, acquire, cleanup } = await start(d, g);
+
+    await acquire("t-first");
+
+    expect(setupRuns(d.calls)).toHaveLength(1);
+    expect(d.calls.some((args) => args[0] === "exec" && args.includes("./.aven/setup"))).toBe(true);
+    expect(d.calls.some((args) => args[0] === "commit" && args.at(-1) === `aven-env-${key}`)).toBe(
+      true,
+    );
+    const snapshot = await sandboxes.snapshots.valid(key, sha);
+    expect(snapshot?.image).toBe(`aven-env-${key}`);
+    expect((await stat(join(snapshot!.workspace, ".aven", "setup"))).isFile()).toBe(true);
+    expect(imageOfThread(d.calls, "t-first")).toBe(`aven-env-${key}`);
+    await cleanup();
+  });
+
+  test("the next thread restores the snapshot, updates the repository and does not set up again", async () => {
+    const d = docker();
+    const g = git();
+    const { sandboxes, key, acquire, cleanup, home } = await start(d, g);
+    await acquire("t-first");
+    const clones = g.verbs().filter((verb) => verb === "clone").length;
+
+    await acquire("t-second");
+
+    expect(g.verbs().filter((verb) => verb === "clone")).toHaveLength(clones);
+    expect(setupRuns(d.calls)).toHaveLength(1);
+    // The default branch is fetched and the thread's own branch is made from it.
+    expect(g.calls.some((args) => verbOf(args) === "fetch")).toBe(true);
+    const checkout = g.calls.find((args) => verbOf(args) === "checkout" && args.includes("-B"))!;
+    expect(checkout.slice(checkout.indexOf("checkout"))).toEqual([
+      "checkout",
+      "-f",
+      "-B",
+      "aven/t-second",
+      "origin/main",
+    ]);
+    expect(await Bun.file(join(home, "workspaces", "t-second", ".aven", "setup")).exists()).toBe(
+      true,
+    );
+    expect(imageOfThread(d.calls, "t-second")).toBe(`aven-env-${key}`);
+    expect(sandboxes.snapshots.imageFor(key)).toBe(`aven-env-${key}`);
+    await cleanup();
+  });
+
+  test("a setup that fails makes no snapshot, does not fail the thread and runs the bare image", async () => {
+    const d = docker((args) => args[0] === "exec" && args.includes("./.aven/setup"));
+    const g = git();
+    const silenced = console.warn;
+    console.warn = () => undefined;
+    const { sandboxes, key, acquire, cleanup } = await start(d, g);
+
+    await acquire("t-broken");
+
+    console.warn = silenced;
+    expect(d.calls.some((args) => args[0] === "commit")).toBe(false);
+    expect(await sandboxes.snapshots.valid(key, sha)).toBeNull();
+    expect(imageOfThread(d.calls, "t-broken")).toBe("img");
+    // The container of the setup is gone either way.
+    expect(d.calls.at(-1)?.[0]).toBe("rm");
+    await cleanup();
+  });
+
+  test("a repository with no setup script is just cloned", async () => {
+    const d = docker();
+    const g = git({ setup: false });
+    const { sandboxes, key, acquire, cleanup } = await start(d, g);
+
+    await acquire("t-plain");
+
+    expect(setupRuns(d.calls)).toHaveLength(0);
+    expect(await sandboxes.snapshots.valid(key, sha)).toBeNull();
+    expect(imageOfThread(d.calls, "t-plain")).toBe("img");
+    await cleanup();
+  });
+
+  test("two threads starting together on a repository set it up once; the second restores", async () => {
+    const d = docker();
+    const g = git();
+    const { acquire, cleanup } = await start(d, g);
+
+    await Promise.all([acquire("t-one"), acquire("t-two")]);
+
+    expect(setupRuns(d.calls)).toHaveLength(1);
+    expect(g.verbs().filter((verb) => verb === "clone")).toHaveLength(1);
+    await cleanup();
+  });
+
+  test("a snapshot that cannot be restored falls back to a clone and a new setup", async () => {
+    const d = docker();
+    const g = git({ failRestore: true });
+    const silenced = console.warn;
+    console.warn = () => undefined;
+    const { acquire, cleanup } = await start(d, g);
+    await acquire("t-first");
+
+    await acquire("t-second");
+
+    console.warn = silenced;
+    expect(g.verbs().filter((verb) => verb === "clone")).toHaveLength(2);
+    expect(setupRuns(d.calls)).toHaveLength(2);
+    await cleanup();
+  });
+
+  test("a thread keeps the image it started from when the snapshot is replaced", async () => {
+    const d = docker();
+    const g = git();
+    const { sandboxes, key, acquire, cleanup } = await start(d, g);
+    await acquire("t-first");
+    await sandboxes.snapshots.remove(key);
+    await sandboxes.release("t-first");
+
+    await acquire("t-first");
+
+    // Its container comes back from the image it was pinned to, not the bare one.
+    const runs = d.calls.filter(
+      (args) => args[0] === "run" && args.includes("aven-sandbox-t-first"),
+    );
+    expect(runs.map((args) => args.at(-1))).toEqual([`aven-env-${key}`, `aven-env-${key}`]);
+    await cleanup();
   });
 });
 
@@ -341,3 +539,111 @@ describe("Sandboxes.start", () => {
     );
   });
 });
+
+live("a repository's environment (real docker)", () => {
+  let sandboxes: Sandboxes;
+  let home: string;
+  let remote: Awaited<ReturnType<typeof createRemoteRepo>>;
+  const organizationId = `org-${crypto.randomUUID().slice(0, 8)}`;
+
+  const run = async (from: ThreadSandbox, command: string) => {
+    const tool = from.tools.find((candidate) => candidate.name === "exec_command");
+    const result = (await tool!.call({ command } as never)) as {
+      exitCode: number;
+      stdout: string;
+    };
+    return result;
+  };
+
+  beforeAll(async () => {
+    home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
+    sandboxes = await Sandboxes.start({ image: image!, home });
+    remote = await createRemoteRepo();
+    // A repository that sets itself up, and does a quick thing whenever a container starts.
+    await Bun.write(
+      join(remote.dir, ".aven", "setup"),
+      '#!/bin/sh\nset -e\necho "from setup" > "$HOME/marker.txt"\necho "built" > /workspace/built.txt\n',
+    );
+    await Bun.write(
+      join(remote.dir, ".aven", "resume"),
+      "#!/bin/sh\ndate +%s%N > /workspace/resumed.txt\n",
+    );
+    await chmod(join(remote.dir, ".aven", "setup"), 0o755);
+    await chmod(join(remote.dir, ".aven", "resume"), 0o755);
+    for (const args of [
+      ["add", "."],
+      ["commit", "-q", "-m", "add .aven"],
+    ]) {
+      await git(args, { cwd: remote.dir });
+    }
+  }, 120_000);
+
+  afterAll(async () => {
+    const key = sandboxes.snapshots.keyFor(organizationId, remote.access.cloneUrl);
+    await sandboxes.dispose();
+    await Bun.spawn(["docker", "rmi", "-f", `aven-env-${key}`]).exited;
+    await rm(home, { recursive: true, force: true });
+    await rm(remote.dir, { recursive: true, force: true });
+  });
+
+  test("the first thread sets the repository up; the next starts from that, with the repository brought up to date", async () => {
+    const first = crypto.randomUUID();
+    const firstBox = await sandboxes.acquire(
+      { id: first, organizationId },
+      async () => remote.access,
+    );
+
+    // What the script put in the container's home and in the workspace, and what resume did on start.
+    expect((await run(firstBox, "cat ~/marker.txt && cat /workspace/built.txt")).stdout).toBe(
+      "from setup\nbuilt\n",
+    );
+    expect((await run(firstBox, "test -s /workspace/resumed.txt && echo yes")).stdout).toBe(
+      "yes\n",
+    );
+    const key = sandboxes.snapshots.keyFor(organizationId, remote.access.cloneUrl);
+    expect((await sandboxes.snapshots.valid(key, await imageId(image!)))?.image).toBe(
+      `aven-env-${key}`,
+    );
+
+    // The repository moves on after the snapshot was made.
+    await Bun.write(join(remote.dir, "NEWS.md"), "fresh\n");
+    for (const args of [
+      ["add", "."],
+      ["commit", "-q", "-m", "news"],
+    ])
+      await git(args, { cwd: remote.dir });
+
+    const second = crypto.randomUUID();
+    const secondBox = await sandboxes.acquire(
+      { id: second, organizationId },
+      async () => remote.access,
+    );
+
+    // The environment came from the snapshot (setup did not run again), the repository is current
+    // and on this thread's own branch.
+    expect((await run(secondBox, "cat ~/marker.txt && cat /workspace/built.txt")).stdout).toBe(
+      "from setup\nbuilt\n",
+    );
+    expect((await run(secondBox, "cat /workspace/NEWS.md")).stdout).toBe("fresh\n");
+    expect((await run(secondBox, "git rev-parse --abbrev-ref HEAD")).stdout.trim()).toBe(
+      `aven/${second.slice(0, 8)}`,
+    );
+    // Resume ran again on this container's start.
+    expect((await run(secondBox, "test -s /workspace/resumed.txt && echo yes")).stdout).toBe(
+      "yes\n",
+    );
+    // The two threads' workspaces are their own.
+    await run(secondBox, "echo mine > /workspace/only-second.txt");
+    expect((await run(firstBox, "test -e /workspace/only-second.txt; echo $?")).stdout.trim()).toBe(
+      "1",
+    );
+  }, 300_000);
+});
+
+// The id of a local Docker image, which a snapshot is made from.
+async function imageId(name: string) {
+  const out = await new Response(
+    Bun.spawn(["docker", "image", "inspect", "--format", "{{.Id}}", name]).stdout,
+  ).text();
+  return out.trim();
+}

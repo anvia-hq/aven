@@ -42,6 +42,15 @@ export async function isCloned(dir: string) {
   return (await readdir(dir).catch(() => [] as string[])).includes(".git");
 }
 
+/** Empties `dir`, dotfiles included, so a failed attempt leaves nothing for the next run to trip on. */
+export async function clearDirectory(dir: string) {
+  await Promise.all(
+    (await readdir(dir).catch(() => [] as string[])).map((entry) =>
+      rm(join(dir, entry), { recursive: true, force: true }),
+    ),
+  );
+}
+
 // Clones the repository's default branch into the empty `dir` and moves onto the thread's own
 // branch. A failed clone leaves `dir` empty again, so the next run tries afresh.
 export async function cloneRepository(
@@ -61,11 +70,7 @@ export async function cloneRepository(
     const branched = await run(["checkout", "-b", threadBranch(threadId)], { cwd: dir });
     if (branched.code !== 0) throw new Error(redact(branched.stderr || branched.stdout));
   } catch (error) {
-    await Promise.all(
-      (await readdir(dir).catch(() => [] as string[])).map((entry) =>
-        rm(join(dir, entry), { recursive: true, force: true }),
-      ),
-    );
+    await clearDirectory(dir);
     throw new Error(`Could not clone ${access.cloneUrl}: ${errorMessage(error)}`);
   }
 }

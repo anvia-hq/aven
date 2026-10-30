@@ -10,15 +10,16 @@ export type DockerRun = (
   options?: { timeoutMs?: number },
 ) => Promise<CommandOutput>;
 
-/** Where a repository keeps what sets up its environment (decision 0043). */
+/** Where a repository keeps what sets up its environment, and what runs when a container starts (decision 0043). */
 export const SETUP_SCRIPT = ".aven/setup";
+export const RESUME_SCRIPT = ".aven/resume";
 
 /** A setup that has not finished by then is stopped. */
 export const SETUP_TIMEOUT_MS = 20 * 60_000;
 
-/** `missing` when the repository has none; `not-executable` when it has one that cannot run. */
-export async function setupScriptState(root: string) {
-  const found = await stat(join(root, SETUP_SCRIPT)).catch(() => null);
+/** `missing` when the repository has no such script; `not-executable` when it has one that cannot run. */
+export async function scriptState(root: string, script: string) {
+  const found = await stat(join(root, script)).catch(() => null);
   if (!found?.isFile()) return "missing" as const;
   return found.mode & 0o111 ? ("ready" as const) : ("not-executable" as const);
 }

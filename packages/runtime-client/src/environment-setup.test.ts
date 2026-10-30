@@ -3,12 +3,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import {
-  setupEnvironment,
-  setupRunArgs,
-  setupScriptState,
-  type DockerRun,
-} from "./environment-setup";
+import { setupEnvironment, setupRunArgs, scriptState, type DockerRun } from "./environment-setup";
 
 const dirs: string[] = [];
 async function temp() {
@@ -170,14 +165,14 @@ describe("running a repository's setup", () => {
 describe("a repository's setup script", () => {
   test("is missing, not executable, or ready", async () => {
     const root = await temp();
-    expect(await setupScriptState(root)).toBe("missing");
+    expect(await scriptState(root, ".aven/setup")).toBe("missing");
 
     await mkdir(join(root, ".aven"));
     await writeFile(join(root, ".aven", "setup"), "#!/bin/sh\n");
     await chmod(join(root, ".aven", "setup"), 0o644);
-    expect(await setupScriptState(root)).toBe("not-executable");
+    expect(await scriptState(root, ".aven/setup")).toBe("not-executable");
 
     await chmod(join(root, ".aven", "setup"), 0o755);
-    expect(await setupScriptState(root)).toBe("ready");
+    expect(await scriptState(root, ".aven/setup")).toBe("ready");
   });
 });

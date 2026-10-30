@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
@@ -14,9 +14,18 @@ import type { SandboxDesktop } from "@anvia/sandbox";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
-import { cloneRepository, git, isCloned, type Git } from "./git-clone";
-import { runCommand, type CommandOutput } from "./run-command";
+import {
+  RESUME_SCRIPT,
+  SETUP_SCRIPT,
+  scriptState,
+  setupEnvironment,
+  type DockerRun,
+} from "./environment-setup";
+import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
+import { updateRestoredWorkspace } from "./restore-workspace";
+import { runCommand } from "./run-command";
 import { SkillStore } from "./skills";
+import { SnapshotStore } from "./snapshots";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 
@@ -49,7 +58,7 @@ export type SandboxConfig = {
   /** Replaced in tests. */
   git?: Git;
   /** Replaced in tests. */
-  docker?: (args: string[]) => Promise<CommandOutput>;
+  docker?: DockerRun;
 };
 
 export type ThreadSandbox = {
@@ -59,14 +68,16 @@ export type ThreadSandbox = {
   hasRunningProcesses(): Promise<boolean>;
 };
 
-type Docker = NonNullable<SandboxConfig["docker"]>;
+type Docker = DockerRun;
 
 const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
 const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
+// `.aven/resume` is for a quick login or repair: the agent waits this long for it, then goes on.
+const RESUME_TIMEOUT_MS = 10_000;
 
-const docker: Docker = (args) => runCommand(["docker", ...args]);
+const docker: Docker = (args, options) => runCommand(["docker", ...args], options);
 
 type DockerRunInput = {
   name: string;
@@ -194,7 +205,10 @@ export interface ThreadWorkspaces {
    * `repo` asks the control plane how to clone the thread's repository; it is called only when the
    * workspace holds no clone yet (decision 0013).
    */
-  acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
+  acquire(
+    thread: { id: string; organizationId?: string },
+    repo: () => Promise<RepoAccess>,
+  ): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
   /** The thread's workspace directory on this machine once it holds a clone; never clones one. */
@@ -220,6 +234,8 @@ export class Sandboxes implements ThreadWorkspaces {
   readonly artifacts: ArtifactStore;
   readonly uploads: UploadStore;
   readonly skills: SkillStore;
+  /** What repositories' setups made on this runner (decision 0043). */
+  readonly snapshots: SnapshotStore;
   #config: SandboxConfig;
   #hub: RemoteSandboxHub;
   #port: number;
@@ -229,6 +245,9 @@ export class Sandboxes implements ThreadWorkspaces {
   #running = new Set<string>();
   // A thread's workspace, while it is being cloned or once it is ready, so two runs never clone twice.
   #roots = new Map<string, Promise<string>>();
+  // The setup or restore of a repository's environment, one at a time, so a second thread on the
+  // repository finds the snapshot the first made instead of running the setup again.
+  #environments = new Map<string, Promise<unknown>>();
   #starting = new Map<string, Promise<void>>();
 
   private constructor(
@@ -242,6 +261,7 @@ export class Sandboxes implements ThreadWorkspaces {
     this.artifacts = new ArtifactStore(join(runtimeHome(config.home), "artifacts"));
     this.uploads = new UploadStore(join(runtimeHome(config.home), "uploads"));
     this.skills = new SkillStore(join(runtimeHome(config.home), "skills"));
+    this.snapshots = new SnapshotStore(join(runtimeHome(config.home), "snapshots"));
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -269,8 +289,11 @@ export class Sandboxes implements ThreadWorkspaces {
     return sandboxes;
   }
 
-  async acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox> {
-    const root = await this.#workspace(thread.id, repo);
+  async acquire(
+    thread: { id: string; organizationId?: string },
+    repo: () => Promise<RepoAccess>,
+  ): Promise<ThreadSandbox> {
+    const root = await this.#workspace(thread, repo);
     await this.#ensure(thread.id, root);
     const runtime = this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR });
     return {
@@ -319,25 +342,133 @@ export class Sandboxes implements ThreadWorkspaces {
     await this.#hub.close();
   }
 
-  // The thread's workspace: the repository cloned on first use and kept for its later runs. Real
-  // path, so the file tools' confinement and the bind mount agree on what the directory is.
-  #workspace(threadId: string, repo: () => Promise<RepoAccess>) {
-    const known = this.#roots.get(threadId);
+  // The thread's workspace: the repository cloned on first use (or restored from its snapshot) and
+  // kept for its later runs. Real path, so the file tools' confinement and the bind mount agree on
+  // what the directory is.
+  #workspace(thread: { id: string; organizationId?: string }, repo: () => Promise<RepoAccess>) {
+    const known = this.#roots.get(thread.id);
     if (known) return known;
-    const preparing = this.#prepare(threadId, repo);
-    this.#roots.set(threadId, preparing);
+    const preparing = this.#prepare(thread, repo);
+    this.#roots.set(thread.id, preparing);
     // A failed clone is tried again by the next run.
-    preparing.catch(() => this.#roots.delete(threadId));
+    preparing.catch(() => this.#roots.delete(thread.id));
     return preparing;
   }
 
-  async #prepare(threadId: string, repo: () => Promise<RepoAccess>) {
-    const dir = this.#workspaceDir(threadId);
+  async #prepare(thread: { id: string; organizationId?: string }, repo: () => Promise<RepoAccess>) {
+    const dir = this.#workspaceDir(thread.id);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
     if (await isCloned(root)) return root;
-    await cloneRepository(root, threadId, await repo(), this.#git);
+    const access = await repo();
+    const environment = await this.#environmentOf(thread, access);
+    if (!environment) {
+      await cloneRepository(root, thread.id, access, this.#git);
+      return root;
+    }
+    await this.#inTurn(environment.key, () => this.#fill(thread.id, root, access, environment));
     return root;
+  }
+
+  // The repository's snapshot key and the image it must be made from; null where snapshots do not
+  // apply: a thread with no organization, or a Docker that cannot name the sandbox image.
+  async #environmentOf(thread: { organizationId?: string }, access: RepoAccess) {
+    if (!thread.organizationId) return null;
+    const inspected = await this.#run([
+      "image",
+      "inspect",
+      "--format",
+      "{{.Id}}",
+      this.#config.image,
+    ]);
+    const baseImageId = inspected.code === 0 ? inspected.stdout.trim() : "";
+    if (!baseImageId) return null;
+    return { key: this.snapshots.keyFor(thread.organizationId, access.cloneUrl), baseImageId };
+  }
+
+  // One at a time per key; a failure of one does not stop the next.
+  #inTurn<T>(key: string, work: () => Promise<T>) {
+    const turn = (this.#environments.get(key) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(work);
+    this.#environments.set(key, turn);
+    return turn.finally(() => {
+      if (this.#environments.get(key) === turn) this.#environments.delete(key);
+    });
+  }
+
+  // Puts the repository in `root`: restored from the snapshot when there is a valid one, else
+  // cloned and, when the repository has a setup script, set up and snapshotted (decision 0043).
+  async #fill(
+    threadId: string,
+    root: string,
+    access: RepoAccess,
+    { key, baseImageId }: { key: string; baseImageId: string },
+  ) {
+    const snapshot = await this.snapshots.valid(key, baseImageId);
+    if (snapshot) {
+      try {
+        await this.snapshots.restore(snapshot, root);
+        await updateRestoredWorkspace(root, threadId, access, this.#git);
+        await this.#pinImage(threadId, snapshot.image);
+        return;
+      } catch (error) {
+        // A snapshot that cannot be restored is not worth failing the thread for: clone afresh.
+        console.warn(`Could not restore the environment of ${access.cloneUrl}:`, error);
+        await clearDirectory(root);
+      }
+    }
+    await cloneRepository(root, threadId, access, this.#git);
+    await this.#setUp(threadId, root, key, baseImageId);
+  }
+
+  // Runs the repository's `.aven/setup`, if it has one, and keeps what it made. A setup that fails
+  // does not fail the thread: it works on the bare image, and the next thread tries again.
+  async #setUp(threadId: string, root: string, key: string, baseImageId: string) {
+    const state = await scriptState(root, SETUP_SCRIPT);
+    if (state === "missing") return;
+    if (state === "not-executable") {
+      console.warn(`${SETUP_SCRIPT} is not executable (chmod +x); it was not run`);
+      return;
+    }
+    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
+    const image = this.snapshots.imageFor(key);
+    try {
+      await setupEnvironment({
+        docker: this.#run,
+        key,
+        baseImage: this.#config.image,
+        image,
+        root,
+        logPath: this.snapshots.logPath(key),
+        memoryMb,
+        cpus,
+        pidsLimit,
+        platform: this.#config.platform,
+        runtime: this.#config.runtime,
+        hostUser: hostUser(),
+      });
+      await this.snapshots.publish(key, { image, baseImageId, workspace: root });
+      await this.#pinImage(threadId, image);
+    } catch (error) {
+      console.warn(`The setup of ${key} failed; see ${this.snapshots.logPath(key)}:`, error);
+    }
+  }
+
+  // A thread keeps the image it started from, so its container does not change under it when the
+  // snapshot is replaced or goes out of date.
+  #imageFile(threadId: string) {
+    return join(runtimeHome(this.#config.home), "environments", `${threadId}.image`);
+  }
+
+  async #pinImage(threadId: string, image: string) {
+    await mkdir(join(runtimeHome(this.#config.home), "environments"), { recursive: true });
+    await writeFile(this.#imageFile(threadId), image);
+  }
+
+  async #imageOf(threadId: string) {
+    const pinned = await readFile(this.#imageFile(threadId), "utf8").catch(() => "");
+    return pinned.trim() || this.#config.image;
   }
 
   #workspaceDir(threadId: string) {
@@ -379,7 +510,7 @@ export class Sandboxes implements ThreadWorkspaces {
     const args = dockerRunArgs({
       name,
       threadId,
-      image: this.#config.image,
+      image: await this.#imageOf(threadId),
       root,
       // Made before the container starts, so a file attached while it runs shows up in it.
       uploads: await this.uploads.dir(threadId),
@@ -401,6 +532,19 @@ export class Sandboxes implements ThreadWorkspaces {
     }
     this.#running.add(threadId);
     await this.#awaitDaemon(threadId);
+    await this.#resume(name, root);
+  }
+
+  // Runs the repository's `.aven/resume`, if it has one, now that the container is up. The run
+  // waits for it a few seconds at most; a failure is logged and the agent goes on.
+  async #resume(name: string, root: string) {
+    if ((await scriptState(root, RESUME_SCRIPT)) !== "ready") return;
+    const ran = await this.#run(["exec", "-w", WORKSPACE_DIR, name, `./${RESUME_SCRIPT}`], {
+      timeoutMs: RESUME_TIMEOUT_MS,
+    });
+    if (ran.code !== 0) {
+      console.warn(`${RESUME_SCRIPT} did not finish well (exit ${ran.code}):`, ran.stderr.trim());
+    }
   }
 
   async #awaitDaemon(threadId: string) {
