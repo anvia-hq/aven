@@ -28,6 +28,17 @@ const QUESTIONS = [
     allowCustom: true,
   },
 ];
+if (process.env.FAKE_QUESTION === "2") {
+  QUESTIONS.unshift({
+    id: "size",
+    text: "How big is it?",
+    choices: [
+      { label: "Small", value: "small" },
+      { label: "Large", value: "large" },
+    ],
+    allowCustom: false,
+  });
+}
 
 const event = (value: object) => console.log(`EVENT ${JSON.stringify(value)}`);
 const text = (value: string) => new TextEncoder().encode(value);

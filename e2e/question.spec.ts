@@ -88,4 +88,45 @@ test.describe("the agent's question", () => {
       });
     }).toPass({ timeout: 5000 });
   });
+
+  test("several questions are asked one screen at a time", async ({ page }) => {
+    await registerUser(page, "ask", "Ask User");
+    await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    const { child, events, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "2" });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    const form = page.getByRole("form", { name: "Answer the agent" });
+    await expect(form).toContainText("1 of 2");
+    await expect(form).toContainText("How big is it?");
+    await expect(form).not.toContainText("Which color should it be?");
+    await expect(form.getByRole("button", { name: "Next" })).toBeDisabled();
+    await form.getByRole("radio", { name: "Large" }).click();
+    await form.getByRole("button", { name: "Next" }).click();
+
+    await expect(form).toContainText("2 of 2");
+    await expect(form).toContainText("Which color should it be?");
+    await form.getByRole("button", { name: "Back" }).click();
+    await expect(form.getByRole("radio", { name: "Large" })).toBeChecked();
+    await form.getByRole("button", { name: "Next" }).click();
+
+    await form.getByRole("radio", { name: "Red" }).click();
+    await form.getByRole("button", { name: "Send answer" }).click();
+    await expect(page.getByText("Thanks, on it.")).toBeVisible();
+    await expect(async () => {
+      expect(events.find((entry) => entry.type === "answered")).toMatchObject({
+        response: {
+          answers: [
+            { questionId: "size", value: "large" },
+            { questionId: "color", value: "red" },
+          ],
+        },
+      });
+    }).toPass({ timeout: 5000 });
+  });
 });

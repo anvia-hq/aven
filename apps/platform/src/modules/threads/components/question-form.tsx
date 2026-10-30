@@ -1,4 +1,4 @@
-import { ArrowUp } from "@mynaui/icons-react";
+import { ArrowLeft, ArrowRight, ArrowUp } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -31,20 +31,24 @@ function Question({
   onChange: (draft: Draft) => void;
 }) {
   const current = draft ?? { choice: "", custom: "" };
-  const own = prompt.allowCustom || !prompt.choices?.length;
+  const hasChoices = Boolean(prompt.choices?.length);
+  const own = prompt.allowCustom || !hasChoices;
 
   return (
-    <div role="group" aria-label={prompt.text} className="flex flex-col gap-2">
-      <p className="text-sm font-medium">{prompt.text}</p>
-      {prompt.choices && (
+    <div role="group" aria-label={prompt.text} className="flex flex-col gap-3">
+      <p className="text-base leading-6 font-medium">{prompt.text}</p>
+      {hasChoices && (
         <RadioGroup
           aria-label={prompt.text}
           value={current.custom.trim() ? "" : current.choice}
           onValueChange={(choice) => onChange({ choice: String(choice), custom: "" })}
           className="gap-1.5"
         >
-          {prompt.choices.map((choice) => (
-            <Label key={choice.value} className="gap-2 font-normal">
+          {prompt.choices?.map((choice) => (
+            <Label
+              key={choice.value}
+              className="cursor-pointer gap-3 rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-accent"
+            >
               <RadioGroupItem value={choice.value} />
               {choice.label}
             </Label>
@@ -53,56 +57,98 @@ function Question({
       )}
       {own && (
         <Input
-          aria-label={prompt.choices?.length ? `${prompt.text} (your own answer)` : prompt.text}
-          placeholder={prompt.choices?.length ? "Or write your own answer" : "Your answer"}
+          aria-label={hasChoices ? `${prompt.text} (your own answer)` : prompt.text}
+          placeholder={hasChoices ? "Or write your own answer" : "Your answer"}
           value={current.custom}
           onChange={(event) => onChange({ choice: "", custom: event.target.value })}
+          className="h-9"
         />
       )}
     </div>
   );
 }
 
-// Takes the composer's place while the agent waits on its question. The model is the one the
-// composer would use, since the run continues with it.
+// Takes the composer's place while the agent waits on its question, one question at a time. The
+// model is the one the composer would use, since the run continues with it.
 export function QuestionForm({ tool, onSubmit }: Props) {
   const model = useModelSelection();
   const prompts = tool.questions ?? [];
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [step, setStep] = useState(0);
   const [sending, setSending] = useState(false);
-  const answers = prompts.map((prompt) => ({
-    questionId: prompt.id,
-    value: valueOf(drafts[prompt.id]),
-  }));
-  const complete = answers.every((answer) => answer.value);
+
+  const prompt = prompts[step];
+  const last = step === prompts.length - 1;
+  const answered = Boolean(prompt && valueOf(drafts[prompt.id]));
 
   async function submit() {
-    if (!complete || sending) return;
+    if (sending) return;
     setSending(true);
-    await onSubmit(answers, model.selection);
+    await onSubmit(
+      prompts.map((item) => ({ questionId: item.id, value: valueOf(drafts[item.id]) })),
+      model.selection,
+    );
     setSending(false);
   }
+
+  if (!prompt) return null;
 
   return (
     <Form
       aria-label="Answer the agent"
-      onFormSubmit={() => void submit()}
-      className="flex flex-col gap-4 rounded-lg border bg-card p-4"
+      onFormSubmit={() => (last ? void submit() : answered && setStep(step + 1))}
+      className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
     >
-      <p className="text-xs text-muted-foreground">The agent is waiting for your answer.</p>
-      {prompts.map((prompt) => (
-        <Question
-          key={prompt.id}
-          prompt={prompt}
-          draft={drafts[prompt.id]}
-          onChange={(draft) => setDrafts((current) => ({ ...current, [prompt.id]: draft }))}
-        />
-      ))}
-      <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={!complete || sending}>
-          <ArrowUp />
-          Send answer
-        </Button>
+      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>The agent needs your answer</span>
+        {prompts.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span>
+              {step + 1} of {prompts.length}
+            </span>
+            <div className="flex gap-1" aria-hidden>
+              {prompts.map((item, index) => (
+                <span
+                  key={item.id}
+                  className={
+                    index <= step
+                      ? "h-1 w-5 rounded-full bg-primary"
+                      : "h-1 w-5 rounded-full bg-border"
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Question
+        key={prompt.id}
+        prompt={prompt}
+        draft={drafts[prompt.id]}
+        onChange={(draft) => setDrafts((current) => ({ ...current, [prompt.id]: draft }))}
+      />
+
+      <div className="flex items-center justify-between">
+        {step > 0 ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+            <ArrowLeft />
+            Back
+          </Button>
+        ) : (
+          <span />
+        )}
+        {last ? (
+          <Button type="submit" size="sm" disabled={!answered || sending}>
+            <ArrowUp />
+            Send answer
+          </Button>
+        ) : (
+          <Button type="submit" size="sm" disabled={!answered}>
+            Next
+            <ArrowRight />
+          </Button>
+        )}
       </div>
     </Form>
   );
