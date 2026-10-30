@@ -175,6 +175,11 @@ export function createGithubService(
       return (await client.installationToken(await githubInstallationId(installationRowId))).token;
     },
 
+    // The pull request the agent opened for a branch, if there is one (decision 0044).
+    async findPullRequest(installationRowId: string, fullName: string, head: string) {
+      return client.findPullRequest(await githubInstallationId(installationRowId), fullName, head);
+    },
+
     // Ships need the app approved to write for the installation's account (decision 0041).
     async requireWritable(installationRowId: string) {
       const [row] = await db

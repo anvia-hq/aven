@@ -222,6 +222,46 @@ export class GithubClient {
     return `${webUrl}/login/oauth/authorize?${new URLSearchParams({ client_id: clientId, state })}`;
   }
 
+  /**
+   * The latest pull request, open or not, whose head is `head` in `fullName`, or null: what the
+   * agent opened with `gh` for a thread's branch (decision 0044). Read with a token for that
+   * repository that may only read pull requests, minted for the call; an installation that cannot
+   * give one (the permission is not approved) just has none.
+   */
+  async findPullRequest(installationId: number, fullName: string, head: string) {
+    const [owner, name] = fullName.split("/") as [string, string];
+    let token: string;
+    try {
+      const issued = await this.#api<{ token: string }>(
+        `/app/installations/${installationId}/access_tokens`,
+        this.#appJwt(),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            repositories: [name],
+            permissions: { pull_requests: "read", metadata: "read" },
+          }),
+        },
+      );
+      token = issued.token;
+    } catch (error) {
+      if (error instanceof GithubApiError && error.status === 422) return null;
+      throw error;
+    }
+    const query = new URLSearchParams({
+      state: "all",
+      sort: "created",
+      direction: "desc",
+      per_page: "1",
+      head: `${owner}:${head}`,
+    });
+    const path = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls`;
+    const [found] = await this.#api<PullPayload[]>(`${path}?${query}`, token);
+    return found
+      ? ({ number: found.number, url: found.html_url } satisfies GithubPullRequest)
+      : null;
+  }
+
   /** Whether the installation has been approved to write contents and pull requests. */
   async canWrite(installationId: number) {
     const found = await this.#api<{ permissions?: Record<string, string> }>(

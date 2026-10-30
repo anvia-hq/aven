@@ -247,6 +247,46 @@ describe("writing to a repository", () => {
     expect(await client.canWrite(9)).toBe(false);
   });
 
+  test("finds the latest pull request of a branch with a token that may only read them", async () => {
+    const github = fakeGithub({
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_read",
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=1&head=acme%3Aaven%2Fabc12345":
+        [{ number: 4, html_url: "https://github.com/acme/app/pull/4" }],
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.findPullRequest(7, "acme/app", "aven/abc12345")).toEqual({
+      number: 4,
+      url: "https://github.com/acme/app/pull/4",
+    });
+
+    expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
+      repositories: ["app"],
+      permissions: { pull_requests: "read", metadata: "read" },
+    });
+    expect(auth(github.calls[1]!)).toBe("Bearer ghs_read");
+  });
+
+  test("a branch with no pull request, or an installation that cannot read them, has none", async () => {
+    const empty = fakeGithub({
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_read",
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=1&head=acme%3Aaven%2Fnone":
+        [],
+    });
+    expect(
+      await new GithubClient(config, empty.fetch).findPullRequest(7, "acme/app", "aven/none"),
+    ).toBeNull();
+
+    const refused = new GithubClient(config, async () => new Response("no", { status: 422 }));
+    expect(await refused.findPullRequest(7, "acme/app", "aven/x")).toBeNull();
+  });
+
   test("a person can push only when GitHub says so for their token; a repository they cannot see is no", async () => {
     const github = fakeGithub({
       "GET /repos/acme/app": { permissions: { push: true } },
