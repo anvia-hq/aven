@@ -1,12 +1,14 @@
-import { Hand, Monitor } from "@mynaui/icons-react";
+import { Hand, Monitor, Power } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
+import { Spinner } from "@/components/spinner";
 
 import { useDesktopControl } from "../hooks/use-desktop-control";
 import { useDesktopStatus } from "../hooks/use-desktop-status";
+import { useDesktopWake } from "../hooks/use-desktop-wake";
 import type { DesktopStatus } from "../types";
 import { DesktopViewer } from "./desktop-viewer";
 
@@ -34,6 +36,7 @@ function hintFor(inControl: boolean, heldByOther: boolean) {
 export function DesktopPanel({ threadId, onClose }: Props) {
   const { status, problem, refresh } = useDesktopStatus(threadId);
   const { controlling, busy, takeOver, giveBack } = useDesktopControl(threadId);
+  const { waking, wake } = useDesktopWake(threadId, refresh);
   const view = viewOf(status, problem);
   const heldByOther = status?.available === true && status.held && !status.heldByMe;
   const inControl = controlling && view === "desktop";
@@ -74,8 +77,13 @@ export function DesktopPanel({ threadId, onClose }: Props) {
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "no-sandbox" && (
           <PanelNotice>
-            The thread's sandbox is not running. It starts when the agent works on this thread, and
-            stops after fifteen idle minutes.
+            <span className="flex flex-col items-center gap-4">
+              The thread's sandbox is not running. It starts when the agent works on this thread,
+              and stops after fifteen idle minutes. You can also wake it up to watch the desktop.
+              <Button variant="outline" disabled={waking} onClick={() => void wake()}>
+                {waking ? <Spinner /> : <Power />} {waking ? "Waking up" : "Wake up"}
+              </Button>
+            </span>
           </PanelNotice>
         )}
         {view === "desktop" && (

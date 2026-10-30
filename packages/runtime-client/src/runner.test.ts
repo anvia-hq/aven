@@ -173,6 +173,51 @@ describe("startRuntime desktops", () => {
     });
   });
 
+  test("wakes a thread's sandbox without a run, answers with its desktop, and frees it when idle", async () => {
+    const fake = fakeDesktop();
+    const { sandbox, up, released } = withDesktop(fake.desktop);
+    const acquired: string[] = [];
+    const counting: ThreadWorkspaces = {
+      ...sandbox,
+      acquire: async (thread, repo) => (acquired.push(thread.id), sandbox.acquire(thread, repo)),
+    };
+    const { plane, runtime } = connect({ sandbox: counting, idleReleaseMs: 50 });
+    await runtime.ready;
+    up();
+
+    plane.send({ type: "call", id: "w1", method: "desktop.wake", params: { threadId: "t1" } });
+
+    await until(() => plane.received.some((message) => message.type === "reply"));
+    expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
+      ok: true,
+      result: { state: "running", control: { held: false } },
+    });
+    expect(acquired).toEqual(["t1"]);
+    // Nothing uses it, so the idle clock frees it again.
+    await until(() => released.length === 1);
+    expect(released).toEqual(["t1"]);
+  });
+
+  test("a thread with no workspace is not woken: the clone is made by a run", async () => {
+    const { sandbox, up } = withDesktop(undefined);
+    // `acquire` asks for the repository only when the workspace holds no clone yet.
+    const unclonedSandbox: ThreadWorkspaces = {
+      ...sandbox,
+      acquire: async (thread, repo) => (await repo(), sandbox.acquire(thread, repo)),
+    };
+    const { plane, runtime } = connect({ sandbox: unclonedSandbox });
+    await runtime.ready;
+    up();
+
+    plane.send({ type: "call", id: "w2", method: "desktop.wake", params: { threadId: "t1" } });
+
+    await until(() => plane.received.some((message) => message.type === "reply"));
+    expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
+      ok: false,
+      error: "The thread has no workspace yet",
+    });
+  });
+
   test("a sandbox someone is watching is not released as idle", async () => {
     const fake = fakeDesktop();
     const { sandbox, up, released } = withDesktop(fake.desktop);

@@ -99,6 +99,20 @@ test.describe("a thread's desktop", () => {
     await expect(panel.getByRole("button", { name: "Take over" })).toHaveCount(0);
   });
 
+  test("wakes a sandbox that is not running, then shows its desktop", async ({ page }) => {
+    await registerUser(page, "wak", "Wake User");
+    const { child, threadId } = await threadOnFakeRunner(page, { NO_SANDBOX: "1" });
+    runner = child;
+
+    await openDesktop(page, threadId);
+    const panel = page.getByRole("region", { name: "Desktop" });
+    await panel.getByRole("button", { name: "Wake up" }).click();
+
+    await expect(panel.locator("canvas")).toBeVisible();
+    await expect(panel.getByText("Watching. Take over to click and type.")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Wake up" })).toHaveCount(0);
+  });
+
   test("can be opened and closed again from the thread header", async ({ page }) => {
     await registerUser(page, "dsk", "Desktop User");
     const { child, threadId } = await threadOnFakeRunner(page);

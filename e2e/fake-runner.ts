@@ -10,8 +10,8 @@ import {
 
 const base = process.env.AVEN_URL!;
 const token = process.env.AVEN_RUNTIME_TOKEN!;
-// With NO_SANDBOX the thread has no running container, as before its first run.
-const sandboxRunning = process.env.NO_SANDBOX !== "1";
+// With NO_SANDBOX the thread has no running container, as before its first run; waking it starts one.
+let sandboxRunning = process.env.NO_SANDBOX !== "1";
 const WIDTH = 640;
 const HEIGHT = 400;
 
@@ -316,6 +316,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         : { kind: "text", text, size: text.length, truncated: false },
     );
   }
+  if (call.method === "desktop.wake") sandboxRunning = true;
   if (!sandboxRunning) return reply(null);
   if (call.method === "desktop.takeover") {
     held = {

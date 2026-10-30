@@ -35,7 +35,8 @@ const DRAIN_POLL_MS = 10;
 const NOT_RUNNING = "The thread's sandbox is not running";
 
 // The desktops of this runner's sandboxes, streamed to viewers the control plane opens (decision
-// 0015). It never starts a sandbox: a thread whose container is not running has no desktop to see.
+// 0015). Watching never starts a sandbox: a thread whose container is not running has no desktop to
+// see, until the runner is asked to wake it (decision 0039).
 export class DesktopViewers {
   #viewers = new Map<string, Viewer>();
 
@@ -84,7 +85,7 @@ export class DesktopViewers {
   }
 
   /** The control plane's calls about a thread's desktop; null when its sandbox is not running. */
-  async call(method: DesktopCallMethod, params: unknown) {
+  async call(method: Exclude<DesktopCallMethod, "desktop.wake">, params: unknown) {
     const { threadId, holder, leaseMs, force } = desktopCallParams(params);
     const desktop = this.sandbox.desktop(threadId);
     if (!desktop) return null;

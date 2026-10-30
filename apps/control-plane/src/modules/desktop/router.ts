@@ -46,6 +46,11 @@ export const desktopRouter = (hub: RuntimeHub) => {
       },
     )
     .post(
+      "/:id/desktop/wake",
+      ({ params, organizationId, user }) => service.wake(organizationId, user.id, params.id),
+      { auth: true, org: true, params: threadParams },
+    )
+    .post(
       "/:id/desktop/takeover",
       ({ params, organizationId, user }) => service.takeover(organizationId, user.id, params.id),
       { auth: true, org: true, params: threadParams },

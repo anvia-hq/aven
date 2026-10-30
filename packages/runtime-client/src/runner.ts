@@ -19,6 +19,7 @@ import {
 
 import {
   artifactsReadParams,
+  desktopCallParams,
   diffGetParams,
   filesCallParams,
   filesSearchParams,
@@ -282,8 +283,24 @@ export function startRuntime(options: RuntimeOptions) {
     return (await options.sandbox.artifacts?.read(threadId, name)) ?? null;
   }
 
+  // Starts a thread's sandbox without a run, for a person who wants its desktop (decision 0039); the
+  // idle clock frees it again if nothing uses it. A thread that never ran has no workspace to
+  // start it on, and the clone is made by a run.
+  async function wakeOf(params: unknown) {
+    const { threadId } = desktopCallParams(params);
+    clearTimeout(idleTimers.get(threadId));
+    await releasing.get(threadId);
+    const box = await options.sandbox.acquire({ id: threadId }, async () => {
+      throw new Error("The thread has no workspace yet");
+    });
+    boxes.set(threadId, box);
+    scheduleIdleRelease(threadId);
+    return viewers.call("desktop.status", { threadId });
+  }
+
   // What the control plane's call asks for: a thread's changes, its files, an image, or its desktop.
   function callOf(method: RunnerCallMethod, params: unknown) {
+    if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);

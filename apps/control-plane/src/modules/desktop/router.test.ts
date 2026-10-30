@@ -73,8 +73,10 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
   });
 
   // A thread on a runner that is connected and answering like a real one; `behaviour` says how.
-  async function setup(behaviour: { running?: boolean; lockedByOther?: boolean } = {}) {
-    const { running = true, lockedByOther = false } = behaviour;
+  async function setup(
+    behaviour: { running?: boolean; lockedByOther?: boolean; neverRan?: boolean } = {},
+  ) {
+    const { running = true, lockedByOther = false, neverRan = false } = behaviour;
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "r",
     });
@@ -129,6 +131,15 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
       if (message.type !== "call") return;
       const reply = (ok: boolean, result?: unknown, error?: string) =>
         ws.send(JSON.stringify({ type: "reply", id: message.id, ok, result, error }));
+      if (message.method === "desktop.wake") {
+        if (neverRan) return reply(false, undefined, "The thread has no workspace yet");
+        return reply(true, {
+          state: "running",
+          width: 1280,
+          height: 800,
+          control: { held: false },
+        });
+      }
       if (!running) return reply(true, null);
       if (message.method === "desktop.status") {
         const control = lockedByOther ? { held: true, holder: "someone-else" } : { held: false };
@@ -287,12 +298,40 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
     expect(taken.status).toBe(409);
   });
 
+  test("waking asks the runner to start the sandbox and answers with the desktop's status", async () => {
+    const { thread, seen } = await setup({ running: false });
+
+    const woke = await api(`/threads/${thread.id}/desktop/wake`, owner.token, "POST");
+
+    expect(woke.status).toBe(200);
+    expect(await woke.json()).toEqual({
+      available: true,
+      state: "running",
+      width: 1280,
+      height: 800,
+      held: false,
+      heldByMe: false,
+    });
+    const calls = seen.messages.filter((message) => message.type === "call");
+    expect(calls.map((call) => [call.method, call.params])).toEqual([
+      ["desktop.wake", { threadId: thread.id }],
+    ]);
+  });
+
+  test("a thread that never ran cannot be woken, and says why", async () => {
+    const { thread } = await setup({ running: false, neverRan: true });
+    const woke = await api(`/threads/${thread.id}/desktop/wake`, owner.token, "POST");
+    expect(woke.status).toBe(409);
+    expect(await woke.text()).toContain("no workspace yet");
+  });
+
   test("the calls need a session and the thread's organization", async () => {
     const { thread } = await setup();
     for (const [path, method] of [
       [`/threads/${thread.id}/desktop`, "GET"],
       [`/threads/${thread.id}/desktop/takeover`, "POST"],
       [`/threads/${thread.id}/desktop/release`, "POST"],
+      [`/threads/${thread.id}/desktop/wake`, "POST"],
     ] as const) {
       expect((await api(path, undefined, method)).status).toBe(401);
       expect((await api(path, outsider.token, method)).status).toBe(404);

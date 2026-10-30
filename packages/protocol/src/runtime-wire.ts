@@ -53,7 +53,12 @@ export type DesktopInfo = {
 };
 
 /** What the control plane asks of a runner about a thread's desktop (decision 0015). */
-export type DesktopCallMethod = "desktop.status" | "desktop.takeover" | "desktop.release";
+export type DesktopCallMethod =
+  | "desktop.status"
+  | "desktop.takeover"
+  | "desktop.release"
+  /** Starts the thread's sandbox if it is not running, and answers like `desktop.status` (decision 0039). */
+  | "desktop.wake";
 
 /** What the control plane asks of a runner about a thread's changes (decision 0030); params are `{ threadId, scope }`. */
 export type DiffCallMethod = "diff.get";
@@ -278,6 +283,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 16: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
 // Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
 // Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
 // Version 13: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
@@ -292,4 +298,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 15;
+export const WIRE_VERSION = 16;

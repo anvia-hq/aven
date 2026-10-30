@@ -43,9 +43,11 @@ export function runnerFor(hub: RuntimeHub) {
       params: CallParams,
       schema: z.ZodType<T>,
       refused?: (error: unknown) => never,
+      // For a call that takes long, such as starting a container; the default is a few seconds.
+      timeoutMs?: number,
     ) {
       const runner = await connection(organizationId, params.threadId);
-      const call = runner.call(method, params);
+      const call = runner.call(method, params, timeoutMs);
       const answer = await (refused ? call.catch(refused) : call);
       const parsed = schema.safeParse(answer);
       if (!parsed.success) throw new UnavailableError("The runtime gave an unexpected answer");
