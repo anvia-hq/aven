@@ -83,18 +83,18 @@ export async function assessGoal(
     };
   }
 
-  const report = failing.map(
-    (result) =>
-      `\`${result.command}\` ${result.exitCode === null ? "timed out" : `exited ${result.exitCode}`}:\n${result.output}`,
-  );
+  const report = failing.map((result) => `${outcomeText(result)}:\n${result.output}`);
   return {
     status: "continue",
     summary,
     next: `Make these commands pass:\n\n${report.join("\n\n")}`,
     progressKey: digest(report.join("\n")),
-    evidence: failing.map(
-      (result) =>
-        `\`${result.command}\` ${result.exitCode === null ? "timed out" : `exited ${result.exitCode}`}`,
-    ),
+    evidence: failing.map(outcomeText),
   };
+}
+
+// How a command that did not pass ended, e.g. "`bun test` exited 1".
+function outcomeText(result: CommandResult) {
+  const ended = result.exitCode === null ? "timed out" : `exited ${result.exitCode}`;
+  return `\`${result.command}\` ${ended}`;
 }

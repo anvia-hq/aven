@@ -192,15 +192,14 @@ export function tokenUsageOf(usage: Usage): TokenUsage {
   };
 }
 
+// How much of the model's context a request used, as Anvia reports it.
+type ModelContextUsage = {
+  usedTokens: number;
+  model: { context: { contextWindow: number } };
+};
+
 // Only known when the model's context window is.
-const contextOf = (
-  usage:
-    | {
-        usedTokens: number;
-        model: { context: { contextWindow: number } };
-      }
-    | undefined,
-): ContextUsage | undefined =>
+const contextOf = (usage: ModelContextUsage | undefined): ContextUsage | undefined =>
   usage && { usedTokens: usage.usedTokens, contextWindow: usage.model.context.contextWindow };
 
 // What a thread has used, read back from the generation metadata stored with its messages.

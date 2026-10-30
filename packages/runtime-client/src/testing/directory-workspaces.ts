@@ -252,6 +252,8 @@ export function directoryWorkspaces(
 ): ThreadWorkspaces & { roots: Map<string, string>; sandboxes: Map<string, DirectorySandbox> } {
   const roots = new Map<string, string>();
   const sandboxes = new Map<string, DirectorySandbox>();
+  // Unlike `ThreadWorkspaces.release`, which keeps the workspace's files for the next `acquire`,
+  // this ends the thread's processes and deletes its temporary directory too.
   const free = async (threadId: string) => {
     await sandboxes.get(threadId)?.dispose();
     sandboxes.delete(threadId);
