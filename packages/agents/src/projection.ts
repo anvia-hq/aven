@@ -30,6 +30,7 @@ import { sentMessage } from "./attachments";
 import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
+import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
 
@@ -64,6 +65,7 @@ export function toolTarget(name: string, input: unknown) {
   if (PROCESS_TOOLS.has(name)) return asString(args.processId);
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
+  if (name === GIT_FETCH_TOOL_NAME) return asString(args.branch);
   if (name === PORT_TOOL) return String(args.containerPort ?? "");
   return "";
 }
@@ -170,7 +172,10 @@ export function projectToolOutput(
       if (image) {
         return { status: "done", output: `Showed ${asString(asRecord(output.value).path)}`, image };
       }
-      return { status: "done", output: clip(jsonText(output.value)) };
+      // What a fetch did, in the words the tool gave it.
+      const fetched =
+        toolName === GIT_FETCH_TOOL_NAME ? asString(asRecord(output.value).summary) : "";
+      return { status: "done", output: clip(fetched || jsonText(output.value)) };
     }
     case "error-json":
       return { status: "error", output: clip(JSON.stringify(output.value)) };

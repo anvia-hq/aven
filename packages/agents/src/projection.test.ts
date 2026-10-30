@@ -136,7 +136,22 @@ describe("the sandbox's tools", () => {
     expect(target("stop_process", { processId: "p1" })).toBe("p1");
     expect(target("wait_for_port", { containerPort: 3000 })).toBe("3000");
     expect(target("web_search", { query: "bun" })).toBe("bun");
+    expect(target("git_fetch", { branch: "main" })).toBe("main");
+    expect(target("git_fetch", {})).toBe("");
     expect(target("desktop_click", { x: 1, y: 2 })).toBe("");
+  });
+
+  test("a fetch's result reads as what it did", () => {
+    const result = {
+      ref: "origin/main",
+      commit: "a".repeat(40),
+      updated: true,
+      summary: "origin/main is now at aaaaaaa.",
+    };
+    expect(projectToolOutput({ type: "json", value: result as never }, "git_fetch")).toEqual({
+      status: "done",
+      output: "origin/main is now at aaaaaaa.",
+    });
   });
 
   test("their results read as text, not as JSON payloads", () => {
