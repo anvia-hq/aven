@@ -47,7 +47,7 @@ describe("the agent's file and command tools", () => {
       command: "head -c 3000000 /dev/zero | tr '\\\\0' x; echo; echo THE-END",
     });
 
-    expect(new TextEncoder().encode(JSON.stringify(ran)).byteLength).toBeLessThan(1_048_576);
+    expect(String(ran.stdout).length).toBeLessThan(100_100);
     expect(String(ran.stdout)).toContain("THE-END");
     expect(ran.stdoutTruncated).toBe(true);
   });

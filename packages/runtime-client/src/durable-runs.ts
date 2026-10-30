@@ -45,6 +45,11 @@ const SAFE_TOOLS = new Set<string>([
   "wait_for_port",
 ] satisfies SandboxToolName[]);
 
+// Durable keeps a run's whole history as one payload and refuses one over a megabyte by default. A
+// coding agent's history holds screenshots (a base64 image each) and command output, and passes
+// that within a handful of steps, which ended the run with "Durable payload byte limit exceeded".
+const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
+
 // Journals this process has open. Durable refuses a journal whose owner is a live process, and a
 // process that reloads in place (`bun --watch`) keeps its pid: it meets its own earlier lease.
 const held = new Set<string>();
@@ -148,6 +153,7 @@ export class DurableRuns {
     const runtime = await DurableRuntime.open({
       store: new SqliteDurableStore(databasePath),
       tasks: [{ registration: goal.registration }],
+      limits: { maxPayloadBytes: MAX_PAYLOAD_BYTES },
       onFatalError: (error) => (onFatalError ?? console.error)(error),
     });
     held.add(databasePath);

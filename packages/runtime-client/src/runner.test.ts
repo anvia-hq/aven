@@ -425,6 +425,50 @@ describe("startRuntime", () => {
     });
   });
 
+  test("a run whose history grows past a megabyte, as screenshots and command output make it, does not end", async () => {
+    // What a few desktop screenshots amount to: results of a few hundred kilobytes each.
+    const screenshot = createTool({
+      name: "screenshot",
+      description: "A big result",
+      inputSchema: z.object({}),
+      execute: async () => ({ png: "A".repeat(450_000) }),
+    });
+    const { sandbox } = slowSandbox();
+    const { plane, runtime } = connect({
+      sandbox: {
+        ...sandbox,
+        acquire: async () => ({ tools: [], hasRunningProcesses: async () => false }),
+      },
+      createAgent: ({ id }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [screenshot],
+          model: scriptedModel([
+            ...Array.from({ length: 4 }, (_, i) => [
+              {
+                type: "tool-call" as const,
+                toolCallId: `s${i}`,
+                toolName: "screenshot",
+                input: {},
+              },
+            ]),
+            [text("done")],
+          ]),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    // The sandbox of this test comes up when the test says so.
+    await Bun.sleep(0);
+
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
+      outcome: "response",
+    });
+  });
+
   test("the sandbox gets the repository's access by asking the control plane about the run", async () => {
     const access = {
       cloneUrl: "https://github.com/acme/web.git",

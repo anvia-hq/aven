@@ -2,23 +2,21 @@ import { describe, expect, test } from "bun:test";
 
 import { boundResult } from "./bounded-result";
 
-const megabytes = (n: number) => "x".repeat(n * 1024 * 1024);
-
-describe("a tool result that must fit in the journal", () => {
-  test("is left as it is when it is small, or large but fits", () => {
+describe("a tool result kept in the run's history", () => {
+  test("is left as it is when its texts are short", () => {
     const small = { status: "exited", stdout: "ok\n", stderr: "", exitCode: 0 };
     expect(boundResult(small)).toBe(small);
 
-    const large = { stdout: "y".repeat(600_000) };
-    expect(boundResult(large)).toBe(large);
+    const long = { stdout: "y".repeat(100_000) };
+    expect(boundResult(long)).toBe(long);
   });
 
-  test("a command with too much output keeps the end of it, says it was cut and fits", () => {
+  test("a command with too much output keeps the end of it, says it was cut and keeps the rest", () => {
     const stdout = `${"build line\n".repeat(300_000)}FAILED: the last line\n`;
     const result = {
       status: "exited" as const,
       stdout,
-      stderr: "",
+      stderr: "warning",
       exitCode: 1,
       stdoutTruncated: false,
       stderrTruncated: false,
@@ -26,33 +24,50 @@ describe("a tool result that must fit in the journal", () => {
 
     const bounded = boundResult(result);
 
-    expect(new TextEncoder().encode(JSON.stringify(bounded)).byteLength).toBeLessThan(1_048_576);
+    expect(bounded.stdout.length).toBeLessThan(100_100);
     expect(bounded.stdout.endsWith("FAILED: the last line\n")).toBe(true);
     expect(bounded.stdout.startsWith("[… output cut")).toBe(true);
     expect(bounded.stdoutTruncated).toBe(true);
+    // What was short is as it was.
+    expect(bounded.stderr).toBe("warning");
     expect(bounded.stderrTruncated).toBe(false);
     expect(bounded.exitCode).toBe(1);
   });
 
-  test("both stdout and stderr are cut when both are too long", () => {
-    const bounded = boundResult({ stdout: megabytes(2), stderr: megabytes(2), exitCode: 0 });
+  test("each text that is too long is cut on its own", () => {
+    const bounded = boundResult({
+      stdout: "a".repeat(500_000),
+      stderr: "b".repeat(500_000),
+      exitCode: 0,
+    });
 
-    expect(new TextEncoder().encode(JSON.stringify(bounded)).byteLength).toBeLessThan(1_048_576);
-    expect(bounded.stdout.length).toBeGreaterThan(1000);
-    expect(bounded.stderr.length).toBeGreaterThan(1000);
-    expect(bounded.exitCode).toBe(0);
+    expect(bounded.stdout.length).toBeLessThan(100_100);
+    expect(bounded.stderr.length).toBeLessThan(100_100);
+    expect(bounded.stdout.endsWith("aaa")).toBe(true);
+    expect(bounded.stderr.endsWith("bbb")).toBe(true);
   });
 
-  test("text that is more than one byte a character is counted as bytes", () => {
-    const bounded = boundResult({ stdout: "é".repeat(700_000) });
+  test("a screenshot is left alone, however much base64 it carries", () => {
+    // What desktop_screenshot returns: a content list with the image as base64 in a part.
+    const screenshot = {
+      type: "content",
+      value: [
+        { type: "text", text: '{"width":1568,"height":882}' },
+        {
+          type: "file",
+          data: { type: "data", data: "A".repeat(1_500_000) },
+          mediaType: "image/png",
+        },
+      ],
+    };
 
-    expect(new TextEncoder().encode(JSON.stringify(bounded)).byteLength).toBeLessThan(1_048_576);
+    expect(boundResult(screenshot)).toBe(screenshot);
   });
 
-  test("a result that cannot be made small is an error, not a failure of the run", () => {
-    expect(() => boundResult("z".repeat(2_000_000))).toThrow("too long to keep");
-    expect(() => boundResult({ data: Array.from({ length: 200_000 }, (_, i) => i) })).toThrow(
+  test("a result that is huge even so is refused, not kept", () => {
+    expect(() => boundResult({ value: [{ data: "A".repeat(9 * 1024 * 1024) }] })).toThrow(
       "too long to keep",
     );
+    expect(() => boundResult("z".repeat(9 * 1024 * 1024))).toThrow("too long to keep");
   });
 });
