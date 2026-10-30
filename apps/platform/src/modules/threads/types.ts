@@ -1,6 +1,7 @@
 import type {
   ChatMessage,
   DiffLine,
+  MessageAttachment,
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
@@ -12,12 +13,16 @@ import type {
 export type {
   ChatMessage,
   DiffLine,
+  MessageAttachment,
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
   ToolImage,
   ToolPart,
 };
+
+/** A file as a message sends it: its bytes in base64 (decision 0034). */
+export type AttachmentUpload = { name: string; mediaType?: string; data: string };
 
 /** What a message asks to run with; omitted fields fall back to the sender's default provider. */
 export type RunSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };

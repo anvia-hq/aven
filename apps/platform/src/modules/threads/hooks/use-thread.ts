@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, attempt, postJson } from "@/lib/api";
 
-import type { ChatMessage, QuestionAnswer, RunSelection } from "../types";
+import type { AttachmentUpload, ChatMessage, QuestionAnswer, RunSelection } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -78,9 +78,9 @@ export function useThread(threadId: string) {
 
   // True once the message is accepted, so the composer knows it can clear.
   const send = useCallback(
-    async (prompt: string, selection: RunSelection = {}) => {
+    async (prompt: string, selection: RunSelection = {}, attachments: AttachmentUpload[] = []) => {
       const sent = await attempt("Could not send message", async () => {
-        await postJson(`/threads/${threadId}/messages`, { prompt, ...selection });
+        await postJson(`/threads/${threadId}/messages`, { prompt, attachments, ...selection });
         rememberModelSelection(threadId, selection);
         return true;
       });

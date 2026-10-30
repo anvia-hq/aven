@@ -4,6 +4,7 @@ import { Markdown } from "@/components/markdown";
 
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import type { ChatMessage, MessagePart, ToolImage, ToolPart } from "../types";
+import { SentAttachments } from "./attachment-list";
 import { ImageBlock } from "./image-block";
 import { QuestionBlock } from "./question-block";
 import { ToolGroup } from "./tool-group";
@@ -60,13 +61,18 @@ export const ThreadMessage = memo(function ThreadMessage({
   streaming?: boolean;
 }) {
   if (message.role === "user") {
+    const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
-      <div
-        className="ml-auto w-fit max-w-[80%] rounded-lg bg-accent px-3 py-2 text-sm leading-6 break-words whitespace-pre-wrap"
-        data-role="user"
-      >
-        {message.parts.map((part, index) =>
-          part.type === "text" ? <Fragment key={index}>{part.text}</Fragment> : null,
+      <div className="ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
+        {message.attachments?.length ? (
+          <SentAttachments threadId={threadId} attachments={message.attachments} />
+        ) : null}
+        {text && (
+          <div className="w-fit rounded-lg bg-accent px-3 py-2 text-sm leading-6 break-words whitespace-pre-wrap">
+            {message.parts.map((part, index) =>
+              part.type === "text" ? <Fragment key={index}>{part.text}</Fragment> : null,
+            )}
+          </div>
         )}
       </div>
     );
