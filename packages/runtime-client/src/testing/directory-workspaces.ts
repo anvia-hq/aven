@@ -10,6 +10,7 @@ import type {
   SandboxRuntime,
 } from "@anvia/sandbox";
 
+import { ArtifactStore } from "../artifacts";
 import type { ThreadSandbox, ThreadWorkspaces } from "../sandbox";
 import { hasRunningProcesses, sandboxTools } from "../thread-tools";
 
@@ -252,6 +253,9 @@ export function directoryWorkspaces(
 ): ThreadWorkspaces & { roots: Map<string, string>; sandboxes: Map<string, DirectorySandbox> } {
   const roots = new Map<string, string>();
   const sandboxes = new Map<string, DirectorySandbox>();
+  const artifacts = new ArtifactStore(
+    join(tmpdir(), `aven-directory-artifacts-${crypto.randomUUID()}`),
+  );
   // Unlike `ThreadWorkspaces.release`, which keeps the workspace's files for the next `acquire`,
   // this ends the thread's processes and deletes its temporary directory too.
   const free = async (threadId: string) => {
@@ -275,15 +279,17 @@ export function directoryWorkspaces(
       }
       const current = sandbox;
       return {
-        tools: sandboxTools(current),
+        tools: sandboxTools(current, { id: thread.id, artifacts }),
         hasRunningProcesses: () => hasRunningProcesses(current),
       };
     },
+    artifacts,
     desktop: () => undefined,
     workspace: async (threadId) => roots.get(threadId),
     release: free,
     async dispose() {
       await Promise.all([...sandboxes.keys()].map(free));
+      await rm(artifacts.root, { recursive: true, force: true });
     },
   };
 }

@@ -78,8 +78,25 @@ export type FileContent =
   | { kind: "binary"; size: number }
   | { kind: "missing" };
 
+/** What the control plane asks of a runner for an image the agent showed (decision 0033); params are `{ threadId, name }`. */
+export type ArtifactsCallMethod = "artifacts.read";
+
+/** An image a runner keeps, its bytes in base64; null on the wire when there is no such image. */
+export type ArtifactContent = { mediaType: string; data: string };
+
+/** The types of image a runner keeps; SVG is not one, since it can carry script. */
+export const ARTIFACT_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+
+/** The names a runner gives the images it keeps: a uuid and the extension of its type. */
+export const ARTIFACT_NAME =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
+
 /** Everything the control plane can `call` a runner for. */
-export type RunnerCallMethod = DesktopCallMethod | DiffCallMethod | FilesCallMethod;
+export type RunnerCallMethod =
+  | DesktopCallMethod
+  | DiffCallMethod
+  | FilesCallMethod
+  | ArtifactsCallMethod;
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {
@@ -92,6 +109,8 @@ export type DesktopCallParams = {
 export type DiffGetParams = { threadId: string; scope: DiffScope };
 
 export type FilesCallParams = { threadId: string; path: string };
+
+export type ArtifactsReadParams = { threadId: string; name: string };
 
 export type ControlPlaneToRuntime =
   | {
@@ -214,6 +233,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 12: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
 // Version 11: a runner answers `files.list` and `files.read` (decision 0031).
 // Version 10: a runner answers `diff.get` with a thread's changes (decision 0030).
 // Version 9: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
@@ -224,4 +244,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 11;
+export const WIRE_VERSION = 12;

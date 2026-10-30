@@ -27,8 +27,8 @@ const DELTAS = new Set(["text_delta", "tool_call"]);
 // Durable journals a run as events of its own. This turns them back into what a client sees:
 // the same run events the agent's stream used to project, plus how the run ended.
 export function createDurableEventMapper(options: { contextWindow?: number } = {}) {
-  // A tool's result names its operation, not its call; the call id arrives with `tool_started`.
-  const calls = new Map<string, string>();
+  // A tool's result names its operation, not its call; the call arrives with `tool_started`.
+  const calls = new Map<string, { id: string; name?: string }>();
   // Some models stream the finished call, others do not: a call is announced once, by whichever comes first.
   const announced = new Set<string>();
 
@@ -59,7 +59,10 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
       case "tool_started": {
         const call = asRecord(asRecord(data.input).toolCall);
         if (typeof data.operationId === "string" && typeof call.toolCallId === "string")
-          calls.set(data.operationId, call.toolCallId);
+          calls.set(data.operationId, {
+            id: call.toolCallId,
+            name: typeof call.toolName === "string" ? call.toolName : undefined,
+          });
         if (typeof call.toolCallId !== "string" || announced.has(call.toolCallId))
           return { events: [] };
         announced.add(call.toolCallId);
@@ -68,10 +71,10 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         };
       }
       case "tool_completed": {
-        const id = typeof data.operationId === "string" ? calls.get(data.operationId) : undefined;
+        const call = typeof data.operationId === "string" ? calls.get(data.operationId) : undefined;
         const output = asRecord(data.result).output as ToolResultOutput | undefined;
-        if (!id || !output) return { events: [] };
-        return { events: [projectToolEnd(id, output)] };
+        if (!call || !output) return { events: [] };
+        return { events: [projectToolEnd(call.id, output, call.name)] };
       }
       case "status":
         return { events: [], end: endOf(data) };

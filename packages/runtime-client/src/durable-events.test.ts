@@ -31,3 +31,23 @@ test("a tool the stream already announced is not announced again", () => {
   expect(streamed.events).toHaveLength(1);
   expect(map(started).events).toEqual([]);
 });
+
+test("an image the agent showed reaches the client with its tool's end", () => {
+  const { map } = createDurableEventMapper();
+  const image = { name: "00000000-0000-4000-8000-000000000001.png", mediaType: "image/png" };
+  map(
+    event("tool_started", {
+      operationId: "op2",
+      input: { toolCall: { toolCallId: "c2", toolName: "show_image", input: { path: "a.png" } } },
+    }),
+  );
+  const completed = map(
+    event("tool_completed", {
+      operationId: "op2",
+      result: { output: { type: "json", value: { image, path: "a.png" } } },
+    }),
+  );
+  expect(completed.events).toEqual([
+    { type: "tool_end", id: "c2", status: "done", output: "Showed a.png", image },
+  ]);
+});

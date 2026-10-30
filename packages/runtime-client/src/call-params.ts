@@ -1,5 +1,6 @@
 import { asRecord } from "@aven/agents/values";
 import type {
+  ArtifactsReadParams,
   DesktopCallParams,
   DiffGetParams,
   FilesCallParams,
@@ -20,6 +21,12 @@ export function filesCallParams(params: unknown): FilesCallParams {
   const { threadId, path } = asRecord(params);
   if (typeof threadId !== "string" || typeof path !== "string") throw invalid();
   return { threadId, path };
+}
+
+export function artifactsReadParams(params: unknown): ArtifactsReadParams {
+  const { threadId, name } = asRecord(params);
+  if (typeof threadId !== "string" || typeof name !== "string") throw invalid();
+  return { threadId, name };
 }
 
 /** Anything but a string `holder`, a number `leaseMs` or `force: true` is left out. */

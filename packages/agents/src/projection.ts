@@ -13,6 +13,7 @@ import {
   messageId,
   NO_USAGE,
   QUESTION_TOOL_NAME,
+  SHOW_IMAGE_TOOL_NAME,
   type ChatMessage,
   type ContextUsage,
   type DiffLine,
@@ -21,6 +22,7 @@ import {
   type RunEvent,
   type ThreadUsage,
   type TokenUsage,
+  type ToolImage,
   type ToolPart,
 } from "@aven/protocol/events";
 
@@ -42,7 +44,8 @@ const PATH_TOOLS = new Set<string>([
   "write_file",
   "list_files",
   EDIT_TOOL_NAME,
-] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME)[]);
+  SHOW_IMAGE_TOOL_NAME,
+] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME | typeof SHOW_IMAGE_TOOL_NAME)[]);
 const COMMAND_TOOLS = new Set<string>([
   "exec_command",
   "start_process",
@@ -132,6 +135,14 @@ function jsonText(value: unknown) {
   return JSON.stringify(value);
 }
 
+// The image a result of the image tool carries, when it has one of the right shape. Only that
+// tool's result is read this way: another tool's JSON may have an `image` of its own.
+function imageOf(value: unknown): ToolImage | undefined {
+  const { name, mediaType, caption } = asRecord(asRecord(value).image);
+  if (typeof name !== "string" || typeof mediaType !== "string") return undefined;
+  return typeof caption === "string" ? { name, mediaType, caption } : { name, mediaType };
+}
+
 function commandText(result: Record<string, unknown>) {
   const parts = [asString(result.stdout), asString(result.stderr)].filter(Boolean);
   if (result.status === "timed_out") parts.push("[timed out]");
@@ -140,17 +151,26 @@ function commandText(result: Record<string, unknown>) {
 }
 
 // What the UI shows for a tool result: the text a human would read, never the raw payload.
-export function projectToolOutput(output: ToolResultOutput): {
+export function projectToolOutput(
+  output: ToolResultOutput,
+  toolName?: string,
+): {
   status: "done" | "error";
   output: string;
+  image?: ToolImage;
 } {
   switch (output.type) {
     case "text":
       return { status: "done", output: clip(output.value) };
     case "error-text":
       return { status: "error", output: clip(output.value) };
-    case "json":
+    case "json": {
+      const image = toolName === SHOW_IMAGE_TOOL_NAME ? imageOf(output.value) : undefined;
+      if (image) {
+        return { status: "done", output: `Showed ${asString(asRecord(output.value).path)}`, image };
+      }
       return { status: "done", output: clip(jsonText(output.value)) };
+    }
     case "error-json":
       return { status: "error", output: clip(JSON.stringify(output.value)) };
     case "content":
@@ -174,8 +194,9 @@ export function projectToolOutput(output: ToolResultOutput): {
 export function projectToolEnd(
   id: string,
   output: ToolResultOutput,
+  toolName?: string,
 ): Extract<RunEvent, { type: "tool_end" }> {
-  return { type: "tool_end", id, ...projectToolOutput(output) };
+  return { type: "tool_end", id, ...projectToolOutput(output, toolName) };
 }
 
 function assertNever(value: never): never {
@@ -224,7 +245,7 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
     case "tool_call":
       return { type: "tool_start", tool: projectToolCall(event.toolCall) };
     case "tool_result":
-      return projectToolEnd(event.toolCallId, event.output);
+      return projectToolEnd(event.toolCallId, event.output, event.toolName);
     case "turn_end":
       return {
         type: "usage",
@@ -277,9 +298,10 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
           (candidate) => candidate.type === "tool" && candidate.tool.id === part.toolCallId,
         );
         if (target?.type === "tool") {
-          const { status, output } = projectToolOutput(part.output);
+          const { status, output, image } = projectToolOutput(part.output, target.tool.name);
           target.tool.status = status;
           target.tool.output = output;
+          if (image) target.tool.image = image;
         }
       }
     }

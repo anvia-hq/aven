@@ -17,6 +17,11 @@ export type QuestionAnswer = { questionId: string; value: string };
 
 export const QUESTION_TOOL_NAME = "ask_user";
 
+export const SHOW_IMAGE_TOOL_NAME = "show_image";
+
+/** An image the agent showed the user (decision 0033). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
+export type ToolImage = { name: string; mediaType: string; caption?: string };
+
 export type ToolPart = {
   id: string;
   name: string;
@@ -27,6 +32,8 @@ export type ToolPart = {
   output?: string;
   /** Set on the agent's question tool: what it asks. While `status` is "running" and no run is live, it awaits an answer. */
   questions?: QuestionPrompt[];
+  /** Set on the image tool once it is done: the image to show. */
+  image?: ToolImage;
 };
 
 /** How much of the model's context window the conversation fills, as of the latest model call. */
@@ -86,7 +93,13 @@ export type RunEvent =
   | { type: "run_resume" }
   | { type: "text"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
-  | { type: "tool_end"; id: string; status: "done" | "error"; output?: string }
+  | {
+      type: "tool_end";
+      id: string;
+      status: "done" | "error";
+      output?: string;
+      image?: ToolImage;
+    }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "done" }
   | { type: "error"; message: string };
@@ -183,11 +196,12 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       ]);
     case "tool_end":
       return updateLastAssistant(messages, (parts) =>
-        parts.map((part) =>
-          part.type === "tool" && part.tool.id === event.id
-            ? { type: "tool", tool: { ...part.tool, status: event.status, output: event.output } }
-            : part,
-        ),
+        parts.map((part) => {
+          if (part.type !== "tool" || part.tool.id !== event.id) return part;
+          const tool: ToolPart = { ...part.tool, status: event.status, output: event.output };
+          if (event.image) tool.image = event.image;
+          return { type: "tool", tool };
+        }),
       );
     default:
       // `done` and `error` do not change the transcript; clients show an error as it arrives

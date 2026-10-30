@@ -16,7 +16,7 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
-import { diffGetParams, filesCallParams } from "./call-params";
+import { artifactsReadParams, diffGetParams, filesCallParams } from "./call-params";
 import { DesktopViewers } from "./desktop-viewers";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile } from "./workspace-files";
@@ -259,9 +259,17 @@ export function startRuntime(options: RuntimeOptions) {
       : readWorkspaceFile(root, path);
   }
 
-  // What the control plane's call asks for: a thread's changes, its files, or its desktop.
+  // An image the thread's agent showed; null when this runner does not have it. Read from the
+  // runner's own disk, so it does not need the thread's sandbox to be running (decision 0033).
+  async function artifactOf(params: unknown) {
+    const { threadId, name } = artifactsReadParams(params);
+    return (await options.sandbox.artifacts?.read(threadId, name)) ?? null;
+  }
+
+  // What the control plane's call asks for: a thread's changes, its files, an image, or its desktop.
   function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "diff.get") return diffOf(params);
+    if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
     return viewers.call(method, params);
   }

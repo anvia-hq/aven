@@ -10,6 +10,7 @@ import { asRecord } from "@aven/agents/values";
 import type { SandboxDesktop } from "@anvia/sandbox";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
+import { ArtifactStore } from "./artifacts";
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { runCommand, type CommandOutput } from "./run-command";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
@@ -188,6 +189,8 @@ export interface ThreadWorkspaces {
   workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
+  /** The images agents showed (decision 0033); without it, none can be read back. */
+  readonly artifacts?: ArtifactStore;
   dispose(): Promise<void>;
 }
 
@@ -198,6 +201,7 @@ export interface ThreadWorkspaces {
 // A daemon in the container dials out to a hub in this process, authenticated by a one-container
 // token; the control plane is not involved.
 export class Sandboxes implements ThreadWorkspaces {
+  readonly artifacts: ArtifactStore;
   #config: SandboxConfig;
   #hub: RemoteSandboxHub;
   #port: number;
@@ -217,6 +221,7 @@ export class Sandboxes implements ThreadWorkspaces {
     tokens: Map<string, string>,
   ) {
     this.#config = config;
+    this.artifacts = new ArtifactStore(join(runtimeHome(config.home), "artifacts"));
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -250,7 +255,7 @@ export class Sandboxes implements ThreadWorkspaces {
     const runtime = this.#hub.runtime(thread.id, { workdir: WORKDIR });
     return {
       tools: [
-        ...sandboxTools(runtime),
+        ...sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
         ...createDesktopTools({ sandbox: this.#hub.desktop(thread.id) }),
       ],
       // A container that is gone has nothing running, and asking it would wait for a daemon.
