@@ -11,7 +11,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { modelCatalog } from "./model-catalog";
-import type { CreateProviderBody, UpdateProviderBody } from "./schema";
+import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 
 export class InvalidProviderError extends UnprocessableError {}
 export class ModelListError extends UnprocessableError {}
@@ -49,6 +49,12 @@ export async function effortsByModel(kind: ProviderKind, ids: string[]) {
 
 type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: string };
 
+// The vendors have one credential each; only an OpenAI-compatible server can be added many times,
+// since every server is its own.
+const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "azure"]);
+
+const hasBaseUrl = (kind: ProviderKind) => kind === "openai-compatible" || kind === "azure";
+
 function requireApiKey({ apiKey }: ModelSource) {
   if (!apiKey) throw new ModelListError("An API key is needed to list models");
   return apiKey;
@@ -56,6 +62,8 @@ function requireApiKey({ apiKey }: ModelSource) {
 
 // Where a provider's model list is and how to ask for it.
 function modelsRequest(source: ModelSource) {
+  // Azure serves deployments, which the user names, so there is no list to ask for.
+  if (source.kind === "azure") throw new ModelListError("Azure models are named by deployment");
   if (source.kind === "anthropic") {
     return {
       url: "https://api.anthropic.com/v1/models?limit=1000",
@@ -108,6 +116,13 @@ function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): Provid
   return { ...row, hasKey: apiKeyEncrypted !== null };
 }
 
+// A changed Azure resource URL is held to the same rules as a new one.
+function azureEndpointOf(value: string) {
+  const parsed = azureEndpoint.safeParse(value);
+  if (!parsed.success) throw new InvalidProviderError("An Azure resource URL must be https");
+  return parsed.data;
+}
+
 const hint = (apiKey: string) => apiKey.slice(-4);
 
 // The stored form of an API key; empty when there is none to set, which leaves a stored one alone.
@@ -144,6 +159,15 @@ export const providersService = {
         .from(providers)
         .where(eq(providers.userId, userId))
         .limit(1);
+      if (SINGLE_CREDENTIAL.has(body.kind)) {
+        const [same] = await tx
+          .select({ id: providers.id })
+          .from(providers)
+          .where(and(eq(providers.userId, userId), eq(providers.kind, body.kind)))
+          .limit(1);
+        if (same)
+          throw new InvalidProviderError("This provider is already connected; remove it first");
+      }
       const isDefault = body.isDefault ?? existing.length === 0;
       if (isDefault) await clearDefault(tx, userId);
       const [row] = await tx
@@ -152,7 +176,7 @@ export const providersService = {
           userId,
           kind: body.kind,
           name: body.name,
-          baseUrl: body.kind === "openai-compatible" ? body.baseUrl : null,
+          baseUrl: body.kind === "openai-compatible" || body.kind === "azure" ? body.baseUrl : null,
           modelId: body.modelId ?? null,
           ...secretColumns(body.apiKey),
           isDefault,
@@ -166,18 +190,24 @@ export const providersService = {
     return db.transaction(async (tx) => {
       const [current] = await tx.select().from(providers).where(ownProvider(userId, id));
       if (!current) return null;
-      if (body.baseUrl !== undefined && current.kind !== "openai-compatible") {
-        throw new InvalidProviderError("Only OpenAI-compatible providers have a base URL");
+      if (body.baseUrl !== undefined && !hasBaseUrl(current.kind)) {
+        throw new InvalidProviderError(
+          "Only Azure and OpenAI-compatible providers have a base URL",
+        );
       }
-      if (body.modelId === null && current.kind === "openai-compatible") {
-        throw new InvalidProviderError("An OpenAI-compatible provider needs a model id");
+      if (body.modelId === null && hasBaseUrl(current.kind)) {
+        throw new InvalidProviderError("This provider needs a model id");
       }
+      const baseUrl =
+        body.baseUrl !== undefined && current.kind === "azure"
+          ? azureEndpointOf(body.baseUrl)
+          : body.baseUrl;
       if (body.isDefault === true) await clearDefault(tx, userId);
       const [row] = await tx
         .update(providers)
         .set({
           name: body.name,
-          baseUrl: body.baseUrl,
+          baseUrl,
           modelId: body.modelId,
           isDefault: body.isDefault,
           ...secretColumns(body.apiKey),
@@ -214,11 +244,7 @@ export const providersService = {
   async listModels(userId: string, id: string) {
     const [row] = await db.select().from(providers).where(ownProvider(userId, id));
     if (!row) return null;
-    const models = await listAgentModels({
-      kind: row.kind,
-      baseUrl: row.baseUrl ?? undefined,
-      apiKey: readKey(row),
-    });
+    const models = await modelsOf(row);
     return { models, efforts: await effortsByModel(row.kind, models) };
   },
 
@@ -240,6 +266,17 @@ export const providersService = {
     return config;
   },
 };
+
+// The models a saved provider offers: its listing, or for Azure the one deployment it was set up
+// with, since Azure has no list of deployments to ask for.
+async function modelsOf(row: ProviderRow) {
+  if (row.kind === "azure") return row.modelId ? [row.modelId] : [];
+  return listAgentModels({
+    kind: row.kind,
+    baseUrl: row.baseUrl ?? undefined,
+    apiKey: readKey(row),
+  });
+}
 
 // A key that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is an
 // unavailable provider, not a server bug: the owner fixes it by entering the key again.
@@ -284,7 +321,9 @@ async function assertRunnable(kind: ProviderKind, modelId: string) {
 async function contextWindowOf(config: ModelConfig) {
   const modelId =
     config.modelId ??
-    (config.provider === "openai-compatible" ? undefined : DEFAULT_MODEL_IDS[config.provider]);
+    (config.provider === "openai-compatible" || config.provider === "azure"
+      ? undefined
+      : DEFAULT_MODEL_IDS[config.provider]);
   return modelId ? modelCatalog.contextWindow(config.provider, modelId) : null;
 }
 

@@ -3,7 +3,7 @@
 // models.dev catalog (https://models.dev/api.json). Ids it does not know, or any id while it is
 // unreachable, fall back to a name check.
 
-type Kind = "openai" | "anthropic" | "openai-compatible";
+type Kind = "openai" | "anthropic" | "azure" | "openai-compatible";
 type Entry = {
   usable: boolean;
   deprecated: boolean;
@@ -51,6 +51,7 @@ const OPENAI_OTHER =
 
 export function looksLikeChatModel(kind: Kind, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
+  if (kind === "azure") return true; // a deployment's name is the owner's, not the model's
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
   return true;
 }
@@ -78,7 +79,7 @@ export function createModelCatalog(
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
       const next: Partial<Record<Kind, Map<string, Entry>>> = {};
-      for (const kind of ["openai", "anthropic"] as const) {
+      for (const kind of ["openai", "anthropic", "azure"] as const) {
         const models = json[kind]?.models ?? {};
         next[kind] = new Map(
           Object.entries(models)

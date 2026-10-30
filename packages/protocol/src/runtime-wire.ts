@@ -9,7 +9,7 @@ export type RunThreadInfo = {
   organizationId: string;
 };
 
-export type Provider = "openai" | "anthropic" | "openai-compatible";
+export type Provider = "openai" | "anthropic" | "azure" | "openai-compatible";
 
 /** How a run ended: `response` is a normal finish, `error` means the run threw. */
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
@@ -131,9 +131,10 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
-// Version 6: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix`
+// Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
+// build as an Anthropic client. Version 6: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix`
 // (decision 0018). Version 5: a runtime can stream a thread's desktop to a viewer and answer the control plane's
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 6;
+export const WIRE_VERSION = 7;

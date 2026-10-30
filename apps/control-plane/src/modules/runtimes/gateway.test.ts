@@ -107,6 +107,38 @@ describe("RunGateway", () => {
     gateway.revoke("r2");
   });
 
+  test("azure: the SDK reaches the resource's v1 API with the sender's key and deployment", async () => {
+    const run = gateway.issue("r2a", {
+      provider: "azure",
+      modelId: "my-deployment",
+      baseUrl: origin,
+      apiKey: "azure-key",
+    });
+    expect(run.gatewayPath).toBe("/runtimes/gateway/azure");
+    const before = seen.length;
+    const { agent } = createCodingAgent({
+      tools: [],
+      provider: "azure",
+      modelId: "whatever-the-runtime-wants",
+      apiKey: run.gatewayToken,
+      baseUrl: `${base}${run.gatewayPath}`,
+    });
+    await agent.generate({ prompt: "hi" }).catch(() => undefined);
+
+    const call = seen[before]!;
+    expect(call.path).toBe("/openai/v1/responses");
+    expect(call.headers.get("api-key")).toBe("azure-key");
+    expect(call.headers.get("authorization")).toBe("Bearer azure-key");
+    expect(call.body.model).toBe("my-deployment");
+    gateway.revoke("r2a");
+  });
+
+  test("an Azure provider without a key cannot start a run", () => {
+    expect(() =>
+      gateway.issue("r2b", { provider: "azure", modelId: "d", baseUrl: origin }),
+    ).toThrow("no API key");
+  });
+
   test("a runtime cannot choose its own model or effort, or smuggle its own key", async () => {
     const run = gateway.issue("r3", {
       provider: "anthropic",

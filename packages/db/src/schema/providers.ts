@@ -12,9 +12,9 @@ export const providers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["openai", "anthropic", "openai-compatible"] }).notNull(),
+    kind: text("kind", { enum: ["openai", "anthropic", "azure", "openai-compatible"] }).notNull(),
     name: text("name").notNull(),
-    /** Only for "openai-compatible". */
+    /** The server root for "openai-compatible", the resource URL for "azure". */
     baseUrl: text("base_url"),
     modelId: text("model_id"),
     /** `iv.tag.ciphertext`, base64 parts. Null when a compatible endpoint needs no key. */

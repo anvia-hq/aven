@@ -10,6 +10,13 @@ const baseUrl = z
   .max(500)
   .transform((value) => value.replace(/\/+$/, ""));
 
+// An Azure OpenAI resource is addressed by its origin, e.g. https://my-resource.openai.azure.com.
+// The control plane calls it with the user's key, so it must be HTTPS; any path is dropped.
+export const azureEndpoint = z
+  .url({ protocol: /^https$/ })
+  .max(500)
+  .transform((value) => new URL(value).origin);
+
 export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("openai"),
@@ -23,6 +30,15 @@ export const createProviderBody = z.discriminatedUnion("kind", [
     name,
     apiKey,
     modelId: modelId.optional(),
+    isDefault: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("azure"),
+    name,
+    // The resource URL, and the name of a deployment in it (the model id Azure accepts).
+    baseUrl: azureEndpoint,
+    modelId,
+    apiKey,
     isDefault: z.boolean().optional(),
   }),
   z.object({

@@ -1,5 +1,6 @@
 import { AnthropicClient } from "@anvia/anthropic";
 import { defineCompletionModelControls, type CompletionModelControls } from "@anvia/core";
+import { AzureOpenAIClient } from "@anvia/azure";
 import { OpenAIClient } from "@anvia/openai";
 import type { Provider } from "@aven/protocol/runtime-wire";
 
@@ -7,12 +8,13 @@ export type { Provider };
 
 export type ModelConfig = {
   provider: Provider;
-  /** Defaults per provider. */
+  /** Defaults per provider. For `azure` it is the deployment name, and has no default. */
   modelId?: string;
   /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. */
   apiKey?: string;
   /**
-   * Required for `openai-compatible`: the server's API root, e.g. http://localhost:11434/v1.
+   * Required for `openai-compatible` and `azure`: the API root, e.g. http://localhost:11434/v1 or
+   * https://my-resource.openai.azure.com/openai/v1.
    * For the other providers it overrides the API root, which is how a runtime reaches the
    * control plane's gateway instead of the vendor.
    */
@@ -29,7 +31,7 @@ export type ModelConfig = {
   contextWindow?: number;
 };
 
-// `openai-compatible` has no default: every server names its own models.
+// `azure` and `openai-compatible` have no default: every resource and server names its own models.
 export const DEFAULT_MODEL_IDS = {
   openai: "gpt-5.6",
   anthropic: "claude-sonnet-5",
@@ -62,6 +64,21 @@ export function createModel(config: ModelConfig) {
     }).completionModel({
       modelId: config.modelId,
       api: "chat",
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
+  if (config.provider === "azure") {
+    if (!config.baseUrl) throw new Error("An Azure provider needs a resource URL");
+    if (!config.modelId) throw new Error("An Azure provider needs a deployment name");
+    if (!config.apiKey) throw new Error("An Azure provider needs an API key");
+    return new AzureOpenAIClient({
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+    }).completionModel({
+      modelId: config.modelId,
+      api: "responses",
+      controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });
   }
@@ -105,9 +122,12 @@ export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
 ): ReasoningControls | null {
   if (config.provider === "openai-compatible") return null;
+  if (config.provider === "azure" && !config.modelId) return null;
   const controls: CompletionModelControls | undefined = createModel({
     ...config,
     apiKey: "unused",
+    // Nothing is sent: Azure only needs some root to build the client with.
+    baseUrl: "https://unused.invalid/openai/v1",
   }).controls;
   const control = controls?.reasoningEffort;
   return control ? { options: control.options, defaultValue: control.defaultValue ?? null } : null;

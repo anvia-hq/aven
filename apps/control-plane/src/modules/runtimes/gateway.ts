@@ -16,6 +16,7 @@ const DEFAULT_UPSTREAMS = {
 const SEGMENTS = {
   anthropic: "anthropic",
   openai: "openai",
+  azure: "azure",
   "openai-compatible": "compatible",
 } as const satisfies Record<Provider, string>;
 
@@ -24,6 +25,7 @@ const SEGMENTS = {
 const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   anthropic: ["/v1/messages"],
   openai: ["/responses", "/chat/completions"],
+  azure: ["/responses", "/chat/completions"],
   "openai-compatible": ["/chat/completions"],
 };
 
@@ -32,13 +34,14 @@ const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-r
 
 type Grant = { model: ModelConfig; key: string | undefined };
 
+// Azure and compatible servers have no shared environment key: the user's own is required or optional.
 const ENV_KEYS = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY" } as const;
 
 /** The model a run asked for cannot be used, such as a missing environment key. */
 export class ModelUnavailableError extends UnavailableError {}
 
 const envKeyFor = (provider: Provider) =>
-  provider === "openai-compatible" ? undefined : process.env[ENV_KEYS[provider]];
+  provider === "anthropic" || provider === "openai" ? process.env[ENV_KEYS[provider]] : undefined;
 
 // With no provider of their own, a sender runs on the environment's shared one.
 export function environmentModel(): ModelConfig {
@@ -63,7 +66,10 @@ export class RunGateway {
   // Throws when the model cannot be used (such as a missing environment key), before any run starts.
   issue(runId: string, config: ModelConfig): RunModel {
     const key = config.apiKey ?? envKeyFor(config.provider);
-    if (!key && config.provider !== "openai-compatible") {
+    if (!key && config.provider === "azure") {
+      throw new ModelUnavailableError("This Azure provider has no API key");
+    }
+    if (!key && (config.provider === "anthropic" || config.provider === "openai")) {
       throw new ModelUnavailableError(`${ENV_KEYS[config.provider]} is not set`);
     }
     const token = `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
@@ -122,6 +128,8 @@ export class RunGateway {
   #upstreamUrl(model: ModelConfig, path: string) {
     if (model.provider === "anthropic") return `${this.upstreams.anthropic}${path}`;
     if (model.provider === "openai") return `${this.upstreams.openai}${path}`;
+    // The resource's v1 API, the same root `@anvia/azure` builds from a resource URL.
+    if (model.provider === "azure") return `${model.baseUrl?.replace(/\/+$/, "")}/openai/v1${path}`;
     return `${model.baseUrl?.replace(/\/$/, "")}${path}`;
   }
 }
@@ -144,6 +152,7 @@ function upstreamHeaders(request: Request, grant: Grant) {
   if (!grant.key) return headers;
   if (grant.model.provider === "anthropic") headers.set("x-api-key", grant.key);
   else headers.set("authorization", `Bearer ${grant.key}`);
+  if (grant.model.provider === "azure") headers.set("api-key", grant.key);
   return headers;
 }
 
@@ -154,9 +163,12 @@ const record = (value: unknown) =>
 function pin(body: Record<string, unknown>, model: ModelConfig, path: string) {
   body.model =
     model.modelId ??
-    (model.provider === "openai-compatible" ? body.model : DEFAULT_MODEL_IDS[model.provider]);
+    (model.provider === "openai-compatible" || model.provider === "azure"
+      ? body.model
+      : DEFAULT_MODEL_IDS[model.provider]);
   if (model.provider === "anthropic") pinAnthropicEffort(body, model.reasoningEffort);
-  if (model.provider === "openai") pinOpenAiEffort(body, model.reasoningEffort, path);
+  if (model.provider === "openai" || model.provider === "azure")
+    pinOpenAiEffort(body, model.reasoningEffort, path);
 }
 
 function pinAnthropicEffort(body: Record<string, unknown>, effort: string | undefined) {

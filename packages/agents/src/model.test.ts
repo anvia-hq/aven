@@ -10,6 +10,29 @@ describe("providerOptionsFor", () => {
     expect(providerOptionsFor("anthropic")).toEqual({ cache_control: { type: "ephemeral" } });
     expect(providerOptionsFor("openai")).toBeUndefined();
     expect(providerOptionsFor("openai-compatible")).toBeUndefined();
+    expect(providerOptionsFor("azure")).toBeUndefined();
+  });
+});
+
+describe("createModel azure", () => {
+  const azure = { provider: "azure", baseUrl: "https://r.openai.azure.com/openai/v1" } as const;
+
+  test("needs a resource URL, a deployment and a key", () => {
+    expect(() => createModel({ provider: "azure", modelId: "d", apiKey: "k" })).toThrow(
+      "resource URL",
+    );
+    expect(() => createModel({ ...azure, apiKey: "k" })).toThrow("deployment");
+    expect(() => createModel({ ...azure, modelId: "d" })).toThrow("API key");
+    expect(createModel({ ...azure, modelId: "d", apiKey: "k" }).provider).toBe("azure-openai");
+  });
+
+  test("reports the SDK's effort levels for the deployment's model name", () => {
+    expect(reasoningControlsFor({ provider: "azure", modelId: "o3" })?.options).toEqual([
+      "low",
+      "medium",
+      "high",
+    ]);
+    expect(reasoningControlsFor({ provider: "azure" })).toBeNull();
   });
 });
 

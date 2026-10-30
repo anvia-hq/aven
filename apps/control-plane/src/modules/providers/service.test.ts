@@ -154,6 +154,53 @@ run("providersService (postgres)", async () => {
     );
   });
 
+  test("an Azure provider keeps its resource origin and deployment, and offers just that model", async () => {
+    const azure = await providersService.create(alice, {
+      kind: "azure",
+      name: "Azure",
+      baseUrl: "https://my-resource.openai.azure.com",
+      modelId: "gpt-5-deploy",
+      apiKey: "azure-secret-1234",
+    });
+    expect(azure.baseUrl).toBe("https://my-resource.openai.azure.com");
+    expect(azure.keyHint).toBe("1234");
+    expect(await providersService.listModels(alice, azure.id)).toMatchObject({
+      models: ["gpt-5-deploy"],
+    });
+    await expect(
+      providersService.update(alice, azure.id, { baseUrl: "http://my-resource.example.com" }),
+    ).rejects.toThrow("https");
+    await expect(providersService.update(alice, azure.id, { modelId: null })).rejects.toThrow(
+      "needs a model id",
+    );
+    const config = await providersService.resolveModel(alice, { providerId: azure.id });
+    expect(config).toMatchObject({
+      provider: "azure",
+      modelId: "gpt-5-deploy",
+      baseUrl: "https://my-resource.openai.azure.com",
+      apiKey: "azure-secret-1234",
+    });
+  });
+
+  test("OpenAI, Anthropic and Azure each take one credential, compatible servers many", async () => {
+    await expect(
+      providersService.create(alice, {
+        kind: "azure",
+        name: "Azure again",
+        baseUrl: "https://other.openai.azure.com",
+        modelId: "d2",
+        apiKey: "k",
+      }),
+    ).rejects.toThrow("already connected");
+    const compat = {
+      kind: "openai-compatible",
+      baseUrl: "http://localhost:1/v1",
+      modelId: "m",
+    } as const;
+    await providersService.create(alice, { ...compat, name: "C3" });
+    await providersService.create(alice, { ...compat, name: "C4" });
+  });
+
   test("model efforts come from the SDK and leave out models without the control", async () => {
     expect(await effortsByModel("openai", ["gpt-4o", "o3"])).toEqual({
       o3: { options: ["low", "medium", "high"], defaultValue: "medium" },
