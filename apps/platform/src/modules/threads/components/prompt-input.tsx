@@ -4,6 +4,7 @@ import {
   useComposer,
   type ComposerInputEntity,
   type ComposerSubmitMessageArgs,
+  type ComposerTriggerItem,
   type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Paperclip, Stop } from "@mynaui/icons-react";
@@ -236,6 +237,36 @@ function emptyMenu({ loading, trigger }: ComposerTriggerState) {
   return trigger.id === "file" ? "No file matches" : "No skill matches";
 }
 
+// One choice of the menu. The arrow keys move the selection, but Anvia leaves the list where it
+// was, so a choice past the edge is scrolled into view here.
+function MentionOption({
+  item,
+  index,
+  selected,
+}: {
+  item: ComposerTriggerItem;
+  index: number;
+  selected: boolean;
+}) {
+  const label = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (selected) label.current?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
+  return (
+    <ComposerPrimitive.TriggerItem
+      index={index}
+      className="flex min-w-0 shrink-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
+    >
+      <span ref={label} className="shrink-0 font-mono">
+        {item.label}
+      </span>
+      {item.detail ? (
+        <span className="min-w-0 truncate text-xs text-muted-foreground">{item.detail}</span>
+      ) : null}
+    </ComposerPrimitive.TriggerItem>
+  );
+}
+
 // What `@` or `/` found, above the composer: the composer sits at the foot of the page, so a
 // menu at the caret, where Anvia places it, would open off screen.
 function MentionMenu() {
@@ -251,18 +282,12 @@ function MentionMenu() {
           <p className="px-2 py-1.5 text-muted-foreground">{emptyMenu(trigger)}</p>
         ) : (
           trigger.items.map((item, index) => (
-            <ComposerPrimitive.TriggerItem
+            <MentionOption
               key={item.id}
+              item={item}
               index={index}
-              className="flex min-w-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
-            >
-              <span className="shrink-0 font-mono">{item.label}</span>
-              {item.detail ? (
-                <span className="min-w-0 truncate text-xs text-muted-foreground">
-                  {item.detail}
-                </span>
-              ) : null}
-            </ComposerPrimitive.TriggerItem>
+              selected={index === trigger.selectedIndex}
+            />
           ))
         )
       }
