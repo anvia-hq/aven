@@ -1,6 +1,6 @@
 # Shipping acts as the person, with their GitHub token
 
-Status: accepted. Supersedes the parts of 0040 that push with an installation token and open the pull request as the app; the rest of 0040 stands.
+Status: accepted; the connection of the person's GitHub account stands, and 0044 builds on it, while the push and the pull request are now the agent's, with `gh`, instead of the control plane's. Supersedes the parts of 0040 that push with an installation token and open the pull request as the app; the rest of 0040 stands.
 
 ## Context
 

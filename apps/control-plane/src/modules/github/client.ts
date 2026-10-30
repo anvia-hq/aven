@@ -284,35 +284,6 @@ export class GithubClient {
     return found?.permissions?.push === true;
   }
 
-  /**
-   * The open pull request from `head` into `base`, opened first if there is none, as the person
-   * whose `userToken` it is. One already open is left as it is, so a person's edits to its title
-   * and description survive a later ship.
-   */
-  async openPullRequest(
-    userToken: string,
-    input: {
-      fullName: string;
-      head: string;
-      base: string;
-      title: string;
-      body: string;
-      draft: boolean;
-    },
-  ): Promise<GithubPullRequest & { created: boolean }> {
-    const [owner, name] = input.fullName.split("/") as [string, string];
-    const pulls = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls`;
-    const query = new URLSearchParams({ state: "open", head: `${owner}:${input.head}` });
-    const [existing] = await this.#api<PullPayload[]>(`${pulls}?${query}`, userToken);
-    if (existing) return { number: existing.number, url: existing.html_url, created: false };
-    const { title, head, base, body, draft } = input;
-    const made = await this.#api<PullPayload>(pulls, userToken, {
-      method: "POST",
-      body: JSON.stringify({ title, head, base, body, draft }),
-    });
-    return { number: made.number, url: made.html_url, created: true };
-  }
-
   async listRepos(installationId: number) {
     const { token } = await this.installationToken(installationId);
     const repos: GithubRepo[] = [];

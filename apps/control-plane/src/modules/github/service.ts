@@ -196,11 +196,6 @@ export function createGithubService(
     async requirePush(userToken: string, fullName: string) {
       if (!(await client.canPush(userToken, fullName))) throw new GithubNoPushAccessError(fullName);
     },
-
-    // The open pull request for a branch, opened first when there is none, as the person.
-    openPullRequest(userToken: string, input: Parameters<GithubClient["openPullRequest"]>[1]) {
-      return client.openPullRequest(userToken, input);
-    },
   };
 }
 

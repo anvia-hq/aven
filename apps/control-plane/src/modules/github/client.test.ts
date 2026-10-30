@@ -224,16 +224,6 @@ describe("a person's GitHub token", () => {
 });
 
 describe("writing to a repository", () => {
-  const input = {
-    fullName: "acme/app",
-    head: "aven/abc12345",
-    base: "main",
-    title: "Add a thing",
-    body: "Why",
-    draft: true,
-  };
-  const open = "GET /repos/acme/app/pulls?state=open&head=acme%3Aaven%2Fabc12345";
-
   test("an installation is writable only once both permissions are approved", async () => {
     const github = fakeGithub({
       "GET /app/installations/7": { permissions: { contents: "write", pull_requests: "write" } },
@@ -298,43 +288,5 @@ describe("writing to a repository", () => {
     expect(await client.canPush("ghu_a", "acme/read-only")).toBe(false);
     expect(await client.canPush("ghu_a", "acme/hidden")).toBe(false);
     expect(auth(github.calls[0]!)).toBe("Bearer ghu_a");
-  });
-
-  test("opens a draft pull request as the person when none is open for the branch", async () => {
-    const github = fakeGithub({
-      [open]: [],
-      "POST /repos/acme/app/pulls": { number: 12, html_url: "https://github.com/acme/app/pull/12" },
-    });
-    const client = new GithubClient(config, github.fetch);
-
-    expect(await client.openPullRequest("ghu_a", input)).toEqual({
-      number: 12,
-      url: "https://github.com/acme/app/pull/12",
-      created: true,
-    });
-
-    const create = github.calls.at(-1)!;
-    expect(github.calls.map(auth)).toEqual(["Bearer ghu_a", "Bearer ghu_a"]);
-    expect(JSON.parse(String(create.init?.body))).toEqual({
-      title: "Add a thing",
-      head: "aven/abc12345",
-      base: "main",
-      body: "Why",
-      draft: true,
-    });
-  });
-
-  test("a pull request already open for the branch is returned, not duplicated or edited", async () => {
-    const github = fakeGithub({
-      [open]: [{ number: 9, html_url: "https://github.com/acme/app/pull/9" }],
-    });
-    const client = new GithubClient(config, github.fetch);
-
-    expect(await client.openPullRequest("ghu_a", input)).toEqual({
-      number: 9,
-      url: "https://github.com/acme/app/pull/9",
-      created: false,
-    });
-    expect(github.calls.map((call) => call.init?.method ?? "GET")).toEqual(["GET"]);
   });
 });

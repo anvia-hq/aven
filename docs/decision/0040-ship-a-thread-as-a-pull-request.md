@@ -1,6 +1,6 @@
 # A person ships a thread as a pull request
 
-Status: accepted. Supersedes the "Clone only" bullet of 0013; the rest of 0013 stands. Which token pushes and opens the pull request is superseded by 0041. Builds on 0010 (a sandbox per thread) and 0012 (the agent's tools act inside the container).
+Status: accepted. Supersedes the "Clone only" bullet of 0013; the rest of 0013 stands. Which token pushes and opens the pull request is superseded by 0041, and how a thread is shipped by 0044: the runner's push, the model-written text and the control plane's own pull request are gone. Builds on 0010 (a sandbox per thread) and 0012 (the agent's tools act inside the container).
 
 ## Context
 

@@ -23,10 +23,8 @@ import {
   diffGetParams,
   filesCallParams,
   filesSearchParams,
-  repoPushParams,
 } from "./call-params";
 import { DesktopViewers } from "./desktop-viewers";
-import { publishBranch } from "./publish-branch";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
@@ -261,14 +259,6 @@ export function startRuntime(options: RuntimeOptions) {
     return root ? threadDiff(root, scope) : null;
   }
 
-  // Commits and pushes a thread's branch for the control plane (decision 0040); null when it has no
-  // workspace on this runner yet.
-  async function pushOf(params: unknown) {
-    const request = repoPushParams(params);
-    const root = await options.sandbox.workspace(request.threadId);
-    return root ? publishBranch(root, request) : null;
-  }
-
   // A folder or a file of a thread's workspace; null when it has no workspace on this runner yet.
   async function filesOf(method: Exclude<FilesCallMethod, "files.search">, params: unknown) {
     const { threadId, path } = filesCallParams(params);
@@ -312,7 +302,6 @@ export function startRuntime(options: RuntimeOptions) {
   function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
-    if (method === "repo.push") return pushOf(params);
     if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
     if (method === "files.search") return searchOf(params);

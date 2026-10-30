@@ -309,7 +309,6 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       truncated: false,
     });
   }
-  if (call.method === "repo.push") return reply({ kind: "pushed", commit: "abc1234" });
   if (call.method === "files.list") {
     const { path } = call.params as { path: string };
     return reply({ entries: WORKSPACE[path] ?? [] });
