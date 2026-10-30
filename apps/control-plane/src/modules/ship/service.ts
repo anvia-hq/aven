@@ -7,6 +7,7 @@ import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { runsService } from "../runs/service";
 import { threadsService } from "../threads/service";
+import { createRunnerDrafter, type Drafter } from "./draft";
 import { pushResult } from "./schema";
 
 export class RunInProgressError extends ConflictError {
@@ -34,8 +35,8 @@ const refused = (error: unknown): never => {
   throw new UnavailableError("The changes could not be pushed");
 };
 
-/** Who the commit is by. */
-export type Author = { name: string; email: string };
+/** Who ships: the commit is by them, and the text of the pull request is written with their model. */
+export type Shipper = { id: string; name: string; email: string };
 
 // Ships a thread as a pull request (decision 0040): the runner commits and pushes the thread's
 // branch with a token made for the push, and the control plane opens the pull request. The agent
@@ -44,10 +45,11 @@ export function createShipService(
   hub: RuntimeHub,
   github: Pick<typeof githubService, "pushToken" | "openPullRequest"> = githubService,
   runs: Pick<typeof runsService, "isRunning"> = runsService,
+  draft: Drafter = createRunnerDrafter(hub),
 ) {
   const runner = runnerFor(hub);
   return {
-    async ship(organizationId: string, author: Author, threadId: string) {
+    async ship(organizationId: string, shipper: Shipper, threadId: string) {
       const thread = await threadsService.require(organizationId, threadId);
       if (runs.isRunning(thread.id)) throw new RunInProgressError();
       const project = await projectsService.get(organizationId, thread.projectId);
@@ -55,6 +57,7 @@ export function createShipService(
       if (!project) throw new Error("The thread's project is missing");
 
       const branch = threadBranch(thread.id);
+      const text = await draft(organizationId, shipper.id, thread);
       const pushed = await runner.ask(
         organizationId,
         "repo.push",
@@ -63,8 +66,8 @@ export function createShipService(
           cloneUrl: project.cloneUrl,
           branch,
           token: await github.pushToken(project.githubInstallationId, project.repoFullName),
-          commitMessage: thread.title,
-          author,
+          commitMessage: text.title,
+          author: { name: shipper.name, email: shipper.email },
         },
         pushResult,
         refused,
@@ -77,8 +80,8 @@ export function createShipService(
         fullName: project.repoFullName,
         head: branch,
         base: project.defaultBranch,
-        title: thread.title,
-        body: "Opened from an Aven thread.",
+        title: text.title,
+        body: text.body,
         draft: true,
       });
       await threadsService.setPullRequest(thread.id, pullRequest);

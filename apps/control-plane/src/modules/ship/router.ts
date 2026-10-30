@@ -11,7 +11,6 @@ export const shipRouter = (hub: RuntimeHub, service = createShipService(hub)) =>
     .use(authRouter)
     .post(
       "/:id/ship",
-      ({ params, organizationId, user }) =>
-        service.ship(organizationId, { name: user.name, email: user.email }, params.id),
+      ({ params, organizationId, user }) => service.ship(organizationId, user, params.id),
       { auth: true, org: true, params: threadParams },
     );

@@ -42,7 +42,17 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
     },
   };
   let running = false;
-  const service = createShipService(hub, github, { isRunning: () => running });
+  const drafted = { title: "Add a greeting", body: "Says hello." };
+  const drafts: string[] = [];
+  const service = createShipService(
+    hub,
+    github,
+    { isRunning: () => running },
+    async (_org, userId) => {
+      drafts.push(userId);
+      return drafted;
+    },
+  );
 
   const server = new Elysia()
     .use(errorsRouter)
@@ -163,18 +173,19 @@ run("shipping a thread (real postgres, real WebSocket, GitHub faked)", async () 
         cloneUrl: project.cloneUrl,
         branch: `aven/${thread.id.slice(0, 8)}`,
         token: "ghs_push",
-        commitMessage: thread.title,
+        commitMessage: "Add a greeting",
         author: { name: "owner", email: owner.email },
       },
     ]);
     expect(minted).toEqual([project.repoFullName]);
+    expect(drafts).toEqual([owner.userId]);
     expect(pulled).toEqual([
       {
         fullName: project.repoFullName,
         head: `aven/${thread.id.slice(0, 8)}`,
         base: "main",
-        title: thread.title,
-        body: "Opened from an Aven thread.",
+        title: "Add a greeting",
+        body: "Says hello.",
         draft: true,
       },
     ]);
