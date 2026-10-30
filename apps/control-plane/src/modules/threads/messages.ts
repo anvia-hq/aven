@@ -14,7 +14,7 @@ export const threadMessages = {
     organizationId: string,
     userId: string,
     threadId: string,
-    { prompt, attachments: files = [], ...selection }: SendMessageBody,
+    { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
   ) {
     const thread = await threadsService.require(organizationId, threadId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
@@ -23,7 +23,7 @@ export const threadMessages = {
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     const skills = await skillsService.forRun(userId);
-    await runsService.start(thread, prompt, model, attachments, skills);
+    await runsService.start(thread, prompt, model, { attachments, mentions, skills });
   },
 
   async answer(

@@ -19,7 +19,7 @@ import type { RunAttachment, RunSkill } from "@aven/protocol/runtime-wire";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
 import { threadsService } from "../threads/service";
-import type { Runtime, RunThread, RuntimeRun } from "./runtime";
+import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";
 import { runGateway } from "../runtimes/gateway";
 import { runtimeHub } from "../runtimes/hub";
@@ -85,13 +85,13 @@ export class RunManager {
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
   // missing API key) before anything is persisted. `model` is the sender's provider; callers
   // resolve it first because this must claim the slot synchronously. Without one, the
-  // environment's is used. `attachments` are the files sent with the prompt (decision 0034).
+  // environment's is used. `attachments` are the files sent with the prompt (decision 0034),
+  // `mentions` the files and skills it points at (decision 0036).
   async start(
     thread: RunThread,
     prompt: string,
     model?: ModelConfig | null,
-    attachments: RunAttachment[] = [],
-    skills: RunSkill[] = [],
+    { attachments = [], mentions = [], skills = [] }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -100,12 +100,14 @@ export class RunManager {
       thread,
       prompt,
       attachments,
+      mentions,
       skills,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
     // The transcript has what was sent, not the bytes.
     if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
+    if (mentions.length > 0) opening.mentions = mentions;
     await this.#begin(channel, handle, opening);
   }
 

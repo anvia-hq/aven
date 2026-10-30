@@ -1,4 +1,5 @@
-import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
+import { MAX_SKILL_NAME, SKILL_NAME } from "@aven/agents/skills";
+import { ATTACHMENT_LIMITS, MENTION_LIMIT, mentionToken } from "@aven/protocol/events";
 import { z } from "zod";
 
 export const threadParams = z.object({ id: z.uuid() });
@@ -36,15 +37,47 @@ const attachment = z.object({
   data: z.base64(),
 });
 
+// A path inside the workspace, as the composer's `@` found it: relative, with no `..` or empty part.
+const workspacePath = z
+  .string()
+  .min(1)
+  .max(1024)
+  .refine(
+    (path) => !path.includes("\0") && path.split("/").every((part) => part && part !== ".."),
+    {
+      message: "Not a path inside the workspace",
+    },
+  );
+
+// A file or a skill the prompt mentions (decision 0036); its token must be in the prompt where it says.
+const mention = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("file"), name: workspacePath, ...mentionRange() }),
+  z.object({
+    type: z.literal("skill"),
+    name: z.string().max(MAX_SKILL_NAME).regex(SKILL_NAME),
+    ...mentionRange(),
+  }),
+]);
+
+function mentionRange() {
+  return { from: z.int().min(0), to: z.int().min(0) };
+}
+
 export const sendMessageBody = z
   .object({
     prompt: z.string().trim().max(20_000),
     attachments: z.array(attachment).max(ATTACHMENT_LIMITS.count).optional(),
+    mentions: z.array(mention).max(MENTION_LIMIT).optional(),
     ...modelSelection,
   })
   .refine((body) => body.prompt.length > 0 || (body.attachments?.length ?? 0) > 0, {
     message: "Write a message or attach a file",
-  });
+  })
+  .refine(
+    ({ prompt, mentions = [] }) =>
+      mentions.every((found) => prompt.slice(found.from, found.to) === mentionToken(found)),
+    { message: "A mention is not where the prompt has it", path: ["mentions"] },
+  );
 
 // The user's answers to the agent's question, one per question; the run continues with the model
 // chosen here like a message would.

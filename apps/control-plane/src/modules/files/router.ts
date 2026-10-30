@@ -3,13 +3,15 @@ import { Elysia } from "elysia";
 import { authRouter } from "../auth/router";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadParams } from "../threads/schema";
-import { filesQuery } from "./schema";
+import { filesQuery, searchQuery } from "./schema";
 import { createFilesService } from "./service";
 
-// The files of a thread's workspace, for reading (decision 0031). Nothing is written.
+// The files of a thread's workspace, for reading (decision 0031) and for the composer's `@` to
+// find (decision 0036). Nothing is written.
 export const filesRouter = (hub: RuntimeHub) => {
   const service = createFilesService(hub);
   const options = { auth: true, org: true, params: threadParams, query: filesQuery } as const;
+  const search = { auth: true, org: true, params: threadParams, query: searchQuery } as const;
   return new Elysia({ prefix: "/threads" })
     .use(authRouter)
     .get(
@@ -21,5 +23,10 @@ export const filesRouter = (hub: RuntimeHub) => {
       "/:id/files/content",
       ({ params, query, organizationId }) => service.read(organizationId, params.id, query.path),
       options,
+    )
+    .get(
+      "/:id/files/search",
+      ({ params, query, organizationId }) => service.search(organizationId, params.id, query.q),
+      search,
     );
 };

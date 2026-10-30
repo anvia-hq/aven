@@ -94,11 +94,7 @@ run("a thread's files (real postgres, real WebSocket)", async () => {
       ws.onerror = () => reject(new Error("runtime could not connect"));
       ws.onmessage = (event) => {
         const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
-        if (
-          message.type !== "call" ||
-          (message.method !== "files.list" && message.method !== "files.read")
-        )
-          return;
+        if (message.type !== "call" || !message.method.startsWith("files.")) return;
         calls.push([message.method, message.params]);
         ws.send(
           JSON.stringify({
@@ -146,6 +142,20 @@ run("a thread's files (real postgres, real WebSocket)", async () => {
       ["files.list", { threadId: thread.id, path: "src" }],
       ["files.read", { threadId: thread.id, path: "src/a.ts" }],
       ["files.list", { threadId: thread.id, path: "" }],
+    ]);
+  });
+
+  test("searches the workspace for the composer's @", async () => {
+    const { thread, calls } = await setup(() => ({
+      ok: true,
+      result: { paths: ["src/app.ts", "app.config.ts"] },
+    }));
+    const found = await get(`/threads/${thread.id}/files/search?q=app`, owner.token);
+    expect(await found.json()).toEqual({ available: true, paths: ["src/app.ts", "app.config.ts"] });
+    await get(`/threads/${thread.id}/files/search`, owner.token);
+    expect(calls).toEqual([
+      ["files.search", { threadId: thread.id, query: "app" }],
+      ["files.search", { threadId: thread.id, query: "" }],
     ]);
   });
 

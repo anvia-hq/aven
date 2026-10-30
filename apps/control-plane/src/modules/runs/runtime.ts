@@ -1,5 +1,5 @@
 import type { ModelConfig } from "@aven/agents/model";
-import type { RunEvent } from "@aven/protocol/events";
+import type { MessageMention, RunEvent } from "@aven/protocol/events";
 import type { RunAttachment, RunOutcome, RunSkill } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
@@ -10,11 +10,16 @@ export type RunThread = {
   runtimeId: string;
 };
 
+/** What can come with a run's prompt. */
+export type RunExtras = Pick<StartRunInput, "attachments" | "mentions" | "skills">;
+
 export type StartRunInput = {
   thread: RunThread;
   prompt: string;
   /** The files sent with the prompt, for the runner to copy into the sandbox (decision 0034). */
   attachments?: RunAttachment[];
+  /** The files and skills the prompt mentions (decision 0036). */
+  mentions?: MessageMention[];
   /** The sender's skills and the built-in ones (decision 0035). */
   skills?: RunSkill[];
   model?: ModelConfig;
