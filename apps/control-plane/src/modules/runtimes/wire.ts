@@ -1,4 +1,4 @@
-import type { Message } from "@anvia/core";
+import type { MemoryCompactionMessage, Message } from "@anvia/core";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
@@ -61,7 +61,14 @@ const frame = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),
-    method: z.enum(["memory.load", "memory.append", "memory.clear", "repo.access"]),
+    method: z.enum([
+      "memory.load",
+      "memory.append",
+      "memory.clear",
+      "memory.snapshot",
+      "memory.replacePrefix",
+      "repo.access",
+    ]),
     params: z.unknown().optional(),
   }),
   z.object({ type: z.literal("reply"), id: z.string() }).loose(),
@@ -84,6 +91,14 @@ const appendParams = memoryParams.extend({
   messages: z.array(z.custom<Message>((value) => typeof value === "object" && value !== null)),
 });
 
+const replacePrefixParams = memoryParams.extend({
+  revision: z.string(),
+  messageCount: z.number().int().positive(),
+  replacement: z.custom<MemoryCompactionMessage>(
+    (value) => typeof value === "object" && value !== null,
+  ),
+});
+
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
   if (!parsed.success) throw new Error("Invalid parameters for this memory call");
@@ -92,3 +107,5 @@ function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
 
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
+export const parseReplacePrefixParams = (params: unknown) =>
+  parseParams(replacePrefixParams, params);

@@ -184,6 +184,25 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       }),
     ).toEqual([]);
 
+    // Compaction goes through the same run-bound scope: a snapshot of this thread's history, and a
+    // summary replacing its prefix.
+    const snapshot = await ask(ws, received, "memory.snapshot", { runId: "run-1" });
+    expect(snapshot.ok).toBe(true);
+    const { revision } = snapshot.result as { revision: string };
+    const replaced = await ask(ws, received, "memory.replacePrefix", {
+      runId: "run-1",
+      revision,
+      messageCount: 1,
+      replacement: {
+        role: "system",
+        content: "summary of hi",
+        metadata: { anvia: { memoryCompaction: { version: 1, compactedMessageCount: 1 } } },
+      },
+    });
+    expect(replaced.result).toEqual({ status: "committed" });
+    const badReplace = await ask(ws, received, "memory.replacePrefix", { runId: "run-1" });
+    expect(badReplace.ok).toBe(false);
+
     // Once the run ends, the runtime can no longer write to it.
     ws.send(JSON.stringify({ type: "run.end", runId: "run-1", outcome: "response" }));
     await until(() => ended.length > 0);

@@ -14,7 +14,17 @@ import { memoryStore } from "../../memory-store";
 import { UnavailableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import { runtimesService } from "./service";
-import { parseAppendParams, parseMemoryParams, parseRuntimeFrame } from "./wire";
+import {
+  parseAppendParams,
+  parseMemoryParams,
+  parseReplacePrefixParams,
+  parseRuntimeFrame,
+} from "./wire";
+
+function requireCompaction(store: MemoryStore) {
+  if (!store.compaction) throw new Error("This conversation store does not support compaction");
+  return store.compaction;
+}
 
 export class RuntimeOfflineError extends UnavailableError {
   constructor() {
@@ -257,6 +267,18 @@ export class RuntimeConnection {
       case "memory.clear":
         await store.clear({ scope });
         return null;
+      case "memory.snapshot":
+        return requireCompaction(store).snapshot({ scope });
+      case "memory.replacePrefix": {
+        const { revision, messageCount, replacement } = parseReplacePrefixParams(params);
+        return requireCompaction(store).replacePrefix({
+          scope,
+          runId,
+          revision,
+          messageCount,
+          replacement,
+        });
+      }
     }
   }
 

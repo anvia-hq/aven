@@ -1,4 +1,10 @@
-import { Agent, type AnyTool, type CompletionModel, type MemoryStore } from "@anvia/core";
+import {
+  Agent,
+  createSummaryMemoryCompactor,
+  type AnyTool,
+  type CompletionModel,
+  type MemoryStore,
+} from "@anvia/core";
 
 import { withoutStoredReasoning } from "./memory";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
@@ -35,10 +41,29 @@ export function createCodingAgent(options: CodingAgentOptions) {
     controls,
     maxTurns: options.maxTurns ?? 50,
     tools,
-    memory: store && { store, savePolicy: "turn" },
+    memory: store && {
+      store,
+      savePolicy: "turn",
+      compaction: store.compaction && compactionFor(options, model),
+    },
   });
 
   return { agent };
+}
+
+// Summarizing starts at this share of the model's context window, leaving room for the next
+// request and the summary itself.
+const COMPACT_AT = 0.7;
+
+// Old history is summarized by the run's own model once it passes the trigger. Without a known
+// context window there is nothing to measure against, so history is left whole.
+function compactionFor(options: CodingAgentOptions, model: CompletionModel) {
+  const contextWindow = "contextWindow" in options ? options.contextWindow : undefined;
+  if (!contextWindow) return undefined;
+  return {
+    trigger: { afterTokens: Math.floor(contextWindow * COMPACT_AT) },
+    compactor: createSummaryMemoryCompactor({ model }),
+  };
 }
 
 // Anthropic rejects thinking replayed from an earlier run, so its runs start without it.
