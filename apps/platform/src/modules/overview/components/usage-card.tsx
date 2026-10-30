@@ -2,7 +2,7 @@ import type { TokenUsage } from "@aven/protocol/events";
 
 import { compactNumber } from "@/lib/format";
 
-import { InspectorCard } from "./inspector-card";
+import { OverviewCard } from "./overview-card";
 
 // Tokens added up over every model call of the thread. Each call sends the conversation again, so
 // this grows far past the context window. Cache write and read are parts of the input, not extra.
@@ -11,7 +11,7 @@ export function UsageCard({ totals }: { totals: TokenUsage | undefined }) {
   if (!totals || total === 0) return null;
 
   return (
-    <InspectorCard title="Usage">
+    <OverviewCard title="Usage">
       <dl className="flex flex-col gap-1 text-xs">
         <Row label="Input" value={totals.inputTokens} />
         <Row label="Cache write" value={totals.cacheWriteTokens} part />
@@ -22,7 +22,7 @@ export function UsageCard({ totals }: { totals: TokenUsage | undefined }) {
       <p className="text-xs text-muted-foreground">
         Across all model calls in this thread. Cache write and read are part of the input.
       </p>
-    </InspectorCard>
+    </OverviewCard>
   );
 }
 

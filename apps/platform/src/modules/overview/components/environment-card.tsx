@@ -5,7 +5,7 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import type { Thread } from "@/modules/threads/types";
 
-import { InspectorCard } from "./inspector-card";
+import { OverviewCard } from "./overview-card";
 
 // Where the thread's agent works: the runner, the repository and the branch it commits to.
 export function EnvironmentCard({ thread }: { thread: Thread }) {
@@ -15,7 +15,7 @@ export function EnvironmentCard({ thread }: { thread: Thread }) {
   const runtime = runtimes.find((candidate) => candidate.id === thread.runtimeId);
 
   return (
-    <InspectorCard title="Environment">
+    <OverviewCard title="Environment">
       <Row icon={<Servers />}>
         {runtime ? `${runtime.name} · ${runtime.online ? "online" : "offline"}` : "Runner revoked"}
       </Row>
@@ -25,7 +25,7 @@ export function EnvironmentCard({ thread }: { thread: Thread }) {
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
-    </InspectorCard>
+    </OverviewCard>
   );
 }
 

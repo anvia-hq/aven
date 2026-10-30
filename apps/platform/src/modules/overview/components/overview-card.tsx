@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function InspectorCard({ title, children }: { title: string; children: ReactNode }) {
+export function OverviewCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section
       aria-label={title}

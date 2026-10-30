@@ -35,7 +35,7 @@ const usage = {
 
 test.describe("a thread's overview", () => {
   test("shows where the agent works, and context once the model reports it", async ({ page }) => {
-    await registerUser(page, "ins", "Inspector User");
+    await registerUser(page, "ins", "Overview User");
     await streamSnapshot(page, { usage });
     const threadId = await newThread(page);
     await page.setViewportSize({ width: 1400, height: 760 });
@@ -65,7 +65,7 @@ test.describe("a thread's overview", () => {
   });
 
   test("says when the context size is not known", async ({ page }) => {
-    await registerUser(page, "ins", "Inspector User");
+    await registerUser(page, "ins", "Overview User");
     await streamSnapshot(page, {});
     const threadId = await newThread(page);
     await page.goto(`/threads/${threadId}`);
@@ -77,7 +77,7 @@ test.describe("a thread's overview", () => {
 });
 
 test("the overview can be closed and opened again from the thread toolbar", async ({ page }) => {
-  await registerUser(page, "ins", "Inspector User");
+  await registerUser(page, "ins", "Overview User");
   await streamSnapshot(page, {});
   const threadId = await newThread(page);
   await page.setViewportSize({ width: 1400, height: 760 });

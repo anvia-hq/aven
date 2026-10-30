@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 
 import { Markdown } from "@/components/markdown";
 
@@ -29,7 +29,9 @@ function AssistantBlock({ block }: { block: Block }) {
   return <ToolGroup tools={block.tools} />;
 }
 
-export function ThreadMessage({ message }: { message: ChatMessage }) {
+// Memoized: while the agent streams, only the last message changes (the reducer keeps the others
+// as they were), and re-parsing every earlier message's Markdown on each delta would add up.
+export const ThreadMessage = memo(function ThreadMessage({ message }: { message: ChatMessage }) {
   if (message.role === "user") {
     return (
       <div
@@ -51,4 +53,4 @@ export function ThreadMessage({ message }: { message: ChatMessage }) {
       {message.parts.length === 0 && <p className="text-sm text-muted-foreground">Thinking…</p>}
     </div>
   );
-}
+});

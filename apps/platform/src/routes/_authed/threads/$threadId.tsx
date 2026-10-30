@@ -7,7 +7,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { safeStorage, useLocalStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
-import { OverviewColumn } from "@/modules/inspector/components/overview-column";
+import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
