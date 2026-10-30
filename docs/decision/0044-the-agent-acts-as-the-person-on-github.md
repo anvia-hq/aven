@@ -19,6 +19,6 @@ Status: accepted. Supersedes 0042 (the agent fetches through the runner) once `g
 ## Consequences
 
 - A prompt injected into something the agent reads (an issue, a review comment, a CI log, a file) can steer it to act as the person: push, merge, comment. The guard is the person watching the thread and the app's narrow permissions (no admin, no settings), not the sandbox.
-- The fixed pipeline (`repo.push`, the ship service's token handling) is no longer how shipping works once the agent run lands; it is removed then, not before.
+- The fixed pipeline (`repo.push`, `publish-branch`, the model-written pull request text and the control plane's own pull request) is gone: the agent run replaced it. The wire version was not lowered when `repo.push` went.
 - A person has to have connected GitHub for the agent to use it; `gh` in the sandbox says it is not logged in otherwise, and the agent's instructions say what to ask.
 - Tokens are sent to the runner on the connection a runtime already holds; a runner is trusted with them as it is with provider keys' grants.

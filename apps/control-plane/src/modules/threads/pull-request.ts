@@ -2,7 +2,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { githubService } from "../github/service";
 import { projectsService } from "../projects/service";
-import { threadsService } from "../threads/service";
+import { threadsService } from "./service";
 
 type Deps = {
   thread: (

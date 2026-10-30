@@ -12,8 +12,8 @@ export type FetchRemote = (
   abortSignal?: AbortSignal,
 ) => Promise<FetchedBranch>;
 
-// Brings a branch from GitHub into the workspace, for an agent whose sandbox has no GitHub
-// credentials and so cannot `git fetch` or `git pull` itself (decision 0042). What fetches is the
+// Brings a branch from GitHub into the workspace, for an agent that is not signed in to GitHub
+// because its person has not connected their account (decisions 0042 and 0044). What fetches is the
 // host; this only says what the agent can ask for and what to do with the answer.
 export function createGitFetchTool(fetchRemote: FetchRemote) {
   return createTool({

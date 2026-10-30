@@ -18,7 +18,7 @@ import type { RunAttachment, RunGithub, RunSkill } from "@aven/protocol/runtime-
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
-import { syncPullRequest } from "../ship/pull-request";
+import { syncPullRequest } from "../threads/pull-request";
 import { threadsService } from "../threads/service";
 import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";

@@ -87,7 +87,7 @@ export const threadsService = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
-  // The pull request the thread was shipped as (decision 0040).
+  // The pull request opened for the thread's branch, found after a run (decision 0044).
   async setPullRequest(id: string, pullRequest: { number: number; url: string }) {
     await db
       .update(threads)

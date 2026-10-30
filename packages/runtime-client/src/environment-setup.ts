@@ -15,7 +15,7 @@ export const SETUP_SCRIPT = ".aven/setup";
 export const RESUME_SCRIPT = ".aven/resume";
 
 /** A setup that has not finished by then is stopped. */
-export const SETUP_TIMEOUT_MS = 20 * 60_000;
+const SETUP_TIMEOUT_MS = 20 * 60_000;
 
 /** `missing` when the repository has no such script; `not-executable` when it has one that cannot run. */
 export async function scriptState(root: string, script: string) {

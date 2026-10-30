@@ -1,7 +1,8 @@
 import { git, type Git } from "./git-clone";
 
 // The workspace's `.git` is written by the agent and these commands run on the runner's host with
-// a token (decisions 0040 and 0042), so what git could run from it is switched off: hooks, the file
+// a token (decisions 0042 and 0043: a fetch, and a restored workspace brought up to date), so what
+// git could run from it is switched off: hooks, the file
 // system monitor, credential helpers and background maintenance; the system and global
 // configuration are not read.
 const SAFE_CONFIG = [

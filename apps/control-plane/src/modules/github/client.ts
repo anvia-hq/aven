@@ -32,7 +32,7 @@ export class GithubNotConfiguredError extends UnavailableError {
   }
 }
 
-/** The installation has not been approved to write to the repository (decision 0040). */
+/** The app has not been approved to write for the installation's account, which Ship needs (decision 0044). */
 export class GithubWriteNotGrantedError extends ConflictError {
   constructor(accountLogin: string) {
     super(

@@ -179,8 +179,8 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
-        // The sandbox has no GitHub credentials, so a fetch is done here, on the host, with the
-        // read-only access the control plane gives this run (decision 0042).
+        // For a person who has not connected GitHub, so the sandbox cannot fetch itself: it is done
+        // here, on the host, with the read-only access the control plane gives this run (decision 0042).
         const gitFetch = createGitFetchTool(async (branch) => {
           const root = await context.sandbox.workspace(thread.id);
           if (!root) throw new Error("The thread has no workspace yet");

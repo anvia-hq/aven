@@ -46,7 +46,7 @@ export type Thread = {
   runtimeId: string;
   state: ThreadState;
   running: boolean;
-  /** The pull request the thread was shipped as (decision 0040); null until it is. */
+  /** The pull request opened for the thread's branch (decision 0044); null until one is found. */
   pullRequestNumber: number | null;
   pullRequestUrl: string | null;
   createdAt: string;

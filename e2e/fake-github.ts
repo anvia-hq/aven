@@ -5,7 +5,7 @@ const port = Number(process.env.FAKE_GITHUB_PORT ?? 8101);
 const appUrl = process.env.FAKE_GITHUB_APP_URL ?? "http://localhost:5174";
 const repositories = ["shiny-app", "docs-site", "composer-app", "project"];
 
-// Both permissions approved, and the person allowed to push (decisions 0040 and 0041).
+// Writing approved for the installation, and the person allowed to push (decisions 0041 and 0044).
 const repo = (name: string) => ({
   id: repositories.indexOf(name) + 1,
   full_name: `acme/${name}`,
@@ -22,7 +22,8 @@ Bun.serve({
   port,
   fetch(request) {
     const { pathname } = new URL(request.url);
-    // Pull requests (decision 0040): none is open until one is created, then that one is.
+    // Pull requests: none is open until one is created (a spec does it, standing in for the agent's
+    // `gh pr create`, decision 0044), then that one is.
     if (/^\/repos\/acme\/[\w.-]+\/pulls$/.test(pathname)) {
       const opened = pullRequests.get(pathname);
       if (request.method === "POST") {

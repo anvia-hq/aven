@@ -293,7 +293,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
 }
 
 // Version 18: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
-// Version 17: the control plane can ask a runner to commit and push a thread's branch, `repo.push` (decision 0040).
+// Version 17: a runner could be asked to commit and push a thread's branch, `repo.push` (decision 0040); the call is gone, the agent ships with `gh` (decision 0044), and the version was not lowered.
 // Version 16: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
 // Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
 // Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
