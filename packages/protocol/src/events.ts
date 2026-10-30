@@ -16,6 +16,44 @@ export type ToolPart = {
 /** How much of the model's context window the conversation fills, as of the latest model call. */
 export type ContextUsage = { usedTokens: number; contextWindow: number };
 
+/** Tokens a model used, split so the four add up to the total: `inputTokens` is only the part that was neither written to nor read from the cache. */
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+};
+
+/** What a thread has used so far, and how full the model's context is as of its latest call. */
+export type ThreadUsage = { totals: TokenUsage; context?: ContextUsage };
+
+export const NO_USAGE: TokenUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheWriteTokens: 0,
+  cacheReadTokens: 0,
+};
+
+export function addUsage(left: TokenUsage, right: TokenUsage): TokenUsage {
+  return {
+    inputTokens: left.inputTokens + right.inputTokens,
+    outputTokens: left.outputTokens + right.outputTokens,
+    cacheWriteTokens: left.cacheWriteTokens + right.cacheWriteTokens,
+    cacheReadTokens: left.cacheReadTokens + right.cacheReadTokens,
+  };
+}
+
+/** The thread's usage after one more model call. */
+export function applyUsage(
+  usage: ThreadUsage | null,
+  event: { turn: TokenUsage; context?: ContextUsage },
+): ThreadUsage {
+  return {
+    totals: addUsage(usage?.totals ?? NO_USAGE, event.turn),
+    context: event.context ?? usage?.context,
+  };
+}
+
 export type MessagePart = { type: "text"; text: string } | { type: "tool"; tool: ToolPart };
 
 export type ChatMessage = {
@@ -26,12 +64,12 @@ export type ChatMessage = {
 
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
-  | { type: "snapshot"; messages: ChatMessage[]; running: boolean; context?: ContextUsage }
+  | { type: "snapshot"; messages: ChatMessage[]; running: boolean; usage?: ThreadUsage }
   | { type: "run_start"; prompt: string }
   | { type: "text"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
   | { type: "tool_end"; id: string; status: "done" | "error"; output?: string }
-  | ({ type: "context" } & ContextUsage)
+  | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "done" }
   | { type: "error"; message: string };
 

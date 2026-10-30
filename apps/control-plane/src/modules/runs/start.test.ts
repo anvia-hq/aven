@@ -74,31 +74,64 @@ describe("starting a run", () => {
   });
 });
 
-describe("context usage", () => {
-  test("the latest one is in the snapshot of a client that attaches afterwards", async () => {
+describe("usage", () => {
+  const turn = { inputTokens: 1, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 };
+  const generation = {
+    modelId: "m",
+    provider: "anthropic",
+    usage: {
+      inputTokens: 8,
+      outputTokens: 2,
+      totalTokens: 10,
+      cachedInputTokens: 4,
+      cacheCreationInputTokens: 3,
+    },
+  };
+  const stored = { role: "assistant", content: "earlier", metadata: { anvia: { generation } } };
+
+  async function firstEvent(manager: RunManager, thread: RunThread) {
+    const stream = manager.events(thread, new AbortController().signal);
+    const first = (await stream.next()).value;
+    await stream.return(undefined);
+    return first;
+  }
+
+  test("a thread's snapshot counts its stored history plus the run in progress", async () => {
     const events: RunEvent[] = [
-      { type: "context", usedTokens: 100, contextWindow: 1000 },
-      { type: "context", usedTokens: 330, contextWindow: 1000 },
+      { type: "usage", turn, context: { usedTokens: 100, contextWindow: 1000 } },
     ];
-    const handle: RuntimeRun = {
-      events: (async function* () {
-        yield* events;
-      })(),
-      result: Promise.resolve({ type: "response" }),
-      cancel: () => undefined,
-    };
-    const manager = managerRunning(handle);
+    const { handle, finish } = liveRun();
+    const manager = managerRunning(
+      {
+        ...handle,
+        events: (async function* () {
+          yield* events;
+          await handle.result;
+        })(),
+      },
+      { load: async () => [stored] as never },
+    );
     const thread = newThread();
     await manager.start(thread, "hi");
     await Bun.sleep(20);
 
-    const stream = manager.events(thread, new AbortController().signal);
-    const first = (await stream.next()).value;
-    await stream.return(undefined);
-    expect(first).toMatchObject({
-      type: "snapshot",
+    expect(await firstEvent(manager, thread)).toMatchObject({
+      running: true,
+      usage: {
+        totals: { inputTokens: 2, outputTokens: 4, cacheWriteTokens: 6, cacheReadTokens: 8 },
+        context: { usedTokens: 100, contextWindow: 1000 },
+      },
+    });
+    finish();
+  });
+
+  test("with no run, the snapshot is read from the stored messages", async () => {
+    const manager = managerRunning(liveRun().handle, { load: async () => [stored] as never });
+    expect(await firstEvent(manager, newThread())).toMatchObject({
       running: false,
-      context: { usedTokens: 330, contextWindow: 1000 },
+      usage: {
+        totals: { inputTokens: 1, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 },
+      },
     });
   });
 });

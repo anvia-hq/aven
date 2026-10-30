@@ -3,7 +3,13 @@ import { createTool } from "@anvia/core";
 import { z } from "zod";
 
 import { createCodingAgent } from "./coding-agent";
-import { messagesToChat, projectStreamEvent, projectToolOutput, toolTarget } from "./projection";
+import {
+  messagesToChat,
+  projectStreamEvent,
+  projectToolOutput,
+  toolTarget,
+  usageFromHistory,
+} from "./projection";
 import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
@@ -52,8 +58,10 @@ async function run(prompt: string) {
 }
 
 describe("projection", () => {
-  test("projects only text and tool events, in order", async () => {
-    const { events } = await run("go");
+  test("projects only text, tool and usage events, with one usage per model call", async () => {
+    const { events: all } = await run("go");
+    expect(all.filter((event) => event.type === "usage")).toHaveLength(3);
+    const events = all.filter((event) => event.type !== "usage");
     expect(events.map((event) => event.type)).toEqual([
       "text",
       "tool_start",
@@ -152,23 +160,44 @@ describe("the sandbox's tools", () => {
   });
 });
 
-describe("context usage", () => {
+describe("usage", () => {
+  const usage = {
+    inputTokens: 4917,
+    outputTokens: 49,
+    totalTokens: 4966,
+    cachedInputTokens: 4209,
+    cacheCreationInputTokens: 704,
+  };
   const turnEnd = (contextUsage?: object) =>
-    ({ type: "turn_end", turn: 1, response: { choice: [], usage: {}, contextUsage } }) as never;
+    ({ type: "turn_end", turn: 1, response: { choice: [], usage, contextUsage } }) as never;
+  const context = {
+    usedTokens: 4917,
+    remainingTokens: 995_083,
+    usedPercent: 0.4917,
+    remainingPercent: 99.5083,
+    model: { modelId: "m", context: { contextWindow: 1_000_000 } },
+  };
 
-  test("a model call that reports it becomes a context event", () => {
-    const usage = {
-      usedTokens: 330_000,
-      model: { modelId: "m", context: { contextWindow: 1_000_000 } },
-    };
-    expect(projectStreamEvent(turnEnd(usage))).toEqual({
-      type: "context",
-      usedTokens: 330_000,
-      contextWindow: 1_000_000,
+  test("a model call becomes a usage event whose four parts add up to the total", () => {
+    const event = projectStreamEvent(turnEnd(context));
+    expect(event).toEqual({
+      type: "usage",
+      turn: { inputTokens: 4, outputTokens: 49, cacheWriteTokens: 704, cacheReadTokens: 4209 },
+      context: { usedTokens: 4917, contextWindow: 1_000_000 },
     });
   });
 
-  test("a model whose window is unknown reports nothing", () => {
-    expect(projectStreamEvent(turnEnd())).toBeUndefined();
+  test("a model whose window is unknown still reports tokens, without context", () => {
+    expect(projectStreamEvent(turnEnd())).toMatchObject({ type: "usage", context: undefined });
+  });
+
+  test("a thread's usage is read back from the stored messages", () => {
+    const generation = { usage, modelId: "m", provider: "anthropic", contextUsage: context };
+    const stored = (text: string) =>
+      ({ role: "assistant", content: text, metadata: { anvia: { generation } } }) as never;
+    expect(usageFromHistory([{ role: "user", content: "hi" }, stored("a"), stored("b")])).toEqual({
+      totals: { inputTokens: 8, outputTokens: 98, cacheWriteTokens: 1408, cacheReadTokens: 8418 },
+      context: { usedTokens: 4917, contextWindow: 1_000_000 },
+    });
   });
 });

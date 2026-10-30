@@ -23,10 +23,20 @@ async function streamSnapshot(page: Page, snapshot: Record<string, unknown>) {
   );
 }
 
+const usage = {
+  totals: {
+    inputTokens: 1_200,
+    outputTokens: 3_400,
+    cacheWriteTokens: 5_600,
+    cacheReadTokens: 78_000,
+  },
+  context: { usedTokens: 330_000, contextWindow: 1_000_000 },
+};
+
 test.describe("a thread's overview", () => {
   test("shows where the agent works, and context once the model reports it", async ({ page }) => {
     await registerUser(page, "ins", "Inspector User");
-    await streamSnapshot(page, { context: { usedTokens: 330_000, contextWindow: 1_000_000 } });
+    await streamSnapshot(page, { usage });
     const threadId = await newThread(page);
     await page.setViewportSize({ width: 1400, height: 760 });
     await page.goto(`/threads/${threadId}`);
@@ -40,6 +50,14 @@ test.describe("a thread's overview", () => {
     const context = page.getByRole("region", { name: "Context" });
     await expect(context).toContainText("33% used");
     await expect(context).toContainText("330K / 1M");
+
+    // The totals are every call added up, a different thing from the window the latest filled.
+    const tokens = page.getByRole("region", { name: "Usage" });
+    await expect(tokens.getByText("Input").locator("..")).toContainText("1.2K");
+    await expect(tokens.getByText("Output").locator("..")).toContainText("3.4K");
+    await expect(tokens.getByText("Cache write").locator("..")).toContainText("5.6K");
+    await expect(tokens.getByText("Cache read").locator("..")).toContainText("78K");
+    await expect(tokens.getByText("Total").locator("..")).toContainText("88.2K");
   });
 
   test("says when the context size is not known", async ({ page }) => {

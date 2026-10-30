@@ -18,6 +18,8 @@ const toolPart = z.object({
   output: z.string().optional(),
 });
 
+const tokenCount = z.number().int().nonnegative();
+
 const runEvent = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), delta: z.string() }),
   z.object({ type: z.literal("tool_start"), tool: toolPart }),
@@ -28,9 +30,16 @@ const runEvent = z.discriminatedUnion("type", [
     output: z.string().optional(),
   }),
   z.object({
-    type: z.literal("context"),
-    usedTokens: z.number().int().nonnegative(),
-    contextWindow: z.number().int().positive(),
+    type: z.literal("usage"),
+    turn: z.object({
+      inputTokens: tokenCount,
+      outputTokens: tokenCount,
+      cacheWriteTokens: tokenCount,
+      cacheReadTokens: tokenCount,
+    }),
+    context: z
+      .object({ usedTokens: tokenCount, contextWindow: z.number().int().positive() })
+      .optional(),
   }),
 ]);
 

@@ -153,8 +153,10 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       "run_start",
       "text",
       "tool_start",
+      "usage",
       "tool_end",
       "text",
+      "usage",
       "done",
     ]);
     expect(client.events[0]).toMatchObject({ type: "snapshot", running: false, messages: [] });
@@ -186,7 +188,12 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(snapshot).toMatchObject({ type: "snapshot", running: true });
     if (snapshot.type !== "snapshot") throw new Error("expected a snapshot");
     expect(snapshot.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
-    expect(late.events.slice(1).map((event) => event.type)).toEqual(["tool_end", "text", "done"]);
+    expect(late.events.slice(1).map((event) => event.type)).toEqual([
+      "tool_end",
+      "text",
+      "usage",
+      "done",
+    ]);
   });
 
   test("dropping every client does not cancel the run", async () => {

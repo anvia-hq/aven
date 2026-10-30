@@ -1,11 +1,12 @@
 import type { ConversationStore } from "@aven/agents/memory";
 import type { ModelConfig } from "@aven/agents/model";
-import { messagesToChat } from "@aven/agents/projection";
+import { messagesToChat, usageFromHistory } from "@aven/agents/projection";
 import {
   applyEvent,
+  applyUsage,
   type ChatMessage,
-  type ContextUsage,
   type RunEvent,
+  type ThreadUsage,
 } from "@aven/protocol/events";
 
 import { ConflictError, UnavailableError } from "../../errors";
@@ -20,6 +21,8 @@ type ActiveRun = {
   handle: RuntimeRun;
   /** The whole transcript so far: history plus this run, kept current by applying events. */
   messages: ChatMessage[];
+  /** What the thread has used: its history plus this run, kept current like `messages`. */
+  usage: ThreadUsage;
   cancelled: boolean;
   /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
@@ -29,8 +32,6 @@ type Channel = {
   thread: RunThread;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
-  /** From the latest model call; kept after the run so a client attaching later still has it. */
-  context?: ContextUsage;
 };
 
 export class RunBusyError extends ConflictError {
@@ -75,10 +76,17 @@ export class RunManager {
 
     const handle = this.#runtime.start({ thread, prompt, model: model ?? undefined });
     // Claim the slot before the first await so two concurrent starts cannot both proceed.
-    const run: ActiveRun = { handle, messages: [], cancelled: false, ready: Promise.resolve() };
+    const run: ActiveRun = {
+      handle,
+      messages: [],
+      usage: usageFromHistory([]),
+      cancelled: false,
+      ready: Promise.resolve(),
+    };
     channel.run = run;
     const loaded = this.#store.load({ scope: this.#scope(thread) }).then((history) => {
       run.messages = messagesToChat(history);
+      run.usage = usageFromHistory(history);
     });
     run.ready = loaded.catch(() => undefined);
     try {
@@ -174,22 +182,23 @@ export class RunManager {
         await run.ready;
         if (channel.run !== run) continue;
         queue.length = 0;
-        return { messages: run.messages, running: true, context: channel.context };
+        return { messages: run.messages, running: true, usage: run.usage };
       }
-      const messages = messagesToChat(
-        await this.#store.load({ scope: this.#scope(channel.thread) }),
-      );
+      const history = await this.#store.load({ scope: this.#scope(channel.thread) });
       if (channel.run) continue;
       queue.length = 0;
-      return { messages, running: false, context: channel.context };
+      return {
+        messages: messagesToChat(history),
+        running: false,
+        usage: usageFromHistory(history),
+      };
     }
   }
 
   #emit(channel: Channel, event: RunEvent) {
     if (channel.run) channel.run.messages = applyEvent(channel.run.messages, event);
-    if (event.type === "context") {
-      channel.context = { usedTokens: event.usedTokens, contextWindow: event.contextWindow };
-    }
+    if (event.type === "usage" && channel.run)
+      channel.run.usage = applyUsage(channel.run.usage, event);
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 

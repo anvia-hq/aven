@@ -1,17 +1,24 @@
-import type {
-  AgentStreamEvent,
-  AssistantContentPart,
-  Message,
-  ToolCallPart,
-  ToolResultOutput,
+import {
+  getAssistantGenerationMetadata,
+  type AgentStreamEvent,
+  type AssistantContentPart,
+  type Message,
+  type ToolCallPart,
+  type ToolResultOutput,
+  type Usage,
 } from "@anvia/core";
 
 import {
+  addUsage,
   messageId,
+  NO_USAGE,
   type ChatMessage,
+  type ContextUsage,
   type DiffLine,
   type MessagePart,
   type RunEvent,
+  type ThreadUsage,
+  type TokenUsage,
   type ToolPart,
 } from "@aven/protocol/events";
 
@@ -131,6 +138,42 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled tool result: ${JSON.stringify(value)}`);
 }
 
+// The providers count cached tokens inside the input; split out, the four parts add up to the total.
+export function tokenUsageOf(usage: Usage): TokenUsage {
+  const cacheWriteTokens = usage.cacheCreationInputTokens;
+  const cacheReadTokens = usage.cachedInputTokens;
+  return {
+    inputTokens: Math.max(0, usage.inputTokens - cacheWriteTokens - cacheReadTokens),
+    outputTokens: usage.outputTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
+  };
+}
+
+// Only known when the model's context window is.
+const contextOf = (
+  usage:
+    | {
+        usedTokens: number;
+        model: { context: { contextWindow: number } };
+      }
+    | undefined,
+): ContextUsage | undefined =>
+  usage && { usedTokens: usage.usedTokens, contextWindow: usage.model.context.contextWindow };
+
+// What a thread has used, read back from the generation metadata stored with its messages.
+export function usageFromHistory(messages: readonly Message[]): ThreadUsage {
+  let totals = NO_USAGE;
+  let context: ContextUsage | undefined;
+  for (const message of messages) {
+    const generation = getAssistantGenerationMetadata(message);
+    if (!generation) continue;
+    totals = addUsage(totals, tokenUsageOf(generation.usage));
+    context = contextOf(generation.contextUsage) ?? context;
+  }
+  return { totals, context };
+}
+
 // Only these run events ever reach a client. Turn events carry full history and the system prompt,
 // and reasoning/provider payloads are private, so they are dropped here.
 export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefined {
@@ -143,16 +186,12 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
       const { status, output } = projectToolOutput(event.output);
       return { type: "tool_end", id: event.toolCallId, status, output };
     }
-    case "turn_end": {
-      // Only known when the model's context window is.
-      const usage = event.response.contextUsage;
-      if (!usage) return undefined;
+    case "turn_end":
       return {
-        type: "context",
-        usedTokens: usage.usedTokens,
-        contextWindow: usage.model.context.contextWindow,
+        type: "usage",
+        turn: tokenUsageOf(event.response.usage),
+        context: contextOf(event.response.contextUsage),
       };
-    }
     default:
       return undefined;
   }

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authed/threads/$threadId")({
 
 function ThreadPage() {
   const { threadId } = Route.useParams();
-  const { thread, loaded, messages, running, context, error, send, cancel } = useThread(threadId);
+  const { thread, loaded, messages, running, usage, error, send, cancel } = useThread(threadId);
   // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
   // What is open is remembered. The overview is on until closed; the desktop opens when asked for.
@@ -71,7 +71,7 @@ function ThreadPage() {
                 <ThreadMessages
                   messages={messages}
                   error={error}
-                  aside={overviewOpen && <OverviewColumn thread={thread} context={context} />}
+                  aside={overviewOpen && <OverviewColumn thread={thread} usage={usage} />}
                 />
                 <div
                   className={cn(

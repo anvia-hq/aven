@@ -1,4 +1,10 @@
-import { applyEvent, isRunning, type ContextUsage, type RunEvent } from "@aven/protocol/events";
+import {
+  applyEvent,
+  applyUsage,
+  isRunning,
+  type RunEvent,
+  type ThreadUsage,
+} from "@aven/protocol/events";
 import { useCallback, useEffect, useState } from "react";
 
 import { toast } from "@/components/toast";
@@ -24,13 +30,13 @@ export function useThread(threadId: string) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [running, setRunning] = useState(false);
-  const [context, setContext] = useState<ContextUsage | null>(null);
+  const [usage, setUsage] = useState<ThreadUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMessages([]);
     setRunning(false);
-    setContext(null);
+    setUsage(null);
     setError(null);
 
     const source = new EventSource(`/api/threads/${threadId}/events`);
@@ -39,10 +45,8 @@ export function useThread(threadId: string) {
       if (!event) return;
       setMessages((current) => applyEvent(current, event));
       setRunning((current) => isRunning(current, event));
-      if (event.type === "snapshot") setContext(event.context ?? null);
-      if (event.type === "context") {
-        setContext({ usedTokens: event.usedTokens, contextWindow: event.contextWindow });
-      }
+      if (event.type === "snapshot") setUsage(event.usage ?? null);
+      if (event.type === "usage") setUsage((current) => applyUsage(current, event));
       if (event.type === "error") setError(event.message);
       if (event.type === "run_start") setError(null);
       if (event.type === "run_start") setThreadRunning(threadId, true);
@@ -79,5 +83,5 @@ export function useThread(threadId: string) {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  return { thread, loaded, messages, running, context, error, send, cancel };
+  return { thread, loaded, messages, running, usage, error, send, cancel };
 }
