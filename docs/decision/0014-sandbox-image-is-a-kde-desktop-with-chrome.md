@@ -1,6 +1,6 @@
 # The sandbox image is a KDE Plasma desktop with Chrome
 
-Status: accepted. Supersedes the openbox and plank desktop of the image in 0009 and 0010; the tag, the daemon and everything that talks to it are unchanged.
+Status: superseded by 0038 for the desktop (Xfce replaces KDE Plasma; the Chrome and Chromium choice stands). Supersedes the openbox and plank desktop of the image in 0009 and 0010; the tag, the daemon and everything that talks to it are unchanged.
 
 ## Context
 

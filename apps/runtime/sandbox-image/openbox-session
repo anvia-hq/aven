@@ -1,17 +1,37 @@
 #!/bin/sh
 # The Anvia daemon starts `openbox-session` as its window manager when it finds one; here that
-# name starts a KDE Plasma session on the daemon's display instead.
-export XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true
+# name starts an Xfce session on the daemon's display instead.
+export XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=XFCE
 export XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
-# No GPU in a container: draw with software rendering. KWIN_COMPOSE must not be forced to an
-# OpenGL mode: KWin then exits, and no window manager is left.
-export LIBGL_ALWAYS_SOFTWARE=1 QT_QUICK_BACKEND=software
-# Plasma starts its window manager (KWin) through systemd, which a container does not have, so
-# without this windows have no title bar, buttons or way to be moved. KWin has to come up after the
-# session has started: one started alongside it does not take over windows.
-# It waits at most two and a half minutes, so a Plasma that never starts does not leave this spinning.
-exec dbus-run-session -- sh -c '
-  (timeout 150 sh -c "until pgrep -x plasmashell >/dev/null; do sleep 0.5; done" &&
-    exec kwin_x11 --replace >/dev/null 2>&1) &
-  exec startplasma-x11'
+# No GPU in a container: draw with software rendering.
+export LIBGL_ALWAYS_SOFTWARE=1
+# The base image's own start script (not used here, the daemon owns the display) seeds the panel,
+# window manager and theme settings on first start; do the same.
+config="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+if [ ! -d "$config" ]; then
+  mkdir -p "$config" && cp /defaults/xfce/* "$config"/
+  # A light theme and a clean desktop: the panel at the bottom without the workspace switcher (one workspace, not the
+  # base's four), no icons on the desktop, and a wallpaper (the base sets none, which leaves the
+  # screen black). The monitor of an Xvnc display is named VNC-0.
+  sed -i -e 's/p=6;x=0;y=0/p=8;x=0;y=0/' -e '/<value type="int" value="4"\/>/d' "$config/xfce4-panel.xml"
+  sed -i -e 's/name="workspace_count" type="int" value="4"/name="workspace_count" type="int" value="1"/' \
+    -e 's/name="theme" type="string" value="Default"/name="theme" type="string" value="Greybird"/' "$config/xfwm4.xml"
+  sed -i 's/"Greybird-dark"/"Greybird-bright"/' "$config/xsettings.xml"
+  sed -i 's/name="dark-mode" type="bool" value="true"/name="dark-mode" type="bool" value="false"/' "$config/xfce4-panel.xml"
+  wallpaper=/usr/share/backgrounds/aven.jpg
+  {
+    echo '<?xml version="1.0" encoding="UTF-8"?>'
+    echo '<channel name="xfce4-desktop" version="1.0"><property name="backdrop" type="empty">'
+    echo '<property name="screen0" type="empty">'
+    for monitor in monitor0 monitorVNC-0; do
+      echo "<property name=\"$monitor\" type=\"empty\"><property name=\"workspace0\" type=\"empty\">"
+      echo '<property name="color-style" type="int" value="0"/><property name="image-style" type="int" value="5"/>'
+      echo "<property name=\"last-image\" type=\"string\" value=\"$wallpaper\"/></property></property>"
+    done
+    echo '</property></property>'
+    echo '<property name="desktop-icons" type="empty"><property name="style" type="int" value="0"/></property>'
+    echo '</channel>'
+  } > "$config/xfce4-desktop.xml"
+fi
+exec dbus-run-session -- xfce4-session
