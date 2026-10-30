@@ -1,3 +1,6 @@
+/** Where the thread's repository is in the sandbox, and where the agent works. */
+export const WORKSPACE_DIR = "/workspace";
+
 // The tools of @anvia/sandbox the agent works with (decision 0012), by name. The host builds them;
 // this is what the rest of Aven knows them as.
 export const SANDBOX_TOOL_NAMES = [

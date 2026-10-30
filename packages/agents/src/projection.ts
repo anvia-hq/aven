@@ -280,13 +280,14 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
 
   for (const message of messages) {
     if (message.role === "user") {
-      const { text, attachments } = sentMessage(message);
+      const { text, attachments, mentions } = sentMessage(message);
       const user: ChatMessage = {
         id: messageId(chat.length),
         role: "user",
         parts: [{ type: "text", text }],
       };
       if (attachments?.length) user.attachments = attachments;
+      if (mentions?.length) user.mentions = mentions;
       chat.push(user);
     } else if (message.role === "assistant") {
       const parts = assistantParts(message.content);

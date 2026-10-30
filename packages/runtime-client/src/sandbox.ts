@@ -6,6 +6,7 @@ import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
+import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { SKILLS_DIR } from "@aven/agents/skills";
 import { asRecord } from "@aven/agents/values";
 
@@ -60,7 +61,6 @@ export type ThreadSandbox = {
 
 type Docker = NonNullable<SandboxConfig["docker"]>;
 
-const WORKDIR = "/workspace";
 const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
 const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
@@ -117,7 +117,7 @@ export function dockerRunArgs(input: DockerRunInput) {
     "--security-opt",
     "no-new-privileges",
     "-v",
-    `${input.root}:${WORKDIR}`,
+    `${input.root}:${WORKSPACE_DIR}`,
     "-v",
     `${input.uploads}:${UPLOADS_DIR}:ro`,
     "-v",
@@ -127,7 +127,7 @@ export function dockerRunArgs(input: DockerRunInput) {
     "-e",
     `ANVIA_SANDBOX_TOKEN=${input.token}`,
     "-e",
-    `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
+    `ANVIA_SANDBOX_WORKDIR=${WORKSPACE_DIR}`,
   ];
   if (input.platform) args.push("--platform", input.platform);
   if (input.runtime) args.push("--runtime", input.runtime);
@@ -272,7 +272,7 @@ export class Sandboxes implements ThreadWorkspaces {
   async acquire(thread: { id: string }, repo: () => Promise<RepoAccess>): Promise<ThreadSandbox> {
     const root = await this.#workspace(thread.id, repo);
     await this.#ensure(thread.id, root);
-    const runtime = this.#hub.runtime(thread.id, { workdir: WORKDIR });
+    const runtime = this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR });
     return {
       tools: [
         ...sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),

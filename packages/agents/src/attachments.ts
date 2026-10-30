@@ -1,6 +1,8 @@
-import type { Message, UserContentPart, UserMessage } from "@anvia/core";
-import type { MessageAttachment } from "@aven/protocol/events";
+import type { AgentPrompt, JsonValue, Message, UserContentPart } from "@anvia/core";
+import type { MessageAttachment, MessageMention } from "@aven/protocol/events";
 
+import { mentionNote, mentionOf } from "./mentions";
+import type { SkillListing } from "./skills";
 import { asRecord } from "./values";
 
 /** Where the sandbox has the files users attach (decision 0034); read-only, outside the workspace. */
@@ -32,29 +34,38 @@ function forTranscript({ name, mediaType, size, image }: KeptAttachment): Messag
   return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }
 
+/** What came with a message's text: its files, the images among them in base64 by artifact name, and its mentions with the skills of the run they may name. */
+export type SentExtras = {
+  attachments?: readonly KeptAttachment[];
+  images?: ReadonlyMap<string, string>;
+  mentions?: readonly MessageMention[];
+  skills?: readonly SkillListing[];
+};
+
 /**
- * The prompt of a message that came with files: the user's text, a note on where the files are,
- * and the images themselves, which `images` has in base64 by artifact name. The metadata keeps the
- * message as the user sent it, for the transcript.
+ * The prompt of a message: the user's text alone, or, when files or mentions came with it, the
+ * text, what was mentioned (decision 0036), where the files are and the images themselves. The
+ * metadata keeps the message as the user sent it, for the transcript.
  */
-export function promptWithAttachments(
+export function sentPrompt(
   prompt: string,
-  kept: readonly KeptAttachment[],
-  images: ReadonlyMap<string, string>,
-): UserMessage {
+  { attachments = [], images = new Map(), mentions = [], skills = [] }: SentExtras = {},
+): AgentPrompt {
+  if (attachments.length === 0 && mentions.length === 0) return prompt;
   const content: UserContentPart[] = [];
   if (prompt) content.push({ type: "text", text: prompt });
-  content.push({ type: "text", text: attachmentNote(kept) });
-  for (const file of kept) {
+  const mentioned = mentionNote(mentions, skills);
+  if (mentioned) content.push({ type: "text", text: mentioned });
+  if (attachments.length > 0) content.push({ type: "text", text: attachmentNote(attachments) });
+  for (const file of attachments) {
     const data = file.image && images.get(file.image);
     if (data)
       content.push({ type: "image", image: { type: "data", data }, mediaType: file.mediaType });
   }
-  return {
-    role: "user",
-    content,
-    metadata: { prompt, attachments: kept.map(forTranscript) },
-  };
+  const metadata: Record<string, JsonValue> = { prompt };
+  if (attachments.length > 0) metadata.attachments = attachments.map(forTranscript);
+  if (mentions.length > 0) metadata.mentions = mentions.map((mention) => ({ ...mention }));
+  return { role: "user", content, metadata };
 }
 
 function attachmentOf(value: unknown): MessageAttachment | undefined {
@@ -65,15 +76,22 @@ function attachmentOf(value: unknown): MessageAttachment | undefined {
   return typeof image === "string" ? { name, mediaType, size, image } : { name, mediaType, size };
 }
 
-/** What a stored user message said, and the files sent with it, as the user sent them. */
+const listOf = <T>(value: unknown, read: (item: unknown) => T | undefined) =>
+  Array.isArray(value) ? value.map(read).filter((item) => item !== undefined) : [];
+
+/** What a stored user message said, and the files and mentions sent with it, as the user sent them. */
 export function sentMessage(message: Extract<Message, { role: "user" }>): {
   text: string;
   attachments?: MessageAttachment[];
+  mentions?: MessageMention[];
 } {
-  const { prompt, attachments } = asRecord(message.metadata);
-  if (typeof prompt === "string" && Array.isArray(attachments)) {
-    const files = attachments.map(attachmentOf).filter((file) => file !== undefined);
-    return { text: prompt, attachments: files };
+  const { prompt, attachments, mentions } = asRecord(message.metadata);
+  if (typeof prompt === "string" && (Array.isArray(attachments) || Array.isArray(mentions))) {
+    return {
+      text: prompt,
+      attachments: listOf(attachments, attachmentOf),
+      mentions: listOf(mentions, mentionOf),
+    };
   }
   if (typeof message.content === "string") return { text: message.content };
   return { text: message.content.map((part) => (part.type === "text" ? part.text : "")).join("") };

@@ -518,6 +518,50 @@ describe("startRuntime runs", () => {
     });
   });
 
+  test("the files and skills a prompt mentions are pointed out to the model and kept for the transcript", async () => {
+    const sandbox = directoryWorkspaces();
+    cleanups.push(() => sandbox.dispose());
+    const digest = "e".repeat(64);
+    const archive = await new Bun.Archive(
+      { "SKILL.md": "---\nname: notes\ndescription: Take notes.\n---\nSteps." },
+      { compress: "gzip" },
+    ).bytes();
+    let asked: CompletionRequest | undefined;
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: agentThat((request) => {
+        asked = request;
+        return [text("ok")];
+      }),
+    });
+    await runtime.ready;
+    const mentions = [
+      { type: "file" as const, name: "src/a.ts", from: 5, to: 14 },
+      { type: "skill" as const, name: "notes", from: 20, to: 26 },
+    ];
+    plane.send({
+      ...runStart,
+      prompt: "read @src/a.ts with /notes",
+      mentions,
+      skills: [{ name: "notes", description: "Take notes.", digest }],
+    });
+    const skillCall = () =>
+      plane.received.find((message) => message.type === "call" && message.method === "skills.get");
+    await until(() => skillCall() !== undefined);
+    const { id } = skillCall() as { id: string };
+    plane.send({ type: "reply", id, ok: true, result: { data: archive.toBase64() } });
+
+    await until(() => ended(plane).length === 1);
+    const prompt = asked?.chatHistory.find((message) => message.role === "user");
+    const content = Array.isArray(prompt?.content) ? prompt.content : [];
+    const note = content[1]?.type === "text" ? content[1].text : "";
+    expect(note).toContain("- /workspace/src/a.ts");
+    expect(note).toContain("- notes: /skills/notes/SKILL.md");
+    const [transcript] = appended(plane);
+    const user = transcript?.messages[0] as { metadata?: unknown } | undefined;
+    expect(user?.metadata).toEqual({ prompt: "read @src/a.ts with /notes", mentions });
+  });
+
   test("a question parks the run, and the answer finishes it with only what is new", async () => {
     const { sandbox, up } = slowSandbox();
     up();

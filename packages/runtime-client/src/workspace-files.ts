@@ -1,6 +1,8 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
-import { isAbsolute, join, relative, sep } from "node:path";
-import type { FileContent, FileEntry } from "@aven/protocol/runtime-wire";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
+import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/protocol/runtime-wire";
+
+import { git, type Git } from "./git-clone";
 
 // A listing past this many entries is cut; a folder that large is not browsed by eye.
 const MAX_ENTRIES = 2000;
@@ -38,6 +40,44 @@ export async function listDirectory(root: string, path: string): Promise<FileEnt
       a.name.localeCompare(b.name),
   );
   return entries.slice(0, MAX_ENTRIES);
+}
+
+// The files git knows of: tracked and untracked, minus what it ignores and what was deleted.
+async function knownFiles(root: string, run: Git) {
+  const list = async (...args: string[]) => {
+    const { code, stdout } = await run(["ls-files", "-z", ...args], { cwd: root });
+    return code === 0 ? stdout.split("\0").filter(Boolean) : [];
+  };
+  const deleted = new Set(await list("--deleted"));
+  return (await list("--cached", "--others", "--exclude-standard")).filter(
+    (path) => !deleted.has(path),
+  );
+}
+
+// How well a path matches: its name starting with the query, its name holding it, then its path.
+function rank(path: string, query: string) {
+  const name = basename(path).toLowerCase();
+  if (name.startsWith(query)) return 0;
+  if (name.includes(query)) return 1;
+  return path.toLowerCase().includes(query) ? 2 : undefined;
+}
+
+/**
+ * The files of the workspace whose path holds `query`, best first, for the composer's `@`
+ * (decision 0036). Only paths, from what git lists: an ignored folder such as `node_modules` is not
+ * searched, and nothing is read. Empty when `root` holds no repository.
+ */
+export async function searchWorkspace(root: string, query: string, run: Git = git) {
+  const wanted = query.trim().toLowerCase();
+  const found: { path: string; rank: number }[] = [];
+  for (const path of await knownFiles(root, run)) {
+    const at = rank(path, wanted);
+    if (at !== undefined) found.push({ path, rank: at });
+  }
+  found.sort(
+    (a, b) => a.rank - b.rank || a.path.length - b.path.length || a.path.localeCompare(b.path),
+  );
+  return found.slice(0, FILE_SEARCH_LIMIT).map(({ path }) => path);
 }
 
 /** A file of the workspace as text, cut at 512 KiB; binary files and missing ones say so. */

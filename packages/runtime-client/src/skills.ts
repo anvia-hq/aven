@@ -8,10 +8,9 @@ import {
   readSkillFolders,
   type SkillListing,
 } from "@aven/agents/skills";
+import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { errorMessage } from "@aven/agents/values";
 import { SKILL_DIGEST, type RunSkill } from "@aven/protocol/runtime-wire";
-
-const WORKDIR = "/workspace";
 
 /** Gets a skill's folder as a `.tar.gz` from the control plane. */
 export type FetchSkill = (digest: string) => Promise<Uint8Array>;
@@ -54,7 +53,7 @@ async function repositorySkills(threadId: string, workspace: string) {
     listed.push({
       name: skill.name,
       description: skill.description,
-      path: `${WORKDIR}/${REPO_SKILLS_DIR}/${skill.name}/SKILL.md`,
+      path: `${WORKSPACE_DIR}/${REPO_SKILLS_DIR}/${skill.name}/SKILL.md`,
     });
   }
   return listed;

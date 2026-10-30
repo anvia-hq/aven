@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { applyEvent, isRunning, type ChatMessage, type RunEvent } from "./events";
+import { applyEvent, isRunning, mentionToken, type ChatMessage, type RunEvent } from "./events";
 
 type Fixture = {
   name: string;
@@ -71,5 +71,24 @@ describe("applyEvent with attachments", () => {
     expect(first).toMatchObject({ role: "user", attachments });
     expect(second?.role).toBe("user");
     expect(second && "attachments" in second).toBe(false);
+  });
+});
+
+describe("applyEvent with mentions", () => {
+  test("a message's mentions go on the user message", () => {
+    const mentions = [{ type: "file" as const, name: "a.ts", from: 0, to: 5 }];
+    const events: RunEvent[] = [
+      { type: "run_start", prompt: "@a.ts", mentions },
+      { type: "done" },
+      { type: "run_start", prompt: "again" },
+    ];
+    const [first, , second] = events.reduce(applyEvent, [] as ChatMessage[]);
+    expect(first).toMatchObject({ role: "user", mentions });
+    expect(second && "mentions" in second).toBe(false);
+  });
+
+  test("a mention's token is its sign and its name", () => {
+    expect(mentionToken({ type: "file", name: "src/a.ts" })).toBe("@src/a.ts");
+    expect(mentionToken({ type: "skill", name: "notes" })).toBe("/notes");
   });
 });

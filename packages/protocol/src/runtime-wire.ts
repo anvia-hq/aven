@@ -2,7 +2,7 @@
 // WebSocket that the runtime opens. Either side can send a one-way message, or a `call` that the
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
-import type { MessageAttachment, RunEvent } from "./events";
+import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
 export type RunThreadInfo = {
   id: string;
@@ -67,8 +67,12 @@ export type ThreadDiff = {
   truncated: boolean;
 };
 
-/** What the control plane asks of a runner about the files of a thread's workspace (decision 0031); params are `{ threadId, path }`. */
-export type FilesCallMethod = "files.list" | "files.read";
+/**
+ * What the control plane asks of a runner about the files of a thread's workspace: `files.list`
+ * and `files.read` take `{ threadId, path }` (decision 0031), `files.search` takes `{ threadId,
+ * query }` and answers with the paths of the files that match it (decision 0036).
+ */
+export type FilesCallMethod = "files.list" | "files.read" | "files.search";
 
 export type FileEntry = { name: string; type: "file" | "directory" };
 
@@ -118,6 +122,11 @@ export type DiffGetParams = { threadId: string; scope: DiffScope };
 
 export type FilesCallParams = { threadId: string; path: string };
 
+export type FilesSearchParams = { threadId: string; query: string };
+
+/** The most paths a `files.search` answers with. */
+export const FILE_SEARCH_LIMIT = 50;
+
 export type ArtifactsReadParams = { threadId: string; name: string };
 
 /**
@@ -142,6 +151,7 @@ export type ControlPlaneToRuntime =
       thread: RunThreadInfo;
       prompt: string;
       attachments?: RunAttachment[];
+      mentions?: MessageMention[];
       skills?: RunSkill[];
       model?: RunModel;
     }
@@ -268,6 +278,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
 // Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
 // Version 13: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
 // Version 12: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
@@ -281,4 +292,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 14;
+export const WIRE_VERSION = 15;

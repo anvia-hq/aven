@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { listDirectory, readWorkspaceFile } from "./workspace-files";
+import { git } from "./git-clone";
+import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 
 const dirs: string[] = [];
 
@@ -71,5 +72,42 @@ describe("browsing a workspace", () => {
     const big = await readWorkspaceFile(root, "big.txt");
     expect(big).toMatchObject({ kind: "text", truncated: true, size: 600 * 1024 });
     expect(big.kind === "text" && big.text.length).toBe(512 * 1024);
+  });
+});
+
+describe("searching a workspace", () => {
+  // A real repository: a tracked file, a deleted one, an untracked one and an ignored folder.
+  async function repository() {
+    const base = await mkdtemp(join(tmpdir(), "aven-search-"));
+    dirs.push(base);
+    const run = (...args: string[]) => git(args, { cwd: base });
+    await run("init", "-q");
+    await mkdir(join(base, "src/app"), { recursive: true });
+    await mkdir(join(base, "node_modules/app"), { recursive: true });
+    await writeFile(join(base, ".gitignore"), "node_modules\n");
+    await writeFile(join(base, "src/app/main.ts"), "");
+    await writeFile(join(base, "src/app.ts"), "");
+    await writeFile(join(base, "src/gone.ts"), "");
+    await writeFile(join(base, "app.config.ts"), "");
+    await writeFile(join(base, "node_modules/app/index.js"), "");
+    await run("add", ".gitignore", "src/app/main.ts", "src/app.ts", "src/gone.ts");
+    await rm(join(base, "src/gone.ts"));
+    return base;
+  }
+
+  test("finds files by name first, then by path, without ignored or deleted ones", async () => {
+    const root = await repository();
+    expect(await searchWorkspace(root, "app")).toEqual([
+      "src/app.ts",
+      "app.config.ts",
+      "src/app/main.ts",
+    ]);
+    expect(await searchWorkspace(root, "GONE")).toEqual([]);
+    expect(await searchWorkspace(root, "")).toContain(".gitignore");
+  });
+
+  test("a folder that is no repository has nothing to find", async () => {
+    const { root } = await workspace();
+    expect(await searchWorkspace(root, "a")).toEqual([]);
   });
 });

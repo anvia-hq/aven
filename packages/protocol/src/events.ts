@@ -93,18 +93,38 @@ export const ATTACHMENT_LIMITS = {
   imageBytes: 5 * 1024 * 1024,
 } as const;
 
+/**
+ * A file or a skill the user picked in the composer (decision 0036). Its token in the prompt is
+ * `@` and the file's path in the workspace, or `/` and the skill's name, from `from` to `to`.
+ */
+export type MessageMention = { type: "file" | "skill"; name: string; from: number; to: number };
+
+/** How many mentions a message may carry. */
+export const MENTION_LIMIT = 20;
+
+/** The text of a mention's token in the prompt. */
+export const mentionToken = ({ type, name }: Pick<MessageMention, "type" | "name">) =>
+  `${type === "file" ? "@" : "/"}${name}`;
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   parts: MessagePart[];
   /** On a user message: the files sent with it. */
   attachments?: MessageAttachment[];
+  /** On a user message: the files and skills it mentions. */
+  mentions?: MessageMention[];
 };
 
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
   | { type: "snapshot"; messages: ChatMessage[]; running: boolean; usage?: ThreadUsage }
-  | { type: "run_start"; prompt: string; attachments?: MessageAttachment[] }
+  | {
+      type: "run_start";
+      prompt: string;
+      attachments?: MessageAttachment[];
+      mentions?: MessageMention[];
+    }
   /** The user answered the agent's question and its run continues in the same assistant message. */
   | { type: "run_resume" }
   | { type: "text"; delta: string }
@@ -191,6 +211,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts: [{ type: "text", text: event.prompt }],
       };
       if (event.attachments?.length) user.attachments = event.attachments;
+      if (event.mentions?.length) user.mentions = event.mentions;
       return [
         ...messages,
         user,

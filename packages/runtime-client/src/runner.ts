@@ -17,10 +17,15 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
-import { artifactsReadParams, diffGetParams, filesCallParams } from "./call-params";
+import {
+  artifactsReadParams,
+  diffGetParams,
+  filesCallParams,
+  filesSearchParams,
+} from "./call-params";
 import { DesktopViewers } from "./desktop-viewers";
 import { threadDiff } from "./thread-diff";
-import { listDirectory, readWorkspaceFile } from "./workspace-files";
+import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -254,13 +259,20 @@ export function startRuntime(options: RuntimeOptions) {
   }
 
   // A folder or a file of a thread's workspace; null when it has no workspace on this runner yet.
-  async function filesOf(method: FilesCallMethod, params: unknown) {
+  async function filesOf(method: Exclude<FilesCallMethod, "files.search">, params: unknown) {
     const { threadId, path } = filesCallParams(params);
     const root = await options.sandbox.workspace(threadId);
     if (!root) return null;
     return method === "files.list"
       ? { entries: await listDirectory(root, path) }
       : readWorkspaceFile(root, path);
+  }
+
+  // The files of a thread's workspace that match the composer's `@`; null without a workspace.
+  async function searchOf(params: unknown) {
+    const { threadId, query } = filesSearchParams(params);
+    const root = await options.sandbox.workspace(threadId);
+    return root ? { paths: await searchWorkspace(root, query) } : null;
   }
 
   // An image the thread's agent showed; null when this runner does not have it. Read from the
@@ -275,6 +287,7 @@ export function startRuntime(options: RuntimeOptions) {
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
+    if (method === "files.search") return searchOf(params);
     return viewers.call(method, params);
   }
 

@@ -1,5 +1,5 @@
 import type { AgentPrompt } from "@anvia/core";
-import { promptWithAttachments, type KeptAttachment } from "@aven/agents/attachments";
+import { sentPrompt, type KeptAttachment } from "@aven/agents/attachments";
 import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import type { RunRecord } from "./run-records";
@@ -26,15 +26,15 @@ export async function keepAttachments(
   return kept;
 }
 
-// What the agent is asked: the user's text, or with files, the text, where the files are, and the
-// images themselves, read back from the copies `keepAttachments` made.
+// What the agent is asked: the user's text, or with files or mentions, the text, what it mentions
+// (the skills from the run's own list), where the files are, and the images themselves, read back
+// from the copies `keepAttachments` made.
 export async function promptOf(record: RunRecord, { artifacts }: Stores): Promise<AgentPrompt> {
-  const prompt = record.prompt ?? "";
-  if (!record.attachments?.length) return prompt;
+  const { attachments = [], mentions, skillListing: skills } = record;
   const images = new Map<string, string>();
-  for (const { image } of record.attachments) {
+  for (const { image } of attachments) {
     const content = image && (await artifacts?.read(record.thread.id, image));
     if (image && content) images.set(image, content.data);
   }
-  return promptWithAttachments(prompt, record.attachments, images);
+  return sentPrompt(record.prompt ?? "", { attachments, images, mentions, skills });
 }

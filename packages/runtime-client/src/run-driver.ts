@@ -353,6 +353,7 @@ export function createRunDriver(context: DriverContext) {
         model: message.model,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
+        mentions: message.type === "run.start" ? message.mentions : undefined,
         skills: message.skills,
         agentId: `run-${message.runId}`,
         turn: 0,
