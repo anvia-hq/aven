@@ -22,6 +22,7 @@ export function ThreadMessages({ threadId, messages, running = false, error, asi
     <div ref={scrollRef} className="h-full overflow-y-auto">
       <div className="flex">
         <div className="min-w-0 flex-1">
+          {/* The bottom padding clears the composer; WorkingIndicator's `bottom-48` matches it. */}
           <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-48">
             {messages.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
