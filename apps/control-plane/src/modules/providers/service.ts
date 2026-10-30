@@ -1,15 +1,11 @@
 import { db } from "@aven/db/client";
 import { providers, type ProviderRow } from "@aven/db/schema/providers";
-import {
-  DEFAULT_MODEL_IDS,
-  reasoningControlsFor,
-  type ModelConfig,
-  type ReasoningControls,
-} from "@aven/agents/model";
+import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "./crypto";
+import { defaultModelId } from "./default-model";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 
@@ -53,7 +49,8 @@ type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: string };
 // since every server is its own.
 const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "azure"]);
 
-const hasBaseUrl = (kind: ProviderKind) => kind === "openai-compatible" || kind === "azure";
+const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "openai-compatible" =>
+  kind === "openai-compatible" || kind === "azure";
 
 function requireApiKey({ apiKey }: ModelSource) {
   if (!apiKey) throw new ModelListError("An API key is needed to list models");
@@ -340,11 +337,7 @@ async function assertRunnable(kind: ProviderKind, modelId: string) {
 
 // The window of the model the run will use, the provider's default when none is named.
 async function contextWindowOf(config: ModelConfig) {
-  const modelId =
-    config.modelId ??
-    (config.provider === "openai-compatible" || config.provider === "azure"
-      ? undefined
-      : DEFAULT_MODEL_IDS[config.provider]);
+  const modelId = config.modelId ?? defaultModelId(config.provider);
   return modelId ? modelCatalog.contextWindow(config.provider, modelId) : null;
 }
 

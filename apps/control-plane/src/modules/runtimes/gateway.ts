@@ -1,9 +1,10 @@
 import { createHmac, randomBytes } from "node:crypto";
 
-import { DEFAULT_MODEL_IDS, type ModelConfig, type Provider } from "@aven/agents/model";
+import type { ModelConfig, Provider } from "@aven/agents/model";
 import type { RunModel } from "@aven/protocol/runtime-wire";
 
 import { UnavailableError } from "../../errors";
+import { defaultModelId } from "../providers/default-model";
 import { bearerToken } from "./bearer";
 
 const TOKEN_PREFIX = "avgw_";
@@ -46,13 +47,13 @@ const tokenFor = (scope: string) =>
   `${TOKEN_PREFIX}${createHmac("sha256", TOKEN_SECRET).update(`run-gateway:${scope}`).digest("base64url")}`;
 
 // Azure and compatible servers have no shared environment key: the user's own is required or optional.
-const ENV_KEYS = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY" } as const;
+const ENV_KEYS: Partial<Record<Provider, string>> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
 
 /** The model a run asked for cannot be used, such as a missing environment key. */
 export class ModelUnavailableError extends UnavailableError {}
-
-const envKeyFor = (provider: Provider) =>
-  provider === "anthropic" || provider === "openai" ? process.env[ENV_KEYS[provider]] : undefined;
 
 // With no provider of their own, a sender runs on the environment's shared one.
 export function environmentModel(): ModelConfig {
@@ -79,13 +80,12 @@ export class RunGateway {
   // question keeps the model client it was built with, so the run that answers must reach the
   // model with that token (decision 0021). The grant still lasts only as long as the run.
   issue(runId: string, config: ModelConfig, scope?: string): RunModel {
-    const key = config.apiKey ?? envKeyFor(config.provider);
+    const envKey = ENV_KEYS[config.provider];
+    const key = config.apiKey ?? (envKey && process.env[envKey]);
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
     }
-    if (!key && (config.provider === "anthropic" || config.provider === "openai")) {
-      throw new ModelUnavailableError(`${ENV_KEYS[config.provider]} is not set`);
-    }
+    if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
     const token = scope
       ? tokenFor(scope)
       : `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
@@ -177,11 +177,7 @@ const record = (value: unknown) =>
 
 // The runtime picks neither the model nor the reasoning effort: the sender's choice wins.
 function pin(body: Record<string, unknown>, model: ModelConfig, path: string) {
-  body.model =
-    model.modelId ??
-    (model.provider === "openai-compatible" || model.provider === "azure"
-      ? body.model
-      : DEFAULT_MODEL_IDS[model.provider]);
+  body.model = model.modelId ?? defaultModelId(model.provider) ?? body.model;
   if (model.provider === "anthropic") pinAnthropicEffort(body, model.reasoningEffort);
   if (model.provider === "openai" || model.provider === "azure")
     pinOpenAiEffort(body, model.reasoningEffort, path);
