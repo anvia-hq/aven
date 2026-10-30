@@ -1,6 +1,7 @@
 import type { Agent, AnyTool } from "@anvia/core";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
   decodeViewerFrame,
@@ -234,8 +235,7 @@ export function startRuntime(options: RuntimeOptions) {
     try {
       sendOrWarn({ type: "reply", id, ok: true, result: await work() });
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      sendOrWarn({ type: "reply", id, ok: false, error: text });
+      sendOrWarn({ type: "reply", id, ok: false, error: errorMessage(error) });
     }
   }
 

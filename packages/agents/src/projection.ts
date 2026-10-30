@@ -27,13 +27,11 @@ import {
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
+import { asRecord } from "./values";
 
 // What a client is sent of a tool result; the model sees the full output.
 const MAX_UI_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;
-
-const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
 

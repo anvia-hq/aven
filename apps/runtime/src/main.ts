@@ -1,3 +1,4 @@
+import { errorMessage } from "@aven/agents/values";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 
@@ -50,7 +51,7 @@ const sandbox = await Sandboxes.start({
   memoryMb: positiveNumber("AVEN_SANDBOX_MEMORY_MB"),
   cpus: positiveNumber("AVEN_SANDBOX_CPUS"),
 }).catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(errorMessage(error));
   process.exit(1);
 });
 

@@ -12,6 +12,7 @@ import {
   projectToolOutput,
   tokenUsageOf,
 } from "@aven/agents/projection";
+import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 
 /** How a durable run ended, as far as the control plane is told (see `RunOutcome` on the wire). */
@@ -23,9 +24,6 @@ export type DurableEnd =
 // Only these deltas are of interest to a client; reasoning and provider payloads are private.
 const DELTAS = new Set(["text_delta", "tool_call"]);
 
-const record = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
-
 // Durable journals a run as events of its own. This turns them back into what a client sees:
 // the same run events the agent's stream used to project, plus how the run ended.
 export function createDurableEventMapper(options: { contextWindow?: number } = {}) {
@@ -35,17 +33,17 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
   const announced = new Set<string>();
 
   function map(event: DurableEvent): { events: RunEvent[]; end?: DurableEnd } {
-    const data = record(event.data);
+    const data = asRecord(event.data);
     switch (event.type) {
       case "model_delta": {
-        const delta = record(data.event);
+        const delta = asRecord(data.event);
         if (typeof delta.type !== "string" || !DELTAS.has(delta.type)) return { events: [] };
         const projected = projectStreamEvent(delta as unknown as AgentStreamEvent);
         if (projected?.type === "tool_start") announced.add(projected.tool.id);
         return { events: projected ? [projected] : [] };
       }
       case "model_completed": {
-        const usage = record(record(data.result).usage) as unknown as Usage;
+        const usage = asRecord(asRecord(data.result).usage) as unknown as Usage;
         if (typeof usage.inputTokens !== "number") return { events: [] };
         const { contextWindow } = options;
         return {
@@ -59,7 +57,7 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         };
       }
       case "tool_started": {
-        const call = record(record(data.input).toolCall);
+        const call = asRecord(asRecord(data.input).toolCall);
         if (typeof data.operationId === "string" && typeof call.toolCallId === "string")
           calls.set(data.operationId, call.toolCallId);
         if (typeof call.toolCallId !== "string" || announced.has(call.toolCallId))
@@ -71,7 +69,7 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
       }
       case "tool_completed": {
         const id = typeof data.operationId === "string" ? calls.get(data.operationId) : undefined;
-        const output = record(data.result).output as ToolResultOutput | undefined;
+        const output = asRecord(data.result).output as ToolResultOutput | undefined;
         if (!id || !output) return { events: [] };
         const { status, output: text } = projectToolOutput(output);
         return { events: [{ type: "tool_end", id, status, output: text }] };
@@ -87,7 +85,7 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
 }
 
 function endOf(data: Record<string, unknown>): DurableEnd | undefined {
-  const outcome = record(data.outcome);
+  const outcome = asRecord(data.outcome);
   const messages = Array.isArray(outcome.messages)
     ? (outcome.messages as AgentOutcome<unknown>["messages"])
     : [];

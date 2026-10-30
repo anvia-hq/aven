@@ -1,5 +1,6 @@
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { errorMessage } from "@aven/agents/values";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
@@ -71,7 +72,6 @@ export async function cloneRepository(
         rm(join(dir, entry), { recursive: true, force: true }),
       ),
     );
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`Could not clone ${access.cloneUrl}: ${reason}`);
+    throw new Error(`Could not clone ${access.cloneUrl}: ${errorMessage(error)}`);
   }
 }

@@ -14,6 +14,7 @@ import {
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { projectToolOutput } from "@aven/agents/projection";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
@@ -105,9 +106,6 @@ type GoalTracker = {
 };
 
 type GoalContext = { verify: () => Promise<CommandResult[]> };
-
-const record = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 /** One durable run being followed: its events as they happen, how it ended, and a way to stop it. */
 export type FollowedRun = {
@@ -343,8 +341,8 @@ export class DurableRuns {
 
     for await (const event of handle.stream()) {
       if (event.type !== "status") continue;
-      const data = record(event.data);
-      const wait = record(data.wait);
+      const data = asRecord(event.data);
+      const wait = asRecord(data.wait);
       if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
         if (!seen.has(wait.runId)) {
           seen.add(wait.runId);
@@ -374,8 +372,8 @@ export class DurableRuns {
       if (data.status === "waiting" && wait.type === "signal") {
         await settled();
         const { task } = await handle.snapshot();
-        const checkpoint = record(task.checkpoint);
-        const handoff = record(checkpoint.handoff);
+        const checkpoint = asRecord(task.checkpoint);
+        const handoff = asRecord(checkpoint.handoff);
         await handle.cancel().catch(() => undefined);
         return {
           type: "paused",

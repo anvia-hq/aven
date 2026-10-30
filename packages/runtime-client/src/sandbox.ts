@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
+import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
@@ -131,8 +132,7 @@ export function dockerRunArgs(input: DockerRunInput) {
 
 function safeJson(text: string): Record<string, unknown> {
   try {
-    const value: unknown = JSON.parse(text);
-    return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+    return asRecord(JSON.parse(text));
   } catch {
     return {};
   }

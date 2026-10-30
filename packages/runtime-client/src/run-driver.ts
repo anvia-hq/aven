@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
+import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   CallMethod,
@@ -267,8 +268,7 @@ export function createRunDriver(context: DriverContext) {
       }
       finish(runId, end, run.cancelReason);
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      finish(runId, { type: "error", error: text });
+      finish(runId, { type: "error", error: errorMessage(error) });
     } finally {
       live.delete(runId);
       context.finished(thread.id);

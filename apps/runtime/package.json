@@ -9,6 +9,7 @@
     "build": "bun build --compile --external @valibot/to-json-schema src/main.ts --outfile dist/aven-runtime"
   },
   "dependencies": {
+    "@aven/agents": "workspace:*",
     "@aven/runtime-client": "workspace:*"
   }
 }

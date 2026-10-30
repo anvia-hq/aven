@@ -1,5 +1,6 @@
 import type { AnyTool, Message } from "@anvia/core";
 import type { GoalAssessment, GoalDecision } from "@anvia/durable";
+import { asRecord } from "@aven/agents/values";
 import { createHash } from "node:crypto";
 
 export type CommandResult = {
@@ -15,9 +16,6 @@ const OUTPUT_TAIL_CHARS = 1_500;
 const tail = (text: string) =>
   text.length > OUTPUT_TAIL_CHARS ? `…${text.slice(-OUTPUT_TAIL_CHARS)}` : text;
 
-const record = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
-
 // Runs the goal's verify commands in the thread's sandbox, one after another, so a later command
 // can rely on an earlier one (a build before a test).
 export function verifyWith(exec: AnyTool | undefined, commands: readonly string[]) {
@@ -27,7 +25,7 @@ export function verifyWith(exec: AnyTool | undefined, commands: readonly string[
       throw new Error("The thread's sandbox is not running, so the goal cannot be checked");
     const results: CommandResult[] = [];
     for (const command of commands) {
-      const result = record(await exec.call({ command, timeoutMs: COMMAND_TIMEOUT_MS }));
+      const result = asRecord(await exec.call({ command, timeoutMs: COMMAND_TIMEOUT_MS }));
       const exited = result.status === "exited";
       results.push({
         command,

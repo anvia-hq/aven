@@ -1,4 +1,5 @@
 import type { SandboxDesktop } from "@anvia/sandbox";
+import { errorMessage } from "@aven/agents/values";
 import {
   encodeViewerFrame,
   type DesktopCallMethod,
@@ -70,7 +71,7 @@ export class DesktopViewers {
       viewer.tunnel = await desktop.openViewer();
     } catch (error) {
       this.#viewers.delete(viewerId);
-      return this.#refuse(viewerId, error instanceof Error ? error.message : String(error));
+      return this.#refuse(viewerId, errorMessage(error));
     }
     if (viewer.closing) return viewer.tunnel.close();
     this.link.send({ type: "desktop.opened", viewerId });
