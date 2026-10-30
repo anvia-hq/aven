@@ -18,7 +18,7 @@ test.describe("prompt composer", () => {
     await expect(
       page.getByRole("link", { name: "Add a provider to choose a model" }),
     ).toBeVisible();
-    await expect(page.getByRole("slider")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toHaveCount(0);
   });
 
   test("the model and reasoning effort picked are sent with the message", async ({ page }) => {
@@ -45,31 +45,36 @@ test.describe("prompt composer", () => {
     });
 
     await createProject(page);
-    const model = page.getByRole("combobox", { name: "Model" });
-    await expect(page.getByRole("slider")).toHaveCount(0);
+    const menu = page.getByRole("button", { name: "Model and reasoning effort" });
+    const effort = page.getByRole("slider", { name: "Reasoning effort" });
 
-    await model.click();
+    // One trigger opens one panel with the models and, for a model that has them, a slider of efforts.
+    await menu.click();
+    await expect(effort).toHaveCount(0);
     await page.getByRole("option", { name: "o3" }).click();
-    const slider = page.getByRole("slider", { name: "Reasoning effort" });
-    await expect(slider).toBeVisible();
-    await slider.focus();
+    await expect(effort).toBeVisible();
+    await effort.focus();
     await page.keyboard.press("End");
-    await expect(slider).toHaveAttribute("aria-valuetext", "high");
+    await expect(effort).toHaveAttribute("aria-valuetext", "high");
 
-    // A model without the control has nothing to slide.
-    await model.click();
+    // A model without the control has no effort to choose.
     await page.getByRole("option", { name: "gpt-4o" }).click();
-    await expect(page.getByRole("slider")).toHaveCount(0);
-    await model.click();
-    await page.getByRole("option", { name: "o3" }).click();
-    await expect(page.getByRole("slider", { name: "Reasoning effort" })).toHaveAttribute(
-      "aria-valuetext",
-      "medium",
-    );
-    await page.keyboard.press("Escape");
-    await page.getByRole("slider", { name: "Reasoning effort" }).focus();
-    await page.keyboard.press("End");
+    await expect(effort).toHaveCount(0);
 
+    // Back on o3 the effort starts from the model's own default, then is picked again.
+    await page.getByRole("option", { name: "o3" }).click();
+    await expect(effort).toHaveAttribute("aria-valuetext", "medium");
+    await effort.focus();
+    await page.keyboard.press("End");
+    await page.keyboard.press("Escape");
+
+    // The choice survives a reload.
+    await page.reload();
+    await expect(menu).toContainText("high");
+    await expect(menu).toContainText("o3");
+    // A reload forgets which project was picked, not the model.
+    await page.getByRole("combobox", { name: "Project" }).click();
+    await page.getByRole("option", { name: "composer-app" }).click();
     await page.getByLabel("Prompt").fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
