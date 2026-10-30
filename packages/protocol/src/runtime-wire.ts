@@ -78,6 +78,21 @@ export type FileContent =
   | { kind: "binary"; size: number }
   | { kind: "missing" };
 
+/** Everything the control plane can `call` a runner for. */
+export type RunnerCallMethod = DesktopCallMethod | DiffCallMethod | FilesCallMethod;
+
+/** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
+export type DesktopCallParams = {
+  threadId: string;
+  holder?: string;
+  leaseMs?: number;
+  force?: boolean;
+};
+
+export type DiffGetParams = { threadId: string; scope: DiffScope };
+
+export type FilesCallParams = { threadId: string; path: string };
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
@@ -106,7 +121,7 @@ export type ControlPlaneToRuntime =
   | {
       type: "call";
       id: string;
-      method: DesktopCallMethod | DiffCallMethod | FilesCallMethod;
+      method: RunnerCallMethod;
       params: unknown;
     }
   | Reply;
@@ -152,12 +167,24 @@ export type RepoAccess = {
   token: string;
 };
 
+export type RepoAccessParams = { runId: string };
+
 export type MemoryAppendParams = {
   runId: string;
   turn: number;
   /** Messages in Anvia's format, as stored in conversation memory; opaque on the wire. */
   messages: unknown[];
 };
+
+/** WebSocket close codes the control plane ends a runtime's connection with. */
+export const CloseCode = {
+  /** The runtime speaks another wire version; it should not reconnect. */
+  UnsupportedVersion: 4000,
+  /** A newer connection from the same runtime took this one's place. */
+  Replaced: 4001,
+  /** The runtime was revoked or its token rotated; it should not reconnect. */
+  Revoked: 4002,
+} as const;
 
 // A viewer's VNC bytes travel as binary frames, in both directions: the viewer id as 16 bytes
 // followed by the payload. Everything else on the wire is JSON text.
