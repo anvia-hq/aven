@@ -1,71 +1,56 @@
 import { Folder, GitDiff, LayoutDashboard, Monitor } from "@mynaui/icons-react";
+import type { ComponentType } from "react";
 
 import { Button } from "@/components/button";
 
+import type { ThreadPanels } from "../hooks/use-thread-panels";
 import type { Thread } from "../types";
 
 type Props = {
   thread: Thread;
-  overviewOpen: boolean;
-  onToggleOverview: () => void;
-  desktopOpen: boolean;
-  onToggleDesktop: () => void;
-  diffOpen: boolean;
-  onToggleDiff: () => void;
-  filesOpen: boolean;
-  onToggleFiles: () => void;
+  panels: ThreadPanels;
 };
 
-export function ThreadHeader({
-  thread,
-  overviewOpen,
-  onToggleOverview,
-  desktopOpen,
-  onToggleDesktop,
-  diffOpen,
-  onToggleDiff,
-  filesOpen,
-  onToggleFiles,
-}: Props) {
+export function ThreadHeader({ thread, panels }: Props) {
+  const toggles = [
+    { label: "Overview", icon: LayoutDashboard, panel: panels.overview },
+    { label: "Desktop", icon: Monitor, panel: panels.desktop },
+    { label: "Changes", icon: GitDiff, panel: panels.diff },
+    { label: "Files", icon: Folder, panel: panels.files },
+  ];
   return (
     <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
       <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</h1>
-      <Button
-        variant={overviewOpen ? "secondary" : "ghost"}
-        size="icon-sm"
-        aria-label="Overview"
-        aria-pressed={overviewOpen}
-        onClick={onToggleOverview}
-      >
-        <LayoutDashboard />
-      </Button>
-      <Button
-        variant={desktopOpen ? "secondary" : "ghost"}
-        size="icon-sm"
-        aria-label="Desktop"
-        aria-pressed={desktopOpen}
-        onClick={onToggleDesktop}
-      >
-        <Monitor />
-      </Button>
-      <Button
-        variant={diffOpen ? "secondary" : "ghost"}
-        size="icon-sm"
-        aria-label="Changes"
-        aria-pressed={diffOpen}
-        onClick={onToggleDiff}
-      >
-        <GitDiff />
-      </Button>
-      <Button
-        variant={filesOpen ? "secondary" : "ghost"}
-        size="icon-sm"
-        aria-label="Files"
-        aria-pressed={filesOpen}
-        onClick={onToggleFiles}
-      >
-        <Folder />
-      </Button>
+      {toggles.map(({ label, icon, panel }) => (
+        <PanelToggle
+          key={label}
+          label={label}
+          icon={icon}
+          open={panel.open}
+          onToggle={panel.toggle}
+        />
+      ))}
     </header>
+  );
+}
+
+type ToggleProps = {
+  label: string;
+  icon: ComponentType;
+  open: boolean;
+  onToggle: () => void;
+};
+
+function PanelToggle({ label, icon: Icon, open, onToggle }: ToggleProps) {
+  return (
+    <Button
+      variant={open ? "secondary" : "ghost"}
+      size="icon-sm"
+      aria-label={label}
+      aria-pressed={open}
+      onClick={onToggle}
+    >
+      <Icon />
+    </Button>
   );
 }

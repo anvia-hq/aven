@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { cn } from "cn";
 
+import { NotFound } from "@/components/not-found";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
-import { safeStorage, useLocalStorage } from "@/hooks/use-local-storage";
+import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
@@ -16,6 +17,7 @@ import { QuestionForm } from "@/modules/threads/components/question-form";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { useThread } from "@/modules/threads/hooks/use-thread";
+import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
 export const Route = createFileRoute("/_authed/threads/$threadId")({
   component: ThreadPage,
@@ -27,13 +29,10 @@ function ThreadPage() {
     useThread(threadId);
   // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
-  // What is open is remembered. The overview is on until closed; the desktop opens when asked for.
-  const [overviewOpen, setOverviewOpen] = useLocalStorage("aven.overview-open", true);
-  const [desktopOpen, setDesktopOpen] = useLocalStorage("aven.desktop-open", false);
-  const [diffOpen, setDiffOpen] = useLocalStorage("aven.diff-open", false);
-  const [filesOpen, setFilesOpen] = useLocalStorage("aven.files-open", false);
+  const panels = useThreadPanels();
+  const { overview, desktop, diff, files } = panels;
   // Files, Changes and Desktop share one column, so the conversation keeps the same width whichever is open.
-  const sideOpen = diffOpen || desktopOpen || filesOpen;
+  const sideOpen = diff.open || desktop.open || files.open;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const side = useDefaultLayout({
     id: "aven.thread-side",
@@ -50,40 +49,28 @@ function ThreadPage() {
   if (!loaded) return null;
 
   if (!thread) {
-    return (
-      <div className="flex min-h-svh flex-col items-center justify-center gap-2">
-        <h1 className="text-xl font-semibold">Thread not found</h1>
-        <Link to="/threads" className="text-sm text-muted-foreground underline">
-          Back to threads
-        </Link>
-      </div>
-    );
+    return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
   }
 
   const sidePanels: { id: string; node: ReactNode }[] = [];
-  if (filesOpen) {
+  if (files.open) {
     sidePanels.push({
       id: "files",
       node: (
-        <FilesPanel
-          key={thread.id}
-          threadId={thread.id}
-          running={running}
-          onClose={() => setFilesOpen(false)}
-        />
+        <FilesPanel key={thread.id} threadId={thread.id} running={running} onClose={files.close} />
       ),
     });
   }
-  if (diffOpen) {
+  if (diff.open) {
     sidePanels.push({
       id: "diff",
-      node: <DiffPanel threadId={thread.id} running={running} onClose={() => setDiffOpen(false)} />,
+      node: <DiffPanel threadId={thread.id} running={running} onClose={diff.close} />,
     });
   }
-  if (desktopOpen) {
+  if (desktop.open) {
     sidePanels.push({
       id: "desktop",
-      node: <DesktopPanel threadId={thread.id} onClose={() => setDesktopOpen(false)} />,
+      node: <DesktopPanel threadId={thread.id} onClose={desktop.close} />,
     });
   }
 
@@ -99,30 +86,20 @@ function ThreadPage() {
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div className="@container flex h-full min-w-0 flex-col">
-              <ThreadHeader
-                thread={thread}
-                overviewOpen={overviewOpen}
-                onToggleOverview={() => setOverviewOpen(!overviewOpen)}
-                desktopOpen={desktopOpen}
-                onToggleDesktop={() => setDesktopOpen(!desktopOpen)}
-                diffOpen={diffOpen}
-                onToggleDiff={() => setDiffOpen(!diffOpen)}
-                filesOpen={filesOpen}
-                onToggleFiles={() => setFilesOpen(!filesOpen)}
-              />
+              <ThreadHeader thread={thread} panels={panels} />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
                 <ThreadMessages
                   messages={messages}
                   running={running}
                   error={error}
-                  aside={overviewOpen && <OverviewColumn thread={thread} usage={usage} />}
+                  aside={overview.open && <OverviewColumn thread={thread} usage={usage} />}
                 />
                 <div
                   className={cn(
                     "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3",
                     // Keep the composer under the messages, not under the overview.
-                    overviewOpen && "@4xl:pr-75",
+                    overview.open && "@4xl:pr-75",
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
