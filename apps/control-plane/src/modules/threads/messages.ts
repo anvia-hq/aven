@@ -1,5 +1,5 @@
 import { ConflictError } from "../../errors";
-import { providersService } from "../providers/service";
+import { resolveModel } from "../providers/resolve-model";
 import { runsService } from "../runs/service";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
@@ -17,7 +17,7 @@ export const threadMessages = {
     const thread = await threadsService.require(organizationId, threadId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
-    const model = await providersService.resolveModel(userId, selection);
+    const model = await resolveModel(userId, selection);
     await runsService.start(thread, prompt, model);
   },
 
@@ -30,7 +30,7 @@ export const threadMessages = {
     const thread = await threadsService.require(organizationId, threadId);
     const continuation = await threadsService.continuation(thread.id);
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
-    const model = await providersService.resolveModel(userId, selection);
+    const model = await resolveModel(userId, selection);
     await runsService.answer(thread, continuation, answers, model);
   },
 };

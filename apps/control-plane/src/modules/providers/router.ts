@@ -2,7 +2,8 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
-import { listAgentModels, providersService } from "./service";
+import { listAgentModels } from "./model-list";
+import { providersService } from "./service";
 
 // Providers belong to the signed-in user, not to the active organization, so no `org: true`.
 export const providersRouter = new Elysia({ prefix: "/providers" })

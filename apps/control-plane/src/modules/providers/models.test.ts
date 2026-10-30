@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { fetchModels, ModelListError } from "./service";
+import { fetchModels, ModelListError } from "./model-list";
 
 const respond = (body: unknown, init?: ResponseInit) =>
   (async () => Response.json(body, init)) as unknown as typeof fetch;

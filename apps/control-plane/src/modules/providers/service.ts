@@ -1,49 +1,16 @@
 import { db } from "@aven/db/client";
 import { providers, type ProviderRow } from "@aven/db/schema/providers";
-import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
+import type { ModelConfig } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
-import { UnavailableError, UnprocessableError } from "../../errors";
-import { decryptSecret, encryptSecret } from "./crypto";
-import { defaultModelId } from "./default-model";
-import { modelCatalog } from "./model-catalog";
+import { UnprocessableError } from "../../errors";
+import { encryptSecret, readKey } from "./crypto";
+import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
 import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 
 export class InvalidProviderError extends UnprocessableError {}
-export class ModelListError extends UnprocessableError {}
-// A message asked for a provider, model or effort the user cannot run with.
-export class InvalidSelectionError extends UnprocessableError {}
 
 type ProviderKind = ModelConfig["provider"];
-
-// What a message may choose beyond the user's default: one of their own providers, a model of it
-// and a reasoning effort that model supports.
-export type ModelSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
-
-// A model's effort levels: the SDK's own list, or for a model newer than the SDK the one models.dev
-// lists (`effortLevels`, which the model must then be built with for the SDK to accept it).
-async function effortsFor(kind: ProviderKind, modelId: string | undefined) {
-  const sdk = reasoningControlsFor({ provider: kind, modelId });
-  if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
-  const effortLevels = (await modelCatalog.efforts(kind, modelId)) ?? undefined;
-  return {
-    controls: reasoningControlsFor({ provider: kind, modelId, effortLevels }),
-    effortLevels,
-  };
-}
-
-// The effort levels of each listed model that has any; models without the control are left out.
-export async function effortsByModel(kind: ProviderKind, ids: string[]) {
-  const entries = await Promise.all(
-    ids.map(async (id) => [id, (await effortsFor(kind, id)).controls] as const),
-  );
-  return Object.fromEntries(entries.filter(([, controls]) => controls)) as Record<
-    string,
-    ReasoningControls
-  >;
-}
-
-type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: string };
 
 // The vendors have one credential each; only an OpenAI-compatible server can be added many times,
 // since every server is its own.
@@ -51,71 +18,6 @@ const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "azure"]
 
 const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "openai-compatible" =>
   kind === "openai-compatible" || kind === "azure";
-
-function requireApiKey({ apiKey }: ModelSource) {
-  if (!apiKey) throw new ModelListError("An API key is needed to list models");
-  return apiKey;
-}
-
-// Where a provider's model list is and how to ask for it.
-function modelsRequest(source: ModelSource) {
-  if (source.kind === "azure") {
-    // The resource's own deployments (decision 0025); its v1 `/models` lists what could be deployed.
-    if (!source.baseUrl) throw new ModelListError("A resource URL is needed to list models");
-    const origin = azureEndpoint.safeParse(source.baseUrl);
-    if (!origin.success) throw new ModelListError("An Azure resource URL must be https");
-    return {
-      url: `${origin.data}/openai/deployments?api-version=2022-12-01`,
-      headers: { "api-key": requireApiKey(source) },
-    };
-  }
-  if (source.kind === "anthropic") {
-    return {
-      url: "https://api.anthropic.com/v1/models?limit=1000",
-      headers: { "x-api-key": requireApiKey(source), "anthropic-version": "2023-06-01" },
-    };
-  }
-  const headers: Record<string, string> = {};
-  if (source.apiKey) headers.authorization = `Bearer ${source.apiKey}`;
-  if (source.kind === "openai") {
-    requireApiKey(source);
-    return { url: "https://api.openai.com/v1/models", headers };
-  }
-  if (!source.baseUrl) throw new ModelListError("A base URL is needed to list models");
-  return { url: `${source.baseUrl.replace(/\/+$/, "")}/models`, headers };
-}
-
-function parseModelIds(json: unknown) {
-  const data = (json as { data?: unknown } | null)?.data;
-  if (!Array.isArray(data)) throw new ModelListError("The provider returned no model list");
-  // A deployment that has not finished (or failed) provisioning cannot be called yet.
-  const ids = data.flatMap((item: { id?: unknown; status?: unknown }) =>
-    typeof item?.id === "string" && (item.status === undefined || item.status === "succeeded")
-      ? [item.id]
-      : [],
-  );
-  return [...new Set(ids)].sort();
-}
-
-// Asks the provider itself which models the key can use (`GET <base>/models`). `fetchFn` is
-// injectable so tests never hit the network.
-export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = fetch) {
-  const { url, headers } = modelsRequest(source);
-  let res: Response;
-  try {
-    res = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000) });
-  } catch {
-    throw new ModelListError("Could not reach the provider");
-  }
-  if (!res.ok) throw new ModelListError(`The provider answered ${res.status} listing models`);
-  return parseModelIds(await res.json().catch(() => null));
-}
-
-// A provider's models that can drive the agent (see `model-catalog.ts`).
-export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetch) {
-  const ids = await fetchModels(source, fetchFn);
-  return modelCatalog.chatModels(source.kind, ids);
-}
 
 // What the API returns: never the key itself, only a hint.
 export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
@@ -256,98 +158,29 @@ export const providersService = {
     return { models, efforts: await effortsByModel(row.kind, models) };
   },
 
-  // The model configuration for a run: the provider the message chose (it must be the user's own)
-  // or else their default, or null if they have neither. Decrypts the key, so call it only where
-  // a run is being started. Throws InvalidSelectionError for a choice that cannot run.
-  async resolveModel(userId: string, selection: ModelSelection = {}): Promise<ModelConfig | null> {
-    const row = await findSelectedProvider(userId, selection);
-    if (!row) return noProvider(selection);
-    const config: ModelConfig = {
-      provider: row.kind,
-      modelId: selection.modelId ?? row.modelId ?? undefined,
-      baseUrl: row.baseUrl ?? undefined,
-      apiKey: readKey(row),
-    };
-    if (selection.modelId) await assertRunnable(config.provider, selection.modelId);
-    if (selection.reasoningEffort) await applyEffort(config, selection.reasoningEffort);
-    config.contextWindow = (await contextWindowOf(config)) ?? undefined;
-    return config;
+  // The provider a run uses: the one chosen, which must be the user's own, or else their default.
+  // The row holds the encrypted key.
+  async forRun(userId: string, providerId: string | undefined) {
+    const [row] = await db
+      .select()
+      .from(providers)
+      .where(
+        providerId
+          ? ownProvider(userId, providerId)
+          : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
+      );
+    return row;
   },
 };
 
 // The models a saved provider offers: its listing. For Azure, the deployments of the resource, with
 // the one it was set up with first; that one stays on offer if the listing fails.
 async function modelsOf(row: ProviderRow) {
-  if (row.kind === "azure") {
-    const listed = await listAgentModels({
-      kind: row.kind,
-      baseUrl: row.baseUrl ?? undefined,
-      apiKey: readKey(row),
-    }).catch((error) => {
-      if (error instanceof ModelListError) return [];
-      throw error;
-    });
-    return [...new Set([row.modelId ?? "", ...listed])].filter(Boolean);
-  }
-  return listAgentModels({
-    kind: row.kind,
-    baseUrl: row.baseUrl ?? undefined,
-    apiKey: readKey(row),
+  const source = { kind: row.kind, baseUrl: row.baseUrl ?? undefined, apiKey: readKey(row) };
+  if (row.kind !== "azure") return listAgentModels(source);
+  const listed = await listAgentModels(source).catch((error) => {
+    if (error instanceof ModelListError) return [];
+    throw error;
   });
-}
-
-// A key that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is an
-// unavailable provider, not a server bug: the owner fixes it by entering the key again.
-function readKey(row: ProviderRow) {
-  if (!row.apiKeyEncrypted) return undefined;
-  try {
-    return decryptSecret(row.apiKeyEncrypted);
-  } catch (error) {
-    console.error(`Could not decrypt the key of provider ${row.id}:`, error);
-    throw new UnavailableError("This provider's saved key could not be read; enter it again");
-  }
-}
-
-async function findSelectedProvider(userId: string, selection: ModelSelection) {
-  const [row] = await db
-    .select()
-    .from(providers)
-    .where(
-      selection.providerId
-        ? ownProvider(userId, selection.providerId)
-        : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
-    );
-  return row;
-}
-
-// With no provider found, a message that chose nothing runs on the environment's.
-function noProvider(selection: ModelSelection) {
-  if (selection.providerId) throw new InvalidSelectionError("Provider not found");
-  if (selection.modelId || selection.reasoningEffort) {
-    throw new InvalidSelectionError("Add a provider to choose a model");
-  }
-  return null;
-}
-
-async function assertRunnable(kind: ProviderKind, modelId: string) {
-  if (!(await modelCatalog.canRun(kind, modelId))) {
-    throw new InvalidSelectionError(`${modelId} cannot be used to run the agent`);
-  }
-}
-
-// The window of the model the run will use, the provider's default when none is named.
-async function contextWindowOf(config: ModelConfig) {
-  const modelId = config.modelId ?? defaultModelId(config.provider);
-  return modelId ? modelCatalog.contextWindow(config.provider, modelId) : null;
-}
-
-async function applyEffort(config: ModelConfig, reasoningEffort: string) {
-  const { controls, effortLevels } = await effortsFor(config.provider, config.modelId);
-  if (!controls?.options.includes(reasoningEffort)) {
-    throw new InvalidSelectionError(
-      `This model does not support the "${reasoningEffort}" reasoning effort`,
-    );
-  }
-  config.reasoningEffort = reasoningEffort;
-  config.effortLevels = effortLevels;
+  return [...new Set([row.modelId ?? "", ...listed])].filter(Boolean);
 }

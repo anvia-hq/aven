@@ -7,7 +7,9 @@ run("providersService (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
   const { UnavailableError } = await import("../../errors");
-  const { InvalidSelectionError, effortsByModel, providersService } = await import("./service");
+  const { providersService } = await import("./service");
+  const { effortsByModel } = await import("./model-list");
+  const { InvalidSelectionError, resolveModel } = await import("./resolve-model");
 
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
@@ -49,11 +51,11 @@ run("providersService (postgres)", async () => {
     expect(await providersService.update(bob, mine!.id, { name: "stolen" })).toBeNull();
     expect(await providersService.remove(bob, mine!.id)).toBe(false);
     expect(await providersService.listModels(bob, mine!.id)).toBeNull();
-    expect(await providersService.resolveModel(bob)).toBeNull();
+    expect(await resolveModel(bob)).toBeNull();
   });
 
   test("resolveModel decrypts the default provider's key", async () => {
-    expect(await providersService.resolveModel(alice)).toEqual({
+    expect(await resolveModel(alice)).toEqual({
       provider: "openai",
       modelId: undefined,
       baseUrl: undefined,
@@ -67,7 +69,7 @@ run("providersService (postgres)", async () => {
     const silenced = console.error;
     console.error = () => undefined;
     try {
-      await expect(providersService.resolveModel(alice)).rejects.toBeInstanceOf(UnavailableError);
+      await expect(resolveModel(alice)).rejects.toBeInstanceOf(UnavailableError);
     } finally {
       console.error = silenced;
       process.env.PROVIDER_ENCRYPTION_KEY = original;
@@ -76,25 +78,25 @@ run("providersService (postgres)", async () => {
 
   test("a message may choose its own provider, model and effort, but never someone else's", async () => {
     const [mine] = await providersService.list(alice);
-    const chosen = await providersService.resolveModel(alice, {
+    const chosen = await resolveModel(alice, {
       providerId: mine!.id,
       modelId: "o3",
       reasoningEffort: "low",
     });
     expect(chosen).toMatchObject({ provider: "openai", modelId: "o3", reasoningEffort: "low" });
 
-    await expect(providersService.resolveModel(bob, { providerId: mine!.id })).rejects.toThrow(
+    await expect(resolveModel(bob, { providerId: mine!.id })).rejects.toThrow(
       InvalidSelectionError,
     );
     await expect(
-      providersService.resolveModel(alice, {
+      resolveModel(alice, {
         providerId: mine!.id,
         modelId: "o3",
         reasoningEffort: "max",
       }),
     ).rejects.toThrow("does not support");
     await expect(
-      providersService.resolveModel(alice, {
+      resolveModel(alice, {
         providerId: mine!.id,
         modelId: "gpt-4o",
         reasoningEffort: "low",
@@ -102,15 +104,13 @@ run("providersService (postgres)", async () => {
     ).rejects.toThrow("does not support");
     // Models that are not chat models are refused before a run starts.
     await expect(
-      providersService.resolveModel(alice, {
+      resolveModel(alice, {
         providerId: mine!.id,
         modelId: "text-embedding-3-small",
       }),
     ).rejects.toThrow("cannot be used");
     // A choice with no provider to apply it to is refused rather than silently dropped.
-    await expect(providersService.resolveModel(bob, { reasoningEffort: "low" })).rejects.toThrow(
-      "Add a provider",
-    );
+    await expect(resolveModel(bob, { reasoningEffort: "low" })).rejects.toThrow("Add a provider");
   });
 
   test("a second default replaces the first, and an omitted key is kept", async () => {
@@ -124,7 +124,7 @@ run("providersService (postgres)", async () => {
     expect(second.hasKey).toBe(false);
     const rows = await providersService.list(alice);
     expect(rows.filter((row) => row.isDefault).map((row) => row.id)).toEqual([second.id]);
-    expect((await providersService.resolveModel(alice))?.provider).toBe("openai-compatible");
+    expect((await resolveModel(alice))?.provider).toBe("openai-compatible");
 
     const [first] = rows;
     await providersService.update(alice, first!.id, { name: "Renamed" });
@@ -200,7 +200,7 @@ run("providersService (postgres)", async () => {
     await expect(providersService.update(alice, azure.id, { modelId: null })).rejects.toThrow(
       "needs a model id",
     );
-    const config = await providersService.resolveModel(alice, { providerId: azure.id });
+    const config = await resolveModel(alice, { providerId: azure.id });
     expect(config).toMatchObject({
       provider: "azure",
       modelId: "gpt-5-deploy",

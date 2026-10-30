@@ -1,5 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
+import type { ProviderRow } from "@aven/db/schema/providers";
+
+import { UnavailableError } from "../../errors";
+
 // AES-256-GCM. The stored form is `iv.tag.ciphertext`, each part base64.
 function key() {
   const raw = process.env.PROVIDER_ENCRYPTION_KEY;
@@ -23,4 +27,16 @@ export function decryptSecret(stored: string) {
   const decipher = createDecipheriv("aes-256-gcm", key(), iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+}
+
+// A key that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is an
+// unavailable provider, not a server bug: the owner fixes it by entering the key again.
+export function readKey(row: ProviderRow) {
+  if (!row.apiKeyEncrypted) return undefined;
+  try {
+    return decryptSecret(row.apiKeyEncrypted);
+  } catch (error) {
+    console.error(`Could not decrypt the key of provider ${row.id}:`, error);
+    throw new UnavailableError("This provider's saved key could not be read; enter it again");
+  }
 }
