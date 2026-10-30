@@ -26,9 +26,9 @@ function blocks(parts: MessagePart[]) {
   return result;
 }
 
-function AssistantBlock({ block }: { block: Block }) {
+function AssistantBlock({ block, live }: { block: Block; live: boolean }) {
   if (block.type === "text") {
-    return <Markdown>{block.text}</Markdown>;
+    return <Markdown live={live}>{block.text}</Markdown>;
   }
   if (block.type === "question") return <QuestionBlock tool={block.tool} />;
   const [only] = block.tools;
@@ -38,7 +38,14 @@ function AssistantBlock({ block }: { block: Block }) {
 
 // Memoized: while the agent streams, only the last message changes (the reducer keeps the others
 // as they were), and re-parsing every earlier message's Markdown on each delta would add up.
-export const ThreadMessage = memo(function ThreadMessage({ message }: { message: ChatMessage }) {
+export const ThreadMessage = memo(function ThreadMessage({
+  message,
+  streaming = false,
+}: {
+  message: ChatMessage;
+  /** The agent is still writing this message: its last block is the one growing. */
+  streaming?: boolean;
+}) {
   if (message.role === "user") {
     return (
       <div
@@ -54,8 +61,8 @@ export const ThreadMessage = memo(function ThreadMessage({ message }: { message:
 
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
-      {blocks(message.parts).map((block, index) => (
-        <AssistantBlock key={index} block={block} />
+      {blocks(message.parts).map((block, index, all) => (
+        <AssistantBlock key={index} block={block} live={streaming && index === all.length - 1} />
       ))}
       {message.parts.length === 0 && <p className="text-sm text-muted-foreground">Thinking…</p>}
     </div>

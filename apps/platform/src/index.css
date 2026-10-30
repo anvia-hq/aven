@@ -106,6 +106,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* The newest text of a streaming answer fades in (see components/markdown.tsx). */
+@keyframes stream-fade-in {
+  from {
+    opacity: var(--anvia-stream-reveal-opacity, 0);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @layer base {
   /* Thin themed scrollbars; the native light track is jarring on the dark theme. */
   * {
@@ -151,4 +161,15 @@ body[data-resizing-sidebar] {
 body[data-resizing-sidebar] [data-slot="sidebar-gap"],
 body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   transition: none;
+}
+
+@layer components {
+  .prose [data-state="revealing"] {
+    animation: stream-fade-in var(--anvia-stream-reveal-duration, 180ms) ease-out both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .prose [data-state="revealing"] {
+      animation: none;
+    }
+  }
 }

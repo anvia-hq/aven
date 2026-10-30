@@ -72,6 +72,7 @@ function ThreadPage() {
               <div className="relative min-h-0 flex-1">
                 <ThreadMessages
                   messages={messages}
+                  running={running}
                   error={error}
                   aside={overviewOpen && <OverviewColumn thread={thread} usage={usage} />}
                 />

@@ -6,12 +6,14 @@ import { ThreadMessage } from "./thread-message";
 
 type Props = {
   messages: ChatMessage[];
+  /** The agent is writing the last message. */
+  running?: boolean;
   error?: string | null;
   /** Stays beside the conversation while it scrolls, so the scrollbar is at the panel's edge. */
   aside?: ReactNode;
 };
 
-export function ThreadMessages({ messages, error, aside }: Props) {
+export function ThreadMessages({ messages, running = false, error, aside }: Props) {
   const scrollRef = useScrollToBottom(messages, messages.length);
 
   return (
@@ -22,8 +24,12 @@ export function ThreadMessages({ messages, error, aside }: Props) {
             {messages.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
-            {messages.map((message) => (
-              <ThreadMessage key={message.id} message={message} />
+            {messages.map((message, index) => (
+              <ThreadMessage
+                key={message.id}
+                message={message}
+                streaming={running && index === messages.length - 1}
+              />
             ))}
             {error && (
               <p
