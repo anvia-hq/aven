@@ -105,7 +105,7 @@ function ThreadPage() {
                     overview.open && "@4xl:pr-75",
                   )}
                 >
-                  <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
+                  <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
                     <div className="flex items-center justify-end gap-2 pb-2">
                       <ChangesBadge threadId={thread.id} running={running} />
                       <ShipButton thread={thread} />
