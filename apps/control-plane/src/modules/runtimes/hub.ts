@@ -296,7 +296,6 @@ export class RuntimeHub {
   #giveUp(runtimeId: string) {
     const held = this.#held.get(runtimeId);
     this.#held.delete(runtimeId);
-    clearTimeout(held?.timer);
     for (const run of held?.runs.values() ?? [])
       run.sink.lost(new Error("The runtime disconnected"));
   }
@@ -325,7 +324,10 @@ export class RuntimeHub {
   closeAll() {
     for (const connection of this.#connections.values())
       connection.close(undefined, undefined, true);
-    for (const runtimeId of this.#held.keys()) this.#giveUp(runtimeId);
+    for (const runtimeId of this.#held.keys()) {
+      clearTimeout(this.#held.get(runtimeId)?.timer);
+      this.#giveUp(runtimeId);
+    }
   }
 }
 
