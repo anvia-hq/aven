@@ -46,13 +46,26 @@ export function useThread(threadId: string) {
       if (!event) return;
       setMessages((current) => applyEvent(current, event));
       setRunning((current) => isRunning(current, event));
-      if (event.type === "snapshot") setUsage(event.usage ?? null);
-      if (event.type === "usage") setUsage((current) => applyUsage(current, event));
-      if (event.type === "error") setError(event.message);
-      if (event.type === "run_start" || event.type === "run_resume") setError(null);
-      if (event.type === "run_start" || event.type === "run_resume")
-        setThreadRunning(threadId, true);
-      if (event.type === "done" || event.type === "error") setThreadRunning(threadId, false);
+      switch (event.type) {
+        case "snapshot":
+          setUsage(event.usage ?? null);
+          break;
+        case "usage":
+          setUsage((current) => applyUsage(current, event));
+          break;
+        case "run_start":
+        case "run_resume":
+          setError(null);
+          setThreadRunning(threadId, true);
+          break;
+        case "error":
+          setError(event.message);
+          setThreadRunning(threadId, false);
+          break;
+        case "done":
+          setThreadRunning(threadId, false);
+          break;
+      }
     };
     source.onerror = () => {
       // The browser retries on its own; only a stream it has given up on leaves the run unknown.
