@@ -36,6 +36,12 @@ async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) 
   return { child, events, threadId: thread.id };
 }
 
+// The desktop panel opens when asked for, from the thread's toolbar.
+async function openDesktop(page: Page, threadId: string) {
+  await page.goto(`/threads/${threadId}`);
+  await page.getByRole("button", { name: "Desktop", exact: true }).click();
+}
+
 test.describe("a thread's desktop", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -49,7 +55,7 @@ test.describe("a thread's desktop", () => {
     runner = child;
 
     await page.setViewportSize({ width: 1400, height: 800 });
-    await page.goto(`/threads/${threadId}`);
+    await openDesktop(page, threadId);
     const panel = page.getByRole("region", { name: "Desktop" });
     await expect(panel).toBeVisible();
     const width = () => panel.evaluate((el) => Math.round(el.getBoundingClientRect().width));
@@ -78,7 +84,7 @@ test.describe("a thread's desktop", () => {
     const { child, events, threadId } = await threadOnFakeRunner(page);
     runner = child;
 
-    await page.goto(`/threads/${threadId}`);
+    await openDesktop(page, threadId);
     const panel = page.getByRole("region", { name: "Desktop" });
     await expect(panel.getByText("Watching. Take over to click and type.")).toBeVisible();
 
@@ -117,7 +123,7 @@ test.describe("a thread's desktop", () => {
     const { child, threadId } = await threadOnFakeRunner(page, { NO_SANDBOX: "1" });
     runner = child;
 
-    await page.goto(`/threads/${threadId}`);
+    await openDesktop(page, threadId);
 
     const panel = page.getByRole("region", { name: "Desktop" });
     await expect(panel.getByText("The thread's sandbox is not running.")).toBeVisible();
@@ -125,18 +131,18 @@ test.describe("a thread's desktop", () => {
     await expect(panel.getByRole("button", { name: "Take over" })).toHaveCount(0);
   });
 
-  test("can be closed and opened again from the thread header", async ({ page }) => {
+  test("can be opened and closed again from the thread header", async ({ page }) => {
     await registerUser(page, "dsk", "Desktop User");
     const { child, threadId } = await threadOnFakeRunner(page);
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
     const toggle = page.getByRole("button", { name: "Desktop", exact: true });
-    await expect(page.getByRole("region", { name: "Desktop" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Desktop" })).toHaveCount(0);
 
     await toggle.click();
-    await expect(page.getByRole("region", { name: "Desktop" })).toHaveCount(0);
-    await toggle.click();
     await expect(page.getByRole("region", { name: "Desktop" })).toBeVisible();
+    await toggle.click();
+    await expect(page.getByRole("region", { name: "Desktop" })).toHaveCount(0);
   });
 });

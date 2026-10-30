@@ -11,3 +11,7 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .map((part) => part[0]!.toUpperCase())
     .join("");
+
+// 331300 -> "331.3k", 1000000 -> "1M".
+export const compactNumber = (value: number) =>
+  new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);

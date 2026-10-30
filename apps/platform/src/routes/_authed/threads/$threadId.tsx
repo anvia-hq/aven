@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { cn } from "cn";
+
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage, useLocalStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
+import { OverviewColumn } from "@/modules/inspector/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
@@ -16,12 +19,12 @@ export const Route = createFileRoute("/_authed/threads/$threadId")({
 
 function ThreadPage() {
   const { threadId } = Route.useParams();
-  const { thread, loaded, messages, running, error, send, cancel } = useThread(threadId);
-  // Side by side needs room; on a narrow screen the desktop opens when asked for.
+  const { thread, loaded, messages, running, context, error, send, cancel } = useThread(threadId);
+  // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
-  // Whether the desktop is open is remembered; until it has been chosen, it follows the width.
-  const [savedOpen, setDesktopOpen] = useLocalStorage<boolean | null>("aven.desktop-open", null);
-  const desktopOpen = savedOpen ?? wide;
+  // What is open is remembered. The overview is on until closed; the desktop opens when asked for.
+  const [overviewOpen, setOverviewOpen] = useLocalStorage("aven.overview-open", true);
+  const [desktopOpen, setDesktopOpen] = useLocalStorage("aven.desktop-open", false);
   // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
     id: `aven.thread-panels.${wide ? "row" : "column"}`,
@@ -53,18 +56,30 @@ function ThreadPage() {
           onLayoutChanged={layout.onLayoutChanged}
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
-            <div className="flex h-full min-w-0 flex-col">
+            <div className="@container flex h-full min-w-0 flex-col">
               <ThreadHeader
                 thread={thread}
                 running={running}
                 onCancel={cancel}
+                overviewOpen={overviewOpen}
+                onToggleOverview={() => setOverviewOpen(!overviewOpen)}
                 desktopOpen={desktopOpen}
                 onToggleDesktop={() => setDesktopOpen(!desktopOpen)}
               />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
-                <ThreadMessages messages={messages} error={error} />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3">
+                <ThreadMessages
+                  messages={messages}
+                  error={error}
+                  aside={overviewOpen && <OverviewColumn thread={thread} context={context} />}
+                />
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3",
+                    // Keep the composer under the messages, not under the overview.
+                    overviewOpen && "@4xl:pr-75",
+                  )}
+                >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
                     <PromptInput
                       disabled={running}
