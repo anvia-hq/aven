@@ -45,3 +45,5 @@ export const answerQuestionBody = z.object({
 
 export type CreateThreadBody = z.infer<typeof createThreadBody>;
 export type UpdateThreadBody = z.infer<typeof updateThreadBody>;
+export type SendMessageBody = z.infer<typeof sendMessageBody>;
+export type AnswerQuestionBody = z.infer<typeof answerQuestionBody>;
