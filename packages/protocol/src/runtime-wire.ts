@@ -176,6 +176,12 @@ export type MemoryAppendParams = {
   messages: unknown[];
 };
 
+/** The calls a runner makes today, by method: what it sends and what the control plane answers. */
+export type RuntimeCalls = {
+  "repo.access": { params: RepoAccessParams; result: RepoAccess };
+  "memory.append": { params: MemoryAppendParams; result: null };
+};
+
 /** WebSocket close codes the control plane ends a runtime's connection with. */
 export const CloseCode = {
   /** The runtime speaks another wire version; it should not reconnect. */

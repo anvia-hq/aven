@@ -6,13 +6,7 @@ import {
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
-import type {
-  CallMethod,
-  MemoryAppendParams,
-  RepoAccess,
-  RunModel,
-  RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
+import type { RunModel, RuntimeCalls, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 
 import type { CreateRuntimeAgent } from "./runner";
 import {
@@ -56,7 +50,10 @@ export type DriverContext = {
   outbox: RunOutbox;
   sandbox: ThreadWorkspaces;
   createAgent: CreateRuntimeAgent;
-  call(method: CallMethod, params: unknown): Promise<unknown>;
+  call<M extends keyof RuntimeCalls>(
+    method: M,
+    params: RuntimeCalls[M]["params"],
+  ): Promise<RuntimeCalls[M]["result"]>;
   /** Sends a message of a run, or keeps it for when the control plane asks. */
   report(
     runId: string,
@@ -96,9 +93,8 @@ export function createRunDriver(context: DriverContext) {
     try {
       await context.starting(thread.id);
       // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
-      const box = await context.sandbox.acquire(
-        thread,
-        () => context.call("repo.access", { runId }) as Promise<RepoAccess>,
+      const box = await context.sandbox.acquire(thread, () =>
+        context.call("repo.access", { runId }),
       );
       if (run.cancelReason) throw new Error(run.cancelReason);
       context.boxes.set(thread.id, box);
@@ -132,11 +128,7 @@ export function createRunDriver(context: DriverContext) {
       // The transcript the control plane keeps, filed as each part of the run ends.
       const file = async (messages: Message[]) => {
         if (messages.length === 0) return;
-        await context.call("memory.append", {
-          runId,
-          turn: record.turn,
-          messages,
-        } satisfies MemoryAppendParams);
+        await context.call("memory.append", { runId, turn: record.turn, messages });
         save({ turn: record.turn + messages.length });
       };
       // What an unattended part of the run is told is a note to the agent, not something the user said.

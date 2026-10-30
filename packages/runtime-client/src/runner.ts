@@ -5,16 +5,18 @@ import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
   decodeViewerFrame,
+  CloseCode,
   type ControlPlaneToRuntime,
   type CallMethod,
-  type DesktopCallMethod,
-  type DiffCallMethod,
   type FilesCallMethod,
   type RunModel,
+  type RunnerCallMethod,
+  type RuntimeCalls,
   type RunThreadInfo,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { diffGetParams, filesCallParams } from "./call-params";
 import { DesktopViewers } from "./desktop-viewers";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile } from "./workspace-files";
@@ -150,8 +152,8 @@ export function startRuntime(options: RuntimeOptions) {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
 
-  const call = (method: CallMethod, params: unknown) =>
-    new Promise<unknown>((resolve, reject) => {
+  const call = <M extends keyof RuntimeCalls>(method: M, params: RuntimeCalls[M]["params"]) =>
+    new Promise<RuntimeCalls[M]["result"]>((resolve, reject) => {
       const id = crypto.randomUUID();
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -160,7 +162,8 @@ export function startRuntime(options: RuntimeOptions) {
       pending.set(id, {
         method,
         params,
-        resolve: (value) => (clearTimeout(timer), resolve(value)),
+        // The control plane's answer is taken to be what the method returns; it is not checked.
+        resolve: (value) => (clearTimeout(timer), resolve(value as RuntimeCalls[M]["result"])),
         reject: (error) => (clearTimeout(timer), reject(error)),
       });
       // Sent now if the link is up, and again whenever it comes back until it is answered.
@@ -241,20 +244,14 @@ export function startRuntime(options: RuntimeOptions) {
 
   // A thread's changes; null when it has no workspace on this runner yet.
   async function diffOf(params: unknown) {
-    const { threadId, scope } = (params ?? {}) as Record<string, unknown>;
-    if (typeof threadId !== "string" || (scope !== "turn" && scope !== "all")) {
-      throw new Error("Invalid parameters");
-    }
+    const { threadId, scope } = diffGetParams(params);
     const root = await options.sandbox.workspace(threadId);
     return root ? threadDiff(root, scope) : null;
   }
 
   // A folder or a file of a thread's workspace; null when it has no workspace on this runner yet.
-  async function filesOf(method: "files.list" | "files.read", params: unknown) {
-    const { threadId, path } = (params ?? {}) as Record<string, unknown>;
-    if (typeof threadId !== "string" || typeof path !== "string") {
-      throw new Error("Invalid parameters");
-    }
+  async function filesOf(method: FilesCallMethod, params: unknown) {
+    const { threadId, path } = filesCallParams(params);
     const root = await options.sandbox.workspace(threadId);
     if (!root) return null;
     return method === "files.list"
@@ -263,7 +260,7 @@ export function startRuntime(options: RuntimeOptions) {
   }
 
   // What the control plane's call asks for: a thread's changes, its files, or its desktop.
-  function callOf(method: DesktopCallMethod | DiffCallMethod | FilesCallMethod, params: unknown) {
+  function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "diff.get") return diffOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
     return viewers.call(method, params);
@@ -304,6 +301,10 @@ export function startRuntime(options: RuntimeOptions) {
         else waiting.reject(new Error(message.error ?? "The control plane reported an error"));
         return;
       }
+      default:
+        // Every type is handled above; a type this runner does not know yet is ignored.
+        message satisfies never;
+        return;
     }
   }
 
@@ -344,7 +345,7 @@ export function startRuntime(options: RuntimeOptions) {
     ws.onclose = (event) => {
       // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
-      if (event.code === 4000 || event.code === 4002) {
+      if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
         options.onRefused?.(event.reason || "Refused by the control plane");
       }

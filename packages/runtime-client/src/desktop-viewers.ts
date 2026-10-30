@@ -7,6 +7,7 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { desktopCallParams } from "./call-params";
 import type { ThreadWorkspaces } from "./sandbox";
 
 type Tunnel = Awaited<ReturnType<SandboxDesktop["openViewer"]>>;
@@ -32,20 +33,6 @@ const MAX_BUFFERED_BYTES = 4 * 1024 * 1024;
 const DRAIN_POLL_MS = 10;
 
 const NOT_RUNNING = "The thread's sandbox is not running";
-
-type ThreadCall = { threadId: string; holder?: string; leaseMs?: number; force?: boolean };
-
-function threadCall(params: unknown): ThreadCall {
-  if (typeof params !== "object" || params === null) throw new Error("Invalid parameters");
-  const { threadId, holder, leaseMs, force } = params as Record<string, unknown>;
-  if (typeof threadId !== "string") throw new Error("Invalid parameters");
-  return {
-    threadId,
-    holder: typeof holder === "string" ? holder : undefined,
-    leaseMs: typeof leaseMs === "number" ? leaseMs : undefined,
-    force: force === true,
-  };
-}
 
 // The desktops of this runner's sandboxes, streamed to viewers the control plane opens (decision
 // 0015). It never starts a sandbox: a thread whose container is not running has no desktop to see.
@@ -98,7 +85,7 @@ export class DesktopViewers {
 
   /** The control plane's calls about a thread's desktop; null when its sandbox is not running. */
   async call(method: DesktopCallMethod, params: unknown) {
-    const { threadId, holder, leaseMs, force } = threadCall(params);
+    const { threadId, holder, leaseMs, force } = desktopCallParams(params);
     const desktop = this.sandbox.desktop(threadId);
     if (!desktop) return null;
     switch (method) {
