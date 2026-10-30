@@ -29,9 +29,15 @@ function ThreadPage() {
   const [overviewOpen, setOverviewOpen] = useLocalStorage("aven.overview-open", true);
   const [desktopOpen, setDesktopOpen] = useLocalStorage("aven.desktop-open", false);
   const [diffOpen, setDiffOpen] = useLocalStorage("aven.diff-open", false);
-  const panelIds = ["conversation"];
-  if (diffOpen) panelIds.push("diff");
-  if (desktopOpen) panelIds.push("desktop");
+  // Changes and Desktop share one column, so the conversation keeps the same width whichever is open.
+  const sideOpen = diffOpen || desktopOpen;
+  const bothOpen = diffOpen && desktopOpen;
+  const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
+  const side = useDefaultLayout({
+    id: "aven.thread-side",
+    panelIds: ["diff", "desktop"],
+    storage: safeStorage,
+  });
   // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
     id: `aven.thread-panels.${wide ? "row" : "column"}`,
@@ -110,23 +116,31 @@ function ThreadPage() {
               </div>
             </div>
           </ResizablePanel>
-          {diffOpen && (
+          {sideOpen && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel id="diff" defaultSize="50" minSize="25">
-                <DiffPanel
-                  threadId={thread.id}
-                  running={running}
-                  onClose={() => setDiffOpen(false)}
-                />
-              </ResizablePanel>
-            </>
-          )}
-          {desktopOpen && (
-            <>
-              <ResizableHandle withHandle />
-              <ResizablePanel id="desktop" defaultSize="50" minSize="25">
-                <DesktopPanel threadId={thread.id} onClose={() => setDesktopOpen(false)} />
+              <ResizablePanel id="side" defaultSize="50" minSize="25">
+                <ResizablePanelGroup
+                  orientation="vertical"
+                  defaultLayout={side.defaultLayout}
+                  onLayoutChanged={side.onLayoutChanged}
+                >
+                  {diffOpen && (
+                    <ResizablePanel id="diff" defaultSize="50" minSize="15">
+                      <DiffPanel
+                        threadId={thread.id}
+                        running={running}
+                        onClose={() => setDiffOpen(false)}
+                      />
+                    </ResizablePanel>
+                  )}
+                  {bothOpen && <ResizableHandle withHandle />}
+                  {desktopOpen && (
+                    <ResizablePanel id="desktop" defaultSize="50" minSize="15">
+                      <DesktopPanel threadId={thread.id} onClose={() => setDesktopOpen(false)} />
+                    </ResizablePanel>
+                  )}
+                </ResizablePanelGroup>
               </ResizablePanel>
             </>
           )}
