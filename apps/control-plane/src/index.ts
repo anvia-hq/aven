@@ -4,6 +4,7 @@ import { errorsRouter } from "./errors";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
+import { filesRouter } from "./modules/files/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
@@ -21,6 +22,7 @@ const app = new Elysia()
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
+  .use(filesRouter(runtimeHub))
   .use(githubRouter)
   .use(platformRouter)
   .use(projectsRouter)

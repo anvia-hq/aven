@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Fragment, type ReactNode } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { cn } from "cn";
@@ -7,6 +8,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { safeStorage, useLocalStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
+import { FilesPanel } from "@/modules/files/components/files-panel";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -29,13 +31,13 @@ function ThreadPage() {
   const [overviewOpen, setOverviewOpen] = useLocalStorage("aven.overview-open", true);
   const [desktopOpen, setDesktopOpen] = useLocalStorage("aven.desktop-open", false);
   const [diffOpen, setDiffOpen] = useLocalStorage("aven.diff-open", false);
-  // Changes and Desktop share one column, so the conversation keeps the same width whichever is open.
-  const sideOpen = diffOpen || desktopOpen;
-  const bothOpen = diffOpen && desktopOpen;
+  const [filesOpen, setFilesOpen] = useLocalStorage("aven.files-open", false);
+  // Files, Changes and Desktop share one column, so the conversation keeps the same width whichever is open.
+  const sideOpen = diffOpen || desktopOpen || filesOpen;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const side = useDefaultLayout({
     id: "aven.thread-side",
-    panelIds: ["diff", "desktop"],
+    panelIds: ["files", "diff", "desktop"],
     storage: safeStorage,
   });
   // Each orientation and each set of panels keeps its own sizes.
@@ -58,6 +60,33 @@ function ThreadPage() {
     );
   }
 
+  const sidePanels: { id: string; node: ReactNode }[] = [];
+  if (filesOpen) {
+    sidePanels.push({
+      id: "files",
+      node: (
+        <FilesPanel
+          key={thread.id}
+          threadId={thread.id}
+          running={running}
+          onClose={() => setFilesOpen(false)}
+        />
+      ),
+    });
+  }
+  if (diffOpen) {
+    sidePanels.push({
+      id: "diff",
+      node: <DiffPanel threadId={thread.id} running={running} onClose={() => setDiffOpen(false)} />,
+    });
+  }
+  if (desktopOpen) {
+    sidePanels.push({
+      id: "desktop",
+      node: <DesktopPanel threadId={thread.id} onClose={() => setDesktopOpen(false)} />,
+    });
+  }
+
   return (
     <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-svh">
       <div className="min-h-0 flex-1">
@@ -78,6 +107,8 @@ function ThreadPage() {
                 onToggleDesktop={() => setDesktopOpen(!desktopOpen)}
                 diffOpen={diffOpen}
                 onToggleDiff={() => setDiffOpen(!diffOpen)}
+                filesOpen={filesOpen}
+                onToggleFiles={() => setFilesOpen(!filesOpen)}
               />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
@@ -125,21 +156,14 @@ function ThreadPage() {
                   defaultLayout={side.defaultLayout}
                   onLayoutChanged={side.onLayoutChanged}
                 >
-                  {diffOpen && (
-                    <ResizablePanel id="diff" defaultSize="50" minSize="15">
-                      <DiffPanel
-                        threadId={thread.id}
-                        running={running}
-                        onClose={() => setDiffOpen(false)}
-                      />
-                    </ResizablePanel>
-                  )}
-                  {bothOpen && <ResizableHandle withHandle />}
-                  {desktopOpen && (
-                    <ResizablePanel id="desktop" defaultSize="50" minSize="15">
-                      <DesktopPanel threadId={thread.id} onClose={() => setDesktopOpen(false)} />
-                    </ResizablePanel>
-                  )}
+                  {sidePanels.map((panel, index) => (
+                    <Fragment key={panel.id}>
+                      {index > 0 && <ResizableHandle withHandle />}
+                      <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
+                        {panel.node}
+                      </ResizablePanel>
+                    </Fragment>
+                  ))}
                 </ResizablePanelGroup>
               </ResizablePanel>
             </>

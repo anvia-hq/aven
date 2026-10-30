@@ -67,6 +67,17 @@ export type ThreadDiff = {
   truncated: boolean;
 };
 
+/** What the control plane asks of a runner about the files of a thread's workspace (decision 0031); params are `{ threadId, path }`. */
+export type FilesCallMethod = "files.list" | "files.read";
+
+export type FileEntry = { name: string; type: "file" | "directory" };
+
+/** A file read from a workspace; `missing` also covers a path outside it. */
+export type FileContent =
+  | { kind: "text"; text: string; size: number; truncated: boolean }
+  | { kind: "binary"; size: number }
+  | { kind: "missing" };
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
@@ -92,7 +103,12 @@ export type ControlPlaneToRuntime =
   /** Start streaming the thread's desktop (VNC) as binary frames for `viewerId`. */
   | { type: "desktop.open"; viewerId: string; threadId: string }
   | { type: "desktop.close"; viewerId: string }
-  | { type: "call"; id: string; method: DesktopCallMethod | DiffCallMethod; params: unknown }
+  | {
+      type: "call";
+      id: string;
+      method: DesktopCallMethod | DiffCallMethod | FilesCallMethod;
+      params: unknown;
+    }
   | Reply;
 
 export type RuntimeToControlPlane =
@@ -165,6 +181,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 11: a runner answers `files.list` and `files.read` (decision 0031).
 // Version 10: a runner answers `diff.get` with a thread's changes (decision 0030).
 // Version 9: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
 // Version 8: a run can suspend on the agent's question and be resumed with the answer, `run.resume`
@@ -174,4 +191,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 10;
+export const WIRE_VERSION = 11;

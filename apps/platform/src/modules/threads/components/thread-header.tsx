@@ -1,4 +1,4 @@
-import { GitDiff, LayoutDashboard, Monitor } from "@mynaui/icons-react";
+import { Folder, GitDiff, LayoutDashboard, Monitor } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 
@@ -12,6 +12,8 @@ type Props = {
   onToggleDesktop: () => void;
   diffOpen: boolean;
   onToggleDiff: () => void;
+  filesOpen: boolean;
+  onToggleFiles: () => void;
 };
 
 export function ThreadHeader({
@@ -22,6 +24,8 @@ export function ThreadHeader({
   onToggleDesktop,
   diffOpen,
   onToggleDiff,
+  filesOpen,
+  onToggleFiles,
 }: Props) {
   return (
     <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
@@ -52,6 +56,15 @@ export function ThreadHeader({
         onClick={onToggleDiff}
       >
         <GitDiff />
+      </Button>
+      <Button
+        variant={filesOpen ? "secondary" : "ghost"}
+        size="icon-sm"
+        aria-label="Files"
+        aria-pressed={filesOpen}
+        onClick={onToggleFiles}
+      >
+        <Folder />
       </Button>
     </header>
   );

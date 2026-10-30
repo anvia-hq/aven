@@ -6,6 +6,9 @@ import {
   decodeViewerFrame,
   type ControlPlaneToRuntime,
   type CallMethod,
+  type DesktopCallMethod,
+  type DiffCallMethod,
+  type FilesCallMethod,
   type RunModel,
   type RunThreadInfo,
   type RuntimeToControlPlane,
@@ -13,6 +16,7 @@ import {
 
 import { DesktopViewers } from "./desktop-viewers";
 import { threadDiff } from "./thread-diff";
+import { listDirectory, readWorkspaceFile } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -245,6 +249,26 @@ export function startRuntime(options: RuntimeOptions) {
     return root ? threadDiff(root, scope) : null;
   }
 
+  // A folder or a file of a thread's workspace; null when it has no workspace on this runner yet.
+  async function filesOf(method: "files.list" | "files.read", params: unknown) {
+    const { threadId, path } = (params ?? {}) as Record<string, unknown>;
+    if (typeof threadId !== "string" || typeof path !== "string") {
+      throw new Error("Invalid parameters");
+    }
+    const root = await options.sandbox.workspace(threadId);
+    if (!root) return null;
+    return method === "files.list"
+      ? { entries: await listDirectory(root, path) }
+      : readWorkspaceFile(root, path);
+  }
+
+  // What the control plane's call asks for: a thread's changes, its files, or its desktop.
+  function callOf(method: DesktopCallMethod | DiffCallMethod | FilesCallMethod, params: unknown) {
+    if (method === "diff.get") return diffOf(params);
+    if (method === "files.list" || method === "files.read") return filesOf(method, params);
+    return viewers.call(method, params);
+  }
+
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {
       case "run.start":
@@ -270,11 +294,7 @@ export function startRuntime(options: RuntimeOptions) {
         viewers.close(message.viewerId);
         return;
       case "call":
-        await answer(message.id, () =>
-          message.method === "diff.get"
-            ? diffOf(message.params)
-            : viewers.call(message.method, message.params),
-        );
+        await answer(message.id, () => callOf(message.method, message.params));
         return;
       case "reply": {
         const waiting = pending.get(message.id);

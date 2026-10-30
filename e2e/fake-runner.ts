@@ -272,6 +272,19 @@ index 0000000..3333333
 +# Notes
 `;
 
+// The pretend workspace's folders and the text of its files.
+const WORKSPACE: Record<string, { name: string; type: "file" | "directory" }[]> = {
+  "": [
+    { name: "src", type: "directory" },
+    { name: "README.md", type: "file" },
+  ],
+  src: [{ name: "greeting.ts", type: "file" }],
+};
+const WORKSPACE_FILES: Record<string, string> = {
+  "README.md": "# Notes\n",
+  "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
+};
+
 let held: { holder: string; expiresAt: string } | null = null;
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { holder?: string; leaseMs?: number };
@@ -282,6 +295,19 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       patch: scope === "turn" ? TURN_PATCH : TURN_PATCH + ALL_ONLY_PATCH,
       truncated: false,
     });
+  }
+  if (call.method === "files.list") {
+    const { path } = call.params as { path: string };
+    return reply({ entries: WORKSPACE[path] ?? [] });
+  }
+  if (call.method === "files.read") {
+    const { path } = call.params as { path: string };
+    const text = WORKSPACE_FILES[path];
+    return reply(
+      text === undefined
+        ? { kind: "missing" }
+        : { kind: "text", text, size: text.length, truncated: false },
+    );
   }
   if (!sandboxRunning) return reply(null);
   if (call.method === "desktop.takeover") {
