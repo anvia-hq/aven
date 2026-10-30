@@ -1,10 +1,11 @@
-import type { Agent, AnyTool } from "@anvia/core";
+import type { Agent, AnyTool, Message } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunEvent } from "@aven/protocol/events";
 import {
   WIRE_VERSION,
@@ -20,6 +21,8 @@ import {
 
 import { DesktopViewers } from "./desktop-viewers";
 import { DurableRuns, type FollowedRun, type RunInput } from "./durable-runs";
+import { verifyWith } from "./goal-assessment";
+import { goalReport } from "./goal-report";
 import { lateBoundTools } from "./late-bound-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
@@ -27,6 +30,8 @@ export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
   /** The agent's id: durable registers one agent per run. */
   id: string;
+  /** Whether a person is there to answer: only then may the agent ask a question. */
+  attended: boolean;
   /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
   model?: RunModel;
@@ -37,10 +42,11 @@ export type CreateRuntimeAgent = (input: {
 // agent has no memory store.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, tools, model }) => {
+  ({ id, attended, tools, model }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       id,
+      questions: attended,
       provider: model.provider,
       modelId: model.modelId,
       apiKey: model.gatewayToken,
@@ -54,8 +60,8 @@ const defaultCreateAgent =
 
 type LiveRun = {
   threadId: string;
-  /** Not there until the thread's sandbox is up and the run is in the journal. */
-  followed?: FollowedRun;
+  /** Not there until the thread's sandbox is up and the run is in the journal; a goal's, while it works. */
+  followed?: Pick<FollowedRun, "cancel">;
   /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
 };
@@ -103,6 +109,8 @@ export function startRuntime(options: RuntimeOptions) {
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
   const runs = new Map<string, LiveRun>();
+  // The goal a thread's agent handed over this run, started once its turn ends.
+  const goals = new Map<string, GoalRequest>();
   // Opened once; a run waits for it, and a journal that will not open fails each run clearly.
   const journal = DurableRuns.open(options.journalPath);
   journal.catch(() => undefined);
@@ -213,24 +221,56 @@ export function startRuntime(options: RuntimeOptions) {
       const journaled = await journal;
       // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
       const current = () => boxes.get(thread.id)?.tools;
-      const build = (id: string): RunInput => {
+      const build = (id: string, attended: boolean): RunInput => {
+        const bound = lateBoundTools(box.tools, current);
         const { agent, compaction } = createAgent({
           thread,
           id,
-          tools: lateBoundTools(box.tools, current),
+          attended,
+          // Only an agent with a person to talk to may take on a goal.
+          tools: attended
+            ? [...bound, createDefineGoalTool((goal) => goals.set(thread.id, goal))]
+            : bound,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
       };
       // Events reach the control plane as the journal records them.
       const forward = (event: RunEvent) => send({ type: "run.event", runId, event });
+      // The transcript the control plane keeps, filed as each part of the run ends.
+      let turn = 0;
+      const file = async (messages: Message[]) => {
+        if (messages.length === 0) return;
+        await call("memory.append", { runId, turn, messages } satisfies MemoryAppendParams);
+        turn += messages.length;
+      };
+      // What an unattended part of the run is told is a note to the agent, not something the user said.
+      const withoutPrompt = (messages: Message[]) =>
+        messages[0]?.role === "user" ? messages.slice(1) : messages;
+      const stopIfCancelled = () => {
+        if (live.cancelReason) throw new Error(live.cancelReason);
+      };
+
+      const pursueGoal = async (request: GoalRequest) => {
+        const exec = current()?.find((tool) => tool.name === "exec_command");
+        const working = await journaled.startGoal(
+          runId,
+          request,
+          build(`goal-${runId}`, false),
+          verifyWith(exec, request.verifyCommands ?? []),
+          forward,
+          async (messages) => file(withoutPrompt(messages)),
+        );
+        live.followed = working;
+        return working.done;
+      };
       let followed: FollowedRun;
       if (message.type === "run.start") {
         followed = await journaled.start(
           runId,
           thread.id,
           message.prompt,
-          build(`run-${runId}`),
+          build(`run-${runId}`, true),
           forward,
         );
       } else {
@@ -242,24 +282,43 @@ export function startRuntime(options: RuntimeOptions) {
           asked,
           interaction,
           parseAgentInteractionResponse(message.response),
-          () => build(asked.agentId),
+          () => build(asked.agentId, true),
           forward,
         );
       }
       live.followed = followed;
       if (live.cancelReason) void followed.cancel();
-      const end = await followed.done;
-      if (end.type !== "error" && end.messages.length > 0) {
-        const turn = journaled.transcriptTurn(
+      let end = await followed.done;
+      if (end.type !== "error") {
+        turn = journaled.transcriptTurn(
           followed.durableId,
           end.messages.length,
           end.type === "response",
         );
-        await call("memory.append", {
-          runId,
-          turn,
-          messages: end.messages,
-        } satisfies MemoryAppendParams);
+        await file(end.messages);
+      }
+
+      // The turn handed over a goal: work it, then let the agent report on it in the thread.
+      const goal = goals.get(thread.id);
+      goals.delete(thread.id);
+      if (goal && end.type === "response") {
+        stopIfCancelled();
+        const goalEnd = await pursueGoal(goal);
+        if (goalEnd.type === "error") {
+          end = goalEnd;
+        } else {
+          stopIfCancelled();
+          const closing = await journaled.start(
+            `${runId}-report`,
+            thread.id,
+            goalReport(goal.objective, goalEnd),
+            build(`run-${runId}-report`, false),
+            forward,
+          );
+          live.followed = closing;
+          end = await closing.done;
+          if (end.type !== "error") await file(withoutPrompt(end.messages));
+        }
       }
       sendOrWarn(
         end.type === "error"
@@ -276,6 +335,8 @@ export function startRuntime(options: RuntimeOptions) {
       const text = error instanceof Error ? error.message : String(error);
       sendOrWarn({ type: "run.end", runId, outcome: "error", error: text });
     } finally {
+      // A goal handed over by a run that never got to start it is not the next run's to start.
+      goals.delete(thread.id);
       runs.delete(runId);
       scheduleIdleRelease(thread.id);
     }

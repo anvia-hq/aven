@@ -21,6 +21,8 @@ import { journalPath } from "./testing/journal-path";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
 function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
+  // Whether the transcript the runner sends home is taken; a test can change it as it goes.
+  const transcripts = { stored: options.storesTranscripts !== false };
   const received: RuntimeToControlPlane[] = [];
   const receivedBinary: Uint8Array[] = [];
   let client: { send(data: string | Uint8Array): void } | undefined;
@@ -42,11 +44,7 @@ function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
         const message = JSON.parse(data) as RuntimeToControlPlane;
         received.push(message);
         // The transcript the runner sends home is taken, unless a test says otherwise.
-        if (
-          message.type === "call" &&
-          message.method === "memory.append" &&
-          options.storesTranscripts !== false
-        )
+        if (message.type === "call" && message.method === "memory.append" && transcripts.stored)
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
       },
     },
@@ -55,6 +53,7 @@ function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
     url: `ws://localhost:${server.port}`,
     received,
     receivedBinary,
+    transcripts,
     opened: opened.promise,
     send: (message: unknown) => client?.send(JSON.stringify(message)),
     sendBinary: (frame: Uint8Array) => client?.send(frame),
@@ -454,5 +453,161 @@ describe("startRuntime runs", () => {
     expect(first?.turn).toBe(0);
     expect(second?.turn).toBe(first?.messages.length);
     expect(second?.messages.at(-1)?.role).toBe("assistant");
+  });
+
+  test("a goal the agent defines is worked after its turn, and the run ends with the agent's report", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const scripts: Record<string, ScriptStep[]> = {
+      "run-run-1": [
+        [
+          text("Starting a goal. "),
+          {
+            type: "tool-call",
+            toolCallId: "g1",
+            toolName: "define_goal",
+            input: { objective: "Add paging", acceptanceCriteria: ["it pages"] },
+          },
+        ],
+        [text("Goal started.")],
+      ],
+      "goal-run-1": [[text("Paging added.")]],
+      "run-run-1-report": [[text("All done, paging works.")]],
+    };
+    const made: { id: string; attended: boolean; tools: string[] }[] = [];
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, attended, tools }) => {
+        made.push({ id, attended, tools: tools.map((tool) => tool.name) });
+        return {
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [...tools],
+            model: scriptedModel(scripts[id] ?? []),
+          }),
+        };
+      },
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+
+    // Only the agent with a person to talk to may define a goal, and only it may ask questions.
+    expect(made).toEqual([
+      { id: "run-run-1", attended: true, tools: ["define_goal"] },
+      { id: "goal-run-1", attended: false, tools: [] },
+      { id: "run-run-1-report", attended: false, tools: [] },
+    ]);
+    const texts = plane.received.flatMap((m) =>
+      m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
+    );
+    expect(texts).toEqual([
+      "Starting a goal. ",
+      "Goal started.",
+      "Paging added.",
+      "All done, paging works.",
+    ]);
+
+    // What the user reads: the prompt, the agent's turn, the goal's work and the report. The notes
+    // Aven wrote to the agent are not in it.
+    const roles = appended(plane).flatMap((append) =>
+      append.messages.map((message) => message.role),
+    );
+    expect(roles).toEqual(["user", "assistant", "tool", "assistant", "assistant", "assistant"]);
+  });
+
+  test("a cancel while the goal is working stops it and ends the run", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const working = Promise.withResolvers<void>();
+    const hold = Promise.withResolvers<void>();
+    const scripts: Record<string, ScriptStep[]> = {
+      "run-run-1": [
+        [
+          {
+            type: "tool-call",
+            toolCallId: "g1",
+            toolName: "define_goal",
+            input: { objective: "Add paging", acceptanceCriteria: ["it pages"] },
+          },
+        ],
+        [text("Goal started.")],
+      ],
+      "goal-run-1": [
+        async () => {
+          working.resolve();
+          await hold.promise;
+          return [text("never")];
+        },
+      ],
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [...tools],
+          model: scriptedModel(scripts[id] ?? []),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await working.promise;
+
+    plane.send({ type: "run.cancel", runId: "run-1", reason: "Cancelled by user" });
+    hold.resolve();
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
+  });
+
+  test("a goal from a run that failed to file its transcript is not started by the next run", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const made: string[] = [];
+    const { plane, runtime } = connect({
+      sandbox,
+      callTimeoutMs: 100,
+      createAgent: ({ id, tools }) => {
+        made.push(id);
+        const steps: ScriptStep[] =
+          id === "run-run-1"
+            ? [
+                [
+                  {
+                    type: "tool-call",
+                    toolCallId: "g1",
+                    toolName: "define_goal",
+                    input: { objective: "Add paging", acceptanceCriteria: ["it pages"] },
+                  },
+                ],
+                [text("Goal started.")],
+              ]
+            : [[text("hello")]];
+        return {
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [...tools],
+            model: scriptedModel(steps),
+          }),
+        };
+      },
+    });
+    await runtime.ready;
+    plane.transcripts.stored = false;
+    plane.send(runStart);
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "error" });
+
+    plane.transcripts.stored = true;
+    plane.send({ ...runStart, runId: "run-2" });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
+    expect(made).toEqual(["run-run-1", "run-run-2"]);
   });
 });

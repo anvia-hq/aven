@@ -24,6 +24,7 @@ import {
   type ToolPart,
 } from "@aven/protocol/events";
 
+import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 
@@ -47,6 +48,7 @@ export function toolTarget(name: string, input: unknown) {
   if (COMMAND_TOOLS.has(name)) return asString(args.command);
   if (PROCESS_TOOLS.has(name)) return asString(args.processId);
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
+  if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
   if (name === "wait_for_port") return String(args.containerPort ?? "");
   return "";
 }

@@ -109,3 +109,74 @@ describe("DurableRuns after the process restarts", () => {
     expect(await next.done).toMatchObject({ type: "response" });
   });
 });
+
+describe("DurableRuns goals", () => {
+  const request = {
+    objective: "Make the tests pass",
+    acceptanceCriteria: ["bun test passes"],
+    verifyCommands: ["bun test"],
+  };
+  const results = (...exitCodes: number[]) => {
+    let calls = 0;
+    return async () => [
+      {
+        command: "bun test",
+        exitCode: exitCodes[Math.min(calls++, exitCodes.length - 1)] ?? 0,
+        output: "1 failed",
+      },
+    ];
+  };
+
+  test("works in sessions until the commands pass, reporting each session's events and messages", async () => {
+    const runs = await opened(journalPath());
+    const events: RunEvent[] = [];
+    const sessions: string[][] = [];
+    const goal = await runs.startGoal(
+      "run-1",
+      request,
+      input("goal-run-1", [text("first try")], [text("fixed it")]),
+      results(1, 0),
+      (event) => events.push(event),
+      async (messages) => void sessions.push(messages.map((message) => message.role)),
+    );
+
+    expect(await goal.done).toMatchObject({ type: "complete", evidence: ["`bun test` passed"] });
+    expect(events.filter((event) => event.type === "text")).toEqual([
+      { type: "text", delta: "first try" },
+      { type: "text", delta: "fixed it" },
+    ]);
+    // Each session's prompt, then its reply.
+    expect(sessions).toEqual([
+      ["user", "assistant"],
+      ["user", "assistant"],
+    ]);
+  });
+
+  test("a goal whose commands keep failing the same way stops short instead of looping", async () => {
+    const runs = await opened(journalPath());
+    const goal = await runs.startGoal(
+      "run-1",
+      request,
+      input("goal-run-1", [text("a")], [text("b")], [text("c")], [text("d")]),
+      results(1),
+      () => {},
+      async () => {},
+    );
+    expect(await goal.done).toMatchObject({ type: "paused", reason: "no_progress" });
+  });
+
+  test("a goal's agent is released when it ends, so the id can be used again", async () => {
+    const runs = await opened(journalPath());
+    for (const id of ["a", "b"]) {
+      const goal = await runs.startGoal(
+        `run-${id}`,
+        { ...request, verifyCommands: [] },
+        input("goal-run-1", [text(id)]),
+        async () => [],
+        () => {},
+        async () => {},
+      );
+      expect((await goal.done).type).toBe("complete");
+    }
+  });
+});
