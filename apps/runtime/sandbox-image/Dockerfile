@@ -77,7 +77,8 @@ RUN chmod 0555 /usr/local/bin/anvia-chromium /usr/local/bin/openbox-session \
   chown -R node:users /opt/venv /usr/local/rustup /usr/local/cargo
 
 # The base sets no wallpaper (the screen is black) and its own is an SVG nothing here can draw;
-# `openbox-session` points the desktop at this one (a soft white wave image from Pinterest).
+# `openbox-session` points the desktop at this one (a soft white wave image from Pinterest;
+# licence: unknown, to be replaced).
 COPY wallpaper.jpg /usr/share/backgrounds/aven.jpg
 
 # Xfce opens the browser, the file manager and the terminal through its helper settings, not a
