@@ -215,6 +215,15 @@ export interface ThreadWorkspaces {
   workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
+  /**
+   * Runs the repository's `.aven/setup` again in a setup container and keeps what it makes as the
+   * snapshot new threads start from (decision 0043). Throws, with the end of the script's output,
+   * when there is no script or it fails. Without it, an agent cannot save an environment.
+   */
+  saveEnvironment?(
+    thread: { id: string; organizationId?: string },
+    access: RepoAccess,
+  ): Promise<{ image: string }>;
   /** The images agents showed (decision 0033); without it, none can be read back. */
   readonly artifacts?: ArtifactStore;
   /** The files users attach (decision 0034); without it, a message with files cannot run. */
@@ -431,28 +440,54 @@ export class Sandboxes implements ThreadWorkspaces {
       console.warn(`${SETUP_SCRIPT} is not executable (chmod +x); it was not run`);
       return;
     }
-    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
-    const image = this.snapshots.imageFor(key);
     try {
-      await setupEnvironment({
-        docker: this.#run,
-        key,
-        baseImage: this.#config.image,
-        image,
-        root,
-        logPath: this.snapshots.logPath(key),
-        memoryMb,
-        cpus,
-        pidsLimit,
-        platform: this.#config.platform,
-        runtime: this.#config.runtime,
-        hostUser: hostUser(),
-      });
-      await this.snapshots.publish(key, { image, baseImageId, workspace: root });
-      await this.#pinImage(threadId, image);
+      await this.#build(threadId, root, key, baseImageId);
     } catch (error) {
       console.warn(`The setup of ${key} failed; see ${this.snapshots.logPath(key)}:`, error);
     }
+  }
+
+  // The setup itself: runs the script, keeps the snapshot and points the thread at its image.
+  async #build(threadId: string, root: string, key: string, baseImageId: string) {
+    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
+    const image = this.snapshots.imageFor(key);
+    await setupEnvironment({
+      docker: this.#run,
+      key,
+      baseImage: this.#config.image,
+      image,
+      root,
+      logPath: this.snapshots.logPath(key),
+      memoryMb,
+      cpus,
+      pidsLimit,
+      platform: this.#config.platform,
+      runtime: this.#config.runtime,
+      hostUser: hostUser(),
+    });
+    await this.snapshots.publish(key, { image, baseImageId, workspace: root });
+    await this.#pinImage(threadId, image);
+    return { image };
+  }
+
+  async saveEnvironment(thread: { id: string; organizationId?: string }, access: RepoAccess) {
+    const root = await this.workspace(thread.id);
+    if (!root) throw new Error("The thread has no workspace yet");
+    const environment = await this.#environmentOf(thread, access);
+    if (!environment)
+      throw new Error("Environments cannot be saved here: the sandbox image is not known");
+    const state = await scriptState(root, SETUP_SCRIPT);
+    if (state === "missing") {
+      throw new Error(
+        `The repository has no ${SETUP_SCRIPT}: write one, then save the environment`,
+      );
+    }
+    if (state === "not-executable") {
+      throw new Error(`${SETUP_SCRIPT} is not executable: run chmod +x ${SETUP_SCRIPT}`);
+    }
+    return this.#inTurn(environment.key, () =>
+      this.#build(thread.id, root, environment.key, environment.baseImageId),
+    );
   }
 
   // A thread keeps the image it started from, so its container does not change under it when the

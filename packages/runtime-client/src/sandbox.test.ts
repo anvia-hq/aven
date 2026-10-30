@@ -346,6 +346,74 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
     await cleanup();
   });
 
+  describe("saving the environment on request", () => {
+    // A thread whose repository had no setup script when it started, and now has one.
+    async function threadWithScript(d: ReturnType<typeof docker>, mode: number | null = 0o755) {
+      const g = git({ setup: false });
+      const started = await start(d, g);
+      await started.acquire("t-save");
+      const root = (await started.sandboxes.workspace("t-save"))!;
+      if (mode !== null) {
+        await Bun.write(join(root, ".aven", "setup"), "#!/bin/sh\nexit 0\n");
+        await chmod(join(root, ".aven", "setup"), mode);
+      }
+      return started;
+    }
+    const thread = { id: "t-save", organizationId: org };
+
+    test("runs the script again, keeps the snapshot and points the thread at it", async () => {
+      const d = docker();
+      const { sandboxes, key, cleanup } = await threadWithScript(d);
+      expect(await sandboxes.snapshots.valid(key, sha)).toBeNull();
+
+      const saved = await sandboxes.saveEnvironment(thread, access);
+
+      expect(saved).toEqual({ image: `aven-env-${key}` });
+      expect((await sandboxes.snapshots.valid(key, sha))?.image).toBe(`aven-env-${key}`);
+      expect(d.calls.some((args) => args[0] === "commit")).toBe(true);
+      // The next thread restores it.
+      await sandboxes.release("t-save");
+      d.calls.length = 0;
+      await sandboxes.acquire({ id: "t-save", organizationId: org }, repo).catch(() => undefined);
+      expect(imageOfThread(d.calls, "t-save")).toBe(`aven-env-${key}`);
+      await cleanup();
+    });
+
+    test("says what to do when there is no script, or it cannot run", async () => {
+      const none = await threadWithScript(docker(), null);
+      await expect(none.sandboxes.saveEnvironment(thread, access)).rejects.toThrow(
+        "has no .aven/setup: write one",
+      );
+      await none.cleanup();
+
+      const locked = await threadWithScript(docker(), 0o644);
+      await expect(locked.sandboxes.saveEnvironment(thread, access)).rejects.toThrow(
+        "is not executable: run chmod +x",
+      );
+      await locked.cleanup();
+    });
+
+    test("a script that fails is the error, with its output, and nothing is kept", async () => {
+      const d = docker((args) => args[0] === "exec" && args.includes("./.aven/setup"));
+      const { sandboxes, key, cleanup } = await threadWithScript(d);
+
+      await expect(sandboxes.saveEnvironment(thread, access)).rejects.toThrow(".aven/setup failed");
+
+      expect(await sandboxes.snapshots.valid(key, sha)).toBeNull();
+      expect(d.calls.some((args) => args[0] === "commit")).toBe(false);
+      await cleanup();
+    });
+
+    test("a thread with no workspace has nothing to save", async () => {
+      const { sandboxes, cleanup } = await start(docker(), git());
+
+      await expect(
+        sandboxes.saveEnvironment({ id: "t-none", organizationId: org }, access),
+      ).rejects.toThrow("no workspace yet");
+      await cleanup();
+    });
+  });
+
   test("a thread keeps the image it started from when the snapshot is replaced", async () => {
     const d = docker();
     const g = git();
