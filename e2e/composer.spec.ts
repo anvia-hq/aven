@@ -11,6 +11,13 @@ async function createProject(page: Page) {
   await importRepository(page, "composer-app");
 }
 
+// The model menu opens on the reasoning effort and the model in use; the model button opens the
+// list of every provider's models, and choosing one goes back to the first view.
+async function pickModel(page: Page, model: string) {
+  await page.getByRole("button", { name: /^(Provider default|gpt-4o|o3)$/ }).click();
+  await page.getByRole("option", { name: model }).click();
+}
+
 test.describe("prompt composer", () => {
   test("without a provider it offers to add one", async ({ page }) => {
     await registerUser(page, "cmp", "Composer User");
@@ -48,21 +55,21 @@ test.describe("prompt composer", () => {
     const menu = page.getByRole("button", { name: "Model and reasoning effort" });
     const effort = page.getByRole("slider", { name: "Reasoning effort" });
 
-    // One trigger opens one panel with the models and, for a model that has them, a slider of efforts.
+    // One trigger opens one panel with the model and, for a model that has them, a slider of efforts.
     await menu.click();
     await expect(effort).toHaveCount(0);
-    await page.getByRole("option", { name: "o3" }).click();
+    await pickModel(page, "o3");
     await expect(effort).toBeVisible();
     await effort.focus();
     await page.keyboard.press("End");
     await expect(effort).toHaveAttribute("aria-valuetext", "high");
 
     // A model without the control has no effort to choose.
-    await page.getByRole("option", { name: "gpt-4o" }).click();
+    await pickModel(page, "gpt-4o");
     await expect(effort).toHaveCount(0);
 
     // Back on o3 the effort starts from the model's own default, then is picked again.
-    await page.getByRole("option", { name: "o3" }).click();
+    await pickModel(page, "o3");
     await expect(effort).toHaveAttribute("aria-valuetext", "medium");
     await effort.focus();
     await page.keyboard.press("End");
@@ -70,7 +77,7 @@ test.describe("prompt composer", () => {
 
     // The choice survives a reload.
     await page.reload();
-    await expect(menu).toContainText("high");
+    await expect(menu).toContainText("High");
     await expect(menu).toContainText("o3");
     // A reload forgets which project was picked, not the model.
     await page.getByRole("combobox", { name: "Project" }).click();
@@ -108,7 +115,7 @@ test.describe("prompt composer", () => {
       await page.getByRole("combobox", { name: "Project" }).click();
       await page.getByRole("option", { name: "composer-app" }).click();
       await menu.click();
-      await page.getByRole("option", { name: model }).click();
+      await pickModel(page, model);
       await page.keyboard.press("Escape");
       await page.getByRole("textbox", { name: "Prompt" }).fill(`on ${model}`);
       await page.getByRole("button", { name: "Send" }).click();
