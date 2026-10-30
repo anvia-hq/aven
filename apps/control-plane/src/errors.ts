@@ -12,6 +12,10 @@ export class UnavailableError extends Error {}
 /** The request clashes with the current state (409). */
 export class ConflictError extends Error {}
 
+/** What went wrong, in words: an Error's message, or whatever else was thrown as text. */
+export const describeError = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 // Global, so it covers every router mounted after it. Anything else is logged and answered
 // generically: an unexpected error's message must not reach the client.
 export const errorsRouter = new Elysia({ name: "errors" }).onError(

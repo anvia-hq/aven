@@ -14,7 +14,7 @@ import {
   type ThreadUsage,
 } from "@aven/protocol/events";
 
-import { ConflictError, UnavailableError, UnprocessableError } from "../../errors";
+import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
 import { threadsService } from "../threads/service";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
@@ -310,7 +310,7 @@ function parseSaved(continuation: unknown) {
 }
 
 function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = describeError(error);
   return message.length > 300 ? `${message.slice(0, 300)}…` : message;
 }
 

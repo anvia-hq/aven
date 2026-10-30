@@ -13,7 +13,7 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { memoryStore } from "../../memory-store";
-import { UnavailableError } from "../../errors";
+import { describeError, UnavailableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import { runtimesService } from "./service";
 import {
@@ -269,8 +269,7 @@ export class RuntimeConnection {
         method === "repo.access" ? await this.#repo(params) : await this.#memory(method, params);
       this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      this.#reply({ type: "reply", id, ok: false, error: text });
+      this.#reply({ type: "reply", id, ok: false, error: describeError(error) });
     }
   }
 

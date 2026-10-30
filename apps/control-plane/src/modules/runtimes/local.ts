@@ -1,6 +1,7 @@
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 
+import { describeError } from "../../errors";
 import { runtimesService } from "./service";
 
 function optionalNumber(name: string) {
@@ -40,9 +41,7 @@ export async function startLocalRunner(port: number) {
       journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
     });
   } catch (error) {
-    console.warn(
-      `The control plane's own runner is offline: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.warn(`The control plane's own runner is offline: ${describeError(error)}`);
     return undefined;
   }
 }
