@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createVerify, generateKeyPairSync } from "node:crypto";
 
-import {
-  GithubClient,
-  GithubNotConfiguredError,
-  GithubWriteNotGrantedError,
-  githubConfigFromEnv,
-} from "./client";
+import { GithubClient, GithubNotConfiguredError, githubConfigFromEnv } from "./client";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const config = {
