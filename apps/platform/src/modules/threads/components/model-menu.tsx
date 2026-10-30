@@ -1,5 +1,6 @@
-import { ChevronDown } from "@mynaui/icons-react";
+import { ArrowLeft, ChevronRight } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -11,18 +12,21 @@ import {
   CommandList,
 } from "@/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { ProviderLogo } from "@/modules/settings/components/provider-logo";
 
 import type { useModelSelection } from "../hooks/use-model-selection";
-import { EffortSlider } from "./effort-slider";
+import { EffortSlider, effortName } from "./effort-slider";
 
 type Props = { model: ReturnType<typeof useModelSelection> };
 
-// Provider, model and reasoning effort in one trigger and one panel. With no provider yet, a link
-// to add one: the server's shared model still answers, but nothing here can be chosen.
+// The panel opens on the reasoning effort and the model in use; the model opens a second view with
+// every provider's models in one flat list, under a heading per provider.
 export function ModelMenu({ model }: Props) {
-  const { providers, provider, modelId, modelOptions, loadingModels, levels, effort } = model;
+  const { providers, provider, modelId, choices, loadingModels, levels, effort } = model;
+  const [choosing, setChoosing] = useState(false);
 
+  // With no provider yet, a link to add one: the server's shared model still answers, but nothing
+  // here can be chosen.
   if (!provider) {
     return (
       <Link to="/settings/providers" className="text-xs text-muted-foreground underline">
@@ -31,70 +35,105 @@ export function ModelMenu({ model }: Props) {
     );
   }
 
-  const providerItems = providers.map((item) => ({ value: item.id, label: item.name }));
+  const efforts = levels.length > 1;
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => !open && setChoosing(false)}>
       <PopoverTrigger
         render={
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             aria-label="Model and reasoning effort"
-            className="max-w-full min-w-0 rounded-full bg-muted/40 pr-2 pl-3 text-muted-foreground"
+            className="max-w-full min-w-0 bg-muted/50 px-2 text-muted-foreground"
           />
         }
       >
-        <span className="truncate text-foreground">{modelId ?? "Provider default"}</span>
-        {levels.length > 1 && <span className="shrink-0">· {effort}</span>}
-        <ChevronDown />
+        <ProviderLogo kind={provider.kind} />
+        <span className="truncate font-medium text-foreground">
+          {modelId ?? "Provider default"}
+        </span>
+        {efforts && <span className="shrink-0">{effortName(effort)}</span>}
       </PopoverTrigger>
       <PopoverContent
         side="top"
         align="end"
-        className="w-80 max-w-[calc(100vw-2rem)] rounded-xl p-1.5"
+        className="w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-2xl p-0"
       >
-        {providers.length > 1 && (
-          <Select
-            items={providerItems}
-            value={provider.id}
-            onValueChange={(value) => value && model.selectProvider(value)}
-          >
-            <SelectTrigger size="sm" aria-label="Provider" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {providerItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Command>
-          <CommandInput placeholder={loadingModels ? "Loading models…" : "Search models…"} />
-          <CommandList className="max-h-56">
-            <CommandEmpty>No models found</CommandEmpty>
-            <CommandGroup>
-              {modelOptions.map((option) => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  data-checked={option === modelId}
-                  onSelect={() => model.selectModel(option)}
-                >
-                  <span className="truncate">{option}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-        {levels.length > 1 && (
-          <div className="border-t px-2 pt-3 pb-2">
-            <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />
+        {choosing ? (
+          <div className="flex flex-col gap-1 p-3 pb-0">
+            <div className="flex items-center gap-2 pb-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Back"
+                onClick={() => setChoosing(false)}
+              >
+                <ArrowLeft />
+              </Button>
+              <span className="font-medium">Choose model</span>
+            </div>
+            <Command>
+              <CommandInput placeholder={loadingModels ? "Loading models…" : "Search models…"} />
+              <CommandList className="max-h-60">
+                <CommandEmpty>No models found</CommandEmpty>
+                {providers.map((item) => (
+                  <CommandGroup
+                    key={item.id}
+                    heading={
+                      <span className="flex items-center gap-1.5">
+                        <ProviderLogo kind={item.kind} />
+                        {item.name}
+                      </span>
+                    }
+                  >
+                    {choices
+                      .filter((choice) => choice.provider.id === item.id)
+                      .map((choice) => (
+                        <CommandItem
+                          key={choice.modelId}
+                          value={`${choice.modelId} ${item.name} ${item.id}`}
+                          data-checked={item.id === provider.id && choice.modelId === modelId}
+                          onSelect={() => {
+                            model.selectModel(choice);
+                            setChoosing(false);
+                          }}
+                        >
+                          <span className="truncate">{choice.modelId}</span>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                ))}
+              </CommandList>
+            </Command>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 p-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs tracking-wide text-muted-foreground uppercase">
+                {efforts ? "Reasoning" : "Model"}
+              </span>
+              {efforts && <span className="text-xl font-semibold">{effortName(effort)}</span>}
+            </div>
+            <Button
+              variant="outline"
+              className="w-fit max-w-full rounded-full"
+              onClick={() => setChoosing(true)}
+            >
+              <ProviderLogo kind={provider.kind} />
+              <span className="truncate">{modelId ?? "Provider default"}</span>
+              <ChevronRight />
+            </Button>
+            {efforts && (
+              <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />
+            )}
           </div>
         )}
+        <div className="border-t px-4 py-3 text-sm">
+          <Link to="/settings/providers" className="text-muted-foreground hover:text-foreground">
+            Manage models
+          </Link>
+        </div>
       </PopoverContent>
     </Popover>
   );

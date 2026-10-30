@@ -1,7 +1,8 @@
 import { getDefaultStore, useAtomValue } from "jotai";
 
-import { useProviderModels } from "@/modules/settings/hooks/use-provider-models";
+import { useProvidersModels } from "@/modules/settings/hooks/use-provider-models";
 import { useProviders } from "@/modules/settings/hooks/use-providers";
+import type { Provider } from "@/modules/settings/types";
 
 import {
   modelSelectionAtom,
@@ -9,6 +10,8 @@ import {
   type SavedSelection,
 } from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
+
+export type ModelChoice = { provider: Provider; modelId: string };
 
 // Threads whose choice is remembered; past this, the least recently used are forgotten.
 const MAX_THREADS = 200;
@@ -51,7 +54,8 @@ export function rememberModelSelection(threadId: string, selection: RunSelection
   });
 }
 
-// The composer's provider, model and reasoning effort, for a thread (`threadId`) or for a new one.
+// The composer's model (which also names its provider) and reasoning effort, for a thread
+// (`threadId`) or for a new one.
 // A thread uses its own choice, else the last one made anywhere. The provider is the saved one if
 // it still exists, else the user's default. Effort levels belong to the model, so they come from
 // its listing and reset to the model's own default whenever the model changes.
@@ -67,16 +71,18 @@ export function useModelSelection(threadId?: string) {
     providers.find((item) => item.isDefault) ??
     providers[0];
   const own = saved?.providerId === provider?.id ? saved : null;
-  const { models, efforts, loading } = useProviderModels(provider?.id);
+  const { byProvider, loading } = useProvidersModels(providers.map((item) => item.id));
 
   const modelId = own?.modelId ?? provider?.modelId ?? null;
-  // The configured model first, then whatever the provider listed.
-  const listed = models ?? [];
-  const modelOptions = [...new Set([provider?.modelId, ...listed])].filter((id): id is string =>
-    Boolean(id),
-  );
+  // Every provider's models in one list: the configured one first, then whatever it listed.
+  const choices: ModelChoice[] = providers.flatMap((item) => {
+    const listed = byProvider[item.id]?.models ?? [];
+    return [...new Set([item.modelId, ...listed])]
+      .filter((id): id is string => Boolean(id))
+      .map((id) => ({ provider: item, modelId: id }));
+  });
 
-  const control = modelId ? efforts[modelId] : undefined;
+  const control = modelId && provider ? byProvider[provider.id]?.efforts[modelId] : undefined;
   const levels = control?.options ?? [];
   const fallback = control?.defaultValue ?? (levels.includes("medium") ? "medium" : levels[0]);
   const effort = own?.effort && levels.includes(own.effort) ? own.effort : fallback;
@@ -94,13 +100,13 @@ export function useModelSelection(threadId?: string) {
     loaded,
     provider,
     modelId,
-    modelOptions,
+    choices,
     loadingModels: loading,
     levels,
     effort,
     selection,
-    selectProvider: (providerId: string) => setSaved({ providerId }),
-    selectModel: (next: string) => provider && setSaved({ providerId: provider.id, modelId: next }),
+    selectModel: (choice: ModelChoice) =>
+      setSaved({ providerId: choice.provider.id, modelId: choice.modelId }),
     selectEffort: (next: string) =>
       provider &&
       setSaved({ providerId: provider.id, modelId: modelId ?? undefined, effort: next }),

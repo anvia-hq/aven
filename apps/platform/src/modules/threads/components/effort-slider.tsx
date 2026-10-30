@@ -1,4 +1,4 @@
-import { Slider } from "@/components/slider";
+import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 
 type Props = {
   levels: string[];
@@ -6,30 +6,58 @@ type Props = {
   onChange: (level: string) => void;
 };
 
+const NAMES: Record<string, string> = { xhigh: "Extra high" };
+
+/** A reasoning level as people read it: "xhigh" is "Extra high". */
+export function effortName(level: string) {
+  const name = NAMES[level] ?? level;
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+// The thumb is 36px wide, taller than the 24px track, and sits within it by its edges, so the dots
+// keep 18px from each end to line up with the steps.
+const THUMB = "size-9";
+
 // One step per level the model accepts, lowest on the left, with the levels named underneath.
 export function EffortSlider({ levels, value, onChange }: Props) {
+  const last = Math.max(levels.length - 1, 1);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Reasoning effort</span>
-        <span className="font-medium capitalize">{value}</span>
-      </div>
-      <Slider
+    <div className="flex flex-col gap-2.5">
+      <SliderPrimitive.Root
         min={0}
         max={levels.length - 1}
         step={1}
+        thumbAlignment="edge"
         value={[Math.max(levels.indexOf(value), 0)]}
         onValueChange={(next) => {
           const level = levels[Array.isArray(next) ? (next[0] ?? 0) : next];
           if (level) onChange(level);
         }}
-        getAriaLabel={() => "Reasoning effort"}
-        getAriaValueText={(_formatted, index) => levels[index] ?? ""}
-      />
-      <div className="flex justify-between text-[0.7rem] text-muted-foreground capitalize">
+      >
+        <SliderPrimitive.Control className="relative flex h-9 w-full touch-none items-center select-none">
+          <SliderPrimitive.Track className="relative h-6 w-full grow overflow-hidden rounded-full border bg-muted/50 select-none">
+            <SliderPrimitive.Indicator className="h-full rounded-full bg-linear-to-r from-effort/25 to-effort" />
+          </SliderPrimitive.Track>
+          <div aria-hidden className="pointer-events-none absolute inset-x-4.5 inset-y-0">
+            {levels.map((level, index) => (
+              <span
+                key={level}
+                className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/60"
+                style={{ left: `${(index / last) * 100}%` }}
+              />
+            ))}
+          </div>
+          <SliderPrimitive.Thumb
+            getAriaLabel={() => "Reasoning effort"}
+            getAriaValueText={(_formatted, index) => levels[index] ?? ""}
+            className={`${THUMB} rounded-full bg-foreground shadow-md ring-ring/50 outline-hidden transition-shadow focus-visible:ring-3`}
+          />
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
+      <div className="flex justify-between text-xs text-muted-foreground">
         {levels.map((level) => (
-          <span key={level} className={level === value ? "text-foreground" : undefined}>
-            {level}
+          <span key={level} className={level === value ? "font-medium text-foreground" : undefined}>
+            {effortName(level)}
           </span>
         ))}
       </div>

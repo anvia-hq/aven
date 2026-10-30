@@ -1,37 +1,32 @@
 import { useAtom } from "jotai";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
 
 import { providerModelsAtom } from "../atoms/provider-models-atom";
-import type { ProviderModels } from "../types";
 
-// The models a saved provider offers. Loads once per provider; `models` stays null while loading
-// and after a failure (bad key, server down), when the caller falls back to the configured model.
-export function useProviderModels(providerId: string | undefined) {
+// The models saved providers offer. Each provider is asked once and kept; a provider's entry is
+// missing while it loads and after a failure (bad key, server down), when the caller falls back to
+// the model configured on the provider.
+export function useProvidersModels(providerIds: string[]) {
   const [cache, setCache] = useAtom(providerModelsAtom);
-  const [failedId, setFailedId] = useState<string | null>(null);
-  const cached = providerId ? cache[providerId] : undefined;
+  const [failed, setFailed] = useState<string[]>([]);
+  const asked = useRef(new Set<string>());
+  const key = providerIds.join(",");
 
   useEffect(() => {
-    if (!providerId || cached) return;
-    let current = true;
-    api<ProviderModels>(`/providers/${providerId}/models`).then(
-      (result) => {
-        if (current) setCache((all) => ({ ...all, [providerId]: result }));
-      },
-      () => {
-        if (current) setFailedId(providerId);
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [providerId, cached, setCache]);
+    for (const id of key ? key.split(",") : []) {
+      if (cache[id] || asked.current.has(id)) continue;
+      asked.current.add(id);
+      api<(typeof cache)[string]>(`/providers/${id}/models`).then(
+        (result) => setCache((all) => ({ ...all, [id]: result })),
+        () => setFailed((ids) => [...ids, id]),
+      );
+    }
+  }, [key, cache, setCache]);
 
   return {
-    models: cached?.models ?? null,
-    efforts: cached?.efforts ?? {},
-    loading: Boolean(providerId) && !cached && failedId !== providerId,
+    byProvider: cache,
+    loading: providerIds.some((id) => !cache[id] && !failed.includes(id)),
   };
 }
