@@ -1,62 +1,123 @@
+import { Database } from "bun:sqlite";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
-
-type Entry = { seq: number; message: RuntimeToControlPlane };
-
-type Log = {
-  entries: Entry[];
-  next: number;
-  /** Whether the control plane has asked for this run since the connection came up. */
-  attached: boolean;
-};
+import { chmodSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 
 // The most a run keeps for a reconnect. A run that outgrows it while the link is down cannot be
 // replayed from the start; the newest events are what a client needs.
 const MAX_ENTRIES = 20_000;
 
-// What a run has told the control plane, numbered, until the control plane says it has the end. A
-// run keeps working while the link is down; when it comes back the control plane asks for
-// everything after the last event it heard (decision 0023).
+/** Where a message came from in the journal, so a restarted runner knows where to pick up. */
+export type Source = { id: string; sequence: number };
+
+// What a run has told the control plane, numbered, until the control plane says it has the end.
+// A run keeps working while the link is down; when it comes back the control plane asks for
+// everything after the last event it heard. It is on disk, so the same holds when the runner
+// restarts (decisions 0023 and 0024).
 export class RunOutbox {
-  #logs = new Map<string, Log>();
+  #db: Database;
+  // The next number of each run, and whether the control plane has asked for it since the
+  // connection came up. Neither outlives the process.
+  #next = new Map<string, number>();
+  #attached = new Set<string>();
+
+  constructor(db: Database) {
+    this.#db = db;
+    db.run(`create table if not exists outbox (
+      run_id text not null, seq integer not null, message text not null,
+      source text, source_sequence integer,
+      primary key (run_id, seq)
+    )`);
+    db.run("create index if not exists outbox_source on outbox (run_id, source, source_sequence)");
+    // A run exists from the moment it starts, before it has said anything.
+    db.run("create table if not exists outbox_runs (run_id text primary key)");
+    for (const row of db.query<{ run_id: string }, []>("select run_id from outbox_runs").all())
+      this.#next.set(row.run_id, 1);
+    for (const row of db
+      .query<{ run_id: string; last: number }, []>(
+        "select run_id, max(seq) as last from outbox group by run_id",
+      )
+      .all())
+      this.#next.set(row.run_id, row.last + 1);
+  }
 
   /** Starts a run's log, already attached: it began on the connection that is up. */
   open(runId: string) {
-    this.#logs.set(runId, { entries: [], next: 1, attached: true });
+    this.#next.set(runId, this.#next.get(runId) ?? 1);
+    this.#attached.add(runId);
+    this.#db.query("insert or ignore into outbox_runs (run_id) values (?)").run(runId);
   }
 
   /** Numbers and keeps a message of the run; null when the run is not in the outbox (it was forgotten). */
-  push(runId: string, make: (seq: number) => RuntimeToControlPlane) {
-    const log = this.#logs.get(runId);
-    if (!log) return null;
-    const entry = { seq: log.next++, message: make(log.next - 1) };
-    log.entries.push(entry);
-    if (log.entries.length > MAX_ENTRIES) log.entries.shift();
-    return entry.message;
+  push(runId: string, make: (seq: number) => RuntimeToControlPlane, source?: Source) {
+    const seq = this.#next.get(runId);
+    if (seq === undefined) return null;
+    this.#next.set(runId, seq + 1);
+    const message = make(seq);
+    this.#db
+      .query(
+        "insert into outbox (run_id, seq, message, source, source_sequence) values (?, ?, ?, ?, ?)",
+      )
+      .run(runId, seq, JSON.stringify(message), source?.id ?? null, source?.sequence ?? null);
+    if (seq > MAX_ENTRIES)
+      this.#db
+        .query("delete from outbox where run_id = ? and seq <= ?")
+        .run(runId, seq - MAX_ENTRIES);
+    return message;
+  }
+
+  /** The newest journal event of `sourceId` this run has already told the control plane about. */
+  cursor(runId: string, sourceId: string) {
+    return (
+      this.#db
+        .query<{ last: number | null }, [string, string]>(
+          "select max(source_sequence) as last from outbox where run_id = ? and source = ?",
+        )
+        .get(runId, sourceId)?.last ?? 0
+    );
   }
 
   /** Whether live messages of the run may be sent now, or are waiting for the control plane to ask. */
   attached(runId: string) {
-    return this.#logs.get(runId)?.attached ?? false;
+    return this.#attached.has(runId);
   }
 
   /** The connection dropped and came back: every run waits to be asked for again. */
   detachAll() {
-    for (const log of this.#logs.values()) log.attached = false;
+    this.#attached.clear();
   }
 
   /** The control plane follows this run and has everything up to `after`: what it lacks, and live from here. */
   attach(runId: string, after: number) {
-    const log = this.#logs.get(runId);
-    if (!log) return [];
-    log.attached = true;
-    return log.entries.filter((entry) => entry.seq > after).map((entry) => entry.message);
+    if (!this.#next.has(runId)) return [];
+    this.#attached.add(runId);
+    return this.#db
+      .query<{ message: string }, [string, number]>(
+        "select message from outbox where run_id = ? and seq > ? order by seq",
+      )
+      .all(runId, after)
+      .map((row) => JSON.parse(row.message) as RuntimeToControlPlane);
   }
 
   ack(runId: string) {
-    this.#logs.delete(runId);
+    this.#next.delete(runId);
+    this.#attached.delete(runId);
+    this.#db.query("delete from outbox where run_id = ?").run(runId);
+    this.#db.query("delete from outbox_runs where run_id = ?").run(runId);
   }
 
   ids() {
-    return [...this.#logs.keys()];
+    return [...this.#next.keys()];
   }
+}
+
+export function openRunDatabase(path: string) {
+  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+  const db = new Database(path, { create: true });
+  // It holds the model grants of runs in flight: the runner's own, no one else's.
+  if (path !== ":memory:") chmodSync(path, 0o600);
+  // Events arrive many a second; a crash may lose the last few, and the journal has them.
+  db.run("pragma journal_mode = wal");
+  db.run("pragma synchronous = normal");
+  return db;
 }

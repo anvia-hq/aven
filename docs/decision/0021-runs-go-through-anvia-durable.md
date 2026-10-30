@@ -20,7 +20,7 @@ Durable shapes the design:
 - **A question parks the run.** The wire is as in 0020 (`run.end` with `interaction` and its `continuation`, then `run.resume`), but the run stays in the journal and `run.resume` delivers the answer to it (`run.respond`). Two things would go stale while a person thinks, and are handled:
   - The agent's tools point at the sandbox of the run that asked, which idle release may have freed. They are stand-ins (`late-bound-tools.ts`) that call the thread's current sandbox.
   - Its model client holds a gateway token, revoked when the run paused. The gateway token is now derived from the thread (HMAC of `PROVIDER_ENCRYPTION_KEY`, else `BETTER_AUTH_SECRET`), so the run that answers gets the same token. The grant still exists only while a run holds it. The provider cannot change between question and answer (the token's path names it); model and effort can, since the gateway pins them per request.
-- **After a runner restart**, a parked question can still be answered: the agent is built again under its old id and registered. A run that was working is cancelled when the journal opens, because the control plane ended it when the link dropped and an unfinished run would hold its thread's queue.
+- **After a runner restart**, a parked question can still be answered: the agent is built again under its old id and registered. A run that was working is cancelled when the journal opens unless a record asks for it (decision 0024), because an unfinished run nobody follows would hold its thread's queue.
 
 ## Consequences
 
@@ -28,5 +28,5 @@ Durable shapes the design:
 - A run's partial turns are not in the transcript when it fails or is cancelled: only completed outcomes are sent. Before, turns were saved as they finished.
 - A model request that is retried can repeat streamed text in the client; the protocol has no event for "discard this attempt" yet.
 - Anthropic thinking blocks now come back from durable's history on later runs; `withoutStoredReasoning` no longer applies (bug 0001). Unverified against the live API.
-- Interrupted (not parked) runs are ended, not continued, so tool recovery policies are not set yet. Continuing them needs the control plane to keep a run alive across a reconnect and re-issue its grant: future work, and the prerequisite for goals that outlive a restart.
+- Continuing interrupted runs came with decisions 0023 and 0024.
 - The wire's `memory.load`, `memory.snapshot` and `memory.replacePrefix`, and the agent's `memory` option with `withoutStoredReasoning`, are unused by production runs. Remove them with the next wire version.

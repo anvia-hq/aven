@@ -346,6 +346,8 @@ describe("startRuntime", () => {
 });
 
 describe("startRuntime runs", () => {
+  const hellos = (plane: ReturnType<typeof fakeControlPlane>) =>
+    plane.received.filter((message) => message.type === "hello");
   const ended = (plane: ReturnType<typeof fakeControlPlane>) =>
     plane.received.filter((message) => message.type === "run.end");
   const appended = (plane: ReturnType<typeof fakeControlPlane>) =>
@@ -624,9 +626,6 @@ describe("startRuntime runs", () => {
   });
 
   describe("when the connection drops", () => {
-    const hellos = (plane: ReturnType<typeof fakeControlPlane>) =>
-      plane.received.filter((message) => message.type === "hello");
-
     test("a run keeps working, and the control plane gets what it missed when it asks", async () => {
       const { sandbox, up } = slowSandbox();
       up();
@@ -674,6 +673,125 @@ describe("startRuntime runs", () => {
       plane.drop();
       await until(() => hellos(plane).length === 3);
       expect(hellos(plane)[2]).toMatchObject({ runs: [] });
+    });
+  });
+
+  describe("when the runner restarts", () => {
+    test("the run it was working on goes on from where it stopped, without repeating what it did", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      let lookups = 0;
+      const lookup = createTool({
+        name: "lookup",
+        description: "Looks something up",
+        inputSchema: z.object({ key: z.string() }),
+        execute: ({ key }) => `value of ${++lookups} for ${key}`,
+      });
+      const hold = Promise.withResolvers<void>();
+      const reached = Promise.withResolvers<void>();
+      const paths = { journalPath: journalPath() };
+
+      const first = connect({
+        sandbox,
+        ...paths,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [lookup],
+            model: scriptedModel([
+              [text("looking. "), toolCall("lookup", { key: "a" }, "call-1")],
+              async () => {
+                reached.resolve();
+                await hold.promise;
+                return [text("never")];
+              },
+            ]),
+          }),
+        }),
+      });
+      await first.runtime.ready;
+      first.plane.send(runStart);
+      await reached.promise;
+      await until(() => first.plane.received.some((m) => m.type === "run.event"));
+      const heard = first.plane.received.flatMap((m) => (m.type === "run.event" ? [m.seq] : []));
+
+      // The runner stops with the run half done.
+      const stopping = first.runtime.stop();
+      hold.resolve();
+      await stopping;
+
+      // A new runner on the same files. The control plane has the first events and asks for the rest.
+      const second = connect({
+        sandbox,
+        ...paths,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [lookup],
+            model: scriptedModel([[text("all done")]]),
+          }),
+        }),
+      });
+      await second.runtime.ready;
+      await until(() => hellos(second.plane).length === 1);
+      expect(hellos(second.plane)[0]).toMatchObject({ runs: ["run-1"] });
+      second.plane.send({ type: "run.attach", runId: "run-1", after: Math.max(...heard) });
+
+      await until(() => ended(second.plane).length === 1);
+      expect(ended(second.plane)[0]).toMatchObject({ outcome: "response" });
+      // What the first runner did is not done again, and the numbering carries on.
+      expect(lookups).toBe(1);
+      const seqs = second.plane.received.flatMap((m) =>
+        m.type === "run.event" || m.type === "run.end" ? [m.seq] : [],
+      );
+      expect(seqs[0]).toBeGreaterThan(Math.max(...heard));
+      expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
+      const texts = second.plane.received.flatMap((m) =>
+        m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
+      );
+      expect(texts).toEqual(["all done"]);
+
+      // Acknowledged, it is forgotten for good.
+      second.plane.send({ type: "run.ack", runId: "run-1" });
+      second.plane.drop();
+      await until(() => hellos(second.plane).length === 2);
+      expect(hellos(second.plane)[1]).toMatchObject({ runs: [] });
+    });
+
+    test("a run the control plane no longer follows is stopped, and said to have ended", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      const hold = Promise.withResolvers<void>();
+      const reached = Promise.withResolvers<void>();
+      const paths = { journalPath: journalPath() };
+      const make: CreateRuntimeAgent = ({ id }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          model: scriptedModel([
+            async () => {
+              reached.resolve();
+              await hold.promise;
+              return [text("never")];
+            },
+          ]),
+        }),
+      });
+      const first = connect({ sandbox, ...paths, createAgent: make });
+      await first.runtime.ready;
+      first.plane.send(runStart);
+      await reached.promise;
+      const stopping = first.runtime.stop();
+      hold.resolve();
+      await stopping;
+
+      const second = connect({ sandbox, ...paths, createAgent: make });
+      await until(() => hellos(second.plane).length === 1);
+      second.plane.send({ type: "run.cancel", runId: "run-1", reason: "Not followed" });
+      await until(() => ended(second.plane).length === 1);
+      expect(ended(second.plane)[0]).toMatchObject({ outcome: "error", error: "Not followed" });
     });
   });
 });

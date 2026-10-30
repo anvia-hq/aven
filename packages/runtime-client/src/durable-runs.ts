@@ -20,11 +20,30 @@ import { dirname } from "node:path";
 
 import { createDurableEventMapper, type DurableEnd } from "./durable-events";
 import { assessGoal, type CommandResult } from "./goal-assessment";
+import type { Source } from "./run-outbox";
 import { goalSessionMarker } from "./goal-report";
 
 // Bump when the agent's tools or instructions change incompatibly: runs unfinished under an older
 // version stop as "needs attention" instead of continuing under code that no longer matches.
 const AGENT_VERSION = "1";
+
+// Tools that are safe to repeat when the runner stopped while they ran. Everything else (commands,
+// processes, the desktop) is not repeated: the run is told the outcome is unknown.
+const SAFE_TOOLS = new Set([
+  "read_file",
+  "write_file",
+  "list_files",
+  "list_ports",
+  "list_processes",
+  "read_process_logs",
+  "wait_for_port",
+]);
+
+const INTERRUPTED =
+  "The runner restarted while this tool call was running, so its outcome is unknown: it may have finished, partly finished, or not started. Check the current state (files, git status, running processes) before repeating it, and do not assume it succeeded.";
+
+/** Where an event goes, with the journal event it came from when it came from one. */
+export type Emit = (event: RunEvent, source?: Source) => void;
 
 // A goal's limits, as the agent may raise or lower the sessions. A session is one agent run, which
 // the agent's own step limit bounds, so the turns follow from the sessions.
@@ -86,7 +105,15 @@ export class DurableRuns {
     this.#contexts = contexts;
   }
 
-  static async open(databasePath: string, onFatalError?: (error: unknown) => void) {
+  /**
+   * Runs of the agents in `keepAgents` are waiting to be taken up again by a runner that restarted
+   * (`rejoin`); every other run that was working is ended.
+   */
+  static async open(
+    databasePath: string,
+    keepAgents: ReadonlySet<string> = new Set(),
+    onFatalError?: (error: unknown) => void,
+  ) {
     mkdirSync(dirname(databasePath), { recursive: true });
     const contexts = new Map<string, GoalContext>();
     // Every session of a goal continues the last one's conversation, so nothing is lost between them.
@@ -106,14 +133,14 @@ export class DurableRuns {
       onFatalError: (error) => (onFatalError ?? console.error)(error),
     });
     const runs = new DurableRuns(runtime, goal, contexts);
-    await runs.#endInterrupted();
+    await runs.#endInterrupted(keepAgents);
     return runs;
   }
 
-  // A run that was working when this process stopped is not continued: the control plane ended it
-  // when the link dropped, and a run left unfinished would hold its thread's queue forever. A run
-  // parked on a question is kept; it needs nothing from this process until it is answered.
-  async #endInterrupted() {
+  // A run that was working when this process stopped, and that no record asks for, is not
+  // continued: nothing would ever follow it, and left unfinished it would hold its thread's queue
+  // forever. A run parked on a question is kept; it needs nothing until it is answered.
+  async #endInterrupted(keepAgents: ReadonlySet<string>) {
     for (const status of [
       "queued",
       "pending",
@@ -123,7 +150,9 @@ export class DurableRuns {
     ] as const) {
       for (let after: number | undefined; ;) {
         const page = await this.#runtime.listRuns({ status, after, limit: 100 });
-        for (const run of page.runs) await this.#runtime.getRun(run.id).then((r) => r.cancel());
+        for (const run of page.runs)
+          if (!keepAgents.has(run.agentId))
+            await this.#runtime.getRun(run.id).then((r) => r.cancel());
         if (page.nextCursor === undefined) break;
         after = page.nextCursor;
       }
@@ -140,13 +169,7 @@ export class DurableRuns {
     return runs[0] && { runId: runs[0].id, agentId: runs[0].agentId };
   }
 
-  async start(
-    runId: string,
-    threadId: string,
-    prompt: string,
-    input: RunInput,
-    onEvent: (event: RunEvent) => void,
-  ) {
+  async start(runId: string, threadId: string, prompt: string, input: RunInput, onEvent: Emit) {
     this.#register(input);
     try {
       const run = await this.#runtime.submit(
@@ -170,7 +193,7 @@ export class DurableRuns {
     question: { id: string; toolCallId: string },
     response: AgentInteractionResponse,
     restore: () => RunInput,
-    onEvent: (event: RunEvent) => void,
+    onEvent: Emit,
   ) {
     const input = restore();
     try {
@@ -211,7 +234,7 @@ export class DurableRuns {
     request: GoalRequest,
     input: RunInput,
     verify: () => Promise<CommandResult[]>,
-    onEvent: (event: RunEvent) => void,
+    onEvent: Emit,
     onSession: (session: number, messages: Message[]) => Promise<void>,
   ): Promise<FollowedGoal> {
     const agentId = input.agent.id;
@@ -247,7 +270,7 @@ export class DurableRuns {
   async #followGoal(
     handle: DurableTaskHandle<GoalResult>,
     input: RunInput,
-    onEvent: (event: RunEvent) => void,
+    onEvent: Emit,
     onSession: (session: number, messages: Message[]) => Promise<void>,
   ): Promise<GoalEnd> {
     const seen = new Set<string>();
@@ -301,7 +324,7 @@ export class DurableRuns {
     runId: string,
     session: number,
     input: RunInput,
-    onEvent: (event: RunEvent) => void,
+    onEvent: Emit,
     onSession: (session: number, messages: Message[]) => Promise<void>,
   ) {
     try {
@@ -318,6 +341,55 @@ export class DurableRuns {
     }
   }
 
+  // Takes up a run that was working when this process stopped. Its agent is built again, and the run
+  // goes on from the last of its journal that was told to the control plane (`after`).
+  async rejoin(
+    durableId: string,
+    input: RunInput,
+    after: number,
+    onEvent: Emit,
+  ): Promise<FollowedRun> {
+    try {
+      this.#register(input);
+    } catch (error) {
+      if (!(error instanceof DurableConflictError)) throw error;
+    }
+    const run = await this.#runtime.getRun(durableId);
+    const followed = this.#follow(run, onEvent, {
+      agentId: input.agent.id,
+      contextWindow: input.contextWindow,
+      after,
+    });
+    followed.done.catch(() => undefined);
+    await this.#revive([input.agent.id]);
+    return followed;
+  }
+
+  // Runs of these agents wait for their agent: `resume` parks them as needing attention until it is
+  // registered, and a tool that was in flight parks them again. Both are cleared here.
+  async #revive(agentIds: readonly string[]) {
+    await this.#runtime.resume();
+    for (let attempt = 0; attempt < 20; attempt++) {
+      let waiting = false;
+      for (const status of ["queued", "pending", "needs_attention"] as const) {
+        const { runs } = await this.#runtime.listRuns({ status, limit: 100 });
+        for (const summary of runs.filter((run) => agentIds.includes(run.agentId))) {
+          waiting = true;
+          if (status !== "needs_attention") continue;
+          const run = await this.#runtime.getRun(summary.id);
+          if (summary.blockedOperation)
+            await run.resolveTool(summary.blockedOperation, {
+              type: "error-text",
+              value: INTERRUPTED,
+            });
+          else await run.retry();
+        }
+      }
+      if (!waiting) return;
+      await Bun.sleep(50);
+    }
+  }
+
   /**
    * The turn the control plane files a run's outcome messages under. A run that stopped on a question
    * reports what it did after the answer on its own, so the numbers keep counting from the first part.
@@ -327,6 +399,11 @@ export class DurableRuns {
     if (over) this.#sent.delete(durableId);
     else this.#sent.set(durableId, from + count);
     return from;
+  }
+
+  /** Stops a run of the journal that no process is following. */
+  async cancelRun(durableId: string) {
+    await (await this.#runtime.getRun(durableId)).cancel().catch(() => undefined);
   }
 
   async close() {
@@ -341,6 +418,12 @@ export class DurableRuns {
         stream: true,
         modelRetry: MODEL_RETRY,
         compaction: input.compaction,
+        // Durable refuses a policy for a tool the agent does not have.
+        toolRecovery: Object.fromEntries(
+          input.agent.tools
+            .filter((tool) => SAFE_TOOLS.has(tool.name))
+            .map((tool) => [tool.name, "safe" as const]),
+        ),
       },
     ]);
   }
@@ -353,7 +436,7 @@ export class DurableRuns {
 
   #follow(
     run: DurableRun,
-    onEvent: (event: RunEvent) => void,
+    onEvent: Emit,
     options: {
       agentId: string;
       contextWindow: number | undefined;
@@ -364,10 +447,14 @@ export class DurableRuns {
   ): FollowedRun {
     const { agentId, contextWindow, after, keepAgent } = options;
     const mapper = createDurableEventMapper({ contextWindow });
+    // A run picked up part way has already been told about its past; the mapper still needs it to
+    // pair a tool's result with its call.
+    if (after) this.#replay(run.id, after, mapper);
     const done = (async (): Promise<DurableEnd> => {
       for await (const event of run.stream({ after })) {
         const { events, end } = mapper.map(event as DurableEvent);
-        for (const mapped of events) onEvent(mapped);
+        for (const mapped of events) onEvent(mapped, { id: run.id, sequence: event.sequence });
+        if (event.type === "status") await this.#resolveInterrupted(run, event);
         if (end) {
           if (!keepAgent) this.#release(agentId, end);
           return end;
@@ -381,6 +468,24 @@ export class DurableRuns {
       // A run that is already over, or a journal that is closing, has nothing left to cancel.
       cancel: () => run.cancel().catch(() => undefined),
     };
+  }
+
+  #replay(runId: string, upTo: number, mapper: ReturnType<typeof createDurableEventMapper>) {
+    for (let at = 0; at < upTo;) {
+      const page = this.#runtime.events(runId, at);
+      if (page.length === 0) return;
+      for (const event of page) if (event.sequence <= upTo) mapper.map(event);
+      at = page.at(-1)!.sequence;
+    }
+  }
+
+  // A tool call in flight when the runner stopped parks the run. Resolving it as "outcome unknown"
+  // lets the run carry on, so the agent checks the state itself instead of the user resending.
+  async #resolveInterrupted(run: DurableRun, event: DurableEvent) {
+    if ((event.data as { status?: string }).status !== "needs_attention") return;
+    const { blockedOperation } = await run.status();
+    if (blockedOperation)
+      await run.resolveTool(blockedOperation, { type: "error-text", value: INTERRUPTED });
   }
 
   // A run that is over frees its agent registration; one parked on a question keeps it.

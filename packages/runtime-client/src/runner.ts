@@ -1,30 +1,21 @@
-import type { Agent, AnyTool, Message } from "@anvia/core";
-import {
-  parseAgentContinuation,
-  parseAgentInteractionResponse,
-} from "@anvia/core/agent/interactions";
+import type { Agent, AnyTool } from "@anvia/core";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
-import type { RunEvent } from "@aven/protocol/events";
 import {
   WIRE_VERSION,
   decodeViewerFrame,
   type ControlPlaneToRuntime,
   type CallMethod,
-  type MemoryAppendParams,
-  type RepoAccess,
   type RunModel,
   type RunThreadInfo,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
 import { DesktopViewers } from "./desktop-viewers";
-import { DurableRuns, type FollowedRun, type RunInput } from "./durable-runs";
-import { verifyWith } from "./goal-assessment";
-import { goalReport, goalSessionMessage } from "./goal-report";
-import { lateBoundTools } from "./late-bound-tools";
-import { RunOutbox } from "./run-outbox";
+import { DurableRuns } from "./durable-runs";
+import { createRunDriver, type DriverContext } from "./run-driver";
+import { RunOutbox, openRunDatabase } from "./run-outbox";
+import { RunRecords } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
@@ -59,19 +50,6 @@ const defaultCreateAgent =
     });
   };
 
-type LiveRun = {
-  threadId: string;
-  /** Not there until the thread's sandbox is up and the run is in the journal; a goal's, while it works. */
-  followed?: Pick<FollowedRun, "cancel">;
-  /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
-  cancelReason?: string;
-};
-
-function cancelRun(run: LiveRun, reason: string) {
-  run.cancelReason = reason;
-  void run.followed?.cancel();
-}
-
 export type RuntimeOptions = {
   /** The control plane's WebSocket URL, e.g. ws://localhost:8000/runtimes/connect. */
   url: string;
@@ -82,6 +60,8 @@ export type RuntimeOptions = {
   sandbox: ThreadWorkspaces;
   /** The SQLite file runs are journaled in (decision 0021). Only one runner may use it at a time. */
   journalPath: string;
+  /** Where what a run told the control plane, and how far it got, is kept (decision 0024). Defaults to beside the journal. */
+  statePath?: string;
   /**
    * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
    * version), so reconnecting would not help. `reason` says why.
@@ -110,11 +90,17 @@ export function startRuntime(options: RuntimeOptions) {
   const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
-  const runs = new Map<string, LiveRun>();
-  // The goal a thread's agent handed over this run, started once its turn ends.
-  const goals = new Map<string, GoalRequest>();
-  // Opened once; a run waits for it, and a journal that will not open fails each run clearly.
-  const journal = DurableRuns.open(options.journalPath);
+  // What each run has told the control plane, and how far it got, kept until the control plane has
+  // the end, so a dropped link or a restart loses nothing.
+  const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
+  const records = new RunRecords(state);
+  const outbox = new RunOutbox(state);
+  // Opened once; a run waits for it, and a journal that will not open fails each run clearly. Runs
+  // a restart interrupted stay in it for the control plane to ask for again.
+  const journal = DurableRuns.open(
+    options.journalPath,
+    new Set(records.all().flatMap((record) => (record.done ? [] : [record.agentId]))),
+  );
   journal.catch(() => undefined);
   // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.
   const boxes = new Map<string, ThreadSandbox>();
@@ -130,8 +116,6 @@ export function startRuntime(options: RuntimeOptions) {
       reject: (e: Error) => void;
     }
   >();
-  // What each run has told the control plane, kept until it has the end, so a dropped link loses nothing.
-  const outbox = new RunOutbox();
   let socket: WebSocket | undefined;
   let stopped = false;
   let backoff = RECONNECT_MIN_MS;
@@ -179,11 +163,8 @@ export function startRuntime(options: RuntimeOptions) {
 
   // Tells the control plane something about a run. It is kept either way: if the link is down or
   // the control plane has not asked for the run since it came back, it is sent on request.
-  const report = (
-    runId: string,
-    make: (seq: number) => Extract<RuntimeToControlPlane, { type: "run.event" | "run.end" }>,
-  ) => {
-    const message = outbox.push(runId, make);
+  const report: DriverContext["report"] = (runId, make, source) => {
+    const message = outbox.push(runId, make, source);
     if (message && outbox.attached(runId)) send(message);
   };
 
@@ -196,7 +177,8 @@ export function startRuntime(options: RuntimeOptions) {
     );
   }
 
-  const hasRun = (threadId: string) => [...runs.values()].some((run) => run.threadId === threadId);
+  const hasRun = (threadId: string) =>
+    [...driver.live.values()].some((run) => run.threadId === threadId);
 
   // A run, or a process the agent left running (a dev server), keeps the sandbox; the check comes
   // round again after another idle period.
@@ -225,156 +207,22 @@ export function startRuntime(options: RuntimeOptions) {
     await options.sandbox.release(threadId);
   }
 
-  async function runAgent(
-    message: Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>,
-  ) {
-    const { runId, thread, model } = message;
-    // Registered before the sandbox is awaited, so a cancel in that window is not lost.
-    const live: LiveRun = { threadId: thread.id };
-    runs.set(runId, live);
-    outbox.open(runId);
-    clearTimeout(idleTimers.get(thread.id));
-    try {
-      await releasing.get(thread.id);
-      // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
-      const box = await options.sandbox.acquire(
-        thread,
-        () => call("repo.access", { runId }) as Promise<RepoAccess>,
-      );
-      if (live.cancelReason) throw new Error(live.cancelReason);
-      boxes.set(thread.id, box);
-      const journaled = await journal;
-      // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
-      const current = () => boxes.get(thread.id)?.tools;
-      const build = (id: string, attended: boolean): RunInput => {
-        const bound = lateBoundTools(box.tools, current);
-        const { agent, compaction } = createAgent({
-          thread,
-          id,
-          attended,
-          // Only an agent with a person to talk to may take on a goal.
-          tools: attended
-            ? [...bound, createDefineGoalTool((goal) => goals.set(thread.id, goal))]
-            : bound,
-          model,
-        });
-        return { agent, compaction, contextWindow: model?.contextWindow };
-      };
-      // Events reach the control plane as the journal records them.
-      const forward = (event: RunEvent) =>
-        report(runId, (seq) => ({ type: "run.event", runId, seq, event }));
-      // The transcript the control plane keeps, filed as each part of the run ends.
-      let turn = 0;
-      const file = async (messages: Message[]) => {
-        if (messages.length === 0) return;
-        await call("memory.append", { runId, turn, messages } satisfies MemoryAppendParams);
-        turn += messages.length;
-      };
-      // What an unattended part of the run is told is a note to the agent, not something the user said.
-      const withoutPrompt = (messages: Message[]) =>
-        messages[0]?.role === "user" ? messages.slice(1) : messages;
-      const stopIfCancelled = () => {
-        if (live.cancelReason) throw new Error(live.cancelReason);
-      };
-
-      const pursueGoal = async (request: GoalRequest) => {
-        const exec = current()?.find((tool) => tool.name === "exec_command");
-        const working = await journaled.startGoal(
-          runId,
-          request,
-          build(`goal-${runId}`, false),
-          verifyWith(exec, request.verifyCommands ?? []),
-          forward,
-          async (session, messages) =>
-            file([goalSessionMessage(session), ...withoutPrompt(messages)]),
-        );
-        live.followed = working;
-        return working.done;
-      };
-      let followed: FollowedRun;
-      if (message.type === "run.start") {
-        followed = await journaled.start(
-          runId,
-          thread.id,
-          message.prompt,
-          build(`run-${runId}`, true),
-          forward,
-        );
-      } else {
-        // The question stays parked in the journal; the answer is delivered to it.
-        const asked = await journaled.asked(thread.id);
-        if (!asked) throw new Error("This thread has no question waiting for an answer");
-        const { interaction } = parseAgentContinuation(message.continuation);
-        followed = await journaled.answer(
-          asked,
-          interaction,
-          parseAgentInteractionResponse(message.response),
-          () => build(asked.agentId, true),
-          forward,
-        );
-      }
-      live.followed = followed;
-      if (live.cancelReason) void followed.cancel();
-      let end = await followed.done;
-      if (end.type !== "error") {
-        turn = journaled.transcriptTurn(
-          followed.durableId,
-          end.messages.length,
-          end.type === "response",
-        );
-        await file(end.messages);
-      }
-
-      // The turn handed over a goal: work it, then let the agent report on it in the thread.
-      const goal = goals.get(thread.id);
-      goals.delete(thread.id);
-      if (goal && end.type === "response") {
-        stopIfCancelled();
-        const goalEnd = await pursueGoal(goal);
-        if (goalEnd.type === "error") {
-          end = goalEnd;
-        } else {
-          stopIfCancelled();
-          const closing = await journaled.start(
-            `${runId}-report`,
-            thread.id,
-            goalReport(goal.objective, goalEnd),
-            build(`run-${runId}-report`, false),
-            forward,
-          );
-          live.followed = closing;
-          end = await closing.done;
-          if (end.type !== "error") await file(withoutPrompt(end.messages));
-        }
-      }
-      report(runId, (seq) =>
-        end.type === "error"
-          ? {
-              type: "run.end",
-              runId,
-              seq,
-              outcome: "error",
-              error: live.cancelReason ?? end.error,
-            }
-          : {
-              type: "run.end",
-              runId,
-              seq,
-              outcome: end.type,
-              // What resumes a run that stopped to ask the user; the control plane keeps it.
-              continuation: end.type === "interaction" ? end.continuation : undefined,
-            },
-      );
-    } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      report(runId, (seq) => ({ type: "run.end", runId, seq, outcome: "error", error: text }));
-    } finally {
-      // A goal handed over by a run that never got to start it is not the next run's to start.
-      goals.delete(thread.id);
-      runs.delete(runId);
-      scheduleIdleRelease(thread.id);
-    }
-  }
+  const driver = createRunDriver({
+    journal,
+    records,
+    outbox,
+    sandbox: options.sandbox,
+    createAgent,
+    call,
+    report,
+    boxes,
+    async starting(threadId) {
+      clearTimeout(idleTimers.get(threadId));
+      await releasing.get(threadId);
+    },
+    finished: scheduleIdleRelease,
+    stopped: () => stopped,
+  });
 
   // Answers a call of the control plane's with what `work` returns, or with why it failed.
   async function answer(id: string, work: () => Promise<unknown>) {
@@ -390,18 +238,19 @@ export function startRuntime(options: RuntimeOptions) {
     switch (message.type) {
       case "run.start":
       case "run.resume":
-        void runAgent(message);
+        void driver.start(message);
         return;
-      case "run.cancel": {
-        const run = runs.get(message.runId);
-        if (run) cancelRun(run, message.reason);
+      case "run.cancel":
+        await driver.cancel(message.runId, message.reason);
         return;
-      }
       case "run.attach":
         for (const missed of outbox.attach(message.runId, message.after)) send(missed);
+        // A run this process had before it restarted goes on from here.
+        void driver.restore(message.runId);
         return;
       case "run.ack":
         outbox.ack(message.runId);
+        driver.forget(message.runId);
         return;
       case "desktop.open":
         void viewers.open(message.viewerId, message.threadId);
@@ -487,6 +336,7 @@ export function startRuntime(options: RuntimeOptions) {
       await Promise.all(releasing.values());
       await options.sandbox.dispose();
       await journal.then((journaled) => journaled.close()).catch(() => undefined);
+      state.close();
     },
   };
 }
