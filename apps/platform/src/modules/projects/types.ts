@@ -10,6 +10,14 @@ export type Project = {
   updatedAt: string;
 };
 
+/** What the import dialog can show: the form once there is something to pick from, else why not. */
+export type ImportStage =
+  | { kind: "failed"; message: string }
+  | { kind: "not-configured" }
+  | { kind: "connect" }
+  | { kind: "no-runner" }
+  | { kind: "ready" };
+
 export type GithubStatus = {
   configured: boolean;
   /** Where to send the browser to install the app on a GitHub account; null when not configured. */
