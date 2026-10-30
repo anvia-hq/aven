@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunModel, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
-import type { GoalState } from "./durable-runs";
+import type { GoalState } from "./durable-goals";
 
 // What a runner needs to take a run up again after it restarts: who asked for what, and how far
 // the run had got. Everything else is in the journal (decision 0024).

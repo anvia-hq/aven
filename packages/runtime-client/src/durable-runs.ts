@@ -1,20 +1,16 @@
-import type { Agent, Message } from "@anvia/core";
+import type { Agent } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import {
   DurableConflictError,
   DurableRuntime,
-  defineGoal,
   type DefinedGoal,
   type DurableAgentRegistration,
   type DurableEvent,
   type DurableRun,
-  type DurableTaskHandle,
-  type GoalResult,
 } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { projectToolEnd } from "@aven/agents/projection";
 import type { SandboxToolName } from "@aven/agents/sandbox-tools";
-import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import { Database } from "bun:sqlite";
@@ -23,9 +19,15 @@ import { hostname } from "node:os";
 import { dirname } from "node:path";
 
 import { createDurableEventMapper, type DurableEnd } from "./durable-events";
-import { assessGoal, type CommandResult } from "./goal-assessment";
+import {
+  defineAvenGoal,
+  startGoal,
+  type FollowedGoal,
+  type GoalContext,
+  type GoalJournal,
+  type GoalSpec,
+} from "./durable-goals";
 import type { Source } from "./run-outbox";
-import { goalSessionMarker } from "./goal-report";
 
 // Bump when the agent's tools or instructions change incompatibly: runs unfinished under an older
 // version stop as "needs attention" instead of continuing under code that no longer matches.
@@ -69,12 +71,6 @@ const INTERRUPTED =
 /** Where an event goes, with the journal event it came from when it came from one. */
 export type Emit = (event: RunEvent, source?: Source) => void;
 
-// A goal's limits, as the agent may raise or lower the sessions. A session is one agent run, which
-// the agent's own step limit bounds, so the turns follow from the sessions.
-const DEFAULT_GOAL_SESSIONS = 20;
-const TURNS_PER_SESSION = 60;
-const NO_PROGRESS_SESSIONS = 3;
-
 // Model requests that fail transiently are tried this many times, waiting longer after each.
 const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 };
 
@@ -86,29 +82,7 @@ export type RunInput = {
   contextWindow?: number;
 };
 
-/** How a goal ended. `paused` is a stop short of done: blocked, out of sessions, or going nowhere. */
-export type GoalEnd =
-  | { type: "complete"; summary: string; evidence: string[] }
-  | { type: "paused"; reason: string; summary: string; next: string }
-  | { type: "error"; error: string };
-
-/** What a goal needs remembered to be taken up again: its task, and each session it has seen. */
-export type GoalState = {
-  taskId?: string;
-  sessions: Record<string, { number: number; filed: boolean }>;
-};
-
-export type FollowedGoal = { done: Promise<GoalEnd>; cancel(): Promise<void> };
-
-type GoalTracker = {
-  state: GoalState;
-  saveState: (state: GoalState) => void;
-  cursorOf: (durableId: string) => number;
-};
-
-type GoalContext = { verify: () => Promise<CommandResult[]> };
-
-type FollowOptions = {
+export type FollowOptions = {
   /** The agent the run is registered under, when it is not the input's own. */
   agentId?: string;
   /** The last of the run's journal already told to the client. */
@@ -131,9 +105,8 @@ export type FollowedRun = {
 // transcript a person reads.
 export class DurableRuns {
   #runtime: DurableRuntime;
-  #goal: DefinedGoal;
-  // What a goal's assessment may use, by the goal's agent: the thread's sandbox, as it is now.
-  #contexts: Map<string, GoalContext>;
+  // What a goal running in this journal uses of it.
+  #goals: GoalJournal;
   // How many messages of a run's transcript the control plane has been sent, while the run waits.
   #sent = new Map<string, number>();
   readonly #path: string;
@@ -146,8 +119,16 @@ export class DurableRuns {
   ) {
     this.#path = path;
     this.#runtime = runtime;
-    this.#goal = goal;
-    this.#contexts = contexts;
+    this.#goals = {
+      runtime,
+      goal,
+      // What a goal's assessment may use, by the goal's agent: the thread's sandbox, as it is now.
+      contexts,
+      registerOrKeep: (input) => this.#registerOrKeep(input),
+      follow: (run, input, onEvent, options) => this.#follow(run, input, onEvent, options),
+      release: (agentId, end) => this.#release(agentId, end),
+      revive: (agentIds) => this.#revive(agentIds),
+    };
   }
 
   /**
@@ -163,17 +144,7 @@ export class DurableRuns {
     if (held.has(databasePath)) throw new Error(`The run journal ${databasePath} is already open`);
     releaseOwnLease(databasePath);
     const contexts = new Map<string, GoalContext>();
-    // Every session of a goal continues the last one's conversation, so nothing is lost between them.
-    const goal = defineGoal({
-      name: "aven-goal",
-      version: 1,
-      rounds: "continue",
-      assess: (assessment) => {
-        const context = contexts.get(assessment.agentId);
-        if (!context) throw new Error("The goal's sandbox is gone, so it cannot be checked");
-        return assessGoal(assessment, context.verify);
-      },
-    });
+    const goal = defineAvenGoal(contexts);
     const runtime = await DurableRuntime.open({
       store: new SqliteDurableStore(databasePath),
       tasks: [{ registration: goal.registration }],
@@ -265,150 +236,10 @@ export class DurableRuns {
     return followed;
   }
 
-  // Runs a goal: working sessions one after another, each followed for its events, until the verify
-  // commands pass or the goal stops short. `onSession` hears each session's messages when it ends.
-  // With a task in `state` the goal is taken up again where a restart left it (`cursorOf` says how
-  // much of each session was already reported).
-  async startGoal(goal: {
-    runId: string;
-    request: GoalRequest;
-    input: RunInput;
-    verify: () => Promise<CommandResult[]>;
-    onEvent: Emit;
-    onSession: (session: number, messages: Message[]) => Promise<void>;
-    /** What a restart needs remembered; omit for a goal that is not kept. */
-    state?: GoalState;
-    saveState?: (state: GoalState) => void;
-    cursorOf?: (durableId: string) => number;
-  }): Promise<FollowedGoal> {
-    const { runId, request, input, verify, onEvent, onSession } = goal;
-    const state = goal.state ?? { sessions: {} };
-    const saveState = goal.saveState ?? (() => undefined);
-    const cursorOf = goal.cursorOf ?? (() => 0);
-    const agentId = input.agent.id;
-    // Registered by the process that was working on it before the restart.
-    this.#registerOrKeep(input);
-    this.#contexts.set(agentId, { verify });
-    const finished = () => {
-      this.#contexts.delete(agentId);
-      this.#release(agentId, { type: "response", messages: [] });
-    };
-    const maxSessions = request.maxSessions ?? DEFAULT_GOAL_SESSIONS;
-    let handle: DurableTaskHandle<GoalResult>;
-    try {
-      // The same ids give the goal that is already there, if a restart interrupted this call.
-      handle = await this.#runtime.submitGoal(this.#goal, {
-        sessionId: `goal:${runId}`,
-        requestId: runId,
-        agentId,
-        objective: request.objective,
-        acceptanceCriteria: request.acceptanceCriteria,
-        limits: {
-          maxSessions,
-          maxTotalModelTurns: maxSessions * TURNS_PER_SESSION,
-          maxConsecutiveNoProgressSessions: NO_PROGRESS_SESSIONS,
-        },
-      });
-      state.taskId = handle.id;
-      saveState(state);
-    } catch (error) {
-      finished();
-      throw error;
-    }
-    const tracker = { state, saveState, cursorOf };
-    const done = this.#followGoal(handle, input, onEvent, onSession, tracker).finally(finished);
-    // After a restart the goal's sessions wait for their agent, which is registered now.
-    if (Object.keys(state.sessions).length > 0) await this.#revive([agentId]);
-    return { done, cancel: () => handle.cancel().catch(() => undefined) };
-  }
-
-  async #followGoal(
-    handle: DurableTaskHandle<GoalResult>,
-    input: RunInput,
-    onEvent: Emit,
-    onSession: (session: number, messages: Message[]) => Promise<void>,
-    tracker: GoalTracker,
-  ): Promise<GoalEnd> {
-    const { state } = tracker;
-    const seen = new Set<string>();
-    const sessions: Promise<void>[] = [];
-    // A session ends before the goal hears of it, and its transcript must be filed first.
-    const settled = () => Promise.all(sessions).then(() => undefined);
-
-    for await (const event of handle.stream()) {
-      if (event.type !== "status") continue;
-      const data = asRecord(event.data);
-      const wait = asRecord(data.wait);
-      if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
-        if (!seen.has(wait.runId)) {
-          seen.add(wait.runId);
-          const known = state.sessions[wait.runId];
-          // A session a restart interrupted was told to the client up to a point, and has its number.
-          if (known?.filed) continue;
-          const session = known?.number ?? Object.keys(state.sessions).length + 1;
-          if (!known) {
-            state.sessions[wait.runId] = { number: session, filed: false };
-            tracker.saveState(state);
-            onEvent({ type: "text", delta: goalSessionMarker(session) });
-          }
-          sessions.push(
-            this.#followSession(wait.runId, session, input, onEvent, onSession, tracker),
-          );
-        }
-        continue;
-      }
-      if (event.taskId !== handle.id) continue;
-
-      if (data.status === "completed") {
-        await settled();
-        const { handoff } = await handle.result();
-        return { type: "complete", summary: handoff.summary, evidence: handoff.evidence };
-      }
-      // A goal that stops short waits for a signal to resume; Aven does not send one.
-      if (data.status === "waiting" && wait.type === "signal") {
-        await settled();
-        const { task } = await handle.snapshot();
-        const checkpoint = asRecord(task.checkpoint);
-        const handoff = asRecord(checkpoint.handoff);
-        await handle.cancel().catch(() => undefined);
-        return {
-          type: "paused",
-          reason: String(checkpoint.pauseReason ?? "requested"),
-          summary: String(handoff.summary ?? ""),
-          next: String(handoff.next ?? ""),
-        };
-      }
-      if (data.status === "failed" || data.status === "cancelled") {
-        await settled();
-        return { type: "error", error: String(data.error ?? `The goal ${data.status}`) };
-      }
-    }
-    return { type: "error", error: "The goal's journal ended without an outcome" };
-  }
-
-  async #followSession(
-    runId: string,
-    session: number,
-    input: RunInput,
-    onEvent: Emit,
-    onSession: (session: number, messages: Message[]) => Promise<void>,
-    tracker: GoalTracker,
-  ) {
-    try {
-      const run = await this.#runtime.getRun(runId);
-      const followed = this.#follow(run, input, onEvent, {
-        keepAgent: true,
-        after: tracker.cursorOf(runId),
-      });
-      const end = await followed.done;
-      if (end.type === "response") {
-        await onSession(session, end.messages);
-        tracker.state.sessions[runId] = { number: session, filed: true };
-        tracker.saveState(tracker.state);
-      }
-    } catch {
-      // A session that failed is the goal's to report: it pauses as `session_failed`.
-    }
+  // Runs a goal through this journal (durable-goals.ts): working sessions until the verify commands
+  // pass or the goal stops short.
+  startGoal(goal: GoalSpec): Promise<FollowedGoal> {
+    return startGoal(this.#goals, goal);
   }
 
   // Takes up a run that was working when this process stopped. Its agent is built again, and the run

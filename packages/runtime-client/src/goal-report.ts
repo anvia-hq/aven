@@ -1,6 +1,6 @@
 import type { Message } from "@anvia/core";
 
-import type { GoalEnd } from "./durable-runs";
+import type { GoalEnd } from "./durable-goals";
 
 // A divider between a goal's sessions, as plain assistant text so every client shows it, live and
 // when the thread is loaded again, without knowing about goals.

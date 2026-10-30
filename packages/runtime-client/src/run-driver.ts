@@ -9,13 +9,8 @@ import type { RunEvent } from "@aven/protocol/events";
 import type { RunModel, RuntimeCalls, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 
 import type { CreateRuntimeAgent } from "./runner";
-import {
-  DurableRuns,
-  type Emit,
-  type FollowedRun,
-  type GoalEnd,
-  type RunInput,
-} from "./durable-runs";
+import type { GoalEnd } from "./durable-goals";
+import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
 import type { DurableEnd } from "./durable-events";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
