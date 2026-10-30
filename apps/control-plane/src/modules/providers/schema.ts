@@ -63,7 +63,7 @@ export const updateProviderBody = z.object({
 
 // Lists models before a provider is saved, so the key and URL come in the body, never the query.
 export const listModelsBody = z.object({
-  kind: z.enum(["openai", "anthropic", "openai-compatible"]),
+  kind: z.enum(["openai", "anthropic", "azure", "openai-compatible"]),
   apiKey: apiKey.optional(),
   baseUrl: baseUrl.optional(),
 });

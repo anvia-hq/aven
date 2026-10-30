@@ -62,8 +62,16 @@ function requireApiKey({ apiKey }: ModelSource) {
 
 // Where a provider's model list is and how to ask for it.
 function modelsRequest(source: ModelSource) {
-  // Azure serves deployments, which the user names, so there is no list to ask for.
-  if (source.kind === "azure") throw new ModelListError("Azure models are named by deployment");
+  if (source.kind === "azure") {
+    // The resource's own deployments (decision 0025); its v1 `/models` lists what could be deployed.
+    if (!source.baseUrl) throw new ModelListError("A resource URL is needed to list models");
+    const origin = azureEndpoint.safeParse(source.baseUrl);
+    if (!origin.success) throw new ModelListError("An Azure resource URL must be https");
+    return {
+      url: `${origin.data}/openai/deployments?api-version=2022-12-01`,
+      headers: { "api-key": requireApiKey(source) },
+    };
+  }
   if (source.kind === "anthropic") {
     return {
       url: "https://api.anthropic.com/v1/models?limit=1000",
@@ -83,8 +91,11 @@ function modelsRequest(source: ModelSource) {
 function parseModelIds(json: unknown) {
   const data = (json as { data?: unknown } | null)?.data;
   if (!Array.isArray(data)) throw new ModelListError("The provider returned no model list");
-  const ids = data.flatMap((item: { id?: unknown }) =>
-    typeof item?.id === "string" ? [item.id] : [],
+  // A deployment that has not finished (or failed) provisioning cannot be called yet.
+  const ids = data.flatMap((item: { id?: unknown; status?: unknown }) =>
+    typeof item?.id === "string" && (item.status === undefined || item.status === "succeeded")
+      ? [item.id]
+      : [],
   );
   return [...new Set(ids)].sort();
 }
@@ -267,10 +278,20 @@ export const providersService = {
   },
 };
 
-// The models a saved provider offers: its listing, or for Azure the one deployment it was set up
-// with, since Azure has no list of deployments to ask for.
+// The models a saved provider offers: its listing. For Azure, the deployments of the resource, with
+// the one it was set up with first; that one stays on offer if the listing fails.
 async function modelsOf(row: ProviderRow) {
-  if (row.kind === "azure") return row.modelId ? [row.modelId] : [];
+  if (row.kind === "azure") {
+    const listed = await listAgentModels({
+      kind: row.kind,
+      baseUrl: row.baseUrl ?? undefined,
+      apiKey: readKey(row),
+    }).catch((error) => {
+      if (error instanceof ModelListError) return [];
+      throw error;
+    });
+    return [...new Set([row.modelId ?? "", ...listed])].filter(Boolean);
+  }
   return listAgentModels({
     kind: row.kind,
     baseUrl: row.baseUrl ?? undefined,

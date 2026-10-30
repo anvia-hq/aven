@@ -154,7 +154,19 @@ run("providersService (postgres)", async () => {
     );
   });
 
-  test("an Azure provider keeps its resource origin and deployment, and offers just that model", async () => {
+  test("an Azure provider keeps its resource origin and deployment, and offers its deployment first, then the deployments the resource lists", async () => {
+    const asked: { url: string; key: string | null }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
+      asked.push({ url: String(input), key: new Headers(init?.headers).get("api-key") });
+      return Response.json({
+        data: [
+          { id: "gpt-4o", model: "gpt-4o", status: "succeeded" },
+          { id: "gpt-5-deploy", model: "gpt-5", status: "succeeded" },
+          { id: "still-creating", model: "gpt-5", status: "creating" },
+        ],
+      });
+    }) as typeof fetch;
     const azure = await providersService.create(alice, {
       kind: "azure",
       name: "Azure",
@@ -164,9 +176,24 @@ run("providersService (postgres)", async () => {
     });
     expect(azure.baseUrl).toBe("https://my-resource.openai.azure.com");
     expect(azure.keyHint).toBe("1234");
-    expect(await providersService.listModels(alice, azure.id)).toMatchObject({
-      models: ["gpt-5-deploy"],
-    });
+    try {
+      expect(await providersService.listModels(alice, azure.id)).toMatchObject({
+        models: ["gpt-5-deploy", "gpt-4o"],
+      });
+      expect(asked).toEqual([
+        {
+          url: "https://my-resource.openai.azure.com/openai/deployments?api-version=2022-12-01",
+          key: "azure-secret-1234",
+        },
+      ]);
+      globalThis.fetch = (async () =>
+        new Response("no", { status: 500 })) as unknown as typeof fetch;
+      expect(await providersService.listModels(alice, azure.id)).toMatchObject({
+        models: ["gpt-5-deploy"],
+      });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
     await expect(
       providersService.update(alice, azure.id, { baseUrl: "http://my-resource.example.com" }),
     ).rejects.toThrow("https");
