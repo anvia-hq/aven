@@ -32,7 +32,15 @@ export class GithubNotConfiguredError extends UnavailableError {
   }
 }
 
-export class GithubApiError extends UnavailableError {}
+export class GithubApiError extends UnavailableError {
+  constructor(
+    message: string,
+    /** The status GitHub answered with. */
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 export function githubConfigFromEnv(env: Record<string, string | undefined> = process.env) {
   const { GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_SLUG } = env;
@@ -57,8 +65,9 @@ export function githubConfigFromEnv(env: Record<string, string | undefined> = pr
   } satisfies GithubConfig;
 }
 
-const REPO_PAGE_SIZE = 100;
-const MAX_REPO_PAGES = 5;
+// A listing is read this many entries at a time, and no further than so many pages.
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5;
 // A token is renewed this long before GitHub would expire it.
 const TOKEN_MARGIN_MS = 5 * 60_000;
 
@@ -129,9 +138,22 @@ export class GithubClient {
     if (!response.ok) {
       throw new GithubApiError(
         `GitHub answered ${response.status} for ${init.method ?? "GET"} ${path}`,
+        response.status,
       );
     }
     return (await response.json()) as T;
+  }
+
+  // The entries of a paged listing, page by page until a short one or MAX_PAGES. A caller that
+  // stops early asks for no further page.
+  async *#pages<P, T>(path: string, auth: string, entriesOf: (page: P) => T[]) {
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const entries = entriesOf(
+        await this.#api<P>(`${path}?per_page=${PAGE_SIZE}&page=${page}`, auth),
+      );
+      yield* entries;
+      if (entries.length < PAGE_SIZE) return;
+    }
   }
 
   /** The account an installation belongs to; fails when the app is not installed with that id. */
@@ -163,14 +185,12 @@ export class GithubClient {
   async listRepos(installationId: number) {
     const { token } = await this.installationToken(installationId);
     const repos: GithubRepo[] = [];
-    for (let page = 1; page <= MAX_REPO_PAGES; page++) {
-      const result = await this.#api<{ repositories: RepoPayload[] }>(
-        `/installation/repositories?per_page=${REPO_PAGE_SIZE}&page=${page}`,
-        token,
-      );
-      repos.push(...result.repositories.map(toRepo));
-      if (result.repositories.length < REPO_PAGE_SIZE) break;
-    }
+    const pages = this.#pages(
+      "/installation/repositories",
+      token,
+      (page: { repositories: RepoPayload[] }) => page.repositories,
+    );
+    for await (const repo of pages) repos.push(toRepo(repo));
     return repos;
   }
 
@@ -180,7 +200,7 @@ export class GithubClient {
     const [owner, name] = fullName.split("/").map(encodeURIComponent);
     const payload = await this.#api<RepoPayload>(`/repos/${owner}/${name}`, token).catch(
       (error: unknown) => {
-        if (error instanceof GithubApiError && /answered 404/.test(error.message)) return null;
+        if (error instanceof GithubApiError && error.status === 404) return null;
         throw error;
       },
     );
@@ -190,6 +210,19 @@ export class GithubClient {
   // Whether the person who came back from GitHub's install page may use `installationId`: they
   // authorised the app during installation (`code`), and GitHub lists the installation among theirs.
   async userCanUse(code: string, installationId: number) {
+    const userToken = await this.#exchangeCode(code);
+    if (!userToken) return false;
+    const installations = this.#pages(
+      "/user/installations",
+      userToken,
+      (page: { installations: { id: number }[] }) => page.installations,
+    );
+    for await (const entry of installations) if (entry.id === installationId) return true;
+    return false;
+  }
+
+  // The user's own token for an OAuth `code`, or null when GitHub does not grant one.
+  async #exchangeCode(code: string) {
     const { clientId, clientSecret, webUrl } = this.#config();
     const exchange = await this.fetchImpl(`${webUrl}/login/oauth/access_token`, {
       method: "POST",
@@ -197,16 +230,7 @@ export class GithubClient {
       body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
     });
     const granted = (await exchange.json().catch(() => ({}))) as { access_token?: string };
-    if (!exchange.ok || !granted.access_token) return false;
-    for (let page = 1; page <= MAX_REPO_PAGES; page++) {
-      const result = await this.#api<{ installations: { id: number }[] }>(
-        `/user/installations?per_page=${REPO_PAGE_SIZE}&page=${page}`,
-        granted.access_token,
-      );
-      if (result.installations.some((entry) => entry.id === installationId)) return true;
-      if (result.installations.length < REPO_PAGE_SIZE) return false;
-    }
-    return false;
+    return exchange.ok && granted.access_token ? granted.access_token : null;
   }
 }
 
