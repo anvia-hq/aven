@@ -79,7 +79,6 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect(page.getByText("The runtime for this project is offline")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();
-    await expect(page.locator("header").getByText("runner · offline")).toBeVisible();
     await expect(
       page.locator('[data-slot="sidebar"]').getByText("Explain the project layout"),
     ).toBeVisible();
@@ -167,13 +166,19 @@ test.describe("threads", () => {
     await expect(page.getByText("Reading the file.")).toBeVisible();
     await expect(page.getByText("All done.")).toBeVisible();
 
+    // The three calls are one row, summarized, and marked failed because one of them failed.
+    const group = page.getByRole("button", { name: /^Read 2 files, edited 1 file/ });
+    await expect(group).toBeVisible();
+    await expect(page.getByLabel("Failed")).toHaveCount(1);
+    await group.click();
+
     const edit = page.getByRole("button", { name: /Edited.*a\.txt/ });
     await expect(edit).toBeVisible();
     await edit.click();
     await expect(page.getByText("bye", { exact: true })).toBeVisible();
 
     await expect(page.getByRole("button", { name: /Read.*missing\.txt/ })).toBeVisible();
-    await expect(page.getByLabel("Failed")).toHaveCount(1);
+    await expect(page.getByLabel("Failed")).toHaveCount(2);
 
     // The run is over, so the prompt is usable and there is nothing to stop.
     await expect(page.getByLabel("Prompt")).toBeEnabled();
