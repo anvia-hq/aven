@@ -2,6 +2,8 @@ import { Agent, createQuestionTool } from "@anvia/core";
 import { scriptedModel, text, type ScriptStep } from "@aven/agents/testing/scripted-model";
 import type { RunEvent } from "@aven/protocol/events";
 import { afterEach, describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
+import { hostname } from "node:os";
 
 import { DurableRuns, type RunInput } from "./durable-runs";
 import { goalSessionMarker } from "./goal-report";
@@ -108,6 +110,25 @@ describe("DurableRuns after the process restarts", () => {
       () => {},
     );
     expect(await next.done).toMatchObject({ type: "response" });
+  });
+});
+
+describe("DurableRuns after a reload in the same process", () => {
+  test("a lease this process's earlier life left behind does not lock the journal", async () => {
+    const path = journalPath();
+    await (await DurableRuns.open(path)).close();
+    const database = new Database(path);
+    database
+      .query("UPDATE anvia_durable_owner SET token = 'stale', pid = ?, host = ?")
+      .run(process.pid, hostname());
+    database.close();
+    await opened(path);
+  });
+
+  test("a journal that is open in this process is not opened twice", async () => {
+    const path = journalPath();
+    await opened(path);
+    await expect(DurableRuns.open(path)).rejects.toThrow("already open");
   });
 });
 

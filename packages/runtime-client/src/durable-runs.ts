@@ -15,7 +15,9 @@ import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { projectToolOutput } from "@aven/agents/projection";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunEvent } from "@aven/protocol/events";
-import { mkdirSync } from "node:fs";
+import { Database } from "bun:sqlite";
+import { existsSync, mkdirSync } from "node:fs";
+import { hostname } from "node:os";
 import { dirname } from "node:path";
 
 import { createDurableEventMapper, type DurableEnd } from "./durable-events";
@@ -38,6 +40,26 @@ const SAFE_TOOLS = new Set([
   "read_process_logs",
   "wait_for_port",
 ]);
+
+// Journals this process has open. Durable refuses a journal whose owner is a live process, and a
+// process that reloads in place (`bun --watch`) keeps its pid: it meets its own earlier lease.
+const held = new Set<string>();
+
+function releaseOwnLease(databasePath: string) {
+  if (!existsSync(databasePath)) return;
+  const database = new Database(databasePath);
+  try {
+    database
+      .query(
+        "UPDATE anvia_durable_owner SET token = NULL, pid = NULL, host = NULL WHERE pid = ? AND host = ?",
+      )
+      .run(process.pid, hostname());
+  } catch {
+    // Not a journal yet: durable creates it.
+  } finally {
+    database.close();
+  }
+}
 
 const INTERRUPTED =
   "The runner restarted while this tool call was running, so its outcome is unknown: it may have finished, partly finished, or not started. Check the current state (files, git status, running processes) before repeating it, and do not assume it succeeded.";
@@ -106,12 +128,15 @@ export class DurableRuns {
   #contexts: Map<string, GoalContext>;
   // How many messages of a run's transcript the control plane has been sent, while the run waits.
   #sent = new Map<string, number>();
+  readonly #path: string;
 
   private constructor(
     runtime: DurableRuntime,
     goal: DefinedGoal,
     contexts: Map<string, GoalContext>,
+    path: string,
   ) {
+    this.#path = path;
     this.#runtime = runtime;
     this.#goal = goal;
     this.#contexts = contexts;
@@ -127,6 +152,8 @@ export class DurableRuns {
     onFatalError?: (error: unknown) => void,
   ) {
     mkdirSync(dirname(databasePath), { recursive: true });
+    if (held.has(databasePath)) throw new Error(`The run journal ${databasePath} is already open`);
+    releaseOwnLease(databasePath);
     const contexts = new Map<string, GoalContext>();
     // Every session of a goal continues the last one's conversation, so nothing is lost between them.
     const goal = defineGoal({
@@ -144,7 +171,8 @@ export class DurableRuns {
       tasks: [{ registration: goal.registration }],
       onFatalError: (error) => (onFatalError ?? console.error)(error),
     });
-    const runs = new DurableRuns(runtime, goal, contexts);
+    held.add(databasePath);
+    const runs = new DurableRuns(runtime, goal, contexts, databasePath);
     await runs.#endInterrupted(keepAgents);
     return runs;
   }
@@ -458,6 +486,7 @@ export class DurableRuns {
 
   async close() {
     await this.#runtime.close();
+    held.delete(this.#path);
   }
 
   #register(input: RunInput) {
