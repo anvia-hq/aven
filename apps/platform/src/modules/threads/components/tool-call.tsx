@@ -1,13 +1,4 @@
-import {
-  CheckCircle,
-  ChevronRight,
-  Edit,
-  DangerCircle,
-  Eye,
-  Search,
-  Spinner,
-  Terminal,
-} from "@mynaui/icons-react";
+import { Edit, DangerCircle, Eye, Search, Spinner, Terminal } from "@mynaui/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
@@ -48,10 +39,10 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
   const expandable = Boolean(tool.diff?.length || tool.output);
 
   return (
-    <Collapsible className="rounded-lg border bg-card/50 text-sm" defaultOpen={false}>
+    <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
       <CollapsibleTrigger
         disabled={!expandable}
-        className="group flex w-full items-center gap-2 px-3 py-2 text-left disabled:cursor-default"
+        className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="text-muted-foreground">{tool.status === "running" ? running : done}</span>
@@ -65,17 +56,13 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         {tool.status === "running" && (
           <Spinner className="size-4 animate-spin text-muted-foreground" />
         )}
-        {tool.status === "done" && <CheckCircle className="size-4 text-success" />}
         {tool.status === "error" && (
           <DangerCircle className="size-4 text-destructive" aria-label="Failed" />
-        )}
-        {expandable && (
-          <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
         )}
       </CollapsibleTrigger>
       {expandable && (
         <CollapsibleContent>
-          <div className="px-3 pb-3">
+          <div className="px-2 pb-2">
             {tool.diff ? (
               <DiffBlock lines={tool.diff} />
             ) : (

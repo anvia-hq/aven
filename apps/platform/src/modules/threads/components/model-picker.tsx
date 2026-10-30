@@ -43,14 +43,14 @@ export function ModelPicker({
   const providerItems = providers.map((item) => ({ value: item.id, label: item.name }));
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       {providers.length > 1 && (
         <Select
           items={providerItems}
           value={provider.id}
           onValueChange={(value) => value && onProvider(value)}
         >
-          <SelectTrigger size="sm" aria-label="Provider" className="w-36">
+          <SelectTrigger size="sm" aria-label="Provider" className="w-28 max-w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -70,7 +70,7 @@ export function ModelPicker({
         <ComboboxInput
           aria-label="Model"
           placeholder={loadingModels ? "Loading models…" : "Provider default"}
-          className="w-56"
+          className="w-44 max-w-full"
         />
         <ComboboxContent side="top">
           <ComboboxEmpty>No models found</ComboboxEmpty>

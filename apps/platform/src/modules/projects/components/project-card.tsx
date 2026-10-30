@@ -14,7 +14,7 @@ export function ProjectCard({ project }: Props) {
     <Link
       to="/projects/$projectId"
       params={{ projectId: project.id }}
-      className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/40"
+      className="flex min-w-0 flex-col gap-1.5 rounded-lg border p-3 transition-colors hover:bg-muted/40"
     >
       <span className="truncate font-medium">{project.name}</span>
       <span className="truncate text-xs text-muted-foreground">{project.repoFullName}</span>

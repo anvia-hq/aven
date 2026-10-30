@@ -1,4 +1,4 @@
-import { Hand, Monitor } from "@mynaui/icons-react";
+import { Hand, Monitor, X } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { Skeleton } from "@/components/skeleton";
@@ -10,6 +10,7 @@ import { DesktopViewer } from "./desktop-viewer";
 
 type Props = {
   threadId: string;
+  onClose: () => void;
 };
 
 type View = "loading" | "problem" | "no-sandbox" | "desktop";
@@ -28,7 +29,7 @@ function hintFor(inControl: boolean, heldByOther: boolean) {
 
 // The thread's desktop beside the conversation: watch it live, or take it over so the agent's
 // inputs pause while you drive it.
-export function DesktopPanel({ threadId }: Props) {
+export function DesktopPanel({ threadId, onClose }: Props) {
   const { status, problem, refresh } = useDesktopStatus(threadId);
   const { controlling, busy, takeOver, giveBack } = useDesktopControl(threadId);
   const view = viewOf(status, problem);
@@ -37,9 +38,15 @@ export function DesktopPanel({ threadId }: Props) {
 
   return (
     <section className="flex size-full min-w-0 flex-col" aria-label="Desktop">
-      <header className="flex items-center gap-2 border-b px-4 py-2">
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <Monitor className="size-4 text-muted-foreground" />
-        <h2 className="flex-1 text-sm font-medium">Desktop</h2>
+        <h2 className="text-sm font-medium">Desktop</h2>
+        {view === "desktop" && (
+          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {hintFor(inControl, heldByOther)}
+          </p>
+        )}
+        {view !== "desktop" && <span className="flex-1" />}
         {view === "desktop" &&
           (inControl ? (
             <Button variant="outline" size="sm" onClick={() => void giveBack()}>
@@ -55,12 +62,10 @@ export function DesktopPanel({ threadId }: Props) {
               <Hand /> Take over
             </Button>
           ))}
+        <Button variant="ghost" size="icon-sm" aria-label="Close desktop" onClick={onClose}>
+          <X />
+        </Button>
       </header>
-      {view === "desktop" && (
-        <p className="border-b px-4 py-1.5 text-xs text-muted-foreground">
-          {hintFor(inControl, heldByOther)}
-        </p>
-      )}
       <div className="min-h-0 flex-1">
         {view === "loading" && <Skeleton className="size-full rounded-none" />}
         {view === "problem" && <Notice>{problem}</Notice>}

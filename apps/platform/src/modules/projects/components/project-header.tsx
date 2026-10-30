@@ -13,7 +13,7 @@ import type { Project } from "../types";
 
 export function ProjectHeader({ project }: { project: Project }) {
   return (
-    <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
+    <header className="flex items-center justify-between gap-4 border-b h-10 px-4">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

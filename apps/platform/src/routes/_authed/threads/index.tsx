@@ -33,10 +33,10 @@ function NewThread() {
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col justify-center gap-10 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-semibold tracking-tight">What should we build?</h1>
-        <p className="text-base text-muted-foreground">
+    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-5 p-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl font-semibold">What should we build?</h1>
+        <p className="text-sm text-muted-foreground">
           Start a thread inside a project. The agent reads, edits and runs code there.
         </p>
       </div>
@@ -44,7 +44,7 @@ function NewThread() {
       {/* Nothing until projects load: swapping the picker for the empty state would remount, and so close, an open dialog. */}
       {loaded &&
         (projects.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-10 text-center">
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
             <p className="text-sm text-muted-foreground">Import a repository to get started.</p>
             <ImportRepositoryDialog onImported={(project) => setProjectId(project.id)} />
           </div>
@@ -70,7 +70,7 @@ function NewThread() {
           </>
         ))}
 
-      <section aria-label="Recent threads" className="flex flex-col gap-3">
+      <section aria-label="Recent threads" className="flex flex-col gap-2">
         <h2 className="text-sm text-muted-foreground">Recent</h2>
         <ThreadList threads={recent} empty="No threads yet." />
       </section>

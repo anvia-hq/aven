@@ -3,19 +3,21 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --background: oklch(0.985 0.0018 250);
   --foreground: oklch(0.2 0.009 250);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.009 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2 0.009 250);
-  --primary: oklch(0.58 0.12 255);
-  --primary-foreground: oklch(0.98 0.005 250);
+  --primary: oklch(0.22 0.01 250);
+  --primary-foreground: oklch(0.98 0.003 250);
   --secondary: oklch(0.955 0.0045 250);
   --secondary-foreground: oklch(0.25 0.03 255);
   --muted: oklch(0.955 0.0045 250);
@@ -29,8 +31,8 @@
   --ring: oklch(0.7 0.06 250);
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.2 0.009 250);
-  --sidebar-primary: oklch(0.58 0.12 255);
-  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-primary: oklch(0.22 0.01 250);
+  --sidebar-primary-foreground: oklch(0.98 0.003 250);
   --sidebar-accent: oklch(0.945 0.015 250);
   --sidebar-accent-foreground: oklch(0.3 0.05 255);
   --sidebar-border: oklch(0.94 0.0036 250);
@@ -45,8 +47,8 @@
   --card-foreground: oklch(0.9 0.002 250);
   --popover: oklch(0.22 0.002 250);
   --popover-foreground: oklch(0.9 0.002 250);
-  --primary: oklch(0.7 0.11 255);
-  --primary-foreground: oklch(0.2 0.03 255);
+  --primary: oklch(0.93 0.002 250);
+  --primary-foreground: oklch(0.18 0.002 250);
   --secondary: oklch(0.24 0.002 250);
   --secondary-foreground: oklch(0.9 0.002 250);
   --muted: oklch(0.22 0.002 250);
@@ -60,8 +62,8 @@
   --ring: oklch(0.5 0.01 250);
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.86 0.002 250);
-  --sidebar-primary: oklch(0.7 0.11 255);
-  --sidebar-primary-foreground: oklch(0.99 0.002 250);
+  --sidebar-primary: oklch(0.93 0.002 250);
+  --sidebar-primary-foreground: oklch(0.18 0.002 250);
   --sidebar-accent: oklch(0.23 0.002 250);
   --sidebar-accent-foreground: oklch(0.92 0.002 250);
   --sidebar-border: oklch(1 0 0 / 3%);
@@ -105,10 +107,38 @@
 }
 
 @layer base {
+  /* Thin themed scrollbars; the native light track is jarring on the dark theme. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 40%, transparent) transparent;
+  }
+  .dark {
+    color-scheme: dark;
+  }
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply overflow-x-clip bg-background text-foreground antialiased;
   }
+}
+
+/* Typography plugin colors follow the semantic tokens. Unlayered, so they beat the plugin's gray palette. */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
 }

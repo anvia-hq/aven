@@ -39,7 +39,7 @@ function AuthedLayout() {
   const signOut = useSignOut();
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "20rem" } as CSSProperties}>
+    <SidebarProvider style={{ "--sidebar-width": "15rem" } as CSSProperties}>
       <Sidebar collapsible="icon" className="text-sidebar-foreground/80">
         <SidebarHeader>
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
@@ -77,6 +77,10 @@ function AuthedLayout() {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
+        <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">
+          <SidebarTrigger />
+          <span className="text-sm font-medium">Aven</span>
+        </div>
         <Outlet />
       </SidebarInset>
       <CommandMenu />

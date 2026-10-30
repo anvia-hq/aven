@@ -30,16 +30,16 @@ function ProjectPage() {
   }
 
   return (
-    <div className="flex w-full flex-col">
+    <div className="flex w-full min-w-0 flex-col">
       <ProjectHeader project={project} />
 
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 p-6 lg:p-8">
+      <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4">
         <PromptInput
           placeholder={`Ask anything about ${project.name}…`}
           onSubmit={(prompt, selection) => startThread(project.id, prompt, selection)}
         />
 
-        <section aria-label="Recent threads" className="flex flex-col gap-3">
+        <section aria-label="Recent threads" className="flex flex-col gap-2">
           <h2 className="text-sm text-muted-foreground">Recent threads</h2>
           <ThreadList threads={threads} empty="No threads in this project yet." />
         </section>

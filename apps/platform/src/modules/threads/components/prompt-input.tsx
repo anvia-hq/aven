@@ -47,7 +47,7 @@ export function PromptInput({
   }
 
   return (
-    <div className="flex flex-col rounded-2xl border bg-card p-4 focus-within:border-ring">
+    <div className="flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring">
       <Textarea
         aria-label="Prompt"
         value={value}
@@ -55,10 +55,10 @@ export function PromptInput({
         placeholder={placeholder}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        className="min-h-20 resize-none border-0 bg-transparent p-1 text-base shadow-none focus-visible:ring-0 dark:bg-transparent"
+        className="min-h-14 resize-none border-0 bg-transparent p-1 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
-      <div className="flex items-center justify-between gap-2 pt-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <ModelPicker
             providers={model.providers}
             provider={model.provider}
@@ -76,12 +76,17 @@ export function PromptInput({
             />
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
             <Kbd>↵</Kbd>
             send
           </span>
-          <Button size="icon" aria-label="Send" disabled={!canSend} onClick={() => void submit()}>
+          <Button
+            size="icon-sm"
+            aria-label="Send"
+            disabled={!canSend}
+            onClick={() => void submit()}
+          >
             <ArrowUp />
           </Button>
         </div>

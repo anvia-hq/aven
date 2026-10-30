@@ -8,9 +8,9 @@ export const Route = createFileRoute("/_authed/settings")({
 
 function SettingsLayout() {
   return (
-    <div className="flex w-full flex-col gap-6 p-6 md:flex-row lg:p-8">
+    <div className="flex w-full min-w-0 flex-col gap-4 p-4 md:flex-row md:gap-8">
       <SettingsNav />
-      <main className="flex min-w-0 max-w-3xl flex-1 flex-col gap-8">
+      <main className="flex min-w-0 max-w-2xl flex-1 flex-col gap-5">
         <Outlet />
       </main>
     </div>

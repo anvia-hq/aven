@@ -32,16 +32,19 @@ export function SettingsNav() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <nav aria-label="Settings" className="flex flex-col gap-6 md:w-52">
+    <nav
+      aria-label="Settings"
+      className="flex gap-1 overflow-x-auto md:w-40 md:shrink-0 md:flex-col md:gap-4 md:overflow-visible"
+    >
       {visibleGroups.map((group) => (
-        <div key={group.label} className="flex flex-col gap-1">
-          <p className="px-2 text-xs font-medium text-muted-foreground">{group.label}</p>
+        <div key={group.label} className="flex gap-1 md:flex-col">
+          <p className="hidden px-2 text-xs text-muted-foreground md:block">{group.label}</p>
           {group.items.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               className={cn(
-                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                "flex shrink-0 items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted",
                 pathname === item.to ? "bg-muted font-medium" : "text-muted-foreground",
               )}
             >

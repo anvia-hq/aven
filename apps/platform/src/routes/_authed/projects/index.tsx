@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authed/projects/")({
 
 function Projects() {
   return (
-    <main className="flex w-full flex-col gap-6 p-6 lg:p-8">
+    <main className="flex w-full min-w-0 flex-col gap-4 p-4">
       <PageHeader
         title="Projects"
         description="Where threads run: each project is an imported GitHub repository and the runner that hosts its sandboxes."

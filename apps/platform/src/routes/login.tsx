@@ -16,8 +16,8 @@ function Login() {
   const { invitation } = search;
   const onSuccess = useContinueAfterAuth(search);
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-8">
-      <h1 className="text-2xl font-bold">Sign in to Aven</h1>
+    <main className="mx-auto flex min-h-screen max-w-xs flex-col justify-center gap-4 p-4">
+      <h1 className="text-lg font-semibold">Sign in to Aven</h1>
       <AuthForm mode="sign-in" onSuccess={onSuccess} />
       <p className="text-sm text-muted-foreground">
         Don't have an account?{" "}

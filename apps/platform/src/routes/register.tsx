@@ -20,8 +20,8 @@ function Register() {
   const closed = Boolean(config && !config.registrationEnabled && !invitation);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-8">
-      <h1 className="text-2xl font-bold">Create your account</h1>
+    <main className="mx-auto flex min-h-screen max-w-xs flex-col justify-center gap-4 p-4">
+      <h1 className="text-lg font-semibold">Create your account</h1>
       {closed ? (
         <p role="status" className="text-sm text-muted-foreground">
           Registration is closed. Ask a teammate for an invite link to join.

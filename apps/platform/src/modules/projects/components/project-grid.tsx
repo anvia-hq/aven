@@ -5,7 +5,7 @@ export function ProjectGrid() {
   const { projects } = useProjects();
 
   return (
-    <section aria-label="Project list" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <section aria-label="Project list" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {projects.map((project) => (
         <ProjectCard key={project.id} project={project} />
       ))}
