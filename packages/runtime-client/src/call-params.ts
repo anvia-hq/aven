@@ -5,6 +5,7 @@ import type {
   DiffGetParams,
   FilesCallParams,
   FilesSearchParams,
+  RepoPushParams,
 } from "@aven/protocol/runtime-wire";
 
 // The params of the control plane's calls, checked: the control plane is trusted, but a call of the
@@ -16,6 +17,25 @@ export function diffGetParams(params: unknown): DiffGetParams {
   const { threadId, scope } = asRecord(params);
   if (typeof threadId !== "string" || (scope !== "turn" && scope !== "all")) throw invalid();
   return { threadId, scope };
+}
+
+// A string with something in it.
+function text(value: unknown) {
+  if (typeof value !== "string" || value === "") throw invalid();
+  return value;
+}
+
+export function repoPushParams(params: unknown): RepoPushParams {
+  const { threadId, cloneUrl, branch, token, commitMessage, author } = asRecord(params);
+  const { name, email } = asRecord(author);
+  return {
+    threadId: text(threadId),
+    cloneUrl: text(cloneUrl),
+    branch: text(branch),
+    token: text(token),
+    commitMessage: text(commitMessage),
+    author: { name: text(name), email: text(email) },
+  };
 }
 
 export function filesCallParams(params: unknown): FilesCallParams {

@@ -27,7 +27,7 @@ function headerKey(cloneUrl: string) {
 
 // The token travels in git's environment configuration, so it is neither in the process's
 // arguments nor written to .git/config (decision 0013).
-function authEnv({ token, cloneUrl }: RepoAccess) {
+export function authEnv({ token, cloneUrl }: Pick<RepoAccess, "token" | "cloneUrl">) {
   const basic = Buffer.from(`x-access-token:${token}`).toString("base64");
   return {
     GIT_CONFIG_COUNT: "1",

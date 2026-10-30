@@ -218,6 +218,32 @@ describe("startRuntime desktops", () => {
     });
   });
 
+  test("a push for a thread with no workspace answers null, and one of the wrong shape fails", async () => {
+    const { sandbox, up } = withDesktop(undefined);
+    const { plane, runtime } = connect({ sandbox });
+    await runtime.ready;
+    up();
+    const push = {
+      threadId: "t1",
+      cloneUrl: "https://github.com/acme/app.git",
+      branch: "aven/t1",
+      token: "token",
+      commitMessage: "Change",
+      author: { name: "Ada", email: "ada@example.com" },
+    };
+
+    plane.send({ type: "call", id: "p1", method: "repo.push", params: push });
+    plane.send({ type: "call", id: "p2", method: "repo.push", params: { ...push, token: "" } });
+
+    await until(() => plane.received.filter((message) => message.type === "reply").length === 2);
+    const replies = plane.received.filter((message) => message.type === "reply");
+    expect(replies.find((reply) => reply.id === "p1")).toMatchObject({ ok: true, result: null });
+    expect(replies.find((reply) => reply.id === "p2")).toMatchObject({
+      ok: false,
+      error: "Invalid parameters",
+    });
+  });
+
   test("a sandbox someone is watching is not released as idle", async () => {
     const fake = fakeDesktop();
     const { sandbox, up, released } = withDesktop(fake.desktop);

@@ -108,10 +108,30 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
 export const ARTIFACT_NAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
 
+/** What the control plane asks of a runner to publish a thread's work (decision 0040); params are `RepoPushParams`. */
+export type ShipCallMethod = "repo.push";
+
+/**
+ * Commit what a thread changed and push its branch. `token` is minted for this push and limited to
+ * the one repository; the runner never keeps it. `branch` is the thread's own branch.
+ */
+export type RepoPushParams = {
+  threadId: string;
+  cloneUrl: string;
+  branch: string;
+  token: string;
+  commitMessage: string;
+  author: { name: string; email: string };
+};
+
+/** `nothing` when the thread's branch holds no change the default branch lacks; null on the wire without a workspace. */
+export type RepoPushResult = { kind: "pushed"; commit: string } | { kind: "nothing" };
+
 /** Everything the control plane can `call` a runner for. */
 export type RunnerCallMethod =
   | DesktopCallMethod
   | DiffCallMethod
+  | ShipCallMethod
   | FilesCallMethod
   | ArtifactsCallMethod;
 
@@ -283,6 +303,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 17: the control plane can ask a runner to commit and push a thread's branch, `repo.push` (decision 0040).
 // Version 16: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
 // Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
 // Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
@@ -298,4 +319,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 16;
+export const WIRE_VERSION = 17;
