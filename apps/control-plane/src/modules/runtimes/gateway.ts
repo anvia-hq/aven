@@ -74,6 +74,7 @@ export class RunGateway {
       modelId: config.modelId,
       reasoningEffort: config.reasoningEffort,
       effortLevels: config.effortLevels && [...config.effortLevels],
+      contextWindow: config.contextWindow,
       gatewayPath: `/runtimes/gateway/${SEGMENTS[config.provider]}`,
       gatewayToken: token,
     };

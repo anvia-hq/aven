@@ -13,6 +13,9 @@ export type ToolPart = {
   output?: string;
 };
 
+/** How much of the model's context window the conversation fills, as of the latest model call. */
+export type ContextUsage = { usedTokens: number; contextWindow: number };
+
 export type MessagePart = { type: "text"; text: string } | { type: "tool"; tool: ToolPart };
 
 export type ChatMessage = {
@@ -23,11 +26,12 @@ export type ChatMessage = {
 
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
-  | { type: "snapshot"; messages: ChatMessage[]; running: boolean }
+  | { type: "snapshot"; messages: ChatMessage[]; running: boolean; context?: ContextUsage }
   | { type: "run_start"; prompt: string }
   | { type: "text"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
   | { type: "tool_end"; id: string; status: "done" | "error"; output?: string }
+  | ({ type: "context" } & ContextUsage)
   | { type: "done" }
   | { type: "error"; message: string };
 

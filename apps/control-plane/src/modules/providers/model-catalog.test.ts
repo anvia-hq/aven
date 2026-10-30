@@ -5,7 +5,11 @@ import { createModelCatalog, looksLikeChatModel } from "./model-catalog";
 const catalog = {
   openai: {
     models: {
-      "gpt-5.6": { tool_call: true, modalities: { output: ["text"] } },
+      "gpt-5.6": {
+        tool_call: true,
+        modalities: { output: ["text"] },
+        limit: { context: 400000 },
+      },
       "o4-mini": { tool_call: true, modalities: { output: ["text"] }, status: "deprecated" },
       "gpt-image-2": { tool_call: false, modalities: { output: ["image"] } },
     },
@@ -120,5 +124,15 @@ describe("modelCatalog", () => {
     expect(await models.efforts("anthropic", "claude-haiku-4-5")).toBeNull();
     expect(await models.efforts("anthropic", "unknown")).toBeNull();
     expect(await models.efforts("openai-compatible", "x")).toBeNull();
+  });
+});
+
+describe("contextWindow", () => {
+  test("is the catalog's context limit, or null when it has none or the model is unknown", async () => {
+    const models = createModelCatalog(serving(catalog), () => 0, url);
+    expect(await models.contextWindow("openai", "gpt-5.6")).toBe(400000);
+    expect(await models.contextWindow("openai", "o4-mini")).toBeNull();
+    expect(await models.contextWindow("openai", "not-listed")).toBeNull();
+    expect(await models.contextWindow("openai-compatible", "llama")).toBeNull();
   });
 });

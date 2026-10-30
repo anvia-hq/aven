@@ -20,6 +20,8 @@ export type RunModel = {
   modelId?: string;
   reasoningEffort?: string;
   effortLevels?: string[];
+  /** Tokens the model's context holds, when known; the run reports how much of it is used. */
+  contextWindow?: number;
   /** Path on the control plane the model client uses as its API root; the runtime adds its own origin. */
   gatewayPath: string;
   gatewayToken: string;

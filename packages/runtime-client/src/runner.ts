@@ -37,6 +37,7 @@ const defaultCreateAgent =
       baseUrl: `${origin}${model.gatewayPath}`,
       reasoningEffort: model.reasoningEffort,
       effortLevels: model.effortLevels,
+      contextWindow: model.contextWindow,
       tools,
       memory,
     });

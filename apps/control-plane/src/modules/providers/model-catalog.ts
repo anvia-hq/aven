@@ -4,7 +4,12 @@
 // unreachable, fall back to a name check.
 
 type Kind = "openai" | "anthropic" | "openai-compatible";
-type Entry = { usable: boolean; deprecated: boolean; efforts: string[] };
+type Entry = {
+  usable: boolean;
+  deprecated: boolean;
+  efforts: string[];
+  contextWindow: number | null;
+};
 
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -16,6 +21,7 @@ type CatalogModel = {
   modalities?: { output?: string[] };
   status?: string;
   reasoning_options?: { type?: string; values?: string[] }[];
+  limit?: { context?: number };
 };
 
 // Entries come from a third-party document; one that is not an object is skipped, not trusted.
@@ -30,6 +36,12 @@ const effortsOf = (model: CatalogModel) =>
   (model.reasoning_options ?? []).flatMap((option) =>
     option.type === "effort" ? (option.values ?? []) : [],
   );
+
+// The model's context window in tokens, when the catalog gives a usable number.
+const contextWindowOf = (model: CatalogModel) => {
+  const context = model.limit?.context;
+  return typeof context === "number" && context > 0 ? context : null;
+};
 
 // Name check for ids models.dev has not listed yet. Anthropic only has chat models; OpenAI mixes
 // them with other modalities, so the other families are named out.
@@ -78,6 +90,7 @@ export function createModelCatalog(
                   usable: isUsable(info),
                   deprecated: info.status === "deprecated",
                   efforts: effortsOf(info),
+                  contextWindow: contextWindowOf(info),
                 },
               ];
             }),
@@ -114,6 +127,12 @@ export function createModelCatalog(
       if (kind === "openai-compatible") return null;
       const levels = (await lookup(kind))?.get(id)?.efforts;
       return levels?.length ? levels : null;
+    },
+    // The model's context window in tokens, or null when the catalog does not know it. Without
+    // one the agent cannot report how full the context is.
+    async contextWindow(kind: Kind, id: string) {
+      if (kind === "openai-compatible") return null;
+      return (await lookup(kind))?.get(id)?.contextWindow ?? null;
     },
     // Whether a model a message names can run: refused only when the catalog says it cannot.
     async canRun(kind: Kind, id: string) {

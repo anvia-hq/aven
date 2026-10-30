@@ -3,7 +3,9 @@ import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { cloneRepository, git, isCloned, threadBranch, type Git } from "./git-clone";
+import { threadBranch } from "@aven/protocol/thread-branch";
+
+import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { createRemoteRepo } from "./testing/remote-repo";
 
 const emptyDir = () => mkdtemp(join(tmpdir(), "aven-clone-"));

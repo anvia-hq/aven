@@ -1,6 +1,11 @@
 import { db } from "@aven/db/client";
 import { providers, type ProviderRow } from "@aven/db/schema/providers";
-import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
+import {
+  DEFAULT_MODEL_IDS,
+  reasoningControlsFor,
+  type ModelConfig,
+  type ReasoningControls,
+} from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
@@ -231,6 +236,7 @@ export const providersService = {
     };
     if (selection.modelId) await assertRunnable(config.provider, selection.modelId);
     if (selection.reasoningEffort) await applyEffort(config, selection.reasoningEffort);
+    config.contextWindow = (await contextWindowOf(config)) ?? undefined;
     return config;
   },
 };
@@ -272,6 +278,14 @@ async function assertRunnable(kind: ProviderKind, modelId: string) {
   if (!(await modelCatalog.canRun(kind, modelId))) {
     throw new InvalidSelectionError(`${modelId} cannot be used to run the agent`);
   }
+}
+
+// The window of the model the run will use, the provider's default when none is named.
+async function contextWindowOf(config: ModelConfig) {
+  const modelId =
+    config.modelId ??
+    (config.provider === "openai-compatible" ? undefined : DEFAULT_MODEL_IDS[config.provider]);
+  return modelId ? modelCatalog.contextWindow(config.provider, modelId) : null;
 }
 
 async function applyEffort(config: ModelConfig, reasoningEffort: string) {

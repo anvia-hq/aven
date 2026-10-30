@@ -28,11 +28,12 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 `GET /threads/:id/events` is `text/event-stream`. Every message is `data: <json>` with a `type`, plus a keep-alive `event: ping` every 5 seconds. Always attach before or right after sending; a snapshot comes first, so reconnecting is safe at any time.
 
 ```
-snapshot    { messages: Message[], running: bool }   replaces all local state
+snapshot    { messages: Message[], running: bool, context?: Context }   replaces all local state
 run_start   { prompt }
 text        { delta }
 tool_start  { tool: Tool }
 tool_end    { id, status: "done" | "error", output? }
+context     { usedTokens, contextWindow }   how full the model's context is; not part of the transcript
 done        {}
 error       { message }
 ```
@@ -41,6 +42,7 @@ error       { message }
 Message = { id, role: "user" | "assistant", parts: Part[] }
 Part    = { type: "text", text } | { type: "tool", tool: Tool }
 Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output? }
+Context  = { usedTokens, contextWindow }
 DiffLine = { type: "add" | "del" | "ctx", text }
 ```
 

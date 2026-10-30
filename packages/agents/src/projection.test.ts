@@ -151,3 +151,24 @@ describe("the sandbox's tools", () => {
     expect(json({ id: "p1", status: "running" }).output).toBe('{"id":"p1","status":"running"}');
   });
 });
+
+describe("context usage", () => {
+  const turnEnd = (contextUsage?: object) =>
+    ({ type: "turn_end", turn: 1, response: { choice: [], usage: {}, contextUsage } }) as never;
+
+  test("a model call that reports it becomes a context event", () => {
+    const usage = {
+      usedTokens: 330_000,
+      model: { modelId: "m", context: { contextWindow: 1_000_000 } },
+    };
+    expect(projectStreamEvent(turnEnd(usage))).toEqual({
+      type: "context",
+      usedTokens: 330_000,
+      contextWindow: 1_000_000,
+    });
+  });
+
+  test("a model whose window is unknown reports nothing", () => {
+    expect(projectStreamEvent(turnEnd())).toBeUndefined();
+  });
+});

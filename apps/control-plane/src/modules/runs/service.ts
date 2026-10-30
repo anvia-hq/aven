@@ -1,7 +1,12 @@
 import type { ConversationStore } from "@aven/agents/memory";
 import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
-import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
+import {
+  applyEvent,
+  type ChatMessage,
+  type ContextUsage,
+  type RunEvent,
+} from "@aven/protocol/events";
 
 import { ConflictError, UnavailableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
@@ -24,6 +29,8 @@ type Channel = {
   thread: RunThread;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
+  /** From the latest model call; kept after the run so a client attaching later still has it. */
+  context?: ContextUsage;
 };
 
 export class RunBusyError extends ConflictError {
@@ -167,19 +174,22 @@ export class RunManager {
         await run.ready;
         if (channel.run !== run) continue;
         queue.length = 0;
-        return { messages: run.messages, running: true };
+        return { messages: run.messages, running: true, context: channel.context };
       }
       const messages = messagesToChat(
         await this.#store.load({ scope: this.#scope(channel.thread) }),
       );
       if (channel.run) continue;
       queue.length = 0;
-      return { messages, running: false };
+      return { messages, running: false, context: channel.context };
     }
   }
 
   #emit(channel: Channel, event: RunEvent) {
     if (channel.run) channel.run.messages = applyEvent(channel.run.messages, event);
+    if (event.type === "context") {
+      channel.context = { usedTokens: event.usedTokens, contextWindow: event.contextWindow };
+    }
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 

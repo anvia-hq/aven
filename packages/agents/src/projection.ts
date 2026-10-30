@@ -143,6 +143,16 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
       const { status, output } = projectToolOutput(event.output);
       return { type: "tool_end", id: event.toolCallId, status, output };
     }
+    case "turn_end": {
+      // Only known when the model's context window is.
+      const usage = event.response.contextUsage;
+      if (!usage) return undefined;
+      return {
+        type: "context",
+        usedTokens: usage.usedTokens,
+        contextWindow: usage.model.context.contextWindow,
+      };
+    }
     default:
       return undefined;
   }

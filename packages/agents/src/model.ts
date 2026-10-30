@@ -25,6 +25,8 @@ export type ModelConfig = {
    * finds none.
    */
   effortLevels?: readonly string[];
+  /** The model's context window in tokens; without it the agent cannot report context usage. */
+  contextWindow?: number;
 };
 
 // `openai-compatible` has no default: every server names its own models.
@@ -32,6 +34,9 @@ export const DEFAULT_MODEL_IDS = {
   openai: "gpt-5.6",
   anthropic: "claude-sonnet-5",
 } as const satisfies Partial<Record<Provider, string>>;
+
+const contextLimitsFor = (config: ModelConfig) =>
+  config.contextWindow ? { contextWindow: config.contextWindow } : undefined;
 
 // Controls for a model the SDK has none for, built from levels the host supplies.
 function controlsFromLevels(levels: readonly string[] | undefined) {
@@ -54,7 +59,11 @@ export function createModel(config: ModelConfig) {
     return new OpenAIClient({
       apiKey: config.apiKey || "not-needed",
       baseUrl: config.baseUrl,
-    }).completionModel({ modelId: config.modelId, api: "chat" });
+    }).completionModel({
+      modelId: config.modelId,
+      api: "chat",
+      contextLimits: contextLimitsFor(config),
+    });
   }
 
   if (config.provider === "openai") {
@@ -64,6 +73,7 @@ export function createModel(config: ModelConfig) {
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.openai,
       api: "responses",
       controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
     });
   }
 
@@ -72,6 +82,7 @@ export function createModel(config: ModelConfig) {
   return new AnthropicClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
     modelId: config.modelId ?? DEFAULT_MODEL_IDS.anthropic,
     controls: controlsFromLevels(config.effortLevels),
+    contextLimits: contextLimitsFor(config),
   });
 }
 

@@ -3,7 +3,7 @@ import { Agent, defineCompletionModelControls } from "@anvia/core";
 import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
-import { providerOptionsFor, reasoningControlsFor } from "./model";
+import { createModel, providerOptionsFor, reasoningControlsFor } from "./model";
 
 describe("providerOptionsFor", () => {
   test("only anthropic gets automatic prompt caching", () => {
@@ -102,5 +102,20 @@ describe("anthropic request", () => {
       tools: [],
     });
     expect(agent.controls).toEqual({ reasoningEffort: "low" });
+  });
+});
+
+describe("createModel", () => {
+  // The SDK knows the window of some models; for any other the host has to say.
+  test("a model the SDK does not know reports context only when given its window", () => {
+    const unknown = {
+      provider: "anthropic",
+      modelId: "claude-not-yet-known",
+      apiKey: "x",
+    } as const;
+    expect(createModel(unknown).contextLimits).toBeUndefined();
+    expect(createModel({ ...unknown, contextWindow: 200_000 }).contextLimits).toEqual({
+      contextWindow: 200_000,
+    });
   });
 });

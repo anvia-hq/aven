@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { ConversationStore } from "@aven/agents/memory";
+import type { RunEvent } from "@aven/protocol/events";
 
 import { UnavailableError } from "../../errors";
 import type { Runtime, RunThread, RuntimeRun } from "./runtime";
@@ -70,5 +71,34 @@ describe("starting a run", () => {
     expect(manager.cancel(thread.id)).toBe(true);
     expect(cancelled).toBe("Cancelled by user");
     expect(manager.cancel(newThread().id)).toBe(false);
+  });
+});
+
+describe("context usage", () => {
+  test("the latest one is in the snapshot of a client that attaches afterwards", async () => {
+    const events: RunEvent[] = [
+      { type: "context", usedTokens: 100, contextWindow: 1000 },
+      { type: "context", usedTokens: 330, contextWindow: 1000 },
+    ];
+    const handle: RuntimeRun = {
+      events: (async function* () {
+        yield* events;
+      })(),
+      result: Promise.resolve({ type: "response" }),
+      cancel: () => undefined,
+    };
+    const manager = managerRunning(handle);
+    const thread = newThread();
+    await manager.start(thread, "hi");
+    await Bun.sleep(20);
+
+    const stream = manager.events(thread, new AbortController().signal);
+    const first = (await stream.next()).value;
+    await stream.return(undefined);
+    expect(first).toMatchObject({
+      type: "snapshot",
+      running: false,
+      context: { usedTokens: 330, contextWindow: 1000 },
+    });
   });
 });

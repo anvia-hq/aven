@@ -1,6 +1,7 @@
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
+import { threadBranch } from "@aven/protocol/thread-branch";
 
 export type Git = (
   args: string[],
@@ -21,9 +22,6 @@ export const git: Git = async (args, { cwd, env }) => {
   ]);
   return { code, stdout, stderr };
 };
-
-/** The branch a thread works on, so threads of one project do not share a branch name. */
-export const threadBranch = (threadId: string) => `aven/${threadId.slice(0, 8)}`;
 
 // The header is limited to the clone URL's own origin, so a redirect elsewhere never sees the token.
 // A path (a local test remote) has no origin and gets the unscoped key.
