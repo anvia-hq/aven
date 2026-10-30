@@ -27,6 +27,11 @@ const runEvent = z.discriminatedUnion("type", [
     status: z.enum(["done", "error"]),
     output: z.string().optional(),
   }),
+  z.object({
+    type: z.literal("context"),
+    usedTokens: z.number().int().nonnegative(),
+    contextWindow: z.number().int().positive(),
+  }),
 ]);
 
 const frame = z.discriminatedUnion("type", [
