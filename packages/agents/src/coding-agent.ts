@@ -44,6 +44,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
 
   const { model, providerOptions, controls } = resolveModel(options);
   const store = historyStoreFor(options);
+  // The summarizer holds nothing between calls, so the memory store and the host can share it.
+  const compaction = compactionFor(options, model);
   const agent = new Agent({
     id: options.id ?? "coding",
     model,
@@ -56,12 +58,12 @@ export function createCodingAgent(options: CodingAgentOptions) {
     memory: store && {
       store,
       savePolicy: "turn",
-      compaction: store.compaction && compactionFor(options, model),
+      compaction: store.compaction && compaction,
     },
   });
 
   // For a host that keeps the history itself (a durable run): what to register beside the agent.
-  return { agent, compaction: compactionFor(options, model) };
+  return { agent, compaction };
 }
 
 // Summarizing starts at this share of the model's context window, leaving room for the next
@@ -97,6 +99,3 @@ function resolveModel(options: CodingAgentOptions) {
     controls: options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : undefined,
   };
 }
-
-export type CodingAgent = ReturnType<typeof createCodingAgent>["agent"];
-export type CodingAgentStream = ReturnType<CodingAgent["stream"]>;
