@@ -1,8 +1,4 @@
-import { Trash } from "@mynaui/icons-react";
 import type { ReactNode } from "react";
-
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
 
 import { useProviders } from "../hooks/use-providers";
 import {
@@ -12,6 +8,7 @@ import {
   type Provider,
   type ProviderKind,
 } from "../types";
+import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
 
@@ -41,90 +38,77 @@ function Heading({ kind }: { kind: ProviderKind }) {
 // OpenAI, Anthropic and Azure have one credential each, shown on the kind's own line; an
 // OpenAI-compatible server is one of many, so those are listed under theirs.
 export function ProvidersList() {
-  const { providers, loaded, makeDefault, remove } = useProviders();
+  const { providers, loaded } = useProviders();
 
   if (!loaded) return null;
-
-  const removeButton = (provider: Provider) => (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      aria-label={`Remove ${provider.name}`}
-      onClick={() => remove(provider)}
-    >
-      <Trash />
-    </Button>
-  );
 
   return (
     <div className="flex flex-col border-t">
       {PROVIDER_KINDS.map((kind) => {
         const ofKind = providers.filter((provider) => provider.kind === kind);
-
-        if (kind !== "openai-compatible") {
-          const [provider] = ofKind;
-          return (
-            <Row key={kind} kind={kind}>
-              <div className="flex items-center gap-2.5">
-                <Heading kind={kind} />
-                {provider ? (
-                  <>
-                    {provider.isDefault && <Badge variant="secondary">Default</Badge>}
-                    <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                      {detail(provider)}
-                    </p>
-                    {!provider.isDefault && (
-                      <Button variant="ghost" size="xs" onClick={() => makeDefault(provider)}>
-                        Make default
-                      </Button>
-                    )}
-                    <ProviderDialog kind={kind} provider={provider} label="Edit" />
-                    {removeButton(provider)}
-                  </>
-                ) : (
-                  <>
-                    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                      {PROVIDER_DESCRIPTIONS[kind]}
-                    </p>
-                    <ProviderDialog kind={kind} label="Set up" />
-                  </>
-                )}
-              </div>
-            </Row>
-          );
-        }
-
-        return (
-          <Row key={kind} kind={kind}>
-            <div className="flex items-center gap-2.5">
-              <Heading kind={kind} />
-              <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                {PROVIDER_DESCRIPTIONS[kind]}
-              </p>
-              <ProviderDialog kind={kind} label="Add" />
-            </div>
-            {ofKind.length > 0 && (
-              <ul className="mt-1.5 flex flex-col pl-6.5">
-                {ofKind.map((provider) => (
-                  <li key={provider.id} className="flex items-center gap-2 py-1 text-xs">
-                    <span className="font-medium">{provider.name}</span>
-                    {provider.isDefault && <Badge variant="secondary">Default</Badge>}
-                    <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
-                      {detail(provider)}
-                    </span>
-                    {!provider.isDefault && (
-                      <Button variant="ghost" size="xs" onClick={() => makeDefault(provider)}>
-                        Make default
-                      </Button>
-                    )}
-                    {removeButton(provider)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Row>
+        return kind === "openai-compatible" ? (
+          <CompatibleRow key={kind} kind={kind} providers={ofKind} />
+        ) : (
+          <SingleRow key={kind} kind={kind} provider={ofKind[0]} />
         );
       })}
     </div>
+  );
+}
+
+// A kind with one credential: the provider when it is set up, else what setting it up gives.
+function SingleRow({ kind, provider }: { kind: ProviderKind; provider: Provider | undefined }) {
+  return (
+    <Row kind={kind}>
+      <div className="flex items-center gap-2.5">
+        <Heading kind={kind} />
+        {provider ? (
+          <ProviderActions
+            provider={provider}
+            edit={<ProviderDialog kind={kind} provider={provider} label="Edit" />}
+          >
+            <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+              {detail(provider)}
+            </p>
+          </ProviderActions>
+        ) : (
+          <>
+            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {PROVIDER_DESCRIPTIONS[kind]}
+            </p>
+            <ProviderDialog kind={kind} label="Set up" />
+          </>
+        )}
+      </div>
+    </Row>
+  );
+}
+
+// OpenAI-compatible servers: any number, each on its own line under the kind's.
+function CompatibleRow({ kind, providers }: { kind: ProviderKind; providers: Provider[] }) {
+  return (
+    <Row kind={kind}>
+      <div className="flex items-center gap-2.5">
+        <Heading kind={kind} />
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+          {PROVIDER_DESCRIPTIONS[kind]}
+        </p>
+        <ProviderDialog kind={kind} label="Add" />
+      </div>
+      {providers.length > 0 && (
+        <ul className="mt-1.5 flex flex-col pl-6.5">
+          {providers.map((provider) => (
+            <li key={provider.id} className="flex items-center gap-2 py-1 text-xs">
+              <span className="font-medium">{provider.name}</span>
+              <ProviderActions provider={provider}>
+                <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
+                  {detail(provider)}
+                </span>
+              </ProviderActions>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Row>
   );
 }
