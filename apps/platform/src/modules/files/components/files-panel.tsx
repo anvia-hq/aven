@@ -7,7 +7,8 @@ import { SidePanel } from "@/components/side-panel";
 
 import { useExplorerState } from "../hooks/use-explorer-state";
 import { useWorkspaceTree } from "../hooks/use-workspace-tree";
-import { FileMatches, FileTree } from "./file-tree";
+import { FileMatches } from "./file-matches";
+import { FileTree } from "./file-tree";
 import { FileTabs } from "./file-tabs";
 import { FileViewer } from "./file-viewer";
 
