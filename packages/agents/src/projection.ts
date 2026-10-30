@@ -31,6 +31,7 @@ import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
+import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
 
@@ -57,6 +58,8 @@ const PROCESS_TOOLS = new Set<string>([
   "stop_process",
 ] satisfies SandboxToolName[]);
 const PORT_TOOL: SandboxToolName = "wait_for_port";
+// Tools whose JSON result carries a `summary` meant to be read as it is.
+const SUMMARISED_TOOLS = new Set<string>([GIT_FETCH_TOOL_NAME, SAVE_ENVIRONMENT_TOOL_NAME]);
 
 export function toolTarget(name: string, input: unknown) {
   const args = asRecord(input);
@@ -172,10 +175,10 @@ export function projectToolOutput(
       if (image) {
         return { status: "done", output: `Showed ${asString(asRecord(output.value).path)}`, image };
       }
-      // What a fetch did, in the words the tool gave it.
-      const fetched =
-        toolName === GIT_FETCH_TOOL_NAME ? asString(asRecord(output.value).summary) : "";
-      return { status: "done", output: clip(fetched || jsonText(output.value)) };
+      // What these tools did, in the words they gave it.
+      const said =
+        toolName && SUMMARISED_TOOLS.has(toolName) ? asString(asRecord(output.value).summary) : "";
+      return { status: "done", output: clip(said || jsonText(output.value)) };
     }
     case "error-json":
       return { status: "error", output: clip(JSON.stringify(output.value)) };

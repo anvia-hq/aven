@@ -326,6 +326,55 @@ describe("startRuntime", () => {
     expect(await Bun.file(`${fixture.root}/.git/config`).text()).not.toContain("secret-token");
   });
 
+  test("the agent's save_environment has the sandbox set the repository up, with the run's own repo access", async () => {
+    const access = {
+      cloneUrl: "https://github.com/acme/web.git",
+      defaultBranch: "main",
+      token: "t",
+    };
+    const saved: { thread: unknown; access: unknown }[] = [];
+    const sandbox: ThreadWorkspaces = {
+      async acquire(): Promise<ThreadSandbox> {
+        return { tools: [], hasRunningProcesses: async () => false };
+      },
+      desktop: () => undefined,
+      workspace: async () => undefined,
+      async saveEnvironment(thread, given) {
+        saved.push({ thread, access: given });
+        return { image: "aven-env-k" };
+      },
+      async release() {},
+      async dispose() {},
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [...tools],
+          model: scriptedModel([
+            [{ type: "tool-call", toolCallId: "s1", toolName: "save_environment", input: {} }],
+            [text("saved")],
+          ]),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => plane.received.some((message) => message.type === "call"));
+    const call = plane.received.find((message) => message.type === "call");
+    expect(call).toMatchObject({ method: "repo.access", params: { runId: "run-1" } });
+    plane.send({ type: "reply", id: (call as { id: string }).id, ok: true, result: access });
+
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    expect(saved).toEqual([{ thread, access }]);
+    expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
+      outcome: "response",
+    });
+  });
+
   test("the sandbox gets the repository's access by asking the control plane about the run", async () => {
     const access = {
       cloneUrl: "https://github.com/acme/web.git",

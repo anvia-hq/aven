@@ -4,6 +4,7 @@ import {
   Eye,
   GitBranch,
   Image as ImageIcon,
+  Save,
   Search,
   Spinner,
   Terminal,
@@ -33,6 +34,11 @@ const meta: Record<string, Meta> = {
   web_search: { icon: Search, running: "Searching", done: "Searched" },
   show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
   git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
+  save_environment: {
+    icon: Save,
+    running: "Saving the environment",
+    done: "Saved the environment",
+  },
 };
 
 // The desktop tools are `desktop_<action>`; anything else unknown is shown by its name.

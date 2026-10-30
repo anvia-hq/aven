@@ -22,6 +22,7 @@ const search: Kind = {
 const desktop: Kind = { label: (count) => plural(count, "desktop action") };
 const image: Kind = { label: (count) => `showed ${plural(count, "image")}` };
 const fetch: Kind = { label: () => "fetched from GitHub" };
+const environment: Kind = { label: () => "saved the environment" };
 const other: Kind = { label: (count) => `used ${plural(count, "tool")}` };
 
 function kindOf(name: string): Kind {
@@ -48,6 +49,8 @@ function kindOf(name: string): Kind {
       return image;
     case "git_fetch":
       return fetch;
+    case "save_environment":
+      return environment;
     default:
       return name.startsWith("desktop_") ? desktop : other;
   }

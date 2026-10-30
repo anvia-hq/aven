@@ -5,6 +5,7 @@ import {
 } from "@anvia/core/agent/interactions";
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
 import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
+import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
@@ -179,13 +180,27 @@ export function createRunDriver(context: DriverContext) {
           return fetchBranch(root, await context.call("repo.access", { runId }), branch);
         });
         const bound: AnyTool[] = [...lateBoundTools(box.tools, current), gitFetch];
+        // Only an agent with a person to set the repository up with may save its environment,
+        // which can take many minutes (decision 0043); a runner without snapshots has no tool.
+        const sandbox = context.sandbox;
+        const saveEnvironment = sandbox.saveEnvironment
+          ? [
+              createSaveEnvironmentTool(async () =>
+                sandbox.saveEnvironment!(thread, await context.call("repo.access", { runId })),
+              ),
+            ]
+          : [];
         const { agent, compaction } = context.createAgent({
           thread,
           id,
           attended,
           // Only an agent with a person to talk to may take on a goal.
           tools: attended
-            ? [...bound, createDefineGoalTool((goal) => activeRun(thread.id)?.save({ goal }))]
+            ? [
+                ...bound,
+                ...saveEnvironment,
+                createDefineGoalTool((goal) => activeRun(thread.id)?.save({ goal })),
+              ]
             : bound,
           skills: state.record.skillListing,
           model,
