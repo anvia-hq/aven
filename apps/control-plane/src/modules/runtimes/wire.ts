@@ -2,6 +2,7 @@ import type { MemoryCompactionMessage, Message } from "@anvia/core";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
+  SKILL_DIGEST,
   type CallMethod,
   type RunOutcome,
   type RuntimeToControlPlane,
@@ -27,6 +28,7 @@ const callMethods = [
   "memory.snapshot",
   "memory.replacePrefix",
   "repo.access",
+  "skills.get",
 ] as const satisfies readonly CallMethod[];
 
 // An image the agent showed: a name the runner gave it, so a client can only ask for it by that.
@@ -145,6 +147,8 @@ const replacePrefixParams = memoryParams.extend({
   ),
 });
 
+const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
+
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
   if (!parsed.success) throw new Error("Invalid parameters for this memory call");
@@ -153,5 +157,6 @@ function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
 
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
+export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
 export const parseReplacePrefixParams = (params: unknown) =>
   parseParams(replacePrefixParams, params);

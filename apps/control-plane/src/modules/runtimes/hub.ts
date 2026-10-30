@@ -14,6 +14,7 @@ import type {
 import { memoryStore } from "../../memory-store";
 import { describeError, UnavailableError } from "../../errors";
 import { projectsService } from "../projects/service";
+import { skillsService } from "../skills/service";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
 import { runtimesService } from "./service";
@@ -42,6 +43,8 @@ type Run = {
   lastSeq: number;
   /** The turns of the transcript already stored, so a call sent again after a dropped reply adds nothing. */
   appended: Set<number>;
+  /** The digests of the run's skills: the only ones its runtime may fetch (decision 0035). */
+  skills: Set<string>;
   /** A cancel asked for while the run had no connection, sent when it has one again. */
   cancel?: string;
 };
@@ -86,8 +89,14 @@ export class RuntimeConnection {
     this.send(JSON.stringify(message));
   }
 
-  startRun(runId: string, thread: RunThreadInfo, sink: RunSink) {
-    this.#runs.set(runId, { thread, sink, lastSeq: 0, appended: new Set() });
+  startRun(runId: string, thread: RunThreadInfo, sink: RunSink, skills: string[] = []) {
+    this.#runs.set(runId, {
+      thread,
+      sink,
+      lastSeq: 0,
+      appended: new Set(),
+      skills: new Set(skills),
+    });
   }
 
   // Takes over a run that was following a connection that dropped, and asks for what it missed.
@@ -190,6 +199,7 @@ export class RuntimeConnection {
         findRun: (runId) => this.#runs.get(runId),
         store: this.hub.store,
         repoAccess: this.hub.repoAccess,
+        skillArchive: this.hub.skillArchive,
       });
       this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
@@ -233,6 +243,9 @@ export class RuntimeHub {
       Promise.reject(new Error("Repository access is not available")),
     /** How long a run waits for its runtime to reconnect before it is given up as lost. */
     private graceMs = DEFAULT_GRACE_MS,
+    /** A skill's archive by its digest (decision 0035). */
+    readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined> = async () =>
+      undefined,
   ) {}
 
   // A runtime that reconnects replaces its previous connection.
@@ -331,6 +344,9 @@ export class RuntimeHub {
   }
 }
 
-export const runtimeHub = new RuntimeHub(memoryStore, (threadId) =>
-  projectsService.repoAccess(threadId),
+export const runtimeHub = new RuntimeHub(
+  memoryStore,
+  (threadId) => projectsService.repoAccess(threadId),
+  DEFAULT_GRACE_MS,
+  (digest) => skillsService.archive(digest),
 );

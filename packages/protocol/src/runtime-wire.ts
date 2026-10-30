@@ -126,6 +126,15 @@ export type ArtifactsReadParams = { threadId: string; name: string };
  */
 export type RunAttachment = MessageAttachment & { data: string };
 
+/**
+ * A skill a run has (decision 0035). The runner fetches the archive with `skills.get` when it
+ * has none with this digest: the SHA-256, in hex, of the skill's files and their paths.
+ */
+export type RunSkill = { name: string; description: string; digest: string };
+
+/** What a skill's digest looks like. */
+export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
@@ -133,6 +142,7 @@ export type ControlPlaneToRuntime =
       thread: RunThreadInfo;
       prompt: string;
       attachments?: RunAttachment[];
+      skills?: RunSkill[];
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -142,6 +152,7 @@ export type ControlPlaneToRuntime =
       thread: RunThreadInfo;
       continuation: unknown;
       response: unknown;
+      skills?: RunSkill[];
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
@@ -192,7 +203,10 @@ export type MemoryCallMethod =
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
 
-export type CallMethod = MemoryCallMethod | RepoCallMethod;
+/** The runtime fetches a skill of the run (decision 0035); params are `{ runId, digest }`. */
+export type SkillsCallMethod = "skills.get";
+
+export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod;
 
 /** What a runtime needs to clone a thread's repository. The token is short-lived and read-only. */
 export type RepoAccess = {
@@ -202,6 +216,11 @@ export type RepoAccess = {
 };
 
 export type RepoAccessParams = { runId: string };
+
+export type SkillsGetParams = { runId: string; digest: string };
+
+/** A skill's folder as a `.tar.gz`, in base64. */
+export type SkillArchive = { data: string };
 
 export type MemoryAppendParams = {
   runId: string;
@@ -214,6 +233,7 @@ export type MemoryAppendParams = {
 export type RuntimeCalls = {
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
+  "skills.get": { params: SkillsGetParams; result: SkillArchive };
 };
 
 /** WebSocket close codes the control plane ends a runtime's connection with. */
@@ -248,6 +268,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
 // Version 13: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
 // Version 12: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
 // Version 11: a runner answers `files.list` and `files.read` (decision 0031).
@@ -260,4 +281,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 13;
+export const WIRE_VERSION = 14;

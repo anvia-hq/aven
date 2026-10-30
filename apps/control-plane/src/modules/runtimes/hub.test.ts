@@ -13,6 +13,9 @@ import { runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
+const SKILL_DIGEST = "a".repeat(64);
+const SKILL_ARCHIVE = new Uint8Array([1, 2, 3]);
+
 run("runtime connection (real postgres, real WebSocket)", async () => {
   const seed = await seedOrgPair();
   const store = createMemoryStore(db);
@@ -30,6 +33,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       return repoAccess;
     },
     GRACE_MS,
+    async (digest) => (digest === SKILL_DIGEST ? SKILL_ARCHIVE : undefined),
   );
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
   const full = new Elysia().use(runtimesRouter).listen({ port: 0 });
@@ -137,6 +141,33 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
     connection.endRun("run-git");
     expect((await ask(ws, received, "repo.access", { runId: "run-git" })).ok).toBe(false);
+  });
+
+  test("a runtime fetches only the skills of its own runs", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "s" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    connection.startRun("run-with", thread, sink, [SKILL_DIGEST]);
+    connection.startRun("run-without", thread, sink);
+
+    const given = await ask(ws, received, "skills.get", {
+      runId: "run-with",
+      digest: SKILL_DIGEST,
+    });
+    expect(given).toMatchObject({ ok: true, result: { data: SKILL_ARCHIVE.toBase64() } });
+    // The same digest through a run that was not given it, and a digest that is not one.
+    const other = await ask(ws, received, "skills.get", {
+      runId: "run-without",
+      digest: SKILL_DIGEST,
+    });
+    expect(other.ok).toBe(false);
+    expect((await ask(ws, received, "skills.get", { runId: "run-with", digest: "x" })).ok).toBe(
+      false,
+    );
   });
 
   test("a runtime is asked for only so many viewers at once", async () => {

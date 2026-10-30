@@ -1,5 +1,10 @@
 import type { RunEvent } from "@aven/protocol/events";
-import type { ControlPlaneToRuntime, RunModel, RunOutcome } from "@aven/protocol/runtime-wire";
+import type {
+  ControlPlaneToRuntime,
+  RunModel,
+  RunOutcome,
+  RunSkill,
+} from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
 
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
@@ -63,24 +68,26 @@ export class RemoteRuntime implements Runtime {
     private gateway: Pick<RunGateway, "issue" | "revoke">,
   ) {}
 
-  start({ thread, prompt, attachments, model }: StartRunInput): RuntimeRun {
-    return this.#launch(thread, model, (runId, runModel) => ({
+  start({ thread, prompt, attachments, skills, model }: StartRunInput): RuntimeRun {
+    return this.#launch(thread, model, skills, (runId, runModel) => ({
       type: "run.start",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
       prompt,
       attachments: attachments?.length ? attachments : undefined,
+      skills: skills?.length ? skills : undefined,
       model: runModel,
     }));
   }
 
-  resume({ thread, continuation, response, model }: ResumeRunInput): RuntimeRun {
-    return this.#launch(thread, model, (runId, runModel) => ({
+  resume({ thread, continuation, response, skills, model }: ResumeRunInput): RuntimeRun {
+    return this.#launch(thread, model, skills, (runId, runModel) => ({
       type: "run.resume",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
       continuation,
       response,
+      skills: skills?.length ? skills : undefined,
       model: runModel,
     }));
   }
@@ -88,6 +95,7 @@ export class RemoteRuntime implements Runtime {
   #launch(
     thread: RunThread,
     model: ModelConfig | undefined,
+    skills: RunSkill[] | undefined,
     message: (runId: string, runModel: RunModel) => ControlPlaneToRuntime,
   ): RuntimeRun {
     const connection = this.#connectionFor(thread);
@@ -99,7 +107,12 @@ export class RemoteRuntime implements Runtime {
     // A run nobody awaits (cancelled early) must not surface as an unhandled rejection.
     result.promise.catch(() => undefined);
 
-    connection.startRun(runId, thread, this.#sink(runId, queue, result));
+    connection.startRun(
+      runId,
+      thread,
+      this.#sink(runId, queue, result),
+      skills?.map((skill) => skill.digest),
+    );
     this.#post(connection, runId, message(runId, runModel));
 
     return {

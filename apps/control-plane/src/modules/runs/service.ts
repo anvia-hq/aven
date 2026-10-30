@@ -14,7 +14,7 @@ import {
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
-import type { RunAttachment } from "@aven/protocol/runtime-wire";
+import type { RunAttachment, RunSkill } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
@@ -91,11 +91,18 @@ export class RunManager {
     prompt: string,
     model?: ModelConfig | null,
     attachments: RunAttachment[] = [],
+    skills: RunSkill[] = [],
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
 
-    const handle = this.#runtime.start({ thread, prompt, attachments, model: model ?? undefined });
+    const handle = this.#runtime.start({
+      thread,
+      prompt,
+      attachments,
+      skills,
+      model: model ?? undefined,
+    });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
     // The transcript has what was sent, not the bytes.
     if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
@@ -110,6 +117,7 @@ export class RunManager {
     continuation: unknown,
     answers: QuestionAnswer[],
     model?: ModelConfig | null,
+    skills: RunSkill[] = [],
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -126,6 +134,7 @@ export class RunManager {
       thread,
       continuation: saved,
       response,
+      skills,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.

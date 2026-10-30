@@ -1,13 +1,14 @@
 import { ConflictError } from "../../errors";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import { runsService } from "../runs/service";
+import { skillsService } from "../skills/service";
 import { prepareAttachments } from "./attachments";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
-// environment's shared one). Kept out of `service.ts`, which `runs` depends on.
+// environment's shared one), with the sender's skills. Kept out of `service.ts`, which `runs` depends on.
 export const threadMessages = {
   async send(
     organizationId: string,
@@ -21,7 +22,8 @@ export const threadMessages = {
     const attachments = prepareAttachments(files);
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
-    await runsService.start(thread, prompt, model, attachments);
+    const skills = await skillsService.forRun(userId);
+    await runsService.start(thread, prompt, model, attachments, skills);
   },
 
   async answer(
@@ -34,6 +36,7 @@ export const threadMessages = {
     const continuation = await threadsService.continuation(thread.id);
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
     const model = await resolveModel(userId, selection);
-    await runsService.answer(thread, continuation, answers, model);
+    const skills = await skillsService.forRun(userId);
+    await runsService.answer(thread, continuation, answers, model, skills);
   },
 };
