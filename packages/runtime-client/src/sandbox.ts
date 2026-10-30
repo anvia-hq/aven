@@ -6,6 +6,7 @@ import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
+import { SKILLS_DIR } from "@aven/agents/skills";
 import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
@@ -14,6 +15,7 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { ArtifactStore } from "./artifacts";
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { runCommand, type CommandOutput } from "./run-command";
+import { SkillStore } from "./skills";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 
@@ -74,6 +76,8 @@ type DockerRunInput = {
   root: string;
   /** The files the thread's users attached, on this machine; mounted read-only (decision 0034). */
   uploads: string;
+  /** The skills of the thread's runs, on this machine; mounted read-only (decision 0035). */
+  skills: string;
   /** How the container reaches this machine. */
   host: string;
   hubPort: number;
@@ -116,6 +120,8 @@ export function dockerRunArgs(input: DockerRunInput) {
     `${input.root}:${WORKDIR}`,
     "-v",
     `${input.uploads}:${UPLOADS_DIR}:ro`,
+    "-v",
+    `${input.skills}:${SKILLS_DIR}:ro`,
     "-e",
     `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
     "-e",
@@ -199,6 +205,8 @@ export interface ThreadWorkspaces {
   readonly artifacts?: ArtifactStore;
   /** The files users attach (decision 0034); without it, a message with files cannot run. */
   readonly uploads?: UploadStore;
+  /** The skills of runs (decision 0035); without it, runs have none. */
+  readonly skills?: SkillStore;
   dispose(): Promise<void>;
 }
 
@@ -211,6 +219,7 @@ export interface ThreadWorkspaces {
 export class Sandboxes implements ThreadWorkspaces {
   readonly artifacts: ArtifactStore;
   readonly uploads: UploadStore;
+  readonly skills: SkillStore;
   #config: SandboxConfig;
   #hub: RemoteSandboxHub;
   #port: number;
@@ -232,6 +241,7 @@ export class Sandboxes implements ThreadWorkspaces {
     this.#config = config;
     this.artifacts = new ArtifactStore(join(runtimeHome(config.home), "artifacts"));
     this.uploads = new UploadStore(join(runtimeHome(config.home), "uploads"));
+    this.skills = new SkillStore(join(runtimeHome(config.home), "skills"));
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -373,6 +383,7 @@ export class Sandboxes implements ThreadWorkspaces {
       root,
       // Made before the container starts, so a file attached while it runs shows up in it.
       uploads: await this.uploads.dir(threadId),
+      skills: await this.skills.dir(threadId),
       host: this.#config.hostName ?? "host.docker.internal",
       hubPort: this.#port,
       token,

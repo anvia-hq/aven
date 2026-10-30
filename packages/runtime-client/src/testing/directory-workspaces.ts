@@ -11,6 +11,7 @@ import type {
 } from "@anvia/sandbox";
 
 import { ArtifactStore } from "../artifacts";
+import { SkillStore } from "../skills";
 import { UploadStore } from "../uploads";
 import type { ThreadSandbox, ThreadWorkspaces } from "../sandbox";
 import { hasRunningProcesses, sandboxTools } from "../thread-tools";
@@ -256,6 +257,7 @@ export function directoryWorkspaces(
   sandboxes: Map<string, DirectorySandbox>;
   artifacts: ArtifactStore;
   uploads: UploadStore;
+  skills: SkillStore;
 } {
   const roots = new Map<string, string>();
   const sandboxes = new Map<string, DirectorySandbox>();
@@ -264,6 +266,7 @@ export function directoryWorkspaces(
   );
   // There is no container to mount them in: the files are only kept.
   const uploads = new UploadStore(join(tmpdir(), `aven-directory-uploads-${crypto.randomUUID()}`));
+  const skills = new SkillStore(join(tmpdir(), `aven-directory-skills-${crypto.randomUUID()}`));
   // Unlike `ThreadWorkspaces.release`, which keeps the workspace's files for the next `acquire`,
   // this ends the thread's processes and deletes its temporary directory too.
   const free = async (threadId: string) => {
@@ -293,6 +296,7 @@ export function directoryWorkspaces(
     },
     artifacts,
     uploads,
+    skills,
     desktop: () => undefined,
     workspace: async (threadId) => roots.get(threadId),
     release: free,
@@ -300,6 +304,7 @@ export function directoryWorkspaces(
       await Promise.all([...sandboxes.keys()].map(free));
       await rm(artifacts.root, { recursive: true, force: true });
       await rm(uploads.root, { recursive: true, force: true });
+      await rm(skills.root, { recursive: true, force: true });
     },
   };
 }

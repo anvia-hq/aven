@@ -31,7 +31,7 @@ import type { Source } from "./run-outbox";
 
 // Bump when the agent's tools or instructions change incompatibly: runs unfinished under an older
 // version stop as "needs attention" instead of continuing under code that no longer matches.
-const AGENT_VERSION = "1";
+const AGENT_VERSION = "2";
 
 // Tools that are safe to repeat when the runner stopped while they ran. Everything else (commands,
 // processes, the desktop) is not repeated: the run is told the outcome is unknown.

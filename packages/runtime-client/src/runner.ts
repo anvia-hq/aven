@@ -1,6 +1,7 @@
 import type { Agent, AnyTool } from "@anvia/core";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import type { SkillListing } from "@aven/agents/skills";
 import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
@@ -34,6 +35,8 @@ export type CreateRuntimeAgent = (input: {
   attended: boolean;
   /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
+  /** The skills in the sandbox, for the instructions (decision 0035). */
+  skills?: readonly SkillListing[];
   model?: RunModel;
 }) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
@@ -42,7 +45,7 @@ export type CreateRuntimeAgent = (input: {
 // agent has no memory store.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, attended, tools, model }) => {
+  ({ id, attended, tools, skills, model }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       id,
@@ -55,6 +58,7 @@ const defaultCreateAgent =
       effortLevels: model.effortLevels,
       contextWindow: model.contextWindow,
       tools,
+      skills,
     });
   };
 

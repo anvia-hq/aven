@@ -124,6 +124,15 @@ export function createRunDriver(context: DriverContext) {
     }
   }
 
+  // Puts the run's skills in the thread's /skills and lists them with the repository's (decision 0035).
+  async function installSkills({ runId, thread, skills = [] }: RunRecord) {
+    const store = context.sandbox.skills;
+    if (!store) return [];
+    const fetch = async (digest: string) =>
+      Uint8Array.fromBase64((await context.call("skills.get", { runId, digest })).data);
+    return store.install(thread.id, skills, fetch, await context.sandbox.workspace(thread.id));
+  }
+
   // Gets the run what it works with: the thread's sandbox and the journal. Everything a phase of the
   // run does goes through the scope this returns.
   async function acquire(
@@ -137,6 +146,8 @@ export function createRunDriver(context: DriverContext) {
     const box = await context.sandbox.acquire(thread, () => context.call("repo.access", { runId }));
     if (run.cancelReason) throw new Error(run.cancelReason);
     context.boxes.set(thread.id, box);
+    // Once per run: a run taken up after a restart keeps the skills it was told of.
+    if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     // What this turn changes is measured from here; a run picked up again after a restart, or
     // resumed with an answer, is still the same turn.
     if (state.record.kind === "start" && !state.record.durableId) {
@@ -167,6 +178,7 @@ export function createRunDriver(context: DriverContext) {
           tools: attended
             ? [...bound, createDefineGoalTool((goal) => activeRun(thread.id)?.save({ goal }))]
             : bound,
+          skills: state.record.skillListing,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
@@ -341,6 +353,7 @@ export function createRunDriver(context: DriverContext) {
         model: message.model,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
+        skills: message.skills,
         agentId: `run-${message.runId}`,
         turn: 0,
         phase: "chat",

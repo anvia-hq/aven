@@ -227,6 +227,41 @@ describe("startRuntime", () => {
     expect(given).toEqual(access);
   });
 
+  test("a run's skills are fetched from the control plane, put in /skills and given to the agent", async () => {
+    const sandbox = directoryWorkspaces();
+    cleanups.push(() => sandbox.dispose());
+    const digest = "d".repeat(64);
+    const archive = await new Bun.Archive(
+      { "SKILL.md": "---\nname: notes\ndescription: Take notes.\n---\nSteps." },
+      { compress: "gzip" },
+    ).bytes();
+    let told: unknown;
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: (input) => {
+        told = input.skills;
+        return reply()(input);
+      },
+    });
+    await runtime.ready;
+    plane.send({ ...runStart, skills: [{ name: "notes", description: "Take notes.", digest }] });
+
+    const asked = () =>
+      plane.received.find((message) => message.type === "call" && message.method === "skills.get");
+    await until(() => asked() !== undefined);
+    const call = asked() as { id: string; params: unknown };
+    expect(call.params).toEqual({ runId: "run-1", digest });
+    plane.send({ type: "reply", id: call.id, ok: true, result: { data: archive.toBase64() } });
+
+    await until(() => told !== undefined);
+    expect(told).toEqual([
+      { name: "notes", description: "Take notes.", path: "/skills/notes/SKILL.md" },
+    ]);
+    expect(
+      await Bun.file(join(await sandbox.skills.dir(thread.id), "notes/SKILL.md")).text(),
+    ).toContain("name: notes");
+  });
+
   test("a cancel that arrives while the sandbox is still starting ends the run before it begins", async () => {
     const { sandbox, up } = slowSandbox();
     let created = false;

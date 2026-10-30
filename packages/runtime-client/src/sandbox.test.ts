@@ -21,6 +21,7 @@ describe("dockerRunArgs", () => {
     image: "img:dev",
     root: "/data/t1",
     uploads: "/data/uploads/t1",
+    skills: "/data/skills/threads/t1",
     host: "host.docker.internal",
     hubPort: 4321,
     token: "tok",
@@ -34,6 +35,7 @@ describe("dockerRunArgs", () => {
     expect(args.slice(0, 4)).toEqual(["run", "-d", "--name", "aven-sandbox-t1"]);
     expect(args).toContain("/data/t1:/workspace");
     expect(args).toContain("/data/uploads/t1:/uploads:ro");
+    expect(args).toContain("/data/skills/threads/t1:/skills:ro");
     expect(args).toContain("1024m");
     expect(args).toContain("ANVIA_CONTROL_URL=ws://host.docker.internal:4321/daemon");
     expect(args).toContain("ANVIA_SANDBOX_TOKEN=tok");
@@ -234,6 +236,22 @@ live("a sandbox (real docker)", () => {
     expect(page.content).toBe("hello there\n");
     const listing = await call<{ entries: { path: string }[] }>(box, "list_files", {});
     expect(listing.entries.map((entry) => entry.path)).toContain("hello.txt");
+  }, 60_000);
+
+  test("a run's skills are in /skills, read-only, and their scripts run", async () => {
+    const archive = await new Bun.Archive(
+      {
+        "SKILL.md": "---\nname: hello\ndescription: Says hello.\n---\nRun scripts/hi.sh.",
+        "scripts/hi.sh": "#!/bin/sh\necho hello from a skill",
+      },
+      { compress: "gzip" },
+    ).bytes();
+    const skill = { name: "hello", description: "Says hello.", digest: "e".repeat(64) };
+    // The container is already running: what is installed now still shows up in it.
+    await sandboxes.skills.install(threadId, [skill], async () => archive);
+
+    expect((await run("/skills/hello/scripts/hi.sh")).stdout).toContain("hello from a skill");
+    expect((await run("touch /skills/hello/x")).exitCode).not.toBe(0);
   }, 60_000);
 
   test("each thread gets its own clone of the repository under the runner's home", async () => {

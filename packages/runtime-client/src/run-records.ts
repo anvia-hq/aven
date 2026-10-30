@@ -1,7 +1,8 @@
 import type { Database } from "bun:sqlite";
 import type { KeptAttachment } from "@aven/agents/attachments";
+import type { SkillListing } from "@aven/agents/skills";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
-import type { RunModel, RunThreadInfo } from "@aven/protocol/runtime-wire";
+import type { RunModel, RunSkill, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
 import type { GoalState } from "./durable-goals";
 
@@ -17,6 +18,9 @@ export type RunRecord = {
   prompt?: string;
   /** The files sent with the prompt, once copied into the sandbox's /uploads (decision 0034). */
   attachments?: KeptAttachment[];
+  /** The skills the control plane gave the run, and what the agent is told of once they are in the sandbox (decision 0035). */
+  skills?: RunSkill[];
+  skillListing?: SkillListing[];
   /** The agent the run's first part uses, and the run it has in the journal once submitted. */
   agentId: string;
   durableId?: string;
