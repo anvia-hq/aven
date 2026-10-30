@@ -9,6 +9,7 @@ import {
 
 import { withoutStoredReasoning } from "./memory";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
+import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 
 export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
@@ -23,6 +24,8 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   id?: string;
   /** Persist conversations; see `createMemoryStore`. Omit for stateless runs, and for durable ones, which keep their own history. */
   memory?: MemoryStore;
+  /** The skills in the sandbox, which the instructions list (decision 0035). */
+  skills?: readonly SkillListing[];
 };
 
 // Model requests that fail transiently (rate limits, dropped connections) are tried this many times.
@@ -51,7 +54,9 @@ export function createCodingAgent(options: CodingAgentOptions) {
   const agent = new Agent({
     id: options.id ?? "coding",
     model,
-    instructions: INSTRUCTIONS,
+    instructions: [INSTRUCTIONS, skillsInstructions(options.skills ?? [])]
+      .filter(Boolean)
+      .join("\n\n"),
     providerOptions,
     controls,
     maxTurns: options.maxTurns ?? 50,
