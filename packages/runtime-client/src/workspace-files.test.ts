@@ -58,6 +58,9 @@ describe("browsing a workspace", () => {
     expect(await listDirectory(root, "..")).toEqual([]);
     expect(await readWorkspaceFile(root, ".git/config")).toEqual({ kind: "missing" });
     expect(await listDirectory(root, ".git")).toEqual([]);
+    // The top of the workspace, spelled another way, still has no `.git`.
+    expect(await listDirectory(root, ".")).toEqual(await listDirectory(root, ""));
+    expect(await listDirectory(root, "src/..")).toEqual(await listDirectory(root, ""));
   });
 
   test("calls binary files binary, and cuts a large text file", async () => {

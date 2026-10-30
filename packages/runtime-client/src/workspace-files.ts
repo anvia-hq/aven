@@ -22,13 +22,14 @@ async function inside(root: string, path: string) {
 
 /** The entries of a folder of the workspace, folders first; empty when it is not there. */
 export async function listDirectory(root: string, path: string): Promise<FileEntry[]> {
-  const real = await inside(await realpath(root), path);
+  const top = await realpath(root);
+  const real = await inside(top, path);
   if (!real) return [];
   const names = await readdir(real, { withFileTypes: true }).catch(() => []);
   const entries: FileEntry[] = [];
   for (const entry of names) {
     // The repository's own folder is not the project's files. A link is listed as a file; reading it is checked.
-    if (entry.name === ".git" && path === "") continue;
+    if (entry.name === ".git" && real === top) continue;
     entries.push({ name: entry.name, type: entry.isDirectory() ? "directory" : "file" });
   }
   entries.sort(
