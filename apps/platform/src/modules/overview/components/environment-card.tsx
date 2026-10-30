@@ -1,24 +1,21 @@
 import { Folder, GitBranch, Servers } from "@mynaui/icons-react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
-import { useProjects } from "@/modules/projects/hooks/use-projects";
-import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
+import { useProject } from "@/modules/projects/hooks/use-project";
+import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { runtimeLabel } from "@/modules/runtimes/runtime-label";
 import type { Thread } from "@/modules/threads/types";
 
 import { OverviewCard } from "./overview-card";
 
 // Where the thread's agent works: the runner, the repository and the branch it commits to.
 export function EnvironmentCard({ thread }: { thread: Thread }) {
-  const { projects } = useProjects();
-  const { runtimes } = useRuntimes();
-  const project = projects.find((candidate) => candidate.id === thread.projectId);
-  const runtime = runtimes.find((candidate) => candidate.id === thread.runtimeId);
+  const { project } = useProject(thread.projectId);
+  const { runtime } = useRuntime(thread.runtimeId);
 
   return (
     <OverviewCard title="Environment">
-      <Row icon={<Servers />}>
-        {runtime ? `${runtime.name} · ${runtime.online ? "online" : "offline"}` : "Runner revoked"}
-      </Row>
+      <Row icon={<Servers />}>{runtime ? runtimeLabel(runtime) : "Runner revoked"}</Row>
       {project && (
         <Row icon={<Folder />}>
           {project.name} <span className="text-muted-foreground">· {project.repoFullName}</span>
