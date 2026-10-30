@@ -1,0 +1,91 @@
+import type { ChildProcess } from "node:child_process";
+
+import { expect, test } from "@playwright/test";
+
+import { registerUser, threadOnFakeRunner } from "./helpers";
+
+// The agent's question (decision 0020) on a runner that asks one and stops, and finishes once it
+// is answered (e2e/fake-runner.ts, FAKE_QUESTION).
+test.describe("the agent's question", () => {
+  let runner: ChildProcess | undefined;
+  test.afterEach(() => {
+    runner?.kill();
+    runner = undefined;
+  });
+
+  test("stops the run until it is answered, then continues in the same message", async ({
+    page,
+  }) => {
+    await registerUser(page, "ask", "Ask User");
+    // The run needs a model grant; the pretend runner never calls the model.
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, events, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "1" });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    // The form takes the composer's place, and a message cannot go around it.
+    const form = page.getByRole("form", { name: "Answer the agent" });
+    await expect(form).toBeVisible();
+    await expect(form).toContainText("Which color should it be?");
+    await expect(page.getByLabel("Prompt")).toHaveCount(0);
+    await expect(page.getByText("Waiting for your answer", { exact: true })).toBeVisible();
+    const refused = await page.request.post(`/api/threads/${threadId}/messages`, {
+      data: { prompt: "never mind" },
+    });
+    expect(refused.status()).toBe(409);
+
+    // Nothing is sent until every question has an answer.
+    await expect(form.getByRole("button", { name: "Send answer" })).toBeDisabled();
+    await form.getByRole("radio", { name: "Blue" }).click();
+    await form.getByRole("button", { name: "Send answer" }).click();
+
+    await expect(page.getByText("Thanks, on it.")).toBeVisible();
+    await expect(form).toHaveCount(0);
+    await expect(page.getByLabel("Prompt")).toBeVisible();
+    await expect(page.getByText("Asked you", { exact: true })).toBeVisible();
+    await expect(async () => {
+      expect(events.find((entry) => entry.type === "answered")).toMatchObject({
+        response: { type: "tool-question", answers: [{ questionId: "color", value: "blue" }] },
+      });
+    }).toPass({ timeout: 5000 });
+
+    // The answer is used once.
+    const again = await page.request.post(`/api/threads/${threadId}/answer`, {
+      data: { answers: [{ questionId: "color", value: "red" }] },
+    });
+    expect(again.status()).toBe(409);
+  });
+
+  test("your own words answer a question that allows them", async ({ page }) => {
+    await registerUser(page, "ask", "Ask User");
+    await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    const { child, events, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "1" });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    const form = page.getByRole("form", { name: "Answer the agent" });
+    await form.getByRole("radio", { name: "Red" }).click();
+    // Writing their own answer replaces the pick.
+    await form.getByLabel("Which color should it be? (your own answer)").fill("teal");
+    await expect(form.getByRole("radio", { name: "Red" })).not.toBeChecked();
+    await form.getByRole("button", { name: "Send answer" }).click();
+
+    await expect(page.getByText("Thanks, on it.")).toBeVisible();
+    await expect(async () => {
+      expect(events.find((entry) => entry.type === "answered")).toMatchObject({
+        response: { answers: [{ questionId: "color", value: "teal" }] },
+      });
+    }).toPass({ timeout: 5000 });
+  });
+});

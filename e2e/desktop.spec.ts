@@ -1,40 +1,8 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { connectGithub, importRepository, registerUser } from "./helpers";
-
-const API_URL = "http://localhost:8100";
-
-// A runner with a pretend desktop (e2e/fake-runner.ts), connected as the organization's own, and a
-// thread on a project that uses it.
-async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) {
-  const created = await page.request.post("/api/runtimes", { data: { name: "fake desktop" } });
-  const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
-  const child = spawn("bun", ["e2e/fake-runner.ts"], {
-    env: { ...process.env, AVEN_URL: API_URL, AVEN_RUNTIME_TOKEN: token, ...env },
-  });
-  const events: { type: string; [key: string]: unknown }[] = [];
-  child.stdout.on("data", (chunk: Buffer) => {
-    for (const line of String(chunk).split("\n")) {
-      if (line.startsWith("EVENT ")) events.push(JSON.parse(line.slice(6)));
-    }
-  });
-  await expect(async () => {
-    const list = (await (await page.request.get("/api/runtimes")).json()) as {
-      id: string;
-      online: boolean;
-    }[];
-    expect(list.find((entry) => entry.id === runtime.id)?.online).toBe(true);
-  }).toPass({ timeout: 10_000 });
-
-  await connectGithub(page);
-  await importRepository(page, "shiny-app");
-  const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
-  const made = await page.request.post("/api/threads", { data: { projectId: projects[0]!.id } });
-  const thread = (await made.json()) as { id: string };
-  return { child, events, threadId: thread.id };
-}
+import { registerUser, threadOnFakeRunner } from "./helpers";
 
 // The desktop panel opens when asked for, from the thread's toolbar.
 async function openDesktop(page: Page, threadId: string) {

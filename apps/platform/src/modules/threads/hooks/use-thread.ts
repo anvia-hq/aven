@@ -2,6 +2,7 @@ import {
   applyEvent,
   applyUsage,
   isRunning,
+  pendingQuestion,
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
@@ -10,7 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { api, errorMessage, postJson } from "@/lib/api";
 
-import type { ChatMessage, RunSelection } from "../types";
+import type { ChatMessage, QuestionAnswer, RunSelection } from "../types";
 import { useThreads } from "./use-threads";
 
 function parseEvent(data: string): RunEvent | null {
@@ -48,8 +49,9 @@ export function useThread(threadId: string) {
       if (event.type === "snapshot") setUsage(event.usage ?? null);
       if (event.type === "usage") setUsage((current) => applyUsage(current, event));
       if (event.type === "error") setError(event.message);
-      if (event.type === "run_start") setError(null);
-      if (event.type === "run_start") setThreadRunning(threadId, true);
+      if (event.type === "run_start" || event.type === "run_resume") setError(null);
+      if (event.type === "run_start" || event.type === "run_resume")
+        setThreadRunning(threadId, true);
       if (event.type === "done" || event.type === "error") setThreadRunning(threadId, false);
     };
     source.onerror = () => {
@@ -79,9 +81,30 @@ export function useThread(threadId: string) {
     [threadId],
   );
 
+  // True once the answers are accepted; the run then continues, and the stream shows it.
+  const answer = useCallback(
+    async (answers: QuestionAnswer[], selection: RunSelection = {}) => {
+      try {
+        await postJson(`/threads/${threadId}/answer`, { answers, ...selection });
+        return true;
+      } catch (failure) {
+        toast.add({
+          title: "Could not send answer",
+          description: errorMessage(failure),
+          type: "error",
+        });
+        return false;
+      }
+    },
+    [threadId],
+  );
+
   const cancel = useCallback(async () => {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  return { thread, loaded, messages, running, usage, error, send, cancel };
+  // The question the agent stopped on, until it is answered.
+  const question = running ? undefined : pendingQuestion(messages);
+
+  return { thread, loaded, messages, running, usage, error, question, send, answer, cancel };
 }

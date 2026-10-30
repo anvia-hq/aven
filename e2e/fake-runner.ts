@@ -15,6 +15,20 @@ const sandboxRunning = process.env.NO_SANDBOX !== "1";
 const WIDTH = 640;
 const HEIGHT = 400;
 
+// With FAKE_QUESTION a run asks the user a question and stops (`interaction`), and the answer
+// resumes it: the runs of a real agent that used `ask_user`, without a model.
+const QUESTIONS = [
+  {
+    id: "color",
+    text: "Which color should it be?",
+    choices: [
+      { label: "Red", value: "red" },
+      { label: "Blue", value: "blue" },
+    ],
+    allowCustom: true,
+  },
+];
+
 const event = (value: object) => console.log(`EVENT ${JSON.stringify(value)}`);
 const text = (value: string) => new TextEncoder().encode(value);
 
@@ -164,6 +178,41 @@ ws.onmessage = ({ data }) => {
     viewers.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
+  } else if (message.type === "run.start" && process.env.FAKE_QUESTION) {
+    const { runId } = message;
+    const ask = { id: "q1", name: "ask_user", target: "", status: "running", questions: QUESTIONS };
+    send({ type: "run.event", runId, event: { type: "text", delta: "One question first." } });
+    send({ type: "run.event", runId, event: { type: "tool_start", tool: ask } });
+    send({
+      type: "run.end",
+      runId,
+      outcome: "interaction",
+      continuation: {
+        version: 1,
+        agentId: "coding",
+        sourceRunId: runId,
+        interaction: {
+          type: "tool-question",
+          id: "i1",
+          toolName: "ask_user",
+          toolCallId: "q1",
+          internalCallId: "c1",
+          questions: QUESTIONS,
+        },
+        state: {},
+      },
+    });
+  } else if (message.type === "run.resume" && process.env.FAKE_QUESTION) {
+    const { runId, response } = message;
+    event({ type: "answered", response });
+    const output = JSON.stringify({ answers: (response as { answers: unknown }).answers });
+    send({
+      type: "run.event",
+      runId,
+      event: { type: "tool_end", id: "q1", status: "done", output },
+    });
+    send({ type: "run.event", runId, event: { type: "text", delta: "Thanks, on it." } });
+    send({ type: "run.end", runId, outcome: "response" });
   }
 };
 

@@ -3,17 +3,23 @@ import { Fragment, memo } from "react";
 import { Markdown } from "@/components/markdown";
 
 import type { ChatMessage, MessagePart, ToolPart } from "../types";
+import { QuestionBlock } from "./question-block";
 import { ToolCall } from "./tool-call";
 import { ToolGroup } from "./tool-group";
 
-type Block = { type: "text"; text: string } | { type: "tools"; tools: ToolPart[] };
+type Block =
+  | { type: "text"; text: string }
+  | { type: "question"; tool: ToolPart }
+  | { type: "tools"; tools: ToolPart[] };
 
-// Consecutive tool calls become one block, so a burst of work reads as a single row.
+// Consecutive tool calls become one block, so a burst of work reads as a single row. A question
+// stands apart: the user has to see it, not find it inside a collapsed group.
 function blocks(parts: MessagePart[]) {
   const result: Block[] = [];
   for (const part of parts) {
     const last = result.at(-1);
     if (part.type === "text") result.push(part);
+    else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
     else if (last?.type === "tools") last.tools.push(part.tool);
     else result.push({ type: "tools", tools: [part.tool] });
   }
@@ -24,6 +30,7 @@ function AssistantBlock({ block }: { block: Block }) {
   if (block.type === "text") {
     return <Markdown>{block.text}</Markdown>;
   }
+  if (block.type === "question") return <QuestionBlock tool={block.tool} />;
   const [only] = block.tools;
   if (block.tools.length === 1 && only) return <ToolCall tool={only} />;
   return <ToolGroup tools={block.tools} />;
