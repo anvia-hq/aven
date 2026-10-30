@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { projects } from "./projects";
@@ -34,6 +34,9 @@ export const threads = pgTable(
      * here; decision 0020). Set while the question is unanswered, otherwise null.
      */
     pendingContinuation: jsonb("pending_continuation"),
+    /** The pull request the thread was shipped as (decision 0040); both null until it is. */
+    pullRequestNumber: integer("pull_request_number"),
+    pullRequestUrl: text("pull_request_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
