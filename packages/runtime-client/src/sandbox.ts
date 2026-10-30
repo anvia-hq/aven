@@ -20,6 +20,11 @@ export type SandboxConfig = {
    * Chrome on an arm64 host under emulation (decision 0014). Default: the host's own.
    */
   platform?: string;
+  /**
+   * The Docker runtime containers run under, as registered in the daemon, e.g. `runsc` for gVisor so
+   * a container does not share the host kernel (decision 0016). Default: the daemon's own.
+   */
+  runtime?: string;
   /** Where the runner keeps thread workspaces, in `workspaces/<thread id>`. Default `~/.aven/runtime`. */
   home?: string;
   memoryMb?: number;
@@ -46,6 +51,7 @@ type Docker = NonNullable<SandboxConfig["docker"]>;
 
 const WORKDIR = "/workspace";
 const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
+const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
 
@@ -74,6 +80,8 @@ type DockerRunInput = {
   pidsLimit: number;
   /** Passed to `docker run --platform`; the host's own when not set. */
   platform?: string;
+  /** Passed to `docker run --runtime`; the daemon's default when not set. */
+  runtime?: string;
   /** `uid:gid` to run as, so files written to the bind mount belong to the host user. */
   user?: string;
 };
@@ -111,9 +119,19 @@ export function dockerRunArgs(input: DockerRunInput) {
     `ANVIA_SANDBOX_WORKDIR=${WORKDIR}`,
   ];
   if (input.platform) args.push("--platform", input.platform);
+  if (input.runtime) args.push("--runtime", input.runtime);
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;
+}
+
+function safeJson(text: string): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(text);
+    return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 /** What a runner needs to run a thread: the sandbox its agent works in. */
@@ -186,6 +204,18 @@ export class Sandboxes implements ThreadWorkspaces {
       throw new Error(
         `The sandbox platform "${config.platform}" is not one Docker knows; use linux/amd64 or linux/arm64`,
       );
+    }
+    if (config.runtime !== undefined) {
+      if (!RUNTIME_PATTERN.test(config.runtime)) {
+        throw new Error(`The sandbox runtime "${config.runtime}" is not a Docker runtime name`);
+      }
+      const info = await run(["info", "--format", "{{json .Runtimes}}"]);
+      const registered: Record<string, unknown> = info.code === 0 ? safeJson(info.stdout) : {};
+      if (!(config.runtime in registered)) {
+        throw new Error(
+          `The Docker daemon has no runtime "${config.runtime}" (AVEN_SANDBOX_RUNTIME); for gVisor, install runsc and register it with \`runsc install\`, then restart Docker`,
+        );
+      }
     }
     const tokens = new Map<string, string>();
     const hub = new RemoteSandboxHub({
@@ -314,6 +344,7 @@ export class Sandboxes implements ThreadWorkspaces {
       cpus,
       pidsLimit,
       platform: this.#config.platform,
+      runtime: this.#config.runtime,
       user: hostUser(),
     });
     const started = await this.#run(args);

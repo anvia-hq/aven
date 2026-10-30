@@ -45,6 +45,12 @@ describe("dockerRunArgs", () => {
     expect(args.slice(-3)).toEqual(["--platform", "linux/amd64", "img:dev"]);
   });
 
+  test("passes the runtime to docker when one is set", () => {
+    expect(dockerRunArgs(input)).not.toContain("--runtime");
+    const args = dockerRunArgs({ ...input, runtime: "runsc" });
+    expect(args.slice(-3)).toEqual(["--runtime", "runsc", "img:dev"]);
+  });
+
   test("runs as the host user when given one", () => {
     const args = dockerRunArgs({ ...input, user: "1000:1000" });
     expect(args.slice(-3)).toEqual(["--user", "1000:1000", "img:dev"]);
@@ -292,6 +298,20 @@ describe("Sandboxes.start", () => {
     await expect(
       Sandboxes.start({ image: "img", docker, git: fakeGit, platform: "windows/386" }),
     ).rejects.toThrow("use linux/amd64 or linux/arm64");
+  });
+
+  test("refuses a runtime the daemon has not registered, and says how to add gVisor", async () => {
+    const docker = async (args: string[]) => ({
+      code: 0,
+      stdout: args[0] === "info" ? '{"runc":{"path":"runc"}}' : "",
+      stderr: "",
+    });
+    await expect(
+      Sandboxes.start({ image: "img", docker, git: fakeGit, runtime: "runsc" }),
+    ).rejects.toThrow("runsc install");
+    await expect(
+      Sandboxes.start({ image: "img", docker, git: fakeGit, runtime: "--privileged" }),
+    ).rejects.toThrow("not a Docker runtime name");
   });
 
   test("refuses to start when the image is missing, and says how to build it", async () => {
