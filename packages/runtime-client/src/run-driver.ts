@@ -6,7 +6,12 @@ import {
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
-import type { RunModel, RuntimeCalls, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import type {
+  ControlPlaneToRuntime,
+  RunThreadInfo,
+  RuntimeCalls,
+  RuntimeToControlPlane,
+} from "@aven/protocol/runtime-wire";
 
 import type { CreateRuntimeAgent } from "./runner";
 import type { GoalEnd } from "./durable-goals";
@@ -20,14 +25,7 @@ import type { RunRecord, RunRecords } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { markTurn } from "./thread-diff";
 
-export type RunMessage = {
-  runId: string;
-  thread: RunRecord["thread"];
-  model?: RunModel;
-} & (
-  | { type: "run.start"; prompt: string }
-  | { type: "run.resume"; continuation: unknown; response: unknown }
-);
+export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
 
 type Live = {
   threadId: string;
@@ -38,6 +36,29 @@ type Live = {
   /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
 };
+
+// What every part of one wire run works with. `record` is read from here each time, never kept:
+// `save` replaces it as the run goes.
+type RunScope = {
+  readonly runId: string;
+  readonly thread: RunThreadInfo;
+  readonly run: Live;
+  readonly journaled: DurableRuns;
+  readonly record: RunRecord;
+  save(changes: Partial<RunRecord>): void;
+  /** The tools of the thread's sandbox as it is now. */
+  current(): readonly AnyTool[] | undefined;
+  /** The agent for a part of the run; only an attended one may ask or take on a goal. */
+  build(id: string, attended: boolean): RunInput;
+  forward: Emit;
+  /** Files messages of the run with the control plane, after those filed before. */
+  file(messages: Message[]): Promise<void>;
+  stopIfCancelled(): void;
+};
+
+// What an unattended part of the run is told is a note to the agent, not something the user said.
+const withoutPrompt = (messages: Message[]) =>
+  messages[0]?.role === "user" ? messages.slice(1) : messages;
 
 export type DriverContext = {
   journal: Promise<DurableRuns>;
@@ -77,33 +98,60 @@ export function createRunDriver(context: DriverContext) {
     [...live.values()].find((run) => run.threadId === threadId);
 
   async function execute(initial: RunRecord, message?: RunMessage) {
-    let record = initial;
-    const { runId, thread, model } = record;
+    const { runId, thread } = initial;
+    const state = { record: initial };
     const save = (changes: Partial<RunRecord>) => {
-      record = { ...record, ...changes };
-      if (!context.stopped()) records.save(record);
+      state.record = { ...state.record, ...changes };
+      if (!context.stopped()) records.save(state.record);
     };
     const run: Live = { threadId: thread.id, save };
     live.set(runId, run);
     try {
-      await context.starting(thread.id);
-      // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
-      const box = await context.sandbox.acquire(thread, () =>
-        context.call("repo.access", { runId }),
-      );
-      if (run.cancelReason) throw new Error(run.cancelReason);
-      context.boxes.set(thread.id, box);
-      // What this turn changes is measured from here; a run picked up again after a restart, or
-      // resumed with an answer, is still the same turn.
-      if (record.kind === "start" && !record.durableId) {
-        const root = await context.sandbox.workspace(thread.id);
-        if (root) await markTurn(root).catch(() => false);
-      }
-      const journaled = await context.journal;
-      // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
-      const current = () => context.boxes.get(thread.id)?.tools;
+      const scope = await acquire(initial, state, run);
+      const end = await phases(scope, message);
+      finish(runId, end, run.cancelReason);
+    } catch (error) {
+      finish(runId, { type: "error", error: errorMessage(error) });
+    } finally {
+      live.delete(runId);
+      context.finished(thread.id);
+    }
+  }
 
-      const build = (id: string, attended: boolean): RunInput => {
+  // Gets the run what it works with: the thread's sandbox and the journal. Everything a phase of the
+  // run does goes through the scope this returns.
+  async function acquire(
+    initial: RunRecord,
+    state: { record: RunRecord },
+    run: Live,
+  ): Promise<RunScope> {
+    const { runId, thread, model } = initial;
+    await context.starting(thread.id);
+    // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
+    const box = await context.sandbox.acquire(thread, () => context.call("repo.access", { runId }));
+    if (run.cancelReason) throw new Error(run.cancelReason);
+    context.boxes.set(thread.id, box);
+    // What this turn changes is measured from here; a run picked up again after a restart, or
+    // resumed with an answer, is still the same turn.
+    if (state.record.kind === "start" && !state.record.durableId) {
+      const root = await context.sandbox.workspace(thread.id);
+      if (root) await markTurn(root).catch(() => false);
+    }
+    const journaled = await context.journal;
+    // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
+    const current = () => context.boxes.get(thread.id)?.tools;
+
+    return {
+      runId,
+      thread,
+      run,
+      journaled,
+      current,
+      get record() {
+        return state.record;
+      },
+      save: run.save,
+      build(id, attended) {
         const bound: AnyTool[] = lateBoundTools(box.tools, current);
         const { agent, compaction } = context.createAgent({
           thread,
@@ -116,144 +164,144 @@ export function createRunDriver(context: DriverContext) {
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
-      };
+      },
       // Events reach the control plane as the journal records them.
-      const forward: Emit = (event: RunEvent, source) =>
-        report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source);
+      forward: (event: RunEvent, source) =>
+        report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source),
       // The transcript the control plane keeps, filed as each part of the run ends.
-      const file = async (messages: Message[]) => {
+      async file(messages) {
         if (messages.length === 0) return;
-        await context.call("memory.append", { runId, turn: record.turn, messages });
-        save({ turn: record.turn + messages.length });
-      };
-      // What an unattended part of the run is told is a note to the agent, not something the user said.
-      const withoutPrompt = (messages: Message[]) =>
-        messages[0]?.role === "user" ? messages.slice(1) : messages;
-      const stopIfCancelled = () => {
+        await context.call("memory.append", { runId, turn: state.record.turn, messages });
+        run.save({ turn: state.record.turn + messages.length });
+      },
+      stopIfCancelled() {
         if (run.cancelReason) throw new Error(run.cancelReason);
-      };
+      },
+    };
+  }
 
-      const reportOnGoal = async (
-        goal: GoalRequest,
-        goalEnd?: Exclude<GoalEnd, { type: "error" }>,
-      ): Promise<DurableEnd> => {
-        stopIfCancelled();
-        const reportAgent = build(`run-${runId}-report`, false);
-        let closing: FollowedRun;
-        if (record.reportId) {
-          closing = await journaled.rejoin(
-            record.reportId,
-            reportAgent,
-            outbox.cursor(runId, record.reportId),
-            forward,
-          );
-        } else {
-          if (!goalEnd) throw new Error("The goal's outcome is gone, so it cannot be reported");
-          closing = await journaled.start(
-            `${runId}-report`,
-            thread.id,
-            goalReport(goal.objective, goalEnd),
-            reportAgent,
-            forward,
-          );
-        }
-        save({ reportId: closing.durableId });
-        run.followed = closing;
-        const closed = await closing.done;
-        if (closed.type !== "error") await file(withoutPrompt(closed.messages));
-        return closed;
-      };
+  // The parts of the run that are left, from where its record says it is.
+  async function phases(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
+    let end: DurableEnd = { type: "response", messages: [] };
+    if (scope.record.phase === "chat") end = await runChat(scope, message);
+    const goal = scope.record.goal;
+    if (goal && scope.record.phase === "goal") return runGoal(scope, goal);
+    if (goal && scope.record.phase === "report") return reportOnGoal(scope, goal);
+    return end;
+  }
 
-      // The agent's turn.
-      let end: DurableEnd = { type: "response", messages: [] };
-      if (record.phase === "chat") {
-        let followed: FollowedRun;
-        if (record.durableId) {
-          // Picked up again after a restart: the run is in the journal, and the control plane has
-          // heard everything of it up to the newest event this run reported.
-          followed = await journaled.rejoin(
-            record.durableId,
-            build(record.agentId, true),
-            outbox.cursor(runId, record.durableId),
-            forward,
-          );
-        } else if (record.kind === "start") {
-          followed = await journaled.start(
-            runId,
-            thread.id,
-            record.prompt ?? "",
-            build(record.agentId, true),
-            forward,
-          );
-        } else {
-          // The question stays parked in the journal; the answer is delivered to it.
-          const asked = await journaled.asked(thread.id);
-          if (!asked) throw new Error("This thread has no question waiting for an answer");
-          // The run in the journal is the one that asked, with the agent it was registered under.
-          save({ agentId: asked.agentId });
-          const { interaction } = parseAgentContinuation(
-            message?.type === "run.resume" ? message.continuation : undefined,
-          );
-          followed = await journaled.answer(
-            asked,
-            interaction,
-            parseAgentInteractionResponse(
-              message?.type === "run.resume" ? message.response : undefined,
-            ),
-            () => build(asked.agentId, true),
-            forward,
-          );
-        }
-        save({ durableId: followed.durableId });
-        run.followed = followed;
-        if (run.cancelReason) void followed.cancel();
-        end = await followed.done;
-        if (end.type !== "error") {
-          // A run that stopped on a question and was answered files its second part after the first.
-          save({ turn: journaled.transcriptTurn(followed.durableId, end) });
-          await file(end.messages);
-        }
-        // Handed a goal: the rest of the run is the goal and the report on it.
-        if (end.type === "response" && record.goal) save({ phase: "goal" });
-        else save({ goal: undefined });
-      }
-
-      // The goal the turn handed over: sessions until the verify commands pass or it stops short.
-      const goal = record.goal;
-      if (goal && record.phase === "goal") {
-        stopIfCancelled();
-        const exec = current()?.find((tool) => tool.name === "exec_command");
-        const working = await journaled.startGoal({
-          runId,
-          request: goal,
-          input: build(`goal-${runId}`, false),
-          verify: verifyWith(exec, goal.verifyCommands ?? []),
-          onEvent: forward,
-          onSession: async (session, messages) =>
-            file([goalSessionMessage(session), ...withoutPrompt(messages)]),
-          state: record.goalState ?? { sessions: {} },
-          saveState: (goalState) => save({ goalState: structuredClone(goalState) }),
-          cursorOf: (durableId) => outbox.cursor(runId, durableId),
-        });
-        run.followed = working;
-        const goalEnd = await working.done;
-        if (goalEnd.type === "error") {
-          end = goalEnd;
-          save({ goal: undefined });
-        } else {
-          save({ phase: "report" });
-          end = await reportOnGoal(goal, goalEnd);
-        }
-      } else if (goal && record.phase === "report") {
-        end = await reportOnGoal(goal);
-      }
-      finish(runId, end, run.cancelReason);
-    } catch (error) {
-      finish(runId, { type: "error", error: errorMessage(error) });
-    } finally {
-      live.delete(runId);
-      context.finished(thread.id);
+  // The agent's turn.
+  async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
+    const { runId, thread, run, journaled, save, build, forward } = scope;
+    let followed: FollowedRun;
+    if (scope.record.durableId) {
+      // Picked up again after a restart: the run is in the journal, and the control plane has
+      // heard everything of it up to the newest event this run reported.
+      followed = await journaled.rejoin(
+        scope.record.durableId,
+        build(scope.record.agentId, true),
+        outbox.cursor(runId, scope.record.durableId),
+        forward,
+      );
+    } else if (scope.record.kind === "start") {
+      followed = await journaled.start(
+        runId,
+        thread.id,
+        scope.record.prompt ?? "",
+        build(scope.record.agentId, true),
+        forward,
+      );
+    } else {
+      // The question stays parked in the journal; the answer is delivered to it.
+      const asked = await journaled.asked(thread.id);
+      if (!asked) throw new Error("This thread has no question waiting for an answer");
+      // The run in the journal is the one that asked, with the agent it was registered under.
+      save({ agentId: asked.agentId });
+      const resume = message?.type === "run.resume" ? message : undefined;
+      const { interaction } = parseAgentContinuation(resume?.continuation);
+      followed = await journaled.answer(
+        asked,
+        interaction,
+        parseAgentInteractionResponse(resume?.response),
+        () => build(asked.agentId, true),
+        forward,
+      );
     }
+    save({ durableId: followed.durableId });
+    run.followed = followed;
+    if (run.cancelReason) void followed.cancel();
+    const end = await followed.done;
+    if (end.type !== "error") {
+      // A run that stopped on a question and was answered files its second part after the first.
+      save({ turn: journaled.transcriptTurn(followed.durableId, end) });
+      await scope.file(end.messages);
+    }
+    // Handed a goal: the rest of the run is the goal and the report on it.
+    if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
+    else save({ goal: undefined });
+    return end;
+  }
+
+  // The goal the turn handed over: sessions until the verify commands pass or it stops short.
+  async function runGoal(scope: RunScope, goal: GoalRequest): Promise<DurableEnd> {
+    const { runId, run, journaled, save, build, forward } = scope;
+    scope.stopIfCancelled();
+    const exec = scope.current()?.find((tool) => tool.name === "exec_command");
+    const working = await journaled.startGoal({
+      runId,
+      request: goal,
+      input: build(`goal-${runId}`, false),
+      verify: verifyWith(exec, goal.verifyCommands ?? []),
+      onEvent: forward,
+      onSession: async (session, messages) =>
+        scope.file([goalSessionMessage(session), ...withoutPrompt(messages)]),
+      state: scope.record.goalState ?? { sessions: {} },
+      saveState: (goalState) => save({ goalState: structuredClone(goalState) }),
+      cursorOf: (durableId) => outbox.cursor(runId, durableId),
+    });
+    run.followed = working;
+    const goalEnd = await working.done;
+    if (goalEnd.type === "error") {
+      save({ goal: undefined });
+      return goalEnd;
+    }
+    save({ phase: "report" });
+    return reportOnGoal(scope, goal, goalEnd);
+  }
+
+  // One more turn, unattended, in which the agent tells the thread how the goal went.
+  async function reportOnGoal(
+    scope: RunScope,
+    goal: GoalRequest,
+    goalEnd?: Exclude<GoalEnd, { type: "error" }>,
+  ): Promise<DurableEnd> {
+    const { runId, thread, run, journaled, save, build, forward } = scope;
+    scope.stopIfCancelled();
+    const reportAgent = build(`run-${runId}-report`, false);
+    let closing: FollowedRun;
+    const { reportId } = scope.record;
+    if (reportId) {
+      closing = await journaled.rejoin(
+        reportId,
+        reportAgent,
+        outbox.cursor(runId, reportId),
+        forward,
+      );
+    } else {
+      if (!goalEnd) throw new Error("The goal's outcome is gone, so it cannot be reported");
+      closing = await journaled.start(
+        `${runId}-report`,
+        thread.id,
+        goalReport(goal.objective, goalEnd),
+        reportAgent,
+        forward,
+      );
+    }
+    save({ reportId: closing.durableId });
+    run.followed = closing;
+    const closed = await closing.done;
+    if (closed.type !== "error") await scope.file(withoutPrompt(closed.messages));
+    return closed;
   }
 
   // The run is over: tell the control plane, and note that nothing is left but its acknowledgement.
