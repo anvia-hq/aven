@@ -112,7 +112,8 @@ export function createGithubService(client: GithubClient = defaultClient) {
       if (!stateMatches(input.state, organizationId, userId)) {
         throw new InstallationNotAllowedError("The GitHub connection link is invalid or expired");
       }
-      if (!input.code || !(await client.userCanUse(input.code, input.installationId))) {
+      const grant = input.code ? await client.exchangeCode(input.code) : null;
+      if (!grant || !(await client.userCanUse(grant.accessToken, input.installationId))) {
         throw new InstallationNotAllowedError("GitHub did not confirm access to that installation");
       }
       const found = await client.installation(input.installationId);

@@ -136,20 +136,85 @@ describe("GithubClient", () => {
 
   test("a user may use an installation only if GitHub lists it among theirs", async () => {
     const github = fakeGithub({
-      "POST /login/oauth/access_token": { access_token: "ghu_user" },
       "GET /user/installations?per_page=100&page=1": { installations: [{ id: 7 }] },
     });
     const client = new GithubClient(config, github.fetch);
 
-    expect(await client.userCanUse("code", 7)).toBe(true);
-    expect(await client.userCanUse("code", 8)).toBe(false);
+    expect(await client.userCanUse("ghu_user", 7)).toBe(true);
+    expect(await client.userCanUse("ghu_user", 8)).toBe(false);
+    expect(auth(github.calls[0]!)).toBe("Bearer ghu_user");
+  });
+});
+
+describe("a person's GitHub token", () => {
+  const oauth = "POST /login/oauth/access_token";
+  const body = (call: Call) => JSON.parse(String(call.init?.body));
+
+  test("a code becomes a token, with when it and its refresh token expire", async () => {
+    const before = Date.now();
+    const github = fakeGithub({
+      [oauth]: {
+        access_token: "ghu_a",
+        expires_in: 28800,
+        refresh_token: "ghr_a",
+        refresh_token_expires_in: 15811200,
+      },
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    const grant = await client.exchangeCode("the-code");
+
+    expect(grant).toMatchObject({ accessToken: "ghu_a", refreshToken: "ghr_a" });
+    expect(grant!.expiresAt).toBeGreaterThanOrEqual(before + 28800 * 1000);
+    expect(grant!.refreshExpiresAt).toBeGreaterThanOrEqual(before + 15811200 * 1000);
+    expect(body(github.calls[0]!)).toEqual({
+      client_id: "Iv1.abc",
+      client_secret: "secret",
+      code: "the-code",
+    });
   });
 
-  test("a code GitHub does not accept means no access", async () => {
-    const github = fakeGithub({
-      "POST /login/oauth/access_token": { error: "bad_verification_code" },
+  test("a token of an app whose user tokens do not expire has no expiry and no refresh token", async () => {
+    const github = fakeGithub({ [oauth]: { access_token: "ghu_forever" } });
+
+    expect(await new GithubClient(config, github.fetch).exchangeCode("c")).toEqual({
+      accessToken: "ghu_forever",
+      expiresAt: null,
+      refreshToken: null,
+      refreshExpiresAt: null,
     });
-    expect(await new GithubClient(config, github.fetch).userCanUse("bad", 7)).toBe(false);
+  });
+
+  test("a code or refresh token GitHub does not accept is no grant", async () => {
+    const github = fakeGithub({ [oauth]: { error: "bad_verification_code" } });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.exchangeCode("bad")).toBeNull();
+    expect(await client.refreshGrant("bad")).toBeNull();
+  });
+
+  test("a refresh token is exchanged for a new grant", async () => {
+    const github = fakeGithub({
+      [oauth]: { access_token: "ghu_b", refresh_token: "ghr_b", expires_in: 28800 },
+    });
+
+    const grant = await new GithubClient(config, github.fetch).refreshGrant("ghr_a");
+
+    expect(grant).toMatchObject({ accessToken: "ghu_b", refreshToken: "ghr_b" });
+    expect(body(github.calls[0]!)).toMatchObject({
+      grant_type: "refresh_token",
+      refresh_token: "ghr_a",
+    });
+  });
+
+  test("reads the person's GitHub account", async () => {
+    const github = fakeGithub({ "GET /user": { id: 42, login: "ada", name: "Ada L" } });
+
+    expect(await new GithubClient(config, github.fetch).userProfile("ghu_a")).toEqual({
+      id: 42,
+      login: "ada",
+      name: "Ada L",
+    });
   });
 });
 
@@ -164,6 +229,32 @@ describe("writing to a repository", () => {
     draft: true,
   };
   const open = "GET /repos/acme/app/pulls?state=open&head=acme%3Aaven%2Fabc12345";
+
+  test("an installation is writable only once both permissions are approved", async () => {
+    const github = fakeGithub({
+      "GET /app/installations/7": { permissions: { contents: "write", pull_requests: "write" } },
+      "GET /app/installations/8": { permissions: { contents: "write", pull_requests: "read" } },
+      "GET /app/installations/9": { permissions: { contents: "read", metadata: "read" } },
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.canWrite(7)).toBe(true);
+    expect(await client.canWrite(8)).toBe(false);
+    expect(await client.canWrite(9)).toBe(false);
+  });
+
+  test("a person can push only when GitHub says so for their token; a repository they cannot see is no", async () => {
+    const github = fakeGithub({
+      "GET /repos/acme/app": { permissions: { push: true } },
+      "GET /repos/acme/read-only": { permissions: { push: false } },
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.canPush("ghu_a", "acme/app")).toBe(true);
+    expect(await client.canPush("ghu_a", "acme/read-only")).toBe(false);
+    expect(await client.canPush("ghu_a", "acme/hidden")).toBe(false);
+    expect(auth(github.calls[0]!)).toBe("Bearer ghu_a");
+  });
 
   test("a write token is for one repository and one permission, and is never reused", async () => {
     const github = fakeGithub({ [tokens]: { token: "ghs_w", expires_at: "2099-01-01T00:00:00Z" } });

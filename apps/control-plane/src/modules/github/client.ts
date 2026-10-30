@@ -41,6 +41,13 @@ export class GithubWriteNotGrantedError extends ConflictError {
   }
 }
 
+/** The person cannot push to the repository, so they cannot ship to it (decision 0041). */
+export class GithubNoPushAccessError extends ConflictError {
+  constructor(fullName: string) {
+    super(`You do not have write access to ${fullName} on GitHub`);
+  }
+}
+
 export class GithubApiError extends UnavailableError {
   constructor(
     message: string,
@@ -83,6 +90,19 @@ const TOKEN_MARGIN_MS = 5 * 60_000;
 export type GithubPullRequest = { number: number; url: string };
 
 type PullPayload = { number: number; html_url: string };
+
+/**
+ * A person's GitHub user access token and when it expires, with the token that renews it and when
+ * that expires (milliseconds since the epoch). An app whose user tokens do not expire has neither.
+ */
+export type GithubUserGrant = {
+  accessToken: string;
+  expiresAt: number | null;
+  refreshToken: string | null;
+  refreshExpiresAt: number | null;
+};
+
+export type GithubUserProfile = { id: number; login: string; name: string | null };
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -223,6 +243,28 @@ export class GithubClient {
     }
   }
 
+  /** Whether the installation has been approved to write contents and pull requests. */
+  async canWrite(installationId: number) {
+    const found = await this.#api<{ permissions?: Record<string, string> }>(
+      `/app/installations/${installationId}`,
+      this.#appJwt(),
+    );
+    return found.permissions?.contents === "write" && found.permissions?.pull_requests === "write";
+  }
+
+  /** Whether the person's token may push to the repository; false when it cannot even see it. */
+  async canPush(userToken: string, fullName: string) {
+    const [owner, name] = fullName.split("/").map(encodeURIComponent);
+    const found = await this.#api<{ permissions?: { push?: boolean } }>(
+      `/repos/${owner}/${name}`,
+      userToken,
+    ).catch((error: unknown) => {
+      if (error instanceof GithubApiError && error.status === 404) return null;
+      throw error;
+    });
+    return found?.permissions?.push === true;
+  }
+
   /**
    * The open pull request from `head` into `base`, opened first if there is none. One already open
    * is left as it is, so a person's edits to its title and description survive a later ship.
@@ -277,11 +319,9 @@ export class GithubClient {
     return payload ? toRepo(payload) : null;
   }
 
-  // Whether the person who came back from GitHub's install page may use `installationId`: they
-  // authorised the app during installation (`code`), and GitHub lists the installation among theirs.
-  async userCanUse(code: string, installationId: number) {
-    const userToken = await this.#exchangeCode(code);
-    if (!userToken) return false;
+  // Whether GitHub lists `installationId` among the installations the person's token can use: they
+  // authorised the app during installation, so it is theirs to connect.
+  async userCanUse(userToken: string, installationId: number) {
     const installations = this.#pages(
       "/user/installations",
       userToken,
@@ -291,16 +331,48 @@ export class GithubClient {
     return false;
   }
 
-  // The user's own token for an OAuth `code`, or null when GitHub does not grant one.
-  async #exchangeCode(code: string) {
+  /** The person's token for an OAuth `code`, or null when GitHub does not grant one. */
+  exchangeCode(code: string) {
+    return this.#grant({ code });
+  }
+
+  /** A new token for a refresh token; null when GitHub refuses it (expired, used or revoked). */
+  refreshGrant(refreshToken: string) {
+    return this.#grant({ grant_type: "refresh_token", refresh_token: refreshToken });
+  }
+
+  async userProfile(userToken: string): Promise<GithubUserProfile> {
+    const user = await this.#api<{ id: number; login: string; name: string | null }>(
+      "/user",
+      userToken,
+    );
+    return { id: user.id, login: user.login, name: user.name };
+  }
+
+  // GitHub answers a refused code or refresh token with a 200 and an `error`, so a grant is what
+  // has an access token in it.
+  async #grant(params: Record<string, string>): Promise<GithubUserGrant | null> {
     const { clientId, clientSecret, webUrl } = this.#config();
     const exchange = await this.fetchImpl(`${webUrl}/login/oauth/access_token`, {
       method: "POST",
       headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, ...params }),
     });
-    const granted = (await exchange.json().catch(() => ({}))) as { access_token?: string };
-    return exchange.ok && granted.access_token ? granted.access_token : null;
+    const granted = (await exchange.json().catch(() => ({}))) as {
+      access_token?: string;
+      expires_in?: number;
+      refresh_token?: string;
+      refresh_token_expires_in?: number;
+    };
+    if (!exchange.ok || !granted.access_token) return null;
+    const now = Date.now();
+    const after = (seconds: number | undefined) => (seconds ? now + seconds * 1000 : null);
+    return {
+      accessToken: granted.access_token,
+      expiresAt: after(granted.expires_in),
+      refreshToken: granted.refresh_token ?? null,
+      refreshExpiresAt: after(granted.refresh_token_expires_in),
+    };
   }
 }
 
