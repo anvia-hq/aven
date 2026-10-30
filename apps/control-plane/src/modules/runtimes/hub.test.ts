@@ -22,10 +22,15 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     defaultBranch: "main",
     token: "t",
   };
-  const hub = new RuntimeHub(store, async (threadId) => {
-    cloned.push(threadId);
-    return repoAccess;
-  });
+  const GRACE_MS = 400;
+  const hub = new RuntimeHub(
+    store,
+    async (threadId) => {
+      cloned.push(threadId);
+      return repoAccess;
+    },
+    GRACE_MS,
+  );
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
   const full = new Elysia().use(runtimesRouter).listen({ port: 0 });
   const sockets: WebSocket[] = [];
@@ -49,13 +54,14 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     token: string,
     path = "/connect",
     version: number | null = WIRE_VERSION,
+    runs: string[] = [],
   ) =>
     new Promise<WebSocket>((resolve, reject) => {
       const init = { headers: { authorization: `Bearer ${token}` } };
       const ws = new WebSocket(`ws://localhost:${port}${path}`, init as unknown as string[]);
       sockets.push(ws);
       ws.onopen = () => {
-        if (version !== null) ws.send(JSON.stringify({ type: "hello", version }));
+        if (version !== null) ws.send(JSON.stringify({ type: "hello", version, runs }));
         resolve(ws);
       };
       ws.onerror = () => reject(new Error("connect failed"));
@@ -204,7 +210,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(badReplace.ok).toBe(false);
 
     // Once the run ends, the runtime can no longer write to it.
-    ws.send(JSON.stringify({ type: "run.end", runId: "run-1", outcome: "response" }));
+    ws.send(JSON.stringify({ type: "run.end", runId: "run-1", seq: 1, outcome: "response" }));
     await until(() => ended.length > 0);
     const late = await ask(ws, received, "memory.append", {
       runId: "run-1",
@@ -248,7 +254,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     // The connection survived all of it, and the run is still live.
     expect(hub.isOnline(runtime.id)).toBe(true);
     expect(ended).toEqual([]);
-    ws.send(JSON.stringify({ type: "run.end", runId: "run-bad", outcome: "response" }));
+    ws.send(JSON.stringify({ type: "run.end", runId: "run-bad", seq: 1, outcome: "response" }));
     await until(() => ended.length > 0);
   });
 
@@ -288,11 +294,18 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       );
 
     const forged = { type: "snapshot", messages: [], running: false };
-    ws.send(JSON.stringify({ type: "run.event", runId: "run-ev", event: forged }));
-    ws.send(JSON.stringify({ type: "run.event", runId: "run-ev", event: { type: "done" } }));
-    ws.send(JSON.stringify({ type: "run.end", runId: "run-ev", outcome: "totally-fine" }));
+    ws.send(JSON.stringify({ type: "run.event", runId: "run-ev", seq: 1, event: forged }));
     ws.send(
-      JSON.stringify({ type: "run.event", runId: "run-ev", event: { type: "text", delta: "ok" } }),
+      JSON.stringify({ type: "run.event", runId: "run-ev", seq: 2, event: { type: "done" } }),
+    );
+    ws.send(JSON.stringify({ type: "run.end", runId: "run-ev", seq: 3, outcome: "totally-fine" }));
+    ws.send(
+      JSON.stringify({
+        type: "run.event",
+        runId: "run-ev",
+        seq: 4,
+        event: { type: "text", delta: "ok" },
+      }),
     );
     await until(() => events.length > 0);
     expect(events).toEqual([{ type: "text", delta: "ok" }]);
@@ -361,20 +374,131 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(JSON.stringify(await runtimesService.list(seed.orgA))).not.toContain(rotated!.token);
   });
 
-  test("dropping the connection fails its live runs", async () => {
-    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "d" });
-    const ws = await open(server.server?.port, token);
-    await until(() => hub.isOnline(runtime.id));
-    const lost: Error[] = [];
-    hub
-      .get(runtime.id)!
-      .startRun(
-        "run-2",
-        { id: crypto.randomUUID(), organizationId: seed.orgA },
-        { event: () => undefined, end: () => undefined, lost: (error) => lost.push(error) },
+  describe("a connection that drops", () => {
+    const thread = () => ({ id: crypto.randomUUID(), organizationId: seed.orgA });
+    const sink = () => {
+      const seen = { events: [] as string[], ended: [] as string[], lost: [] as Error[] };
+      return {
+        seen,
+        sink: {
+          event: (event: { type: string; delta?: string }) =>
+            seen.events.push(event.delta ?? event.type),
+          end: (outcome: string) => seen.ended.push(outcome),
+          lost: (error: Error) => seen.lost.push(error),
+        },
+      };
+    };
+    const text = (runId: string, seq: number, delta: string) =>
+      JSON.stringify({ type: "run.event", runId, seq, event: { type: "text", delta } });
+
+    // A runtime with a run going, whose connection then drops.
+    const dropped = async (name: string, runId: string) => {
+      const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name });
+      const ws = await open(server.server?.port, token);
+      await until(() => hub.isOnline(runtime.id));
+      const followed = sink();
+      hub.get(runtime.id)!.startRun(runId, thread(), followed.sink);
+      return { runtime, token, ws, ...followed };
+    };
+
+    test("keeps its run, and the runtime reconnecting for it gets what the control plane missed", async () => {
+      const { runtime, token, ws, seen } = await dropped("keep", "run-keep");
+      ws.send(text("run-keep", 1, "a"));
+      ws.send(text("run-keep", 2, "b"));
+      await until(() => seen.events.length === 2);
+      ws.close();
+      await until(() => !hub.isOnline(runtime.id));
+      expect(seen.lost).toEqual([]);
+
+      const back = await open(server.server?.port, token, "/connect", WIRE_VERSION, ["run-keep"]);
+      const received = inbox(back);
+      await until(() => received.some((m) => m.type === "run.attach"));
+      expect(received.find((m) => m.type === "run.attach")).toEqual({
+        type: "run.attach",
+        runId: "run-keep",
+        after: 2,
+      });
+
+      // The runtime replays from where it is asked, and may repeat what was already heard.
+      back.send(text("run-keep", 2, "b"));
+      back.send(text("run-keep", 3, "c"));
+      back.send(
+        JSON.stringify({ type: "run.end", runId: "run-keep", seq: 4, outcome: "response" }),
       );
-    ws.close();
-    await until(() => lost.length > 0);
-    expect(hub.isOnline(runtime.id)).toBe(false);
+      await until(() => seen.ended.length === 1);
+      expect(seen.events).toEqual(["a", "b", "c"]);
+      await until(() => received.some((m) => m.type === "run.ack"));
+    });
+
+    test("loses a run whose runtime comes back without it", async () => {
+      const { token, ws, seen } = await dropped("restarted", "run-gone");
+      ws.close();
+      await Bun.sleep(50);
+      await open(server.server?.port, token);
+      await until(() => seen.lost.length === 1);
+      expect(seen.lost[0]?.message).toContain("restarted");
+    });
+
+    test("tells a runtime to stop a run the control plane does not follow", async () => {
+      const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
+        name: "ghost",
+      });
+      const ws = await open(server.server?.port, token, "/connect", WIRE_VERSION, ["ghost-run"]);
+      const received = inbox(ws);
+      await until(() => hub.isOnline(runtime.id));
+      await until(() => received.some((m) => m.type === "run.cancel"));
+      expect(received.find((m) => m.type === "run.cancel")).toMatchObject({ runId: "ghost-run" });
+    });
+
+    test("loses a run whose runtime never comes back, after the grace period", async () => {
+      const { ws, seen } = await dropped("away", "run-away");
+      ws.close();
+      await until(() => seen.lost.length === 1, GRACE_MS + 2000);
+    });
+
+    test("a cancel asked for while the run waits is sent when the runtime is back", async () => {
+      const { runtime, token, ws, seen } = await dropped("cancel", "run-cancel");
+      ws.close();
+      await until(() => !hub.isOnline(runtime.id));
+      hub.cancelRun(runtime.id, "run-cancel", "Cancelled by user");
+
+      const back = await open(server.server?.port, token, "/connect", WIRE_VERSION, ["run-cancel"]);
+      const received = inbox(back);
+      await until(() => received.some((m) => m.type === "run.cancel"));
+      expect(received.find((m) => m.type === "run.cancel")).toMatchObject({
+        runId: "run-cancel",
+        reason: "Cancelled by user",
+      });
+      expect(seen.lost).toEqual([]);
+    });
+
+    test("cutting a runtime off ends its runs at once", async () => {
+      const { runtime, seen } = await dropped("revoked", "run-cut");
+      hub.disconnect(runtime.id, "Revoked");
+      await until(() => seen.lost.length === 1);
+    });
+
+    test("a transcript call sent again after a lost reply adds nothing twice", async () => {
+      const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
+        name: "again",
+      });
+      const ws = await open(server.server?.port, token);
+      const received = inbox(ws);
+      await until(() => hub.isOnline(runtime.id));
+      const threadInfo = thread();
+      threadIds.push(threadInfo.id);
+      hub.get(runtime.id)!.startRun("run-again", threadInfo, sink().sink);
+      const params = {
+        runId: "run-again",
+        turn: 0,
+        messages: [{ role: "user", content: "hi" }],
+      };
+      expect((await ask(ws, received, "memory.append", params)).ok).toBe(true);
+      expect((await ask(ws, received, "memory.append", params)).ok).toBe(true);
+      const stored = await store.load({
+        scope: { sessionId: threadInfo.id, metadata: { organizationId: seed.orgA } },
+      });
+      expect(stored).toHaveLength(1);
+    });
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { parseRuntimeFrame } from "./wire";
 
-const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", event });
+const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
 describe("run events from a runtime", () => {
   const turn = { inputTokens: 1, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 };
@@ -13,9 +13,19 @@ describe("run events from a runtime", () => {
       turn,
       context: { usedTokens: 330, contextWindow: 1000 },
     } as const;
-    expect(parseRuntimeFrame(frame(event))).toEqual({ type: "run.event", runId: "r1", event });
+    expect(parseRuntimeFrame(frame(event))).toEqual({
+      type: "run.event",
+      runId: "r1",
+      seq: 1,
+      event,
+    });
     const bare = { type: "usage", turn } as const;
-    expect(parseRuntimeFrame(frame(bare))).toEqual({ type: "run.event", runId: "r1", event: bare });
+    expect(parseRuntimeFrame(frame(bare))).toEqual({
+      type: "run.event",
+      runId: "r1",
+      seq: 1,
+      event: bare,
+    });
   });
 
   test("a usage event with nonsense numbers is refused", () => {

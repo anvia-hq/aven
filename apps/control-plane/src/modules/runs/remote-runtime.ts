@@ -99,9 +99,7 @@ export class RemoteRuntime implements Runtime {
     return {
       events: queue,
       result: result.promise,
-      cancel: (reason) => {
-        if (connection.hasRun(runId)) connection.post({ type: "run.cancel", runId, reason });
-      },
+      cancel: (reason) => this.hub.cancelRun(thread.runtimeId, runId, reason),
     };
   }
 

@@ -26,7 +26,7 @@ function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
   const transcripts = { stored: options.storesTranscripts !== false };
   const received: RuntimeToControlPlane[] = [];
   const receivedBinary: Uint8Array[] = [];
-  let client: { send(data: string | Uint8Array): void } | undefined;
+  let client: { send(data: string | Uint8Array): void; close(): void } | undefined;
   const opened = Promise.withResolvers<void>();
   const server = Bun.serve({
     port: 0,
@@ -57,6 +57,7 @@ function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
     transcripts,
     opened: opened.promise,
     send: (message: unknown) => client?.send(JSON.stringify(message)),
+    drop: () => client?.close(),
     sendBinary: (frame: Uint8Array) => client?.send(frame),
     stop: () => server.stop(true),
   };
@@ -620,5 +621,59 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 2);
     expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
     expect(made).toEqual(["run-run-1", "run-run-2"]);
+  });
+
+  describe("when the connection drops", () => {
+    const hellos = (plane: ReturnType<typeof fakeControlPlane>) =>
+      plane.received.filter((message) => message.type === "hello");
+
+    test("a run keeps working, and the control plane gets what it missed when it asks", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      const hold = Promise.withResolvers<void>();
+      const { plane, runtime } = connect({
+        sandbox,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            model: scriptedModel([
+              async () => {
+                await hold.promise;
+                return [text("finished while away")];
+              },
+            ]),
+          }),
+        }),
+      });
+      await runtime.ready;
+      plane.send(runStart);
+      // The run is under way: the model holds the first reply back.
+      await Bun.sleep(100);
+      const before = plane.received.length;
+
+      plane.drop();
+      hold.resolve();
+      // The run finishes with nobody listening; the runner reconnects and says what it holds.
+      await until(() => hellos(plane).length === 2);
+      expect(hellos(plane)[1]).toMatchObject({ runs: ["run-1"] });
+      // Nothing about the run is sent until it is asked for.
+      await Bun.sleep(100);
+      expect(plane.received.slice(before).filter((m) => m.type === "run.end")).toEqual([]);
+
+      plane.send({ type: "run.attach", runId: "run-1", after: 0 });
+      await until(() => ended(plane).length === 1);
+      expect(ended(plane)[0]).toMatchObject({ outcome: "response", seq: 3 });
+      const seqs = plane.received.flatMap((m) =>
+        m.type === "run.event" || m.type === "run.end" ? [m.seq] : [],
+      );
+      expect(seqs).toEqual([1, 2, 3]);
+
+      // Once the end is acknowledged the run is forgotten.
+      plane.send({ type: "run.ack", runId: "run-1" });
+      plane.drop();
+      await until(() => hellos(plane).length === 3);
+      expect(hellos(plane)[2]).toMatchObject({ runs: [] });
+    });
   });
 });

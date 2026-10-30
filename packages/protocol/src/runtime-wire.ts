@@ -73,6 +73,10 @@ export type ControlPlaneToRuntime =
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
+  /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
+  | { type: "run.attach"; runId: string; after: number }
+  /** The control plane has the end of this run, or does not follow it: forget it. */
+  | { type: "run.ack"; runId: string }
   /** Start streaming the thread's desktop (VNC) as binary frames for `viewerId`. */
   | { type: "desktop.open"; viewerId: string; threadId: string }
   | { type: "desktop.close"; viewerId: string }
@@ -80,10 +84,19 @@ export type ControlPlaneToRuntime =
   | Reply;
 
 export type RuntimeToControlPlane =
-  | { type: "hello"; version: number }
-  | { type: "run.event"; runId: string; event: RunEvent }
+  /** `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged included. */
+  | { type: "hello"; version: number; runs: string[] }
+  /** Every event and the end of a run are numbered from 1, so a reconnect can say where it stopped. */
+  | { type: "run.event"; runId: string; seq: number; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error"; `continuation` what resumes a run that is "interaction" (it waits for the user's answer). */
-  | { type: "run.end"; runId: string; outcome: RunOutcome; error?: string; continuation?: unknown }
+  | {
+      type: "run.end";
+      runId: string;
+      seq: number;
+      outcome: RunOutcome;
+      error?: string;
+      continuation?: unknown;
+    }
   | { type: "call"; id: string; method: CallMethod; params: unknown }
   /** The viewer is streaming; its bytes follow as binary frames. */
   | { type: "desktop.opened"; viewerId: string }
@@ -140,6 +153,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 9: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
 // Version 8: a run can suspend on the agent's question and be resumed with the answer, `run.resume`
 // (decision 0020). Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
 // build as an Anthropic client. Version 6: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix`
@@ -147,4 +161,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 8;
+export const WIRE_VERSION = 9;

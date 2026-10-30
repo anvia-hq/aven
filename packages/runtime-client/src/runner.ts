@@ -24,6 +24,7 @@ import { DurableRuns, type FollowedRun, type RunInput } from "./durable-runs";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { lateBoundTools } from "./late-bound-tools";
+import { RunOutbox } from "./run-outbox";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
@@ -86,7 +87,7 @@ export type RuntimeOptions = {
    * version), so reconnecting would not help. `reason` says why.
    */
   onRefused?: (reason: string) => void;
-  /** How long to wait for the control plane to answer a memory call. Default 30 seconds. */
+  /** How long a call to the control plane may take, a dropped connection included. Default 60 seconds. */
   callTimeoutMs?: number;
   /**
    * A thread with no run and no running process for this long gives up its sandbox (its files
@@ -97,7 +98,8 @@ export type RuntimeOptions = {
 
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
-const DEFAULT_CALL_TIMEOUT_MS = 30_000;
+// About as long as the control plane holds a run for its runtime to come back.
+const DEFAULT_CALL_TIMEOUT_MS = 60_000;
 const DEFAULT_IDLE_RELEASE_MS = 15 * 60_000;
 
 // Connects out to the control plane and runs whatever it is told to, until stopped. Reconnects
@@ -118,7 +120,18 @@ export function startRuntime(options: RuntimeOptions) {
   const boxes = new Map<string, ThreadSandbox>();
   const idleTimers = new Map<string, Timer>();
   const releasing = new Map<string, Promise<void>>();
-  const pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  // Calls waiting for an answer. One sent over a connection that dropped is sent again on the next.
+  const pending = new Map<
+    string,
+    {
+      method: CallMethod;
+      params: unknown;
+      resolve: (v: unknown) => void;
+      reject: (e: Error) => void;
+    }
+  >();
+  // What each run has told the control plane, kept until it has the end, so a dropped link loses nothing.
+  const outbox = new RunOutbox();
   let socket: WebSocket | undefined;
   let stopped = false;
   let backoff = RECONNECT_MIN_MS;
@@ -155,13 +168,24 @@ export function startRuntime(options: RuntimeOptions) {
         reject(new Error(`The control plane did not answer ${method} within ${callTimeoutMs} ms`));
       }, callTimeoutMs);
       pending.set(id, {
+        method,
+        params,
         resolve: (value) => (clearTimeout(timer), resolve(value)),
         reject: (error) => (clearTimeout(timer), reject(error)),
       });
-      if (send({ type: "call", id, method, params })) return;
-      pending.get(id)?.reject(new Error("Not connected to the control plane"));
-      pending.delete(id);
+      // Sent now if the link is up, and again whenever it comes back until it is answered.
+      send({ type: "call", id, method, params });
     });
+
+  // Tells the control plane something about a run. It is kept either way: if the link is down or
+  // the control plane has not asked for the run since it came back, it is sent on request.
+  const report = (
+    runId: string,
+    make: (seq: number) => Extract<RuntimeToControlPlane, { type: "run.event" | "run.end" }>,
+  ) => {
+    const message = outbox.push(runId, make);
+    if (message && outbox.attached(runId)) send(message);
+  };
 
   function scheduleIdleRelease(threadId: string) {
     clearTimeout(idleTimers.get(threadId));
@@ -208,6 +232,7 @@ export function startRuntime(options: RuntimeOptions) {
     // Registered before the sandbox is awaited, so a cancel in that window is not lost.
     const live: LiveRun = { threadId: thread.id };
     runs.set(runId, live);
+    outbox.open(runId);
     clearTimeout(idleTimers.get(thread.id));
     try {
       await releasing.get(thread.id);
@@ -236,7 +261,8 @@ export function startRuntime(options: RuntimeOptions) {
         return { agent, compaction, contextWindow: model?.contextWindow };
       };
       // Events reach the control plane as the journal records them.
-      const forward = (event: RunEvent) => send({ type: "run.event", runId, event });
+      const forward = (event: RunEvent) =>
+        report(runId, (seq) => ({ type: "run.event", runId, seq, event }));
       // The transcript the control plane keeps, filed as each part of the run ends.
       let turn = 0;
       const file = async (messages: Message[]) => {
@@ -321,12 +347,19 @@ export function startRuntime(options: RuntimeOptions) {
           if (end.type !== "error") await file(withoutPrompt(end.messages));
         }
       }
-      sendOrWarn(
+      report(runId, (seq) =>
         end.type === "error"
-          ? { type: "run.end", runId, outcome: "error", error: live.cancelReason ?? end.error }
+          ? {
+              type: "run.end",
+              runId,
+              seq,
+              outcome: "error",
+              error: live.cancelReason ?? end.error,
+            }
           : {
               type: "run.end",
               runId,
+              seq,
               outcome: end.type,
               // What resumes a run that stopped to ask the user; the control plane keeps it.
               continuation: end.type === "interaction" ? end.continuation : undefined,
@@ -334,7 +367,7 @@ export function startRuntime(options: RuntimeOptions) {
       );
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      sendOrWarn({ type: "run.end", runId, outcome: "error", error: text });
+      report(runId, (seq) => ({ type: "run.end", runId, seq, outcome: "error", error: text }));
     } finally {
       // A goal handed over by a run that never got to start it is not the next run's to start.
       goals.delete(thread.id);
@@ -364,6 +397,12 @@ export function startRuntime(options: RuntimeOptions) {
         if (run) cancelRun(run, message.reason);
         return;
       }
+      case "run.attach":
+        for (const missed of outbox.attach(message.runId, message.after)) send(missed);
+        return;
+      case "run.ack":
+        outbox.ack(message.runId);
+        return;
       case "desktop.open":
         void viewers.open(message.viewerId, message.threadId);
         return;
@@ -394,7 +433,11 @@ export function startRuntime(options: RuntimeOptions) {
     socket = ws;
     ws.onopen = () => {
       backoff = RECONNECT_MIN_MS;
-      send({ type: "hello", version: WIRE_VERSION });
+      // The control plane asks for each of these runs again, or says to forget it.
+      outbox.detachAll();
+      send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids() });
+      for (const [id, waiting] of pending)
+        send({ type: "call", id, method: waiting.method, params: waiting.params });
       connected.resolve();
     };
     ws.onmessage = (event) => {
@@ -415,9 +458,7 @@ export function startRuntime(options: RuntimeOptions) {
       });
     };
     ws.onclose = (event) => {
-      for (const [, waiting] of pending) waiting.reject(new Error("Disconnected"));
-      pending.clear();
-      for (const run of runs.values()) cancelRun(run, "Disconnected from the control plane");
+      // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
       if (event.code === 4000 || event.code === 4002) {
         stopped = true;

@@ -29,6 +29,7 @@ const toolPart = z.object({
 });
 
 const tokenCount = z.number().int().nonnegative();
+const seq = z.number().int().positive();
 
 const runEvent = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), delta: z.string() }),
@@ -54,11 +55,12 @@ const runEvent = z.discriminatedUnion("type", [
 ]);
 
 const frame = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("hello"), version: z.number() }),
-  z.object({ type: z.literal("run.event"), runId, event: runEvent }),
+  z.object({ type: z.literal("hello"), version: z.number(), runs: z.array(runId).default([]) }),
+  z.object({ type: z.literal("run.event"), runId, seq, event: runEvent }),
   z.object({
     type: z.literal("run.end"),
     runId,
+    seq,
     outcome: z.enum(["response", "blocked", "interaction", "error"]),
     error: z.string().optional(),
     continuation: z.unknown().optional(),
