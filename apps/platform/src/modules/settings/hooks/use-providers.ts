@@ -2,7 +2,7 @@ import { getDefaultStore, useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
-import { api, errorMessage, postJson } from "@/lib/api";
+import { api, attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 
 import { providerModelsAtom } from "../atoms/provider-models-atom";
@@ -33,12 +33,11 @@ export function useProviders() {
 
   // Runs a request that changes a provider and reloads the list; false on failure (already toasted).
   async function change(failureTitle: string, request: () => Promise<unknown>) {
-    try {
+    const changed = await attempt(failureTitle, async () => {
       await request();
-    } catch (failure) {
-      toast.add({ title: failureTitle, description: errorMessage(failure), type: "error" });
-      return false;
-    }
+      return true;
+    });
+    if (!changed) return false;
     await refresh();
     return true;
   }
@@ -52,18 +51,11 @@ export function useProviders() {
   }
 
   // Asks the provider which models the key can use. Null on failure (already toasted).
-  async function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
-    try {
+  function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
+    return attempt("Could not load models", async () => {
       const result = await postJson<{ models: string[] }>("/providers/models", input);
       return result.models;
-    } catch (failure) {
-      toast.add({
-        title: "Could not load models",
-        description: errorMessage(failure),
-        type: "error",
-      });
-      return null;
-    }
+    });
   }
 
   async function update(provider: Provider, patch: ProviderPatch) {
@@ -76,17 +68,11 @@ export function useProviders() {
   }
 
   // The models a saved provider offers, asked of its stored key. Null on failure (already toasted).
-  async function listSavedModels(provider: Provider) {
-    try {
-      return (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models;
-    } catch (failure) {
-      toast.add({
-        title: "Could not load models",
-        description: errorMessage(failure),
-        type: "error",
-      });
-      return null;
-    }
+  function listSavedModels(provider: Provider) {
+    return attempt(
+      "Could not load models",
+      async () => (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models,
+    );
   }
 
   async function makeDefault(provider: Provider) {

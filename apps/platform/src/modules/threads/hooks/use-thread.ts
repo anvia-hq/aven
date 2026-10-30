@@ -8,8 +8,7 @@ import {
 } from "@aven/protocol/events";
 import { useCallback, useEffect, useState } from "react";
 
-import { toast } from "@/components/toast";
-import { api, errorMessage, postJson } from "@/lib/api";
+import { api, attempt, postJson } from "@/lib/api";
 
 import type { ChatMessage, QuestionAnswer, RunSelection } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
@@ -67,18 +66,12 @@ export function useThread(threadId: string) {
   // True once the message is accepted, so the composer knows it can clear.
   const send = useCallback(
     async (prompt: string, selection: RunSelection = {}) => {
-      try {
+      const sent = await attempt("Could not send message", async () => {
         await postJson(`/threads/${threadId}/messages`, { prompt, ...selection });
         rememberModelSelection(threadId, selection);
         return true;
-      } catch (failure) {
-        toast.add({
-          title: "Could not send message",
-          description: errorMessage(failure),
-          type: "error",
-        });
-        return false;
-      }
+      });
+      return sent ?? false;
     },
     [threadId],
   );
@@ -86,17 +79,11 @@ export function useThread(threadId: string) {
   // True once the answers are accepted; the run then continues, and the stream shows it.
   const answer = useCallback(
     async (answers: QuestionAnswer[], selection: RunSelection = {}) => {
-      try {
+      const sent = await attempt("Could not send answer", async () => {
         await postJson(`/threads/${threadId}/answer`, { answers, ...selection });
         return true;
-      } catch (failure) {
-        toast.add({
-          title: "Could not send answer",
-          description: errorMessage(failure),
-          type: "error",
-        });
-        return false;
-      }
+      });
+      return sent ?? false;
     },
     [threadId],
   );

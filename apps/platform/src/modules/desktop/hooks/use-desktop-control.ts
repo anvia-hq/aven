@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { toast } from "@/components/toast";
-import { api, errorMessage } from "@/lib/api";
+import { api, attempt, errorMessage } from "@/lib/api";
 
 // The control plane gives control for a minute at a time; this renews it well before that.
 const RENEW_MS = 20_000;
@@ -16,29 +16,16 @@ export function useDesktopControl(threadId: string) {
 
   async function takeOver() {
     setBusy(true);
-    try {
+    await attempt("Could not take over the desktop", async () => {
       await api(takeoverPath, { method: "POST" });
       setControlling(true);
-    } catch (failure) {
-      toast.add({
-        title: "Could not take over the desktop",
-        description: errorMessage(failure),
-        type: "error",
-      });
-    } finally {
-      setBusy(false);
-    }
+    });
+    setBusy(false);
   }
 
   async function giveBack() {
     setControlling(false);
-    await api(releasePath, { method: "POST" }).catch((failure: unknown) =>
-      toast.add({
-        title: "Could not give the desktop back",
-        description: errorMessage(failure),
-        type: "error",
-      }),
-    );
+    await attempt("Could not give the desktop back", () => api(releasePath, { method: "POST" }));
   }
 
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
-import { api, errorMessage, postJson } from "@/lib/api";
+import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { createListStore } from "@/lib/list-store";
 
@@ -45,15 +45,12 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
   const isOwnedByMe = (runtime: Runtime) => runtime.ownerId === session?.user.id;
 
   // Runs a request that changes a runtime and reloads the list; null on failure (already toasted).
-  async function change<T>(failureTitle: string, request: () => Promise<T>) {
-    try {
+  function change<T>(failureTitle: string, request: () => Promise<T>) {
+    return attempt(failureTitle, async () => {
       const result = await request();
       await refresh();
       return result;
-    } catch (failure) {
-      toast.add({ title: failureTitle, description: errorMessage(failure), type: "error" });
-      return null;
-    }
+    });
   }
 
   // Returns the new runtime with its token, shown once.

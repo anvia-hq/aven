@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 
 import { toast } from "@/components/toast";
-import { errorMessage, postJson } from "@/lib/api";
+import { attempt, postJson } from "@/lib/api";
 
 import type { RunSelection, Thread } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
@@ -16,32 +16,24 @@ export function useStartThread() {
   const navigate = useNavigate();
   const { refresh } = useThreads();
 
-  async function createThread(projectId: string, prompt: string) {
-    try {
-      return await postJson<Thread>("/threads", { projectId, title: titleFrom(prompt) });
-    } catch (failure) {
-      toast.add({
-        title: "Could not start thread",
-        description: errorMessage(failure),
-        type: "error",
-      });
-      return null;
-    }
+  function createThread(projectId: string, prompt: string) {
+    return attempt("Could not start thread", () =>
+      postJson<Thread>("/threads", { projectId, title: titleFrom(prompt) }),
+    );
   }
 
   async function sendFirstPrompt(thread: Thread, prompt: string, selection: RunSelection) {
-    try {
-      await postJson(`/threads/${thread.id}/messages`, { prompt, ...selection });
-    } catch (failure) {
-      toast.add({
-        title: "The agent did not start",
-        description: errorMessage(failure),
-        type: "error",
-      });
-    }
+    await attempt("The agent did not start", () =>
+      postJson(`/threads/${thread.id}/messages`, { prompt, ...selection }),
+    );
   }
 
-  return async (projectId: string, prompt: string, selection: RunSelection = {}) => {
+  // With no project picked yet, nothing is created.
+  return async (projectId: string | undefined, prompt: string, selection: RunSelection = {}) => {
+    if (!projectId) {
+      toast.add({ title: "Choose a project first", type: "error" });
+      return false;
+    }
     const thread = await createThread(projectId, prompt);
     if (!thread) return false;
     rememberModelSelection(thread.id, selection);

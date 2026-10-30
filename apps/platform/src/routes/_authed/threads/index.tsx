@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
-import { toast } from "@/components/toast";
 import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -24,13 +23,8 @@ function NewThread() {
   const recent = useThreads().threads.slice(0, 3);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
 
-  async function start(prompt: string, selection: RunSelection) {
-    if (!projectId) {
-      toast.add({ title: "Choose a project first", type: "error" });
-      return false;
-    }
-    return startThread(projectId, prompt, selection);
-  }
+  const start = (prompt: string, selection: RunSelection) =>
+    startThread(projectId, prompt, selection);
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-5 p-4">

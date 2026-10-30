@@ -1,3 +1,5 @@
+import { toast } from "@/components/toast";
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -12,6 +14,19 @@ const UNREACHABLE = "Could not reach the server";
 // What to tell the user about a failed request: the backend's own message, else a generic one.
 export function errorMessage(failure: unknown) {
   return failure instanceof ApiError ? failure.message : UNREACHABLE;
+}
+
+// Runs a request and toasts its failure under `failureTitle`. Null on failure (already toasted).
+export async function attempt<T>(
+  failureTitle: string,
+  request: () => Promise<T>,
+): Promise<T | null> {
+  try {
+    return await request();
+  } catch (failure) {
+    toast.add({ title: failureTitle, description: errorMessage(failure), type: "error" });
+    return null;
+  }
 }
 
 async function send(path: string, init?: RequestInit) {
