@@ -215,13 +215,7 @@ export function createRunDriver(context: DriverContext) {
         end = await followed.done;
         if (end.type !== "error") {
           // A run that stopped on a question and was answered files its second part after the first.
-          save({
-            turn: journaled.transcriptTurn(
-              followed.durableId,
-              end.messages.length,
-              end.type === "response",
-            ),
-          });
+          save({ turn: journaled.transcriptTurn(followed.durableId, end) });
           await file(end.messages);
         }
         // Handed a goal: the rest of the run is the goal and the report on it.

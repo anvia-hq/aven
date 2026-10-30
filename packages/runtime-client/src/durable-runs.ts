@@ -108,6 +108,15 @@ type GoalTracker = {
 
 type GoalContext = { verify: () => Promise<CommandResult[]> };
 
+type FollowOptions = {
+  /** The agent the run is registered under, when it is not the input's own. */
+  agentId?: string;
+  /** The last of the run's journal already told to the client. */
+  after?: number;
+  /** Leave the agent registered when the run ends: a goal's sessions share one. Default false. */
+  keepAgent?: boolean;
+};
+
 /** One durable run being followed: its events as they happen, how it ended, and a way to stop it. */
 export type FollowedRun = {
   durableId: string;
@@ -215,10 +224,7 @@ export class DurableRuns {
         { agentId: input.agent.id, sessionId: threadId, requestId: runId, prompt },
         { enqueue: true },
       );
-      return this.#follow(run, onEvent, {
-        agentId: input.agent.id,
-        contextWindow: input.contextWindow,
-      });
+      return this.#follow(run, input, onEvent);
     } catch (error) {
       this.#runtime.unregisterAgent(input.agent.id);
       throw error;
@@ -235,12 +241,8 @@ export class DurableRuns {
     onEvent: Emit,
   ) {
     const input = restore();
-    try {
-      this.#register(input);
-    } catch (error) {
-      // Still registered from before the question: that agent carries on.
-      if (!(error instanceof DurableConflictError)) throw error;
-    }
+    // Still registered from before the question: that agent carries on.
+    this.#registerOrKeep(input);
     const run = await this.#runtime.getRun(asked.runId);
     // The question's result, as the agent's stream used to report it, so the client sees it answered.
     if (response.type === "tool-question")
@@ -248,9 +250,8 @@ export class DurableRuns {
         projectToolEnd(question.toolCallId, { type: "json", value: { answers: response.answers } }),
       );
     // Followed from now on, so the answer does not replay the run's earlier events to the client.
-    const followed = this.#follow(run, onEvent, {
+    const followed = this.#follow(run, input, onEvent, {
       agentId: asked.agentId,
-      contextWindow: input.contextWindow,
       after: await this.#cursor(run),
     });
     try {
@@ -285,12 +286,8 @@ export class DurableRuns {
     const saveState = goal.saveState ?? (() => undefined);
     const cursorOf = goal.cursorOf ?? (() => 0);
     const agentId = input.agent.id;
-    try {
-      this.#register(input);
-    } catch (error) {
-      // Registered by the process that was working on it before the restart.
-      if (!(error instanceof DurableConflictError)) throw error;
-    }
+    // Registered by the process that was working on it before the restart.
+    this.#registerOrKeep(input);
     this.#contexts.set(agentId, { verify });
     const finished = () => {
       this.#contexts.delete(agentId);
@@ -399,9 +396,7 @@ export class DurableRuns {
   ) {
     try {
       const run = await this.#runtime.getRun(runId);
-      const followed = this.#follow(run, onEvent, {
-        agentId: input.agent.id,
-        contextWindow: input.contextWindow,
+      const followed = this.#follow(run, input, onEvent, {
         keepAgent: true,
         after: tracker.cursorOf(runId),
       });
@@ -424,17 +419,9 @@ export class DurableRuns {
     after: number,
     onEvent: Emit,
   ): Promise<FollowedRun> {
-    try {
-      this.#register(input);
-    } catch (error) {
-      if (!(error instanceof DurableConflictError)) throw error;
-    }
+    this.#registerOrKeep(input);
     const run = await this.#runtime.getRun(durableId);
-    const followed = this.#follow(run, onEvent, {
-      agentId: input.agent.id,
-      contextWindow: input.contextWindow,
-      after,
-    });
+    const followed = this.#follow(run, input, onEvent, { after });
     followed.done.catch(() => undefined);
     await this.#revive([input.agent.id]);
     return followed;
@@ -452,11 +439,7 @@ export class DurableRuns {
           waiting = true;
           if (status !== "needs_attention") continue;
           const run = await this.#runtime.getRun(summary.id);
-          if (summary.blockedOperation)
-            await run.resolveTool(summary.blockedOperation, {
-              type: "error-text",
-              value: INTERRUPTED,
-            });
+          if (summary.blockedOperation) await this.#resolveUnknown(run, summary.blockedOperation);
           else await run.retry();
         }
       }
@@ -467,12 +450,13 @@ export class DurableRuns {
 
   /**
    * The turn the control plane files a run's outcome messages under. A run that stopped on a question
-   * reports what it did after the answer on its own, so the numbers keep counting from the first part.
+   * reports what it did after the answer on its own, so the numbers keep counting from the first part:
+   * a question counts its messages for the answer to follow, any other end forgets the run.
    */
-  transcriptTurn(durableId: string, count: number, over: boolean) {
+  transcriptTurn(durableId: string, end: Exclude<DurableEnd, { type: "error" }>) {
     const from = this.#sent.get(durableId) ?? 0;
-    if (over) this.#sent.delete(durableId);
-    else this.#sent.set(durableId, from + count);
+    if (end.type === "interaction") this.#sent.set(durableId, from + end.messages.length);
+    else this.#sent.delete(durableId);
     return from;
   }
 
@@ -484,6 +468,15 @@ export class DurableRuns {
   async close() {
     await this.#runtime.close();
     held.delete(this.#path);
+  }
+
+  // An agent registered before (by the run that asked, or the process a restart replaced) carries on.
+  #registerOrKeep(input: RunInput) {
+    try {
+      this.#register(input);
+    } catch (error) {
+      if (!(error instanceof DurableConflictError)) throw error;
+    }
   }
 
   #register(input: RunInput) {
@@ -512,23 +505,18 @@ export class DurableRuns {
 
   #follow(
     run: DurableRun,
+    input: RunInput,
     onEvent: Emit,
-    options: {
-      agentId: string;
-      contextWindow: number | undefined;
-      after?: number;
-      /** Leave the agent registered when the run ends: a goal's sessions share one. Default false. */
-      keepAgent?: boolean;
-    },
+    options: FollowOptions = {},
   ): FollowedRun {
-    const { agentId, contextWindow, after, keepAgent } = options;
-    const mapper = createDurableEventMapper({ contextWindow });
+    const { agentId = input.agent.id, after, keepAgent } = options;
+    const mapper = createDurableEventMapper({ contextWindow: input.contextWindow });
     // A run picked up part way has already been told about its past; the mapper still needs it to
     // pair a tool's result with its call.
     if (after) this.#replay(run.id, after, mapper);
     const done = (async (): Promise<DurableEnd> => {
       for await (const event of run.stream({ after })) {
-        const { events, end } = mapper.map(event as DurableEvent);
+        const { events, end } = mapper.map(event);
         for (const mapped of events) onEvent(mapped, { id: run.id, sequence: event.sequence });
         if (event.type === "status") await this.#resolveInterrupted(run, event);
         if (end) {
@@ -558,10 +546,14 @@ export class DurableRuns {
   // A tool call in flight when the runner stopped parks the run. Resolving it as "outcome unknown"
   // lets the run carry on, so the agent checks the state itself instead of the user resending.
   async #resolveInterrupted(run: DurableRun, event: DurableEvent) {
-    if ((event.data as { status?: string }).status !== "needs_attention") return;
+    if (asRecord(event.data).status !== "needs_attention") return;
     const { blockedOperation } = await run.status();
-    if (blockedOperation)
-      await run.resolveTool(blockedOperation, { type: "error-text", value: INTERRUPTED });
+    if (blockedOperation) await this.#resolveUnknown(run, blockedOperation);
+  }
+
+  // The tool call's outcome is unknown, and the run is told so.
+  async #resolveUnknown(run: DurableRun, operationId: string) {
+    await run.resolveTool(operationId, { type: "error-text", value: INTERRUPTED });
   }
 
   // A run that is over frees its agent registration; one parked on a question keeps it.
