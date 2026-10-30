@@ -5,12 +5,12 @@ import type { RunEvent } from "@aven/protocol/events";
 
 import { UnavailableError } from "../../errors";
 import { memoryContinuations } from "../../testing/memory-continuations";
-import type { Runtime, RunThread, RuntimeRun } from "./runtime";
+import type { Runtime, RunResult, RunThread, RuntimeRun } from "./runtime";
 import { RunBusyError, RunManager } from "./service";
 
 // A run that stays live until `finish`.
 function liveRun() {
-  const done = Promise.withResolvers<{ type: string }>();
+  const done = Promise.withResolvers<RunResult>();
   const handle: RuntimeRun = {
     events: {
       [Symbol.asyncIterator]: () => ({

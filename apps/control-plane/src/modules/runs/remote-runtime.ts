@@ -1,12 +1,17 @@
 import type { RunEvent } from "@aven/protocol/events";
-import type { ControlPlaneToRuntime, RunModel } from "@aven/protocol/runtime-wire";
+import type { ControlPlaneToRuntime, RunModel, RunOutcome } from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
 
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
-import type { ResumeRunInput, Runtime, RunThread, RuntimeRun, StartRunInput } from "./runtime";
-
-type RunResult = { type: string; continuation?: unknown };
+import type {
+  ResumeRunInput,
+  Runtime,
+  RunResult,
+  RunThread,
+  RuntimeRun,
+  StartRunInput,
+} from "./runtime";
 
 // A minimal async queue: `events` for a run is fed by the connection and consumed by RunManager.
 class EventQueue implements AsyncIterable<RunEvent> {
@@ -118,7 +123,7 @@ export class RemoteRuntime implements Runtime {
   #sink(runId: string, queue: EventQueue, result: PromiseWithResolvers<RunResult>) {
     return {
       event: (event: RunEvent) => queue.push(event),
-      end: (outcome: string, error?: string, continuation?: unknown) => {
+      end: (outcome: RunOutcome, error?: string, continuation?: unknown) => {
         this.gateway.revoke(runId);
         queue.close();
         if (error) result.reject(new Error(error));

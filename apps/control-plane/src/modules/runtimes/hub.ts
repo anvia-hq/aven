@@ -9,6 +9,7 @@ import type {
   FilesCallMethod,
   RepoAccess,
   RuntimeToControlPlane,
+  RunOutcome,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
@@ -38,7 +39,7 @@ export class RuntimeOfflineError extends UnavailableError {
 export type RunSink = {
   event(event: RunEvent): void;
   /** The run finished; `error` is set when the runtime reports it threw. */
-  end(outcome: string, error?: string, continuation?: unknown): void;
+  end(outcome: RunOutcome, error?: string, continuation?: unknown): void;
   /** The connection dropped before the run ended. */
   lost(error: Error): void;
 };
@@ -254,7 +255,7 @@ export class RuntimeConnection {
     }
   }
 
-  #endRun(runId: string, seq: number, outcome: string, error?: string, continuation?: unknown) {
+  #endRun(runId: string, seq: number, outcome: RunOutcome, error?: string, continuation?: unknown) {
     const run = this.#runs.get(runId);
     // Acknowledged whether or not it is followed, so the runtime can forget a run nobody wants.
     this.post({ type: "run.ack", runId });

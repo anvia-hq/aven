@@ -1,11 +1,27 @@
 import type { MemoryCompactionMessage, Message } from "@anvia/core";
-import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import type { CallMethod, RunOutcome, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 // A runtime is not trusted, so every frame it sends is checked before anything acts on it.
 // `@aven/protocol` has the types and no runtime imports; the checking lives here.
 
 const runId = z.string().min(1);
+
+// Listed by hand, since the protocol has only types; `satisfies` keeps each name one it knows.
+const outcomes = [
+  "response",
+  "blocked",
+  "interaction",
+  "error",
+] as const satisfies readonly RunOutcome[];
+const callMethods = [
+  "memory.load",
+  "memory.append",
+  "memory.clear",
+  "memory.snapshot",
+  "memory.replacePrefix",
+  "repo.access",
+] as const satisfies readonly CallMethod[];
 
 // The events a runtime's agent projects. Anything else (a snapshot, `done`) is the control plane's
 // to send, so a runtime cannot forge a client's view of the conversation beyond its own run.
@@ -61,7 +77,7 @@ const frame = z.discriminatedUnion("type", [
     type: z.literal("run.end"),
     runId,
     seq,
-    outcome: z.enum(["response", "blocked", "interaction", "error"]),
+    outcome: z.enum(outcomes),
     error: z.string().optional(),
     continuation: z.unknown().optional(),
   }),
@@ -74,18 +90,20 @@ const frame = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),
-    method: z.enum([
-      "memory.load",
-      "memory.append",
-      "memory.clear",
-      "memory.snapshot",
-      "memory.replacePrefix",
-      "repo.access",
-    ]),
+    method: z.enum(callMethods),
     params: z.unknown().optional(),
   }),
   z.object({ type: z.literal("reply"), id: z.string() }).loose(),
 ]);
+
+// Fails to compile when a checked frame is not the protocol's. A reply is checked only for its id,
+// the rest is read where it is answered, so it is left out; a call may leave out its `params`.
+type Assignable<T extends U, U> = T;
+type ParamsOptional<T> = T extends { type: "call" } ? Omit<T, "params"> & { params?: unknown } : T;
+type _CheckedFrame = Assignable<
+  Exclude<z.infer<typeof frame>, { type: "reply" }>,
+  ParamsOptional<RuntimeToControlPlane>
+>;
 
 /** The frame a runtime sent, or null when it is not JSON or not a frame we know. */
 export function parseRuntimeFrame(raw: string): RuntimeToControlPlane | null {

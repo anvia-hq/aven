@@ -1,5 +1,6 @@
 import type { ModelConfig } from "@aven/agents/model";
 import type { RunEvent } from "@aven/protocol/events";
+import type { RunOutcome } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
 export type RunThread = {
@@ -19,13 +20,16 @@ export type ResumeRunInput = {
   model?: ModelConfig;
 };
 
+/** How a run ended: `response` for a normal finish, `interaction` when it waits for the user's answer (with the `continuation` to resume it). */
+export type RunResult = { type: RunOutcome; continuation?: unknown };
+
 // One agent run as the control plane sees it. Everything a run needs from the machine it runs on
 // (the agent loop, its tools, the sandbox) stays behind this handle (decisions 0008 and 0010).
 export type RuntimeRun = {
   /** The run's progress as protocol events; ends when the run does. */
   events: AsyncIterable<RunEvent>;
-  /** How the run ended; `type` is "response" for a normal finish, "interaction" when it waits for the user's answer (with the `continuation` to resume it). */
-  result: Promise<{ type: string; continuation?: unknown }>;
+  /** How the run ended. */
+  result: Promise<RunResult>;
   cancel(reason: string): void;
 };
 
