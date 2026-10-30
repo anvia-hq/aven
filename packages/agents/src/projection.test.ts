@@ -137,7 +137,7 @@ describe("the sandbox's tools", () => {
     expect(target("wait_for_port", { containerPort: 3000 })).toBe("3000");
     expect(target("web_search", { query: "bun" })).toBe("bun");
     expect(target("git_fetch", { branch: "main" })).toBe("main");
-    expect(target("git_fetch", {})).toBe("");
+    expect(target("git_fetch", {})).toBe("default branch");
     expect(target("desktop_click", { x: 1, y: 2 })).toBe("");
   });
 

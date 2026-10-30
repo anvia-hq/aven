@@ -96,6 +96,43 @@ test.describe("threads", () => {
     await expect(page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
   });
 
+  test("a fetch from GitHub reads as one, with what it did", async ({ page }) => {
+    const events = [
+      { type: "snapshot", running: true, messages: [] },
+      { type: "run_start", prompt: "Catch up with main" },
+      {
+        type: "tool_start",
+        tool: { id: "f1", name: "git_fetch", target: "default branch", status: "running" },
+      },
+      {
+        type: "tool_end",
+        id: "f1",
+        status: "done",
+        output: "origin/main is now at bbbbbbb (was aaaaaaa).",
+      },
+      { type: "text", delta: "Up to date." },
+      { type: "done" },
+    ];
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\n${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}`,
+      }),
+    );
+
+    await registerUser(page, "thr", "Thread User");
+    await startThread(page, "Catch up with main");
+
+    const group = page.getByRole("button", { name: "Fetched from GitHub" });
+    await expect(group).toBeVisible();
+    await group.click();
+    const call = page.getByRole("button", { name: /Fetched.*default branch/ });
+    await expect(call).toBeVisible();
+    await call.click();
+    await expect(page.getByText("origin/main is now at bbbbbbb (was aaaaaaa).")).toBeVisible();
+  });
+
   test("the thread view renders a streamed run: tool calls, a diff, an error and the reply", async ({
     page,
   }) => {

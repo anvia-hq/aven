@@ -2,6 +2,7 @@ import {
   Edit,
   DangerCircle,
   Eye,
+  GitBranch,
   Image as ImageIcon,
   Search,
   Spinner,
@@ -16,7 +17,7 @@ import { DiffBlock } from "./diff-block";
 
 type Meta = { icon: typeof Eye; running: string; done: string };
 
-// The agent's tools: the sandbox's own (@anvia/sandbox), our edit, and web search.
+// The agent's tools: the sandbox's own (@anvia/sandbox), our edit, web search, images and git_fetch.
 const meta: Record<string, Meta> = {
   read_file: { icon: Eye, running: "Reading", done: "Read" },
   write_file: { icon: Edit, running: "Writing", done: "Wrote" },
@@ -31,6 +32,7 @@ const meta: Record<string, Meta> = {
   list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
   web_search: { icon: Search, running: "Searching", done: "Searched" },
   show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
+  git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
 };
 
 // The desktop tools are `desktop_<action>`; anything else unknown is shown by its name.

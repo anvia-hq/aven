@@ -65,7 +65,7 @@ export function toolTarget(name: string, input: unknown) {
   if (PROCESS_TOOLS.has(name)) return asString(args.processId);
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
-  if (name === GIT_FETCH_TOOL_NAME) return asString(args.branch);
+  if (name === GIT_FETCH_TOOL_NAME) return asString(args.branch) || "default branch";
   if (name === PORT_TOOL) return String(args.containerPort ?? "");
   return "";
 }
