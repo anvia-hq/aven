@@ -243,6 +243,12 @@ export class GithubClient {
     }
   }
 
+  /** The page where a person lets the app act as their GitHub account; GitHub comes back to the app's Callback URL. */
+  authorizeUrl(state: string) {
+    const { clientId, webUrl } = this.#config();
+    return `${webUrl}/login/oauth/authorize?${new URLSearchParams({ client_id: clientId, state })}`;
+  }
+
   /** Whether the installation has been approved to write contents and pull requests. */
   async canWrite(installationId: number) {
     const found = await this.#api<{ permissions?: Record<string, string> }>(

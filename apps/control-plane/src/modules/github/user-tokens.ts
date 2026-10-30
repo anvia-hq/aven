@@ -74,7 +74,7 @@ export function createGithubUserTokens(
     },
 
     /** The connected account's login, or null when the person has not connected one. */
-    async status(userId: string) {
+    async status(userId: string): Promise<{ login: string } | null> {
       const [row] = await db
         .select({ login: githubUserTokens.login })
         .from(githubUserTokens)
