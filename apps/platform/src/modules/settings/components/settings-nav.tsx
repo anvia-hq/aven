@@ -1,4 +1,4 @@
-import { ArrowLeft, Cog, Servers, Sparkles, Terminal, Users } from "@mynaui/icons-react";
+import { ArrowLeft, BookOpen, Cog, Servers, Sparkles, Terminal, Users } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
@@ -14,6 +14,7 @@ const groups = [
     items: [
       { to: "/settings/profile", label: "Profile", icon: Cog },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
+      { to: "/settings/skills", label: "Skills", icon: BookOpen },
     ],
   },
   {

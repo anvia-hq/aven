@@ -23,6 +23,7 @@ import { Route as AuthedSettingsPlatformRouteImport } from './routes/_authed/set
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/settings/providers'
 import { Route as AuthedSettingsRuntimesRouteImport } from './routes/_authed/settings/runtimes'
+import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
 import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
 import { Route as AuthedThreadsThreadIdRouteImport } from './routes/_authed/threads/$threadId'
 
@@ -96,6 +97,11 @@ const AuthedSettingsRuntimesRoute = AuthedSettingsRuntimesRouteImport.update({
   path: '/runtimes',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsSkillsRoute = AuthedSettingsSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedThreadsIndexRoute = AuthedThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/projects/': typeof AuthedProjectsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/projects': typeof AuthedProjectsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/providers': typeof AuthedSettingsProvidersRoute
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
+    | '/settings/skills'
     | '/threads/$threadId'
     | '/projects/'
     | '/settings/'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
+    | '/settings/skills'
     | '/threads/$threadId'
     | '/projects'
     | '/settings'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/profile'
     | '/_authed/settings/providers'
     | '/_authed/settings/runtimes'
+    | '/_authed/settings/skills'
     | '/_authed/threads/$threadId'
     | '/_authed/projects/'
     | '/_authed/settings/'
@@ -321,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRuntimesRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/skills': {
+      id: '/_authed/settings/skills'
+      path: '/skills'
+      fullPath: '/settings/skills'
+      preLoaderRoute: typeof AuthedSettingsSkillsRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/threads/': {
       id: '/_authed/threads/'
       path: '/threads'
@@ -344,6 +363,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsProvidersRoute: typeof AuthedSettingsProvidersRoute
   AuthedSettingsRuntimesRoute: typeof AuthedSettingsRuntimesRoute
+  AuthedSettingsSkillsRoute: typeof AuthedSettingsSkillsRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
 }
 
@@ -353,6 +373,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsProvidersRoute: AuthedSettingsProvidersRoute,
   AuthedSettingsRuntimesRoute: AuthedSettingsRuntimesRoute,
+  AuthedSettingsSkillsRoute: AuthedSettingsSkillsRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
 }
 
