@@ -60,7 +60,7 @@ test.describe("mentions in the composer", () => {
     await expect(prompt).toHaveText("");
   });
 
-  test("/ offers the built-in setup-env skill", async ({ page }) => {
+  test("/ offers the built-in setup skills", async ({ page }) => {
     await registerUser(page, "men", "Mention User");
     const { child, threadId } = await threadOnFakeRunner(page);
     runner = child;
@@ -69,8 +69,12 @@ test.describe("mentions in the composer", () => {
     await page.getByRole("textbox", { name: "Prompt" }).click();
     await page.keyboard.type("/setup");
 
-    await expect(
-      page.getByRole("listbox", { name: "Mention" }).getByRole("option", { name: /setup-env/ }),
-    ).toBeVisible();
+    const menu = page.getByRole("listbox", { name: "Mention" });
+    // An option's name is the skill's name followed by its description, so pick by the name's own text.
+    for (const skill of ["setup-env", "setup-ship"]) {
+      await expect(
+        menu.getByRole("option").filter({ has: page.getByText(skill, { exact: true }) }),
+      ).toBeVisible();
+    }
   });
 });
