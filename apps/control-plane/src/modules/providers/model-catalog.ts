@@ -9,6 +9,8 @@ type Entry = {
   deprecated: boolean;
   efforts: string[];
   contextWindow: number | null;
+  /** Whether the model takes images; null when the catalog does not say. */
+  images: boolean | null;
 };
 
 const DEFAULT_URL = "https://models.dev/api.json";
@@ -18,7 +20,7 @@ const RETRY_MS = 5 * 60 * 1000;
 // The agent needs tool calls and a text answer.
 type CatalogModel = {
   tool_call?: boolean;
-  modalities?: { output?: string[] };
+  modalities?: { input?: string[]; output?: string[] };
   status?: string;
   reasoning_options?: { type?: string; values?: string[] }[];
   limit?: { context?: number };
@@ -41,6 +43,11 @@ const effortsOf = (model: CatalogModel) =>
 const contextWindowOf = (model: CatalogModel) => {
   const context = model.limit?.context;
   return typeof context === "number" && context > 0 ? context : null;
+};
+
+const imagesOf = (model: CatalogModel) => {
+  const input = model.modalities?.input;
+  return Array.isArray(input) ? input.includes("image") : null;
 };
 
 // Name check for ids models.dev has not listed yet. Anthropic only has chat models; OpenAI mixes
@@ -103,6 +110,7 @@ export function createModelCatalog(
                   deprecated: info.status === "deprecated",
                   efforts: effortsOf(info),
                   contextWindow: contextWindowOf(info),
+                  images: imagesOf(info),
                 },
               ];
             }),
@@ -159,6 +167,11 @@ export function createModelCatalog(
       const own = (await lookup(kind))?.get(id)?.contextWindow ?? null;
       if (own !== null || kind !== "azure") return own;
       return commonWindow(windows.get(id.toLowerCase()));
+    },
+    // Whether a model takes images: false only when the catalog says it does not.
+    async seesImages(kind: Kind, id: string) {
+      if (kind === "openai-compatible") return true;
+      return (await lookup(kind))?.get(id)?.images ?? true;
     },
     // Whether a model a message names can run: refused only when the catalog says it cannot.
     async canRun(kind: Kind, id: string) {

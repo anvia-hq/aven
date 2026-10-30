@@ -63,12 +63,13 @@ export class RemoteRuntime implements Runtime {
     private gateway: Pick<RunGateway, "issue" | "revoke">,
   ) {}
 
-  start({ thread, prompt, model }: StartRunInput): RuntimeRun {
+  start({ thread, prompt, attachments, model }: StartRunInput): RuntimeRun {
     return this.#launch(thread, model, (runId, runModel) => ({
       type: "run.start",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
       prompt,
+      attachments: attachments?.length ? attachments : undefined,
       model: runModel,
     }));
   }

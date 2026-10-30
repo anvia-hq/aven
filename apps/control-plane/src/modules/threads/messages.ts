@@ -1,6 +1,7 @@
 import { ConflictError } from "../../errors";
-import { resolveModel } from "../providers/resolve-model";
+import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import { runsService } from "../runs/service";
+import { prepareAttachments } from "./attachments";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 
@@ -12,13 +13,15 @@ export const threadMessages = {
     organizationId: string,
     userId: string,
     threadId: string,
-    { prompt, ...selection }: SendMessageBody,
+    { prompt, attachments: files = [], ...selection }: SendMessageBody,
   ) {
     const thread = await threadsService.require(organizationId, threadId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+    const attachments = prepareAttachments(files);
     const model = await resolveModel(userId, selection);
-    await runsService.start(thread, prompt, model);
+    if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    await runsService.start(thread, prompt, model, attachments);
   },
 
   async answer(

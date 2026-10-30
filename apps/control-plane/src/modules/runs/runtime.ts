@@ -1,6 +1,6 @@
 import type { ModelConfig } from "@aven/agents/model";
 import type { RunEvent } from "@aven/protocol/events";
-import type { RunOutcome } from "@aven/protocol/runtime-wire";
+import type { RunAttachment, RunOutcome } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
 export type RunThread = {
@@ -10,7 +10,13 @@ export type RunThread = {
   runtimeId: string;
 };
 
-export type StartRunInput = { thread: RunThread; prompt: string; model?: ModelConfig };
+export type StartRunInput = {
+  thread: RunThread;
+  prompt: string;
+  /** The files sent with the prompt, for the runner to copy into the sandbox (decision 0034). */
+  attachments?: RunAttachment[];
+  model?: ModelConfig;
+};
 
 /** A run that suspended on the agent's question, resumed with the user's answers. Both are opaque Anvia values. */
 export type ResumeRunInput = {

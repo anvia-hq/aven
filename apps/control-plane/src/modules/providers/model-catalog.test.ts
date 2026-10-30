@@ -7,7 +7,7 @@ const catalog = {
     models: {
       "gpt-5.6": {
         tool_call: true,
-        modalities: { output: ["text"] },
+        modalities: { input: ["text", "image"], output: ["text"] },
         limit: { context: 400000 },
       },
       "o4-mini": { tool_call: true, modalities: { output: ["text"] }, status: "deprecated" },
@@ -17,6 +17,7 @@ const catalog = {
   anthropic: {
     models: {
       "claude-sonnet-5": { tool_call: true, modalities: { output: ["text"] } },
+      "claude-text-only": { tool_call: true, modalities: { input: ["text"], output: ["text"] } },
       "claude-haiku-5-5": {
         tool_call: true,
         modalities: { output: ["text"] },
@@ -116,6 +117,16 @@ describe("modelCatalog", () => {
     expect(await models.canRun("openai", "gpt-image-2")).toBe(false);
     expect(await models.canRun("openai-compatible", "anything")).toBe(true);
     expect(looksLikeChatModel("openai-compatible", "x")).toBe(true);
+  });
+
+  test("seesImages refuses only a model the catalog says takes no images", async () => {
+    const models = createModelCatalog(serving(catalog), Date.now, url);
+    expect(await models.seesImages("openai", "gpt-5.6")).toBe(true);
+    expect(await models.seesImages("anthropic", "claude-text-only")).toBe(false);
+    // The catalog does not say, or does not know the model.
+    expect(await models.seesImages("anthropic", "claude-sonnet-5")).toBe(true);
+    expect(await models.seesImages("openai", "gpt-unknown")).toBe(true);
+    expect(await models.seesImages("openai-compatible", "anything")).toBe(true);
   });
 
   test("efforts are the levels the catalog lists, and none for other kinds of reasoning", async () => {

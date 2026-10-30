@@ -37,6 +37,16 @@ export async function resolveModel(
   return config;
 }
 
+// A message with images needs a model that takes them (decision 0034). Refused only when the
+// catalog says it does not; the environment's model (null) is the operator's choice.
+export async function assertSeesImages(config: ModelConfig | null) {
+  if (!config) return;
+  const modelId = config.modelId ?? defaultModelId(config.provider);
+  if (modelId && !(await modelCatalog.seesImages(config.provider, modelId))) {
+    throw new InvalidSelectionError(`${modelId} does not take images; choose a model that does`);
+  }
+}
+
 // With no provider found, a message that chose nothing runs on the environment's.
 function noProvider(selection: ModelSelection) {
   if (selection.providerId) throw new InvalidSelectionError("Provider not found");

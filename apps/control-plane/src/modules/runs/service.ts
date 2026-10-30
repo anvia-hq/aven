@@ -9,10 +9,12 @@ import {
   applyEvent,
   applyUsage,
   type ChatMessage,
+  type MessageAttachment,
   type QuestionAnswer,
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
+import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
@@ -83,13 +85,21 @@ export class RunManager {
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
   // missing API key) before anything is persisted. `model` is the sender's provider; callers
   // resolve it first because this must claim the slot synchronously. Without one, the
-  // environment's is used.
-  async start(thread: RunThread, prompt: string, model?: ModelConfig | null) {
+  // environment's is used. `attachments` are the files sent with the prompt (decision 0034).
+  async start(
+    thread: RunThread,
+    prompt: string,
+    model?: ModelConfig | null,
+    attachments: RunAttachment[] = [],
+  ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
 
-    const handle = this.#runtime.start({ thread, prompt, model: model ?? undefined });
-    await this.#begin(channel, handle, { type: "run_start", prompt });
+    const handle = this.#runtime.start({ thread, prompt, attachments, model: model ?? undefined });
+    const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
+    // The transcript has what was sent, not the bytes.
+    if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
+    await this.#begin(channel, handle, opening);
   }
 
   // Continues the run that stopped on the agent's question: `continuation` is what was saved when it
@@ -306,6 +316,10 @@ function parseSaved(continuation: unknown) {
   } catch {
     throw new ConflictError("The agent's question can no longer be answered; send a new message");
   }
+}
+
+function withoutBytes({ name, mediaType, size, image }: RunAttachment): MessageAttachment {
+  return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }
 
 function errorMessage(error: unknown) {
