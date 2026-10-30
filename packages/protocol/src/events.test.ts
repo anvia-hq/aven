@@ -27,3 +27,31 @@ describe("applyEvent", () => {
     });
   }
 });
+
+describe("applyEvent with blank text", () => {
+  // Some models open each step with blank text before a tool call (kept out of the shared fixtures,
+  // which the Swift client also runs).
+  test("blank text before a tool call is not a part, so the calls stay together", () => {
+    const tool = (id: string) => ({
+      id,
+      name: "read_file",
+      target: id,
+      status: "running" as const,
+    });
+    const events: RunEvent[] = [
+      { type: "run_start", prompt: "go" },
+      { type: "text", delta: "\n\n" },
+      { type: "tool_start", tool: tool("a") },
+      { type: "text", delta: "\n\n" },
+      { type: "tool_start", tool: tool("b") },
+      { type: "text", delta: "Done" },
+      { type: "text", delta: "\n\n" },
+    ];
+    const [, assistant] = events.reduce(applyEvent, [] as ChatMessage[]);
+    expect(assistant?.parts).toEqual([
+      { type: "tool", tool: tool("a") },
+      { type: "tool", tool: tool("b") },
+      { type: "text", text: "Done\n\n" },
+    ]);
+  });
+});

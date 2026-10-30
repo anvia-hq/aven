@@ -171,6 +171,9 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         if (last?.type === "text") {
           return [...parts.slice(0, -1), { type: "text", text: last.text + event.delta }];
         }
+        // Some models open each step with blank text before a tool call; as a part of its own it
+        // would split the tool calls around it into separate rows.
+        if (event.delta.trim() === "") return parts;
         return [...parts, { type: "text", text: event.delta }];
       });
     case "tool_start":

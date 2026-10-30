@@ -226,10 +226,11 @@ function userText(message: Extract<Message, { role: "user" }>) {
 }
 
 function assistantParts(content: string | readonly AssistantContentPart[]): MessagePart[] {
-  if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
+  // Blank text is left out, as the reducer does with a blank delta: it would split tool calls.
+  if (typeof content === "string") return content.trim() ? [{ type: "text", text: content }] : [];
   const parts: MessagePart[] = [];
   for (const part of content) {
-    if (part.type === "text" && part.text) parts.push({ type: "text", text: part.text });
+    if (part.type === "text" && part.text.trim()) parts.push({ type: "text", text: part.text });
     if (part.type === "tool-call") parts.push({ type: "tool", tool: projectToolCall(part) });
   }
   return parts;

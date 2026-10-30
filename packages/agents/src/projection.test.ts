@@ -238,6 +238,17 @@ describe("questions", () => {
     });
   });
 
+  test("blank text before a tool call is not a part, so the calls stay together", () => {
+    const read = (id: string) =>
+      ({ type: "tool-call", toolCallId: id, toolName: "read_file", input: { path: id } }) as const;
+    const chat = messagesToChat([
+      { role: "user", content: "look" },
+      { role: "assistant", content: [{ type: "text", text: "\n\n" }, read("a")] },
+      { role: "assistant", content: [{ type: "text", text: "\n\n" }, read("b")] },
+    ]);
+    expect(chat[1]?.parts.map((part) => part.type)).toEqual(["tool", "tool"]);
+  });
+
   test("a stored question without a result is pending, and with one it is answered", () => {
     const pending = messagesToChat([
       { role: "user", content: "paint it" },
