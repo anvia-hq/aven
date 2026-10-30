@@ -19,7 +19,7 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 - `GET /threads` returns `[{ id, projectId, title, runtimeId, state, running, createdAt, updatedAt }]`, newest first.
 - `POST /threads` `{ projectId, title? }` creates a thread, which gets its own sandbox with an empty workspace on first run. `422` if the project is not in the organization.
 - `GET /threads/:id` returns the thread plus `running`, `awaitingAnswer` and `messages` (the transcript, see below).
-- `POST /threads/:id/messages` `{ prompt, attachments?, providerId?, modelId?, reasoningEffort? }` starts a run and returns `202`. `attachments` is up to 10 files `{ name, mediaType?, data }` with `data` in base64, at most 10 MB together; `prompt` may be empty when there are files. Every file is copied into the sandbox at `/uploads`; a PNG, JPEG, GIF or WebP (by its bytes, up to 5 MB) is also shown to the model (decision 0034). Without a choice the sender's default provider runs. `409` a run is already live, `422` the choice is unusable, a file is too large, or the model takes no images, `503` the agent could not start (no provider, runtime offline). `409` also while the agent waits for an answer (`awaitingAnswer`).
+- `POST /threads/:id/messages` `{ prompt, attachments?, mentions?, providerId?, modelId?, reasoningEffort? }` starts a run and returns `202`. `mentions` is up to 20 `{ type: "file" | "skill", name, from, to }`: the token `@<path>` or `/<skill>` must be in the (trimmed) prompt from `from` to `to`; a file's path is relative to the workspace (decision 0036). `GET /threads/:id/files/search?q=` finds files for `@`: `{ available, paths? }`, at most 50, best first. `attachments` is up to 10 files `{ name, mediaType?, data }` with `data` in base64, at most 10 MB together; `prompt` may be empty when there are files. Every file is copied into the sandbox at `/uploads`; a PNG, JPEG, GIF or WebP (by its bytes, up to 5 MB) is also shown to the model (decision 0034). Without a choice the sender's default provider runs. `409` a run is already live, `422` the choice is unusable, a file is too large, or the model takes no images, `503` the agent could not start (no provider, runtime offline). `409` also while the agent waits for an answer (`awaitingAnswer`).
 - `POST /threads/:id/answer` `{ answers: [{ questionId, value }], providerId?, modelId?, reasoningEffort? }` answers the agent's question (see below) and continues the run, returning `202`. One answer per question, in any order. `409` nothing is waiting, or a run is live; `422` the answers are not the questions' own.
 - `POST /threads/:id/cancel` stops the run and its background commands.
 - `GET /providers` returns the user's providers; `GET /providers/:id/models` returns `{ models, efforts }`.
@@ -30,7 +30,7 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 
 ```
 snapshot    { messages: Message[], running: bool, usage?: Usage }   replaces all local state
-run_start   { prompt, attachments?: Attachment[] }
+run_start   { prompt, attachments?: Attachment[], mentions?: Mention[] }
 text        { delta }
 tool_start  { tool: Tool }
 tool_end    { id, status: "done" | "error", output?, image?: Image }
@@ -41,7 +41,8 @@ error       { message }
 ```
 
 ```
-Message = { id, role: "user" | "assistant", parts: Part[], attachments?: Attachment[] }   attachments only on a user message
+Message = { id, role: "user" | "assistant", parts: Part[], attachments?: Attachment[], mentions?: Mention[] }   attachments and mentions only on a user message
+Mention = { type: "file" | "skill", name, from, to }   where the token is in the message's text
 Part    = { type: "text", text } | { type: "tool", tool: Tool }
 Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output?, questions?: Question[], image?: Image }
 Image   = { name, mediaType, caption? }   an image the agent showed; GET /threads/:id/artifacts/:name serves it (decision 0033)
@@ -58,7 +59,7 @@ DiffLine = { type: "add" | "del" | "ctx", text }
 Keep `messages` and `running`. For each event:
 
 - `snapshot`: `messages = event.messages`, `running = event.running`.
-- `run_start`: `running = true`; append `{ id: "m-<n>", role: "user", parts: [text(prompt)] }` (with `attachments` when the event has any) then `{ id: "m-<n+1>", role: "assistant", parts: [] }`, where `n` is the message count before.
+- `run_start`: `running = true`; append `{ id: "m-<n>", role: "user", parts: [text(prompt)] }` (with `attachments` and `mentions` when the event has any) then `{ id: "m-<n+1>", role: "assistant", parts: [] }`, where `n` is the message count before.
 - `text`: on the **last assistant message**, if its last part is text, append `delta` to it; otherwise add a new text part.
 - `tool_start`: add `{ type: "tool", tool }` to the last assistant message.
 - `tool_end`: in the last assistant message, find the tool part with that `id` and set its `status` and `output`, and its `image` when the event has one.
