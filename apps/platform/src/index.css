@@ -26,6 +26,7 @@
   --accent-foreground: oklch(0.3 0.05 255);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
+  --code: oklch(0.5 0.1 170);
   --border: oklch(0.91 0.0045 250);
   --input: oklch(0.91 0.0045 250);
   --ring: oklch(0.7 0.06 250);
@@ -57,6 +58,7 @@
   --accent-foreground: oklch(0.92 0.002 250);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
+  --code: oklch(0.8 0.1 170);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.5 0.01 250);
@@ -89,6 +91,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-code: var(--code);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -146,9 +149,9 @@
   --tw-prose-quotes: var(--foreground);
   --tw-prose-quote-borders: var(--border);
   --tw-prose-captions: var(--muted-foreground);
-  --tw-prose-code: var(--foreground);
+  --tw-prose-code: var(--code);
   --tw-prose-pre-code: var(--foreground);
-  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-pre-bg: color-mix(in oklch, var(--muted) 40%, transparent);
   --tw-prose-th-borders: var(--border);
   --tw-prose-td-borders: var(--border);
 }

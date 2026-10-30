@@ -11,7 +11,7 @@ export function MentionChip({ type, name }: Mentionable) {
   const Icon = type === "file" ? File : BookOpen;
   return (
     <span
-      className="inline-flex items-baseline gap-1 rounded bg-primary/10 px-1 font-mono text-[0.9em] text-primary"
+      className="inline-flex items-baseline gap-1 rounded bg-code/10 px-1 py-0.5 font-mono text-[0.85em] text-code"
       title={type === "file" ? `File ${name}` : `Skill ${name}`}
       data-mention={type}
     >
