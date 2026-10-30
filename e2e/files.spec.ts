@@ -27,6 +27,8 @@ test.describe("a thread's files", () => {
     await tree.getByRole("button", { name: "src" }).click();
     await tree.getByRole("button", { name: "greeting.ts" }).click();
     await expect(panel.getByText('return "hello, world";')).toBeVisible();
+    // The grammar is fetched when the file opens; its tokens carry the colours of both themes.
+    await expect(panel.locator('[style*="--shiki-dark"]').first()).toBeVisible();
     await tree.getByRole("button", { name: "README.md" }).click();
     await expect(panel.getByText("# Notes")).toBeVisible();
 

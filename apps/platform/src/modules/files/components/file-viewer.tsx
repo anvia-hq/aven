@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/skeleton";
 
+import { useHighlightedLines } from "../hooks/use-highlighted-lines";
 import { useWorkspaceFile } from "../hooks/use-workspace-file";
 
 type Props = { threadId: string; path: string | null; running: boolean };
@@ -25,8 +26,15 @@ export function FileViewer({ threadId, path, running }: Props) {
   if (file.kind === "binary") {
     return <Notice>Binary file, {Math.ceil(file.size / KIB)} KiB. It is not shown.</Notice>;
   }
+  return <Lines path={path} text={file.text} truncated={file.truncated} />;
+}
+
+// Text with line numbers, coloured once the colours are ready.
+function Lines({ path, text, truncated }: { path: string; text: string; truncated: boolean }) {
   // A final newline ends the last line; it does not start another.
-  const lines = file.text.replace(/\n$/, "").split("\n");
+  const shown = text.replace(/\n$/, "");
+  const coloured = useHighlightedLines(shown, path);
+  const lines = shown.split("\n");
   return (
     <div className="size-full overflow-auto font-mono text-xs leading-5">
       <div className="flex w-max min-w-full flex-col py-2">
@@ -35,10 +43,22 @@ export function FileViewer({ threadId, path, running }: Props) {
             <span className="w-12 shrink-0 select-none pr-3 text-right text-muted-foreground/60">
               {index + 1}
             </span>
-            <span className="whitespace-pre pr-4">{line}</span>
+            <span className="whitespace-pre pr-4">
+              {coloured?.[index]
+                ? coloured[index].map((token, at) => (
+                    <span
+                      key={at}
+                      style={token.htmlStyle}
+                      className="text-(--shiki-light) dark:text-(--shiki-dark)"
+                    >
+                      {token.content}
+                    </span>
+                  ))
+                : line}
+            </span>
           </div>
         ))}
-        {file.truncated && (
+        {truncated && (
           <p className="px-4 py-2 font-sans text-muted-foreground">
             The file is too large to show in full; the end of it is left out.
           </p>
