@@ -169,7 +169,15 @@ const viewers = new Map<string, FakeDesktop>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
 
-ws.onopen = () => send({ type: "hello", version: WIRE_VERSION });
+// A run's events and its end are numbered from 1 (the wire since version 9).
+const seqs = new Map<string, number>();
+const numbered = (runId: string) => {
+  const seq = (seqs.get(runId) ?? 0) + 1;
+  seqs.set(runId, seq);
+  return seq;
+};
+
+ws.onopen = () => send({ type: "hello", version: WIRE_VERSION, runs: [] });
 ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
@@ -192,11 +200,22 @@ ws.onmessage = ({ data }) => {
   } else if (message.type === "run.start" && process.env.FAKE_QUESTION) {
     const { runId } = message;
     const ask = { id: "q1", name: "ask_user", target: "", status: "running", questions: QUESTIONS };
-    send({ type: "run.event", runId, event: { type: "text", delta: "One question first." } });
-    send({ type: "run.event", runId, event: { type: "tool_start", tool: ask } });
+    send({
+      type: "run.event",
+      runId,
+      seq: numbered(runId),
+      event: { type: "text", delta: "One question first." },
+    });
+    send({
+      type: "run.event",
+      runId,
+      seq: numbered(runId),
+      event: { type: "tool_start", tool: ask },
+    });
     send({
       type: "run.end",
       runId,
+      seq: numbered(runId),
       outcome: "interaction",
       continuation: {
         version: 1,
@@ -220,10 +239,16 @@ ws.onmessage = ({ data }) => {
     send({
       type: "run.event",
       runId,
+      seq: numbered(runId),
       event: { type: "tool_end", id: "q1", status: "done", output },
     });
-    send({ type: "run.event", runId, event: { type: "text", delta: "Thanks, on it." } });
-    send({ type: "run.end", runId, outcome: "response" });
+    send({
+      type: "run.event",
+      runId,
+      seq: numbered(runId),
+      event: { type: "text", delta: "Thanks, on it." },
+    });
+    send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
   }
 };
 
