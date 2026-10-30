@@ -1,6 +1,6 @@
 import type { ModelConfig } from "@aven/agents/model";
 import type { MessageMention, RunEvent } from "@aven/protocol/events";
-import type { RunAttachment, RunOutcome, RunSkill } from "@aven/protocol/runtime-wire";
+import type { RunAttachment, RunGithub, RunOutcome, RunSkill } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
 export type RunThread = {
@@ -11,7 +11,7 @@ export type RunThread = {
 };
 
 /** What can come with a run's prompt. */
-export type RunExtras = Pick<StartRunInput, "attachments" | "mentions" | "skills">;
+export type RunExtras = Pick<StartRunInput, "attachments" | "mentions" | "skills" | "github">;
 
 export type StartRunInput = {
   thread: RunThread;
@@ -22,6 +22,8 @@ export type StartRunInput = {
   mentions?: MessageMention[];
   /** The sender's skills and the built-in ones (decision 0035). */
   skills?: RunSkill[];
+  /** The GitHub account the run acts as: the sender's own (decision 0044). */
+  github?: RunGithub;
   model?: ModelConfig;
 };
 
@@ -31,6 +33,7 @@ export type ResumeRunInput = {
   continuation: unknown;
   response: unknown;
   skills?: RunSkill[];
+  github?: RunGithub;
   model?: ModelConfig;
 };
 

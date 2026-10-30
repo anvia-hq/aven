@@ -68,7 +68,15 @@ export class RemoteRuntime implements Runtime {
     private gateway: Pick<RunGateway, "issue" | "revoke">,
   ) {}
 
-  start({ thread, prompt, attachments, mentions, skills, model }: StartRunInput): RuntimeRun {
+  start({
+    thread,
+    prompt,
+    attachments,
+    mentions,
+    skills,
+    github,
+    model,
+  }: StartRunInput): RuntimeRun {
     return this.#launch(thread, model, skills, (runId, runModel) => ({
       type: "run.start",
       runId,
@@ -77,11 +85,12 @@ export class RemoteRuntime implements Runtime {
       attachments: attachments?.length ? attachments : undefined,
       mentions: mentions?.length ? mentions : undefined,
       skills: skills?.length ? skills : undefined,
+      github,
       model: runModel,
     }));
   }
 
-  resume({ thread, continuation, response, skills, model }: ResumeRunInput): RuntimeRun {
+  resume({ thread, continuation, response, skills, github, model }: ResumeRunInput): RuntimeRun {
     return this.#launch(thread, model, skills, (runId, runModel) => ({
       type: "run.resume",
       runId,
@@ -89,6 +98,7 @@ export class RemoteRuntime implements Runtime {
       continuation,
       response,
       skills: skills?.length ? skills : undefined,
+      github,
       model: runModel,
     }));
   }

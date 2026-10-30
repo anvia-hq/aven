@@ -167,6 +167,13 @@ export type RunAttachment = MessageAttachment & { data: string };
  */
 export type RunSkill = { name: string; description: string; digest: string };
 
+/**
+ * The GitHub account a run acts as (decision 0044): the sender's own token and who they are. The
+ * runner signs `gh` and `git` in with it inside the thread's sandbox and keeps it in memory, never
+ * in its journal.
+ */
+export type RunGithub = { token: string; id: number; login: string; name: string | null };
+
 /** What a skill's digest looks like. */
 export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
 
@@ -179,6 +186,7 @@ export type ControlPlaneToRuntime =
       attachments?: RunAttachment[];
       mentions?: MessageMention[];
       skills?: RunSkill[];
+      github?: RunGithub;
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -189,6 +197,7 @@ export type ControlPlaneToRuntime =
       continuation: unknown;
       response: unknown;
       skills?: RunSkill[];
+      github?: RunGithub;
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
@@ -304,6 +313,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 18: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
 // Version 17: the control plane can ask a runner to commit and push a thread's branch, `repo.push` (decision 0040).
 // Version 16: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
 // Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
@@ -320,4 +330,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 17;
+export const WIRE_VERSION = 18;

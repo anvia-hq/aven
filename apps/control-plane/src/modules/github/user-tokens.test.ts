@@ -160,6 +160,52 @@ run("a person's GitHub connection (postgres)", async () => {
     expect(github.refreshed).toEqual(["ghr_one"]);
   });
 
+  test("a run acts as the person: their token and who they are, renewed first if it would not last", async () => {
+    const id = await person("j");
+    const github = fakeClient(() => grant({ accessToken: "ghu_long", refreshToken: "ghr_long" }));
+    const tokens = createGithubUserTokens(github.client);
+    expect(await tokens.forRun(id)).toBeUndefined();
+
+    // Plenty of life left: used as it is.
+    await tokens.connect(
+      id,
+      grant({ accessToken: "ghu_ok", expiresAt: Date.now() + 5 * 3_600_000 }),
+    );
+    expect(await tokens.forRun(id)).toEqual({
+      token: "ghu_ok",
+      id: 42,
+      login: "ada",
+      name: "Ada L",
+    });
+    expect(github.refreshed).toEqual([]);
+
+    // An hour left is enough for `use`, not for a run that may go on for hours.
+    await tokens.connect(
+      id,
+      grant({ accessToken: "ghu_short", expiresAt: Date.now() + 3_600_000 }),
+    );
+    expect((await tokens.forRun(id))?.token).toBe("ghu_long");
+    expect(github.refreshed).toEqual(["ghr_one"]);
+  });
+
+  test("a GitHub that cannot be reached gives a run no GitHub, and the connection stays", async () => {
+    const id = await person("k");
+    const silenced = console.warn;
+    console.warn = () => undefined;
+    const tokens = createGithubUserTokens({
+      userProfile: async () => profile,
+      refreshGrant: async () => {
+        throw new Error("GitHub is down");
+      },
+    });
+    await tokens.connect(id, grant({ expiresAt: Date.now() + 3_600_000 }));
+
+    expect(await tokens.forRun(id)).toBeUndefined();
+
+    console.warn = silenced;
+    expect(await tokens.status(id)).toEqual({ login: "ada" });
+  });
+
   test("a token that cannot be read (the key changed) leaves the person not connected", async () => {
     const id = await person("g");
     const tokens = createGithubUserTokens(fakeClient(() => null).client);

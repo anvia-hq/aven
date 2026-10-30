@@ -1,4 +1,5 @@
 import { ConflictError } from "../../errors";
+import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import { runsService } from "../runs/service";
 import { skillsService } from "../skills/service";
@@ -8,7 +9,7 @@ import { threadsService } from "./service";
 
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
-// environment's shared one), with the sender's skills. Kept out of `service.ts`, which `runs` depends on.
+// environment's shared one), with the sender's skills and acting as their GitHub account. Kept out of `service.ts`, which `runs` depends on.
 export const threadMessages = {
   async send(
     organizationId: string,
@@ -23,7 +24,8 @@ export const threadMessages = {
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     const skills = await skillsService.forRun(userId);
-    await runsService.start(thread, prompt, model, { attachments, mentions, skills });
+    const github = await githubUserTokenService.forRun(userId);
+    await runsService.start(thread, prompt, model, { attachments, mentions, skills, github });
   },
 
   async answer(
@@ -37,6 +39,7 @@ export const threadMessages = {
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
     const model = await resolveModel(userId, selection);
     const skills = await skillsService.forRun(userId);
-    await runsService.answer(thread, continuation, answers, model, skills);
+    const github = await githubUserTokenService.forRun(userId);
+    await runsService.answer(thread, continuation, answers, model, skills, github);
   },
 };
