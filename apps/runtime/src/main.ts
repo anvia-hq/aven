@@ -1,5 +1,5 @@
 import { startRuntime } from "@aven/runtime-client/runner";
-import { Sandboxes } from "@aven/runtime-client/sandbox";
+import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 
 // A runner: connects out to a control plane and hosts the sandboxes its threads run in. Create one in the
 // control plane's settings to get its token (shown once), then:
@@ -58,6 +58,7 @@ runtime = startRuntime({
   url,
   token,
   sandbox,
+  journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
   onRefused: (reason) => {
     console.error(`The control plane refused this runtime: ${reason}`);
     void exit(1);

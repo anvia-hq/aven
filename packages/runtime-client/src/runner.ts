@@ -1,15 +1,17 @@
-import type { AnyTool, MemoryStore } from "@anvia/core";
+import type { Agent, AnyTool } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
-import { createCodingAgent, type CodingAgent } from "@aven/agents/coding-agent";
-import { projectStreamEvent } from "@aven/agents/projection";
+import type { DurableAgentRegistration } from "@anvia/durable";
+import { createCodingAgent } from "@aven/agents/coding-agent";
+import type { RunEvent } from "@aven/protocol/events";
 import {
   WIRE_VERSION,
   decodeViewerFrame,
   type ControlPlaneToRuntime,
   type CallMethod,
+  type MemoryAppendParams,
   type RepoAccess,
   type RunModel,
   type RunThreadInfo,
@@ -17,24 +19,28 @@ import {
 } from "@aven/protocol/runtime-wire";
 
 import { DesktopViewers } from "./desktop-viewers";
-import { createRemoteMemory } from "./remote-memory";
+import { DurableRuns, type FollowedRun, type RunInput } from "./durable-runs";
+import { lateBoundTools } from "./late-bound-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
+  /** The agent's id: durable registers one agent per run. */
+  id: string;
   /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
-  memory: MemoryStore;
   model?: RunModel;
-}) => { agent: Pick<CodingAgent, "stream"> };
+}) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
-// run's token; this process never holds a provider key.
+// run's token; this process never holds a provider key. The conversation is durable's own, so the
+// agent has no memory store.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ tools, memory, model }) => {
+  ({ id, tools, model }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
+      id,
       provider: model.provider,
       modelId: model.modelId,
       apiKey: model.gatewayToken,
@@ -43,21 +49,20 @@ const defaultCreateAgent =
       effortLevels: model.effortLevels,
       contextWindow: model.contextWindow,
       tools,
-      memory,
     });
   };
 
 type LiveRun = {
   threadId: string;
-  /** Not there until the thread's sandbox is up and the agent has started. */
-  stream?: ReturnType<CodingAgent["stream"]>;
-  /** A cancel that arrived before there was a stream to cancel. */
+  /** Not there until the thread's sandbox is up and the run is in the journal. */
+  followed?: FollowedRun;
+  /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
 };
 
 function cancelRun(run: LiveRun, reason: string) {
-  if (run.stream) run.stream.cancel(reason);
-  else run.cancelReason = reason;
+  run.cancelReason = reason;
+  void run.followed?.cancel();
 }
 
 export type RuntimeOptions = {
@@ -68,6 +73,8 @@ export type RuntimeOptions = {
   createAgent?: CreateRuntimeAgent;
   /** Gives each thread its sandbox and workspace (decision 0010). */
   sandbox: ThreadWorkspaces;
+  /** The SQLite file runs are journaled in (decision 0021). Only one runner may use it at a time. */
+  journalPath: string;
   /**
    * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
    * version), so reconnecting would not help. `reason` says why.
@@ -96,6 +103,9 @@ export function startRuntime(options: RuntimeOptions) {
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
   const runs = new Map<string, LiveRun>();
+  // Opened once; a run waits for it, and a journal that will not open fails each run clearly.
+  const journal = DurableRuns.open(options.journalPath);
+  journal.catch(() => undefined);
   // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.
   const boxes = new Map<string, ThreadSandbox>();
   const idleTimers = new Map<string, Timer>();
@@ -200,40 +210,68 @@ export function startRuntime(options: RuntimeOptions) {
       );
       if (live.cancelReason) throw new Error(live.cancelReason);
       boxes.set(thread.id, box);
-      const { agent } = createAgent({
-        thread,
-        tools: box.tools,
-        memory: createRemoteMemory(call, runId),
-        model,
-      });
-      // A resumed run carries its own conversation state; the answer is delivered as the question's result.
-      const stream = agent.stream(
-        message.type === "run.start"
-          ? {
-              prompt: message.prompt,
-              session: {
-                sessionId: thread.id,
-                metadata: { organizationId: thread.organizationId },
-              },
-            }
+      const journaled = await journal;
+      // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
+      const current = () => boxes.get(thread.id)?.tools;
+      const build = (id: string): RunInput => {
+        const { agent, compaction } = createAgent({
+          thread,
+          id,
+          tools: lateBoundTools(box.tools, current),
+          model,
+        });
+        return { agent, compaction, contextWindow: model?.contextWindow };
+      };
+      // Events reach the control plane as the journal records them.
+      const forward = (event: RunEvent) => send({ type: "run.event", runId, event });
+      let followed: FollowedRun;
+      if (message.type === "run.start") {
+        followed = await journaled.start(
+          runId,
+          thread.id,
+          message.prompt,
+          build(`run-${runId}`),
+          forward,
+        );
+      } else {
+        // The question stays parked in the journal; the answer is delivered to it.
+        const asked = await journaled.asked(thread.id);
+        if (!asked) throw new Error("This thread has no question waiting for an answer");
+        const { interaction } = parseAgentContinuation(message.continuation);
+        followed = await journaled.answer(
+          asked,
+          interaction,
+          parseAgentInteractionResponse(message.response),
+          () => build(asked.agentId),
+          forward,
+        );
+      }
+      live.followed = followed;
+      if (live.cancelReason) void followed.cancel();
+      const end = await followed.done;
+      if (end.type !== "error" && end.messages.length > 0) {
+        const turn = journaled.transcriptTurn(
+          followed.durableId,
+          end.messages.length,
+          end.type === "response",
+        );
+        await call("memory.append", {
+          runId,
+          turn,
+          messages: end.messages,
+        } satisfies MemoryAppendParams);
+      }
+      sendOrWarn(
+        end.type === "error"
+          ? { type: "run.end", runId, outcome: "error", error: live.cancelReason ?? end.error }
           : {
-              continuation: parseAgentContinuation(message.continuation),
-              response: parseAgentInteractionResponse(message.response),
+              type: "run.end",
+              runId,
+              outcome: end.type,
+              // What resumes a run that stopped to ask the user; the control plane keeps it.
+              continuation: end.type === "interaction" ? end.continuation : undefined,
             },
       );
-      live.stream = stream;
-      for await (const event of stream) {
-        const projected = projectStreamEvent(event);
-        if (projected) send({ type: "run.event", runId, event: projected });
-      }
-      const outcome = await stream.result;
-      sendOrWarn({
-        type: "run.end",
-        runId,
-        outcome: outcome.type,
-        // What resumes a run that stopped to ask the user; the control plane keeps it.
-        continuation: outcome.type === "interaction" ? outcome.continuation : undefined,
-      });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       sendOrWarn({ type: "run.end", runId, outcome: "error", error: text });
@@ -345,6 +383,7 @@ export function startRuntime(options: RuntimeOptions) {
       socket?.close();
       await Promise.all(releasing.values());
       await options.sandbox.dispose();
+      await journal.then((journaled) => journaled.close()).catch(() => undefined);
     },
   };
 }

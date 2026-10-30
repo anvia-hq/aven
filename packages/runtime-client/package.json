@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@anvia/core": "^1.17.2",
+    "@anvia/durable": "^0.12.2",
     "@anvia/sandbox": "1.3.2",
     "@aven/agents": "workspace:*",
-    "@aven/protocol": "workspace:*"
+    "@aven/protocol": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

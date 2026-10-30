@@ -1,0 +1,89 @@
+import { Agent, createTool } from "@anvia/core";
+import { DurableRuntime } from "@anvia/durable";
+import { SqliteDurableStore } from "@anvia/durable/sqlite";
+import { expect, test } from "bun:test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { z } from "zod";
+
+import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
+
+// What the runner relies on @anvia/durable for (decision 0021): a run continues after the runtime
+// stops without repeating a committed tool call, and the history is the journal's, not a memory store's.
+test("a run resumes after the runtime closes, reusing committed tool results", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "aven-durable-"));
+  const db = join(dir, "runs.db");
+  let ran = 0;
+  const counter = createTool({
+    name: "count",
+    description: "Counts",
+    inputSchema: z.object({ n: z.number() }),
+    execute: async () => ({ ran: ++ran }),
+  });
+  const hold = Promise.withResolvers<void>();
+  const reached = Promise.withResolvers<void>();
+
+  const open = (steps: Parameters<typeof scriptedModel>[0]) =>
+    DurableRuntime.open({
+      store: new SqliteDurableStore(db),
+      agents: [
+        {
+          agent: new Agent({
+            id: "coding",
+            model: scriptedModel(steps),
+            instructions: "x",
+            tools: [counter],
+          }),
+          version: "1",
+          toolRecovery: { count: "safe" },
+        },
+      ],
+    });
+
+  const first = await open([
+    [toolCall("count", { n: 1 }, "c1")],
+    async () => {
+      reached.resolve();
+      await hold.promise;
+      return [text("never")];
+    },
+  ]);
+  const run = await first.submit({
+    agentId: "coding",
+    sessionId: "thread-1",
+    requestId: "run-1",
+    prompt: "go",
+  });
+  await reached.promise;
+  // close() waits for the attempt in flight to settle, so let it go once the close has begun.
+  const closing = first.close();
+  hold.resolve();
+  await closing;
+  expect(ran).toBe(1);
+
+  const second = await open([[text("done")]]);
+  await second.resume();
+  const resumed = await second.getRun(run.id);
+  const outcome = await resumed.result();
+  expect(outcome.type).toBe("response");
+  expect(ran).toBe(1);
+  await second.close();
+});
+
+test("an agent with memory cannot be registered", async () => {
+  const memory = { load: async () => [], append: async () => {}, clear: async () => {} };
+  const agent = new Agent({
+    id: "coding",
+    model: scriptedModel([]),
+    instructions: "x",
+    memory: { store: memory },
+  });
+  const dir = mkdtempSync(join(tmpdir(), "aven-durable-"));
+  await expect(
+    DurableRuntime.open({
+      store: new SqliteDurableStore(join(dir, "runs.db")),
+      agents: [{ agent, version: "1" }],
+    }),
+  ).rejects.toThrow(/memory/);
+});

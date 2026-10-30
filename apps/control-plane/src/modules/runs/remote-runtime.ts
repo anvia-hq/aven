@@ -87,7 +87,7 @@ export class RemoteRuntime implements Runtime {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
     // Throws before anything starts if the model cannot be used (no key); the runtime gets a token, not the key.
-    const runModel = this.gateway.issue(runId, model ?? environmentModel());
+    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     // A run nobody awaits (cancelled early) must not surface as an unhandled rejection.

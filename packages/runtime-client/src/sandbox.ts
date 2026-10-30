@@ -12,6 +12,10 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 
+// Where a runner keeps its workspaces and its journal of runs.
+export const runtimeHome = (home?: string) => home ?? join(homedir(), ".aven", "runtime");
+export const journalPathIn = (home?: string) => join(runtimeHome(home), "runs.db");
+
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
   image: string;
@@ -291,7 +295,7 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async #prepare(threadId: string, repo: () => Promise<RepoAccess>) {
-    const home = this.#config.home ?? join(homedir(), ".aven", "runtime");
+    const home = runtimeHome(this.#config.home);
     const dir = join(home, "workspaces", threadId);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);

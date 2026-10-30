@@ -1,5 +1,5 @@
 import { startRuntime } from "@aven/runtime-client/runner";
-import { Sandboxes } from "@aven/runtime-client/sandbox";
+import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 
 import { runtimesService } from "./service";
 
@@ -37,6 +37,7 @@ export async function startLocalRunner(port: number) {
       url: `ws://localhost:${port}/runtimes/connect`,
       token: runtimesService.localToken,
       sandbox,
+      journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
     });
   } catch (error) {
     console.warn(

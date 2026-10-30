@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import { DEFAULT_MODEL_IDS, type ModelConfig, type Provider } from "@aven/agents/model";
 import type { RunModel } from "@aven/protocol/runtime-wire";
@@ -34,6 +34,17 @@ const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-r
 
 type Grant = { model: ModelConfig; key: string | undefined };
 
+// A thread's token is derived from this, so it stays the same from run to run and across a restart
+// of the control plane. Without a configured secret it is random per process, and a thread that
+// waits for an answer across a restart can no longer continue.
+const TOKEN_SECRET =
+  process.env.PROVIDER_ENCRYPTION_KEY ||
+  process.env.BETTER_AUTH_SECRET ||
+  randomBytes(32).toString("base64");
+
+const tokenFor = (scope: string) =>
+  `${TOKEN_PREFIX}${createHmac("sha256", TOKEN_SECRET).update(`run-gateway:${scope}`).digest("base64url")}`;
+
 // Azure and compatible servers have no shared environment key: the user's own is required or optional.
 const ENV_KEYS = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY" } as const;
 
@@ -64,7 +75,10 @@ export class RunGateway {
   constructor(private upstreams: { anthropic: string; openai: string } = DEFAULT_UPSTREAMS) {}
 
   // Throws when the model cannot be used (such as a missing environment key), before any run starts.
-  issue(runId: string, config: ModelConfig): RunModel {
+  // With a `scope` (a thread), the token is the same every time: a run parked on the agent's
+  // question keeps the model client it was built with, so the run that answers must reach the
+  // model with that token (decision 0021). The grant still lasts only as long as the run.
+  issue(runId: string, config: ModelConfig, scope?: string): RunModel {
     const key = config.apiKey ?? envKeyFor(config.provider);
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
@@ -72,7 +86,9 @@ export class RunGateway {
     if (!key && (config.provider === "anthropic" || config.provider === "openai")) {
       throw new ModelUnavailableError(`${ENV_KEYS[config.provider]} is not set`);
     }
-    const token = `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
+    const token = scope
+      ? tokenFor(scope)
+      : `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
     this.#grants.set(token, { model: config, key });
     this.#tokens.set(runId, token);
     return {

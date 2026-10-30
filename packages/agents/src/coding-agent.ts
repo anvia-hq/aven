@@ -19,7 +19,9 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   /** Give the agent `ask_user`, which suspends the run until the user answers. Defaults to on. */
   questions?: boolean;
   maxTurns?: number;
-  /** Persist conversations; see `createMemoryStore`. Omit for stateless runs. */
+  /** The agent's id. A durable run registers one agent per run, so each needs its own. Defaults to "coding". */
+  id?: string;
+  /** Persist conversations; see `createMemoryStore`. Omit for stateless runs, and for durable ones, which keep their own history. */
   memory?: MemoryStore;
 };
 
@@ -43,7 +45,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
   const { model, providerOptions, controls } = resolveModel(options);
   const store = historyStoreFor(options);
   const agent = new Agent({
-    id: "coding",
+    id: options.id ?? "coding",
     model,
     instructions: INSTRUCTIONS,
     providerOptions,
@@ -58,7 +60,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
     },
   });
 
-  return { agent };
+  // For a host that keeps the history itself (a durable run): what to register beside the agent.
+  return { agent, compaction: compactionFor(options, model) };
 }
 
 // Summarizing starts at this share of the model's context window, leaving room for the next

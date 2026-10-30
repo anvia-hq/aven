@@ -181,6 +181,34 @@ describe("RunGateway", () => {
     expect((await post("anthropic/v1/messages", run.gatewayToken, {})).status).toBe(401);
   });
 
+  test("a thread's token is the same for every run, and only works while a run holds it", async () => {
+    const first = gateway.issue(
+      "r-first",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-1",
+    );
+    const other = gateway.issue(
+      "r-other",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-2",
+    );
+    expect(other.gatewayToken).not.toBe(first.gatewayToken);
+
+    gateway.revoke("r-first");
+    expect((await post("anthropic/v1/messages", first.gatewayToken, {})).status).toBe(401);
+
+    // The run that answers the thread's question gets the token the paused run's client holds.
+    const second = gateway.issue(
+      "r-second",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-1",
+    );
+    expect(second.gatewayToken).toBe(first.gatewayToken);
+    expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).not.toBe(401);
+    gateway.revoke("r-second");
+    gateway.revoke("r-other");
+  });
+
   test("the vendor's streamed answer passes through untouched", async () => {
     const run = gateway.issue("r5", { provider: "anthropic", apiKey: "sk-real" });
     const chunks = ["event: a\ndata: 1\n\n", "event: b\ndata: 2\n\n"];

@@ -4,6 +4,7 @@ import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
+import { journalPath } from "@aven/runtime-client/testing/journal-path";
 import { Elysia } from "elysia";
 
 import { memoryContinuations } from "../../testing/memory-continuations";
@@ -97,6 +98,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     url: `ws://localhost:${controlPlane.server?.port}/connect`,
     token,
     sandbox: workspaces,
+    journalPath: journalPath(),
   });
 
   afterAll(async () => {

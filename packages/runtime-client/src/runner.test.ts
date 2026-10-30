@@ -1,4 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Agent, createQuestionTool, createTool } from "@anvia/core";
+import {
+  scriptedModel,
+  text,
+  toolCall,
+  type ScriptStep,
+} from "@aven/agents/testing/scripted-model";
+import { z } from "zod";
 
 import {
   decodeViewerFrame,
@@ -9,9 +17,10 @@ import {
 import { startRuntime, type CreateRuntimeAgent } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { fakeDesktop } from "./testing/fake-desktop";
+import { journalPath } from "./testing/journal-path";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
-function fakeControlPlane() {
+function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
   const received: RuntimeToControlPlane[] = [];
   const receivedBinary: Uint8Array[] = [];
   let client: { send(data: string | Uint8Array): void } | undefined;
@@ -25,9 +34,20 @@ function fakeControlPlane() {
         client = ws;
         opened.resolve();
       },
-      message(_ws, data) {
-        if (typeof data === "string") received.push(JSON.parse(data) as RuntimeToControlPlane);
-        else receivedBinary.push(new Uint8Array(data));
+      message(ws, data) {
+        if (typeof data !== "string") {
+          receivedBinary.push(new Uint8Array(data));
+          return;
+        }
+        const message = JSON.parse(data) as RuntimeToControlPlane;
+        received.push(message);
+        // The transcript the runner sends home is taken, unless a test says otherwise.
+        if (
+          message.type === "call" &&
+          message.method === "memory.append" &&
+          options.storesTranscripts !== false
+        )
+          ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
       },
     },
   });
@@ -64,32 +84,14 @@ function slowSandbox() {
   return { sandbox, up: gate.resolve, released, busy };
 }
 
-// An agent whose stream is a stand-in: the runner only iterates it, awaits `result` and cancels.
-// The cast is because the real stream type is Anvia's.
+// An agent that answers from a script, one step per model call.
 const agentThat =
-  (
-    events: (memory: Parameters<CreateRuntimeAgent>[0]["memory"]) => AsyncIterable<never>,
-  ): CreateRuntimeAgent =>
-  ({ memory }) => ({
-    agent: {
-      stream: () =>
-        Object.assign(events(memory), {
-          result: Promise.resolve({ type: "response" as const }),
-          cancel: () => undefined,
-        }) as never,
-    },
+  (...steps: ScriptStep[]): CreateRuntimeAgent =>
+  ({ id }) => ({
+    agent: new Agent({ id, model: scriptedModel(steps), instructions: "x" }),
   });
 
-const iterableThat = (step: () => Promise<unknown>): AsyncIterable<never> => ({
-  [Symbol.asyncIterator]: () => ({
-    next: async () => {
-      await step();
-      return { done: true, value: undefined };
-    },
-  }),
-});
-
-const noEvents = iterableThat(async () => undefined);
+const reply = () => agentThat([text("ok")]);
 
 const until = async (condition: () => boolean) => {
   for (let i = 0; i < 100 && !condition(); i++) await Bun.sleep(20);
@@ -102,10 +104,19 @@ afterEach(async () => {
 });
 
 function connect(
-  options: Partial<Parameters<typeof startRuntime>[0]> & { sandbox: ThreadWorkspaces },
+  options: Partial<Parameters<typeof startRuntime>[0]> & {
+    sandbox: ThreadWorkspaces;
+    storesTranscripts?: boolean;
+  },
 ) {
-  const plane = fakeControlPlane();
-  const runtime = startRuntime({ url: plane.url, token: "t", ...options });
+  const { storesTranscripts, ...runtimeOptions } = options;
+  const plane = fakeControlPlane({ storesTranscripts });
+  const runtime = startRuntime({
+    url: plane.url,
+    token: "t",
+    journalPath: journalPath(),
+    ...runtimeOptions,
+  });
   cleanups.push(() => runtime.stop(), plane.stop);
   return { plane, runtime };
 }
@@ -164,7 +175,7 @@ describe("startRuntime desktops", () => {
     const { plane, runtime } = connect({
       sandbox,
       idleReleaseMs: 50,
-      createAgent: agentThat(() => noEvents),
+      createAgent: reply(),
     });
     await runtime.ready;
     up();
@@ -198,7 +209,7 @@ describe("startRuntime", () => {
       async release() {},
       async dispose() {},
     };
-    const { plane, runtime } = connect({ sandbox, createAgent: agentThat(() => noEvents) });
+    const { plane, runtime } = connect({ sandbox, createAgent: reply() });
     await runtime.ready;
     plane.send(runStart);
 
@@ -218,7 +229,7 @@ describe("startRuntime", () => {
       sandbox,
       createAgent: (input) => {
         created = true;
-        return agentThat(() => noEvents)(input);
+        return reply()(input);
       },
     });
     await runtime.ready;
@@ -236,13 +247,14 @@ describe("startRuntime", () => {
     expect(created).toBe(false);
   });
 
-  test("a memory call the control plane never answers fails the run with a clear error", async () => {
+  test("a transcript the control plane never takes fails the run with a clear error", async () => {
     const { sandbox, up } = slowSandbox();
     up();
     const { plane, runtime } = connect({
       sandbox,
       callTimeoutMs: 100,
-      createAgent: agentThat((memory) => iterableThat(() => memory.load({} as never))),
+      storesTranscripts: false,
+      createAgent: reply(),
     });
     await runtime.ready;
     plane.send(runStart);
@@ -250,7 +262,7 @@ describe("startRuntime", () => {
     await until(() => plane.received.some((message) => message.type === "run.end"));
     const end = plane.received.find((message) => message.type === "run.end");
     expect(end).toMatchObject({ outcome: "error" });
-    expect(end && "error" in end ? end.error : "").toContain("did not answer memory.load");
+    expect(end && "error" in end ? end.error : "").toContain("did not answer memory.append");
   });
 
   test("a thread with nothing running gives up its sandbox after the idle time", async () => {
@@ -259,7 +271,7 @@ describe("startRuntime", () => {
     const { plane, runtime } = connect({
       sandbox,
       idleReleaseMs: 50,
-      createAgent: agentThat(() => noEvents),
+      createAgent: reply(),
     });
     await runtime.ready;
     plane.send(runStart);
@@ -275,7 +287,7 @@ describe("startRuntime", () => {
     const { plane, runtime } = connect({
       sandbox,
       idleReleaseMs: 40,
-      createAgent: agentThat(() => noEvents),
+      createAgent: reply(),
     });
     await runtime.ready;
     plane.send(runStart);
@@ -312,7 +324,12 @@ describe("startRuntime", () => {
       idleReleaseMs: 30,
       // The first run ends at once; the second is still going when the idle check comes back.
       createAgent: (input) =>
-        agentThat(() => (++runs === 1 ? noEvents : iterableThat(() => hold.promise)))(input),
+        ++runs === 1
+          ? reply()(input)
+          : agentThat(async () => {
+              await hold.promise;
+              return [text("ok")];
+            })(input),
     });
     await runtime.ready;
     plane.send(runStart);
@@ -324,5 +341,118 @@ describe("startRuntime", () => {
     await Bun.sleep(100);
     expect(released).toEqual([]);
     hold.resolve();
+  });
+});
+
+describe("startRuntime runs", () => {
+  const ended = (plane: ReturnType<typeof fakeControlPlane>) =>
+    plane.received.filter((message) => message.type === "run.end");
+  const appended = (plane: ReturnType<typeof fakeControlPlane>) =>
+    plane.received.flatMap((message) =>
+      message.type === "call" && message.method === "memory.append"
+        ? [message.params as { turn: number; messages: { role: string }[] }]
+        : [],
+    );
+
+  test("a run reports its progress as events and hands its messages home", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const lookup = createTool({
+      name: "lookup",
+      description: "Looks something up",
+      inputSchema: z.object({ key: z.string() }),
+      execute: ({ key }) => `value of ${key}`,
+    });
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [lookup],
+          model: scriptedModel([
+            [text("looking"), toolCall("lookup", { key: "a" }, "call-1")],
+            [text("found it")],
+          ]),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+    const events = plane.received.flatMap((m) => (m.type === "run.event" ? [m.event] : []));
+    expect(events.map((event) => event.type)).toEqual([
+      "text",
+      "tool_start",
+      "usage",
+      "tool_end",
+      "text",
+      "usage",
+    ]);
+    expect(events.find((event) => event.type === "tool_end")).toMatchObject({
+      id: "call-1",
+      status: "done",
+      output: "value of a",
+    });
+    // The prompt, the assistant's turn, the tool's result and the final reply.
+    const [transcript] = appended(plane);
+    expect(transcript?.turn).toBe(0);
+    expect(transcript?.messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+    ]);
+  });
+
+  test("a question parks the run, and the answer finishes it with only what is new", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [createQuestionTool()],
+          // One agent for the whole exchange: the run that answers continues the asking run's.
+          model: scriptedModel([
+            [
+              {
+                type: "tool-call",
+                toolCallId: "q1",
+                toolName: "ask_user",
+                input: { questions: [{ id: "color", text: "Which color?" }] },
+              },
+            ],
+            [text("Going with red")],
+          ]),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => ended(plane).length === 1);
+    const asked = ended(plane)[0];
+    expect(asked).toMatchObject({ outcome: "interaction" });
+    const continuation = asked && "continuation" in asked ? asked.continuation : undefined;
+    expect(continuation).toBeDefined();
+
+    plane.send({
+      type: "run.resume",
+      runId: "run-2",
+      thread,
+      continuation,
+      response: { type: "tool-question", answers: [{ questionId: "color", value: "red" }] },
+    });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ runId: "run-2", outcome: "response" });
+    const [first, second] = appended(plane);
+    expect(first?.turn).toBe(0);
+    expect(second?.turn).toBe(first?.messages.length);
+    expect(second?.messages.at(-1)?.role).toBe("assistant");
   });
 });
