@@ -138,15 +138,13 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled tool result: ${JSON.stringify(value)}`);
 }
 
-// The providers count cached tokens inside the input; split out, the four parts add up to the total.
+// Core's `inputTokens` already includes what was written to and read from the cache.
 export function tokenUsageOf(usage: Usage): TokenUsage {
-  const cacheWriteTokens = usage.cacheCreationInputTokens;
-  const cacheReadTokens = usage.cachedInputTokens;
   return {
-    inputTokens: Math.max(0, usage.inputTokens - cacheWriteTokens - cacheReadTokens),
+    inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
-    cacheWriteTokens,
-    cacheReadTokens,
+    cacheWriteTokens: usage.cacheCreationInputTokens,
+    cacheReadTokens: usage.cachedInputTokens,
   };
 }
 

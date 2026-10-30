@@ -16,7 +16,7 @@ export type ToolPart = {
 /** How much of the model's context window the conversation fills, as of the latest model call. */
 export type ContextUsage = { usedTokens: number; contextWindow: number };
 
-/** Tokens a model used, split so the four add up to the total: `inputTokens` is only the part that was neither written to nor read from the cache. */
+/** Tokens a model used. `inputTokens` is all of the input; the cache figures are the parts of it written to and read from the cache. */
 export type TokenUsage = {
   inputTokens: number;
   outputTokens: number;

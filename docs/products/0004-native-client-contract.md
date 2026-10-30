@@ -43,7 +43,7 @@ Message = { id, role: "user" | "assistant", parts: Part[] }
 Part    = { type: "text", text } | { type: "tool", tool: Tool }
 Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output? }
 Context  = { usedTokens, contextWindow }
-Tokens   = { inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens }   input is only what was neither cache-written nor cache-read, so the four add up
+Tokens   = { inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens }   input is all of the input; the cache figures are parts of it
 Usage    = { totals: Tokens, context?: Context }
 DiffLine = { type: "add" | "del" | "ctx", text }
 ```

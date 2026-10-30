@@ -118,7 +118,7 @@ describe("usage", () => {
     expect(await firstEvent(manager, thread)).toMatchObject({
       running: true,
       usage: {
-        totals: { inputTokens: 2, outputTokens: 4, cacheWriteTokens: 6, cacheReadTokens: 8 },
+        totals: { inputTokens: 9, outputTokens: 4, cacheWriteTokens: 6, cacheReadTokens: 8 },
         context: { usedTokens: 100, contextWindow: 1000 },
       },
     });
@@ -130,7 +130,7 @@ describe("usage", () => {
     expect(await firstEvent(manager, newThread())).toMatchObject({
       running: false,
       usage: {
-        totals: { inputTokens: 1, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 },
+        totals: { inputTokens: 8, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 },
       },
     });
   });

@@ -25,10 +25,10 @@ async function streamSnapshot(page: Page, snapshot: Record<string, unknown>) {
 
 const usage = {
   totals: {
-    inputTokens: 1_200,
+    inputTokens: 80_000,
     outputTokens: 3_400,
     cacheWriteTokens: 5_600,
-    cacheReadTokens: 78_000,
+    cacheReadTokens: 70_000,
   },
   context: { usedTokens: 330_000, contextWindow: 1_000_000 },
 };
@@ -53,11 +53,15 @@ test.describe("a thread's overview", () => {
 
     // The totals are every call added up, a different thing from the window the latest filled.
     const tokens = page.getByRole("region", { name: "Usage" });
-    await expect(tokens.getByText("Input").locator("..")).toContainText("1.2K");
-    await expect(tokens.getByText("Output").locator("..")).toContainText("3.4K");
-    await expect(tokens.getByText("Cache write").locator("..")).toContainText("5.6K");
-    await expect(tokens.getByText("Cache read").locator("..")).toContainText("78K");
-    await expect(tokens.getByText("Total").locator("..")).toContainText("88.2K");
+    await expect(tokens.getByText("Input", { exact: true }).locator("..")).toContainText("80K");
+    await expect(tokens.getByText("Output", { exact: true }).locator("..")).toContainText("3.4K");
+    await expect(tokens.getByText("Cache write", { exact: true }).locator("..")).toContainText(
+      "5.6K",
+    );
+    await expect(tokens.getByText("Cache read", { exact: true }).locator("..")).toContainText(
+      "70K",
+    );
+    await expect(tokens.getByText("Total", { exact: true }).locator("..")).toContainText("83.4K");
   });
 
   test("says when the context size is not known", async ({ page }) => {

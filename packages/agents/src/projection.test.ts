@@ -178,11 +178,11 @@ describe("usage", () => {
     model: { modelId: "m", context: { contextWindow: 1_000_000 } },
   };
 
-  test("a model call becomes a usage event whose four parts add up to the total", () => {
+  test("a model call becomes a usage event: the whole input, with the cache parts of it", () => {
     const event = projectStreamEvent(turnEnd(context));
     expect(event).toEqual({
       type: "usage",
-      turn: { inputTokens: 4, outputTokens: 49, cacheWriteTokens: 704, cacheReadTokens: 4209 },
+      turn: { inputTokens: 4917, outputTokens: 49, cacheWriteTokens: 704, cacheReadTokens: 4209 },
       context: { usedTokens: 4917, contextWindow: 1_000_000 },
     });
   });
@@ -196,7 +196,12 @@ describe("usage", () => {
     const stored = (text: string) =>
       ({ role: "assistant", content: text, metadata: { anvia: { generation } } }) as never;
     expect(usageFromHistory([{ role: "user", content: "hi" }, stored("a"), stored("b")])).toEqual({
-      totals: { inputTokens: 8, outputTokens: 98, cacheWriteTokens: 1408, cacheReadTokens: 8418 },
+      totals: {
+        inputTokens: 9834,
+        outputTokens: 98,
+        cacheWriteTokens: 1408,
+        cacheReadTokens: 8418,
+      },
       context: { usedTokens: 4917, contextWindow: 1_000_000 },
     });
   });
