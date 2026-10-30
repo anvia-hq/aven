@@ -2,7 +2,8 @@ import type { DesktopInfo } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError } from "../../errors";
 import { runnerFor, type Available } from "../runtimes/ask-runner";
-import type { RuntimeHub, ViewerSink } from "../runtimes/hub";
+import type { RuntimeHub } from "../runtimes/hub";
+import type { ViewerSink } from "../runtimes/viewer-streams";
 import { desktopControl, desktopInfo } from "./schema";
 
 /** How long a takeover lasts unless the page renews it, so a closed tab gives control back. */

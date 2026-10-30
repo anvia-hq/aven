@@ -1,5 +1,7 @@
+import { CloseCode } from "@aven/protocol/runtime-wire";
 import { Elysia } from "elysia";
 
+import { bytesOf } from "../../bytes";
 import { bearerToken } from "./bearer";
 import type { RuntimeConnection, RuntimeHub } from "./hub";
 import { runtimesService } from "./service";
@@ -22,7 +24,6 @@ export const connectRouter = (hub: RuntimeHub) => {
           const { runtime } = ws.data;
           const connection = hub.attach(
             runtime.id,
-            runtime.organizationId,
             // Elysia would encode a Uint8Array as JSON text; the native socket sends bytes as bytes.
             (message) => ws.raw.send(message),
             (code, reason) => ws.close(code, reason),
@@ -31,7 +32,7 @@ export const connectRouter = (hub: RuntimeHub) => {
           // A revoke or rotation that landed after the check above found nothing to cut off.
           runtimesService.stillCurrent(runtime).then(
             (current) => {
-              if (!current) connection.close(4002, "Revoked or token rotated");
+              if (!current) connection.close(CloseCode.Revoked, "Revoked or token rotated");
             },
             (error: unknown) => {
               console.warn(`Could not re-check runtime ${runtime.id}:`, error);
@@ -44,9 +45,7 @@ export const connectRouter = (hub: RuntimeHub) => {
           // Binary frames carry a viewer's VNC bytes; anything else is JSON, which Elysia may
           // already have parsed.
           if (ArrayBuffer.isView(message)) {
-            connection?.receiveBinary(
-              new Uint8Array(message.buffer, message.byteOffset, message.byteLength),
-            );
+            connection?.receiveBinary(bytesOf(message));
             return;
           }
           const text = typeof message === "string" ? message : JSON.stringify(message);

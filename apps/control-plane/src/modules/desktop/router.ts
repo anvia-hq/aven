@@ -1,8 +1,11 @@
+import type { ServerWebSocket } from "bun";
 import { Elysia } from "elysia";
 
+import { bytesOf } from "../../bytes";
 import { authRouter } from "../auth/router";
 import { trustedOrigins } from "../auth/service";
-import type { RuntimeHub, ViewerHandle } from "../runtimes/hub";
+import type { RuntimeHub } from "../runtimes/hub";
+import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { threadsService } from "../threads/service";
 import { threadParams } from "../threads/schema";
 import { createDesktopService } from "./service";
@@ -24,7 +27,7 @@ function originAllowed(request: Request) {
 
 // Bun's sockets know how much is waiting to go out; Elysia's type for them does not say so.
 const bufferedAmount = (raw: object) =>
-  (raw as { getBufferedAmount(): number }).getBufferedAmount();
+  (raw as Pick<ServerWebSocket, "getBufferedAmount">).getBufferedAmount();
 
 // Watching and taking over a thread's desktop (decision 0015). `/stream` is a WebSocket carrying
 // the VNC session in binary messages, as noVNC expects.
@@ -91,9 +94,7 @@ export const desktopRouter = (hub: RuntimeHub) => {
       },
       message(ws, message) {
         if (ArrayBuffer.isView(message)) {
-          viewers
-            .get(ws.raw)
-            ?.write(new Uint8Array(message.buffer, message.byteOffset, message.byteLength));
+          viewers.get(ws.raw)?.write(bytesOf(message));
         }
       },
       close(ws) {
