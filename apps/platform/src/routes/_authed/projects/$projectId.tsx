@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
+import { NotFound } from "@/components/not-found";
 import { ProjectHeader } from "@/modules/projects/components/project-header";
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -19,14 +20,7 @@ function ProjectPage() {
 
   if (!project) {
     if (!loaded) return null;
-    return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-2">
-        <h1 className="text-xl font-semibold">Project not found</h1>
-        <Link to="/projects" className="text-sm text-muted-foreground underline">
-          Back to projects
-        </Link>
-      </main>
-    );
+    return <NotFound as="main" title="Project not found" to="/projects" back="Back to projects" />;
   }
 
   return (
