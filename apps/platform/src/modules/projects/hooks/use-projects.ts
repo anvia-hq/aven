@@ -2,7 +2,7 @@ import { useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
-import { errorMessage, postJson } from "@/lib/api";
+import { attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 
 import { projectsAtom } from "../atoms/projects-atom";
@@ -31,21 +31,11 @@ export function useProjects() {
     repository: string;
     runtimeId: string;
   }) {
-    let project: Project;
-    try {
-      project = await postJson<Project>("/projects", input);
-    } catch (failure) {
-      toast.add({
-        title: "Could not import repository",
-        description: errorMessage(failure),
-        type: "error",
-      });
-      return null;
-    }
-    setProjects((current) => {
-      const list = current ?? [];
-      return [project, ...list];
-    });
+    const project = await attempt("Could not import repository", () =>
+      postJson<Project>("/projects", input),
+    );
+    if (!project) return null;
+    setProjects((current) => (current ? [project, ...current] : [project]));
     toast.add({ title: "Repository imported", description: project.name, type: "success" });
     return project;
   }
