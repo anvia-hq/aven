@@ -59,4 +59,18 @@ test.describe("mentions in the composer", () => {
     await expect(sent.locator('[data-mention="skill"]')).toHaveText("writing-skills");
     await expect(prompt).toHaveText("");
   });
+
+  test("/ offers the built-in setup-env skill", async ({ page }) => {
+    await registerUser(page, "men", "Mention User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+    await page.goto(`/threads/${threadId}`);
+
+    await page.getByRole("textbox", { name: "Prompt" }).click();
+    await page.keyboard.type("/setup");
+
+    await expect(
+      page.getByRole("listbox", { name: "Mention" }).getByRole("option", { name: /setup-env/ }),
+    ).toBeVisible();
+  });
 });
