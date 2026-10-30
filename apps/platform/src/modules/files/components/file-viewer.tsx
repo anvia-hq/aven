@@ -1,3 +1,4 @@
+import { PanelNotice } from "@/components/panel-notice";
 import { Skeleton } from "@/components/skeleton";
 
 import { useHighlightedLines } from "../hooks/use-highlighted-lines";
@@ -5,26 +6,20 @@ import { useWorkspaceFile } from "../hooks/use-workspace-file";
 
 type Props = { threadId: string; path: string | null; running: boolean };
 
-function Notice({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex size-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-      <p className="max-w-sm">{children}</p>
-    </div>
-  );
-}
-
 const KIB = 1024;
 
 // A file as plain text with line numbers. It is only read, never changed from here.
 export function FileViewer({ threadId, path, running }: Props) {
   const { loaded, file, problem } = useWorkspaceFile(threadId, path, running);
-  if (path === null) return <Notice>Pick a file in the tree to read it.</Notice>;
+  if (path === null) return <PanelNotice>Pick a file in the tree to read it.</PanelNotice>;
   if (!loaded) return <Skeleton className="size-full rounded-none" />;
-  if (problem) return <Notice>{problem}</Notice>;
-  if (!file?.available) return <Notice>This thread has no workspace yet.</Notice>;
-  if (file.kind === "missing") return <Notice>This file is no longer there.</Notice>;
+  if (problem) return <PanelNotice>{problem}</PanelNotice>;
+  if (!file?.available) return <PanelNotice>This thread has no workspace yet.</PanelNotice>;
+  if (file.kind === "missing") return <PanelNotice>This file is no longer there.</PanelNotice>;
   if (file.kind === "binary") {
-    return <Notice>Binary file, {Math.ceil(file.size / KIB)} KiB. It is not shown.</Notice>;
+    return (
+      <PanelNotice>Binary file, {Math.ceil(file.size / KIB)} KiB. It is not shown.</PanelNotice>
+    );
   }
   return <Lines path={path} text={file.text} truncated={file.truncated} />;
 }

@@ -1,8 +1,9 @@
-import { Folder, Refresh, Search, Sidebar, X } from "@mynaui/icons-react";
+import { Folder, Refresh, Search, Sidebar } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { SidePanel } from "@/components/side-panel";
 
 import { useExplorerState } from "../hooks/use-explorer-state";
 import { useWorkspaceTree } from "../hooks/use-workspace-tree";
@@ -29,38 +30,39 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
   const [query, setQuery] = useState("");
 
   return (
-    <section className="flex size-full min-w-0 flex-col" aria-label="Files">
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <Folder className="size-4 text-muted-foreground" />
-        <h2 className="text-sm font-medium">Files</h2>
-        <FileTabs
-          open={explorer.open}
-          active={explorer.active}
-          onSelect={explorer.select}
-          onClose={explorer.closeFile}
-        />
-        {explorer.open.length === 0 && <span className="flex-1" />}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Reload files"
-          onClick={() => void refresh()}
-        >
-          <Refresh />
-        </Button>
-        <Button
-          variant={explorer.treeShown ? "secondary" : "ghost"}
-          size="icon-sm"
-          aria-label="File tree"
-          aria-pressed={explorer.treeShown}
-          onClick={explorer.toggleTree}
-        >
-          <Sidebar />
-        </Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Close files" onClick={onClose}>
-          <X />
-        </Button>
-      </header>
+    <SidePanel
+      title="Files"
+      icon={Folder}
+      onClose={onClose}
+      actions={
+        <>
+          <FileTabs
+            open={explorer.open}
+            active={explorer.active}
+            onSelect={explorer.select}
+            onClose={explorer.closeFile}
+          />
+          {explorer.open.length === 0 && <span className="flex-1" />}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Reload files"
+            onClick={() => void refresh()}
+          >
+            <Refresh />
+          </Button>
+          <Button
+            variant={explorer.treeShown ? "secondary" : "ghost"}
+            size="icon-sm"
+            aria-label="File tree"
+            aria-pressed={explorer.treeShown}
+            onClick={explorer.toggleTree}
+          >
+            <Sidebar />
+          </Button>
+        </>
+      }
+    >
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1">
           <FileViewer threadId={threadId} path={explorer.active} running={running} />
@@ -105,6 +107,6 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
           </aside>
         )}
       </div>
-    </section>
+    </SidePanel>
   );
 }
