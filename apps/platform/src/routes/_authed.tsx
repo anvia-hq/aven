@@ -10,14 +10,15 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
-  SidebarRail,
   SidebarTrigger,
 } from "@/components/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { CommandMenu } from "@/modules/navigation/components/command-menu";
+import { SidebarResizer } from "@/modules/navigation/components/sidebar-resizer";
 import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
+import { useSidebarWidth } from "@/modules/navigation/hooks/use-sidebar-width";
 import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
@@ -37,9 +38,10 @@ function AuthedLayout() {
   const { setOpen: setCommandOpen } = useCommandMenu();
 
   const signOut = useSignOut();
+  const sidebarSize = useSidebarWidth();
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "15rem" } as CSSProperties}>
+    <SidebarProvider style={{ "--sidebar-width": `${sidebarSize.width}px` } as CSSProperties}>
       <Sidebar collapsible="icon" className="text-sidebar-foreground/80">
         <SidebarHeader>
           <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
@@ -47,7 +49,6 @@ function AuthedLayout() {
               <UserCard name={user.name} onSignOut={signOut} />
             </div>
             <div className="flex shrink-0 items-center group-data-[collapsible=icon]:flex-col">
-              <SidebarTrigger />
               <ThemeSelector />
               <Button
                 variant="ghost"
@@ -74,7 +75,7 @@ function AuthedLayout() {
             <Cog />
           </Button>
         </SidebarFooter>
-        <SidebarRail />
+        <SidebarResizer size={sidebarSize} />
       </Sidebar>
       <SidebarInset>
         <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">

@@ -142,3 +142,13 @@
   --tw-prose-th-borders: var(--border);
   --tw-prose-td-borders: var(--border);
 }
+
+/* No width transition while the sidebar is being dragged. */
+body[data-resizing-sidebar] {
+  cursor: col-resize;
+  user-select: none;
+}
+body[data-resizing-sidebar] [data-slot="sidebar-gap"],
+body[data-resizing-sidebar] [data-slot="sidebar-container"] {
+  transition: none;
+}

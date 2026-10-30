@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useDefaultLayout } from "react-resizable-panels";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { safeStorage, useLocalStorage } from "@/hooks/use-local-storage";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
-
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
@@ -20,7 +19,15 @@ function ThreadPage() {
   const { thread, loaded, messages, running, error, send, cancel } = useThread(threadId);
   // Side by side needs room; on a narrow screen the desktop opens when asked for.
   const wide = useMediaQuery("(min-width: 1024px)");
-  const [desktopOpen, setDesktopOpen] = useState(wide);
+  // Whether the desktop is open is remembered; until it has been chosen, it follows the width.
+  const [savedOpen, setDesktopOpen] = useLocalStorage<boolean | null>("aven.desktop-open", null);
+  const desktopOpen = savedOpen ?? wide;
+  // Each orientation and each set of panels keeps its own sizes.
+  const layout = useDefaultLayout({
+    id: `aven.thread-panels.${wide ? "row" : "column"}`,
+    panelIds: desktopOpen ? ["conversation", "desktop"] : ["conversation"],
+    storage: safeStorage,
+  });
 
   if (!loaded) return null;
 
@@ -40,7 +47,11 @@ function ThreadPage() {
       <div className="min-h-0 flex-1">
         {/* The conversation stays the first panel whether or not the desktop is open, so opening
             it does not remount the conversation and lose a half-written reply. */}
-        <ResizablePanelGroup orientation={wide ? "horizontal" : "vertical"}>
+        <ResizablePanelGroup
+          orientation={wide ? "horizontal" : "vertical"}
+          defaultLayout={layout.defaultLayout}
+          onLayoutChanged={layout.onLayoutChanged}
+        >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div className="flex h-full min-w-0 flex-col">
               <ThreadHeader
@@ -48,13 +59,13 @@ function ThreadPage() {
                 running={running}
                 onCancel={cancel}
                 desktopOpen={desktopOpen}
-                onToggleDesktop={() => setDesktopOpen((open) => !open)}
+                onToggleDesktop={() => setDesktopOpen(!desktopOpen)}
               />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
                 <ThreadMessages messages={messages} error={error} />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3">
-                  <div className="pointer-events-auto mx-auto w-full max-w-2xl px-4 pb-3">
+                  <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
                     <PromptInput
                       disabled={running}
                       placeholder={running ? "Agent is working…" : "Reply to the agent…"}

@@ -50,8 +50,8 @@ test.describe("platform auth", () => {
     await expect(page.locator("html")).toHaveClass(/dark/);
     await registerUser(page, "ui", "Theme User");
 
-    // Sidebar trigger lives in the sidebar header.
-    await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeVisible();
+    // On a wide screen the sidebar is resized, not toggled; its trigger is only in the mobile bar.
+    await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeHidden();
     const toggle = page.getByRole("button", { name: "Toggle theme" });
     await toggle.click();
     await expect(page.locator("html")).not.toHaveClass(/dark/);

@@ -43,6 +43,36 @@ test.describe("a thread's desktop", () => {
     runner = undefined;
   });
 
+  test("keeps the panel sizes and whether the desktop is open", async ({ page }) => {
+    await registerUser(page, "per", "Persist User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto(`/threads/${threadId}`);
+    const panel = page.getByRole("region", { name: "Desktop" });
+    await expect(panel).toBeVisible();
+    const width = () => panel.evaluate((el) => Math.round(el.getBoundingClientRect().width));
+    const before = await width();
+
+    const box = (await page.getByRole("separator").last().boundingBox())!;
+    await page.mouse.move(box.x + 1, 300);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 300, 300, { steps: 8 });
+    await page.mouse.up();
+    const resized = await width();
+    expect(resized).toBeLessThan(before - 100);
+
+    await page.reload();
+    await expect(panel).toBeVisible();
+    expect(Math.abs((await width()) - resized)).toBeLessThan(8);
+
+    await page.getByRole("button", { name: "Close desktop" }).click();
+    await page.reload();
+    await page.getByLabel("Prompt").waitFor();
+    await expect(panel).toHaveCount(0);
+  });
+
   test("is watched read-only, and a click only reaches it after taking over", async ({ page }) => {
     await registerUser(page, "dsk", "Desktop User");
     const { child, events, threadId } = await threadOnFakeRunner(page);
