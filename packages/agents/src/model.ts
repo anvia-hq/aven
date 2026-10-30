@@ -4,6 +4,8 @@ import { AzureOpenAIClient } from "@anvia/azure";
 import { OpenAIClient } from "@anvia/openai";
 import type { Provider } from "@aven/protocol/runtime-wire";
 
+import { nullFreeStream } from "./null-free-stream";
+
 export type { Provider };
 
 export type ModelConfig = {
@@ -52,6 +54,14 @@ function controlsFromLevels(levels: readonly string[] | undefined) {
   });
 }
 
+// Azure serves OpenAI's models and others (DeepSeek, Grok, ...) from one resource. The Responses
+// API streams OpenAI's models, but the others' answers come back whole on it (the stream ends up
+// one burst after the wait), while chat completions streams them. A deployment named unlike its
+// model is taken for another vendor's, which chat completions also serves.
+const OPENAI_MODEL = /^(gpt-|o\d|chatgpt-|codex)/i;
+
+export const azureApiFor = (modelId: string) => (OPENAI_MODEL.test(modelId) ? "responses" : "chat");
+
 export function createModel(config: ModelConfig) {
   if (config.provider === "openai-compatible") {
     if (!config.baseUrl) throw new Error("An OpenAI-compatible provider needs a base URL");
@@ -75,9 +85,11 @@ export function createModel(config: ModelConfig) {
     return new AzureOpenAIClient({
       apiKey: config.apiKey,
       baseUrl: config.baseUrl,
+      // Chat completions streams from some vendors carry nulls the SDK rejects (bug 0002).
+      fetch: nullFreeStream(),
     }).completionModel({
       modelId: config.modelId,
-      api: "responses",
+      api: azureApiFor(config.modelId),
       controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });

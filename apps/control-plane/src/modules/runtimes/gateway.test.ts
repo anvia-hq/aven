@@ -108,29 +108,35 @@ describe("RunGateway", () => {
   });
 
   test("azure: the SDK reaches the resource's v1 API with the sender's key and deployment", async () => {
-    const run = gateway.issue("r2a", {
-      provider: "azure",
-      modelId: "my-deployment",
-      baseUrl: origin,
-      apiKey: "azure-key",
-    });
-    expect(run.gatewayPath).toBe("/runtimes/gateway/azure");
-    const before = seen.length;
-    const { agent } = createCodingAgent({
-      tools: [],
-      provider: "azure",
-      modelId: "whatever-the-runtime-wants",
-      apiKey: run.gatewayToken,
-      baseUrl: `${base}${run.gatewayPath}`,
-    });
-    await agent.generate({ prompt: "hi" }).catch(() => undefined);
+    // OpenAI's models go to the Responses API, the others to chat completions (decision 0026).
+    for (const [runtimeModel, path] of [
+      ["gpt-5.5", "/openai/v1/responses"],
+      ["DeepSeek-V4.1-Flash", "/openai/v1/chat/completions"],
+    ] as const) {
+      const run = gateway.issue("r2a", {
+        provider: "azure",
+        modelId: "my-deployment",
+        baseUrl: origin,
+        apiKey: "azure-key",
+      });
+      expect(run.gatewayPath).toBe("/runtimes/gateway/azure");
+      const before = seen.length;
+      const { agent } = createCodingAgent({
+        tools: [],
+        provider: "azure",
+        modelId: runtimeModel,
+        apiKey: run.gatewayToken,
+        baseUrl: `${base}${run.gatewayPath}`,
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
 
-    const call = seen[before]!;
-    expect(call.path).toBe("/openai/v1/responses");
-    expect(call.headers.get("api-key")).toBe("azure-key");
-    expect(call.headers.get("authorization")).toBe("Bearer azure-key");
-    expect(call.body.model).toBe("my-deployment");
-    gateway.revoke("r2a");
+      const call = seen[before]!;
+      expect(call.path).toBe(path);
+      expect(call.headers.get("api-key")).toBe("azure-key");
+      expect(call.headers.get("authorization")).toBe("Bearer azure-key");
+      expect(call.body.model).toBe("my-deployment");
+      gateway.revoke("r2a");
+    }
   });
 
   test("an Azure provider without a key cannot start a run", () => {

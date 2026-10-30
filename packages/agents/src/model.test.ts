@@ -3,7 +3,7 @@ import { Agent, defineCompletionModelControls } from "@anvia/core";
 import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
-import { createModel, providerOptionsFor, reasoningControlsFor } from "./model";
+import { azureApiFor, createModel, providerOptionsFor, reasoningControlsFor } from "./model";
 
 describe("providerOptionsFor", () => {
   test("only anthropic gets automatic prompt caching", () => {
@@ -24,6 +24,15 @@ describe("createModel azure", () => {
     expect(() => createModel({ ...azure, apiKey: "k" })).toThrow("deployment");
     expect(() => createModel({ ...azure, modelId: "d" })).toThrow("API key");
     expect(createModel({ ...azure, modelId: "d", apiKey: "k" }).provider).toBe("azure-openai");
+  });
+
+  test("OpenAI's models use the Responses API and the rest chat completions, which streams them", () => {
+    for (const id of ["gpt-5.5", "o3", "gpt-5.1-codex", "GPT-4o"]) {
+      expect(azureApiFor(id)).toBe("responses");
+    }
+    for (const id of ["DeepSeek-V4.1-Flash", "grok-4.6", "Llama-4", "alphax-8885-resource"]) {
+      expect(azureApiFor(id)).toBe("chat");
+    }
   });
 
   test("reports the SDK's effort levels for the deployment's model name", () => {
