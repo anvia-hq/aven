@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight, ArrowUp } from "@mynaui/icons-react";
+import { cn } from "cn";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -111,11 +112,7 @@ export function QuestionForm({ tool, threadId, onSubmit }: Props) {
               {prompts.map((item, index) => (
                 <span
                   key={item.id}
-                  className={
-                    index <= step
-                      ? "h-1 w-5 rounded-full bg-primary"
-                      : "h-1 w-5 rounded-full bg-border"
-                  }
+                  className={cn("h-1 w-5 rounded-full", index <= step ? "bg-primary" : "bg-border")}
                 />
               ))}
             </div>

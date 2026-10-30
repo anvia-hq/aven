@@ -19,17 +19,10 @@ export type Thread = {
   id: string;
   projectId: string;
   title: string;
-  /** The runtime that machine is; null means the control plane's own. */
+  /** The runner that hosts the thread's sandbox, copied from its project when the thread was made. */
   runtimeId: string;
   state: ThreadState;
   running: boolean;
   createdAt: string;
   updatedAt: string;
 };
-
-export const SUGGESTIONS = [
-  "Explain how this project is structured",
-  "Find and fix any failing tests",
-  "Add a README section describing how to run it",
-  "Summarize the most recent changes",
-];

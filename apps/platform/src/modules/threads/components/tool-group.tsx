@@ -49,7 +49,7 @@ function kindOf(name: string): Kind {
 
 // "Ran 2 commands, edited 2 files": one clause per kind of tool, in the order they first appear.
 // Edits count distinct files, so two edits to one file read as one.
-export function summarize(tools: ToolPart[]) {
+function summarize(tools: ToolPart[]) {
   const counts = new Map<Kind, number>();
   const editedFiles = new Set<string>();
   for (const tool of tools) {

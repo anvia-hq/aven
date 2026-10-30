@@ -10,7 +10,8 @@ import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import { SUGGESTIONS, type RunSelection } from "@/modules/threads/types";
+import { SUGGESTIONS } from "@/modules/threads/suggestions";
+import type { RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/threads/")({
   component: NewThread,
