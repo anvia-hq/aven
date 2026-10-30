@@ -120,6 +120,13 @@
       "when": 1793370682172,
       "tag": "0016_bouncy_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793371518374,
+      "tag": "0017_pink_puck",
+      "breakpoints": true
     }
   ]
 }
