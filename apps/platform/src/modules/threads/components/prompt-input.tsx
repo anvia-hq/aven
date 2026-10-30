@@ -1,4 +1,4 @@
-import { ArrowUp, Plus } from "@mynaui/icons-react";
+import { ArrowUp, Plus, Stop } from "@mynaui/icons-react";
 import { useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/button";
@@ -12,20 +12,23 @@ type Props = {
   // Resolves to whether the prompt was taken; the text is only cleared when it was.
   onSubmit: (prompt: string, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
-  disabled?: boolean;
+  /** The agent is working: nothing can be sent, and Send gives way to Stop. */
+  running?: boolean;
+  onStop?: () => void;
   autoFocus?: boolean;
 };
 
 export function PromptInput({
   onSubmit,
   placeholder = "Ask anything about the codebase…",
-  disabled,
+  running = false,
+  onStop,
   autoFocus,
 }: Props) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const model = useModelSelection();
-  const canSend = value.trim().length > 0 && !disabled && !sending;
+  const canSend = value.trim().length > 0 && !running && !sending;
 
   async function submit() {
     if (!canSend) return;
@@ -62,14 +65,20 @@ export function PromptInput({
         </Button>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
-          <Button
-            size="icon-sm"
-            aria-label="Send"
-            disabled={!canSend}
-            onClick={() => void submit()}
-          >
-            <ArrowUp />
-          </Button>
+          {running ? (
+            <Button size="icon-sm" aria-label="Stop" onClick={onStop}>
+              <Stop />
+            </Button>
+          ) : (
+            <Button
+              size="icon-sm"
+              aria-label="Send"
+              disabled={!canSend}
+              onClick={() => void submit()}
+            >
+              <ArrowUp />
+            </Button>
+          )}
         </div>
       </div>
     </div>

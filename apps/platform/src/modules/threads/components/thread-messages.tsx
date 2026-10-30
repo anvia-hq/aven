@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import type { ChatMessage } from "../types";
 import { ThreadMessage } from "./thread-message";
+import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
   messages: ChatMessage[];
@@ -31,6 +32,7 @@ export function ThreadMessages({ messages, running = false, error, aside }: Prop
                 streaming={running && index === messages.length - 1}
               />
             ))}
+            {running && <WorkingIndicator />}
             {error && (
               <p
                 role="alert"

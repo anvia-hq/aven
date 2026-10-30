@@ -5,7 +5,6 @@ import { Markdown } from "@/components/markdown";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import type { ChatMessage, MessagePart, ToolPart } from "../types";
 import { QuestionBlock } from "./question-block";
-import { ToolCall } from "./tool-call";
 import { ToolGroup } from "./tool-group";
 
 type Block =
@@ -32,8 +31,6 @@ function AssistantBlock({ block, live }: { block: Block; live: boolean }) {
     return <Markdown live={live}>{block.text}</Markdown>;
   }
   if (block.type === "question") return <QuestionBlock tool={block.tool} />;
-  const [only] = block.tools;
-  if (block.tools.length === 1 && only) return <ToolCall tool={only} />;
   return <ToolGroup tools={block.tools} />;
 }
 
@@ -66,12 +63,13 @@ export const ThreadMessage = memo(function ThreadMessage({
 function AssistantMessage({ message, streaming }: { message: ChatMessage; streaming: boolean }) {
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
+  // Nothing written yet: the working indicator under the conversation says the agent is on it.
+  if (parts.length === 0) return null;
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
       {blocks(parts).map((block, index, all) => (
         <AssistantBlock key={index} block={block} live={live && index === all.length - 1} />
       ))}
-      {message.parts.length === 0 && <p className="text-sm text-muted-foreground">Thinking…</p>}
     </div>
   );
 }

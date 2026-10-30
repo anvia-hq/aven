@@ -167,7 +167,7 @@ test.describe("threads", () => {
     await expect(page.getByText("All done.")).toBeVisible();
 
     // The three calls are one row, summarized, and marked failed because one of them failed.
-    const group = page.getByRole("button", { name: /^Read 2 files, edited 1 file/ });
+    const group = page.getByRole("button", { name: /^Read 2 files, edited a file/ });
     await expect(group).toBeVisible();
     await expect(page.getByLabel("Failed")).toHaveCount(1);
     await group.click();
@@ -185,7 +185,9 @@ test.describe("threads", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
   });
 
-  test("a running thread cannot take another message and offers Stop", async ({ page }) => {
+  test("a running thread shows it is working, and its composer offers Stop instead of Send", async ({
+    page,
+  }) => {
     await page.route("**/api/threads/*/events", (route) =>
       route.fulfill({
         status: 200,
@@ -207,8 +209,11 @@ test.describe("threads", () => {
     await startThread(page, "long task");
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
+    await expect(page.getByRole("status").filter({ hasText: "Working…" })).toBeVisible();
     await page.getByLabel("Prompt").fill("one more thing");
-    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+    await page.getByLabel("Prompt").press("Enter");
+    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
+    await expect(page.locator('[data-role="user"]')).toHaveCount(1);
     await page.getByRole("button", { name: "Stop" }).click();
     await expect.poll(() => cancelled).toBe(true);
   });

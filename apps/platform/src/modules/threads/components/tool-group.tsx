@@ -7,15 +7,18 @@ import { ToolCall } from "./tool-call";
 
 type Kind = { label: (count: number) => string };
 
+// "a command", "2 commands".
 const plural = (count: number, one: string, many = `${one}s`) =>
-  `${count} ${count === 1 ? one : many}`;
+  count === 1 ? `a ${one}` : `${count} ${many}`;
 
 const command: Kind = { label: (count) => `ran ${plural(count, "command")}` };
 const processes: Kind = { label: () => "checked processes" };
 const edit: Kind = { label: (count) => `edited ${plural(count, "file")}` };
 const read: Kind = { label: (count) => `read ${plural(count, "file")}` };
 const list: Kind = { label: (count) => `listed ${plural(count, "directory", "directories")}` };
-const search: Kind = { label: (count) => `searched ${plural(count, "time")}` };
+const search: Kind = {
+  label: (count) => (count === 1 ? "searched once" : `searched ${count} times`),
+};
 const desktop: Kind = { label: (count) => plural(count, "desktop action") };
 const other: Kind = { label: (count) => `used ${plural(count, "tool")}` };
 
@@ -62,7 +65,7 @@ export function summarize(tools: ToolPart[]) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// A run of tool calls as one row; the calls themselves open inside it.
+// A run of tool calls, even a run of one, as one row; the calls themselves open inside it.
 export function ToolGroup({ tools }: { tools: ToolPart[] }) {
   const running = tools.some((tool) => tool.status === "running");
   const failed = tools.some((tool) => tool.status === "error");

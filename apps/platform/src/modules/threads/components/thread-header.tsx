@@ -1,4 +1,4 @@
-import { LayoutDashboard, Monitor, Spinner, Stop } from "@mynaui/icons-react";
+import { LayoutDashboard, Monitor } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 
@@ -6,8 +6,6 @@ import type { Thread } from "../types";
 
 type Props = {
   thread: Thread;
-  running: boolean;
-  onCancel: () => void;
   overviewOpen: boolean;
   onToggleOverview: () => void;
   desktopOpen: boolean;
@@ -16,8 +14,6 @@ type Props = {
 
 export function ThreadHeader({
   thread,
-  running,
-  onCancel,
   overviewOpen,
   onToggleOverview,
   desktopOpen,
@@ -26,14 +22,6 @@ export function ThreadHeader({
   return (
     <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
       <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</h1>
-      {running && (
-        <>
-          <Spinner className="size-4 animate-spin text-muted-foreground" aria-label="Running" />
-          <Button variant="outline" size="sm" onClick={onCancel}>
-            <Stop /> Stop
-          </Button>
-        </>
-      )}
       <Button
         variant={overviewOpen ? "secondary" : "ghost"}
         size="icon-sm"

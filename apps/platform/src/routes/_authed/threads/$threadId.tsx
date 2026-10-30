@@ -61,8 +61,6 @@ function ThreadPage() {
             <div className="@container flex h-full min-w-0 flex-col">
               <ThreadHeader
                 thread={thread}
-                running={running}
-                onCancel={cancel}
                 overviewOpen={overviewOpen}
                 onToggleOverview={() => setOverviewOpen(!overviewOpen)}
                 desktopOpen={desktopOpen}
@@ -88,8 +86,9 @@ function ThreadPage() {
                       <QuestionForm key={question.id} tool={question} onSubmit={answer} />
                     ) : (
                       <PromptInput
-                        disabled={running}
-                        placeholder={running ? "Agent is working…" : "Reply to the agent…"}
+                        running={running}
+                        onStop={cancel}
+                        placeholder="Reply to the agent…"
                         onSubmit={send}
                       />
                     )}
