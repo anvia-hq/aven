@@ -20,6 +20,7 @@ import { dirname } from "node:path";
 
 import { createDurableEventMapper, type DurableEnd } from "./durable-events";
 import { assessGoal, type CommandResult } from "./goal-assessment";
+import { goalSessionMarker } from "./goal-report";
 
 // Bump when the agent's tools or instructions change incompatibly: runs unfinished under an older
 // version stop as "needs attention" instead of continuing under code that no longer matches.
@@ -211,7 +212,7 @@ export class DurableRuns {
     input: RunInput,
     verify: () => Promise<CommandResult[]>,
     onEvent: (event: RunEvent) => void,
-    onSession: (messages: Message[]) => Promise<void>,
+    onSession: (session: number, messages: Message[]) => Promise<void>,
   ): Promise<FollowedGoal> {
     const agentId = input.agent.id;
     this.#register(input);
@@ -247,7 +248,7 @@ export class DurableRuns {
     handle: DurableTaskHandle<GoalResult>,
     input: RunInput,
     onEvent: (event: RunEvent) => void,
-    onSession: (messages: Message[]) => Promise<void>,
+    onSession: (session: number, messages: Message[]) => Promise<void>,
   ): Promise<GoalEnd> {
     const seen = new Set<string>();
     const sessions: Promise<void>[] = [];
@@ -261,7 +262,9 @@ export class DurableRuns {
       if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
         if (!seen.has(wait.runId)) {
           seen.add(wait.runId);
-          sessions.push(this.#followSession(wait.runId, input, onEvent, onSession));
+          const session = seen.size;
+          onEvent({ type: "text", delta: goalSessionMarker(session) });
+          sessions.push(this.#followSession(wait.runId, session, input, onEvent, onSession));
         }
         continue;
       }
@@ -296,9 +299,10 @@ export class DurableRuns {
 
   async #followSession(
     runId: string,
+    session: number,
     input: RunInput,
     onEvent: (event: RunEvent) => void,
-    onSession: (messages: Message[]) => Promise<void>,
+    onSession: (session: number, messages: Message[]) => Promise<void>,
   ) {
     try {
       const run = await this.#runtime.getRun(runId);
@@ -308,7 +312,7 @@ export class DurableRuns {
         keepAgent: true,
       });
       const end = await followed.done;
-      if (end.type === "response") await onSession(end.messages);
+      if (end.type === "response") await onSession(session, end.messages);
     } catch {
       // A session that failed is the goal's to report: it pauses as `session_failed`.
     }

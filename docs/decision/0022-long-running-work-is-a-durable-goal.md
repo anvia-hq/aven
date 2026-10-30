@@ -22,5 +22,5 @@ The harness this was modelled on moved away from `defineGoal` because the goal's
 
 - A goal does not survive a runner restart. Its agent, its sandbox handle and its assessment live in the runner's process; on restart the journal ends interrupted runs (0021) and an unfinished goal task stays in the journal, unused. Continuing goals across a restart needs the control plane to keep runs alive across a reconnect.
 - Verify commands are written by the model and run in the thread's sandbox, with the same reach as any command the agent runs there.
-- The client shows a goal's sessions as one long reply: there is no marker between them yet.
+- A goal's sessions are one long reply, with a "Goal · session N" divider between them. The divider is ordinary assistant text, live and in the filed transcript, so no client needs to know about goals; it is not in the agent's own history.
 - The goal's sessions use their own conversation, so the thread's history has the objective, the agent's report and nothing of what the sessions did except through the report.

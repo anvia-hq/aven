@@ -17,6 +17,7 @@ import {
 import { startRuntime, type CreateRuntimeAgent } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { fakeDesktop } from "./testing/fake-desktop";
+import { goalSessionMarker } from "./goal-report";
 import { journalPath } from "./testing/journal-path";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
@@ -507,6 +508,7 @@ describe("startRuntime runs", () => {
     expect(texts).toEqual([
       "Starting a goal. ",
       "Goal started.",
+      goalSessionMarker(1),
       "Paging added.",
       "All done, paging works.",
     ]);
@@ -516,7 +518,16 @@ describe("startRuntime runs", () => {
     const roles = appended(plane).flatMap((append) =>
       append.messages.map((message) => message.role),
     );
-    expect(roles).toEqual(["user", "assistant", "tool", "assistant", "assistant", "assistant"]);
+    // The session's divider is an assistant message of its own.
+    expect(roles).toEqual([
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+      "assistant",
+      "assistant",
+      "assistant",
+    ]);
   });
 
   test("a cancel while the goal is working stops it and ends the run", async () => {

@@ -22,7 +22,7 @@ import {
 import { DesktopViewers } from "./desktop-viewers";
 import { DurableRuns, type FollowedRun, type RunInput } from "./durable-runs";
 import { verifyWith } from "./goal-assessment";
-import { goalReport } from "./goal-report";
+import { goalReport, goalSessionMessage } from "./goal-report";
 import { lateBoundTools } from "./late-bound-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
@@ -259,7 +259,8 @@ export function startRuntime(options: RuntimeOptions) {
           build(`goal-${runId}`, false),
           verifyWith(exec, request.verifyCommands ?? []),
           forward,
-          async (messages) => file(withoutPrompt(messages)),
+          async (session, messages) =>
+            file([goalSessionMessage(session), ...withoutPrompt(messages)]),
         );
         live.followed = working;
         return working.done;

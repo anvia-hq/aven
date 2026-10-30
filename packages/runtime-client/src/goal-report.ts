@@ -1,4 +1,16 @@
+import type { Message } from "@anvia/core";
+
 import type { GoalEnd } from "./durable-runs";
+
+// A divider between a goal's sessions, as plain assistant text so every client shows it, live and
+// when the thread is loaded again, without knowing about goals.
+export const goalSessionMarker = (session: number) =>
+  `\n\n---\n\n**Goal · session ${session}**\n\n`;
+
+export const goalSessionMessage = (session: number): Message => ({
+  role: "assistant",
+  content: [{ type: "text", text: goalSessionMarker(session) }],
+});
 
 // What the agent is told when its goal is over, so it reports in the thread in its own words. It
 // is part of the conversation the agent continues from, so it reads as a note from Aven.

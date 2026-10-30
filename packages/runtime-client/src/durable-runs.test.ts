@@ -4,6 +4,7 @@ import type { RunEvent } from "@aven/protocol/events";
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { DurableRuns, type RunInput } from "./durable-runs";
+import { goalSessionMarker } from "./goal-report";
 import { journalPath } from "./testing/journal-path";
 
 const question: ScriptStep = [
@@ -137,18 +138,22 @@ describe("DurableRuns goals", () => {
       input("goal-run-1", [text("first try")], [text("fixed it")]),
       results(1, 0),
       (event) => events.push(event),
-      async (messages) => void sessions.push(messages.map((message) => message.role)),
+      async (session, messages) =>
+        void sessions.push([String(session), ...messages.map((message) => message.role)]),
     );
 
     expect(await goal.done).toMatchObject({ type: "complete", evidence: ["`bun test` passed"] });
+    // A divider opens each session, then the session's own text.
     expect(events.filter((event) => event.type === "text")).toEqual([
+      { type: "text", delta: goalSessionMarker(1) },
       { type: "text", delta: "first try" },
+      { type: "text", delta: goalSessionMarker(2) },
       { type: "text", delta: "fixed it" },
     ]);
     // Each session's prompt, then its reply.
     expect(sessions).toEqual([
-      ["user", "assistant"],
-      ["user", "assistant"],
+      ["1", "user", "assistant"],
+      ["2", "user", "assistant"],
     ]);
   });
 
