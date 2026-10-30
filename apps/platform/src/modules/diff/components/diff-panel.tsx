@@ -28,9 +28,11 @@ const EMPTY: Record<DiffScope, string> = {
 // everything since the branch left the default branch, drawn as one column or two.
 export function DiffPanel({ threadId, running, onClose }: Props) {
   const { scope, setScope, layout, setLayout } = useDiffPreferences();
-  const { loaded, problem, available, truncated, files } = useThreadDiff(threadId, scope, running);
-  const additions = files.reduce((sum, file) => sum + file.additions, 0);
-  const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
+  const { loaded, problem, available, truncated, files, additions, deletions } = useThreadDiff(
+    threadId,
+    scope,
+    running,
+  );
 
   return (
     <SidePanel

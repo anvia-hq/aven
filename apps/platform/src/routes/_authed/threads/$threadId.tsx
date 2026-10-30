@@ -10,10 +10,12 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
+import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { QuestionForm } from "@/modules/threads/components/question-form";
+import { ShipButton } from "@/modules/threads/components/ship-button";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { useThread } from "@/modules/threads/hooks/use-thread";
@@ -104,6 +106,10 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3">
+                    <div className="flex items-center justify-end gap-2 pb-2">
+                      <ChangesBadge threadId={thread.id} running={running} />
+                      <ShipButton thread={thread} />
+                    </div>
                     {question ? (
                       <QuestionForm
                         key={question.id}

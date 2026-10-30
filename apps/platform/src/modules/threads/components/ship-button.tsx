@@ -21,6 +21,7 @@ export function ShipButton({ thread }: Props) {
     return (
       <Button
         size="sm"
+        className="shadow-md"
         nativeButton={false}
         render={<a href={`/api/github/connect?next=${next}`} />}
       >
@@ -33,8 +34,9 @@ export function ShipButton({ thread }: Props) {
     <>
       {thread.pullRequestUrl && (
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
+          className="shadow-md"
           nativeButton={false}
           role="link"
           render={<a href={thread.pullRequestUrl} target="_blank" rel="noreferrer" />}
@@ -46,6 +48,7 @@ export function ShipButton({ thread }: Props) {
       <Button
         variant={shipped ? "outline" : "default"}
         size="sm"
+        className="shadow-md"
         disabled={thread.running || shipping}
         onClick={() => void ship()}
       >

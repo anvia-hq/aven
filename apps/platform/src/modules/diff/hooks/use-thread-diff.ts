@@ -23,6 +23,10 @@ export function useThreadDiff(threadId: string, scope: DiffScope, running: boole
   const patch = response?.available ? response : null;
   const files = useMemo(() => (patch ? parsePatch(patch.patch) : []), [patch]);
 
+  // Lines added and removed over every file.
+  const additions = useMemo(() => files.reduce((sum, file) => sum + file.additions, 0), [files]);
+  const deletions = useMemo(() => files.reduce((sum, file) => sum + file.deletions, 0), [files]);
+
   return {
     loaded: answer !== null,
     problem: answer?.error ?? null,
@@ -30,5 +34,7 @@ export function useThreadDiff(threadId: string, scope: DiffScope, running: boole
     available: response ? response.available : null,
     truncated: patch?.truncated ?? false,
     files,
+    additions,
+    deletions,
   };
 }
