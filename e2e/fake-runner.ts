@@ -198,8 +198,18 @@ ws.onmessage = ({ data }) => {
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.start" && !process.env.FAKE_QUESTION) {
-    // A plain run is left going; the spec reads what it was given.
+    // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
     event({ type: "started", prompt: message.prompt, mentions: message.mentions });
+    if (process.env.FAKE_RUN_ENDS) {
+      const { runId } = message;
+      send({
+        type: "run.event",
+        runId,
+        seq: numbered(runId),
+        event: { type: "text", delta: "Done." },
+      });
+      send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
+    }
   } else if (message.type === "run.start" && process.env.FAKE_QUESTION) {
     const { runId } = message;
     const ask = { id: "q1", name: "ask_user", target: "", status: "running", questions: QUESTIONS };

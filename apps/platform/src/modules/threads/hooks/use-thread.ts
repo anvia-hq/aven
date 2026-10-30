@@ -37,7 +37,7 @@ export function messageBody(
 }
 
 export function useThread(threadId: string) {
-  const { threads, loaded, setRunning: setThreadRunning } = useThreads();
+  const { threads, loaded, setRunning: setThreadRunning, refresh } = useThreads();
   const thread = threads.find((candidate) => candidate.id === threadId);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -75,6 +75,10 @@ export function useThread(threadId: string) {
           break;
         case "done":
           setThreadRunning(threadId, false);
+          // What the server does once a run has ended, such as finding the pull request the agent
+          // opened, lands a moment after `done`: look now, and again shortly.
+          void refresh();
+          setTimeout(() => void refresh(), 2000);
           break;
       }
     };
@@ -85,7 +89,7 @@ export function useThread(threadId: string) {
       setError("Lost the connection to the server");
     };
     return () => source.close();
-  }, [threadId, setThreadRunning]);
+  }, [threadId, setThreadRunning, refresh]);
 
   // True once the message is accepted, so the composer knows it can clear.
   const send = useCallback(

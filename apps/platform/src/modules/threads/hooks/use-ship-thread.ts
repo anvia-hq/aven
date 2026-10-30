@@ -1,31 +1,26 @@
 import { useState } from "react";
 
-import { api, attempt } from "@/lib/api";
 import { toast } from "@/components/toast";
+import { api, attempt } from "@/lib/api";
 
 import type { Thread } from "../types";
-import { useThreads } from "./use-threads";
 
-type PullRequest = { number: number; url: string; created: boolean };
-
-// Publishing a thread's work as a pull request (decision 0040): the server commits and pushes the
-// thread's branch and opens the pull request, or finds the one already open.
+// Shipping a thread sends its agent the ship prompt (decision 0044): the work goes on in the thread,
+// where it can be watched, and the pull request shows up once the agent has opened it.
 export function useShipThread(thread: Thread) {
-  const { refresh } = useThreads();
   const [shipping, setShipping] = useState(false);
 
   async function ship() {
     setShipping(true);
-    const pullRequest = await attempt("Could not ship the thread", () =>
-      api<PullRequest>(`/threads/${thread.id}/ship`, { method: "POST" }),
+    const started = await attempt("Could not ship the thread", () =>
+      api<{ ok: true }>(`/threads/${thread.id}/ship`, { method: "POST" }),
     );
-    if (pullRequest) {
+    if (started) {
       toast.add({
-        title: pullRequest.created ? "Pull request opened" : "Pull request updated",
-        description: `#${pullRequest.number}`,
+        title: "Shipping",
+        description: "The agent is working on it in this thread",
         type: "success",
       });
-      await refresh();
     }
     setShipping(false);
   }
