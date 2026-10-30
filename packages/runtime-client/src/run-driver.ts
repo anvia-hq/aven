@@ -13,6 +13,7 @@ import type {
   RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { keepAttachments, promptOf } from "./attachments";
 import type { CreateRuntimeAgent } from "./runner";
 import type { GoalEnd } from "./durable-goals";
 import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
@@ -107,6 +108,11 @@ export function createRunDriver(context: DriverContext) {
     const run: Live = { threadId: thread.id, save };
     live.set(runId, run);
     try {
+      if (message?.type === "run.start" && message.attachments?.length) {
+        save({
+          attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
+        });
+      }
       const scope = await acquire(initial, state, run);
       const end = await phases(scope, message);
       finish(runId, end, run.cancelReason);
@@ -207,7 +213,7 @@ export function createRunDriver(context: DriverContext) {
       followed = await journaled.start(
         runId,
         thread.id,
-        scope.record.prompt ?? "",
+        await promptOf(scope.record, context.sandbox),
         build(scope.record.agentId, true),
         forward,
       );

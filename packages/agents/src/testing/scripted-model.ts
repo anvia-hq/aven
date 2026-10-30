@@ -34,7 +34,8 @@ export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
       streaming: true,
       tools: true,
       toolChoice: true,
-      imageInput: false,
+      // Takes the images users attach (decision 0034), as every provider the agent runs on does.
+      imageInput: true,
       documentInput: false,
       outputSchema: false,
       reasoning: false,

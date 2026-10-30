@@ -55,3 +55,21 @@ describe("applyEvent with blank text", () => {
     ]);
   });
 });
+
+describe("applyEvent with attachments", () => {
+  test("a message's files go on the user message, and a message without any has none", () => {
+    const attachments = [
+      { name: "chart.png", mediaType: "image/png", size: 10, image: "a.png" },
+      { name: "deck.pptx", mediaType: "application/octet-stream", size: 20 },
+    ];
+    const events: RunEvent[] = [
+      { type: "run_start", prompt: "", attachments },
+      { type: "done" },
+      { type: "run_start", prompt: "again" },
+    ];
+    const [first, , second] = events.reduce(applyEvent, [] as ChatMessage[]);
+    expect(first).toMatchObject({ role: "user", attachments });
+    expect(second?.role).toBe("user");
+    expect(second && "attachments" in second).toBe(false);
+  });
+});

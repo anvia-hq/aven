@@ -1,13 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ARTIFACT_NAME, type ArtifactContent } from "@aven/protocol/runtime-wire";
+import {
+  ARTIFACT_EXTENSIONS,
+  ARTIFACT_NAME,
+  type ArtifactContent,
+} from "@aven/protocol/runtime-wire";
 
-const EXTENSIONS: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/gif": "gif",
-  "image/webp": "webp",
-};
+const EXTENSIONS: Record<string, string> = ARTIFACT_EXTENSIONS;
 const MEDIA_TYPES = Object.fromEntries(
   Object.entries(EXTENSIONS).map(([mediaType, extension]) => [extension, mediaType]),
 );
@@ -22,11 +21,17 @@ export class ArtifactStore {
   async save(threadId: string, bytes: Uint8Array, mediaType: string) {
     const extension = EXTENSIONS[mediaType];
     if (!extension) throw new Error(`Images of type ${mediaType} are not kept`);
+    const name = `${crypto.randomUUID()}.${extension}`;
+    await this.keep(threadId, name, bytes);
+    return name;
+  }
+
+  /** Keeps an image under a name the control plane gave it: one a user attached (decision 0034). */
+  async keep(threadId: string, name: string, bytes: Uint8Array) {
+    if (!ARTIFACT_NAME.test(name)) throw new Error(`${name} is not an image name this store gives`);
     const dir = this.#dir(threadId);
     await mkdir(dir, { recursive: true });
-    const name = `${crypto.randomUUID()}.${extension}`;
     await writeFile(join(dir, name), bytes);
-    return name;
   }
 
   /** An image of the thread's, in base64; null when the name is not one this store gives or it is gone. */

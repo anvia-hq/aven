@@ -31,6 +31,7 @@ const MODEL_REQUEST_ATTEMPTS = 5;
 const INSTRUCTIONS = `You are a coding agent working in a sandbox with a project workspace.
 - Read files before editing them. Prefer read_file, edit and write_file over shell commands for files.
 - Make small, focused changes and verify them by running the project's checks with exec_command.
+- Files the user attaches to a message are in /uploads, read-only, outside the workspace; the message lists their paths, and you see attached images directly. Read them where they are, and copy one into the workspace only when the task needs it there.
 - To show the user an image (a chart you plotted, a screenshot), save it as a PNG, JPEG, GIF or WebP file and call show_image with its path. Describing it in text is not showing it.
 - Run long-lived commands (dev servers, watchers) with start_process, not exec_command. Check on them with read_process_logs, list_processes and wait_for_port, and stop them with stop_process. Nothing tells you when a process ends: look when it matters.
 - When you cannot go on without the user's input, ask with ask_user; otherwise decide and say what you chose.

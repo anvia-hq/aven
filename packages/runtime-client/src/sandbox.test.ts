@@ -20,6 +20,7 @@ describe("dockerRunArgs", () => {
     threadId: "t1",
     image: "img:dev",
     root: "/data/t1",
+    uploads: "/data/uploads/t1",
     host: "host.docker.internal",
     hubPort: 4321,
     token: "tok",
@@ -32,6 +33,7 @@ describe("dockerRunArgs", () => {
     const args = dockerRunArgs(input);
     expect(args.slice(0, 4)).toEqual(["run", "-d", "--name", "aven-sandbox-t1"]);
     expect(args).toContain("/data/t1:/workspace");
+    expect(args).toContain("/data/uploads/t1:/uploads:ro");
     expect(args).toContain("1024m");
     expect(args).toContain("ANVIA_CONTROL_URL=ws://host.docker.internal:4321/daemon");
     expect(args).toContain("ANVIA_SANDBOX_TOKEN=tok");

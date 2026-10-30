@@ -11,6 +11,7 @@ import type {
 } from "@anvia/sandbox";
 
 import { ArtifactStore } from "../artifacts";
+import { UploadStore } from "../uploads";
 import type { ThreadSandbox, ThreadWorkspaces } from "../sandbox";
 import { hasRunningProcesses, sandboxTools } from "../thread-tools";
 
@@ -250,12 +251,19 @@ async function collect(stream: ReadableStream, into: Buffer[]) {
 export function directoryWorkspaces(
   /** Puts files in a new workspace before the first run. */
   seed?: (root: string) => Promise<void>,
-): ThreadWorkspaces & { roots: Map<string, string>; sandboxes: Map<string, DirectorySandbox> } {
+): ThreadWorkspaces & {
+  roots: Map<string, string>;
+  sandboxes: Map<string, DirectorySandbox>;
+  artifacts: ArtifactStore;
+  uploads: UploadStore;
+} {
   const roots = new Map<string, string>();
   const sandboxes = new Map<string, DirectorySandbox>();
   const artifacts = new ArtifactStore(
     join(tmpdir(), `aven-directory-artifacts-${crypto.randomUUID()}`),
   );
+  // There is no container to mount them in: the files are only kept.
+  const uploads = new UploadStore(join(tmpdir(), `aven-directory-uploads-${crypto.randomUUID()}`));
   // Unlike `ThreadWorkspaces.release`, which keeps the workspace's files for the next `acquire`,
   // this ends the thread's processes and deletes its temporary directory too.
   const free = async (threadId: string) => {
@@ -284,12 +292,14 @@ export function directoryWorkspaces(
       };
     },
     artifacts,
+    uploads,
     desktop: () => undefined,
     workspace: async (threadId) => roots.get(threadId),
     release: free,
     async dispose() {
       await Promise.all([...sandboxes.keys()].map(free));
       await rm(artifacts.root, { recursive: true, force: true });
+      await rm(uploads.root, { recursive: true, force: true });
     },
   };
 }

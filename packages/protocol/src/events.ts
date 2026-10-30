@@ -79,16 +79,32 @@ export function applyUsage(
 
 export type MessagePart = { type: "text"; text: string } | { type: "tool"; tool: ToolPart };
 
+/**
+ * A file the user attached to a message (decision 0034). Every one is copied into the sandbox; an
+ * image is also shown to the model, and `image` is the name `GET /threads/:id/artifacts/:name`
+ * serves it by.
+ */
+export type MessageAttachment = { name: string; mediaType: string; size: number; image?: string };
+
+/** How much a message may carry. A model takes images of up to 5 MB. */
+export const ATTACHMENT_LIMITS = {
+  count: 10,
+  totalBytes: 10 * 1024 * 1024,
+  imageBytes: 5 * 1024 * 1024,
+} as const;
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   parts: MessagePart[];
+  /** On a user message: the files sent with it. */
+  attachments?: MessageAttachment[];
 };
 
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
   | { type: "snapshot"; messages: ChatMessage[]; running: boolean; usage?: ThreadUsage }
-  | { type: "run_start"; prompt: string }
+  | { type: "run_start"; prompt: string; attachments?: MessageAttachment[] }
   /** The user answered the agent's question and its run continues in the same assistant message. */
   | { type: "run_resume" }
   | { type: "text"; delta: string }
@@ -168,16 +184,19 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
   switch (event.type) {
     case "snapshot":
       return event.messages;
-    case "run_start":
+    case "run_start": {
+      const user: ChatMessage = {
+        id: messageId(messages.length),
+        role: "user",
+        parts: [{ type: "text", text: event.prompt }],
+      };
+      if (event.attachments?.length) user.attachments = event.attachments;
       return [
         ...messages,
-        {
-          id: messageId(messages.length),
-          role: "user",
-          parts: [{ type: "text", text: event.prompt }],
-        },
+        user,
         { id: messageId(messages.length + 1), role: "assistant", parts: [] },
       ];
+    }
     case "text":
       return updateLastAssistant(messages, (parts) => {
         const last = parts.at(-1);

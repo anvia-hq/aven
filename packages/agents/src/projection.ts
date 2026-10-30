@@ -26,6 +26,7 @@ import {
   type ToolPart,
 } from "@aven/protocol/events";
 
+import { sentMessage } from "./attachments";
 import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
@@ -257,11 +258,6 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
   }
 }
 
-function userText(message: Extract<Message, { role: "user" }>) {
-  if (typeof message.content === "string") return message.content;
-  return message.content.map((part) => (part.type === "text" ? part.text : "")).join("");
-}
-
 function assistantParts(content: string | readonly AssistantContentPart[]): MessagePart[] {
   // Blank text is left out, as the reducer does with a blank delta: it would split tool calls.
   if (typeof content === "string") return content.trim() ? [{ type: "text", text: content }] : [];
@@ -284,7 +280,14 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
 
   for (const message of messages) {
     if (message.role === "user") {
-      add("user", [{ type: "text", text: userText(message) }]);
+      const { text, attachments } = sentMessage(message);
+      const user: ChatMessage = {
+        id: messageId(chat.length),
+        role: "user",
+        parts: [{ type: "text", text }],
+      };
+      if (attachments?.length) user.attachments = attachments;
+      chat.push(user);
     } else if (message.role === "assistant") {
       const parts = assistantParts(message.content);
       const current = lastAssistant();

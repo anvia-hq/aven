@@ -2,7 +2,7 @@
 // WebSocket that the runtime opens. Either side can send a one-way message, or a `call` that the
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
-import type { RunEvent } from "./events";
+import type { MessageAttachment, RunEvent } from "./events";
 
 export type RunThreadInfo = {
   id: string;
@@ -87,6 +87,14 @@ export type ArtifactContent = { mediaType: string; data: string };
 /** The types of image a runner keeps; SVG is not one, since it can carry script. */
 export const ARTIFACT_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
 
+/** The extension a kept image's name ends in, by its type. */
+export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
 /** The names a runner gives the images it keeps: a uuid and the extension of its type. */
 export const ARTIFACT_NAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
@@ -112,12 +120,19 @@ export type FilesCallParams = { threadId: string; path: string };
 
 export type ArtifactsReadParams = { threadId: string; name: string };
 
+/**
+ * A file sent with a message, its bytes in base64 (decision 0034). The runner copies it into the
+ * sandbox; one with `image` it also keeps as that artifact and shows to the model.
+ */
+export type RunAttachment = MessageAttachment & { data: string };
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
       runId: string;
       thread: RunThreadInfo;
       prompt: string;
+      attachments?: RunAttachment[];
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -233,6 +248,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 13: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
 // Version 12: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
 // Version 11: a runner answers `files.list` and `files.read` (decision 0031).
 // Version 10: a runner answers `diff.get` with a thread's changes (decision 0030).
@@ -244,4 +260,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 12;
+export const WIRE_VERSION = 13;

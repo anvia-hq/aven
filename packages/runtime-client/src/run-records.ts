@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import type { KeptAttachment } from "@aven/agents/attachments";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunModel, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
@@ -14,6 +15,8 @@ export type RunRecord = {
   /** "start" runs a prompt; "answer" delivers the answers to a question the thread parked. */
   kind: "start" | "answer";
   prompt?: string;
+  /** The files sent with the prompt, once copied into the sandbox's /uploads (decision 0034). */
+  attachments?: KeptAttachment[];
   /** The agent the run's first part uses, and the run it has in the journal once submitted. */
   agentId: string;
   durableId?: string;

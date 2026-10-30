@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Agent, createQuestionTool, createTool } from "@anvia/core";
+import { join } from "node:path";
+import { Agent, createQuestionTool, createTool, type CompletionRequest } from "@anvia/core";
 import {
   scriptedModel,
   text,
@@ -16,6 +17,7 @@ import {
 
 import { startRuntime, type CreateRuntimeAgent } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { fakeDesktop } from "./testing/fake-desktop";
 import { goalSessionMarker } from "./goal-report";
 import { journalPath } from "./testing/journal-path";
@@ -410,6 +412,75 @@ describe("startRuntime runs", () => {
       "tool",
       "assistant",
     ]);
+  });
+
+  test("attached files go to /uploads, and an image is shown to the model and kept for the transcript", async () => {
+    const sandbox = directoryWorkspaces();
+    cleanups.push(() => sandbox.dispose());
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const pdf = new TextEncoder().encode("%PDF-1.7 hello");
+    const image = `${crypto.randomUUID()}.png`;
+    let asked: CompletionRequest | undefined;
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: agentThat((request) => {
+        asked = request;
+        return [text("seen")];
+      }),
+    });
+    await runtime.ready;
+    plane.send({
+      ...runStart,
+      prompt: "what is in these?",
+      attachments: [
+        {
+          name: "chart.png",
+          mediaType: "image/png",
+          size: png.length,
+          image,
+          data: png.toBase64(),
+        },
+        {
+          name: "Q3 report.pdf",
+          mediaType: "application/pdf",
+          size: pdf.length,
+          data: pdf.toBase64(),
+        },
+      ],
+    });
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+    const uploads = join(sandbox.uploads.root, thread.id);
+    expect(new Uint8Array(await Bun.file(join(uploads, "chart.png")).arrayBuffer())).toEqual(png);
+    expect(await Bun.file(join(uploads, "Q3_report.pdf")).text()).toBe("%PDF-1.7 hello");
+    expect(await sandbox.artifacts.read(thread.id, image)).toEqual({
+      mediaType: "image/png",
+      data: png.toBase64(),
+    });
+
+    // The model gets the text, where the files are, and the image itself.
+    const prompt = asked?.chatHistory.find((message) => message.role === "user");
+    const content = Array.isArray(prompt?.content) ? prompt.content : [];
+    expect(content[0]).toEqual({ type: "text", text: "what is in these?" });
+    const note = content[1]?.type === "text" ? content[1].text : "";
+    expect(note).toContain("/uploads/chart.png (image/png, 11 B, shown to you below)");
+    expect(note).toContain("/uploads/Q3_report.pdf (application/pdf, 14 B)");
+    expect(content[2]).toMatchObject({
+      type: "image",
+      image: { type: "data", data: png.toBase64() },
+    });
+
+    // The transcript keeps the message as it was sent, for the client to show.
+    const [transcript] = appended(plane);
+    const user = transcript?.messages[0] as { metadata?: unknown } | undefined;
+    expect(user?.metadata).toEqual({
+      prompt: "what is in these?",
+      attachments: [
+        { name: "chart.png", mediaType: "image/png", size: 11, image },
+        { name: "Q3 report.pdf", mediaType: "application/pdf", size: 14 },
+      ],
+    });
   });
 
   test("a question parks the run, and the answer finishes it with only what is new", async () => {

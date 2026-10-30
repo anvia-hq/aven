@@ -1,4 +1,4 @@
-import type { Agent } from "@anvia/core";
+import type { Agent, AgentPrompt } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import {
   DurableConflictError,
@@ -188,7 +188,13 @@ export class DurableRuns {
     return runs[0] && { runId: runs[0].id, agentId: runs[0].agentId };
   }
 
-  async start(runId: string, threadId: string, prompt: string, input: RunInput, onEvent: Emit) {
+  async start(
+    runId: string,
+    threadId: string,
+    prompt: AgentPrompt,
+    input: RunInput,
+    onEvent: Emit,
+  ) {
     this.#register(input);
     try {
       const run = await this.#runtime.submit(

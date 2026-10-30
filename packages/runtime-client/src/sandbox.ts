@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
+import { UPLOADS_DIR } from "@aven/agents/attachments";
 import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
@@ -14,6 +15,7 @@ import { ArtifactStore } from "./artifacts";
 import { cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { runCommand, type CommandOutput } from "./run-command";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
+import { UploadStore } from "./uploads";
 
 // Where a runner keeps its workspaces and its journal of runs.
 export const runtimeHome = (home?: string) => home ?? join(homedir(), ".aven", "runtime");
@@ -70,6 +72,8 @@ type DockerRunInput = {
   image: string;
   /** The thread's workspace on this machine. */
   root: string;
+  /** The files the thread's users attached, on this machine; mounted read-only (decision 0034). */
+  uploads: string;
   /** How the container reaches this machine. */
   host: string;
   hubPort: number;
@@ -110,6 +114,8 @@ export function dockerRunArgs(input: DockerRunInput) {
     "no-new-privileges",
     "-v",
     `${input.root}:${WORKDIR}`,
+    "-v",
+    `${input.uploads}:${UPLOADS_DIR}:ro`,
     "-e",
     `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
     "-e",
@@ -191,6 +197,8 @@ export interface ThreadWorkspaces {
   release(threadId: string): Promise<void>;
   /** The images agents showed (decision 0033); without it, none can be read back. */
   readonly artifacts?: ArtifactStore;
+  /** The files users attach (decision 0034); without it, a message with files cannot run. */
+  readonly uploads?: UploadStore;
   dispose(): Promise<void>;
 }
 
@@ -202,6 +210,7 @@ export interface ThreadWorkspaces {
 // token; the control plane is not involved.
 export class Sandboxes implements ThreadWorkspaces {
   readonly artifacts: ArtifactStore;
+  readonly uploads: UploadStore;
   #config: SandboxConfig;
   #hub: RemoteSandboxHub;
   #port: number;
@@ -222,6 +231,7 @@ export class Sandboxes implements ThreadWorkspaces {
   ) {
     this.#config = config;
     this.artifacts = new ArtifactStore(join(runtimeHome(config.home), "artifacts"));
+    this.uploads = new UploadStore(join(runtimeHome(config.home), "uploads"));
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -361,6 +371,8 @@ export class Sandboxes implements ThreadWorkspaces {
       threadId,
       image: this.#config.image,
       root,
+      // Made before the container starts, so a file attached while it runs shows up in it.
+      uploads: await this.uploads.dir(threadId),
       host: this.#config.hostName ?? "host.docker.internal",
       hubPort: this.#port,
       token,
