@@ -166,10 +166,10 @@ test.describe("threads", () => {
     await expect(page.getByText("Reading the file.")).toBeVisible();
     await expect(page.getByText("All done.")).toBeVisible();
 
-    // The three calls are one row, summarized, and marked failed because one of them failed.
+    // The three calls are one row, summarized; the row is not marked although one of them failed.
     const group = page.getByRole("button", { name: /^Read 2 files, edited a file/ });
     await expect(group).toBeVisible();
-    await expect(page.getByLabel("Failed")).toHaveCount(1);
+    await expect(page.getByLabel("Failed")).toHaveCount(0);
     await group.click();
 
     const edit = page.getByRole("button", { name: /Edited.*a\.txt/ });
@@ -177,8 +177,9 @@ test.describe("threads", () => {
     await edit.click();
     await expect(page.getByText("bye", { exact: true })).toBeVisible();
 
+    // The call that failed is marked once the row is open.
     await expect(page.getByRole("button", { name: /Read.*missing\.txt/ })).toBeVisible();
-    await expect(page.getByLabel("Failed")).toHaveCount(2);
+    await expect(page.getByLabel("Failed")).toHaveCount(1);
 
     // The run is over, so the prompt is usable and there is nothing to stop.
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();

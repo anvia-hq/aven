@@ -1,4 +1,4 @@
-import { DangerCircle, Spinner } from "@mynaui/icons-react";
+import { Spinner } from "@mynaui/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
@@ -68,17 +68,16 @@ function summarize(tools: ToolPart[]) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// A run of tool calls, even a run of one, as one row; the calls themselves open inside it.
+// A run of tool calls, even a run of one, as one row; the calls themselves open inside it, and a
+// call that failed is marked there, not on the row: the agent often recovers from one.
 export function ToolGroup({ tools }: { tools: ToolPart[] }) {
   const running = tools.some((tool) => tool.status === "running");
-  const failed = tools.some((tool) => tool.status === "error");
 
   return (
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
       <CollapsibleTrigger className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-muted-foreground hover:bg-muted/50">
         <span className="min-w-0 flex-1 truncate">{summarize(tools)}</span>
         {running && <Spinner className="size-4 animate-spin" />}
-        {failed && <DangerCircle className="size-4 text-destructive" aria-label="Failed" />}
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-1 flex flex-col border-l pl-3">
