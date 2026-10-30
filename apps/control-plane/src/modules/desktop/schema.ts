@@ -1,6 +1,5 @@
+import type { DesktopControl, DesktopInfo } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
-
-export const desktopParams = z.object({ id: z.uuid() });
 
 // A runtime is not trusted, so what it answers about a desktop is checked before it is used.
 const control = z.object({
@@ -10,7 +9,7 @@ const control = z.object({
 });
 
 // Null is a runtime saying the thread's sandbox is not running.
-export const desktopInfo = z
+export const desktopInfo: z.ZodType<DesktopInfo | null> = z
   .object({
     state: z.enum(["running", "stopped", "starting", "restarting", "failed"]),
     width: z.number(),
@@ -19,4 +18,4 @@ export const desktopInfo = z
   })
   .nullable();
 
-export const desktopControl = control.nullable();
+export const desktopControl: z.ZodType<DesktopControl | null> = control.nullable();

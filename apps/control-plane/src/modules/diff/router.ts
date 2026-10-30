@@ -2,7 +2,8 @@ import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import type { RuntimeHub } from "../runtimes/hub";
-import { diffParams, diffQuery } from "./schema";
+import { threadParams } from "../threads/schema";
+import { diffQuery } from "./schema";
 import { createDiffService } from "./service";
 
 // What a thread has changed in its workspace (decision 0030): since its latest run began, or since
@@ -17,7 +18,7 @@ export const diffRouter = (hub: RuntimeHub) => {
       {
         auth: true,
         org: true,
-        params: diffParams,
+        params: threadParams,
         query: diffQuery,
       },
     );

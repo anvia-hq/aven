@@ -1,39 +1,31 @@
-import type { FileContent, FileEntry } from "@aven/protocol/runtime-wire";
+import type { FileContent, FileEntry, FilesCallMethod } from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
 
-import { UnavailableError } from "../../errors";
-import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
-import { threadsService } from "../threads/service";
+import { describeError, UnavailableError } from "../../errors";
+import { runnerFor, type Available } from "../runtimes/ask-runner";
+import type { RuntimeHub } from "../runtimes/hub";
 import { fileAnswer, folderAnswer } from "./schema";
 
-export type FolderResult = { available: false } | { available: true; entries: FileEntry[] };
-export type FileResult = { available: false } | ({ available: true } & FileContent);
+export type FolderResult = Available<{ entries: FileEntry[] }>;
+export type FileResult = Available<FileContent>;
 
 // The files of a thread's workspace, read through the runner that holds it (decision 0031). Every
 // call starts from a thread of the caller's organization.
 export function createFilesService(hub: RuntimeHub) {
-  async function ask<T>(
+  const runner = runnerFor(hub);
+
+  const ask = <T>(
     organizationId: string,
     threadId: string,
-    method: "files.list" | "files.read",
+    method: FilesCallMethod,
     path: string,
     schema: z.ZodType<T>,
-  ) {
-    const thread = await threadsService.require(organizationId, threadId);
-    const connection = hub.get(thread.runtimeId);
-    if (!connection) throw new RuntimeOfflineError();
+  ) =>
     // The runtime's own reason stays in the log; the client gets a fixed message.
-    const answer = await connection.call(method, { threadId, path }).catch((error: unknown) => {
-      console.warn(
-        `The ${method} call was refused:`,
-        error instanceof Error ? error.message : error,
-      );
+    runner.ask(organizationId, method, { threadId, path }, schema, (error) => {
+      console.warn(`The ${method} call was refused:`, describeError(error));
       throw new UnavailableError("The files could not be read");
     });
-    const parsed = schema.safeParse(answer);
-    if (!parsed.success) throw new UnavailableError("The runtime gave an unexpected answer");
-    return parsed.data;
-  }
 
   return {
     async list(organizationId: string, threadId: string, path: string): Promise<FolderResult> {

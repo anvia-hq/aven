@@ -2,13 +2,14 @@ import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import type { RuntimeHub } from "../runtimes/hub";
-import { filesParams, filesQuery } from "./schema";
+import { threadParams } from "../threads/schema";
+import { filesQuery } from "./schema";
 import { createFilesService } from "./service";
 
 // The files of a thread's workspace, for reading (decision 0031). Nothing is written.
 export const filesRouter = (hub: RuntimeHub) => {
   const service = createFilesService(hub);
-  const options = { auth: true, org: true, params: filesParams, query: filesQuery } as const;
+  const options = { auth: true, org: true, params: threadParams, query: filesQuery } as const;
   return new Elysia({ prefix: "/threads" })
     .use(authRouter)
     .get(

@@ -1,6 +1,5 @@
+import type { FileContent, FileEntry } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
-
-export const filesParams = z.object({ id: z.uuid() });
 
 // A path inside the workspace, empty for its top. The runner confines it; this only keeps the
 // call small and well formed.
@@ -14,13 +13,13 @@ export const filesQuery = z.object({
 
 // A runtime is not trusted, so what it answers is checked before it is used. Null is a runtime
 // saying the thread has no workspace yet.
-export const folderAnswer = z
+export const folderAnswer: z.ZodType<{ entries: FileEntry[] } | null> = z
   .object({
     entries: z.array(z.object({ name: z.string(), type: z.enum(["file", "directory"]) })),
   })
   .nullable();
 
-export const fileAnswer = z
+export const fileAnswer: z.ZodType<FileContent | null> = z
   .discriminatedUnion("kind", [
     z.object({
       kind: z.literal("text"),

@@ -4,7 +4,7 @@ import { authRouter } from "../auth/router";
 import { trustedOrigins } from "../auth/service";
 import type { RuntimeHub, ViewerHandle } from "../runtimes/hub";
 import { threadsService } from "../threads/service";
-import { desktopParams } from "./schema";
+import { threadParams } from "../threads/schema";
 import { createDesktopService } from "./service";
 
 // noVNC offers this subprotocol and fails the connection if the server does not pick it.
@@ -39,23 +39,23 @@ export const desktopRouter = (hub: RuntimeHub) => {
       {
         auth: true,
         org: true,
-        params: desktopParams,
+        params: threadParams,
       },
     )
     .post(
       "/:id/desktop/takeover",
       ({ params, organizationId, user }) => service.takeover(organizationId, user.id, params.id),
-      { auth: true, org: true, params: desktopParams },
+      { auth: true, org: true, params: threadParams },
     )
     .post(
       "/:id/desktop/release",
       ({ params, organizationId, user }) => service.release(organizationId, user.id, params.id),
-      { auth: true, org: true, params: desktopParams },
+      { auth: true, org: true, params: threadParams },
     )
     .ws("/:id/desktop/stream", {
       auth: true,
       org: true,
-      params: desktopParams,
+      params: threadParams,
       async beforeHandle({ request, set, status, organizationId, params }) {
         if (!originAllowed(request)) return status(403, "Forbidden origin");
         // A thread of another organization is not found before any socket is upgraded.

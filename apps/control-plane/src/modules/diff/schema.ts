@@ -1,9 +1,12 @@
+import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-export const diffParams = z.object({ id: z.uuid() });
+const scopes = ["turn", "all"] as const satisfies readonly DiffScope[];
 
-export const diffQuery = z.object({ scope: z.enum(["turn", "all"]).default("turn") });
+export const diffQuery = z.object({ scope: z.enum(scopes).default("turn") });
 
 // A runtime is not trusted, so what it answers is checked before it is used. Null is a runtime
 // saying the thread has no workspace yet.
-export const threadDiff = z.object({ patch: z.string(), truncated: z.boolean() }).nullable();
+export const threadDiff: z.ZodType<ThreadDiff | null> = z
+  .object({ patch: z.string(), truncated: z.boolean() })
+  .nullable();
