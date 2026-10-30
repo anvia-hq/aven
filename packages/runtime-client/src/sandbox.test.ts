@@ -708,6 +708,64 @@ live("a repository's environment (real docker)", () => {
   }, 300_000);
 });
 
+live("signing a sandbox in to GitHub (real docker)", () => {
+  let sandboxes: Sandboxes;
+  let home: string;
+  let remote: Awaited<ReturnType<typeof createRemoteRepo>>;
+  const ada = { token: "ghu_live-token", id: 42, login: "ada", name: "Ada L" };
+
+  beforeAll(async () => {
+    home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
+    sandboxes = await Sandboxes.start({ image: image!, home });
+    remote = await createRemoteRepo();
+  }, 120_000);
+
+  afterAll(async () => {
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+    await rm(remote.dir, { recursive: true, force: true });
+  });
+
+  const run = async (from: ThreadSandbox, command: string) => {
+    const tool = from.tools.find((candidate) => candidate.name === "exec_command");
+    return (await tool!.call({ command } as never)) as {
+      exitCode: number;
+      stdout: string;
+      stderr: string;
+    };
+  };
+
+  test("gh and git act as the person after signing in, and as nobody after signing out", async () => {
+    const id = crypto.randomUUID();
+    const box = await sandboxes.acquire({ id }, async () => remote.access);
+
+    await sandboxes.signInGithub(id, ada);
+
+    // gh uses the token it was given, git asks gh for credentials, commits are the person's.
+    expect((await run(box, "gh auth token")).stdout.trim()).toBe("ghu_live-token");
+    const credential = await run(
+      box,
+      "printf 'protocol=https\\nhost=github.com\\n\\n' | git credential fill",
+    );
+    expect(credential.stdout).toContain("password=ghu_live-token");
+    expect((await run(box, "git config --global user.email")).stdout.trim()).toBe(
+      "42+ada@users.noreply.github.com",
+    );
+    // Only the container's user can read what holds the token.
+    expect((await run(box, "stat -c %a ~/.config/gh/hosts.yml")).stdout.trim()).toBe("600");
+    // The workspace, which a snapshot copies, does not.
+    expect((await run(box, "grep -rl ghu_live-token /workspace || true")).stdout).toBe("");
+
+    // Another person's run replaces it, and a run with none removes it.
+    await sandboxes.signInGithub(id, { token: "ghu_next", id: 7, login: "grace", name: null });
+    expect((await run(box, "gh auth token")).stdout.trim()).toBe("ghu_next");
+    expect((await run(box, "git config --global user.name")).stdout.trim()).toBe("grace");
+    await sandboxes.signInGithub(id, undefined);
+    expect((await run(box, "gh auth token")).exitCode).not.toBe(0);
+    expect((await run(box, "git config --global user.email")).stdout.trim()).toBe("aven@localhost");
+  }, 300_000);
+});
+
 // The id of a local Docker image, which a snapshot is made from.
 async function imageId(name: string) {
   const out = await new Response(

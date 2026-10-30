@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { join } from "node:path";
+import { readdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { Agent, createQuestionTool, createTool, type CompletionRequest } from "@anvia/core";
 import {
   scriptedModel,
@@ -372,6 +373,81 @@ describe("startRuntime", () => {
     expect(saved).toEqual([{ thread, access }]);
     expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
       outcome: "response",
+    });
+  });
+
+  describe("signing the sandbox in to GitHub for a run (decision 0044)", () => {
+    const ada = { token: "ghu_very-secret", id: 42, login: "ada", name: "Ada L" };
+
+    // A sandbox that records who each run signed in as.
+    function signingSandbox(options: { failSignIn?: boolean } = {}) {
+      const signedIn: { threadId: string; github: unknown }[] = [];
+      const sandbox: ThreadWorkspaces = {
+        async acquire(): Promise<ThreadSandbox> {
+          return { tools: [], hasRunningProcesses: async () => false };
+        },
+        desktop: () => undefined,
+        workspace: async () => undefined,
+        async signInGithub(threadId, github) {
+          signedIn.push({ threadId, github });
+          if (options.failSignIn) throw new Error("no shell");
+        },
+        async release() {},
+        async dispose() {},
+      };
+      return { sandbox, signedIn };
+    }
+
+    test("a run signs in as the account it came with, and a run with none signs out", async () => {
+      const { sandbox, signedIn } = signingSandbox();
+      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      await runtime.ready;
+
+      plane.send({ ...runStart, runId: "run-a", github: ada });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-a"));
+      plane.send({ ...runStart, runId: "run-b" });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-b"));
+
+      expect(signedIn).toEqual([
+        { threadId: "thread-1", github: ada },
+        { threadId: "thread-1", github: undefined },
+      ]);
+    });
+
+    test("a sign-in that fails does not fail the run", async () => {
+      const { sandbox } = signingSandbox({ failSignIn: true });
+      const silenced = console.warn;
+      console.warn = () => undefined;
+      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      await runtime.ready;
+
+      plane.send({ ...runStart, github: ada });
+
+      await until(() => plane.received.some((message) => message.type === "run.end"));
+      console.warn = silenced;
+      expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
+        outcome: "response",
+      });
+    });
+
+    test("the token is in memory only: no file in the runner's data folder holds it", async () => {
+      const { sandbox } = signingSandbox();
+      const journal = journalPath();
+      const { plane, runtime } = connect({ sandbox, createAgent: reply(), journalPath: journal });
+      await runtime.ready;
+
+      plane.send({ ...runStart, github: ada });
+      await until(() => plane.received.some((message) => message.type === "run.end"));
+      plane.send({ type: "run.ack", runId: "run-1" });
+      await Bun.sleep(100);
+
+      const folder = dirname(journal);
+      const files = await readdir(folder);
+      expect(files.length).toBeGreaterThan(0);
+      for (const file of files) {
+        const bytes = await Bun.file(join(folder, file)).text();
+        expect(bytes).not.toContain("ghu_very-secret");
+      }
     });
   });
 

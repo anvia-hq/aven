@@ -10,6 +10,7 @@ import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
+  RunGithub,
   RunThreadInfo,
   RuntimeCalls,
   RuntimeToControlPlane,
@@ -116,7 +117,7 @@ export function createRunDriver(context: DriverContext) {
           attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
         });
       }
-      const scope = await acquire(initial, state, run);
+      const scope = await acquire(initial, state, run, message?.github);
       const end = await phases(scope, message);
       finish(runId, end, run.cancelReason);
     } catch (error) {
@@ -142,6 +143,7 @@ export function createRunDriver(context: DriverContext) {
     initial: RunRecord,
     state: { record: RunRecord },
     run: Live,
+    github?: RunGithub,
   ): Promise<RunScope> {
     const { runId, thread, model } = initial;
     await context.starting(thread.id);
@@ -149,6 +151,11 @@ export function createRunDriver(context: DriverContext) {
     const box = await context.sandbox.acquire(thread, () => context.call("repo.access", { runId }));
     if (run.cancelReason) throw new Error(run.cancelReason);
     context.boxes.set(thread.id, box);
+    // The GitHub account the sender gave this run, or none; kept in memory and out of the record
+    // and the journal (decision 0044). A failure to sign in does not fail the run: it has no GitHub.
+    await context.sandbox.signInGithub?.(thread.id, github).catch((error: unknown) => {
+      console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
+    });
     // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     // What this turn changes is measured from here; a run picked up again after a restart, or

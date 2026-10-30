@@ -11,7 +11,7 @@ import { SKILLS_DIR } from "@aven/agents/skills";
 import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
+import type { RepoAccess, RunGithub } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
 import {
@@ -22,6 +22,7 @@ import {
   type DockerRun,
 } from "./environment-setup";
 import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
+import { signInCommand } from "./github-signin";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { runCommand } from "./run-command";
 import { SkillStore } from "./skills";
@@ -76,6 +77,7 @@ const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
 // `.aven/resume` is for a quick login or repair: the agent waits this long for it, then goes on.
 const RESUME_TIMEOUT_MS = 10_000;
+const SIGN_IN_TIMEOUT_MS = 30_000;
 
 const docker: Docker = (args, options) => runCommand(["docker", ...args], options);
 
@@ -215,6 +217,12 @@ export interface ThreadWorkspaces {
   workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
+  /**
+   * Signs `gh` and `git` in to GitHub as `github` inside the thread's container, or out when there
+   * is none, for a run that is starting (decision 0044). The thread's container must be running.
+   * Without it, a run's agent has no GitHub account.
+   */
+  signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
   /**
    * Runs the repository's `.aven/setup` again in a setup container and keeps what it makes as the
    * snapshot new threads start from (decision 0043). Throws, with the end of the script's output,
@@ -468,6 +476,18 @@ export class Sandboxes implements ThreadWorkspaces {
     await this.snapshots.publish(key, { image, baseImageId, workspace: root });
     await this.#pinImage(threadId, image);
     return { image };
+  }
+
+  async signInGithub(threadId: string, github: RunGithub | undefined) {
+    const { script, env } = signInCommand(github);
+    const result = await this.#hub
+      .runtime(threadId, { workdir: WORKSPACE_DIR })
+      .exec({ command: "sh", args: ["-c", script], env, timeoutMs: SIGN_IN_TIMEOUT_MS });
+    if (result.status !== "exited" || result.exitCode !== 0) {
+      throw new Error(
+        `Could not sign in to GitHub: ${new TextDecoder().decode(result.stderr).trim()}`,
+      );
+    }
   }
 
   async saveEnvironment(thread: { id: string; organizationId?: string }, access: RepoAccess) {

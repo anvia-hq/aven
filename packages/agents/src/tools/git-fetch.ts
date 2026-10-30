@@ -19,7 +19,7 @@ export function createGitFetchTool(fetchRemote: FetchRemote) {
   return createTool({
     name: GIT_FETCH_TOOL_NAME,
     description:
-      "Fetch a branch of the project's GitHub repository into the workspace as origin/<branch>, so you can bring the thread up to date or look at another branch. Leave out `branch` for the repository's default branch. It changes only origin/<branch>, not your files or your branch: then use git in the workspace, such as `git merge origin/main`, `git rebase origin/main` or `git checkout -b try origin/other`. Plain git fetch, pull and push do not work in the sandbox, which has no GitHub credentials; the user ships your work with their own button.",
+      "Fetch a branch of the project's GitHub repository into the workspace as origin/<branch>, so you can bring the thread up to date or look at another branch. Leave out `branch` for the repository's default branch. It changes only origin/<branch>, not your files or your branch: then use git in the workspace, such as `git merge origin/main`, `git rebase origin/main` or `git checkout -b try origin/other`. Use it when plain git fetch fails because you are not signed in to GitHub (the user has not connected their account); when you are signed in, plain git works.",
     inputSchema: z.object({
       branch: z
         .string()
