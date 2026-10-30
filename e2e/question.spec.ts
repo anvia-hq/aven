@@ -26,14 +26,14 @@ test.describe("the agent's question", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
     await page.getByRole("button", { name: "Send" }).click();
 
     // The form takes the composer's place, and a message cannot go around it.
     const form = page.getByRole("form", { name: "Answer the agent" });
     await expect(form).toBeVisible();
     await expect(form).toContainText("Which color should it be?");
-    await expect(page.getByLabel("Prompt")).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
     await expect(
       page.getByRole("region", { name: "Question waiting for an answer" }),
     ).toBeVisible();
@@ -49,7 +49,7 @@ test.describe("the agent's question", () => {
 
     await expect(page.getByText("Thanks, on it.")).toBeVisible();
     await expect(form).toHaveCount(0);
-    await expect(page.getByLabel("Prompt")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
     await expect(
       page.getByRole("region", { name: "Answered questions" }).getByText("blue"),
     ).toBeVisible();
@@ -75,7 +75,7 @@ test.describe("the agent's question", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
     await page.getByRole("button", { name: "Send" }).click();
 
     const form = page.getByRole("form", { name: "Answer the agent" });
@@ -102,7 +102,7 @@ test.describe("the agent's question", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await page.getByLabel("Prompt").fill("paint it");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
     await page.getByRole("button", { name: "Send" }).click();
 
     const form = page.getByRole("form", { name: "Answer the agent" });

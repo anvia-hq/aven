@@ -1,24 +1,38 @@
+import {
+  ChatProvider,
+  ComposerPrimitive,
+  useComposer,
+  type ComposerInputEntity,
+  type ComposerSubmitMessageArgs,
+  type ComposerTriggerState,
+} from "@anvia/react-ui/chat";
 import { ArrowUp, Paperclip, Stop } from "@mynaui/icons-react";
-import { useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import { MENTION_LIMIT } from "@aven/protocol/events";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type DragEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { Textarea } from "@/components/textarea";
 import { toast } from "@/components/toast";
 
 import { useAttachments } from "../hooks/use-attachments";
+import { useComposerChat } from "../hooks/use-composer-chat";
+import { mentionOf, useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
-import type { AttachmentUpload, RunSelection } from "../types";
+import type { MessageMention, OutgoingMessage, RunSelection } from "../types";
 import { PendingAttachments } from "./attachment-list";
+import { MentionChip } from "./mention-chip";
 import { ModelMenu } from "./model-menu";
 
 type Props = {
   // Resolves to whether the message was taken; the text and files are only cleared when it was.
-  onSubmit: (
-    prompt: string,
-    selection: RunSelection,
-    attachments: AttachmentUpload[],
-  ) => boolean | Promise<boolean>;
+  onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
   /** The agent is working: nothing can be sent, and Send gives way to Stop. */
   running?: boolean;
@@ -28,7 +42,45 @@ type Props = {
   threadId?: string;
 };
 
-export function PromptInput({
+type Draft = Pick<ComposerSubmitMessageArgs, "input" | "entities">;
+
+// The prompt as sent: trimmed, with its mentions moved to where their tokens are in it.
+function outgoing({ input, entities }: Draft) {
+  const lead = input.length - input.trimStart().length;
+  const mentions: MessageMention[] = [];
+  for (const entity of entities) {
+    const mention = mentionOf(entity.triggerId, entity.id);
+    const from = entity.range.from - lead;
+    if (mention) mentions.push({ ...mention, from, to: from + entity.text.length });
+  }
+  return { prompt: input.trim(), mentions };
+}
+
+const renderEntity = ({ triggerId, id }: ComposerInputEntity) => {
+  const mention = mentionOf(triggerId, id);
+  return mention ? <MentionChip {...mention} /> : null;
+};
+
+// The message composer: Anvia's tiptap Composer, where `@` mentions a file of the workspace and
+// `/` a skill (decision 0036), with the files attached and the model picked per message.
+export function PromptInput({ threadId, ...props }: Props) {
+  const chat = useComposerChat();
+  const triggers = useMentions(threadId);
+  return (
+    <ChatProvider controller={chat}>
+      {/* Sending is `Composer`'s own; the form Anvia renders never submits. */}
+      <ComposerPrimitive.Root
+        triggers={triggers}
+        className="contents"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <Composer threadId={threadId} {...props} />
+      </ComposerPrimitive.Root>
+    </ChatProvider>
+  );
+}
+
+function Composer({
   onSubmit,
   placeholder = "Ask anything about the codebase…",
   running = false,
@@ -36,23 +88,38 @@ export function PromptInput({
   autoFocus,
   threadId,
 }: Props) {
-  const [value, setValue] = useState("");
+  const composer = useComposer();
   const [sending, setSending] = useState(false);
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
+  const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
   const attachments = useAttachments();
-  const hasContent = value.trim().length > 0 || attachments.files.length > 0;
+  const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
   const canSend = hasContent && !running && !sending;
+
+  useEffect(() => {
+    if (autoFocus) editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
+  }, [autoFocus]);
 
   async function submit() {
     if (!canSend) return;
+    const { prompt, mentions } = outgoing(composer);
+    if (mentions.length > MENTION_LIMIT) {
+      toast.add({
+        title: "Too many mentions",
+        description: `A message can mention ${MENTION_LIMIT} files and skills`,
+        type: "error",
+      });
+      return;
+    }
     setSending(true);
     try {
       const files = await attachments.encode();
-      const sent = await onSubmit(value.trim(), model.selection, files);
+      const sent = await onSubmit({ prompt, attachments: files, mentions }, model.selection);
       if (sent) {
-        setValue("");
+        composer.setInput("");
+        composer.setEntities([]);
         attachments.clear();
       }
     } catch (error) {
@@ -67,19 +134,23 @@ export function PromptInput({
     }
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  // Enter sends, unless the `@` or `/` menu has something to pick, which Enter then picks. Handled
+  // before the editor sees it, so a message of files alone, or text after a `/` that matches no
+  // skill, still sends.
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     // Enter while composing text with an input method confirms a candidate; it is not a send.
-    if (event.nativeEvent.isComposing) return;
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void submit();
-    }
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    if (composer.activeTrigger?.items.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    void submit();
   }
 
-  // A pasted screenshot or file is attached; pasted text is left to the textarea.
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+  // A pasted screenshot or file is attached; pasted text is left to the editor.
+  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
     if (event.clipboardData.files.length === 0) return;
     event.preventDefault();
+    event.stopPropagation();
     attachments.add(event.clipboardData.files);
   }
 
@@ -87,12 +158,13 @@ export function PromptInput({
     setDragging(false);
     if (event.dataTransfer.files.length === 0) return;
     event.preventDefault();
+    event.stopPropagation();
     attachments.add(event.dataTransfer.files);
   }
 
   return (
     <div
-      className="flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      className="relative flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       data-dragging={dragging || undefined}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes("Files")) return;
@@ -102,18 +174,18 @@ export function PromptInput({
       onDragLeave={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
       }}
-      onDrop={handleDrop}
+      onDropCapture={handleDrop}
+      onPasteCapture={handlePaste}
+      onKeyDownCapture={handleKeyDown}
     >
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
-      <Textarea
+      <MentionMenu />
+      <ComposerPrimitive.Input
+        ref={editor}
         aria-label="Prompt"
-        value={value}
-        autoFocus={autoFocus}
         placeholder={placeholder}
-        onChange={(event) => setValue(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        className="min-h-14 resize-none border-0 bg-transparent p-1 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+        renderEntity={renderEntity}
+        className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6"
       />
       <div className="flex items-center gap-2 pt-2">
         <Input
@@ -155,5 +227,45 @@ export function PromptInput({
         </div>
       </div>
     </div>
+  );
+}
+
+// What the menu says while it has nothing to pick.
+function emptyMenu({ loading, trigger }: ComposerTriggerState) {
+  if (loading) return "Searching…";
+  return trigger.id === "file" ? "No file matches" : "No skill matches";
+}
+
+// What `@` or `/` found, above the composer: the composer sits at the foot of the page, so a
+// menu at the caret, where Anvia places it, would open off screen.
+function MentionMenu() {
+  return (
+    <ComposerPrimitive.TriggerMenu
+      aria-label="Mention"
+      className="absolute inset-x-0 bottom-full z-20 mb-1 flex max-h-72 flex-col overflow-y-auto rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+      // Anvia pins the menu to the caret; here it belongs to the composer instead.
+      style={{ position: "absolute", top: "auto", left: 0 }}
+    >
+      {(trigger) =>
+        trigger.items.length === 0 ? (
+          <p className="px-2 py-1.5 text-muted-foreground">{emptyMenu(trigger)}</p>
+        ) : (
+          trigger.items.map((item, index) => (
+            <ComposerPrimitive.TriggerItem
+              key={item.id}
+              index={index}
+              className="flex min-w-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
+            >
+              <span className="shrink-0 font-mono">{item.label}</span>
+              {item.detail ? (
+                <span className="min-w-0 truncate text-xs text-muted-foreground">
+                  {item.detail}
+                </span>
+              ) : null}
+            </ComposerPrimitive.TriggerItem>
+          ))
+        )
+      }
+    </ComposerPrimitive.TriggerMenu>
   );
 }

@@ -3,6 +3,9 @@ export type FolderResponse = { available: false } | { available: true; entries: 
 
 export type FileEntry = { name: string; type: "file" | "directory" };
 
+/** The files of a workspace that match a search, best first (decision 0036). */
+export type SearchResponse = { available: false } | { available: true; paths: string[] };
+
 /** A file as the control plane reads it (`GET /threads/:id/files/content`). */
 export type FileResponse =
   | { available: false }

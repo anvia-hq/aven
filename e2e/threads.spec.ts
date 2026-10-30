@@ -12,7 +12,7 @@ async function createProject(page: Page, name: string) {
 async function startThread(page: Page, prompt: string) {
   await addRunner(page);
   await createProject(page, "project");
-  await page.getByLabel("Prompt").fill(prompt);
+  await page.getByRole("textbox", { name: "Prompt" }).fill(prompt);
   await page.getByRole("button", { name: "Send" }).click();
 }
 
@@ -40,7 +40,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await addRunner(page);
     await createProject(page, "project");
-    await page.getByLabel("Prompt").fill("hello");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
@@ -51,7 +51,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await addRunner(page);
     await createProject(page, "project");
-    await page.getByLabel("Prompt").fill("hello");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     // `_authed`'s beforeLoad re-checks the session on every navigation, so the URL can update
     // before the route actually swaps content; wait for the thread's own content to render
@@ -61,13 +61,13 @@ test.describe("threads", () => {
     // Back on the new-thread page, the project the agent just worked in is no longer pre-selected.
     await page.getByRole("button", { name: "New thread" }).click();
     await expect(page.getByLabel("Project")).toBeVisible();
-    await page.getByLabel("Prompt").fill("hello again");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("hello again");
     await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByText("Choose a project first")).toBeVisible();
     await expect(page).toHaveURL(/\/threads$/);
     // The refused prompt is still there to send once a project is chosen.
-    await expect(page.getByLabel("Prompt")).toHaveValue("hello again");
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveText("hello again");
   });
 
   test("creating a project opens the thread once prompted; with its runner offline the agent reports why", async ({
@@ -82,7 +82,7 @@ test.describe("threads", () => {
     await expect(
       page.locator('[data-slot="sidebar"]').getByText("Explain the project layout"),
     ).toBeVisible();
-    await expect(page.getByLabel("Prompt")).toBeEnabled();
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
 
     // The project is offered again as a shortcut for the next thread.
     await page.getByRole("button", { name: "New thread" }).click();
@@ -181,7 +181,7 @@ test.describe("threads", () => {
     await expect(page.getByLabel("Failed")).toHaveCount(2);
 
     // The run is over, so the prompt is usable and there is nothing to stop.
-    await expect(page.getByLabel("Prompt")).toBeEnabled();
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
   });
 
@@ -210,8 +210,8 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await expect(page.getByRole("status").filter({ hasText: "Working…" })).toBeVisible();
-    await page.getByLabel("Prompt").fill("one more thing");
-    await page.getByLabel("Prompt").press("Enter");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
+    await page.getByRole("textbox", { name: "Prompt" }).press("Enter");
     await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
     await expect(page.locator('[data-role="user"]')).toHaveCount(1);
     await page.getByRole("button", { name: "Stop" }).click();

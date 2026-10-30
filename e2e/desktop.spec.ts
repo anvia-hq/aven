@@ -43,7 +43,7 @@ test.describe("a thread's desktop", () => {
 
     await page.getByRole("button", { name: "Close desktop" }).click();
     await page.reload();
-    await page.getByLabel("Prompt").waitFor();
+    await page.getByRole("textbox", { name: "Prompt" }).waitFor();
     await expect(panel).toHaveCount(0);
   });
 

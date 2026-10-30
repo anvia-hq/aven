@@ -197,6 +197,9 @@ ws.onmessage = ({ data }) => {
     viewers.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
+  } else if (message.type === "run.start" && !process.env.FAKE_QUESTION) {
+    // A plain run is left going; the spec reads what it was given.
+    event({ type: "started", prompt: message.prompt, mentions: message.mentions });
   } else if (message.type === "run.start" && process.env.FAKE_QUESTION) {
     const { runId } = message;
     const ask = { id: "q1", name: "ask_user", target: "", status: "running", questions: QUESTIONS };
@@ -299,6 +302,10 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   if (call.method === "files.list") {
     const { path } = call.params as { path: string };
     return reply({ entries: WORKSPACE[path] ?? [] });
+  }
+  if (call.method === "files.search") {
+    const { query } = call.params as { query: string };
+    return reply({ paths: Object.keys(WORKSPACE_FILES).filter((path) => path.includes(query)) });
   }
   if (call.method === "files.read") {
     const { path } = call.params as { path: string };

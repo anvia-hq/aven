@@ -32,7 +32,7 @@ test.describe("projects", () => {
     await importRepository(page, "shiny-app");
     await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
 
-    await page.getByLabel("Prompt").fill("Explain the project layout");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("Explain the project layout");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();

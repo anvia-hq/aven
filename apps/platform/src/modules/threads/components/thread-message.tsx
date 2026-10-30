@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { memo } from "react";
 
 import { Markdown } from "@/components/markdown";
 
@@ -6,6 +6,7 @@ import { useSmoothParts } from "../hooks/use-smooth-parts";
 import type { ChatMessage, MessagePart, ToolImage, ToolPart } from "../types";
 import { SentAttachments } from "./attachment-list";
 import { ImageBlock } from "./image-block";
+import { MentionedText } from "./mention-chip";
 import { QuestionBlock } from "./question-block";
 import { ToolGroup } from "./tool-group";
 
@@ -70,7 +71,9 @@ export const ThreadMessage = memo(function ThreadMessage({
         {text && (
           <div className="w-fit rounded-lg bg-accent px-3 py-2 text-sm leading-6 break-words whitespace-pre-wrap">
             {message.parts.map((part, index) =>
-              part.type === "text" ? <Fragment key={index}>{part.text}</Fragment> : null,
+              part.type === "text" ? (
+                <MentionedText key={index} text={part.text} mentions={message.mentions} />
+              ) : null,
             )}
           </div>
         )}

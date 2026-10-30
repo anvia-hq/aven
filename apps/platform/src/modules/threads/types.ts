@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   DiffLine,
   MessageAttachment,
+  MessageMention,
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
@@ -14,6 +15,7 @@ export type {
   ChatMessage,
   DiffLine,
   MessageAttachment,
+  MessageMention,
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
@@ -23,6 +25,13 @@ export type {
 
 /** A file as a message sends it: its bytes in base64 (decision 0034). */
 export type AttachmentUpload = { name: string; mediaType?: string; data: string };
+
+/** A message as the composer sends it: the text, its files and what it mentions (decision 0036). */
+export type OutgoingMessage = {
+  prompt: string;
+  attachments: AttachmentUpload[];
+  mentions: MessageMention[];
+};
 
 /** What a message asks to run with; omitted fields fall back to the sender's default provider. */
 export type RunSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };

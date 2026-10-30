@@ -173,3 +173,20 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
     }
   }
 }
+
+/* The composer's editor (Anvia's tiptap Composer, decision 0036): no outline of its own, and the
+   placeholder tiptap marks on an empty first paragraph. */
+@layer components {
+  [data-role="editor"] .ProseMirror {
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  [data-role="editor"] .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--muted-foreground);
+  }
+}

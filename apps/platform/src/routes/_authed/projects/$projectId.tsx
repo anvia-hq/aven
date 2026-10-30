@@ -30,9 +30,7 @@ function ProjectPage() {
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4">
         <PromptInput
           placeholder={`Ask anything about ${project.name}…`}
-          onSubmit={(prompt, selection, attachments) =>
-            startThread(project.id, prompt, selection, attachments)
-          }
+          onSubmit={(message, selection) => startThread(project.id, message, selection)}
         />
 
         <section aria-label="Recent threads" className="flex flex-col gap-2">

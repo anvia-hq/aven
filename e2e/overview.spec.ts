@@ -91,7 +91,7 @@ test("the overview can be closed and opened again from the thread toolbar", asyn
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await expect(overview).toHaveCount(0);
   await page.reload();
-  await expect(page.getByLabel("Prompt")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
   await expect(overview).toHaveCount(0);
 });
 
@@ -152,7 +152,7 @@ test("the conversation follows a streaming answer, with its end clear of the com
   const stream = await openStreamingThread(page, 80, 25);
   try {
     const last = page.locator('[data-role="assistant"]').last();
-    const prompt = page.getByLabel("Prompt");
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
     await expect(last).toContainText("word79", { timeout: 15_000 });
     await expect
       .poll(async () => {

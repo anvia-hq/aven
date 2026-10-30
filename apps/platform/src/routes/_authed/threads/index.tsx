@@ -11,7 +11,7 @@ import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import { SUGGESTIONS } from "@/modules/threads/suggestions";
-import type { AttachmentUpload, RunSelection } from "@/modules/threads/types";
+import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/threads/")({
   component: NewThread,
@@ -24,8 +24,8 @@ function NewThread() {
   const recent = useThreads().threads.slice(0, 3);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
 
-  const start = (prompt: string, selection: RunSelection, attachments?: AttachmentUpload[]) =>
-    startThread(projectId, prompt, selection, attachments);
+  const start = (message: OutgoingMessage, selection: RunSelection) =>
+    startThread(projectId, message, selection);
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-5 p-4">
@@ -56,7 +56,9 @@ function NewThread() {
                   variant="outline"
                   size="sm"
                   className="rounded-full font-normal text-muted-foreground"
-                  onClick={() => void start(suggestion, selection)}
+                  onClick={() =>
+                    void start({ prompt: suggestion, attachments: [], mentions: [] }, selection)
+                  }
                 >
                   {suggestion}
                 </Button>

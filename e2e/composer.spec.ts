@@ -75,7 +75,7 @@ test.describe("prompt composer", () => {
     // A reload forgets which project was picked, not the model.
     await page.getByRole("combobox", { name: "Project" }).click();
     await page.getByRole("option", { name: "composer-app" }).click();
-    await page.getByLabel("Prompt").fill("hello");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect.poll(() => sent).toBeDefined();
@@ -110,7 +110,7 @@ test.describe("prompt composer", () => {
       await menu.click();
       await page.getByRole("option", { name: model }).click();
       await page.keyboard.press("Escape");
-      await page.getByLabel("Prompt").fill(`on ${model}`);
+      await page.getByRole("textbox", { name: "Prompt" }).fill(`on ${model}`);
       await page.getByRole("button", { name: "Send" }).click();
       await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
       return page.url();

@@ -3,14 +3,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 
-import type { AttachmentUpload, RunSelection, Thread } from "../types";
+import type { OutgoingMessage, RunSelection, Thread } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
+import { messageBody } from "./use-thread";
 import { useThreads } from "./use-threads";
 
 const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt);
 
 // A thread started with files only is named after the first of them.
-const titleOf = (prompt: string, attachments: AttachmentUpload[]) =>
+const titleOf = ({ prompt, attachments }: OutgoingMessage) =>
   titleFrom(prompt || attachments[0]?.name || "New thread");
 
 // Creates a thread in a project, sends the first prompt and opens the thread. Resolves to whether
@@ -28,30 +29,28 @@ export function useStartThread() {
 
   async function sendFirstPrompt(
     thread: Thread,
-    prompt: string,
+    message: OutgoingMessage,
     selection: RunSelection,
-    attachments: AttachmentUpload[],
   ) {
     await attempt("The agent did not start", () =>
-      postJson(`/threads/${thread.id}/messages`, { prompt, attachments, ...selection }),
+      postJson(`/threads/${thread.id}/messages`, messageBody(message, selection)),
     );
   }
 
   // With no project picked yet, nothing is created.
   return async (
     projectId: string | undefined,
-    prompt: string,
+    message: OutgoingMessage,
     selection: RunSelection = {},
-    attachments: AttachmentUpload[] = [],
   ) => {
     if (!projectId) {
       toast.add({ title: "Choose a project first", type: "error" });
       return false;
     }
-    const thread = await createThread(projectId, titleOf(prompt, attachments));
+    const thread = await createThread(projectId, titleOf(message));
     if (!thread) return false;
     rememberModelSelection(thread.id, selection);
-    await sendFirstPrompt(thread, prompt, selection, attachments);
+    await sendFirstPrompt(thread, message, selection);
     await refresh();
     await navigate({ to: "/threads/$threadId", params: { threadId: thread.id } });
     return true;

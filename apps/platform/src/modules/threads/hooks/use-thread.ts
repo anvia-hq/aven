@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, attempt, postJson } from "@/lib/api";
 
-import type { AttachmentUpload, ChatMessage, QuestionAnswer, RunSelection } from "../types";
+import type { ChatMessage, OutgoingMessage, QuestionAnswer, RunSelection } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -25,6 +25,17 @@ function parseEvent(data: string): RunEvent | null {
 // A live view of one thread. The server owns the run: this attaches over server-sent events,
 // gets a snapshot of the transcript, then applies events as they arrive. Reloading or leaving the
 // page never stops the agent, and reattaching shows the run still in progress.
+/** A message as `POST /threads/:id/messages` takes it: files and mentions only when there are any. */
+export function messageBody(
+  { prompt, attachments, mentions }: OutgoingMessage,
+  selection: RunSelection,
+) {
+  const body: Record<string, unknown> = { prompt, ...selection };
+  if (attachments.length > 0) body.attachments = attachments;
+  if (mentions.length > 0) body.mentions = mentions;
+  return body;
+}
+
 export function useThread(threadId: string) {
   const { threads, loaded, setRunning: setThreadRunning } = useThreads();
   const thread = threads.find((candidate) => candidate.id === threadId);
@@ -78,9 +89,9 @@ export function useThread(threadId: string) {
 
   // True once the message is accepted, so the composer knows it can clear.
   const send = useCallback(
-    async (prompt: string, selection: RunSelection = {}, attachments: AttachmentUpload[] = []) => {
+    async (message: OutgoingMessage, selection: RunSelection = {}) => {
       const sent = await attempt("Could not send message", async () => {
-        await postJson(`/threads/${threadId}/messages`, { prompt, attachments, ...selection });
+        await postJson(`/threads/${threadId}/messages`, messageBody(message, selection));
         rememberModelSelection(threadId, selection);
         return true;
       });
