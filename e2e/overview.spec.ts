@@ -1,3 +1,6 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+
 import { expect, test, type Page } from "@playwright/test";
 
 import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
@@ -90,4 +93,93 @@ test("the overview can be closed and opened again from the thread toolbar", asyn
   await page.reload();
   await expect(page.getByLabel("Prompt")).toBeVisible();
   await expect(overview).toHaveCount(0);
+});
+
+// Serves the events one after another, as a real run does, for the thread page to attach to.
+function serveEvents(events: unknown[], gapMs: number) {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, {
+      "content-type": "text/event-stream",
+      "access-control-allow-origin": "*",
+    });
+    response.write("retry: 600000\n\n");
+    let sent = 0;
+    const next = () => {
+      const event = events[sent++];
+      if (!event) return response.end();
+      response.write(`data: ${JSON.stringify(event)}\n\n`);
+      setTimeout(next, sent < 3 ? 0 : gapMs);
+    };
+    next();
+  }).listen(0);
+  return {
+    url: `http://localhost:${(server.address() as AddressInfo).port}/`,
+    close() {
+      server.close();
+      server.closeAllConnections();
+    },
+  };
+}
+
+// A long conversation whose last answer streams in: 20 earlier exchanges, then `words` deltas.
+async function openStreamingThread(page: Page, words: number, gapMs: number) {
+  await registerUser(page, "ins", "Overview User");
+  const history = Array.from({ length: 20 }, (_, index) => [
+    { id: `u${index}`, role: "user", parts: [{ type: "text", text: `Question ${index}` }] },
+    { id: `a${index}`, role: "assistant", parts: [{ type: "text", text: `Answer ${index}` }] },
+  ]).flat();
+  const stream = serveEvents(
+    [
+      { type: "snapshot", running: true, messages: history },
+      { type: "run_start", prompt: "Stream please" },
+      ...Array.from({ length: words }, (_, index) => ({
+        type: "text",
+        delta: `word${index} \n\n`,
+      })),
+      { type: "done" },
+    ],
+    gapMs,
+  );
+  const threadId = await newThread(page);
+  await page.route("**/api/threads/*/events", (route) => route.continue({ url: stream.url }));
+  await page.goto(`/threads/${threadId}`);
+  return stream;
+}
+
+test("the conversation follows a streaming answer, with its end clear of the composer", async ({
+  page,
+}) => {
+  const stream = await openStreamingThread(page, 80, 25);
+  try {
+    const last = page.locator('[data-role="assistant"]').last();
+    const prompt = page.getByLabel("Prompt");
+    await expect(last).toContainText("word79", { timeout: 15_000 });
+    await expect
+      .poll(async () => {
+        const [message, composer] = await Promise.all([last.boundingBox(), prompt.boundingBox()]);
+        return composer!.y - (message!.y + message!.height);
+      })
+      .toBeGreaterThan(24);
+  } finally {
+    stream.close();
+  }
+});
+
+test("a reader who scrolled up is not pulled back down by the answer streaming in", async ({
+  page,
+}) => {
+  const stream = await openStreamingThread(page, 80, 25);
+  try {
+    const last = page.locator('[data-role="assistant"]').last();
+    await expect(last).toContainText("word10", { timeout: 15_000 });
+    const scroller = page
+      .locator('[data-role="user"]')
+      .first()
+      .locator("xpath=ancestor::div[contains(@class, 'overflow-y-auto')][1]");
+    await scroller.evaluate((element) => (element.scrollTop = 0));
+    await expect(last).toContainText("word79", { timeout: 15_000 });
+    expect(await scroller.evaluate((element) => element.scrollTop)).toBeLessThan(100);
+  } finally {
+    stream.close();
+  }
 });
