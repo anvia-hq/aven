@@ -3,8 +3,6 @@ import {
   environmentVariables as variables,
   type EnvironmentVariableRow,
 } from "@aven/db/schema/environment-variables";
-import { members } from "@aven/db/schema/members";
-import { projects } from "@aven/db/schema/projects";
 import { users } from "@aven/db/schema/users";
 import { variableEvents, type NewVariableEventRow } from "@aven/db/schema/variable-events";
 import type { RunEnvVar } from "@aven/protocol/runtime-wire";
@@ -12,6 +10,8 @@ import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
+import { isOwnerOrAdmin } from "../auth/members";
+import { projectsService } from "../projects/service";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";
 
 const HINT_MIN_LENGTH = 12;
@@ -122,14 +122,8 @@ function view(row: EnvironmentVariableRow) {
 }
 
 // The organization's values reach every member's runs, so only an owner or an admin changes them.
-// A member's role can hold several, comma-separated.
 async function requireAdmin(organizationId: string, userId: string) {
-  const [member] = await db
-    .select({ role: members.role })
-    .from(members)
-    .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)));
-  const roles = member?.role.split(",").map((role) => role.trim()) ?? [];
-  if (!roles.some((role) => role === "owner" || role === "admin")) {
+  if (!(await isOwnerOrAdmin(organizationId, userId))) {
     throw new ForbiddenError("Only an owner or an admin can change the workspace's variables");
   }
 }
@@ -137,12 +131,7 @@ async function requireAdmin(organizationId: string, userId: string) {
 // A project scope must name a project of the organization: another organization's is not found.
 async function requireScope(scope: Scope) {
   if (scope.kind !== "project") return;
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(
-      and(eq(projects.organizationId, scope.organizationId), eq(projects.id, scope.projectId)),
-    );
+  const project = await projectsService.get(scope.organizationId, scope.projectId);
   if (!project) throw new NotFoundError("Project not found");
 }
 

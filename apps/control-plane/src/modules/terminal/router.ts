@@ -6,7 +6,6 @@ import { authRouter } from "../auth/router";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { TerminalHandle } from "../runtimes/viewer-streams";
 import { threadParams } from "../threads/schema";
-import { threadsService } from "../threads/service";
 import { terminalControl, terminalSize } from "./schema";
 import { createTerminalService } from "./service";
 
@@ -22,13 +21,8 @@ export const terminalRouter = (hub: RuntimeHub) => {
     query: terminalSize,
     async beforeHandle({ request, status, organizationId, user, params }) {
       if (!originAllowed(request)) return status(403, "Forbidden origin");
-      // A thread of another organization is not found before any socket is upgraded.
-      const thread = await threadsService.require(organizationId, params.id);
-      // The shell sees what the latest run was given: its sender's GitHub account and personal
-      // variables. Only that person gets in; before any run, the thread's creator.
-      if ((thread.lastRunBy ?? thread.createdBy) !== user.id) {
-        return status(403, "Only the person the thread last ran as has its terminal");
-      }
+      // Checked before any socket is upgraded.
+      await service.requireShell(organizationId, user.id, params.id);
     },
     async open(ws) {
       const { organizationId, params, query } = ws.data;
