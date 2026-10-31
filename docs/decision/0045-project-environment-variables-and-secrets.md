@@ -9,12 +9,13 @@ Status: accepted. Builds on 0043 (environments: setup script and snapshots). Fol
 ## Decision
 
 - **A project owns a set of variables**, each a name, a value and a `secret` flag. They belong to the project (so to its organization), not to a user, and any member of the organization can change them, as they can a project.
-- **A secret is write-only.** The API never returns its value, only that it is set and its last characters (`valueHint`), as provider keys do (0006). A plain variable is returned and editable. Values are stored encrypted with the same AES-256-GCM key as provider keys (`PROVIDER_ENCRYPTION_KEY`), secret or not.
+- **A secret is write-only.** The API never returns its value, only that it is set and, for a value of at least 12 characters, its last four (`valueHint`), as provider keys do (0006); a shorter one would be shown whole. A plain variable is returned and editable. Values are stored encrypted with the same AES-256-GCM key as provider keys (`PROVIDER_ENCRYPTION_KEY`), secret or not.
 - **Names** are `[A-Za-z_][A-Za-z0-9_]*`, at most 128 characters; a value is at most 8,192 characters; a project has at most 100. Names the runner or the sandbox rely on (`PATH`, `HOME`, `USER`, `SHELL`, `LD_*`, `AVEN_*`, `GH_*`, `GITHUB_*`, `GIT_*`) are refused, so a variable cannot change how the sandbox or its GitHub sign-in behaves.
 - **A run carries them**: `env` on `run.start` and `run.resume` (a list of `{ name, value }`), read when the run starts, so a change applies from the next run. They are sent on the connection a runtime already holds, like `github` (0044).
 - **The runner holds them in memory only** and applies them to the environment of every command the agent runs in the thread's container (`exec_command`, processes it starts), never to a file, a command line, the journal or a snapshot. A run taken up after a runner restart has none until the next message.
 - **Not in setup.** A setup container (0043) and the snapshot get no project variables, so a snapshot is the same for everyone and holds no secret. A setup script that needs a value copies a template, `[ -f .env ] || cp .env.example .env`, which is for local, non-secret values; `/setup-env` says so.
 - **The agent is told the names, not the values**: its instructions list the variable names set for the project, so it knows `DATABASE_URL` exists without seeing it.
+- **A database is the repository's own business**, not a feature: `.aven/setup` installs the server and `.aven/resume`, which runs as `node` without `sudo` (thread containers have `no-new-privileges`), starts one in the home folder. It was run in the sandbox image to check it, and `/setup-env` carries the script. The data lives in the container, so a thread whose container was freed and comes back finds the snapshot's data, not its own.
 
 ## Consequences
 

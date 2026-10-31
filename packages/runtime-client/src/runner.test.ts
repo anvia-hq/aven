@@ -462,6 +462,27 @@ describe("startRuntime", () => {
       ]);
     });
 
+    test("the agent is told their names, and nothing it is built from holds a value", async () => {
+      const { sandbox } = envSandbox();
+      const built: unknown[] = [];
+      const inner = reply();
+      const { plane, runtime } = connect({
+        sandbox,
+        createAgent: (input) => {
+          built.push(input);
+          return inner(input);
+        },
+      });
+      await runtime.ready;
+
+      plane.send({ ...runStart, env });
+      await until(() => plane.received.some((message) => message.type === "run.end"));
+
+      expect(built).toHaveLength(1);
+      expect(built[0]).toMatchObject({ envNames: ["DATABASE_URL"] });
+      expect(JSON.stringify(built)).not.toContain("very-secret");
+    });
+
     test("they are in memory only: no file in the runner's data folder holds them", async () => {
       const { sandbox } = envSandbox();
       const journal = journalPath();

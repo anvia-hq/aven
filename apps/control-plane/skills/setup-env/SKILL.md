@@ -43,7 +43,7 @@ Rules:
 - **Idempotent.** It may run again on a repository that is already set up.
 - **From the lockfile**, with the frozen or locked flag, so the result is the same every time.
 - **No long-running processes.** Dev servers, watchers and databases are stopped when the script ends. Build things; do not start them.
-- **No secrets and no `.env` files.** The script is committed to the repository.
+- **No secrets.** The script is committed to the repository, and the setup container gets none of the project's environment variables. What the project needs to run (an API key, a database URL) is set by the user as the project's **environment variables** on its page in Aven, and the agent's commands have them from then on: your instructions list their names. If a value is missing, ask the user to add it there; never write one into the script. A copy of a template with local, non-secret values is fine: `[ -f .env ] || cp .env.example .env`. Most loaders (Bun, Node's `--env-file`, dotenv) keep a variable that is already set over the same name in a `.env`, so a project variable usually wins.
 - **No interaction.** `-y`, `--yes`, `CI=true` (already set); nothing that waits for input.
 - **Quiet about what matters.** Print one line for each step so a failure is easy to find in the log.
 - **pnpm: keep its store out of the repository.** With the workspace mounted from the host, pnpm cannot share a disk between its store and the project, so it leaves a `.pnpm-store` folder (hundreds of megabytes) in the repository's root. Put the store in the home folder first: `pnpm config set store-dir "$HOME/.local/share/pnpm/store"`. (Aven keeps `.pnpm-store` out of git and out of snapshots anyway, but a store in the repository still costs disk and time.)
@@ -55,6 +55,31 @@ Then make it executable: `chmod +x .aven/setup`.
 ## 3. Optional: `.aven/resume`
 
 If a thread needs something quick each time its container starts (a login, a cache refresh, a service started in the background), put it in an executable `.aven/resume`. It runs at every container start and the agent waits for it for at most 10 seconds. Do not put installs in it. Most repositories do not need one.
+
+### A database the project needs
+
+Every process the setup script starts is stopped when it ends, so a database is never left running in the snapshot. And `sudo` works only in the setup container: thread containers run with `no-new-privileges`, so `.aven/resume` runs as the plain user `node`. Split the work:
+
+- **`.aven/setup` installs the server** with `sudo apt-get install -y --no-install-recommends postgresql`, and the project's dependencies as usual.
+- **`.aven/resume` runs a server of its own as `node`**, with no `sudo`: a data directory in the home folder, started on a socket in `/tmp` (the default one is not writable) and reached over `localhost`. It makes the data directory and the database only when they are missing, so it can run any number of times and takes a fraction of a second:
+
+  ```bash
+  #!/usr/bin/env bash
+  set -euo pipefail
+  PGBIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)
+  PGDATA="$HOME/pgdata"
+  [ -d "$PGDATA" ] || "$PGBIN/initdb" -D "$PGDATA" -U app --auth=trust > /dev/null
+  "$PGBIN/pg_ctl" -D "$PGDATA" status > /dev/null \
+    || "$PGBIN/pg_ctl" -D "$PGDATA" -l "$HOME/pgdata.log" -w -o "-c unix_socket_directories=/tmp" start > /dev/null
+  "$PGBIN/psql" -h localhost -U app -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='app'" | grep -q 1 \
+    || "$PGBIN/createdb" -h localhost -U app app
+  ```
+
+- **The connection string** is `postgres://app@localhost/app`, as a project environment variable (`DATABASE_URL`) or, for local-only values, in the copied `.env.example`.
+- **The data lives in the container, not in the workspace.** When a thread's container is freed after it has been idle and comes back, it starts from the snapshot's image, so the thread's own tables and rows are gone. Migrations and seed data must be safe to run again, and the agent runs them again when it comes back to a thread.
+- **Migrations run in the thread**, not in `resume`: the agent runs the project's own command (for example `bun run db:migrate`) before it needs the schema.
+
+`save_environment` runs only `.aven/setup`. `.aven/resume` runs when a thread's container starts, so check the database in a new thread (the agent's `list_ports` shows 5432, and a `psql` query answers).
 
 ## 4. Save it
 

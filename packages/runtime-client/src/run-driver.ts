@@ -215,6 +215,7 @@ export function createRunDriver(context: DriverContext) {
               ]
             : bound,
           skills: state.record.skillListing,
+          envNames: env?.map(({ name }) => name),
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };

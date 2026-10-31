@@ -9,6 +9,7 @@ import {
 
 import { withoutStoredReasoning } from "./memory";
 import { createModel, providerOptionsFor, type ModelConfig } from "./model";
+import { environmentInstructions } from "./environment";
 import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 
@@ -26,6 +27,8 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   memory?: MemoryStore;
   /** The skills in the sandbox, which the instructions list (decision 0035). */
   skills?: readonly SkillListing[];
+  /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
+  envNames?: readonly string[];
 };
 
 // Model requests that fail transiently (rate limits, dropped connections) are tried this many times.
@@ -55,7 +58,11 @@ export function createCodingAgent(options: CodingAgentOptions) {
   const agent = new Agent({
     id: options.id ?? "coding",
     model,
-    instructions: [INSTRUCTIONS, skillsInstructions(options.skills ?? [])]
+    instructions: [
+      INSTRUCTIONS,
+      skillsInstructions(options.skills ?? []),
+      environmentInstructions(options.envNames ?? []),
+    ]
       .filter(Boolean)
       .join("\n\n"),
     providerOptions,

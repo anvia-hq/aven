@@ -43,6 +43,8 @@ export type CreateRuntimeAgent = (input: {
   tools: readonly AnyTool[];
   /** The skills in the sandbox, for the instructions (decision 0035). */
   skills?: readonly SkillListing[];
+  /** The names of the project's environment variables the run came with (decision 0045). */
+  envNames?: readonly string[];
   model?: RunModel;
 }) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
@@ -51,7 +53,7 @@ export type CreateRuntimeAgent = (input: {
 // agent has no memory store.
 const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, attended, tools, skills, model }) => {
+  ({ id, attended, tools, skills, envNames, model }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       id,
@@ -65,6 +67,7 @@ const defaultCreateAgent =
       contextWindow: model.contextWindow,
       tools,
       skills,
+      envNames,
     });
   };
 
