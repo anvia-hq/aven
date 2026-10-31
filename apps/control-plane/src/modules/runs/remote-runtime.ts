@@ -75,6 +75,7 @@ export class RemoteRuntime implements Runtime {
     mentions,
     skills,
     github,
+    env,
     model,
   }: StartRunInput): RuntimeRun {
     return this.#launch(thread, model, skills, (runId, runModel) => ({
@@ -86,11 +87,20 @@ export class RemoteRuntime implements Runtime {
       mentions: mentions?.length ? mentions : undefined,
       skills: skills?.length ? skills : undefined,
       github,
+      env: env?.length ? env : undefined,
       model: runModel,
     }));
   }
 
-  resume({ thread, continuation, response, skills, github, model }: ResumeRunInput): RuntimeRun {
+  resume({
+    thread,
+    continuation,
+    response,
+    skills,
+    github,
+    env,
+    model,
+  }: ResumeRunInput): RuntimeRun {
     return this.#launch(thread, model, skills, (runId, runModel) => ({
       type: "run.resume",
       runId,
@@ -99,6 +109,7 @@ export class RemoteRuntime implements Runtime {
       response,
       skills: skills?.length ? skills : undefined,
       github,
+      env: env?.length ? env : undefined,
       model: runModel,
     }));
   }

@@ -425,6 +425,64 @@ describe("startRuntime", () => {
     });
   });
 
+  describe("giving the agent's commands the project's variables (decision 0045)", () => {
+    const env = [{ name: "DATABASE_URL", value: "postgres://very-secret" }];
+
+    // A sandbox that records the variables each run was given.
+    function envSandbox() {
+      const given: { threadId: string; env: unknown }[] = [];
+      const sandbox: ThreadWorkspaces = {
+        async acquire(): Promise<ThreadSandbox> {
+          return { tools: [], hasRunningProcesses: async () => false };
+        },
+        desktop: () => undefined,
+        workspace: async () => undefined,
+        setProjectEnv(threadId, variables) {
+          given.push({ threadId, env: variables });
+        },
+        async release() {},
+        async dispose() {},
+      };
+      return { sandbox, given };
+    }
+
+    test("a run sets the variables it came with, and a run with none clears them", async () => {
+      const { sandbox, given } = envSandbox();
+      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      await runtime.ready;
+
+      plane.send({ ...runStart, runId: "run-a", env });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-a"));
+      plane.send({ ...runStart, runId: "run-b" });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-b"));
+
+      expect(given).toEqual([
+        { threadId: "thread-1", env },
+        { threadId: "thread-1", env: undefined },
+      ]);
+    });
+
+    test("they are in memory only: no file in the runner's data folder holds them", async () => {
+      const { sandbox } = envSandbox();
+      const journal = journalPath();
+      const { plane, runtime } = connect({ sandbox, createAgent: reply(), journalPath: journal });
+      await runtime.ready;
+
+      plane.send({ ...runStart, env });
+      await until(() => plane.received.some((message) => message.type === "run.end"));
+      plane.send({ type: "run.ack", runId: "run-1" });
+      await Bun.sleep(100);
+
+      const folder = dirname(journal);
+      const files = await readdir(folder);
+      expect(files.length).toBeGreaterThan(0);
+      for (const file of files) {
+        const bytes = await Bun.file(join(folder, file)).text();
+        expect(bytes).not.toContain("very-secret");
+      }
+    });
+  });
+
   test("a run whose history grows past a megabyte, as screenshots and command output make it, does not end", async () => {
     // What a few desktop screenshots amount to: results of a few hundred kilobytes each.
     const screenshot = createTool({

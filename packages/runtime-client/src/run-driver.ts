@@ -10,6 +10,7 @@ import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
+  RunEnvVar,
   RunGithub,
   RunThreadInfo,
   RuntimeCalls,
@@ -117,7 +118,7 @@ export function createRunDriver(context: DriverContext) {
           attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
         });
       }
-      const scope = await acquire(initial, state, run, message?.github);
+      const scope = await acquire(initial, state, run, message?.github, message?.env);
       const end = await phases(scope, message);
       finish(runId, end, run.cancelReason);
     } catch (error) {
@@ -144,6 +145,7 @@ export function createRunDriver(context: DriverContext) {
     state: { record: RunRecord },
     run: Live,
     github?: RunGithub,
+    env?: RunEnvVar[],
   ): Promise<RunScope> {
     const { runId, thread, model } = initial;
     await context.starting(thread.id);
@@ -156,6 +158,9 @@ export function createRunDriver(context: DriverContext) {
     await context.sandbox.signInGithub?.(thread.id, github).catch((error: unknown) => {
       console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
     });
+    // The project's variables for this run's commands, in memory like the GitHub account; a run
+    // taken up after a restart has none until the next message (decision 0045).
+    context.sandbox.setProjectEnv?.(thread.id, env);
     // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     // What this turn changes is measured from here; a run picked up again after a restart, or

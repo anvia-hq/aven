@@ -45,4 +45,17 @@ describe("a run's message to its runtime", () => {
     expect(posted[0]).not.toHaveProperty("github", expect.anything());
     expect(JSON.stringify(posted[0])).not.toContain("ghu_");
   });
+
+  test("carries the project's environment variables, and none when it has none", () => {
+    const { posted, remote } = runtime();
+    const env = [{ name: "DATABASE_URL", value: "postgres://x" }];
+
+    remote.start({ thread, prompt: "hi", env });
+    remote.resume({ thread, continuation: {}, response: {}, env });
+    remote.start({ thread, prompt: "hi", env: [] });
+
+    expect(posted[0]).toMatchObject({ env });
+    expect(posted[1]).toMatchObject({ env });
+    expect(posted[2]).not.toHaveProperty("env", expect.anything());
+  });
 });

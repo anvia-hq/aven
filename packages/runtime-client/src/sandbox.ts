@@ -11,7 +11,7 @@ import { SKILLS_DIR } from "@aven/agents/skills";
 import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
-import type { RepoAccess, RunGithub } from "@aven/protocol/runtime-wire";
+import type { RepoAccess, RunEnvVar, RunGithub } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
 import {
@@ -23,6 +23,7 @@ import {
 } from "./environment-setup";
 import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
+import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { runCommand } from "./run-command";
@@ -225,6 +226,12 @@ export interface ThreadWorkspaces {
    */
   signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
   /**
+   * Gives the commands and processes the agent starts in the thread's container `env`, the
+   * project's variables of the run that is starting, or none (decision 0045). Kept in memory, in
+   * place of the last run's. Without it, a run's commands have no project variables.
+   */
+  setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
+  /**
    * Runs the repository's `.aven/setup` again in a setup container and keeps what it makes as the
    * snapshot new threads start from (decision 0043). Throws, with the end of the script's output,
    * when there is no script or it fails. Without it, an agent cannot save an environment.
@@ -267,6 +274,8 @@ export class Sandboxes implements ThreadWorkspaces {
   // repository finds the snapshot the first made instead of running the setup again.
   #environments = new Map<string, Promise<unknown>>();
   #starting = new Map<string, Promise<void>>();
+  // The project's variables the thread's current run was given, in memory only (decision 0045).
+  #projectEnv = new Map<string, Readonly<Record<string, string>>>();
 
   private constructor(
     config: SandboxConfig,
@@ -313,7 +322,9 @@ export class Sandboxes implements ThreadWorkspaces {
   ): Promise<ThreadSandbox> {
     const root = await this.#workspace(thread, repo);
     await this.#ensure(thread.id, root);
-    const runtime = this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR });
+    const runtime = withProjectEnv(this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR }), () =>
+      this.#projectEnv.get(thread.id),
+    );
     return {
       tools: [
         ...sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
@@ -343,6 +354,7 @@ export class Sandboxes implements ThreadWorkspaces {
 
   async #teardown(threadId: string) {
     this.#running.delete(threadId);
+    this.#projectEnv.delete(threadId);
     this.#dropTokens(threadId);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
@@ -490,6 +502,11 @@ export class Sandboxes implements ThreadWorkspaces {
     await this.snapshots.publish(key, { image, baseImageId, workspace: root });
     await this.#pinImage(threadId, image);
     return { image };
+  }
+
+  setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
+    if (env?.length) this.#projectEnv.set(threadId, envOf(env));
+    else this.#projectEnv.delete(threadId);
   }
 
   async signInGithub(threadId: string, github: RunGithub | undefined) {

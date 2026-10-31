@@ -97,6 +97,18 @@ run("variablesService (postgres)", async () => {
     );
   });
 
+  test("a run gets every variable of the project with its value, secrets included", async () => {
+    const { project: mine } = await seedProject(orgA, userId, runner.id, "forrun");
+    await variablesService.set(orgA, mine.id, "B_PLAIN", { value: "plain", secret: false });
+    await variablesService.set(orgA, mine.id, "A_SECRET", { value: "s3cret", secret: true });
+
+    expect(await variablesService.forRun(mine.id)).toEqual([
+      { name: "A_SECRET", value: "s3cret" },
+      { name: "B_PLAIN", value: "plain" },
+    ]);
+    expect(await variablesService.forRun(crypto.randomUUID())).toEqual([]);
+  });
+
   test("a project has a limited number of variables, and replacing one is still allowed", async () => {
     const { project: full } = await seedProject(orgA, userId, runner.id, "full");
     await db.insert(projectVariables).values(

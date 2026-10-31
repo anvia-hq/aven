@@ -1,5 +1,6 @@
 import { db } from "@aven/db/client";
 import { projects } from "@aven/db/schema/projects";
+import type { RunEnvVar } from "@aven/protocol/runtime-wire";
 import { projectVariables, type ProjectVariableRow } from "@aven/db/schema/project-variables";
 import { and, asc, count, eq } from "drizzle-orm";
 
@@ -86,6 +87,18 @@ export const variablesService = {
       })
       .returning();
     return view(row!);
+  },
+
+  // What a run of the project's threads gets in its commands' environment (decision 0045). The
+  // caller has the project from a thread of the organization, so this does not look at the
+  // organization again.
+  async forRun(projectId: string): Promise<RunEnvVar[]> {
+    const rows = await db
+      .select()
+      .from(projectVariables)
+      .where(eq(projectVariables.projectId, projectId))
+      .orderBy(asc(projectVariables.name));
+    return rows.map((row) => ({ name: row.name, value: readValue(row) }));
   },
 
   async remove(organizationId: string, projectId: string, name: string) {

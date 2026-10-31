@@ -14,7 +14,7 @@ import {
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
-import type { RunAttachment, RunGithub, RunSkill } from "@aven/protocol/runtime-wire";
+import type { RunAttachment, RunEnvVar, RunGithub, RunSkill } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import { memoryStore } from "../../memory-store";
@@ -92,7 +92,7 @@ export class RunManager {
     thread: RunThread,
     prompt: string,
     model?: ModelConfig | null,
-    { attachments = [], mentions = [], skills = [], github }: RunExtras = {},
+    { attachments = [], mentions = [], skills = [], github, env }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -104,6 +104,7 @@ export class RunManager {
       mentions,
       skills,
       github,
+      env,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
@@ -123,6 +124,7 @@ export class RunManager {
     model?: ModelConfig | null,
     skills: RunSkill[] = [],
     github?: RunGithub,
+    env?: RunEnvVar[],
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -141,6 +143,7 @@ export class RunManager {
       response,
       skills,
       github,
+      env,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.
