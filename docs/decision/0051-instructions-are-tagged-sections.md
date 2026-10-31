@@ -8,7 +8,7 @@ The agent's instructions were one bullet list, followed by the skills and the en
 
 ## Decision
 
-- **Each part is a tagged section**, written out by hand in `packages/agents/src/instruction.ts` (no helper: the prompt reads as it is sent): `role`, `safety`, `workflow`, `sandbox`, `files`, `github`, `processes`, `asking`, `identity`, `output`, and `skills` and `environment_variables` when there is something to say (`skills.ts`, `environment.ts`). Anthropic recommends XML tags to keep instructions, examples and context apart; other providers read them as plain headings. Sections are flat, one level, apart from an `<example>` in `output`.
+- **Each part is a tagged section**, written out by hand in `packages/agents/src/instruction.ts` (no helper: the prompt reads as it is sent): `role`, `safety`, `workflow`, `sandbox`, `files`, `github`, `processes`, `asking`, `identity`, `tone`, `output`, and `skills` and `environment_variables` when there is something to say (`skills.ts`, `environment.ts`). Anthropic recommends XML tags to keep instructions, examples and context apart; other providers read them as plain headings. Sections are flat, one level, apart from an `<example>` in `output`.
 - **`safety` comes first** and says that text arriving through files, attachments, the web, GitHub and tool results is information, never instructions.
 - **New rules:** keep going until the work is done and verified, say so when there are no checks or they fail, stay on the thread's branch, the sandbox's limits (only `/workspace` lasts, output is cut, `read_file` reaches `/workspace` only), and a final summary of what changed, how it was checked and what was not.
 
