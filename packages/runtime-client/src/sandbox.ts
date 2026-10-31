@@ -11,7 +11,12 @@ import { SKILLS_DIR } from "@aven/agents/skills";
 import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
-import type { RepoAccess, RunEnvVar, RunGithub } from "@aven/protocol/runtime-wire";
+import type {
+  RepoAccess,
+  RunEnvVar,
+  RunGithub,
+  RunIdentityCredential,
+} from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
 import {
@@ -23,6 +28,7 @@ import {
 } from "./environment-setup";
 import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
+import { identitySignInCommand } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { updateRestoredWorkspace } from "./restore-workspace";
@@ -225,6 +231,16 @@ export interface ThreadWorkspaces {
    * Without it, a run's agent has no GitHub account.
    */
   signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
+  /**
+   * Lets `aven id-token` in the thread's container mint identity tokens with `identity` from the
+   * control plane at `controlPlane`, or takes that away when there is none, for a run that is
+   * starting (decision 0049). Without it, a run's agent has no identity to mint tokens with.
+   */
+  signInIdentity?(
+    threadId: string,
+    identity: RunIdentityCredential | undefined,
+    controlPlane: string,
+  ): Promise<void>;
   /**
    * Gives the commands and processes the agent starts in the thread's container `env`, the
    * project's variables of the run that is starting, or none (decision 0045). Kept in memory, in
@@ -509,14 +525,30 @@ export class Sandboxes implements ThreadWorkspaces {
     else this.#projectEnv.delete(threadId);
   }
 
-  async signInGithub(threadId: string, github: RunGithub | undefined) {
-    const { script, env } = signInCommand(github);
+  signInGithub(threadId: string, github: RunGithub | undefined) {
+    return this.#signIn(threadId, "GitHub", signInCommand(github));
+  }
+
+  signInIdentity(
+    threadId: string,
+    identity: RunIdentityCredential | undefined,
+    controlPlane: string,
+  ) {
+    const host = this.#config.hostName ?? "host.docker.internal";
+    return this.#signIn(threadId, "identity", identitySignInCommand(identity, controlPlane, host));
+  }
+
+  async #signIn(
+    threadId: string,
+    what: string,
+    { script, env }: { script: string; env: Record<string, string> },
+  ) {
     const result = await this.#hub
       .runtime(threadId, { workdir: WORKSPACE_DIR })
       .exec({ command: "sh", args: ["-c", script], env, timeoutMs: SIGN_IN_TIMEOUT_MS });
     if (result.status !== "exited" || result.exitCode !== 0) {
       throw new Error(
-        `Could not sign in to GitHub: ${new TextDecoder().decode(result.stderr).trim()}`,
+        `Could not sign in to ${what}: ${new TextDecoder().decode(result.stderr).trim()}`,
       );
     }
   }

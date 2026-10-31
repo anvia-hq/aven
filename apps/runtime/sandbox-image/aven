@@ -1,0 +1,47 @@
+#!/bin/sh
+# The sandbox's Aven command. `aven id-token` prints an OIDC identity token for this run, which a
+# service that trusts Aven's issuer can accept in place of a stored key (decision 0049). It reads
+# what the runner wrote when the run started, so it works only while a run has an identity.
+set -eu
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: aven id-token --audience <audience> [--subject-scope thread|project|organization] [--lifetime <seconds>]
+
+Prints a signed OIDC token for this run and nothing else, so it works in command substitution:
+  TOKEN=$(aven id-token --audience https://service.example)
+
+--audience       the service the token is for (required)
+--subject-scope  who the token's subject is: this thread (default), its project or its organization
+--lifetime       seconds the token is valid, 60 to 3600 (default 600)
+USAGE
+}
+
+[ "${1:-}" = "id-token" ] || { usage; exit 2; }
+shift
+
+audience=""
+scope="thread"
+lifetime="600"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --audience) audience="${2:?--audience needs a value}"; shift 2 ;;
+    --subject-scope) scope="${2:?--subject-scope needs a value}"; shift 2 ;;
+    --lifetime) lifetime="${2:?--lifetime needs a value}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "aven: unknown option $1" >&2; usage; exit 2 ;;
+  esac
+done
+[ -n "$audience" ] || { echo "aven: --audience is required" >&2; exit 2; }
+case "$lifetime" in ''|*[!0-9]*) echo "aven: --lifetime is a number of seconds" >&2; exit 2 ;; esac
+
+file="$HOME/.config/aven/identity"
+[ -r "$file" ] || { echo "aven: this run has no identity to mint tokens with" >&2; exit 1; }
+# shellcheck disable=SC1090
+. "$file"
+
+jq -n --arg audience "$audience" --arg scope "$scope" --argjson lifetime "$lifetime" \
+    '{audience: $audience, subjectScope: $scope, lifetime: $lifetime}' |
+  curl -fsS --max-time 20 -X POST "$AVEN_IDENTITY_URL/workload-identity/token" \
+    -H "authorization: Bearer $AVEN_IDENTITY_CREDENTIAL" -H "content-type: application/json" -d @- |
+  jq -er .token

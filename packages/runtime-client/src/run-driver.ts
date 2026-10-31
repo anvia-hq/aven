@@ -10,8 +10,6 @@ import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
-  RunEnvVar,
-  RunGithub,
   RunThreadInfo,
   RuntimeCalls,
   RuntimeToControlPlane,
@@ -89,6 +87,8 @@ export type DriverContext = {
   starting(threadId: string): Promise<void>;
   /** A run is over: the thread's sandbox may be released once it has been idle for a while. */
   finished(threadId: string): void;
+  /** The control plane's origin, which the sandbox's `aven` command calls to mint identity tokens. */
+  controlPlane: string;
   /** The runner is shutting down: its state is closed, so nothing more is recorded. */
   stopped(): boolean;
 };
@@ -119,7 +119,7 @@ export function createRunDriver(context: DriverContext) {
           attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
         });
       }
-      const scope = await acquire(initial, state, run, message?.github, message?.env);
+      const scope = await acquire(initial, state, run, message);
       const end = await phases(scope, message);
       finish(runId, end, run.cancelReason);
     } catch (error) {
@@ -145,9 +145,9 @@ export function createRunDriver(context: DriverContext) {
     initial: RunRecord,
     state: { record: RunRecord },
     run: Live,
-    github?: RunGithub,
-    env?: RunEnvVar[],
+    message?: RunMessage,
   ): Promise<RunScope> {
+    const { github, env, identity } = message ?? {};
     const { runId, thread, model } = initial;
     await context.starting(thread.id);
     // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
@@ -159,6 +159,16 @@ export function createRunDriver(context: DriverContext) {
     await context.sandbox.signInGithub?.(thread.id, github).catch((error: unknown) => {
       console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
     });
+    // What `aven id-token` mints tokens with; in memory and the container only, like the GitHub
+    // account, and a failure does not fail the run (decision 0049).
+    await context.sandbox
+      .signInIdentity?.(thread.id, identity, context.controlPlane)
+      .catch((error: unknown) => {
+        console.warn(
+          `Run ${runId} could not sign in to mint identity tokens:`,
+          errorMessage(error),
+        );
+      });
     // The project's variables for this run's commands, in memory like the GitHub account; a run
     // taken up after a restart has none until the next message (decision 0045).
     context.sandbox.setProjectEnv?.(thread.id, env);

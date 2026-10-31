@@ -238,6 +238,7 @@ export function startRuntime(options: RuntimeOptions) {
     call,
     report,
     boxes,
+    controlPlane: origin,
     async starting(threadId) {
       clearTimeout(idleTimers.get(threadId));
       await releasing.get(threadId);

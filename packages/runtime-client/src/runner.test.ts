@@ -356,6 +356,7 @@ describe("startRuntime", () => {
     // A sandbox that records who each run signed in as.
     function signingSandbox(options: { failSignIn?: boolean } = {}) {
       const signedIn: { threadId: string; github: unknown }[] = [];
+      const identities: { threadId: string; identity: unknown; controlPlane: string }[] = [];
       const sandbox: ThreadWorkspaces = {
         async acquire(): Promise<ThreadSandbox> {
           return { tools: [], hasRunningProcesses: async () => false };
@@ -366,10 +367,13 @@ describe("startRuntime", () => {
           signedIn.push({ threadId, github });
           if (options.failSignIn) throw new Error("no shell");
         },
+        async signInIdentity(threadId, identity, controlPlane) {
+          identities.push({ threadId, identity, controlPlane });
+        },
         async release() {},
         async dispose() {},
       };
-      return { sandbox, signedIn };
+      return { sandbox, signedIn, identities };
     }
 
     test("a run signs in as the account it came with, and a run with none signs out", async () => {
@@ -385,6 +389,23 @@ describe("startRuntime", () => {
       expect(signedIn).toEqual([
         { threadId: "thread-1", github: ada },
         { threadId: "thread-1", github: undefined },
+      ]);
+    });
+
+    test("a run signs in to mint identity tokens with the credential it came with, at the control plane's origin", async () => {
+      const { sandbox, identities } = signingSandbox();
+      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      await runtime.ready;
+
+      plane.send({ ...runStart, runId: "run-a", identity: { credential: "avid_a" } });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-a"));
+      plane.send({ ...runStart, runId: "run-b" });
+      await until(() => plane.received.some((m) => m.type === "run.end" && m.runId === "run-b"));
+
+      const controlPlane = plane.url.replace("ws://", "http://");
+      expect(identities).toEqual([
+        { threadId: "thread-1", identity: { credential: "avid_a" }, controlPlane },
+        { threadId: "thread-1", identity: undefined, controlPlane },
       ]);
     });
 
