@@ -7,6 +7,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
+import { VariablesSection } from "@/modules/variables/components/variables-section";
 
 export const Route = createFileRoute("/_authed/projects/$projectId")({
   component: ProjectPage,
@@ -37,6 +38,8 @@ function ProjectPage() {
           <h2 className="text-sm text-muted-foreground">Recent threads</h2>
           <ThreadList threads={threads} empty="No threads in this project yet." />
         </section>
+
+        <VariablesSection projectId={project.id} />
       </main>
     </div>
   );
