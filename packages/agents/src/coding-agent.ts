@@ -8,9 +8,10 @@ import {
 } from "@anvia/core";
 
 import { withoutStoredReasoning } from "./memory";
-import { createModel, providerOptionsFor, type ModelConfig } from "./model";
+import { azureApiFor, createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { environmentInstructions } from "./environment";
 import { INSTRUCTIONS } from "./instruction";
+import { ownedByAnthropic, ownedByResponsesApi, withOwnReasoning } from "./own-reasoning";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
@@ -95,13 +96,22 @@ export function historyStoreFor(options: CodingAgentOptions) {
   return memory && anthropic ? withoutStoredReasoning(memory) : memory;
 }
 
+// What a thread's earlier runs left may be another provider's reasoning, which this one rejects.
+function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
+  if (config.provider === "anthropic") return withOwnReasoning(model, ownedByAnthropic);
+  const responses =
+    config.provider === "openai" ||
+    (config.provider === "azure" && azureApiFor(config.modelId ?? "") === "responses");
+  return responses ? withOwnReasoning(model, ownedByResponsesApi) : model;
+}
+
 // A ready model carries no provider settings; a model config also picks the provider's options
 // and the reasoning effort.
 function resolveModel(options: CodingAgentOptions) {
   if ("model" in options)
     return { model: options.model, providerOptions: undefined, controls: undefined };
   return {
-    model: createModel(options),
+    model: withHistoryItOwns(createModel(options), options),
     providerOptions: providerOptionsFor(options.provider),
     controls: options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : undefined,
   };
