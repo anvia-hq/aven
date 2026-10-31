@@ -17,6 +17,7 @@ Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token str
 | `muted` / `muted-foreground`            | subdued surfaces and text       |
 | `destructive`                           | errors and destructive actions  |
 | `border`, `input`, `ring`               | borders, field borders, focus   |
+| `frame`                                 | the shell's outer frame         |
 
 Use them as Tailwind utilities: `bg-primary text-primary-foreground`, `text-muted-foreground`, `border-border`, `bg-primary/90`.
 
