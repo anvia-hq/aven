@@ -5,7 +5,7 @@ import { toast } from "@/components/toast";
 import { api, attempt, errorMessage, postJson } from "@/lib/api";
 
 import { variablesAtom } from "../atoms/variables-atom";
-import type { Variable, VariableInput } from "../types";
+import { variablesPath, type Variable, type VariableInput, type VariableScope } from "../types";
 
 const store = getDefaultStore();
 // Bumped by `reset` so a response for the previous organization, resolving after the switch, can't
@@ -20,21 +20,24 @@ export function resetVariables() {
   store.set(variablesAtom, {});
 }
 
-const path = (projectId: string, name?: string) =>
-  `/projects/${projectId}/variables${name ? `/${name}` : ""}`;
+const path = (scope: VariableScope, name?: string) =>
+  `${variablesPath(scope)}${name ? `/${name}` : ""}`;
 
-async function load(projectId: string) {
+// What a scope's list is kept under: the atom and the requests in flight are by it.
+const keyOf = (scope: VariableScope) => (scope.kind === "project" ? scope.projectId : scope.kind);
+
+async function load(scope: VariableScope) {
+  const key = keyOf(scope);
   const startedIn = generation;
-  const known = store.get(variablesAtom)[projectId] !== undefined;
-  let request = inflight.get(projectId);
+  const known = store.get(variablesAtom)[key] !== undefined;
+  let request = inflight.get(key);
   if (!request) {
-    request = api<Variable[]>(path(projectId)).finally(() => inflight.delete(projectId));
-    inflight.set(projectId, request);
+    request = api<Variable[]>(path(scope)).finally(() => inflight.delete(key));
+    inflight.set(key, request);
   }
   try {
     const list = await request;
-    if (startedIn === generation)
-      store.set(variablesAtom, (all) => ({ ...all, [projectId]: list }));
+    if (startedIn === generation) store.set(variablesAtom, (all) => ({ ...all, [key]: list }));
   } catch (failure) {
     if (startedIn !== generation) return;
     // Only a failed first load is worth a toast; a failed refetch keeps the old list.
@@ -44,20 +47,21 @@ async function load(projectId: string) {
         description: errorMessage(failure),
         type: "error",
       });
-      store.set(variablesAtom, (all) => ({ ...all, [projectId]: [] }));
+      store.set(variablesAtom, (all) => ({ ...all, [key]: [] }));
     }
   }
 }
 
-// A project's variables. Loads on first use; mutations refetch. Saving a name that exists
-// replaces it, which is also how an unreadable value is entered again.
-export function useVariables(projectId: string) {
+// A scope's variables. Loads on first use; mutations refetch. Saving a name that exists replaces
+// it, which is also how an unreadable value is entered again.
+export function useVariables(scope: VariableScope) {
   const [all] = useAtom(variablesAtom);
-  const variables = all[projectId];
+  const key = keyOf(scope);
+  const variables = all[key];
 
   useEffect(() => {
-    if (variables === undefined) void load(projectId);
-  }, [projectId, variables]);
+    if (variables === undefined) void load(scope);
+  }, [key, variables]);
 
   // Runs a request that changes a variable and reloads the list; false on failure (already toasted).
   async function change(failureTitle: string, request: () => Promise<unknown>) {
@@ -66,13 +70,13 @@ export function useVariables(projectId: string) {
       return true;
     });
     if (!changed) return false;
-    await load(projectId);
+    await load(scope);
     return true;
   }
 
   async function save({ name, ...body }: VariableInput) {
     const saved = await change("Could not save variable", () =>
-      postJson<Variable>(path(projectId, name), body, "PUT"),
+      postJson<Variable>(path(scope, name), body, "PUT"),
     );
     if (saved) toast.add({ title: "Variable saved", description: name, type: "success" });
     return saved;
@@ -80,7 +84,7 @@ export function useVariables(projectId: string) {
 
   async function remove(variable: Variable) {
     const removed = await change("Could not remove variable", () =>
-      api<void>(path(projectId, variable.name), { method: "DELETE" }),
+      api<void>(path(scope, variable.name), { method: "DELETE" }),
     );
     if (removed) toast.add({ title: "Variable removed", description: variable.name });
   }

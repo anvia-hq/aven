@@ -2,21 +2,21 @@ import { useRef, useState, type FormEvent } from "react";
 
 import { toast } from "@/components/toast";
 
-import { isReservedName, type Variable } from "../types";
+import { isReservedName, type Variable, type VariableScope } from "../types";
 import { useVariables } from "./use-variables";
 
 // The state behind the variable dialog: whether the value is a secret, and submitting, which adds
 // a variable or, given one, replaces its value. Text fields are uncontrolled; they are read from
 // the form when needed.
 export function useVariableForm(
-  projectId: string,
+  scope: VariableScope,
   variable: Variable | undefined,
   onDone: () => void,
 ) {
   const [secret, setSecret] = useState(variable?.secret ?? false);
   const [submitting, setSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const { save } = useVariables(projectId);
+  const { save } = useVariables(scope);
 
   const reset = () => setSecret(variable?.secret ?? false);
 

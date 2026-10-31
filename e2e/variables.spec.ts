@@ -150,4 +150,62 @@ test.describe("project environment variables", () => {
       expect((await request.get(path)).status()).toBe(401);
     }
   });
+
+  test("a person's own and the workspace's variables are managed on their settings pages", async ({
+    page,
+  }) => {
+    await registerUser(page, "pages", "Pages User");
+
+    await page.goto("/settings/environment-variables");
+    const own = page.getByRole("region", { name: "Your variables" });
+    await expect(own).toContainText("None yet");
+    await own.getByRole("button", { name: "Add" }).click();
+    await page.getByLabel("Name").fill("MY_TOKEN");
+    await page.getByLabel("Value").fill("not-a-secret");
+    await page.getByRole("button", { name: "Add variable" }).click();
+    await expect(page.getByText("Variable saved")).toBeVisible();
+    await expect(own).toContainText("MY_TOKEN");
+
+    // The owner of the workspace may change its variables.
+    await page.goto("/settings/workspace-variables");
+    const shared = page.getByRole("region", { name: "Workspace variables" });
+    await expect(shared.getByRole("button", { name: "Add" })).toBeVisible();
+    await shared.getByRole("button", { name: "Add" }).click();
+    await page.getByLabel("Name").fill("REGISTRY");
+    await page.getByLabel("Value").fill("registry.example.com");
+    await page.getByRole("button", { name: "Add variable" }).click();
+    await expect(shared).toContainText("registry.example.com");
+    // Not the person's own list.
+    await expect(shared).not.toContainText("MY_TOKEN");
+
+    await shared.getByRole("button", { name: "Remove REGISTRY" }).click();
+    await expect(shared).toContainText("None yet");
+  });
+
+  test("a project's page lists what it inherits, and what replaces what", async ({ page }) => {
+    const section = await openProject(page);
+    await expect(page.getByRole("region", { name: "Inherited variables" })).toHaveCount(0);
+
+    for (const [scope, name, value] of [
+      ["workspace", "REGION", "eu"],
+      ["workspace", "TIER", "free"],
+      ["personal", "REGION", "mine"],
+    ] as const) {
+      const saved = await page.request.put(`/api/variables/${scope}/${name}`, {
+        data: { value, secret: false },
+      });
+      expect(saved.ok()).toBe(true);
+    }
+    await add(page, "TIER", "project");
+    await page.reload();
+
+    const inherited = page.getByRole("region", { name: "Inherited variables" });
+    await expect(inherited).toContainText("REGION");
+    await expect(inherited).toContainText("You");
+    // REGION is set in the workspace and by the person: shown once, where it wins.
+    await expect(inherited.getByText("REGION")).toHaveCount(1);
+    await expect(inherited).toContainText("TIER");
+    await expect(inherited).toContainText("replaced by the project's");
+    await expect(section).toContainText("TIER");
+  });
 });

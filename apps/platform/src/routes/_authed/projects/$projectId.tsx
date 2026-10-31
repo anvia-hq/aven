@@ -7,6 +7,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
+import { InheritedVariables } from "@/modules/variables/components/inherited-variables";
 import { VariablesSection } from "@/modules/variables/components/variables-section";
 
 export const Route = createFileRoute("/_authed/projects/$projectId")({
@@ -39,7 +40,12 @@ function ProjectPage() {
           <ThreadList threads={threads} empty="No threads in this project yet." />
         </section>
 
-        <VariablesSection projectId={project.id} />
+        <VariablesSection
+          scope={{ kind: "project", projectId: project.id }}
+          title="Environment variables"
+          empty="None yet. Add what the project needs to run, such as a database URL or an API key."
+        />
+        <InheritedVariables projectId={project.id} />
       </main>
     </div>
   );

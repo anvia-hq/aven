@@ -18,12 +18,14 @@ import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accep
 import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsPlatformRouteImport } from './routes/_authed/settings/platform'
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/settings/providers'
 import { Route as AuthedSettingsRuntimesRouteImport } from './routes/_authed/settings/runtimes'
 import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
+import { Route as AuthedSettingsWorkspaceVariablesRouteImport } from './routes/_authed/settings/workspace-variables'
 import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
 import { Route as AuthedThreadsThreadIdRouteImport } from './routes/_authed/threads/$threadId'
 
@@ -72,6 +74,12 @@ const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsEnvironmentVariablesRoute =
+  AuthedSettingsEnvironmentVariablesRouteImport.update({
+    id: '/environment-variables',
+    path: '/environment-variables',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -102,6 +110,12 @@ const AuthedSettingsSkillsRoute = AuthedSettingsSkillsRouteImport.update({
   path: '/skills',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsWorkspaceVariablesRoute =
+  AuthedSettingsWorkspaceVariablesRouteImport.update({
+    id: '/workspace-variables',
+    path: '/workspace-variables',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 const AuthedThreadsIndexRoute = AuthedThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
@@ -120,12 +134,14 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/projects/': typeof AuthedProjectsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
@@ -137,12 +153,14 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/projects': typeof AuthedProjectsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
@@ -157,12 +175,14 @@ export interface FileRoutesById {
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/platform': typeof AuthedSettingsPlatformRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/providers': typeof AuthedSettingsProvidersRoute
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
@@ -177,12 +197,14 @@ export interface FileRouteTypes {
     | '/settings'
     | '/accept-invitation/$invitationId'
     | '/projects/$projectId'
+    | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
     | '/settings/skills'
+    | '/settings/workspace-variables'
     | '/threads/$threadId'
     | '/projects/'
     | '/settings/'
@@ -194,12 +216,14 @@ export interface FileRouteTypes {
     | '/register'
     | '/accept-invitation/$invitationId'
     | '/projects/$projectId'
+    | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
     | '/settings/skills'
+    | '/settings/workspace-variables'
     | '/threads/$threadId'
     | '/projects'
     | '/settings'
@@ -213,12 +237,14 @@ export interface FileRouteTypes {
     | '/_authed/settings'
     | '/accept-invitation/$invitationId'
     | '/_authed/projects/$projectId'
+    | '/_authed/settings/environment-variables'
     | '/_authed/settings/members'
     | '/_authed/settings/platform'
     | '/_authed/settings/profile'
     | '/_authed/settings/providers'
     | '/_authed/settings/runtimes'
     | '/_authed/settings/skills'
+    | '/_authed/settings/workspace-variables'
     | '/_authed/threads/$threadId'
     | '/_authed/projects/'
     | '/_authed/settings/'
@@ -298,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/environment-variables': {
+      id: '/_authed/settings/environment-variables'
+      path: '/environment-variables'
+      fullPath: '/settings/environment-variables'
+      preLoaderRoute: typeof AuthedSettingsEnvironmentVariablesRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/members': {
       id: '/_authed/settings/members'
       path: '/members'
@@ -340,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsSkillsRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/workspace-variables': {
+      id: '/_authed/settings/workspace-variables'
+      path: '/workspace-variables'
+      fullPath: '/settings/workspace-variables'
+      preLoaderRoute: typeof AuthedSettingsWorkspaceVariablesRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/threads/': {
       id: '/_authed/threads/'
       path: '/threads'
@@ -358,22 +398,27 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedSettingsRouteChildren {
+  AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
   AuthedSettingsPlatformRoute: typeof AuthedSettingsPlatformRoute
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsProvidersRoute: typeof AuthedSettingsProvidersRoute
   AuthedSettingsRuntimesRoute: typeof AuthedSettingsRuntimesRoute
   AuthedSettingsSkillsRoute: typeof AuthedSettingsSkillsRoute
+  AuthedSettingsWorkspaceVariablesRoute: typeof AuthedSettingsWorkspaceVariablesRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
 }
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+  AuthedSettingsEnvironmentVariablesRoute:
+    AuthedSettingsEnvironmentVariablesRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
   AuthedSettingsPlatformRoute: AuthedSettingsPlatformRoute,
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsProvidersRoute: AuthedSettingsProvidersRoute,
   AuthedSettingsRuntimesRoute: AuthedSettingsRuntimesRoute,
   AuthedSettingsSkillsRoute: AuthedSettingsSkillsRoute,
+  AuthedSettingsWorkspaceVariablesRoute: AuthedSettingsWorkspaceVariablesRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
 }
 

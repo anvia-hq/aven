@@ -9,6 +9,18 @@ export type Variable = {
   updatedAt: string;
 };
 
+/** Whose variables a list is (decision 0046): the workspace's, one project's, or the person's own. */
+export type VariableScope =
+  | { kind: "workspace" }
+  | { kind: "project"; projectId: string }
+  | { kind: "personal" };
+
+/** The API path of a scope's variables. */
+export function variablesPath(scope: VariableScope) {
+  if (scope.kind === "project") return `/projects/${scope.projectId}/variables`;
+  return `/variables/${scope.kind}`;
+}
+
 export type VariableInput = { name: string; value: string; secret: boolean };
 
 // The control plane's rules for a variable (modules/variables/schema.ts), checked here first to say

@@ -1,4 +1,13 @@
-import { ArrowLeft, BookOpen, Cog, Servers, Sparkles, Terminal, Users } from "@mynaui/icons-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  Cog,
+  Key,
+  Servers,
+  Sparkles,
+  Terminal,
+  Users,
+} from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
@@ -15,6 +24,7 @@ const groups = [
       { to: "/settings/profile", label: "Profile", icon: Cog },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
+      { to: "/settings/environment-variables", label: "Environment variables", icon: Key },
     ],
   },
   {
@@ -22,6 +32,7 @@ const groups = [
     items: [
       { to: "/settings/members", label: "Members", icon: Users },
       { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
+      { to: "/settings/workspace-variables", label: "Variables", icon: Key },
     ],
   },
 ] as const;

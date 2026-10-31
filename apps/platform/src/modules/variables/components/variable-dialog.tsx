@@ -21,18 +21,19 @@ import {
   MIN_REDACTED_LENGTH,
   NAME_PATTERN,
   type Variable,
+  type VariableScope,
 } from "../types";
 
 type Props = {
-  projectId: string;
+  scope: VariableScope;
   /** Given one, the dialog replaces its value; without, it adds a variable. */
   variable?: Variable;
   label: string;
 };
 
-export function VariableDialog({ projectId, variable, label }: Props) {
+export function VariableDialog({ scope, variable, label }: Props) {
   const [open, setOpen] = useState(false);
-  const form = useVariableForm(projectId, variable, () => setOpen(false));
+  const form = useVariableForm(scope, variable, () => setOpen(false));
   const editing = variable !== undefined;
 
   return (
@@ -49,8 +50,8 @@ export function VariableDialog({ projectId, variable, label }: Props) {
           <DialogHeader>
             <DialogTitle>{editing ? `Edit ${variable.name}` : "Add a variable"}</DialogTitle>
             <DialogDescription>
-              The agent's commands in this project's threads get it in their environment. A secret
-              is encrypted and never shown again.
+              The agent's commands get it in their environment, in the threads it applies to. A
+              secret is encrypted and never shown again.
             </DialogDescription>
           </DialogHeader>
           {!editing && (
