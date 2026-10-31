@@ -106,6 +106,26 @@ describe("BotRunner", () => {
     expect(pauses).toEqual([typingDelay("hey"), typingDelay("how was your day, my friend?")]);
   });
 
+  test("messages the model sends in one turn are typed one at a time", async () => {
+    let typing = 0;
+    let most = 0;
+    const runner = new BotRunner({
+      store: fakeStore(),
+      createAgent: scripts([[send("one"), send("two"), send("three")], [text("")]]),
+      pause: async () => {
+        typing += 1;
+        most = Math.max(most, typing);
+        await Bun.sleep(2);
+        typing -= 1;
+      },
+    });
+    const client = await watch(runner, stopped);
+    await runner.send(bot, USER, "hello", model);
+    await client.done;
+    expect(most).toBe(1);
+    expect(typed(client.events).slice(3, 6)).toEqual(["bot: one", "bot: two", "bot: three"]);
+  });
+
   test("a message that comes while the bot is at work waits its turn", async () => {
     const store = fakeStore();
     const gates: (() => void)[] = [];

@@ -9,6 +9,8 @@ const WEB_URL = `http://localhost:${WEB_PORT}`;
 const API_URL = `http://localhost:${API_PORT}`;
 const GITHUB_PORT = 8101;
 const GITHUB_URL = `http://localhost:${GITHUB_PORT}`;
+const MODEL_PORT = 8102;
+const MODEL_URL = `http://localhost:${MODEL_PORT}`;
 // The control plane signs its GitHub App requests; the fake GitHub does not check the signature.
 const GITHUB_APP_PRIVATE_KEY = generateKeyPairSync("rsa", { modulusLength: 2048 })
   .privateKey.export({ type: "pkcs8", format: "pem" })
@@ -60,6 +62,13 @@ export default defineConfig({
       url: `${GITHUB_URL}/health`,
       reuseExistingServer: false,
       env: { FAKE_GITHUB_PORT: String(GITHUB_PORT) },
+    },
+    {
+      // A model a person's provider can point at; bots call it from the control plane.
+      command: "bun e2e/fake-model.ts",
+      url: `${MODEL_URL}/health`,
+      reuseExistingServer: false,
+      env: { FAKE_MODEL_PORT: String(MODEL_PORT) },
     },
     {
       command: "bun run --cwd apps/platform dev",

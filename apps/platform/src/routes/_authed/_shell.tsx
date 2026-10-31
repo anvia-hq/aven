@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { cn } from "cn";
 
 import { AvenMark } from "@/components/brand-icons";
+import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { Button } from "@/components/button";
 import {
   Sidebar,
@@ -56,6 +57,9 @@ function ShellLayout() {
         >
           <AvenMark className="w-5" />
         </Link>
+        <div className="mt-3">
+          <BotRailLink />
+        </div>
         <div className="mt-auto mb-1">
           <ThemeSelector />
         </div>

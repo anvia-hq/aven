@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
+import { resetBots } from "@/modules/bots/hooks/use-bots";
 import { resetOrganizationData } from "@/modules/organizations/hooks/use-organizations";
 import { resetPlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { resetProviders } from "@/modules/providers/hooks/use-providers";
@@ -14,6 +15,7 @@ export function useSignOut() {
   return async () => {
     await authClient.signOut();
     resetOrganizationData();
+    resetBots();
     resetProviders();
     resetSkills();
     resetModelSelection();
