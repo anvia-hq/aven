@@ -1,0 +1,16 @@
+import { z } from "zod";
+
+export const SUBJECT_SCOPES = ["thread", "project", "organization"] as const;
+
+export const DEFAULT_LIFETIME_SECONDS = 600;
+
+export const mintTokenBody = z.object({
+  /** The service the token is for; it must be the `aud` that service checks. */
+  audience: z.string().trim().min(1).max(2048),
+  subjectScope: z.enum(SUBJECT_SCOPES).default("thread"),
+  /** In seconds. */
+  lifetime: z.number().int().min(60).max(3600).default(DEFAULT_LIFETIME_SECONDS),
+});
+
+export type MintTokenBody = z.infer<typeof mintTokenBody>;
+export type SubjectScope = (typeof SUBJECT_SCOPES)[number];
