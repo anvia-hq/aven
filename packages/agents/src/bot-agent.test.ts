@@ -309,6 +309,43 @@ describe("createBotAgent", () => {
     expect(botInstructions(base)).not.toContain(UPDATE_SELF_TOOL_NAME);
   });
 
+  // Anthropic caches the prompt's prefix when the request carries one top-level `cache_control`
+  // (`providerOptionsFor`); a bot's chat grows and its tools loop, so each turn would pay for it all.
+  test("an Anthropic bot's request asks for prompt caching, and another provider's does not", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return Response.json({ error: { message: "stop here" } }, { status: 400 });
+      },
+    });
+    const ask = async (provider: "anthropic" | "openai", path: string) => {
+      const agent = createBotAgent({
+        ...base,
+        provider,
+        apiKey: "k",
+        modelId: provider === "anthropic" ? "claude-sonnet-4-5" : "gpt-5",
+        baseUrl: `http://localhost:${server.port}${path}`,
+        deliver: async () => undefined,
+        memory: { store: fakeStore(), savePolicy: "turn" },
+      });
+      await agent
+        .generate({ prompt: "hello", session: { sessionId: "b1" } })
+        .catch(() => undefined);
+      return bodies.at(-1)!;
+    };
+    try {
+      const anthropic = await ask("anthropic", "");
+      const openai = await ask("openai", "/v1");
+
+      expect(anthropic.cache_control).toEqual({ type: "ephemeral" });
+      expect(openai).not.toHaveProperty("cache_control");
+    } finally {
+      await server.stop(true);
+    }
+  });
+
   test("a cancelled delivery stops the run", async () => {
     const controller = new AbortController();
     const agent = createBotAgent({
