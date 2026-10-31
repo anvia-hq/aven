@@ -7,7 +7,7 @@ import type { ModelConfig } from "@aven/agents/model";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import type { Bot, BotEvent } from "@aven/protocol/bots";
 
-import { UnavailableError } from "../../errors";
+import { ConflictError, UnavailableError } from "../../errors";
 import { BotRunner, type CreateBotAgent } from "./runner";
 
 const USER = "u1";
@@ -228,6 +228,21 @@ describe("BotRunner", () => {
       type: "error",
       message: "the model is down",
     });
+  });
+
+  test("a bot that owes too many replies is not given more", async () => {
+    const runner = new BotRunner({
+      store: fakeStore(),
+      createAgent: scripts(...Array.from({ length: 6 }, () => [[send("x")], [text("")]])),
+      pause: () => new Promise<void>(() => undefined),
+    });
+    const client = await watch(runner);
+    for (let sent = 0; sent < 5; sent++) await runner.send(bot, USER, `message ${sent}`, model);
+    await expect(runner.send(bot, USER, "one more", model)).rejects.toBeInstanceOf(ConflictError);
+    await until(() => client.events.length === 7);
+    // The refused message is not in the chat.
+    expect(typed(client.events).filter((entry) => entry.startsWith("user:"))).toHaveLength(5);
+    client.close();
   });
 
   test("a model that cannot be used is refused before anything is added", async () => {

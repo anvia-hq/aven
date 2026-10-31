@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import type { MemoryStore, Message } from "@anvia/core";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -30,13 +31,23 @@ run("createBotChats (postgres)", async () => {
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
+  // A store that keeps what is appended, as the database does.
+  const keeping = () => {
+    const kept = new Map<string, Message[]>();
+    return {
+      load: async ({ scope }) => kept.get(scope.sessionId) ?? [],
+      append: async ({ scope, messages }) => {
+        const earlier = kept.get(scope.sessionId) ?? [];
+        earlier.push(...messages);
+        kept.set(scope.sessionId, earlier);
+      },
+      clear: async ({ scope }) => void kept.delete(scope.sessionId),
+    } satisfies MemoryStore;
+  };
+
   const chats = () => {
     const runner = new BotRunner({
-      store: {
-        load: async () => [],
-        append: async () => undefined,
-        clear: async () => undefined,
-      },
+      store: keeping(),
       createAgent: ({ bot, deliver, memory }) =>
         createBotAgent({
           model: scriptedModel([[toolCall("send_message", { text: "hi Alice" })], [text("")]]),

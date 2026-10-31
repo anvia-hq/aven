@@ -13,9 +13,12 @@ import {
   type BotEvent,
 } from "@aven/protocol/bots";
 
-import { describeError, UnavailableError } from "../../errors";
+import { ConflictError, describeError, UnavailableError } from "../../errors";
 
 const PING_MS = 5_000;
+
+// How many replies a bot may owe at once: the one it is on and those waiting behind it.
+const MAX_PENDING = 5;
 
 type BotAgent = Pick<ReturnType<typeof createBotAgent>, "generate">;
 
@@ -89,6 +92,11 @@ export class BotRunner {
   // comes as events. Throws if the model cannot be used, before anything is added.
   async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
     const channel = await this.#open(bot.id, userId);
+    if (channel.pending >= MAX_PENDING) {
+      throw new ConflictError("The bot has a lot to answer already; give it a moment");
+    }
+    // A client may have detached while this waited, which dropped the channel; it is in use again.
+    this.#channels.set(bot.id, channel);
     const session = this.#scope(bot.id, userId);
     const deliver: DeliverMessage = async (message, { abortSignal }) => {
       await this.#pause(typingDelay(message), abortSignal);
@@ -223,6 +231,7 @@ export class BotRunner {
     } finally {
       channel.pending -= 1;
       if (channel.pending === 0) this.#emit(channel, { type: "typing", typing: false });
+      this.#release(bot.id, channel);
     }
   }
 }
