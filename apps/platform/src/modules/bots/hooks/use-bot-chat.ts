@@ -19,9 +19,14 @@ function parseEvent(data: string): BotEvent | null {
 // What the bot said last, as far as an event tells; nothing when it tells nothing of that.
 function botSaid(event: BotEvent) {
   if (event.type === "snapshot") {
-    return event.messages.findLast((message) => message.role === "bot")?.text ?? "";
+    return (
+      event.messages.findLast((message) => message.role === "bot" && !message.peer)?.text ?? ""
+    );
   }
-  if (event.type === "message" && event.message.role === "bot") return event.message.text;
+  // What a bot said to another bot is not what it last said to the person.
+  if (event.type === "message" && event.message.role === "bot" && !event.message.peer) {
+    return event.message.text;
+  }
   return undefined;
 }
 

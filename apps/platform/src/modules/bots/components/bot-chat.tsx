@@ -1,13 +1,16 @@
 import { cn } from "cn";
+import { useMemo } from "react";
 
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
+import { chatItems } from "../activity";
 import { useBotChat } from "../hooks/use-bot-chat";
 import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 import { BotComposer } from "./bot-composer";
-import { BotChatBubble, isPersons, speakerOf } from "./bot-chat-bubble";
+import { BotActivity } from "./bot-activity";
+import { BotChatBubble, isPersons } from "./bot-chat-bubble";
 
 // A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
 // from the bot arrive one after another, each as the bot sends it, close together; a change of
@@ -15,6 +18,7 @@ import { BotChatBubble, isPersons, speakerOf } from "./bot-chat-bubble";
 export function BotChat({ bot }: { bot: Bot }) {
   const { messages, typing, error, send } = useBotChat(bot.id);
   const { bots } = useBots();
+  const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
 
   return (
@@ -29,18 +33,26 @@ export function BotChat({ bot }: { bot: Bot }) {
                 Say hello to {bot.name}.
               </p>
             )}
-            {messages.map((message, index) => (
-              <Message
-                key={message.id}
-                align={isPersons(message) ? "end" : "start"}
-                className={cn(
-                  index > 0 &&
-                    (speakerOf(messages[index - 1]!) === speakerOf(message) ? "mt-1.5" : "mt-5"),
-                )}
-              >
-                <BotChatBubble message={message} bots={bots} />
-              </Message>
-            ))}
+            {items.map((item, index) => {
+              if (item.type === "activity") {
+                return (
+                  <BotActivity key={item.key} messages={item.messages} bots={bots} self={bot} />
+                );
+              }
+              const { message } = item;
+              const before = items[index - 1];
+              // Close to the message before it when the same one said it, and apart otherwise.
+              const together = before?.type === "message" && before.message.role === message.role;
+              return (
+                <Message
+                  key={item.key}
+                  align={isPersons(message) ? "end" : "start"}
+                  className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
+                >
+                  <BotChatBubble message={message} bots={bots} />
+                </Message>
+              );
+            })}
             {typing && <TypingIndicator name={bot.name} />}
             {error && (
               <p

@@ -92,6 +92,13 @@ Bun.serve({
     if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
       return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");
     }
+    // A bot just made is woken with a note from the app and says hello (decision 0063).
+    if (heard.startsWith("[note] You were just created")) {
+      return reply(
+        { content: null, tool_calls: [sendMessage("call_1", "Hello, I am your new bot")] },
+        "tool_calls",
+      );
+    }
     // Asked to ask a bot, the main bot writes to the first bot of its list, by the id its instructions
     // give, as a model reads it (decision 0063).
     if (/ask @/i.test(heard) && !body.messages.some(askedABot)) {

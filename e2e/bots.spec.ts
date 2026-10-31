@@ -80,7 +80,9 @@ test.describe("bots", () => {
     await scout.click();
     await expect(page).toHaveURL(/\/bot\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
-    await expect(page.getByText("Say hello to Scout.")).toBeVisible();
+    // It said hello unasked when it was made, and the note that woke it is not shown.
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(page.getByText("You were just created")).toHaveCount(0);
 
     // Its chat is its own: it answers, and the main bot's words are not in it.
     await page.getByRole("textbox", { name: "Message" }).fill("hello scout");
@@ -151,11 +153,24 @@ test.describe("bots", () => {
     await expect(bubble(page, "Scout answered")).toBeVisible();
     await expect(message).toHaveText("");
 
-    // The other bot's own chat has the message as the main bot's, and its answer.
+    // Between the bots it is one line that opens, as in the harness: here, what was asked and what
+    // Scout said back, and no bubbles for them.
+    const activity = page.locator('[data-activity="bots"]');
+    await expect(activity).toContainText("3 messages with");
+    await expect(activity).toContainText("Scout");
+    await expect(bubble(page, "A, B and C")).toHaveCount(0);
+    await activity.getByRole("button").click();
+    await expect(activity).toContainText("Aven → Scout A, B and C");
+    await expect(activity).toContainText("Scout → Aven Hey there!");
+
+    // The other bot's own chat has the same exchange, from its side, after the hello it made.
     await page.getByRole("link", { name: /Scout/ }).click();
-    await expect(page.getByText("from Aven")).toBeVisible();
-    await expect(bubble(page, "A, B and C")).toBeVisible();
-    await expect(bubble(page, "You said: [from bot Aven] A, B and C")).toBeVisible();
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(activity).toContainText("3 messages with");
+    await expect(activity).toContainText("Aven");
+    await activity.getByRole("button").click();
+    await expect(activity).toContainText("Aven → Scout A, B and C");
+    await expect(activity).toContainText("Scout → Aven You said: [from bot Aven] A, B and C");
 
     // Only the main bot writes to the others, so `@` offers nothing in this chat.
     await page.getByRole("textbox", { name: "Message" }).click();
@@ -164,10 +179,12 @@ test.describe("bots", () => {
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");
 
-    // It is the chat's, so it is there after a reload, with who it is from.
+    // It is the chat's, so it is there after a reload, read back from what the bot remembers.
     await page.reload();
-    await expect(page.getByText("from Aven")).toBeVisible();
-    await expect(bubble(page, "Hey there!")).toBeVisible();
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(activity).toContainText("3 messages with");
+    await activity.getByRole("button").click();
+    await expect(activity).toContainText("Aven → Scout A, B and C");
   });
 
   // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
@@ -212,7 +229,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
     await page.getByRole("link", { name: /Scout/ }).click();
-    await expect(page.getByText("Say hello to Scout.")).toBeVisible();
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "I am Pip now")).toBeVisible();
