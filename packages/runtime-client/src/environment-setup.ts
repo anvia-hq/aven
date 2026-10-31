@@ -75,6 +75,12 @@ export function setupRunArgs(input: SetupInput & { name: string }) {
   return args;
 }
 
+// On Linux a bind mount keeps host ownership, so files must be written as the host user.
+export function hostUser() {
+  if (process.platform !== "linux" || !process.getuid || !process.getgid) return undefined;
+  return `${process.getuid()}:${process.getgid()}`;
+}
+
 const tail = (text: string, lines = 20) => text.trimEnd().split("\n").slice(-lines).join("\n");
 
 /**

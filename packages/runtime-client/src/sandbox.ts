@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
@@ -19,22 +19,16 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
-import {
-  RESUME_SCRIPT,
-  SETUP_SCRIPT,
-  scriptState,
-  setupEnvironment,
-  type DockerRun,
-} from "./environment-setup";
-import { clearDirectory, cloneRepository, git, isCloned, type Git } from "./git-clone";
+import { RESUME_SCRIPT, hostUser, scriptState, type DockerRun } from "./environment-setup";
+import { Environments } from "./environments";
+import { git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
 import { identitySignInCommand } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
-import { updateRestoredWorkspace } from "./restore-workspace";
 import { runCommand } from "./run-command";
 import { SkillStore } from "./skills";
-import { SnapshotStore } from "./snapshots";
+import type { SnapshotStore } from "./snapshots";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 
@@ -290,17 +284,17 @@ export class Sandboxes implements ThreadWorkspaces {
   /** What repositories' setups made on this runner (decision 0043). */
   readonly snapshots: SnapshotStore;
   #config: SandboxConfig;
+  // The container limits and how a container reaches this machine, with their defaults.
+  #limits: { memoryMb: number; cpus: number; pidsLimit: number };
+  #host: string;
+  #environments: Environments;
   #hub: RemoteSandboxHub;
   #port: number;
   #tokens: Map<string, string>;
   #run: Docker;
-  #git: Git;
   #running = new Set<string>();
   // A thread's workspace, while it is being cloned or once it is ready, so two runs never clone twice.
   #roots = new Map<string, Promise<string>>();
-  // The setup or restore of a repository's environment, one at a time, so a second thread on the
-  // repository finds the snapshot the first made instead of running the setup again.
-  #environments = new Map<string, Promise<unknown>>();
   #starting = new Map<string, Promise<void>>();
   // The project's variables the thread's current run was given, in memory only (decision 0045).
   #projectEnv = new Map<string, Readonly<Record<string, string>>>();
@@ -313,15 +307,29 @@ export class Sandboxes implements ThreadWorkspaces {
     tokens: Map<string, string>,
   ) {
     this.#config = config;
+    this.#limits = {
+      memoryMb: config.memoryMb ?? 8192,
+      cpus: config.cpus ?? 4,
+      pidsLimit: config.pidsLimit ?? 1024,
+    };
+    this.#host = config.hostName ?? "host.docker.internal";
     this.artifacts = new ArtifactStore(join(runtimeHome(config.home), "artifacts"));
     this.uploads = new UploadStore(join(runtimeHome(config.home), "uploads"));
     this.skills = new SkillStore(join(runtimeHome(config.home), "skills"));
-    this.snapshots = new SnapshotStore(join(runtimeHome(config.home), "snapshots"));
+    this.#environments = new Environments({
+      image: config.image,
+      platform: config.platform,
+      runtime: config.runtime,
+      ...this.#limits,
+      home: runtimeHome(config.home),
+      docker: commands.docker,
+      git: commands.git,
+    });
+    this.snapshots = this.#environments.snapshots;
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
     this.#run = commands.docker;
-    this.#git = commands.git;
   }
 
   // Fails now, with what to do about it, rather than on the first run.
@@ -464,105 +472,8 @@ export class Sandboxes implements ThreadWorkspaces {
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
     if (await isCloned(root)) return root;
-    const access = await repo();
-    const environment = await this.#environmentOf(thread, access);
-    if (!environment) {
-      await cloneRepository(root, thread.id, access, this.#git);
-      return root;
-    }
-    await this.#inTurn(environment.key, () => this.#fill(thread.id, root, access, environment));
+    await this.#environments.fill(thread, root, await repo());
     return root;
-  }
-
-  // The repository's snapshot key and the image it must be made from; null where snapshots do not
-  // apply: a thread with no organization, or a Docker that cannot name the sandbox image.
-  async #environmentOf(thread: { organizationId?: string }, access: RepoAccess) {
-    if (!thread.organizationId) return null;
-    const inspected = await this.#run([
-      "image",
-      "inspect",
-      "--format",
-      "{{.Id}}",
-      this.#config.image,
-    ]);
-    const baseImageId = inspected.code === 0 ? inspected.stdout.trim() : "";
-    if (!baseImageId) return null;
-    return { key: this.snapshots.keyFor(thread.organizationId, access.cloneUrl), baseImageId };
-  }
-
-  // One at a time per key; a failure of one does not stop the next.
-  #inTurn<T>(key: string, work: () => Promise<T>) {
-    const turn = (this.#environments.get(key) ?? Promise.resolve())
-      .catch(() => undefined)
-      .then(work);
-    this.#environments.set(key, turn);
-    return turn.finally(() => {
-      if (this.#environments.get(key) === turn) this.#environments.delete(key);
-    });
-  }
-
-  // Puts the repository in `root`: restored from the snapshot when there is a valid one, else
-  // cloned and, when the repository has a setup script, set up and snapshotted (decision 0043).
-  async #fill(
-    threadId: string,
-    root: string,
-    access: RepoAccess,
-    { key, baseImageId }: { key: string; baseImageId: string },
-  ) {
-    const snapshot = await this.snapshots.valid(key, baseImageId);
-    if (snapshot) {
-      try {
-        await this.snapshots.restore(snapshot, root);
-        await updateRestoredWorkspace(root, threadId, access, this.#git);
-        await this.#pinImage(threadId, snapshot.image);
-        return;
-      } catch (error) {
-        // A snapshot that cannot be restored is not worth failing the thread for: clone afresh.
-        console.warn(`Could not restore the environment of ${access.cloneUrl}:`, error);
-        await clearDirectory(root);
-      }
-    }
-    await cloneRepository(root, threadId, access, this.#git);
-    await this.#setUp(threadId, root, key, baseImageId);
-  }
-
-  // Runs the repository's `.aven/setup`, if it has one, and keeps what it made. A setup that fails
-  // does not fail the thread: it works on the bare image, and the next thread tries again.
-  async #setUp(threadId: string, root: string, key: string, baseImageId: string) {
-    const state = await scriptState(root, SETUP_SCRIPT);
-    if (state === "missing") return;
-    if (state === "not-executable") {
-      console.warn(`${SETUP_SCRIPT} is not executable (chmod +x); it was not run`);
-      return;
-    }
-    try {
-      await this.#build(threadId, root, key, baseImageId);
-    } catch (error) {
-      console.warn(`The setup of ${key} failed; see ${this.snapshots.logPath(key)}:`, error);
-    }
-  }
-
-  // The setup itself: runs the script, keeps the snapshot and points the thread at its image.
-  async #build(threadId: string, root: string, key: string, baseImageId: string) {
-    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
-    const image = this.snapshots.imageFor(key);
-    await setupEnvironment({
-      docker: this.#run,
-      key,
-      baseImage: this.#config.image,
-      image,
-      root,
-      logPath: this.snapshots.logPath(key),
-      memoryMb,
-      cpus,
-      pidsLimit,
-      platform: this.#config.platform,
-      runtime: this.#config.runtime,
-      hostUser: hostUser(),
-    });
-    await this.snapshots.publish(key, { image, baseImageId, workspace: root });
-    await this.#pinImage(threadId, image);
-    return { image };
   }
 
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
@@ -579,8 +490,11 @@ export class Sandboxes implements ThreadWorkspaces {
     identity: RunIdentityCredential | undefined,
     controlPlane: string,
   ) {
-    const host = this.#config.hostName ?? "host.docker.internal";
-    return this.#signIn(threadId, "identity", identitySignInCommand(identity, controlPlane, host));
+    return this.#signIn(
+      threadId,
+      "identity",
+      identitySignInCommand(identity, controlPlane, this.#host),
+    );
   }
 
   async #signIn(
@@ -601,37 +515,7 @@ export class Sandboxes implements ThreadWorkspaces {
   async saveEnvironment(thread: { id: string; organizationId?: string }, access: RepoAccess) {
     const root = await this.workspace(thread.id);
     if (!root) throw new Error("The thread has no workspace yet");
-    const environment = await this.#environmentOf(thread, access);
-    if (!environment)
-      throw new Error("Environments cannot be saved here: the sandbox image is not known");
-    const state = await scriptState(root, SETUP_SCRIPT);
-    if (state === "missing") {
-      throw new Error(
-        `The repository has no ${SETUP_SCRIPT}: write one, then save the environment`,
-      );
-    }
-    if (state === "not-executable") {
-      throw new Error(`${SETUP_SCRIPT} is not executable: run chmod +x ${SETUP_SCRIPT}`);
-    }
-    return this.#inTurn(environment.key, () =>
-      this.#build(thread.id, root, environment.key, environment.baseImageId),
-    );
-  }
-
-  // A thread keeps the image it started from, so its container does not change under it when the
-  // snapshot is replaced or goes out of date.
-  #imageFile(threadId: string) {
-    return join(runtimeHome(this.#config.home), "environments", `${threadId}.image`);
-  }
-
-  async #pinImage(threadId: string, image: string) {
-    await mkdir(join(runtimeHome(this.#config.home), "environments"), { recursive: true });
-    await writeFile(this.#imageFile(threadId), image);
-  }
-
-  async #imageOf(threadId: string) {
-    const pinned = await readFile(this.#imageFile(threadId), "utf8").catch(() => "");
-    return pinned.trim() || this.#config.image;
+    return this.#environments.save(thread, root, access);
   }
 
   #workspaceDir(threadId: string) {
@@ -669,21 +553,18 @@ export class Sandboxes implements ThreadWorkspaces {
     const token = randomBytes(24).toString("base64url");
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
-    const { memoryMb = 8192, cpus = 4, pidsLimit = 1024 } = this.#config;
     const args = dockerRunArgs({
       name,
       threadId,
-      image: await this.#imageOf(threadId),
+      image: await this.#environments.imageOf(threadId),
       root,
       // Made before the container starts, so a file attached while it runs shows up in it.
       uploads: await this.uploads.dir(threadId),
       skills: await this.skills.dir(threadId),
-      host: this.#config.hostName ?? "host.docker.internal",
+      host: this.#host,
       hubPort: this.#port,
       token,
-      memoryMb,
-      cpus,
-      pidsLimit,
+      ...this.#limits,
       platform: this.#config.platform,
       runtime: this.#config.runtime,
       user: hostUser(),
@@ -725,10 +606,4 @@ export class Sandboxes implements ThreadWorkspaces {
   #dropTokens(threadId: string) {
     for (const [token, id] of this.#tokens) if (id === threadId) this.#tokens.delete(token);
   }
-}
-
-// On Linux a bind mount keeps host ownership, so files must be written as the host user.
-function hostUser() {
-  if (process.platform !== "linux" || !process.getuid || !process.getgid) return undefined;
-  return `${process.getuid()}:${process.getgid()}`;
 }
