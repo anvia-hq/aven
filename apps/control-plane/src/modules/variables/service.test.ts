@@ -2,10 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { environmentVariables } from "@aven/db/schema/environment-variables";
+import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { NotFoundError, UnavailableError } from "../../errors";
+import { ForbiddenError, NotFoundError, UnavailableError } from "../../errors";
+import { encryptSecret } from "../providers/crypto";
 import { runtimesService } from "../runtimes/service";
 import { MAX_VARIABLES } from "./schema";
 import { TooManyVariablesError, variablesService } from "./service";
@@ -117,7 +119,7 @@ run("variablesService (postgres)", async () => {
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  test("a run gets every variable of the project with its value, secrets included", async () => {
+  test("a run gets the project's variables with their values, secrets included", async () => {
     const { project: mine } = await seedProject(orgA, userId, runner.id, "forrun");
     await variablesService.set(inProject(orgA, mine.id), "B_PLAIN", {
       value: "plain",
@@ -128,23 +130,37 @@ run("variablesService (postgres)", async () => {
       secret: true,
     });
 
-    expect(await variablesService.forRun(mine.id)).toEqual([
+    const given = await variablesService.forRun({
+      organizationId: orgA,
+      projectId: mine.id,
+      userId,
+    });
+    expect(given.filter((variable) => /^[AB]_/.test(variable.name))).toEqual([
       { name: "A_SECRET", value: "s3cret", secret: true },
       { name: "B_PLAIN", value: "plain", secret: false },
     ]);
-    expect(await variablesService.forRun(crypto.randomUUID())).toEqual([]);
   });
 
   describe("scopes (decision 0046)", () => {
     const otherId = `u-other-${crypto.randomUUID().slice(0, 8)}`;
     beforeAll(async () => {
       await db.insert(users).values({ id: otherId, name: "O", email: `${otherId}@aven.test` });
+      // The test user owns both organizations; the other person is a plain member of the first.
+      await db.insert(members).values([
+        { id: `m-a-${userId}`, organizationId: orgA, userId, role: "owner" },
+        { id: `m-b-${userId}`, organizationId: orgB, userId, role: "owner" },
+        { id: `m-a-${otherId}`, organizationId: orgA, userId: otherId, role: "member" },
+      ]);
     });
     afterAll(async () => {
       await db.delete(users).where(eq(users.id, otherId));
     });
 
-    const workspace = (organizationId: string) => ({ kind: "workspace" as const, organizationId });
+    const workspace = (organizationId: string, actorId = userId) => ({
+      kind: "workspace" as const,
+      organizationId,
+      actorId,
+    });
     const personal = (organizationId: string, userId: string) => ({
       kind: "personal" as const,
       organizationId,
@@ -204,6 +220,84 @@ run("variablesService (postgres)", async () => {
       ).rejects.toBeInstanceOf(TooManyVariablesError);
       // The person's own list in the same organization is a different one.
       await variablesService.set(personal(orgB, userId), "ONE_MORE", { value: "1", secret: false });
+    });
+
+    test("a run gets the workspace's, then the project's, then the sender's own, by name", async () => {
+      const { project: merged } = await seedProject(orgA, userId, runner.id, "merged");
+      const set = (
+        scope: Parameters<typeof variablesService.list>[0],
+        name: string,
+        value: string,
+      ) => variablesService.set(scope, name, { value, secret: name.startsWith("S_") });
+      const project = inProject(orgA, merged.id);
+      await set(workspace(orgA), "M_ONLY_WORKSPACE", "w");
+      await set(workspace(orgA), "M_OVER_PROJECT", "workspace");
+      await set(project, "M_OVER_PROJECT", "project");
+      await set(workspace(orgA), "M_OVER_PERSONAL", "workspace");
+      await set(project, "M_OVER_PERSONAL", "project");
+      await set(personal(orgA, userId), "M_OVER_PERSONAL", "mine");
+      await set(personal(orgA, otherId), "M_THEIRS", "theirs");
+      await set(personal(orgA, userId), "S_MINE_SECRET", "my-secret-value");
+      // Another organization's workspace is not in this run, however it got there.
+      await db.insert(environmentVariables).values({
+        organizationId: orgB,
+        name: "M_OTHER_ORG",
+        valueEncrypted: encryptSecret("elsewhere"),
+      });
+
+      const given = await variablesService.forRun({
+        organizationId: orgA,
+        projectId: merged.id,
+        userId,
+      });
+      const mine = Object.fromEntries(
+        given.filter((v) => /^(M|S)_/.test(v.name)).map((v) => [v.name, v.value]),
+      );
+      expect(mine).toEqual({
+        M_ONLY_WORKSPACE: "w",
+        M_OVER_PROJECT: "project",
+        M_OVER_PERSONAL: "mine",
+        S_MINE_SECRET: "my-secret-value",
+      });
+      // The secret flag is the winner's, and a name appears once.
+      expect(given.find((v) => v.name === "S_MINE_SECRET")?.secret).toBe(true);
+      expect(given.filter((v) => v.name === "M_OVER_PERSONAL")).toHaveLength(1);
+
+      // Another person's run in the same project gets the project's, not mine.
+      const theirs = await variablesService.forRun({
+        organizationId: orgA,
+        projectId: merged.id,
+        userId: otherId,
+      });
+      expect(theirs.find((v) => v.name === "M_OVER_PERSONAL")?.value).toBe("project");
+      expect(theirs.find((v) => v.name === "M_THEIRS")?.value).toBe("theirs");
+      expect(theirs.find((v) => v.name === "S_MINE_SECRET")).toBeUndefined();
+    });
+
+    test("only an owner or an admin changes the workspace's variables; anyone in it reads them", async () => {
+      const asMember = workspace(orgA, otherId);
+
+      await variablesService.set(workspace(orgA), "ADMIN_SET", { value: "1", secret: false });
+      await expect(
+        variablesService.set(asMember, "MEMBER_SET", { value: "1", secret: false }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(variablesService.remove(asMember, "ADMIN_SET")).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+      expect(await valueOf(asMember, "ADMIN_SET")).toBe("1");
+      // Not a member of the organization at all.
+      await expect(
+        variablesService.set(workspace(orgB, otherId), "X", { value: "1", secret: false }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+
+      // A person's own values are theirs whatever their role.
+      await variablesService.set(personal(orgA, otherId), "MINE", { value: "1", secret: false });
+      // A role can hold several.
+      await db
+        .update(members)
+        .set({ role: "member, admin" })
+        .where(eq(members.id, `m-a-${otherId}`));
+      await variablesService.set(asMember, "MEMBER_SET", { value: "1", secret: false });
     });
 
     test("the database refuses a row of two scopes", async () => {

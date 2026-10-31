@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import {
   ConflictError,
   errorsRouter,
+  ForbiddenError,
   NotFoundError,
   UnavailableError,
   UnprocessableError,
@@ -24,6 +25,7 @@ describe("errorsRouter", () => {
       [new UnprocessableError("bad"), 422],
       [new UnavailableError("offline"), 503],
       [new ConflictError("busy"), 409],
+      [new ForbiddenError("not yours"), 403],
     ] as const;
     for (const [error, expected] of cases) {
       const res = await respond(error);

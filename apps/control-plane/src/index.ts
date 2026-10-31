@@ -18,7 +18,7 @@ import { runsService } from "./modules/runs/service";
 import { skillsRouter } from "./modules/skills/router";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
-import { variablesRouter } from "./modules/variables/router";
+import { scopedVariablesRouter, variablesRouter } from "./modules/variables/router";
 
 const app = new Elysia()
   .use(errorsRouter)
@@ -37,6 +37,7 @@ const app = new Elysia()
   .use(skillsRouter)
   .use(threadsRouter)
   .use(usersRouter)
+  .use(scopedVariablesRouter)
   .use(variablesRouter);
 
 const port = Number(process.env.PORT ?? 8000);

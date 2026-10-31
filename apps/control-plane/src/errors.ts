@@ -11,6 +11,8 @@ export class UnprocessableError extends Error {}
 export class UnavailableError extends Error {}
 /** The request clashes with the current state (409). */
 export class ConflictError extends Error {}
+/** The caller is known but may not do this (403). */
+export class ForbiddenError extends Error {}
 
 /** What went wrong, in words: an Error's message, or whatever else was thrown as text. */
 export const describeError = (error: unknown) =>
@@ -25,6 +27,7 @@ export const errorsRouter = new Elysia({ name: "errors" }).onError(
     if (error instanceof UnprocessableError) return status(422, error.message);
     if (error instanceof UnavailableError) return status(503, error.message);
     if (error instanceof ConflictError) return status(409, error.message);
+    if (error instanceof ForbiddenError) return status(403, error.message);
     if (code !== "UNKNOWN") return;
     console.error(error);
     return status(500, "Internal server error");

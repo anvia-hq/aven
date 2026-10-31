@@ -3,11 +3,12 @@ import {
   environmentVariables as variables,
   type EnvironmentVariableRow,
 } from "@aven/db/schema/environment-variables";
+import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
 import type { RunEnvVar } from "@aven/protocol/runtime-wire";
-import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNull, or, sql } from "drizzle-orm";
 
-import { NotFoundError, UnavailableError, UnprocessableError } from "../../errors";
+import { ForbiddenError, NotFoundError, UnavailableError, UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "../providers/crypto";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";
 
@@ -21,7 +22,11 @@ export class TooManyVariablesError extends UnprocessableError {}
  * another organization's rows are never reached.
  */
 export type Scope =
-  | { kind: "workspace"; organizationId: string }
+  | {
+      kind: "workspace";
+      organizationId: string;
+      /** Who is asking: only an owner or an admin may change them. */ actorId: string;
+    }
   | { kind: "project"; organizationId: string; projectId: string }
   | { kind: "personal"; organizationId: string; userId: string };
 
@@ -92,6 +97,19 @@ function view(row: EnvironmentVariableRow) {
   };
 }
 
+// The organization's values reach every member's runs, so only an owner or an admin changes them.
+// A member's role can hold several, comma-separated.
+async function requireAdmin(organizationId: string, userId: string) {
+  const [member] = await db
+    .select({ role: members.role })
+    .from(members)
+    .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)));
+  const roles = member?.role.split(",").map((role) => role.trim()) ?? [];
+  if (!roles.some((role) => role === "owner" || role === "admin")) {
+    throw new ForbiddenError("Only an owner or an admin can change the workspace's variables");
+  }
+}
+
 // A project scope must name a project of the organization: another organization's is not found.
 async function requireScope(scope: Scope) {
   if (scope.kind !== "project") return;
@@ -118,6 +136,7 @@ export const variablesService = {
   // Makes the variable or replaces its value and whether it is a secret.
   async set(scope: Scope, name: string, body: SetVariableBody) {
     await requireScope(scope);
+    if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
     const [existing] = await db
       .select({ id: variables.id })
       .from(variables)
@@ -145,6 +164,7 @@ export const variablesService = {
 
   async remove(scope: Scope, name: string) {
     await requireScope(scope);
+    if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
     const removed = await db
       .delete(variables)
       .where(and(inScope(scope), eq(variables.name, name)))
@@ -152,15 +172,36 @@ export const variablesService = {
     if (removed.length === 0) throw new NotFoundError("Variable not found");
   },
 
-  // What a run of the project's threads gets in its commands' environment (decision 0045). The
-  // caller has the project from a thread of the organization, so this does not look at the
-  // organization again.
-  async forRun(projectId: string): Promise<RunEnvVar[]> {
+  // What a run gets in its commands' environment (decisions 0045 and 0046): the organization's
+  // variables, then the project's, then the sender's own, a later one replacing an earlier of the
+  // same name. The caller has the project and the person from a thread of the organization and the
+  // message's sender.
+  async forRun(run: {
+    organizationId: string;
+    projectId: string;
+    userId: string;
+  }): Promise<RunEnvVar[]> {
     const rows = await db
       .select()
       .from(variables)
-      .where(eq(variables.projectId, projectId))
-      .orderBy(asc(variables.name));
-    return rows.map((row) => ({ name: row.name, value: readValue(row), secret: row.secret }));
+      .where(
+        and(
+          eq(variables.organizationId, run.organizationId),
+          or(
+            and(isNull(variables.projectId), isNull(variables.userId)),
+            eq(variables.projectId, run.projectId),
+            eq(variables.userId, run.userId),
+          ),
+        ),
+      );
+    const rank = (row: EnvironmentVariableRow) => {
+      if (row.userId) return 2;
+      return row.projectId ? 1 : 0;
+    };
+    const merged = new Map<string, EnvironmentVariableRow>();
+    for (const row of rows.sort((a, b) => rank(a) - rank(b))) merged.set(row.name, row);
+    return [...merged.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((row) => ({ name: row.name, value: readValue(row), secret: row.secret }));
   },
 };

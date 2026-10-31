@@ -19,6 +19,7 @@ export const variableName = z
 
 export const projectParams = z.object({ id: z.uuid() });
 export const variableParams = z.object({ id: z.uuid(), name: variableName });
+export const nameParams = z.object({ name: variableName });
 
 // A variable is made or replaced by name. A secret's value is write-only (decision 0045), and a
 // secret needs one: an empty value is only for a plain variable, to reset a setting.

@@ -27,7 +27,11 @@ export const threadMessages = {
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     const skills = await skillsService.forRun(userId);
     const github = await githubUserTokenService.forRun(userId);
-    const env = await variablesService.forRun(thread.projectId);
+    const env = await variablesService.forRun({
+      organizationId,
+      projectId: thread.projectId,
+      userId,
+    });
     await runsService.start(thread, prompt, model, { attachments, mentions, skills, github, env });
   },
 
@@ -43,7 +47,11 @@ export const threadMessages = {
     const model = await resolveModel(userId, selection);
     const skills = await skillsService.forRun(userId);
     const github = await githubUserTokenService.forRun(userId);
-    const env = await variablesService.forRun(thread.projectId);
+    const env = await variablesService.forRun({
+      organizationId,
+      projectId: thread.projectId,
+      userId,
+    });
     await runsService.answer(thread, continuation, answers, model, skills, github, env);
   },
 };

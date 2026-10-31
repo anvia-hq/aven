@@ -96,4 +96,58 @@ test.describe("project environment variables", () => {
     const mine = await page.request.get(`/api/projects/${projects[0]!.id}/variables`);
     expect(mine.status()).toBe(200);
   });
+
+  test("workspace and personal variables are set, listed and removed through their own routes", async ({
+    page,
+  }) => {
+    // The person who registers owns the organization, so they may change the workspace's values.
+    await registerUser(page, "scopes", "Scopes User");
+
+    for (const scope of ["workspace", "personal"]) {
+      const path = `/api/variables/${scope}`;
+      expect(((await (await page.request.get(path)).json()) as unknown[]).length).toBe(0);
+
+      const saved = await page.request.put(`${path}/REGION`, {
+        data: { value: `${scope}-region`, secret: false },
+      });
+      expect(saved.ok()).toBe(true);
+      const secret = await page.request.put(`${path}/TOKEN`, {
+        data: { value: `${scope}-secret-value-1234`, secret: true },
+      });
+      expect(secret.ok()).toBe(true);
+
+      const listed = (await (await page.request.get(path)).json()) as {
+        name: string;
+        value: string | null;
+      }[];
+      expect(listed.map((variable) => variable.name)).toEqual(["REGION", "TOKEN"]);
+      expect(listed[0]!.value).toBe(`${scope}-region`);
+      // A secret is never given back.
+      expect(listed[1]!.value).toBeNull();
+      expect(JSON.stringify(listed)).not.toContain("secret-value");
+
+      expect((await page.request.delete(`${path}/REGION`)).status()).toBe(204);
+      expect((await page.request.delete(`${path}/REGION`)).status()).toBe(404);
+      const reserved = await page.request.put(`${path}/GIT_DIR`, {
+        data: { value: "x", secret: false },
+      });
+      expect(reserved.status()).toBe(422);
+      const emptySecret = await page.request.put(`${path}/EMPTY`, {
+        data: { value: "", secret: true },
+      });
+      expect(emptySecret.status()).toBe(422);
+    }
+
+    // The two scopes are separate lists.
+    const workspace = (await (await page.request.get("/api/variables/workspace")).json()) as {
+      name: string;
+    }[];
+    expect(workspace.map((variable) => variable.name)).toEqual(["TOKEN"]);
+  });
+
+  test("the variables routes need a session", async ({ request }) => {
+    for (const path of ["/api/variables/workspace", "/api/variables/personal"]) {
+      expect((await request.get(path)).status()).toBe(401);
+    }
+  });
 });
