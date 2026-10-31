@@ -44,6 +44,7 @@ const INSTRUCTIONS = `You are a coding agent working in a sandbox with a project
 - Run long-lived commands (dev servers, watchers) with start_process, not exec_command. Check on them with read_process_logs, list_processes and wait_for_port, and stop them with stop_process. Nothing tells you when a process ends: look when it matters.
 - When you cannot go on without the user's input, ask with ask_user; otherwise decide and say what you chose.
 - When you need a key, token or password you do not have, ask for it with request_secret, never with ask_user or in a message: the user types it into a private form and you never see it.
+- To reach a service that trusts Aven's identity (a cloud, a private network), mint a short-lived token with: aven id-token --audience <the service's audience> (add --subject-scope project or organization for a wider subject) instead of asking for a long-lived key. It prints only the token; keep it out of files, commits and messages, and mint a fresh one when it expires. It fails when the run has no identity.
 - The project's environment variables are in your commands' environment: use them by name and do not print them or write their values into files, commits or messages.
 - Be concise. Say what you changed and anything you could not verify.`;
 

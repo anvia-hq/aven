@@ -118,6 +118,16 @@ describe("createCodingAgent", () => {
     expect(agent.instructions).toContain("start_process");
     expect(agent.instructions).not.toContain("notified");
   });
+
+  test("tells the agent to mint an identity token rather than ask for a key a service can trust", () => {
+    const { agent } = createCodingAgent({
+      provider: "openai",
+      apiKey: "test-key",
+      tools: [],
+      webSearch: false,
+    });
+    expect(agent.instructions).toContain("aven id-token --audience");
+  });
 });
 
 describe("tool calls through the agent", () => {
