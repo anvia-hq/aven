@@ -1,8 +1,10 @@
 import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
+import type { BotPeer } from "@aven/protocol/runtime-wire";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
+import { createMessageBotTool, type MessageBot } from "./tools/message-bot";
 import { createSendMessageTool, type DeliverMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
 
@@ -27,6 +29,10 @@ type BotAgentOptions = ModelSource & {
   computer?: readonly AnyTool[];
   /** Makes another bot, for the person's main bot only (decision 0060); without it the bot cannot. */
   createBot?: CreateBot;
+  /** Writes to another of the person's bots, for the main bot only (decision 0063); without it the bot cannot. */
+  messageBot?: MessageBot;
+  /** The person's other bots, which the instructions list for a bot that can write to them. */
+  peers?: readonly BotPeer[];
   /** What the bot's description is now. */
   description?: string;
   /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
@@ -46,6 +52,8 @@ export function createBotAgent({
   compactAfterTokens,
   computer = [],
   createBot,
+  messageBot,
+  peers = [],
   description = "",
   updateSelf,
   ...source
@@ -60,6 +68,7 @@ export function createBotAgent({
       instruction,
       computer: computer.length > 0,
       createBots: Boolean(createBot),
+      peers: messageBot ? peers : undefined,
       self: updateSelf ? { description } : undefined,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
@@ -68,6 +77,7 @@ export function createBotAgent({
       createSendMessageTool(deliver),
       ...computer,
       ...makingBots(createBot),
+      ...messagingBots(messageBot),
       ...changingSelf(updateSelf),
     ],
   });
@@ -76,3 +86,5 @@ export function createBotAgent({
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
+const messagingBots = (messageBot?: MessageBot) =>
+  messageBot ? [createMessageBotTool(messageBot)] : [];

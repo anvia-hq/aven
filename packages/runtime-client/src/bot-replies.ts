@@ -3,8 +3,10 @@ import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
+import type { MessageBot } from "@aven/agents/tools/message-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { DeliverMessage } from "@aven/agents/tools/send-message";
+import { BOT_ASK_TIMEOUT_MS } from "@aven/protocol/bots";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
   BotReplyInfo,
@@ -30,6 +32,8 @@ export type CreateBotReplyAgent = (input: {
   computer: readonly AnyTool[];
   /** Makes another bot; only for the person's main bot (decision 0060). */
   createBot?: CreateBot;
+  /** Writes to another of the person's bots; only for the main bot (decision 0063). */
+  messageBot?: MessageBot;
   /** Changes the bot's own name, description or instruction (decision 0061). */
   updateSelf: UpdateSelf;
 }) => Pick<Agent<unknown>, "generate">;
@@ -38,7 +42,7 @@ export type CreateBotReplyAgent = (input: {
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, deliver, memory, computer, createBot, updateSelf }) =>
+  ({ bot, model, deliver, memory, computer, createBot, messageBot, updateSelf }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -55,6 +59,8 @@ export const defaultCreateBotAgent =
       memory,
       computer,
       createBot,
+      messageBot,
+      peers: bot.peers,
       description: bot.description,
       updateSelf,
     });
@@ -81,6 +87,7 @@ export type BotRepliesContext = {
   call<M extends keyof RuntimeCalls>(
     method: M,
     params: RuntimeCalls[M]["params"],
+    options?: { timeoutMs?: number },
   ): Promise<RuntimeCalls[M]["result"]>;
   /** The sandboxes of the threads and bots that have one. */
   boxes: Map<string, ThreadSandbox>;
@@ -166,6 +173,11 @@ export class BotReplies {
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
       // The control plane says whether this bot may, and holds to it whatever is asked here.
+      // The control plane waits for the other bot at most BOT_ASK_TIMEOUT_MS; this waits a little longer.
+      messageBot: bot.peers
+        ? (input) =>
+            call("bot.ask", { ...input, replyId }, { timeoutMs: BOT_ASK_TIMEOUT_MS + 30_000 })
+        : undefined,
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       createBot: bot.canCreateBots
         ? (input) => call("bot.create", { ...input, replyId })

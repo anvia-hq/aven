@@ -8,6 +8,7 @@ import {
   toolCall,
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
+import { createMessageBotTool } from "@aven/agents/tools/message-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
@@ -1669,6 +1670,58 @@ describe("startRuntime answering for a bot", () => {
         memory,
         tools: [createSendMessageTool(deliver)],
       });
+
+  // The main bot writes to another bot (decision 0063) and says what it answered.
+  const SCOUT = "11111111-2222-4333-8444-555555555555";
+  const askingBot: CreateBotReplyAgent = ({ deliver, memory, messageBot }) => {
+    const asking = messageBot ? [createMessageBotTool(messageBot)] : [];
+    return new Agent({
+      id: "bot",
+      model: scriptedModel([
+        [toolCall("message_bot", { bot: SCOUT, text: "do A" })],
+        [toolCall("send_message", { text: "Scout did A" })],
+        [text("")],
+      ]),
+      instructions: "x",
+      memory,
+      tools: [createSendMessageTool(deliver), ...asking],
+    });
+  };
+
+  test("a call to another bot waits for its answer past the time any other call is given", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const { plane, runtime } = connect({
+      sandbox,
+      createBotAgent: askingBot,
+      typingPause: async () => undefined,
+      callTimeoutMs: 100,
+    });
+    await runtime.ready;
+
+    plane.send({
+      ...botReply,
+      bot: {
+        ...botReply.bot,
+        canCreateBots: true,
+        peers: [{ id: SCOUT, name: "Scout", description: "" }],
+      },
+    });
+    const asked = () =>
+      plane.received.find((message) => message.type === "call" && message.method === "bot.ask");
+    await until(() => asked() !== undefined);
+    // Long enough that an ordinary call would have given up on the control plane.
+    await Bun.sleep(300);
+    const ask = asked() as Extract<RuntimeToControlPlane, { type: "call" }>;
+    expect(ask.params).toEqual({ bot: SCOUT, text: "do A", replyId: "reply-1" });
+    plane.send({ type: "reply", id: ask.id, ok: true, result: { replies: ["A is done"] } });
+
+    await until(() => plane.received.some((message) => message.type === "bot.end"));
+    expect(plane.received.filter((message) => message.type.startsWith("bot."))).toEqual([
+      { type: "bot.say", replyId: "reply-1", text: "Scout did A" },
+      { type: "bot.end", replyId: "reply-1" },
+    ]);
+  });
 
   test("the bot's messages arrive one by one, then the reply ends, on the bot's own sandbox", async () => {
     const { sandbox, up } = slowSandbox();

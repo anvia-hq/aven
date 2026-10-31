@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
+import { createMessageBotTool, type MessageBot } from "@aven/agents/tools/message-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
+import { BOT_ASK_TIMEOUT_MS } from "@aven/protocol/bots";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
@@ -28,11 +30,13 @@ const message: BotReplyMessage = {
 };
 
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
+const messagingBots = (messageBot?: MessageBot) =>
+  messageBot ? [createMessageBotTool(messageBot)] : [];
 
 // An agent that sends what a script says to, then stops.
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
-  ({ deliver, computer, memory, createBot, updateSelf }) =>
+  ({ deliver, computer, memory, createBot, messageBot, updateSelf }) =>
     new Agent({
       id: "bot",
       model: scriptedModel(steps),
@@ -42,6 +46,7 @@ const agentThat =
         createSendMessageTool(deliver),
         ...computer,
         ...makingBots(createBot),
+        ...messagingBots(messageBot),
         createUpdateSelfTool(updateSelf),
       ],
     });
@@ -66,6 +71,7 @@ const memoryAnswer = (params: unknown) => ((params as { op?: string }).op === "l
 function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boolean } = {}) {
   const sent: RuntimeToControlPlane[] = [];
   const calls: unknown[] = [];
+  const timeouts: (number | undefined)[] = [];
   const acquired: { id: string; repo: unknown }[] = [];
   const finished: string[] = [];
   const pauses: number[] = [];
@@ -78,9 +84,11 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
       sent.push(frame);
       return true;
     },
-    call: async (method, params) => {
+    call: async (method, params, options) => {
       calls.push({ method, params });
+      timeouts.push(options?.timeoutMs);
       if (method === "bot.create") return { id: "b2", name: (params as { name: string }).name };
+      if (method === "bot.ask") return { replies: ["A is done"] };
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
       return memoryAnswer(params);
     },
@@ -93,7 +101,7 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
   const until = async () => {
     for (let i = 0; i < 100 && !ended(); i++) await Bun.sleep(10);
   };
-  return { replies, sent, calls, acquired, finished, pauses, boxes, until };
+  return { replies, sent, calls, timeouts, acquired, finished, pauses, boxes, until };
 }
 
 describe("BotReplies", () => {
@@ -193,6 +201,47 @@ describe("BotReplies", () => {
     ]);
   });
 
+  test("the main bot writes to another bot by asking the control plane, for its own reply, and waits longer than a call does", async () => {
+    const scout = "11111111-2222-4333-8444-555555555555";
+    const run = harness(
+      agentThat(
+        [toolCall("message_bot", { bot: scout, text: "do A" })],
+        [toolCall("send_message", { text: "Scout says A is done" })],
+        [text("")],
+      ),
+    );
+    const peers = [{ id: scout, name: "Scout", description: "" }];
+
+    run.replies.start({ ...message, bot: { ...message.bot, canCreateBots: true, peers } });
+    await run.until();
+
+    expect(run.calls).toContainEqual({
+      method: "bot.ask",
+      params: { bot: scout, text: "do A", replyId: "r1" },
+    });
+    // The control plane waits five minutes for the other bot; the call waits a little longer.
+    expect(run.timeouts.find((timeout) => timeout !== undefined)).toBeGreaterThan(
+      BOT_ASK_TIMEOUT_MS,
+    );
+    expect(run.sent).toEqual([
+      { type: "bot.say", replyId: "r1", text: "Scout says A is done" },
+      { type: "bot.end", replyId: "r1" },
+    ]);
+  });
+
+  test("a bot told of no other bots is not given the tool", async () => {
+    let offered: unknown = "unset";
+    const run = harness((input) => {
+      offered = input.messageBot;
+      return agentThat([text("")])(input);
+    });
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(offered).toBeUndefined();
+  });
+
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
     const run = harness(
       agentThat(
@@ -232,7 +281,13 @@ describe("BotReplies", () => {
   describe("the agent the runner builds", () => {
     const build = (canCreateBots: boolean) =>
       defaultCreateBotAgent("http://control-plane")({
-        bot: { ...message.bot, canCreateBots },
+        bot: {
+          ...message.bot,
+          canCreateBots,
+          peers: canCreateBots
+            ? [{ id: "b2", name: "Scout", description: "Looks things up." }]
+            : undefined,
+        },
         model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
         deliver: async () => undefined,
         memory: {
@@ -245,7 +300,8 @@ describe("BotReplies", () => {
         },
         computer: [],
         updateSelf: async () => ({ name: "Pip", description: "" }),
-        createBot: canCreateBots ? async () => ({ name: "Scout" }) : undefined,
+        createBot: canCreateBots ? async () => ({ id: "b2", name: "Scout" }) : undefined,
+        messageBot: canCreateBots ? async () => ({ replies: [] }) : undefined,
       }) as unknown as { tools: { name: string }[]; instructions: string };
 
     test("every bot can change itself and knows its own description", () => {
@@ -260,9 +316,11 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "create_bot",
+        "message_bot",
         "update_self",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
+      expect(agent.instructions).toContain("- Scout (id: b2): Looks things up.");
     });
   });
 

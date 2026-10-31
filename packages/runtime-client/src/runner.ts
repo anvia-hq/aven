@@ -167,13 +167,19 @@ export function startRuntime(options: RuntimeOptions) {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
 
-  const call = <M extends keyof RuntimeCalls>(method: M, params: RuntimeCalls[M]["params"]) =>
+  // A call waits `callTimeoutMs` for its answer unless it says it needs longer, as one that waits
+  // for another bot's reply does.
+  const call = <M extends keyof RuntimeCalls>(
+    method: M,
+    params: RuntimeCalls[M]["params"],
+    { timeoutMs = callTimeoutMs }: { timeoutMs?: number } = {},
+  ) =>
     new Promise<RuntimeCalls[M]["result"]>((resolve, reject) => {
       const id = crypto.randomUUID();
       const timer = setTimeout(() => {
         pending.delete(id);
-        reject(new Error(`The control plane did not answer ${method} within ${callTimeoutMs} ms`));
-      }, callTimeoutMs);
+        reject(new Error(`The control plane did not answer ${method} within ${timeoutMs} ms`));
+      }, timeoutMs);
       pending.set(id, {
         method,
         params,
