@@ -260,4 +260,36 @@ test.describe("project environment variables", () => {
       expect((await request.get(path)).status()).toBe(401);
     }
   });
+
+  test("the History button shows who changed what, and says the values are not kept", async ({
+    page,
+  }) => {
+    const section = await openProject(page);
+    await add(page, "HISTORY_ME", "a-plain-value");
+    await add(page, "HISTORY_SECRET", "a-secret-that-must-not-show-1234", true);
+    await section.getByRole("button", { name: "Remove HISTORY_ME" }).click();
+    await expect(page.getByText("Variable removed")).toBeVisible();
+
+    await section.getByRole("button", { name: "History", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "History" });
+    await expect(dialog).toContainText("The values are never kept");
+    const events = dialog.getByRole("list", { name: "Variable history" }).getByRole("listitem");
+    await expect(events).toHaveCount(3);
+    // Newest first.
+    await expect(events.nth(0)).toContainText("Variables User removed HISTORY_ME");
+    await expect(events.nth(1)).toContainText("Variables User created HISTORY_SECRET");
+    await expect(events.nth(1)).toContainText("Secret");
+    await expect(events.nth(2)).toContainText("Variables User created HISTORY_ME");
+    await expect(dialog).not.toContainText("must-not-show");
+    await expect(dialog).not.toContainText("a-plain-value");
+  });
+
+  test("a scope with no changes says so", async ({ page }) => {
+    await registerUser(page, "emptyhist", "History User");
+    await page.goto("/settings/environment-variables");
+    await page.getByRole("button", { name: "History" }).click();
+    await expect(page.getByRole("dialog", { name: "History" })).toContainText(
+      "Nothing has been changed yet.",
+    );
+  });
 });

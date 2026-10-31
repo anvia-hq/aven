@@ -7,6 +7,7 @@ import { useCanChangeVariables } from "../hooks/use-can-change-variables";
 import { useVariables } from "../hooks/use-variables";
 import { MAX_VARIABLES, type Variable, type VariableScope } from "../types";
 import { VariableDialog } from "./variable-dialog";
+import { VariableHistoryDialog } from "./variable-history-dialog";
 
 // What a variable shows in place of its value: a plain one's own, a secret only as its end.
 const shown = (variable: Variable) =>
@@ -65,9 +66,12 @@ export function VariablesSection({ scope, title, empty }: Props) {
     <section aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm text-muted-foreground">{title}</h2>
-        {canChange && variables.length < MAX_VARIABLES && (
-          <VariableDialog scope={scope} label="Add" />
-        )}
+        <div className="flex items-center gap-1">
+          <VariableHistoryDialog scope={scope} />
+          {canChange && variables.length < MAX_VARIABLES && (
+            <VariableDialog scope={scope} label="Add" />
+          )}
+        </div>
       </div>
       {variables.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>

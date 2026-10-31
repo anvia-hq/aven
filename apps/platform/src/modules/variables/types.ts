@@ -21,6 +21,19 @@ export function variablesPath(scope: VariableScope) {
   return `/variables/${scope.kind}`;
 }
 
+/** One thing that was done to a variable (decision 0048): by whom, never to what value. */
+export type VariableEvent = {
+  id: string;
+  name: string;
+  action: "created" | "updated" | "removed";
+  secret: boolean;
+  /** The settings, or the agent's request for a secret. */
+  source: "settings" | "agent";
+  createdAt: string;
+  /** Who did it; null once their account is gone. */
+  actor: string | null;
+};
+
 export type VariableInput = { name: string; value: string; secret: boolean };
 
 // The control plane's rules for a variable (modules/variables/schema.ts), checked here first to say

@@ -79,6 +79,17 @@ test.describe("the agent asks for a secret", () => {
     expect(await variables.text()).not.toContain(SECRET);
     const personal = await page.request.get("/api/variables/personal");
     expect(await personal.json()).toEqual([]);
+
+    // The project's history says it was asked for by the agent, and holds no value.
+    await page.goto(`/projects/${projectId}`);
+    await page
+      .getByRole("region", { name: "Environment variables" })
+      .getByRole("button", { name: "History" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "History" });
+    await expect(dialog).toContainText("Secret User created STRIPE_API_KEY");
+    await expect(dialog).toContainText("asked for by the agent");
+    await expect(dialog).not.toContainText(SECRET);
   });
 
   test("can be kept for the person alone", async ({ page }) => {
