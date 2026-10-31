@@ -77,7 +77,7 @@ test.describe("threads", () => {
 
     // Back on the new-thread page, the project the agent just worked in is no longer pre-selected.
     await page.getByRole("button", { name: "New thread" }).click();
-    await expect(page.getByLabel("Project")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Project" })).toBeVisible();
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello again");
     await page.getByRole("button", { name: "Send" }).click();
 
@@ -103,7 +103,7 @@ test.describe("threads", () => {
 
     // The project is offered again as a shortcut for the next thread.
     await page.getByRole("button", { name: "New thread" }).click();
-    await page.getByLabel("Project").click();
+    await page.getByRole("combobox", { name: "Project" }).click();
     await expect(page.getByRole("option", { name: "project" })).toBeVisible();
   });
 
