@@ -25,7 +25,7 @@ test.describe("bots", () => {
 
     await page.getByRole("link", { name: "Bot", exact: true }).click();
     await expect(page).toHaveURL(/\/bot$/);
-    await expect(page.getByRole("heading", { name: "Aven" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
     await expect(page.getByText("Say hello to Aven.")).toBeVisible();
 
     await page.getByRole("textbox", { name: "Message" }).fill("hello bot");
@@ -38,9 +38,8 @@ test.describe("bots", () => {
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
 
-    // The bot has a shell of its own: its sidebar has the bot, with what it said last, in place of
-    // the threads and projects.
-    await expect(page.getByRole("link", { name: /Aven.*You said: hello bot/ })).toBeVisible();
+    // The bot has a shell of its own: its main bot is the tile of its sidebar, in place of the
+    // threads and projects.
     await expect(page.getByRole("link", { name: "Projects" })).toBeHidden();
 
     // The chat is the server's: it is all there after a reload.
@@ -69,7 +68,7 @@ test.describe("bots", () => {
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expect(page.getByText("Bot saved")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" })).toHaveAttribute(
       "placeholder",
       "Message Pip",
@@ -77,7 +76,7 @@ test.describe("bots", () => {
 
     // It is kept: the bot is the same after a reload, in the settings too.
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await page.getByRole("button", { name: "Bot settings" }).click();
     await expect(page.getByLabel("Instruction")).toHaveValue("Talk like a pirate.");
     await expect(page.getByLabel("Avatar")).toHaveValue("🐦");

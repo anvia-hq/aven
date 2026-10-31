@@ -1,32 +1,55 @@
+import { Star } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 
+import { AvatarBadge } from "@/components/avatar";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import { useBots } from "../hooks/use-bots";
 import { BotAvatar } from "./bot-avatar";
+import { BotSettingsDialog } from "./bot-settings-dialog";
 
-// The bot's own sidebar: each bot with its avatar, its name and what it said last.
+// The bot's own sidebar: the main bot as a tile on top, and under it the person's other bots, each
+// with its avatar, its name and what it said last.
 export function BotSidebar() {
-  const { bots } = useBots();
+  const { bots, main } = useBots();
   const lastMessages = useAtomValue(botLastMessagesAtom);
   const active = useRouterState({ select: (state) => state.location.pathname.startsWith("/bot") });
+  const others = bots.filter((bot) => !bot.isMain);
 
   return (
     <>
-      <div className="px-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-        Bots
-      </div>
-      <SidebarMenu className="px-2">
-        {bots.map((bot) => (
-          <SidebarMenuItem key={bot.id}>
-            <SidebarMenuButton
-              render={<Link to="/bot" />}
-              isActive={active && bot.isMain}
-              size="lg"
-              tooltip={bot.name}
+      {main && (
+        <div className="group/tile relative mx-auto mt-2 mb-3">
+          <Link
+            to="/bot"
+            aria-label={`${main.name}, main bot`}
+            className="flex w-28 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-xs text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-1"
+            data-active={active}
+          >
+            <BotAvatar
+              bot={main}
+              solid
+              className="size-16 text-3xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
             >
+              <AvatarBadge className="size-5! [&>svg]:size-3!">
+                <Star />
+              </AvatarBadge>
+            </BotAvatar>
+            <span className="max-w-full truncate group-data-[collapsible=icon]:hidden">
+              {main.name}
+            </span>
+          </Link>
+          <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/tile:opacity-100 group-hover/tile:opacity-100 group-data-[collapsible=icon]:hidden">
+            <BotSettingsDialog bot={main} />
+          </div>
+        </div>
+      )}
+      <SidebarMenu className="px-2">
+        {others.map((bot) => (
+          <SidebarMenuItem key={bot.id}>
+            <SidebarMenuButton render={<Link to="/bot" />} size="lg" tooltip={bot.name}>
               <BotAvatar bot={bot} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>

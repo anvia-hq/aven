@@ -10,9 +10,9 @@ type Props = {
   placeholder: string;
 };
 
-// Where the person writes to a bot, drawn like the thread's composer: a card with the text above
-// and Send below. Enter sends, Shift+Enter starts a new line. The bot may be at work: a message
-// sent meanwhile waits its turn, so the composer is never locked.
+// Where the person writes to a bot: a pill with the text and Send in it, growing with what is
+// written. Enter sends, Shift+Enter starts a new line. The bot may be at work: a message sent
+// meanwhile waits its turn, so the composer is never locked.
 export function BotComposer({ onSend, placeholder }: Props) {
   const [text, setText] = useState("");
 
@@ -29,25 +29,25 @@ export function BotComposer({ onSend, placeholder }: Props) {
   };
 
   return (
-    <div className="relative flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring">
+    <div className="relative flex items-end gap-2 rounded-3xl border bg-card py-2 pr-2 pl-4 focus-within:border-ring">
       <Textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label="Message"
-        className="max-h-60 min-h-14 resize-none rounded-none border-0 bg-transparent p-1 text-sm leading-6 shadow-none focus-visible:ring-0 dark:bg-transparent"
+        rows={1}
+        className="max-h-48 min-h-9 flex-1 resize-none rounded-none border-0 bg-transparent px-0 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button
-          size="icon-sm"
-          aria-label="Send"
-          disabled={!text.trim()}
-          onClick={() => void submit()}
-        >
-          <ArrowUp />
-        </Button>
-      </div>
+      <Button
+        size="icon"
+        className="rounded-full"
+        aria-label="Send"
+        disabled={!text.trim()}
+        onClick={() => void submit()}
+      >
+        <ArrowUp />
+      </Button>
     </div>
   );
 }

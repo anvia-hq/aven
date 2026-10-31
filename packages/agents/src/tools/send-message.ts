@@ -9,7 +9,9 @@ export const sendMessageSchema = z.object({
     .trim()
     .min(1)
     .max(2000)
-    .describe("One message, as you would text it: short, one thought, plain text."),
+    .describe(
+      "One message, as you would text it: short, one thought. Light markdown (bold, a short list) is shown as such; use it only when it helps.",
+    ),
 });
 
 /** What the host does with a message: shows it to the person, once it has been "typed". */
