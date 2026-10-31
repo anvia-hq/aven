@@ -9,6 +9,7 @@ import {
 import { Cog, Search } from "@mynaui/icons-react";
 import type { CSSProperties } from "react";
 
+import { AvenMark } from "@/components/brand-icons";
 import { Button } from "@/components/button";
 import {
   Sidebar,
@@ -69,16 +70,16 @@ function AuthedLayout() {
         <Link
           to="/threads"
           aria-label="Aven"
-          className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
+          className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"
         >
-          A
+          <AvenMark className="w-5" />
         </Link>
       </aside>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own border. */}
       <div className="flex min-w-0 flex-1 md:my-2 md:mr-2 md:overflow-clip md:rounded-xl md:bg-background md:ring-1 md:ring-sidebar-border">
         <Sidebar
           collapsible="icon"
-          className="text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:overflow-hidden md:rounded-l-xl"
+          className="text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl"
         >
           <SidebarHeader>
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">

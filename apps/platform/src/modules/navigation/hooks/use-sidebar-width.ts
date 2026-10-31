@@ -7,6 +7,8 @@ const DEFAULT_WIDTH = 240;
 const MIN_WIDTH = 192;
 const MAX_WIDTH = 448;
 const KEY_STEP = 16;
+/** The rail left of the sidebar (`w-12` and `left-12` in the authed layout), which the pointer is measured from. */
+const RAIL_WIDTH = 48;
 
 const clamp = (width: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
 
@@ -29,7 +31,7 @@ export function useSidebarWidth() {
       setDragging(true);
     },
     onPointerMove(event: PointerEvent<HTMLElement>) {
-      if (dragging) setWidth(clamp(event.clientX));
+      if (dragging) setWidth(clamp(event.clientX - RAIL_WIDTH));
     },
     onPointerUp: () => setDragging(false),
     onPointerCancel: () => setDragging(false),

@@ -14,7 +14,8 @@ test("the sidebar is resized by dragging its edge, and keeps its width", async (
   const box = (await page.getByRole("separator", { name: "Resize sidebar" }).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, 300);
   await page.mouse.down();
-  await page.mouse.move(360, 300, { steps: 6 });
+  // The sidebar starts after the 48px rail, so its edge is at the rail plus its width.
+  await page.mouse.move(48 + 360, 300, { steps: 6 });
   await page.mouse.up();
   await expect.poll(width).toBe(360);
 
