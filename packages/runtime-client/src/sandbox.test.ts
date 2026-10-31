@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { git } from "./git-clone";
-import { dockerRunArgs, Sandboxes, type ThreadSandbox } from "./sandbox";
+import { dockerRunArgs, runnerLabel, Sandboxes, type ThreadSandbox } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
 
 // Stands in for git where a test is about the container: a clone is just a `.git` directory.
@@ -26,6 +26,7 @@ describe("dockerRunArgs", () => {
     host: "host.docker.internal",
     hubPort: 4321,
     token: "tok",
+    runner: "r1",
     memoryMb: 1024,
     cpus: 1,
     pidsLimit: 64,
@@ -38,6 +39,7 @@ describe("dockerRunArgs", () => {
     expect(args).toContain("/data/uploads/t1:/uploads:ro");
     expect(args).toContain("/data/skills/threads/t1:/skills:ro");
     expect(args).toContain("1024m");
+    expect(args).toContain("aven.runner=r1");
     expect(args).toContain("ANVIA_CONTROL_URL=ws://host.docker.internal:4321/daemon");
     expect(args).toContain("ANVIA_SANDBOX_TOKEN=tok");
     expect(args.at(-1)).toBe("img:dev");
@@ -71,6 +73,23 @@ describe("Sandboxes starting a container", () => {
     };
     return { calls, docker };
   };
+
+  test("removes its own containers and unlabelled ones when it starts, not another runner's", async () => {
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const calls: string[][] = [];
+    const docker = async (args: string[]) => {
+      calls.push(args);
+      const stdout =
+        args[0] === "ps"
+          ? `mine ${runnerLabel(home)}\nolder \ntheirs ${runnerLabel("/elsewhere")}\n`
+          : "";
+      return { code: 0, stdout, stderr: "" };
+    };
+    const sandboxes = await Sandboxes.start({ image: "img", home, docker, git: fakeGit });
+
+    expect(calls.filter((args) => args[0] === "rm")).toEqual([["rm", "-f", "mine", "older"]]);
+    await sandboxes.dispose();
+  });
 
   test("two runs on a thread that has no clone yet clone it once", async () => {
     const { docker } = fakeDocker();

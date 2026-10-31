@@ -47,6 +47,7 @@ async function input(
     image: "aven-env-k1",
     root: join(base, "work"),
     logPath: join(base, "logs", "k1.setup.log"),
+    runner: "r1",
     memoryMb: 4096,
     cpus: 2,
     pidsLimit: 512,

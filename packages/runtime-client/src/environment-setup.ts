@@ -36,6 +36,8 @@ export type SetupInput = {
   root: string;
   /** Where the output of the script is written. */
   logPath: string;
+  /** The runner the container belongs to, as `runnerLabel` gives it. */
+  runner: string;
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
@@ -50,6 +52,8 @@ export type ContainerBase = {
   name: string;
   /** What the container is for, as a label beside `aven.sandbox=1`, which every runner container has. */
   label: string;
+  /** The runner the container belongs to, so a runner removes only its own (`runnerLabel`). */
+  runner: string;
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
@@ -72,6 +76,8 @@ export function containerBaseArgs(
     input.name,
     "--label",
     "aven.sandbox=1",
+    "--label",
+    `aven.runner=${input.runner}`,
     "--label",
     input.label,
     ...beforeLimits,

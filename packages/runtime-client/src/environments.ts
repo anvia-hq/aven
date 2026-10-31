@@ -19,6 +19,7 @@ export type EnvironmentsConfig = {
   image: string;
   platform?: string;
   runtime?: string;
+  runner: string;
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
@@ -156,6 +157,7 @@ export class Environments {
       image,
       root,
       logPath: this.snapshots.logPath(key),
+      runner: this.#config.runner,
       memoryMb: this.#config.memoryMb,
       cpus: this.#config.cpus,
       pidsLimit: this.#config.pidsLimit,

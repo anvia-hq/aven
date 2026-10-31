@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -42,6 +42,13 @@ import { UploadStore } from "./uploads";
 // Where a runner keeps its workspaces and its journal of runs.
 export const runtimeHome = (home?: string) => home ?? join(homedir(), ".aven", "runtime");
 export const journalPathIn = (home?: string) => join(runtimeHome(home), "runs.db");
+
+/**
+ * Names the runner a container belongs to by its home, so two runners on one machine, such as the
+ * control plane's own and a standalone one with another home, leave each other's containers alone.
+ */
+export const runnerLabel = (home?: string) =>
+  createHash("sha256").update(runtimeHome(home)).digest("hex").slice(0, 16);
 
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
@@ -270,7 +277,7 @@ export class Sandboxes implements ThreadWorkspaces {
   readonly snapshots: SnapshotStore;
   #config: SandboxConfig;
   // The container limits and how a container reaches this machine, with their defaults.
-  #limits: { memoryMb: number; cpus: number; pidsLimit: number };
+  #containers: { runner: string; memoryMb: number; cpus: number; pidsLimit: number };
   #host: string;
   #environments: Environments;
   #hub: RemoteSandboxHub;
@@ -292,7 +299,8 @@ export class Sandboxes implements ThreadWorkspaces {
     tokens: Map<string, string>,
   ) {
     this.#config = config;
-    this.#limits = {
+    this.#containers = {
+      runner: runnerLabel(config.home),
       memoryMb: config.memoryMb ?? 8192,
       cpus: config.cpus ?? 4,
       pidsLimit: config.pidsLimit ?? 1024,
@@ -305,7 +313,7 @@ export class Sandboxes implements ThreadWorkspaces {
       image: config.image,
       platform: config.platform,
       runtime: config.runtime,
-      ...this.#limits,
+      ...this.#containers,
       home: runtimeHome(config.home),
       docker: commands.docker,
       git: commands.git,
@@ -511,9 +519,22 @@ export class Sandboxes implements ThreadWorkspaces {
     return `aven-sandbox-${threadId}`;
   }
 
+  // This runner's containers, and those of a runner from before containers named theirs, which
+  // have no `aven.runner` label.
   async #removeStale() {
-    const { stdout } = await this.#run(["ps", "-aq", "--filter", "label=aven.sandbox"]);
-    const ids = stdout.split("\n").filter(Boolean);
+    const { stdout } = await this.#run([
+      "ps",
+      "-a",
+      "--filter",
+      "label=aven.sandbox",
+      "--format",
+      '{{.ID}} {{.Label "aven.runner"}}',
+    ]);
+    const ids = stdout
+      .split("\n")
+      .map((line) => line.trim().split(" "))
+      .filter(([id, runner]) => id && (!runner || runner === this.#containers.runner))
+      .map(([id]) => id as string);
     if (ids.length > 0) await this.#run(["rm", "-f", ...ids]);
   }
 
@@ -549,7 +570,7 @@ export class Sandboxes implements ThreadWorkspaces {
       host: this.#host,
       hubPort: this.#port,
       token,
-      ...this.#limits,
+      ...this.#containers,
       platform: this.#config.platform,
       runtime: this.#config.runtime,
       user: hostUser(),
