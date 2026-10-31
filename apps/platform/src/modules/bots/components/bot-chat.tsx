@@ -10,6 +10,7 @@ import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 import { BotComposer } from "./bot-composer";
 import { BotActivity } from "./bot-activity";
+import { BotAvatar } from "./bot-avatar";
 import { BotChatBubble, isPersons } from "./bot-chat-bubble";
 
 // A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
@@ -53,7 +54,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                 </Message>
               );
             })}
-            {typing && <TypingIndicator name={bot.name} />}
+            {typing && <TypingIndicator bot={bot} />}
             {error && (
               <p
                 role="alert"
@@ -79,20 +80,16 @@ export function BotChat({ bot }: { bot: Bot }) {
   );
 }
 
-function TypingIndicator({ name }: { name: string }) {
+// The bot at work, as in the Anvia harness: its avatar with open eyes, and a line saying so.
+function TypingIndicator({ bot }: { bot: Bot }) {
   return (
-    <div
+    <p
       role="status"
-      aria-label={`${name} is typing`}
-      className="mt-1.5 flex w-fit items-center gap-1 rounded-2xl bg-muted px-4 py-3.5"
+      aria-label={`${bot.name} is typing`}
+      className="mt-3 flex items-center gap-2.5 text-xs text-muted-foreground"
     >
-      {[0, 150, 300].map((delay) => (
-        <span
-          key={delay}
-          className="size-1.5 animate-bounce rounded-full bg-muted-foreground"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
-    </div>
+      <BotAvatar bot={bot} mood="working" className="size-6" />
+      {bot.name} is typing…
+    </p>
   );
 }

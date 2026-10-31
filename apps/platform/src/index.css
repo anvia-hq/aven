@@ -76,9 +76,10 @@
   --sidebar-ring: oklch(0.5 0.01 250);
 }
 
-/* What a bot's face is drawn with (decision 0062): one color in both themes, like an illustration. */
+/* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
 :root {
   --avatar-face: oklch(0.2 0.01 250);
+  --avatar-eye: oklch(0.99 0 0);
 }
 
 @theme inline {
@@ -104,6 +105,7 @@
   --color-effort: var(--effort);
   --color-frame: var(--frame);
   --color-avatar-face: var(--avatar-face);
+  --color-avatar-eye: var(--avatar-eye);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -206,14 +208,24 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   }
 }
 
-/* A bot's avatar bobs gently, each at its own time (decision 0062). */
+/* A bot's avatar bobs gently, each at its own time, and at work opens its eyes, looks about and gives
+   off a ring and an orbiting dot (decision 0062, from the Anvia harness). */
 .bot-avatar {
   overflow: visible;
 }
 
-.bot-body {
+.bot-eye,
+.bot-body,
+.bot-gaze {
   transform-box: fill-box;
   transform-origin: center;
+}
+
+/* The box the avatar is drawn in is cropped to 4 4 40 40, so its middle is 20 from its corner. */
+.bot-orbit,
+.bot-ring {
+  transform-box: view-box;
+  transform-origin: 20px 20px;
 }
 
 @keyframes bot-bob {
@@ -226,9 +238,55 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   }
 }
 
+@keyframes bot-look {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2.4px);
+  }
+  75% {
+    transform: translateX(2.4px);
+  }
+}
+
+@keyframes bot-ring {
+  from {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+
+@keyframes bot-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .bot-body {
     animation: bot-bob 3.6s ease-in-out infinite;
     animation-delay: var(--bot-delay, 0ms);
+  }
+
+  .bot-avatar[data-mood="working"] .bot-body {
+    animation: bot-bob 0.9s ease-in-out infinite;
+  }
+
+  .bot-avatar[data-mood="working"] .bot-gaze {
+    animation: bot-look 1.8s ease-in-out infinite;
+  }
+
+  .bot-avatar[data-mood="working"] .bot-ring {
+    animation: bot-ring 1.6s ease-out infinite;
+  }
+
+  .bot-avatar[data-mood="working"] .bot-orbit {
+    animation: bot-orbit 2.4s linear infinite;
   }
 }

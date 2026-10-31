@@ -16,9 +16,8 @@ A bot's avatar was a text the person typed, an emoji, and empty meant the first 
 
 ## Known limits
 
-- The four faces draw as three: `curious` and `glance` differ only in where the pupils look, which shows only while a bot works, and that state is not here. They are kept so that a seed draws the same character as in the harness.
 - `data-family` and `data-color` on the avatar's svg are there for the e2e tests.
 
 ## Not taken from the harness
 
-- **Upload and moods**: the harness lets a person upload a picture, which needs somewhere to keep and serve images, and animates a bot while it works or sleeps. Neither is here: there is no image storage, and the bot's typing state is in the chat, not the sidebar.
+- **Upload**: the harness lets a person upload a picture, which needs somewhere to keep and serve images. That is not here. A bot at work opens its eyes: decision 0064.

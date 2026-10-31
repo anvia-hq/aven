@@ -32,11 +32,19 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "hello bot")).toBeVisible();
 
-    // The bot types, then each message shows after its own pause.
+    // The bot types, then each message shows after its own pause. While it works its eyes are open,
+    // in the sidebar and by the line that says so, and shut again when it is done.
+    const tile = page.locator('a[aria-label="Aven, main bot"] svg[data-mood]');
     await expect(page.getByRole("status", { name: /typing/ })).toBeVisible();
+    await expect(tile).toHaveAttribute("data-mood", "working");
+    await expect(page.getByRole("status", { name: /typing/ }).locator("svg")).toHaveAttribute(
+      "data-mood",
+      "working",
+    );
     await expect(bubble(page, "Hey there!")).toBeVisible();
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
+    await expect(tile).toHaveAttribute("data-mood", "idle");
 
     // The bot has a shell of its own: its main bot is the tile of its sidebar, in place of the
     // threads and projects.
@@ -150,6 +158,11 @@ test.describe("bots", () => {
       .locator('[data-slot="bubble-content"]')
       .filter({ hasText: "to do A, B and C" });
     await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
+    // While Aven waits, Scout is at work: its eyes are open in the sidebar, whichever chat is open.
+    await expect(page.locator('a[href^="/bot/"] svg[data-mood]')).toHaveAttribute(
+      "data-mood",
+      "working",
+    );
     await expect(bubble(page, "Scout answered")).toBeVisible();
     await expect(message).toHaveText("");
 
@@ -157,6 +170,8 @@ test.describe("bots", () => {
     // Scout said back, and no bubbles for them.
     const activity = page.locator('[data-activity="bots"]');
     await expect(activity).toContainText("3 messages with");
+    // Scout is done, and its eyes are shut again.
+    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]')).toBeVisible();
     await expect(activity).toContainText("Scout");
     await expect(bubble(page, "A, B and C")).toHaveCount(0);
     await activity.getByRole("button").click();

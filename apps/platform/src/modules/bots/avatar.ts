@@ -11,13 +11,15 @@ export type Part =
   | { kind: "path"; d: string }
   | { kind: "polygon"; points: string };
 
-type Point = { x: number; y: number };
+export type Point = { x: number; y: number };
 
 type Family = {
   name: string;
   parts: readonly Part[];
   /** Where the face goes. */
   face: Point;
+  /** How far from the middle the shape reaches, which the ring of a bot at work goes around. */
+  reach: number;
 };
 
 const circle = (cx: number, cy: number, r: number): Part => ({ kind: "circle", cx, cy, r });
@@ -33,7 +35,7 @@ const polygon = (points: string): Part => ({ kind: "polygon", points });
 
 // Each shape is drawn in a 48 by 48 box.
 export const families: readonly Family[] = [
-  { name: "circle", parts: [circle(24, 24, 17)], face: { x: 24, y: 24 } },
+  { name: "circle", parts: [circle(24, 24, 17)], face: { x: 24, y: 24 }, reach: 17 },
   {
     name: "flower",
     parts: [
@@ -44,41 +46,48 @@ export const families: readonly Family[] = [
       circle(24, 24, 12),
     ],
     face: { x: 24, y: 24.5 },
+    reach: 21.5,
   },
   {
     name: "bean",
     parts: [rect(7, 7, 34, 18.5, 8), rect(7, 22.5, 34, 18.5, 8)],
     face: { x: 24, y: 24 },
+    reach: 21,
   },
   {
     name: "stack",
     parts: [rect(7, 6, 34, 13, 6.5), rect(7, 17.5, 34, 13, 6.5), rect(7, 29, 34, 13, 6.5)],
     face: { x: 24, y: 24 },
+    reach: 21.5,
   },
   {
     name: "crown",
     parts: [rect(7, 13, 34, 28, 9), circle(13, 13, 6), circle(24, 12, 6), circle(35, 13, 6)],
     face: { x: 24, y: 27 },
+    reach: 21.5,
   },
   {
     name: "arch",
     parts: [{ kind: "path", d: "M7 24a17 17 0 0 1 34 0v12a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5Z" }],
     face: { x: 24, y: 26 },
+    reach: 21,
   },
   {
     name: "hexagon",
     parts: [polygon("8,24 16,10 32,10 40,24 32,38 16,38")],
     face: { x: 24, y: 24 },
+    reach: 19,
   },
-  { name: "triangle", parts: [polygon("24,9 40,37 8,37")], face: { x: 24, y: 29 } },
-  { name: "square", parts: [rect(8, 8, 32, 32, 7)], face: { x: 24, y: 24 } },
+  { name: "triangle", parts: [polygon("24,9 40,37 8,37")], face: { x: 24, y: 29 }, reach: 20 },
+  { name: "square", parts: [rect(8, 8, 32, 32, 7)], face: { x: 24, y: 24 }, reach: 20 },
   {
     name: "quarter",
     parts: [{ kind: "path", d: "M41 41H12a5 5 0 0 1-5-5A29 29 0 0 1 36 7a5 5 0 0 1 5 5Z" }],
     face: { x: 27, y: 29 },
+    reach: 22,
   },
-  { name: "capsule", parts: [rect(5, 13, 38, 22, 11)], face: { x: 24, y: 24 } },
-  { name: "diamond", parts: [polygon("24,8 40,24 24,40 8,24")], face: { x: 24, y: 24 } },
+  { name: "capsule", parts: [rect(5, 13, 38, 22, 11)], face: { x: 24, y: 24 }, reach: 19 },
+  { name: "diamond", parts: [polygon("24,8 40,24 24,40 8,24")], face: { x: 24, y: 24 }, reach: 19 },
 ];
 
 // What a bot can be colored: palette data kept with the bot, not theme colors.
@@ -106,6 +115,7 @@ export type Avatar = {
   face: Face;
   parts: readonly Part[];
   center: Point;
+  reach: number;
   /** How long into its bob it starts, so a list of bots does not move as one. */
   delay: number;
 };
@@ -148,6 +158,7 @@ export function avatarFor(id: string, setting?: AvatarSetting): Avatar {
     face,
     parts: family.parts,
     center: family.face,
+    reach: family.reach,
     delay,
   };
 }

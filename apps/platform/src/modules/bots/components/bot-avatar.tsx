@@ -3,7 +3,13 @@ import type { CSSProperties } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
 
-import { avatarFor, parseAvatarSetting, type Avatar as Look, type Part } from "../avatar";
+import {
+  avatarFor,
+  parseAvatarSetting,
+  type Avatar as Look,
+  type Part,
+  type Point,
+} from "../avatar";
 import type { Bot } from "../types";
 
 // A round corner is a stroke of the shape's own color, so a polygon only needs its points.
@@ -45,9 +51,22 @@ function Body({ parts, color }: { parts: readonly Part[]; color: string }) {
   });
 }
 
-// Eyes shut as in a smile, and the mouth the face has: a smile, a grin or none.
-function Face({ look }: { look: Look }) {
+/** What a bot is doing, which its avatar shows: at work its eyes are open (decision 0062). */
+export type BotMood = "idle" | "working";
+
+// Where the pupils look, by face: ahead, up and to the right, or off to the left.
+const LOOK: Record<Look["face"], Point> = {
+  smile: { x: 0, y: 0 },
+  grin: { x: 0, y: 0 },
+  curious: { x: 1.3, y: -1.3 },
+  glance: { x: -1.8, y: 0.4 },
+};
+
+// Eyes shut as in a smile when idle, wide open and looking about when at work; and the mouth the
+// face has: a smile, a grin or none.
+function Face({ look, mood }: { look: Look; mood: BotMood }) {
   const { center, face } = look;
+  const gaze = LOOK[face];
   return (
     <g
       className="fill-none stroke-avatar-face"
@@ -55,13 +74,53 @@ function Face({ look }: { look: Look }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {[-EYE_SPACING, EYE_SPACING].map((offset) => {
-        const x = center.x + offset - 2.6;
-        return <path key={offset} d={`M${x} ${center.y - 1.5}q2.6 3 5.2 0`} />;
-      })}
+      <g className="bot-gaze">
+        {[-EYE_SPACING, EYE_SPACING].map((offset) =>
+          mood === "working" ? (
+            <g key={offset} className="bot-eye stroke-none">
+              <circle
+                className="fill-avatar-eye"
+                cx={center.x + offset}
+                cy={center.y - 1}
+                r={5.1}
+              />
+              <circle
+                className="fill-avatar-face"
+                cx={center.x + offset + gaze.x}
+                cy={center.y - 1 + gaze.y}
+                r={2.7}
+              />
+            </g>
+          ) : (
+            <path key={offset} d={`M${center.x + offset - 2.6} ${center.y - 1.5}q2.6 3 5.2 0`} />
+          ),
+        )}
+      </g>
       {face === "smile" && <path d={`M${center.x - 6.5} ${center.y + 2.5}q6.5 6 13 0`} />}
       {face === "grin" && <path d={`M${center.x - 3} ${center.y + 4}q3 3 6 0`} />}
     </g>
+  );
+}
+
+// A bot at work gives off a ring that spreads and a dot that goes round it, in its color.
+function Working({ look }: { look: Look }) {
+  const radius = look.reach + 3;
+  return (
+    <>
+      <circle
+        className="bot-ring"
+        cx="24"
+        cy="24"
+        r={radius}
+        fill="none"
+        stroke={look.color}
+        strokeWidth="2"
+      />
+      <g className="bot-orbit">
+        <circle cx="24" cy={24 - radius} r="2.4" fill={look.color} />
+        <circle cx="30" cy={25 - radius} r="1.4" fill={look.color} opacity="0.5" />
+      </g>
+    </>
   );
 }
 
@@ -71,10 +130,12 @@ function Face({ look }: { look: Look }) {
 // by 48 one, and the size is forced with `!` because a sidebar button sizes every svg in it to 16px.
 export function BotAvatar({
   bot,
+  mood = "idle",
   className,
   children,
 }: {
   bot: Pick<Bot, "id" | "avatar">;
+  mood?: BotMood;
   className?: string;
   children?: ReactNode;
 }) {
@@ -96,12 +157,14 @@ export function BotAvatar({
           focusable="false"
           data-family={look.family}
           data-color={look.color}
+          data-mood={mood}
           className="bot-avatar size-full!"
           style={{ "--bot-delay": `-${look.delay}ms` } as CSSProperties}
         >
+          {mood === "working" && <Working look={look} />}
           <g className="bot-body">
             <Body parts={look.parts} color={look.color} />
-            <Face look={look} />
+            <Face look={look} mood={mood} />
           </g>
         </svg>
       )}

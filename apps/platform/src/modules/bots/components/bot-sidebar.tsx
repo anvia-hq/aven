@@ -6,6 +6,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/si
 
 import { useBotLastMessages } from "../hooks/use-bot-last-messages";
 import { useBots } from "../hooks/use-bots";
+import { useBotsWorking } from "../hooks/use-bots-working";
 import { BotAvatar } from "./bot-avatar";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
@@ -14,6 +15,7 @@ import { BotSettingsDialog } from "./bot-settings-dialog";
 export function BotSidebar() {
   const { bots, main } = useBots();
   const lastMessages = useBotLastMessages();
+  const working = useBotsWorking();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const others = bots.filter((bot) => !bot.isMain);
 
@@ -29,6 +31,7 @@ export function BotSidebar() {
           >
             <BotAvatar
               bot={main}
+              mood={working.has(main.id) ? "working" : "idle"}
               className="size-16 text-3xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
             >
               <AvatarBadge className="size-5! [&>svg]:size-3!">
@@ -52,9 +55,13 @@ export function BotSidebar() {
               isActive={pathname === `/bot/${bot.id}`}
               size="lg"
               tooltip={bot.name}
-              className="gap-3"
+              className="gap-3 overflow-visible"
             >
-              <BotAvatar bot={bot} className="size-10 group-data-[collapsible=icon]:size-8" />
+              <BotAvatar
+                bot={bot}
+                mood={working.has(bot.id) ? "working" : "idle"}
+                className="size-10 group-data-[collapsible=icon]:size-8"
+              />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">

@@ -38,6 +38,13 @@ describe("avatarFor", () => {
     expect(avatarFor("bot", { seed: "abc" })).not.toEqual(avatarFor("bot"));
   });
 
+  test("every shape says how far it reaches, which a bot at work gives off its ring around", () => {
+    for (const family of families) {
+      expect(family.reach).toBeGreaterThan(10);
+      expect(avatarFor("bot", { family: family.name }).reach).toBe(family.reach);
+    }
+  });
+
   test("a shape that does not exist falls back to the one the seed gives", () => {
     expect(avatarFor("bot", { family: "blob" }).family).toBe(avatarFor("bot").family);
   });
