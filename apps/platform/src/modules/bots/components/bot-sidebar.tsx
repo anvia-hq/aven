@@ -30,7 +30,6 @@ export function BotSidebar() {
           >
             <BotAvatar
               bot={main}
-              solid
               className="size-16 text-3xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
             >
               <AvatarBadge className="size-5! [&>svg]:size-3!">
@@ -46,7 +45,7 @@ export function BotSidebar() {
           </div>
         </div>
       )}
-      <SidebarMenu className="px-2">
+      <SidebarMenu className="gap-2 px-2">
         {others.map((bot) => (
           <SidebarMenuItem key={bot.id}>
             <SidebarMenuButton
@@ -54,8 +53,9 @@ export function BotSidebar() {
               isActive={pathname === `/bot/${bot.id}`}
               size="lg"
               tooltip={bot.name}
+              className="gap-3"
             >
-              <BotAvatar bot={bot} />
+              <BotAvatar bot={bot} className="size-10" />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">

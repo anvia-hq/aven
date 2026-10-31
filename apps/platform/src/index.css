@@ -76,6 +76,13 @@
   --sidebar-ring: oklch(0.5 0.01 250);
 }
 
+/* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
+:root,
+.dark {
+  --avatar-face: oklch(0.2 0.01 250);
+  --avatar-eye: oklch(0.99 0 0);
+}
+
 @theme inline {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
@@ -98,6 +105,8 @@
   --color-code: var(--code);
   --color-effort: var(--effort);
   --color-frame: var(--frame);
+  --color-avatar-face: var(--avatar-face);
+  --color-avatar-eye: var(--avatar-eye);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -197,5 +206,32 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
     height: 0;
     pointer-events: none;
     color: var(--muted-foreground);
+  }
+}
+
+/* A bot's avatar bobs gently, each at its own time (decision 0062). */
+.bot-avatar {
+  overflow: visible;
+}
+
+.bot-body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes bot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bot-body {
+    animation: bot-bob 3.6s ease-in-out infinite;
+    animation-delay: var(--bot-delay, 0ms);
   }
 }

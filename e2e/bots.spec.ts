@@ -97,7 +97,7 @@ test.describe("bots", () => {
     const [, scoutRow] = await (await page.request.get("/api/bots")).json();
     expect(scoutRow).toMatchObject({
       name: "Scout",
-      avatar: "🔭",
+      avatar: "",
       isMain: false,
       providerId: null,
       description: "Researches what you ask.",
@@ -173,12 +173,11 @@ test.describe("bots", () => {
     await expect(page.getByText("ANTHROPIC_API_KEY is not set")).toBeVisible();
   });
 
-  test("the person changes the bot's name and avatar", async ({ page }) => {
+  test("the person changes the bot's name and instruction", async ({ page }) => {
     await registerUser(page, "bot-edit", "Bot Editor");
     await page.goto("/bot");
     await page.getByRole("button", { name: "Bot settings" }).click();
     await page.getByLabel("Name").fill("Pip");
-    await page.getByLabel("Avatar").fill("🐦");
     await page.getByLabel("Instruction").fill("Talk like a pirate.");
     await page.getByRole("button", { name: "Save changes" }).click();
 
@@ -194,7 +193,71 @@ test.describe("bots", () => {
     await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await page.getByRole("button", { name: "Bot settings" }).click();
     await expect(page.getByLabel("Instruction")).toHaveValue("Talk like a pirate.");
-    await expect(page.getByLabel("Avatar")).toHaveValue("🐦");
+  });
+
+  // A bot's avatar (decision 0062): it has a character from the start, drawn from its id, and the
+  // person can pick another.
+  test("a bot has a character of its own, and the person picks another", async ({ page }) => {
+    await registerUser(page, "bot-look", "Bot Looker");
+    await page.goto("/bot");
+    // By its label, not its role: an open dialog hides the page behind it from role queries.
+    const look = page.locator('a[aria-label="Aven, main bot"] svg[data-family]');
+    await expect(look).toBeVisible();
+    const family = await look.getAttribute("data-family");
+    const color = await look.getAttribute("data-color");
+    expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+
+    // The same bot looks the same on the next visit, without anything having been saved.
+    await page.reload();
+    await expect(look).toHaveAttribute("data-family", family!);
+    await expect(look).toHaveAttribute("data-color", color!);
+
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Change avatar" }).click();
+    await page
+      .getByRole("group", { name: "Shape" })
+      .getByRole("button", { name: "hexagon" })
+      .click();
+    await page.getByRole("button", { name: "Color #ff7a00" }).click();
+    // The avatar in the dialog changes before anything is saved.
+    const preview = dialog
+      .getByRole("button", { name: "Change avatar" })
+      .locator("svg[data-family]");
+    await expect(preview).toHaveAttribute("data-family", "hexagon");
+    await expect(preview).toHaveAttribute("data-color", "#ff7a00");
+    await expect(look).toHaveAttribute("data-family", family!);
+
+    await page.keyboard.press("Escape");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Bot saved")).toBeVisible();
+    await expect(look).toHaveAttribute("data-family", "hexagon");
+    await expect(look).toHaveAttribute("data-color", "#ff7a00");
+
+    // It is kept, and the picker opens on it.
+    await page.reload();
+    await expect(look).toHaveAttribute("data-family", "hexagon");
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Change avatar" }).click();
+    await expect(
+      page.getByRole("group", { name: "Shape" }).getByRole("button", { name: "hexagon" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // Generate offers characters to choose from; closing without saving keeps what was kept.
+    await page.getByRole("tab", { name: "Generate" }).click();
+    await page.getByRole("button", { name: "Use this character" }).first().click();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(look).toHaveAttribute("data-family", "hexagon");
+
+    // Reset goes back to the character the bot's id draws.
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Change avatar" }).click();
+    await page.getByRole("button", { name: "Reset" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").getByRole("button", { name: "Save changes" }).click();
+    await expect(look).toHaveAttribute("data-family", family!);
+    await expect(look).toHaveAttribute("data-color", color!);
   });
 
   test("the person chooses the model a bot talks with", async ({ page }) => {

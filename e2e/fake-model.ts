@@ -34,7 +34,6 @@ const createBot = (id: string) => ({
       name: "Scout",
       instruction: "You research what the person asks and report what you found.",
       description: "Researches what you ask.",
-      avatar: "🔭",
     }),
   },
 });
