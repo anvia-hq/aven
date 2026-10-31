@@ -99,7 +99,7 @@ A runner (the runtime of decision 0008) needs `git` besides Docker and is a comp
 
 ## packages/protocol
 
-The wire protocol shared by the control plane, runtimes and every client (see decision 0008): run event types plus the pure `applyEvent` reducer (`events.ts`), and the runtime WebSocket messages (`runtime-wire.ts`). No runtime imports. Non-TypeScript clients follow `docs/products/0004-native-client-contract.md`. Clients (the platform) depend on this, never on `@aven/agents`.
+The wire protocol shared by the control plane, runtimes and every client (see decision 0008): run event types plus the pure `applyEvent` reducer (`events.ts`), and the runtime WebSocket messages (`runtime-wire.ts`; what each `WIRE_VERSION` added is in `docs/products/0005-runtime-wire-versions.md`). No runtime imports. Non-TypeScript clients follow `docs/products/0004-native-client-contract.md`. Clients (the platform) depend on this, never on `@aven/agents`.
 
 ## packages/agents
 

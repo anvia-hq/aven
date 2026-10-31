@@ -1,0 +1,23 @@
+# Runtime wire versions
+
+Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
+
+- **21**: a runner can run a shell for a thread on a pseudo-terminal, `terminal.open`, `terminal.resize` and `terminal.close` (decision 0053).
+- **20**: `run.start` and `run.resume` can carry the credential for minting identity tokens, `identity` (decision 0049).
+- **19**: `run.start` and `run.resume` can carry the project's environment variables, `env` (decision 0045).
+- **18**: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
+- **17**: a runner could be asked to commit and push a thread's branch, `repo.push` (decision 0040); the call is gone, the agent ships with `gh` (decision 0044), and the version was not lowered.
+- **16**: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
+- **15**: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
+- **14**: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
+- **13**: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
+- **12**: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
+- **11**: a runner answers `files.list` and `files.read` (decision 0031).
+- **10**: a runner answers `diff.get` with a thread's changes (decision 0030).
+- **9**: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
+- **8**: a run can suspend on the agent's question and be resumed with the answer, `run.resume` (decision 0020).
+- **7**: a run can use the `azure` provider (decision 0019), which an older runtime would build as an Anthropic client.
+- **6**: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix` (decision 0018).
+- **5**: a runtime can stream a thread's desktop to a viewer and answer the control plane's calls about it (decision 0015).
+- **4**: a runtime can ask for access to the thread's repository, `repo.access` (decision 0013).
+- **3**: a run is only started and cancelled; commands and processes are the sandbox's, so no job notices, job stops or steering (decision 0012).

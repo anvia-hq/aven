@@ -325,24 +325,5 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
-// Version 21: a runner can run a shell for a thread on a pseudo-terminal, `terminal.open`, `terminal.resize` and `terminal.close` (decision 0053).
-// Version 20: `run.start` and `run.resume` can carry the credential for minting identity tokens, `identity` (decision 0049).
-// Version 19: `run.start` and `run.resume` can carry the project's environment variables, `env` (decision 0045).
-// Version 18: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
-// Version 17: a runner could be asked to commit and push a thread's branch, `repo.push` (decision 0040); the call is gone, the agent ships with `gh` (decision 0044), and the version was not lowered.
-// Version 16: the control plane can ask a runner to start a thread's sandbox without a run, `desktop.wake` (decision 0039).
-// Version 15: `run.start` can carry the files and skills the prompt mentions, and a runner answers `files.search` (decision 0036).
-// Version 14: `run.start` and `run.resume` carry the run's skills, which a runner fetches with `skills.get` (decision 0035).
-// Version 13: `run.start` can carry the files the user attached, which a runner copies into the sandbox (decision 0034).
-// Version 12: a runner keeps the images its agent shows with `show_image` and answers `artifacts.read` (decision 0033).
-// Version 11: a runner answers `files.list` and `files.read` (decision 0031).
-// Version 10: a runner answers `diff.get` with a thread's changes (decision 0030).
-// Version 9: a run survives a dropped connection: its events are numbered, `hello` lists the runs a runtime still holds, and the control plane answers each with `run.attach` or `run.ack` (decision 0023).
-// Version 8: a run can suspend on the agent's question and be resumed with the answer, `run.resume`
-// (decision 0020). Version 7: a run can use the `azure` provider (decision 0019), which an older runtime would
-// build as an Anthropic client. Version 6: a runtime can compact the conversation, `memory.snapshot` and `memory.replacePrefix`
-// (decision 0018). Version 5: a runtime can stream a thread's desktop to a viewer and answer the control plane's
-// calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
-// 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
-// so no job notices, job stops or steering (decision 0012).
+// What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
 export const WIRE_VERSION = 21;
