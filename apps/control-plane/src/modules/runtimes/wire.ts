@@ -104,6 +104,12 @@ const frame = z.discriminatedUnion("type", [
     viewerId: z.string().min(1),
     reason: z.string(),
   }),
+  z.object({ type: z.literal("terminal.opened"), viewerId: z.string().min(1) }),
+  z.object({
+    type: z.literal("terminal.closed"),
+    viewerId: z.string().min(1),
+    reason: z.string(),
+  }),
   z.object({
     type: z.literal("call"),
     id: z.string().min(1),

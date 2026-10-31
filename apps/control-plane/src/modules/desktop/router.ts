@@ -1,9 +1,8 @@
-import type { ServerWebSocket } from "bun";
 import { Elysia } from "elysia";
 
 import { bytesOf } from "../../bytes";
+import { bufferedAmount, CloseCode, originAllowed } from "../../websocket";
 import { authRouter } from "../auth/router";
-import { trustedOrigins } from "../auth/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { threadsService } from "../threads/service";
@@ -14,20 +13,6 @@ import { createDesktopService } from "./service";
 const VIEWER_SUBPROTOCOL = "binary";
 // Stop a viewer whose browser cannot keep up, instead of buffering the desktop without limit.
 const MAX_BROWSER_BUFFER_BYTES = 8 * 1024 * 1024;
-const GOING_AWAY = 1001;
-const POLICY_VIOLATION = 1008;
-const INTERNAL_ERROR = 1011;
-
-// A browser always sends its page's origin on a WebSocket, and cookies alone would let another
-// site open one. Anything that is not a browser has no Origin and is let through.
-function originAllowed(request: Request) {
-  const origin = request.headers.get("origin");
-  return origin === null || trustedOrigins.includes(origin);
-}
-
-// Bun's sockets know how much is waiting to go out; Elysia's type for them does not say so.
-const bufferedAmount = (raw: object) =>
-  (raw as Pick<ServerWebSocket, "getBufferedAmount">).getBufferedAmount();
 
 // Watching and taking over a thread's desktop (decision 0015). `/stream` is a WebSocket carrying
 // the VNC session in binary messages, as noVNC expects.
@@ -79,20 +64,20 @@ export const desktopRouter = (hub: RuntimeHub) => {
           const handle = await service.openViewer(organizationId, params.id, {
             data(bytes) {
               if (bufferedAmount(ws.raw) > MAX_BROWSER_BUFFER_BYTES) {
-                ws.close(POLICY_VIOLATION, "The viewer is too slow");
+                ws.close(CloseCode.PolicyViolation, "The viewer is too slow");
                 return;
               }
               // Elysia would encode a Uint8Array as JSON text; the native socket sends bytes as bytes.
               ws.raw.send(bytes);
             },
-            closed: (reason) => ws.close(GOING_AWAY, reason.slice(0, 120)),
+            closed: (reason) => ws.close(CloseCode.GoingAway, reason.slice(0, 120)),
           });
           // The browser may have left while the runner was answering; nothing would close this.
           if (ws.raw.readyState !== WebSocket.OPEN) handle.close();
           else viewers.set(ws.raw, handle);
         } catch (error) {
           ws.close(
-            INTERNAL_ERROR,
+            CloseCode.InternalError,
             (error instanceof Error ? error.message : "Failed").slice(0, 120),
           );
         }

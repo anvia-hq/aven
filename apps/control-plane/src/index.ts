@@ -16,6 +16,7 @@ import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
 import { runsService } from "./modules/runs/service";
 import { skillsRouter } from "./modules/skills/router";
+import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
 import { scopedVariablesRouter, variablesRouter } from "./modules/variables/router";
@@ -36,6 +37,7 @@ const app = new Elysia()
   .use(providersRouter)
   .use(runtimesRouter)
   .use(skillsRouter)
+  .use(terminalRouter(runtimeHub))
   .use(threadsRouter)
   .use(usersRouter)
   .use(scopedVariablesRouter)

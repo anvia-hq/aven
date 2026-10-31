@@ -25,6 +25,7 @@ import {
   filesSearchParams,
 } from "./call-params";
 import { DesktopViewers } from "./desktop-viewers";
+import { TerminalSessions } from "./terminal-sessions";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
@@ -161,6 +162,13 @@ export function startRuntime(options: RuntimeOptions) {
     buffered: () => socket?.bufferedAmount ?? 0,
   });
 
+  // Runs the shells of the terminals the control plane opens (decision 0053).
+  const terminals = new TerminalSessions(options.sandbox, {
+    send: (message) => void send(message),
+    sendBinary,
+    buffered: () => socket?.bufferedAmount ?? 0,
+  });
+
   const sendOrWarn = (message: RuntimeToControlPlane) => {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
@@ -209,6 +217,7 @@ export function startRuntime(options: RuntimeOptions) {
     if (stopped || hasRun(threadId)) return;
     const busy =
       viewers.watching(threadId) > 0 ||
+      terminals.count(threadId) > 0 ||
       (await boxes
         .get(threadId)
         ?.hasRunningProcesses()
@@ -336,6 +345,15 @@ export function startRuntime(options: RuntimeOptions) {
       case "desktop.close":
         viewers.close(message.viewerId);
         return;
+      case "terminal.open":
+        terminals.open(message.viewerId, message.threadId, message);
+        return;
+      case "terminal.resize":
+        terminals.resize(message.viewerId, message.cols, message.rows);
+        return;
+      case "terminal.close":
+        terminals.close(message.viewerId);
+        return;
       case "call":
         await answer(message.id, () => callOf(message.method, message.params));
         return;
@@ -374,7 +392,9 @@ export function startRuntime(options: RuntimeOptions) {
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
         const frame = decodeViewerFrame(new Uint8Array(event.data));
-        if (frame) viewers.write(frame.viewerId, frame.payload);
+        if (!frame) return;
+        if (terminals.has(frame.viewerId)) terminals.write(frame.viewerId, frame.payload);
+        else viewers.write(frame.viewerId, frame.payload);
         return;
       }
       let message: ControlPlaneToRuntime;
@@ -391,6 +411,7 @@ export function startRuntime(options: RuntimeOptions) {
     ws.onclose = (event) => {
       // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
+      terminals.closeAll();
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
         options.onRefused?.(event.reason || "Refused by the control plane");
@@ -414,6 +435,7 @@ export function startRuntime(options: RuntimeOptions) {
       clearTimeout(retry);
       for (const timer of idleTimers.values()) clearTimeout(timer);
       viewers.closeAll();
+      terminals.closeAll();
       socket?.close();
       await Promise.all(releasing.values());
       await options.sandbox.dispose();

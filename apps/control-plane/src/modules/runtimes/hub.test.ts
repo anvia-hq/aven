@@ -184,6 +184,52 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(() => connection.openViewer("t", sink)).not.toThrow();
   });
 
+  test("a terminal is opened, resized and closed on the runtime, and only it answers for its id", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "t" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const events: string[] = [];
+    const sink = {
+      data: () => events.push("data"),
+      closed: (reason: string) => events.push(`closed: ${reason}`),
+    };
+
+    const terminal = connection.openTerminal("t", { cols: 100, rows: 30 }, sink);
+    await until(() => received.some((m) => m.type === "terminal.open"));
+    const opened = received.find((m) => m.type === "terminal.open")!;
+    if (opened.type !== "terminal.open") throw new Error("unreachable");
+    expect(opened).toMatchObject({ threadId: "t", cols: 100, rows: 30 });
+
+    // A resize before the shell has opened is dropped; a desktop's answer is not a terminal's.
+    terminal.resize(80, 24);
+    ws.send(JSON.stringify({ type: "desktop.opened", viewerId: opened.viewerId }));
+    ws.send(JSON.stringify({ type: "terminal.opened", viewerId: opened.viewerId }));
+    await Bun.sleep(50);
+    terminal.resize(80, 24);
+    await until(() => received.some((m) => m.type === "terminal.resize"));
+    expect(received.find((m) => m.type === "terminal.resize")).toEqual({
+      type: "terminal.resize",
+      viewerId: opened.viewerId,
+      cols: 80,
+      rows: 24,
+    });
+    expect(received.filter((m) => m.type === "terminal.resize")).toHaveLength(1);
+
+    ws.send(JSON.stringify({ type: "desktop.closed", viewerId: opened.viewerId, reason: "no" }));
+    ws.send(
+      JSON.stringify({
+        type: "terminal.closed",
+        viewerId: opened.viewerId,
+        reason: "The shell ended",
+      }),
+    );
+    await until(() => events.length > 0);
+    expect(events).toEqual(["closed: The shell ended"]);
+    terminal.close();
+  });
+
   test("a runtime can only touch runs the control plane started on it", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
     const ws = await open(server.server?.port, token);

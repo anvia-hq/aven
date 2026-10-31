@@ -209,6 +209,10 @@ export type ControlPlaneToRuntime =
   /** Start streaming the thread's desktop (VNC) as binary frames for `viewerId`. */
   | { type: "desktop.open"; viewerId: string; threadId: string }
   | { type: "desktop.close"; viewerId: string }
+  /** Start a shell in the thread's sandbox on a pseudo-terminal of `cols` x `rows`; its bytes travel as binary frames for `viewerId` (decision 0053). */
+  | { type: "terminal.open"; viewerId: string; threadId: string; cols: number; rows: number }
+  | { type: "terminal.resize"; viewerId: string; cols: number; rows: number }
+  | { type: "terminal.close"; viewerId: string }
   | {
       type: "call";
       id: string;
@@ -236,6 +240,10 @@ export type RuntimeToControlPlane =
   | { type: "desktop.opened"; viewerId: string }
   /** The viewer ended, or could not start: `reason` says why in words. */
   | { type: "desktop.closed"; viewerId: string; reason: string }
+  /** The terminal's shell is running; its bytes follow as binary frames. */
+  | { type: "terminal.opened"; viewerId: string }
+  /** The shell ended, or could not start: `reason` says why in words. */
+  | { type: "terminal.closed"; viewerId: string; reason: string }
   | Reply;
 
 /** The runtime reads and writes the conversation, which the control plane owns. */
@@ -292,7 +300,7 @@ export const CloseCode = {
   Revoked: 4002,
 } as const;
 
-// A viewer's VNC bytes travel as binary frames, in both directions: the viewer id as 16 bytes
+// A viewer's VNC bytes, or a terminal's, travel as binary frames, in both directions: the viewer id as 16 bytes
 // followed by the payload. Everything else on the wire is JSON text.
 const VIEWER_ID_BYTES = 16;
 
@@ -314,6 +322,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 21: a runner can run a shell for a thread on a pseudo-terminal, `terminal.open`, `terminal.resize` and `terminal.close` (decision 0053).
 // Version 20: `run.start` and `run.resume` can carry the credential for minting identity tokens, `identity` (decision 0049).
 // Version 19: `run.start` and `run.resume` can carry the project's environment variables, `env` (decision 0045).
 // Version 18: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
@@ -333,4 +342,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 20;
+export const WIRE_VERSION = 21;

@@ -221,6 +221,18 @@ export interface ThreadWorkspaces {
   ): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
+  /**
+   * The command that opens a shell in the thread's running container, on a terminal the caller
+   * provides, or undefined when it is not running; never starts one (decision 0053). `env` is for
+   * the command's own process: the project's variables are named in `argv` and valued only there.
+   * `hangup` is the command that ends that shell and what it started, which Docker does not do when
+   * the client of an `exec` goes away; it is safe to run more than once. `sessionId` names the shell
+   * for it. Without `shell`, a thread has no terminal.
+   */
+  shell?(
+    threadId: string,
+    sessionId: string,
+  ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   /** The thread's workspace directory on this machine once it holds a clone; never clones one. */
   workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
@@ -354,6 +366,39 @@ export class Sandboxes implements ThreadWorkspaces {
 
   desktop(threadId: string) {
     return this.#hub.isConnected(threadId) ? this.#hub.desktop(threadId) : undefined;
+  }
+
+  shell(threadId: string, sessionId: string) {
+    if (!/^[\w-]+$/.test(sessionId)) throw new Error("Invalid terminal id");
+    if (!this.#running.has(threadId) || !this.#hub.isConnected(threadId)) return undefined;
+    const project = this.#projectEnv.get(threadId) ?? {};
+    const name = this.#name(threadId);
+    // The shell is its session's leader, so its pid, kept in a file, names every process of it.
+    const pidFile = `/tmp/.aven-terminal-${sessionId}`;
+    const argv = [
+      "docker",
+      "exec",
+      "-it",
+      "-w",
+      WORKSPACE_DIR,
+      "-e",
+      "TERM=xterm-256color",
+      // Named without a value, Docker takes each from this command's own environment.
+      ...Object.keys(project).flatMap((variable) => ["-e", variable]),
+      name,
+      "sh",
+      "-c",
+      `echo $$ > ${pidFile}; exec bash`,
+    ];
+    const hangup = [
+      "docker",
+      "exec",
+      name,
+      "sh",
+      "-c",
+      `pid=$(cat ${pidFile} 2>/dev/null) && pkill -HUP -s "$pid"; rm -f ${pidFile}`,
+    ];
+    return { argv, env: { ...process.env, ...project } as Record<string, string>, hangup };
   }
 
   async workspace(threadId: string) {

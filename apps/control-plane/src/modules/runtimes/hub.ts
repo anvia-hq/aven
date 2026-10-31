@@ -112,6 +112,11 @@ export class RuntimeConnection {
     return this.#viewers.open(threadId, sink);
   }
 
+  // Starts a shell in a thread's sandbox, with the same rules as `openViewer` (decision 0053).
+  openTerminal(threadId: string, size: { cols: number; rows: number }, sink: ViewerSink) {
+    return this.#viewers.openTerminal(threadId, size, sink);
+  }
+
   // Asks the runtime about a thread (its desktop, changes or files). Rejects with the runtime's own
   // error, or when it does not answer in time.
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
@@ -136,7 +141,7 @@ export class RuntimeConnection {
     await this.#dispatch(message);
   }
 
-  // A binary frame: a viewer's VNC bytes.
+  // A binary frame: a viewer's VNC bytes or a terminal's.
   receiveBinary(frame: Uint8Array) {
     if (!this.#ready) return;
     this.#viewers.receive(frame);
@@ -173,10 +178,16 @@ export class RuntimeConnection {
         await this.#answer(message.id, message.method, message.params);
         return;
       case "desktop.opened":
-        this.#viewers.opened(message.viewerId);
+        this.#viewers.opened(message.viewerId, "desktop");
         return;
       case "desktop.closed":
-        this.#viewers.closed(message.viewerId, message.reason);
+        this.#viewers.closed(message.viewerId, "desktop", message.reason);
+        return;
+      case "terminal.opened":
+        this.#viewers.opened(message.viewerId, "terminal");
+        return;
+      case "terminal.closed":
+        this.#viewers.closed(message.viewerId, "terminal", message.reason);
         return;
       case "reply":
         this.#calls.settle(message);
