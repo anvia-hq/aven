@@ -1,4 +1,4 @@
-import { BOT_ASK_TIMEOUT_MS, type Bot, type BotEvent } from "@aven/protocol/bots";
+import { BOT_ASK_TIMEOUT_MS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
 import type { BotAnswered } from "@aven/protocol/runtime-wire";
 
 import { orNotFound, UnavailableError, UnprocessableError } from "../../errors";
@@ -37,7 +37,7 @@ function within<T>(answer: Promise<T>, ms: number, message: string) {
 export const createBotChats = (runner: BotRunner, options: { askTimeoutMs?: number } = {}) => ({
   async send(userId: string, botId: string, text: string) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
-    await runner.send(bot, userId, text, await modelOf(userId, bot));
+    await runner.send(bot, userId, personPrompt(text), await modelOf(userId, bot));
   },
 
   // A bot writes to another of the person's bots and waits for what it sends back (decision 0063).

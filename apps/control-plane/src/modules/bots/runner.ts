@@ -302,7 +302,9 @@ export class BotRunner {
         signal: this.#shutdown.signal,
       });
     } catch (failure) {
-      if (!this.#shutdown.signal.aborted) {
+      if (this.#shutdown.signal.aborted) {
+        error = "The server is shutting down";
+      } else {
         console.warn(`Bot ${bot.id} could not reply:`, failure);
         error = describeError(failure);
         this.#emit(channel, { type: "error", message: error });

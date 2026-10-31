@@ -142,6 +142,13 @@ test.describe("bots", () => {
     await message.press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
+    // Scout's own hello comes first, so the eyes seen open below are for what Aven asks of it.
+    await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
+    await page.getByRole("link", { name: "Aven, main bot" }).click();
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+
     // `@` offers the person's other bots, and not the one written to.
     await message.click();
     await page.keyboard.type("Ask @Sco");
@@ -190,6 +197,9 @@ test.describe("bots", () => {
     // Only the main bot writes to the others, so `@` offers nothing in this chat.
     await page.getByRole("textbox", { name: "Message" }).click();
     await page.keyboard.type("@Av");
+    await expect(page.getByRole("textbox", { name: "Message" })).toContainText("@Av");
+    // Absence cannot be waited for, so the menu gets the time it takes to open elsewhere.
+    await page.waitForTimeout(300);
     await expect(page.getByRole("listbox", { name: "Mention" })).toHaveCount(0);
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");

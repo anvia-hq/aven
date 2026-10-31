@@ -61,10 +61,10 @@ export function useBotChat(botId: string) {
       }
     };
     source.onerror = () => {
-      // The browser retries on its own; only a stream it has given up on is lost.
-      if (source.readyState !== EventSource.CLOSED) return;
+      // The browser retries on its own, and the snapshot it hears again says whether the bot is at
+      // work; until then it is not claimed to be. Only a stream it has given up on is lost.
       setTyping(false);
-      setError("Lost the connection to the server");
+      if (source.readyState === EventSource.CLOSED) setError("Lost the connection to the server");
     };
     return () => source.close();
   }, [botId, setLastMessages]);

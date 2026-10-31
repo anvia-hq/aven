@@ -1,4 +1,4 @@
-import type { BotChatMessage, BotChatPeer } from "./types";
+import type { Bot, BotChatMessage, BotChatPeer } from "./types";
 
 /** What the chat is made of: a message, or a run of messages between bots shown as one line. */
 export type ChatItem =
@@ -40,4 +40,18 @@ export function activitySummary(messages: readonly BotChatMessage[]) {
 function leadOf(messages: readonly BotChatMessage[]) {
   if (messages.length > 1) return `${messages.length} messages with`;
   return messages[0]?.peer?.direction === "to" ? "Messaged" : "Heard from";
+}
+
+/**
+ * The bots a line is with, as the person's bots when they are found there, by id when it is known
+ * and by name when not, and one for each: the same bot known by name only (a chat read back from
+ * memory) and by id (a message just sent) is not two. A bot that is gone, or renamed since, is
+ * drawn from its name.
+ */
+export function peerBots(peers: readonly BotChatPeer[], bots: readonly Bot[]) {
+  const found = peers.map((peer) => {
+    const bot = bots.find((each) => (peer.id ? each.id === peer.id : each.name === peer.name));
+    return bot ?? { id: peerKey(peer), name: peer.name, avatar: "" };
+  });
+  return [...new Map(found.map((bot) => [bot.id, bot])).values()];
 }

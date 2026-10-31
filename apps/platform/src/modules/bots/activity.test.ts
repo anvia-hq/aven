@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { activitySummary, chatItems } from "./activity";
-import type { BotChatMessage } from "./types";
+import { activitySummary, chatItems, peerBots } from "./activity";
+import type { Bot, BotChatMessage } from "./types";
 
 const said = (id: number, text: string, peer?: BotChatMessage["peer"]): BotChatMessage => ({
   id: `m-${id}`,
@@ -61,5 +61,20 @@ describe("activitySummary", () => {
     ]);
     expect(summary.lead).toBe("4 messages with");
     expect(summary.peers.map((peer) => peer.name)).toEqual(["Scout", "Ana"]);
+  });
+});
+
+describe("peerBots", () => {
+  const scout = { id: "b1", name: "Scout", avatar: "" } as Bot;
+
+  test("is one bot when it is known by name in one message and by id in another", () => {
+    const found = peerBots([to("Scout"), { id: "b1", name: "Scout", direction: "from" }], [scout]);
+    expect(found).toEqual([scout]);
+  });
+
+  test("draws a bot that is not among the person's from its name", () => {
+    expect(peerBots([to("Gone")], [scout])).toEqual([
+      { id: "name:Gone", name: "Gone", avatar: "" },
+    ]);
   });
 });

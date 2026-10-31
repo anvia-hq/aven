@@ -114,6 +114,38 @@ describe("RemoteBotReplier", () => {
     expect(usable.grants.issued).toEqual([]);
   });
 
+  test("grants nothing when the list of the main bot's peers cannot be had", async () => {
+    const run = fakeRunner({
+      bots: {
+        list: async () => {
+          throw new Error("database is down");
+        },
+      },
+    });
+
+    await expect(run.replier.answer(input(() => undefined))).rejects.toThrow("database is down");
+    expect(run.grants.issued).toEqual([]);
+    expect(run.started).toEqual([]);
+  });
+
+  test("does not start a reply that a shutdown overtook while the peers were listed", async () => {
+    const controller = new AbortController();
+    const run = fakeRunner({
+      bots: {
+        list: async () => {
+          controller.abort(new Error("Shutting down"));
+          return [bot];
+        },
+      },
+    });
+
+    await expect(run.replier.answer(input(() => undefined, controller.signal))).rejects.toThrow(
+      "Shutting down",
+    );
+    expect(run.started).toEqual([]);
+    expect(run.grants.issued).toEqual([]);
+  });
+
   test("sends the runner the bot, what was said and a token for its model", async () => {
     const run = fakeRunner();
     const answering = run.replier.answer(input(() => undefined));

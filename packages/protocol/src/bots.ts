@@ -40,7 +40,7 @@ export type Bot = {
  */
 export type BotChatPeer = {
   name: string;
-  /** Known when the message was sent live; a chat read back from what the bot remembers has the name only. */
+  /** Known when the message was sent live, and for a bot this one wrote to; a chat read back has the name only for a bot that wrote to this one. */
   id?: string;
   /** `to`: this bot wrote it to the peer. `from`: the peer wrote it to this bot. */
   direction: "to" | "from";
@@ -70,6 +70,16 @@ export const botPrompt = (from: string, text: string) =>
 
 /** The prompt a bot is given for a note from the app: not the person's, and not shown to them. */
 export const botNote = (text: string) => `[note] ${text}`;
+
+// The person's own text that starts like one of those is kept from being read as one (invisibly,
+// with a zero-width space), so what is shown when it is sent and when it is read back is the same.
+const ZERO_WIDTH_SPACE = "\u200B";
+
+/** The prompt a bot is given for what the person typed. */
+export const personPrompt = (text: string) => {
+  const { from, note } = parseBotPrompt(text);
+  return from !== undefined || note ? `${ZERO_WIDTH_SPACE}${text}` : text;
+};
 
 /** Who sent a prompt and what it said: a bot, the app (a note), or the person, whose text is left whole. */
 export function parseBotPrompt(prompt: string): { from?: string; note?: boolean; text: string } {

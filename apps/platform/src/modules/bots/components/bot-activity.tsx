@@ -2,16 +2,9 @@ import { ChevronRight } from "@mynaui/icons-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
-import { activitySummary, peerKey } from "../activity";
-import type { Bot, BotChatMessage, BotChatPeer } from "../types";
+import { activitySummary, peerBots } from "../activity";
+import type { Bot, BotChatMessage } from "../types";
 import { BotAvatar } from "./bot-avatar";
-
-// A peer as a bot of the person's, by id when it is known and by name when not; a bot that is
-// gone, or renamed since, is drawn from its name.
-function botOf(peer: BotChatPeer, bots: readonly Bot[]) {
-  const found = bots.find((bot) => (peer.id ? bot.id === peer.id : bot.name === peer.name));
-  return found ?? { id: peerKey(peer), name: peer.name, avatar: "" };
-}
 
 // Messages between this bot and others as one line that opens, as in the Anvia harness (decision
 // 0063): Messaged, Heard from, or how many messages with whom; open, each message with who wrote it
@@ -26,7 +19,7 @@ export function BotActivity({
   self: Pick<Bot, "name">;
 }) {
   const { lead, peers } = activitySummary(messages);
-  const others = peers.map((peer) => botOf(peer, bots));
+  const others = peerBots(peers, bots);
   return (
     <Collapsible className="my-3 w-full" data-activity="bots">
       <CollapsibleTrigger className="group mx-auto flex items-center gap-2 rounded py-1 text-xs text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">

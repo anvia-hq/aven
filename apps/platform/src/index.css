@@ -221,11 +221,12 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   transform-origin: center;
 }
 
-/* The box the avatar is drawn in is cropped to 4 4 40 40, so its middle is 20 from its corner. */
+/* The reference box of view-box starts at the origin of the user space, not at the viewBox's 4 4, so
+   the middle of the avatar (drawn in 4 4 40 40) is 24 24. */
 .bot-orbit,
 .bot-ring {
   transform-box: view-box;
-  transform-origin: 20px 20px;
+  transform-origin: 24px 24px;
 }
 
 @keyframes bot-bob {

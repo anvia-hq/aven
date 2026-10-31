@@ -15,10 +15,9 @@ export function useBotsWorking(): ReadonlySet<string> {
         // Not a list of ids: left as it was.
       }
     };
-    source.onerror = () => {
-      // The browser retries on its own; what it cannot tell is not claimed to be going on.
-      if (source.readyState === EventSource.CLOSED) setWorking(new Set());
-    };
+    // The browser retries on its own, and the first thing it hears again says who is at work; until
+    // then what it cannot tell is not claimed to be going on.
+    source.onerror = () => setWorking(new Set());
     return () => source.close();
   }, []);
 
