@@ -1,17 +1,21 @@
-import { useAtom } from "jotai";
+import { getDefaultStore, useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 
+import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import { botsAtom } from "../atoms/bots-atom";
 import type { Bot, BotPatch } from "../types";
 
 const botsStore = createListStore<Bot>({ path: "/bots", atom: botsAtom, label: "bots" });
 
 // Bots belong to the signed-in user, so drop them on sign-out; the next user refetches.
-export const resetBots = botsStore.reset;
+export function resetBots() {
+  botsStore.reset();
+  getDefaultStore().set(botLastMessagesAtom, {});
+}
 
 // The user's bots, and their main one. Loads on first use; the first load makes the main bot.
 export function useBots() {

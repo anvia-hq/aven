@@ -23,40 +23,50 @@ export function BotChat({ bot, actions }: { bot: Bot; actions?: ReactNode }) {
         {actions}
       </header>
 
-      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 p-4">
-          {messages.length === 0 && !typing && (
-            <p className="py-16 text-center text-sm text-muted-foreground">
-              Say hello to {bot.name}.
-            </p>
-          )}
-          {messages.map((message) => {
-            const mine = message.role === "user";
-            return (
-              <Message key={message.id} align={mine ? "end" : "start"}>
-                {!mine && (
-                  <MessageAvatar>
-                    <BotAvatar bot={bot} size="sm" />
-                  </MessageAvatar>
-                )}
-                <MessageContent>
-                  <Bubble variant={mine ? "default" : "muted"} align={mine ? "end" : "start"}>
-                    <BubbleContent className="whitespace-pre-wrap">{message.text}</BubbleContent>
-                  </Bubble>
-                </MessageContent>
-              </Message>
-            );
-          })}
-          {typing && <TypingIndicator name={bot.name} />}
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
+      {/* As in a thread: the conversation scrolls the full height, behind the composer. */}
+      <div className="relative min-h-0 flex-1">
+        <div ref={scroll} className="h-full overflow-y-auto">
+          {/* The bottom padding clears the composer. */}
+          <div className="mx-auto flex max-w-4xl flex-col gap-2 px-4 pt-5 pb-48">
+            {messages.length === 0 && !typing && (
+              <p className="py-16 text-center text-sm text-muted-foreground">
+                Say hello to {bot.name}.
+              </p>
+            )}
+            {messages.map((message) => {
+              const mine = message.role === "user";
+              return (
+                <Message key={message.id} align={mine ? "end" : "start"}>
+                  {!mine && (
+                    <MessageAvatar>
+                      <BotAvatar bot={bot} size="sm" />
+                    </MessageAvatar>
+                  )}
+                  <MessageContent>
+                    <Bubble variant={mine ? "default" : "muted"} align={mine ? "end" : "start"}>
+                      <BubbleContent className="whitespace-pre-wrap">{message.text}</BubbleContent>
+                    </Bubble>
+                  </MessageContent>
+                </Message>
+              );
+            })}
+            {typing && <TypingIndicator name={bot.name} />}
+            {error && (
+              <p
+                role="alert"
+                className="rounded-lg border border-destructive/40 px-4 py-3 text-sm text-destructive"
+              >
+                {error}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3">
+          <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
+            <BotComposer onSend={send} placeholder={`Message ${bot.name}`} />
+          </div>
         </div>
       </div>
-
-      <BotComposer onSend={send} placeholder={`Message ${bot.name}`} />
     </div>
   );
 }

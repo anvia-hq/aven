@@ -10,8 +10,9 @@ type Props = {
   placeholder: string;
 };
 
-// Where the person writes to a bot. Enter sends, Shift+Enter starts a new line. The bot may be
-// at work: a message sent meanwhile waits its turn, so the composer is never locked.
+// Where the person writes to a bot, drawn like the thread's composer: a card with the text above
+// and Send below. Enter sends, Shift+Enter starts a new line. The bot may be at work: a message
+// sent meanwhile waits its turn, so the composer is never locked.
 export function BotComposer({ onSend, placeholder }: Props) {
   const [text, setText] = useState("");
 
@@ -28,19 +29,25 @@ export function BotComposer({ onSend, placeholder }: Props) {
   };
 
   return (
-    <div className="flex items-end gap-2 border-t p-3">
+    <div className="relative flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring">
       <Textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label="Message"
-        rows={1}
-        className="max-h-40 min-h-9 flex-1 resize-none"
+        className="max-h-60 min-h-14 resize-none rounded-none border-0 bg-transparent p-1 text-sm leading-6 shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
-      <Button size="icon" aria-label="Send" disabled={!text.trim()} onClick={() => void submit()}>
-        <ArrowUp />
-      </Button>
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <Button
+          size="icon-sm"
+          aria-label="Send"
+          disabled={!text.trim()}
+          onClick={() => void submit()}
+        >
+          <ArrowUp />
+        </Button>
+      </div>
     </div>
   );
 }

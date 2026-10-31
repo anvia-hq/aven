@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
+
+// A message in the conversation; the sidebar shows the bot's last words too.
+const bubble = (page: Page, text: string) =>
+  page
+    .locator('[data-slot="bubble-content"]')
+    .filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
 
 // A person's main bot (decision 0058), on a pretend model that answers with two messages
 // (e2e/fake-model.ts).
@@ -24,19 +30,24 @@ test.describe("bots", () => {
 
     await page.getByRole("textbox", { name: "Message" }).fill("hello bot");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
-    await expect(page.getByText("hello bot", { exact: true })).toBeVisible();
+    await expect(bubble(page, "hello bot")).toBeVisible();
 
     // The bot types, then each message shows after its own pause.
     await expect(page.getByRole("status", { name: /typing/ })).toBeVisible();
-    await expect(page.getByText("Hey there!")).toBeVisible();
-    await expect(page.getByText("You said: hello bot")).toBeVisible();
+    await expect(bubble(page, "Hey there!")).toBeVisible();
+    await expect(bubble(page, "You said: hello bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
+
+    // The bot has a shell of its own: its sidebar has the bot, with what it said last, in place of
+    // the threads and projects.
+    await expect(page.getByRole("link", { name: /Aven.*You said: hello bot/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Projects" })).toBeHidden();
 
     // The chat is the server's: it is all there after a reload.
     await page.reload();
-    await expect(page.getByText("hello bot", { exact: true })).toBeVisible();
-    await expect(page.getByText("Hey there!")).toBeVisible();
-    await expect(page.getByText("You said: hello bot")).toBeVisible();
+    await expect(bubble(page, "hello bot")).toBeVisible();
+    await expect(bubble(page, "Hey there!")).toBeVisible();
+    await expect(bubble(page, "You said: hello bot")).toBeVisible();
   });
 
   test("a person with no model is told why nothing was sent", async ({ page }) => {

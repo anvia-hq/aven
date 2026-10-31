@@ -14,9 +14,10 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
+import { Route as AuthedBotRouteImport } from './routes/_authed/bot'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
-import { Route as AuthedShellBotRouteImport } from './routes/_authed/_shell/bot'
+import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
@@ -54,6 +55,11 @@ const AuthedShellRoute = AuthedShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedBotRoute = AuthedBotRouteImport.update({
+  id: '/bot',
+  path: '/bot',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -65,10 +71,10 @@ const AcceptInvitationInvitationIdRoute =
     path: '/accept-invitation/$invitationId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthedShellBotRoute = AuthedShellBotRouteImport.update({
-  id: '/bot',
-  path: '/bot',
-  getParentRoute: () => AuthedShellRoute,
+const AuthedBotIndexRoute = AuthedBotIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedBotRoute,
 } as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
@@ -145,9 +151,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/bot': typeof AuthedBotRouteWithChildren
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/bot': typeof AuthedShellBotRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/bot/': typeof AuthedBotIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -167,7 +174,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/bot': typeof AuthedShellBotRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -176,6 +182,7 @@ export interface FileRoutesByTo {
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/bot': typeof AuthedBotIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
   '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -189,9 +196,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
+  '/_authed/bot': typeof AuthedBotRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/_authed/_shell/bot': typeof AuthedShellBotRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -200,6 +207,7 @@ export interface FileRoutesById {
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/_authed/bot/': typeof AuthedBotIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/_shell/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/_authed/_shell/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -212,9 +220,9 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/bot'
     | '/settings'
     | '/accept-invitation/$invitationId'
-    | '/bot'
     | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
@@ -223,6 +231,7 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/skills'
     | '/settings/workspace-variables'
+    | '/bot/'
     | '/settings/'
     | '/projects/$projectId'
     | '/threads/$threadId'
@@ -234,7 +243,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/accept-invitation/$invitationId'
-    | '/bot'
     | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
@@ -243,6 +251,7 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/skills'
     | '/settings/workspace-variables'
+    | '/bot'
     | '/settings'
     | '/projects/$projectId'
     | '/threads/$threadId'
@@ -255,9 +264,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_authed/_shell'
+    | '/_authed/bot'
     | '/_authed/settings'
     | '/accept-invitation/$invitationId'
-    | '/_authed/_shell/bot'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/members'
     | '/_authed/settings/platform'
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/runtimes'
     | '/_authed/settings/skills'
     | '/_authed/settings/workspace-variables'
+    | '/_authed/bot/'
     | '/_authed/settings/'
     | '/_authed/_shell/projects/$projectId'
     | '/_authed/_shell/threads/$threadId'
@@ -318,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShellRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/bot': {
+      id: '/_authed/bot'
+      path: '/bot'
+      fullPath: '/bot'
+      preLoaderRoute: typeof AuthedBotRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -332,12 +349,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/_shell/bot': {
-      id: '/_authed/_shell/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof AuthedShellBotRouteImport
-      parentRoute: typeof AuthedShellRoute
+    '/_authed/bot/': {
+      id: '/_authed/bot/'
+      path: '/'
+      fullPath: '/bot/'
+      preLoaderRoute: typeof AuthedBotIndexRouteImport
+      parentRoute: typeof AuthedBotRoute
     }
     '/_authed/settings/': {
       id: '/_authed/settings/'
@@ -434,7 +451,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedShellRouteChildren {
-  AuthedShellBotRoute: typeof AuthedShellBotRoute
   AuthedShellProjectsProjectIdRoute: typeof AuthedShellProjectsProjectIdRoute
   AuthedShellThreadsThreadIdRoute: typeof AuthedShellThreadsThreadIdRoute
   AuthedShellProjectsIndexRoute: typeof AuthedShellProjectsIndexRoute
@@ -442,7 +458,6 @@ interface AuthedShellRouteChildren {
 }
 
 const AuthedShellRouteChildren: AuthedShellRouteChildren = {
-  AuthedShellBotRoute: AuthedShellBotRoute,
   AuthedShellProjectsProjectIdRoute: AuthedShellProjectsProjectIdRoute,
   AuthedShellThreadsThreadIdRoute: AuthedShellThreadsThreadIdRoute,
   AuthedShellProjectsIndexRoute: AuthedShellProjectsIndexRoute,
@@ -451,6 +466,18 @@ const AuthedShellRouteChildren: AuthedShellRouteChildren = {
 
 const AuthedShellRouteWithChildren = AuthedShellRoute._addFileChildren(
   AuthedShellRouteChildren,
+)
+
+interface AuthedBotRouteChildren {
+  AuthedBotIndexRoute: typeof AuthedBotIndexRoute
+}
+
+const AuthedBotRouteChildren: AuthedBotRouteChildren = {
+  AuthedBotIndexRoute: AuthedBotIndexRoute,
+}
+
+const AuthedBotRouteWithChildren = AuthedBotRoute._addFileChildren(
+  AuthedBotRouteChildren,
 )
 
 interface AuthedSettingsRouteChildren {
@@ -484,11 +511,13 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedShellRoute: typeof AuthedShellRouteWithChildren
+  AuthedBotRoute: typeof AuthedBotRouteWithChildren
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedShellRoute: AuthedShellRouteWithChildren,
+  AuthedBotRoute: AuthedBotRouteWithChildren,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
 }
 

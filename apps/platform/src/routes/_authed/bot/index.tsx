@@ -4,7 +4,7 @@ import { BotChat } from "@/modules/bots/components/bot-chat";
 import { BotSettingsDialog } from "@/modules/bots/components/bot-settings-dialog";
 import { useBots } from "@/modules/bots/hooks/use-bots";
 
-export const Route = createFileRoute("/_authed/_shell/bot")({
+export const Route = createFileRoute("/_authed/bot/")({
   component: BotPage,
 });
 
