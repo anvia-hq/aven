@@ -1,0 +1,70 @@
+import {
+  ComposerPrimitive,
+  type ComposerTriggerItem,
+  type ComposerTriggerState,
+} from "@anvia/react-ui/chat";
+import { useEffect, useRef } from "react";
+
+// What the menu says while it has nothing to pick.
+function emptyMenu({ loading, trigger }: ComposerTriggerState) {
+  if (loading) return "Searching…";
+  return trigger.id === "file" ? "No file matches" : "No skill matches";
+}
+
+// One choice of the menu. The arrow keys move the selection, but Anvia leaves the list where it
+// was, so a choice past the edge is scrolled into view here.
+function MentionOption({
+  item,
+  index,
+  selected,
+}: {
+  item: ComposerTriggerItem;
+  index: number;
+  selected: boolean;
+}) {
+  const label = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (selected) label.current?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
+  return (
+    <ComposerPrimitive.TriggerItem
+      index={index}
+      className="flex min-w-0 shrink-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
+    >
+      <span ref={label} className="shrink-0 font-mono">
+        {item.label}
+      </span>
+      {item.detail ? (
+        <span className="min-w-0 truncate text-xs text-muted-foreground">{item.detail}</span>
+      ) : null}
+    </ComposerPrimitive.TriggerItem>
+  );
+}
+
+// What `@` or `/` found, above the composer: the composer sits at the foot of the page, so a
+// menu at the caret, where Anvia places it, would open off screen.
+export function MentionMenu() {
+  return (
+    <ComposerPrimitive.TriggerMenu
+      aria-label="Mention"
+      className="absolute inset-x-0 bottom-full z-20 mb-1 flex max-h-72 flex-col overflow-y-auto rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+      // Anvia pins the menu to the caret; here it belongs to the composer instead.
+      style={{ position: "absolute", top: "auto", left: 0 }}
+    >
+      {(trigger) =>
+        trigger.items.length === 0 ? (
+          <p className="px-2 py-1.5 text-muted-foreground">{emptyMenu(trigger)}</p>
+        ) : (
+          trigger.items.map((item, index) => (
+            <MentionOption
+              key={item.id}
+              item={item}
+              index={index}
+              selected={index === trigger.selectedIndex}
+            />
+          ))
+        )
+      }
+    </ComposerPrimitive.TriggerMenu>
+  );
+}

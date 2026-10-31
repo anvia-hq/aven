@@ -3,12 +3,8 @@ import {
   ComposerPrimitive,
   useComposer,
   type ComposerInputEntity,
-  type ComposerSubmitMessageArgs,
-  type ComposerTriggerItem,
-  type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Paperclip, Stop } from "@mynaui/icons-react";
-import { MENTION_LIMIT } from "@aven/protocol/events";
 import {
   useEffect,
   useRef,
@@ -21,15 +17,16 @@ import {
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { toast } from "@/components/toast";
 
 import { useAttachments } from "../hooks/use-attachments";
 import { useComposerChat } from "../hooks/use-composer-chat";
 import { mentionOf, useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
-import type { MessageMention, OutgoingMessage, RunSelection } from "../types";
+import { useSendComposer } from "../hooks/use-send-composer";
+import type { OutgoingMessage, RunSelection } from "../types";
 import { PendingAttachments } from "./attachment-list";
 import { MentionChip } from "./mention-chip";
+import { MentionMenu } from "./mention-menu";
 import { ModelMenu } from "./model-menu";
 
 type Props = {
@@ -45,20 +42,6 @@ type Props = {
   /** More controls for the toolbar, beside the attach button, such as the project of a new thread. */
   tools?: ReactNode;
 };
-
-type Draft = Pick<ComposerSubmitMessageArgs, "input" | "entities">;
-
-// The prompt as sent: trimmed, with its mentions moved to where their tokens are in it.
-function outgoing({ input, entities }: Draft) {
-  const lead = input.length - input.trimStart().length;
-  const mentions: MessageMention[] = [];
-  for (const entity of entities) {
-    const mention = mentionOf(entity.triggerId, entity.id);
-    const from = entity.range.from - lead;
-    if (mention) mentions.push({ ...mention, from, to: from + entity.text.length });
-  }
-  return { prompt: input.trim(), mentions };
-}
 
 const renderEntity = ({ triggerId, id }: ComposerInputEntity) => {
   const mention = mentionOf(triggerId, id);
@@ -94,50 +77,22 @@ function Composer({
   tools,
 }: Props) {
   const composer = useComposer();
-  const [sending, setSending] = useState(false);
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
   const attachments = useAttachments();
-  const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
-  const canSend = hasContent && !running && !sending;
+  const { canSend, submit } = useSendComposer({
+    composer,
+    attachments,
+    selection: model.selection,
+    running,
+    onSubmit,
+  });
 
   useEffect(() => {
     if (autoFocus) editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
   }, [autoFocus]);
-
-  async function submit() {
-    if (!canSend) return;
-    const { prompt, mentions } = outgoing(composer);
-    if (mentions.length > MENTION_LIMIT) {
-      toast.add({
-        title: "Too many mentions",
-        description: `A message can mention ${MENTION_LIMIT} files and skills`,
-        type: "error",
-      });
-      return;
-    }
-    setSending(true);
-    try {
-      const files = await attachments.encode();
-      const sent = await onSubmit({ prompt, attachments: files, mentions }, model.selection);
-      if (sent) {
-        composer.setInput("");
-        composer.setEntities([]);
-        attachments.clear();
-      }
-    } catch (error) {
-      // A picked file can no longer be read, say it was moved; the message stays to send again.
-      toast.add({
-        title: "Could not read the attached files",
-        description: error instanceof Error ? error.message : undefined,
-        type: "error",
-      });
-    } finally {
-      setSending(false);
-    }
-  }
 
   // Enter sends, unless the `@` or `/` menu has something to pick, which Enter then picks. Handled
   // before the editor sees it, so a message of files alone, or text after a `/` that matches no
@@ -233,69 +188,5 @@ function Composer({
         </div>
       </div>
     </div>
-  );
-}
-
-// What the menu says while it has nothing to pick.
-function emptyMenu({ loading, trigger }: ComposerTriggerState) {
-  if (loading) return "Searching…";
-  return trigger.id === "file" ? "No file matches" : "No skill matches";
-}
-
-// One choice of the menu. The arrow keys move the selection, but Anvia leaves the list where it
-// was, so a choice past the edge is scrolled into view here.
-function MentionOption({
-  item,
-  index,
-  selected,
-}: {
-  item: ComposerTriggerItem;
-  index: number;
-  selected: boolean;
-}) {
-  const label = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (selected) label.current?.scrollIntoView({ block: "nearest" });
-  }, [selected]);
-  return (
-    <ComposerPrimitive.TriggerItem
-      index={index}
-      className="flex min-w-0 shrink-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
-    >
-      <span ref={label} className="shrink-0 font-mono">
-        {item.label}
-      </span>
-      {item.detail ? (
-        <span className="min-w-0 truncate text-xs text-muted-foreground">{item.detail}</span>
-      ) : null}
-    </ComposerPrimitive.TriggerItem>
-  );
-}
-
-// What `@` or `/` found, above the composer: the composer sits at the foot of the page, so a
-// menu at the caret, where Anvia places it, would open off screen.
-function MentionMenu() {
-  return (
-    <ComposerPrimitive.TriggerMenu
-      aria-label="Mention"
-      className="absolute inset-x-0 bottom-full z-20 mb-1 flex max-h-72 flex-col overflow-y-auto rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-md"
-      // Anvia pins the menu to the caret; here it belongs to the composer instead.
-      style={{ position: "absolute", top: "auto", left: 0 }}
-    >
-      {(trigger) =>
-        trigger.items.length === 0 ? (
-          <p className="px-2 py-1.5 text-muted-foreground">{emptyMenu(trigger)}</p>
-        ) : (
-          trigger.items.map((item, index) => (
-            <MentionOption
-              key={item.id}
-              item={item}
-              index={index}
-              selected={index === trigger.selectedIndex}
-            />
-          ))
-        )
-      }
-    </ComposerPrimitive.TriggerMenu>
   );
 }
