@@ -1,14 +1,13 @@
-import type { AgentMemoryOptions, CompletionModel } from "@anvia/core";
+import { Agent, type AgentMemoryOptions } from "@anvia/core";
 
+import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
-import { createCodingAgent } from "./coding-agent";
-import type { ModelConfig } from "./model";
 import { createSendMessageTool, type DeliverMessage } from "./tools/send-message";
 
 // A bot answers with a few messages, so a handful of turns is plenty.
 export const BOT_MAX_TURNS = 8;
 
-type BotAgentOptions = (ModelConfig | { model: CompletionModel }) & {
+type BotAgentOptions = ModelSource & {
   /** The bot's id: its conversation is kept under it. */
   id: string;
   name: string;
@@ -22,7 +21,8 @@ type BotAgentOptions = (ModelConfig | { model: CompletionModel }) & {
 };
 
 // A bot is an agent with one tool: it talks by sending messages (decision 0058). It runs through
-// `generate`, with no stream, since nothing is shown until it sends something.
+// `generate`, with no stream, since nothing is shown until it sends something. It keeps its own
+// conversation, and summarizes it past a size so the chat can go on.
 export function createBotAgent({
   id,
   name,
@@ -30,17 +30,16 @@ export function createBotAgent({
   deliver,
   memory,
   compactAfterTokens,
-  ...model
+  ...source
 }: BotAgentOptions) {
-  return createCodingAgent({
-    ...model,
+  const agentModel = resolveAgentModel(source);
+  const compaction = compactionFor(source, agentModel.model, compactAfterTokens);
+  return new Agent({
+    ...agentModel,
     id: `bot-${id}`,
-    tools: [createSendMessageTool(deliver)],
     instructions: botInstructions({ name, instruction }),
-    webSearch: false,
-    questions: false,
     maxTurns: BOT_MAX_TURNS,
-    memory,
-    compactAfterTokens,
-  }).agent;
+    memory: compaction ? { ...memory, compaction } : memory,
+    tools: [createSendMessageTool(deliver)],
+  });
 }

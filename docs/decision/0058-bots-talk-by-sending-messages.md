@@ -20,7 +20,7 @@ A person should be able to chat with a bot of their own, as with Grok Bot: a nam
 
 ## Consequences
 
-- The bot reuses `createCodingAgent` (model, provider options, history rules) with its own instructions and no question, search or sandbox tools. `createCodingAgent` gained a `memory` option for it.
+- The bot is not a coding agent and is not built on one: `createBotAgent` builds its own `Agent`, with its own instructions, one tool and a memory store. What it shares with the coding agent is `agent-model.ts` (how a model is built from a config, the provider's options, the reasoning effort, retries, and when old history is summarized), so the two cannot drift on that and neither depends on the other.
 - A bot's replies reach the web client as events of their own, not as `RunEvent`s: the text event concatenates, so several messages would become one, and a new run event would change the wire version and the native contract for a feature only the web has.
 - A model that cannot be used (no provider and no environment key) is refused with a 503 before the message is added.
 - **Known limits:** a chat on a model with no known context window is not summarized until its size is set; the typing pause is a guess to tune by feel (40 ms a character, 0.6 to 4 seconds); the person cannot stop a bot that is typing.
