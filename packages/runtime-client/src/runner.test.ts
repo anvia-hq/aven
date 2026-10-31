@@ -1264,9 +1264,10 @@ describe("startRuntime runs", () => {
     await until(() => stopped);
     // What the subagent made of the cancel is told before the run ends, not after.
     await Bun.sleep(50);
-    const types = plane.received.flatMap((m) =>
-      m.type === "run.end" ? ["end"] : m.type === "run.event" ? [m.event.type] : [],
-    );
+    const types = plane.received.flatMap((m) => {
+      if (m.type === "run.end") return ["end"];
+      return m.type === "run.event" ? [m.event.type] : [];
+    });
     expect(types.at(-1)).toBe("end");
     expect(types).toContain("subagent");
   });
