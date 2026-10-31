@@ -1,5 +1,6 @@
 import type { ModelConfig } from "@aven/agents/model";
 import type { MessageMention, RunEvent } from "@aven/protocol/events";
+import type { RunIdentity } from "../workload-identity/grants";
 import type {
   RunAttachment,
   RunEnvVar,
@@ -19,7 +20,7 @@ export type RunThread = {
 /** What can come with a run's prompt. */
 export type RunExtras = Pick<
   StartRunInput,
-  "attachments" | "mentions" | "skills" | "github" | "env"
+  "attachments" | "mentions" | "skills" | "github" | "env" | "identity"
 >;
 
 export type StartRunInput = {
@@ -35,6 +36,8 @@ export type StartRunInput = {
   github?: RunGithub;
   /** The project's environment variables, for the agent's commands (decision 0045). */
   env?: RunEnvVar[];
+  /** Who the run is, for the identity tokens it can mint (decision 0049). */
+  identity?: RunIdentity;
   model?: ModelConfig;
 };
 
@@ -47,6 +50,8 @@ export type ResumeRunInput = {
   github?: RunGithub;
   /** The project's environment variables, for the agent's commands (decision 0045). */
   env?: RunEnvVar[];
+  /** Who the run is, for the identity tokens it can mint (decision 0049). */
+  identity?: RunIdentity;
   model?: ModelConfig;
 };
 

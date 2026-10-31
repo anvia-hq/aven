@@ -1,6 +1,7 @@
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
+  RunIdentityCredential,
   RunModel,
   RunOutcome,
   RunSkill,
@@ -9,6 +10,7 @@ import type { ModelConfig } from "@aven/agents/model";
 
 import { environmentModel, type RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import { runIdentities, type RunIdentities, type RunIdentity } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
   Runtime,
@@ -66,6 +68,7 @@ export class RemoteRuntime implements Runtime {
   constructor(
     private hub: RuntimeHub,
     private gateway: Pick<RunGateway, "issue" | "revoke">,
+    private identities: Pick<RunIdentities, "issue" | "revoke"> = runIdentities,
   ) {}
 
   start({
@@ -76,9 +79,10 @@ export class RemoteRuntime implements Runtime {
     skills,
     github,
     env,
+    identity,
     model,
   }: StartRunInput): RuntimeRun {
-    return this.#launch(thread, model, skills, (runId, runModel) => ({
+    return this.#launch(thread, model, skills, identity, (runId, runModel, credential) => ({
       type: "run.start",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
@@ -88,6 +92,7 @@ export class RemoteRuntime implements Runtime {
       skills: skills?.length ? skills : undefined,
       github,
       env: env?.length ? env : undefined,
+      identity: credential,
       model: runModel,
     }));
   }
@@ -99,9 +104,10 @@ export class RemoteRuntime implements Runtime {
     skills,
     github,
     env,
+    identity,
     model,
   }: ResumeRunInput): RuntimeRun {
-    return this.#launch(thread, model, skills, (runId, runModel) => ({
+    return this.#launch(thread, model, skills, identity, (runId, runModel, credential) => ({
       type: "run.resume",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
@@ -110,6 +116,7 @@ export class RemoteRuntime implements Runtime {
       skills: skills?.length ? skills : undefined,
       github,
       env: env?.length ? env : undefined,
+      identity: credential,
       model: runModel,
     }));
   }
@@ -118,7 +125,12 @@ export class RemoteRuntime implements Runtime {
     thread: RunThread,
     model: ModelConfig | undefined,
     skills: RunSkill[] | undefined,
-    message: (runId: string, runModel: RunModel) => ControlPlaneToRuntime,
+    identity: RunIdentity | undefined,
+    message: (
+      runId: string,
+      runModel: RunModel,
+      credential: RunIdentityCredential | undefined,
+    ) => ControlPlaneToRuntime,
   ): RuntimeRun {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
@@ -135,7 +147,8 @@ export class RemoteRuntime implements Runtime {
       this.#sink(runId, queue, result),
       skills?.map((skill) => skill.digest),
     );
-    this.#post(connection, runId, message(runId, runModel));
+    const credential = identity && { credential: this.identities.issue(runId, identity) };
+    this.#post(connection, runId, message(runId, runModel, credential));
 
     return {
       events: queue,
@@ -160,24 +173,29 @@ export class RemoteRuntime implements Runtime {
     return {
       event: (event: RunEvent) => queue.push(event),
       end: (outcome: RunOutcome, error?: string, continuation?: unknown) => {
-        this.gateway.revoke(runId);
+        this.#revoke(runId);
         queue.close();
         if (error) result.reject(new Error(error));
         else result.resolve({ type: outcome, continuation });
       },
       lost: (error: Error) => {
-        this.gateway.revoke(runId);
+        this.#revoke(runId);
         queue.fail(error);
         result.reject(error);
       },
     };
   }
 
+  #revoke(runId: string) {
+    this.gateway.revoke(runId);
+    this.identities.revoke(runId);
+  }
+
   #post(connection: RuntimeConnection, runId: string, message: ControlPlaneToRuntime) {
     try {
       connection.post(message);
     } catch (error) {
-      this.gateway.revoke(runId);
+      this.#revoke(runId);
       connection.endRun(runId);
       throw error;
     }

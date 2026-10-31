@@ -3,11 +3,29 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import { runsService } from "../runs/service";
 import { skillsService } from "../skills/service";
+import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
+import type { RunIdentity } from "../workload-identity/grants";
 import { prepareAttachments } from "./attachments";
 import { keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
+
+// Who a run is, for the identity tokens it can mint (decision 0049).
+async function runIdentity(
+  thread: { id: string; organizationId: string; projectId: string },
+  userId: string,
+): Promise<RunIdentity | undefined> {
+  const person = await usersService.get(userId);
+  if (!person) return undefined;
+  return {
+    organizationId: thread.organizationId,
+    projectId: thread.projectId,
+    threadId: thread.id,
+    userId,
+    email: person.email,
+  };
+}
 
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
@@ -33,7 +51,15 @@ export const threadMessages = {
       projectId: thread.projectId,
       userId,
     });
-    await runsService.start(thread, prompt, model, { attachments, mentions, skills, github, env });
+    const identity = await runIdentity(thread, userId);
+    await runsService.start(thread, prompt, model, {
+      attachments,
+      mentions,
+      skills,
+      github,
+      env,
+      identity,
+    });
   },
 
   async answer(
@@ -64,6 +90,7 @@ export const threadMessages = {
       projectId: thread.projectId,
       userId,
     });
-    await runsService.answer(thread, continuation, kept, model, skills, github, env);
+    const identity = await runIdentity(thread, userId);
+    await runsService.answer(thread, continuation, kept, model, skills, github, env, identity);
   },
 };

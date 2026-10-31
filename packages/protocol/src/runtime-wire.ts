@@ -160,6 +160,13 @@ export type RunGithub = { token: string; id: number; login: string; name: string
  */
 export type RunEnvVar = { name: string; value: string; secret?: boolean };
 
+/**
+ * What lets the sandbox mint OIDC identity tokens for the run (decision 0049). The credential is
+ * worth nothing without the control plane, which holds who the run is and ends the credential with
+ * the run; the runner puts it in the thread's container for `aven id-token` and keeps it in memory.
+ */
+export type RunIdentityCredential = { credential: string };
+
 /** What a skill's digest looks like. */
 export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
 
@@ -174,6 +181,7 @@ export type ControlPlaneToRuntime =
       skills?: RunSkill[];
       github?: RunGithub;
       env?: RunEnvVar[];
+      identity?: RunIdentityCredential;
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -186,6 +194,7 @@ export type ControlPlaneToRuntime =
       skills?: RunSkill[];
       github?: RunGithub;
       env?: RunEnvVar[];
+      identity?: RunIdentityCredential;
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
@@ -301,6 +310,7 @@ export function decodeViewerFrame(frame: Uint8Array) {
   return { viewerId, payload: frame.subarray(VIEWER_ID_BYTES) };
 }
 
+// Version 20: `run.start` and `run.resume` can carry the credential for minting identity tokens, `identity` (decision 0049).
 // Version 19: `run.start` and `run.resume` can carry the project's environment variables, `env` (decision 0045).
 // Version 18: `run.start` and `run.resume` can carry the GitHub account the run acts as, `github` (decision 0044).
 // Version 17: a runner could be asked to commit and push a thread's branch, `repo.push` (decision 0040); the call is gone, the agent ships with `gh` (decision 0044), and the version was not lowered.
@@ -319,4 +329,4 @@ export function decodeViewerFrame(frame: Uint8Array) {
 // calls about it (decision 0015). Version 4: a runtime can ask for access to the thread's repository, `repo.access` (decision
 // 0013). Version 3: a run is only started and cancelled; commands and processes are the sandbox's,
 // so no job notices, job stops or steering (decision 0012).
-export const WIRE_VERSION = 19;
+export const WIRE_VERSION = 20;

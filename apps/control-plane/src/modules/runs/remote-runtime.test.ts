@@ -10,18 +10,37 @@ const model: RunModel = {
   gatewayPath: "/gateway/anthropic",
   gatewayToken: "grant",
 };
+const identity = {
+  organizationId: "org-1",
+  projectId: "p1",
+  threadId: "t1",
+  userId: "u1",
+  email: "ada@example.com",
+};
 const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" };
 
 // A runtime connection that keeps what it was sent.
-function runtime() {
+function runtime({ failPost = false } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
+  const revoked: string[] = [];
   const connection = {
     startRun() {},
     endRun() {},
-    post: (message: ControlPlaneToRuntime) => posted.push(message),
+    post(message: ControlPlaneToRuntime) {
+      if (failPost) throw new Error("connection lost");
+      posted.push(message);
+    },
   };
   const hub = { get: () => connection, cancelRun() {}, closeAll() {} } as unknown as RuntimeHub;
-  return { posted, remote: new RemoteRuntime(hub, { issue: () => model, revoke() {} }) };
+  const identities = {
+    issue: () => "avid_credential",
+    revoke: (runId: string) => revoked.push(runId),
+  };
+  return {
+    posted,
+    revoked,
+    remote: new RemoteRuntime(hub, { issue: () => model, revoke() {} }, identities),
+  };
 }
 
 describe("a run's message to its runtime", () => {
@@ -57,5 +76,26 @@ describe("a run's message to its runtime", () => {
     expect(posted[0]).toMatchObject({ env });
     expect(posted[1]).toMatchObject({ env });
     expect(posted[2]).not.toHaveProperty("env", expect.anything());
+  });
+
+  test("carries a credential for identity tokens, never who the run is", () => {
+    const { posted, remote } = runtime();
+
+    remote.start({ thread, prompt: "hi", identity });
+    remote.resume({ thread, continuation: {}, response: {}, identity });
+    remote.start({ thread, prompt: "hi" });
+
+    expect(posted[0]).toMatchObject({ identity: { credential: "avid_credential" } });
+    expect(posted[1]).toMatchObject({ identity: { credential: "avid_credential" } });
+    expect(posted[2]).not.toHaveProperty("identity", expect.anything());
+    expect(JSON.stringify(posted)).not.toContain(identity.email);
+  });
+
+  test("ends the credential when the run cannot be posted", () => {
+    const { revoked, remote } = runtime({ failPost: true });
+
+    expect(() => remote.start({ thread, prompt: "hi", identity })).toThrow("connection lost");
+
+    expect(revoked).toHaveLength(1);
   });
 });

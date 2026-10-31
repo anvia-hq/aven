@@ -23,6 +23,7 @@ import { threadsService } from "../threads/service";
 import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
 import { RemoteRuntime } from "./remote-runtime";
 import { runGateway } from "../runtimes/gateway";
+import type { RunIdentity } from "../workload-identity/grants";
 import { runtimeHub } from "../runtimes/hub";
 
 type ActiveRun = {
@@ -92,7 +93,7 @@ export class RunManager {
     thread: RunThread,
     prompt: string,
     model?: ModelConfig | null,
-    { attachments = [], mentions = [], skills = [], github, env }: RunExtras = {},
+    { attachments = [], mentions = [], skills = [], github, env, identity }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -105,6 +106,7 @@ export class RunManager {
       skills,
       github,
       env,
+      identity,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
@@ -125,6 +127,7 @@ export class RunManager {
     skills: RunSkill[] = [],
     github?: RunGithub,
     env?: RunEnvVar[],
+    identity?: RunIdentity,
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -144,6 +147,7 @@ export class RunManager {
       skills,
       github,
       env,
+      identity,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.
