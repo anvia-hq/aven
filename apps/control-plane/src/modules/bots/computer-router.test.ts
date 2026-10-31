@@ -1,0 +1,240 @@
+import { afterAll, describe, expect, test } from "bun:test";
+
+const run = process.env.DATABASE_URL ? describe : describe.skip;
+
+run("a bot's computer (real postgres, real WebSockets)", async () => {
+  const { Elysia } = await import("elysia");
+  const { db } = await import("@aven/db/client");
+  const { WIRE_VERSION } = await import("@aven/protocol/runtime-wire");
+  const { decodeViewerFrame, encodeViewerFrame } = await import("@aven/protocol/viewer-frame");
+  const { errorsRouter } = await import("../../errors");
+  const { createMemoryStore } = await import("../../memory-store");
+  const { signUp } = await import("../../testing/sign-up");
+  const { connectRouter } = await import("../runtimes/connect");
+  const { RuntimeHub } = await import("../runtimes/hub");
+  const { runtimesService } = await import("../runtimes/service");
+  const { botComputerRouter } = await import("./computer-router");
+  const { botsService } = await import("./service");
+  type ControlPlaneToRuntime = import("@aven/protocol/runtime-wire").ControlPlaneToRuntime;
+
+  const hub = new RuntimeHub(createMemoryStore(db));
+  const owner = await signUp("bot-owner");
+  const stranger = await signUp("bot-stranger");
+  const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+    name: "bots",
+  });
+  const server = new Elysia()
+    .use(errorsRouter)
+    .use(connectRouter(hub))
+    .use(botComputerRouter(hub, runtime.id))
+    .listen({ port: 0 });
+  const base = `localhost:${server.server?.port}`;
+  const sockets: WebSocket[] = [];
+  const [mine] = await botsService.list(owner.userId);
+  const [theirs] = await botsService.list(stranger.userId);
+
+  afterAll(async () => {
+    for (const socket of sockets) socket.close();
+    await server.stop(true);
+    await owner.remove();
+    await stranger.remove();
+  });
+
+  const until = async (check: () => boolean, ms = 3000) => {
+    const deadline = Date.now() + ms;
+    while (!check()) {
+      if (Date.now() > deadline) throw new Error("timed out");
+      await Bun.sleep(20);
+    }
+  };
+
+  // The runner the bots are on: answers the calls about a desktop, opens streams, and echoes a
+  // shell's keystrokes in uppercase.
+  const seen = { messages: [] as ControlPlaneToRuntime[] };
+  const calls = () =>
+    seen.messages.flatMap((message) => (message.type === "call" ? [message] : []));
+  const connected = new Promise<void>((resolve) => {
+    const init = { headers: { authorization: `Bearer ${token}` } };
+    const ws = new WebSocket(`ws://${base}/connect`, init as unknown as string[]);
+    ws.binaryType = "arraybuffer";
+    sockets.push(ws);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "hello", version: WIRE_VERSION }));
+      resolve();
+    };
+    ws.onmessage = (event) => {
+      if (event.data instanceof ArrayBuffer) {
+        const frame = decodeViewerFrame(new Uint8Array(event.data));
+        if (!frame) return;
+        const typed = new TextDecoder().decode(frame.payload).toUpperCase();
+        ws.send(encodeViewerFrame(frame.viewerId, new TextEncoder().encode(typed)));
+        return;
+      }
+      const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
+      seen.messages.push(message);
+      if (message.type === "desktop.open") {
+        ws.send(JSON.stringify({ type: "desktop.opened", viewerId: message.viewerId }));
+        ws.send(encodeViewerFrame(message.viewerId, new TextEncoder().encode("RFB 003.008\n")));
+      }
+      if (message.type === "terminal.open") {
+        ws.send(JSON.stringify({ type: "terminal.opened", viewerId: message.viewerId }));
+      }
+      if (message.type === "call") {
+        const result =
+          message.method === "desktop.status" || message.method === "desktop.wake"
+            ? { state: "running", width: 1280, height: 800, control: { held: false } }
+            : { held: message.method === "desktop.takeover", expiresAt: "2030-01-01T00:00:00Z" };
+        ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
+      }
+    };
+  });
+  await connected;
+  await until(() => hub.isOnline(runtime.id));
+
+  const api = (path: string, bearer: string | undefined, method = "GET") =>
+    fetch(`http://${base}${path}`, {
+      method,
+      headers: bearer ? { authorization: `Bearer ${bearer}` } : {},
+    });
+
+  const open = (
+    path: string,
+    bearer: string | undefined,
+    { headers = {} as Record<string, string>, protocols = [] as string[] } = {},
+  ) => {
+    const sent = { ...headers };
+    if (bearer) sent.authorization = `Bearer ${bearer}`;
+    const ws = new WebSocket(`ws://${base}${path}`, {
+      headers: sent,
+      protocols,
+    } as unknown as string[]);
+    ws.binaryType = "arraybuffer";
+    sockets.push(ws);
+    const events = {
+      messages: [] as string[],
+      closed: undefined as CloseEvent | undefined,
+      failed: false,
+      opened: false,
+    };
+    ws.onopen = () => (events.opened = true);
+    ws.onmessage = (event) =>
+      events.messages.push(new TextDecoder().decode(event.data as ArrayBuffer));
+    ws.onclose = (event) => (events.closed = event);
+    ws.onerror = () => (events.failed = true);
+    return { ws, events };
+  };
+
+  test("a person sees, wakes, takes over and releases their bot's desktop", async () => {
+    const status = await api(`/bots/${mine!.id}/desktop`, owner.token);
+    expect(await status.json()).toMatchObject({ available: true, state: "running", held: false });
+
+    const woken = await api(`/bots/${mine!.id}/desktop/wake`, owner.token, "POST");
+    expect(woken.status).toBe(200);
+    expect((await api(`/bots/${mine!.id}/desktop/takeover`, owner.token, "POST")).status).toBe(200);
+    expect((await api(`/bots/${mine!.id}/desktop/release`, owner.token, "POST")).status).toBe(200);
+
+    // The runner is asked about the bot's id, and told that it is a bot's, which has no repository.
+    const asked = calls().filter((call) => call.method.startsWith("desktop."));
+    expect(asked.map((call) => call.method)).toEqual([
+      "desktop.status",
+      "desktop.wake",
+      "desktop.takeover",
+      "desktop.release",
+    ]);
+    for (const call of asked) {
+      expect(call.params).toMatchObject({ threadId: mine!.id, bot: true });
+    }
+    expect(asked[2]?.params).toMatchObject({ holder: owner.userId });
+  });
+
+  test("only the bot's own person: another person's bot is not found, and nothing is asked of the runner", async () => {
+    const before = calls().length;
+
+    for (const [path, method] of [
+      ["desktop", "GET"],
+      ["desktop/wake", "POST"],
+      ["desktop/takeover", "POST"],
+      ["desktop/release", "POST"],
+    ] as const) {
+      expect((await api(`/bots/${theirs!.id}/${path}`, owner.token, method)).status).toBe(404);
+      expect((await api(`/bots/${mine!.id}/${path}`, undefined, method)).status).toBe(401);
+    }
+
+    expect(calls()).toHaveLength(before);
+  });
+
+  test("streams the desktop to the browser and the browser's bytes back", async () => {
+    const { ws, events } = open(`/bots/${mine!.id}/desktop/stream`, owner.token, {
+      protocols: ["binary"],
+    });
+
+    await until(() => events.messages.length === 1);
+    expect(ws.protocol).toBe("binary");
+    expect(events.messages[0]).toBe("RFB 003.008\n");
+    expect(
+      seen.messages.find(
+        (message) => message.type === "desktop.open" && message.threadId === mine!.id,
+      ),
+    ).toBeDefined();
+    ws.close();
+    await until(() => seen.messages.some((message) => message.type === "desktop.close"));
+  });
+
+  test("is refused for another person's bot, without a login and from another origin", async () => {
+    const opens = () => seen.messages.filter((message) => message.type === "desktop.open").length;
+    const before = opens();
+
+    const others = open(`/bots/${theirs!.id}/desktop/stream`, owner.token, {
+      protocols: ["binary"],
+    });
+    await until(() => others.events.failed || others.events.closed !== undefined);
+    const anonymous = open(`/bots/${mine!.id}/desktop/stream`, undefined, {
+      protocols: ["binary"],
+    });
+    await until(() => anonymous.events.failed || anonymous.events.closed !== undefined);
+    const foreign = open(`/bots/${mine!.id}/desktop/stream`, owner.token, {
+      headers: { origin: "https://evil.example" },
+      protocols: ["binary"],
+    });
+    await until(() => foreign.events.failed || foreign.events.closed !== undefined);
+
+    // Refused before the socket was upgraded, not opened and closed again.
+    for (const refused of [others, anonymous, foreign]) expect(refused.events.opened).toBe(false);
+    expect(opens()).toBe(before);
+  });
+
+  test("opens a shell of the asked size on the bot's computer, and carries keystrokes and output", async () => {
+    const { ws, events } = open(`/bots/${mine!.id}/terminal/stream?cols=100&rows=30`, owner.token);
+
+    await until(() =>
+      seen.messages.some(
+        (message) => message.type === "terminal.open" && message.threadId === mine!.id,
+      ),
+    );
+    expect(seen.messages.find((message) => message.type === "terminal.open")).toMatchObject({
+      cols: 100,
+      rows: 30,
+    });
+    ws.send(new TextEncoder().encode("ls\n"));
+    await until(() => events.messages.length === 1);
+    expect(events.messages[0]).toBe("LS\n");
+
+    ws.send(JSON.stringify({ type: "resize", cols: 80, rows: 24 }));
+    await until(() => seen.messages.some((message) => message.type === "terminal.resize"));
+    ws.close();
+    await until(() => seen.messages.some((message) => message.type === "terminal.close"));
+  });
+
+  test("a shell is refused for another person's bot", async () => {
+    const opens = () => seen.messages.filter((message) => message.type === "terminal.open").length;
+    const before = opens();
+
+    const others = open(`/bots/${theirs!.id}/terminal/stream?cols=80&rows=24`, owner.token);
+    await until(() => others.events.failed || others.events.closed !== undefined);
+    const anonymous = open(`/bots/${mine!.id}/terminal/stream?cols=80&rows=24`, undefined);
+    await until(() => anonymous.events.failed || anonymous.events.closed !== undefined);
+
+    for (const refused of [others, anonymous]) expect(refused.events.opened).toBe(false);
+    expect(opens()).toBe(before);
+  });
+});

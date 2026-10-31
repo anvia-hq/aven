@@ -1,8 +1,7 @@
 import type { DesktopInfo } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import { runnerFor, type Available, type Refusal } from "../runtimes/ask-runner";
-import type { RuntimeHub } from "../runtimes/hub";
+import type { Available, Refusal, Runner } from "../runtimes/ask-runner";
 import type { ViewerSink } from "../runtimes/viewer-streams";
 import { desktopControl, desktopInfo } from "./schema";
 
@@ -13,8 +12,8 @@ const TAKEOVER_LEASE_MS = 60_000;
 const WAKE_TIMEOUT_MS = 120_000;
 
 class SandboxNotRunningError extends ConflictError {
-  constructor() {
-    super("The thread's sandbox is not running");
+  constructor(what: string) {
+    super(`${what} is not running`);
   }
 }
 
@@ -66,23 +65,24 @@ function statusOf(info: DesktopInfo, userId: string): DesktopStatus {
   };
 }
 
-// A thread's desktop, watched and driven through the runner that hosts its sandbox (decision
-// 0015). Every call starts from a thread of the caller's organization.
-export function createDesktopService(hub: RuntimeHub) {
-  const runner = runnerFor(hub);
+/** What a desktop belongs to, in the words of what a person is told. */
+type DesktopOwner = { what: string };
 
+// A desktop, watched and driven through the runner that hosts its sandbox (decision 0015): a
+// thread's, or a bot's (decision 0059). `scope` is whose it is, as `runner` finds computers by it.
+export function createDesktopService(runner: Runner, owner: DesktopOwner) {
   return {
     // A runner that fails to answer is a server error here, not a refusal.
-    async status(organizationId: string, userId: string, threadId: string): Promise<DesktopStatus> {
-      const info = await runner.ask(organizationId, "desktop.status", { threadId }, desktopInfo);
+    async status(scope: string, userId: string, threadId: string): Promise<DesktopStatus> {
+      const info = await runner.ask(scope, "desktop.status", { threadId }, desktopInfo);
       return info ? statusOf(info, userId) : { available: false };
     },
 
     // Starts the thread's sandbox when it is off (decision 0039). The answer is the desktop's status,
     // so the page can show it at once.
-    async wake(organizationId: string, userId: string, threadId: string): Promise<DesktopStatus> {
+    async wake(scope: string, userId: string, threadId: string): Promise<DesktopStatus> {
       const info = await runner.ask(
-        organizationId,
+        scope,
         "desktop.wake",
         { threadId },
         desktopInfo,
@@ -95,34 +95,34 @@ export function createDesktopService(hub: RuntimeHub) {
 
     // The agent's inputs fail while a person holds the desktop, until `release` or the lease runs
     // out; the page renews the lease while it is in control.
-    async takeover(organizationId: string, userId: string, threadId: string) {
+    async takeover(scope: string, userId: string, threadId: string) {
       const params = { threadId, holder: userId, leaseMs: TAKEOVER_LEASE_MS };
       const control = await runner.ask(
-        organizationId,
+        scope,
         "desktop.takeover",
         params,
         desktopControl,
         refused("takeover"),
       );
-      if (!control) throw new SandboxNotRunningError();
+      if (!control) throw new SandboxNotRunningError(owner.what);
       return { held: control.held, expiresAt: control.expiresAt };
     },
 
-    async release(organizationId: string, userId: string, threadId: string) {
+    async release(scope: string, userId: string, threadId: string) {
       const params = { threadId, holder: userId };
       const control = await runner.ask(
-        organizationId,
+        scope,
         "desktop.release",
         params,
         desktopControl,
         refused("release"),
       );
-      if (!control) throw new SandboxNotRunningError();
+      if (!control) throw new SandboxNotRunningError(owner.what);
       return { held: control.held };
     },
 
-    async openViewer(organizationId: string, threadId: string, sink: ViewerSink) {
-      const connection = await runner.connection(organizationId, threadId);
+    async openViewer(scope: string, threadId: string, sink: ViewerSink) {
+      const connection = await runner.connection(scope, threadId);
       return connection.openViewer(threadId, sink);
     },
   };

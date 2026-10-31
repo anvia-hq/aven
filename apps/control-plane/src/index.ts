@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import {
   botChats,
   botRunner,
+  botRuntimeId,
   runsService,
   runtimeHub,
   shipService,
@@ -11,6 +12,7 @@ import {
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
+import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
@@ -35,6 +37,7 @@ const app = new Elysia()
   .use(artifactsRouter(runtimeHub))
   .use(authRouter)
   .use(botsRouter(botChats))
+  .use(botComputerRouter(runtimeHub, botRuntimeId))
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))

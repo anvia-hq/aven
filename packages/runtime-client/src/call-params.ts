@@ -41,14 +41,17 @@ export function artifactsReadParams(params: unknown): ArtifactsReadParams {
   return { threadId, name };
 }
 
-/** Anything but a string `holder`, a number `leaseMs` or `force: true` is left out. */
-export function desktopCallParams(params: unknown): DesktopCallParams & { force: boolean } {
-  const { threadId, holder, leaseMs, force } = asRecord(params);
+/** Anything but a string `holder`, a number `leaseMs`, `force: true` or `bot: true` is left out. */
+export function desktopCallParams(
+  params: unknown,
+): DesktopCallParams & { force: boolean; bot: boolean } {
+  const { threadId, holder, leaseMs, force, bot } = asRecord(params);
   if (typeof threadId !== "string") throw invalid();
   return {
     threadId,
     holder: typeof holder === "string" ? holder : undefined,
     leaseMs: typeof leaseMs === "number" ? leaseMs : undefined,
     force: force === true,
+    bot: bot === true,
   };
 }

@@ -124,10 +124,13 @@ export type RunnerCallMethod =
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {
+  /** The thread's id, or a bot's: a bot's computer is the sandbox of its own id (decision 0059). */
   threadId: string;
   holder?: string;
   leaseMs?: number;
   force?: boolean;
+  /** For a `desktop.wake`: the id is a bot's, whose computer has no repository to clone. */
+  bot?: boolean;
 };
 
 export type DiffGetParams = { threadId: string; scope: DiffScope };

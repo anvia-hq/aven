@@ -50,14 +50,11 @@ export const shipService = createShipService(runtimeHub, { send: threadMessages.
 
 // Every bot's computer is on one runner: the control plane's own, which every person has, or the one
 // `AVEN_BOT_RUNNER` names for a deployment that has turned its own off (decision 0059).
+export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
+
 export const botRunner = new BotRunner({
   store: botMemoryStore,
-  replier: new RemoteBotReplier(
-    runtimeHub,
-    runGateway,
-    botMemoryStore,
-    process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID,
-  ),
+  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId),
 });
 
 export const botChats = createBotChats(botRunner);

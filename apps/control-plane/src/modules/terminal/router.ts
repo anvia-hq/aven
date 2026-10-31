@@ -7,12 +7,12 @@ import type { RuntimeHub } from "../runtimes/hub";
 import type { TerminalHandle } from "../runtimes/viewer-streams";
 import { threadParams } from "../threads/schema";
 import { terminalControl, terminalSize } from "./schema";
-import { createTerminalService } from "./service";
+import { threadTerminalService } from "./service";
 
 // A shell in a thread's sandbox (decision 0053). `/stream` is a WebSocket: the browser's
 // keystrokes go in binary messages and so does the shell's output; a resize is a JSON text message.
 export const terminalRouter = (hub: RuntimeHub) => {
-  const service = createTerminalService(hub);
+  const service = threadTerminalService(hub);
   const terminals = bridgeToRunner<TerminalHandle>("The terminal is too slow");
   return new Elysia({ prefix: "/threads" }).use(authRouter).ws("/:id/terminal/stream", {
     auth: true,

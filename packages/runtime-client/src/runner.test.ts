@@ -205,6 +205,40 @@ describe("startRuntime desktops", () => {
     expect(released).toEqual(["t1"]);
   });
 
+  test("wakes a bot's computer with no repository, and starts its container", async () => {
+    const fake = fakeDesktop();
+    const { sandbox, up } = withDesktop(fake.desktop);
+    const acquired: { id: string; repo: unknown }[] = [];
+    const starts: string[] = [];
+    const lazy: ThreadWorkspaces = {
+      ...sandbox,
+      acquire: async (thread, repo) => {
+        acquired.push({ id: thread.id, repo });
+        const box = await sandbox.acquire(thread, repo);
+        // A bot's container is started by what needs it, here the wake.
+        return { ...box, start: async () => void starts.push(thread.id) };
+      },
+    };
+    const { plane, runtime } = connect({ sandbox: lazy });
+    await runtime.ready;
+    up();
+
+    plane.send({
+      type: "call",
+      id: "w1",
+      method: "desktop.wake",
+      params: { threadId: "bot-1", bot: true },
+    });
+
+    await until(() => plane.received.some((message) => message.type === "reply"));
+    expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
+      ok: true,
+      result: { state: "running" },
+    });
+    expect(acquired).toEqual([{ id: "bot-1", repo: undefined }]);
+    expect(starts).toEqual(["bot-1"]);
+  });
+
   test("a thread with no workspace is not woken: the clone is made by a run", async () => {
     const { sandbox, up } = withDesktop(undefined);
     // `acquire` asks for the repository only when the workspace holds no clone yet.

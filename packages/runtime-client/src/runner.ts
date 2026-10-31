@@ -307,15 +307,23 @@ export function startRuntime(options: RuntimeOptions) {
 
   // Starts a thread's sandbox without a run, for a person who wants its desktop (decision 0039); the
   // idle clock frees it again if nothing uses it. A thread that never ran has no workspace to
-  // start it on, and the clone is made by a run.
+  // start it on, and the clone is made by a run. A bot's computer has no repository: it is started
+  // as it is (decision 0059).
   async function wakeOf(params: unknown) {
-    const { threadId } = desktopCallParams(params);
+    const { threadId, bot } = desktopCallParams(params);
     clearTimeout(idleTimers.get(threadId));
     await releasing.get(threadId);
-    const box = await options.sandbox.acquire({ id: threadId }, async () => {
-      throw new Error("The thread has no workspace yet");
-    });
+    const box = await options.sandbox.acquire(
+      { id: threadId },
+      bot
+        ? undefined
+        : async () => {
+            throw new Error("The thread has no workspace yet");
+          },
+    );
     boxes.set(threadId, box);
+    // A thread's container is up already; a bot's starts here.
+    await box.start?.();
     scheduleIdleRelease(threadId);
     return viewers.call("desktop.status", { threadId });
   }
