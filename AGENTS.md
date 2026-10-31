@@ -62,7 +62,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 ## Ports
 
 - control-plane (backend): `8000` (`PORT` in `.env`).
-- platform (frontend): `5173`. Vite proxies `/api/*` to `http://localhost:8000` and strips the `/api` prefix, so the frontend calls `/api/users`, never the backend origin directly.
+- platform (frontend): `5173`. Vite proxies `/api/*` to `http://localhost:8000` and strips the `/api` prefix, so the frontend calls `/api/threads`, never the backend origin directly.
 
 ## apps/control-plane
 

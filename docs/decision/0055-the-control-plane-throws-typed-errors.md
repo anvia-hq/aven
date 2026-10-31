@@ -16,4 +16,4 @@ Rule 0002 asked services to return data or `null` and routers to map `null` to `
 
 - Routers hold routes only; authorization and lookups live in services and helpers, where other callers can use them.
 - A test that mounts a router alone must mount `errorsRouter` too, or a thrown error is a 500.
-- The users router and the platform router's owner check still return `status(...)` for a 403 or a 404; they are left as they are for now and follow this when next changed.
+- The platform router's owner check still returns `status(...)` for a 403; it is left as it is for now and follows this when next changed.

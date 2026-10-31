@@ -20,7 +20,7 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
   });
 
   test("protected routes return 401 without a session", async ({ request }) => {
-    for (const path of ["/api/users"]) {
+    for (const path of ["/api/providers", "/api/threads"]) {
       const res = await request.get(path);
       expect(res.status(), path).toBe(401);
     }
@@ -34,14 +34,16 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
     });
     expect(signUp.status()).toBe(200);
 
-    const users = await request.get("/api/users");
-    expect(users.status()).toBe(200);
-    const list: { id: string; email: string }[] = await users.json();
-    expect(list.map((u) => u.email)).toContain(email);
+    const session = await request.get("/api/auth/get-session");
+    expect((await session.json()).user.email).toBe(email);
+    const providers = await request.get("/api/providers");
+    expect(providers.status()).toBe(200);
+    // No route lists the platform's users: that would show every organization's people.
+    expect((await request.get("/api/users")).status()).toBe(404);
 
     const signOut = await request.post("/api/auth/sign-out", { data: {} });
     expect(signOut.status()).toBe(200);
-    expect((await request.get("/api/users")).status()).toBe(401);
+    expect((await request.get("/api/providers")).status()).toBe(401);
   });
 
   test("sign in rejects a wrong password", async ({ request }) => {
@@ -60,27 +62,5 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
       data: { email, password: "password123" },
     });
     expect(good.status()).toBe(200);
-  });
-
-  test("a user can update only their own profile", async ({ request }) => {
-    const email = unique();
-    const signUp = await request.post("/api/auth/sign-up/email", {
-      data: { name: "Before", email, password: "password123" },
-    });
-    const { user } = await signUp.json();
-
-    const own = await request.patch(`/api/users/${user.id}`, { data: { name: "After" } });
-    expect(own.status()).toBe(200);
-    expect((await own.json()).name).toBe("After");
-
-    const list: { id: string }[] = await (await request.get("/api/users")).json();
-    const other = list.find((u) => u.id !== user.id);
-    if (other) {
-      const res = await request.patch(`/api/users/${other.id}`, { data: { name: "Nope" } });
-      expect(res.status()).toBe(403);
-    }
-
-    const invalid = await request.patch(`/api/users/${user.id}`, { data: { name: "" } });
-    expect(invalid.status()).toBe(422);
   });
 });
