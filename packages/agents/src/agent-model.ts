@@ -35,7 +35,8 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
   if (!trigger) return undefined;
   return {
     trigger: { afterTokens: trigger },
-    compactor: createSummaryMemoryCompactor({ model }),
+    // No temperature: Anvia sends 0 by default, which reasoning models refuse (bug 0004).
+    compactor: createSummaryMemoryCompactor({ model, temperature: null }),
   };
 }
 

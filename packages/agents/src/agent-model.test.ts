@@ -101,6 +101,38 @@ describe("compactionFor", () => {
     expect(compactionFor({ model }, model, 5_000)?.trigger).toEqual({ afterTokens: 5_000 });
   });
 
+  // Anvia's summary compactor sends `temperature: 0` unless told not to, and Azure's reasoning
+  // models answer `Unsupported parameter: 'temperature' is not supported with this model`.
+  test("the summary request carries no temperature, which reasoning models refuse", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return Response.json({ error: { message: "stop here" } }, { status: 400 });
+      },
+    });
+    try {
+      const source = {
+        provider: "openai",
+        apiKey: "k",
+        modelId: "gpt-5",
+        baseUrl: `http://localhost:${server.port}/v1`,
+        contextWindow: 100_000,
+      } as const;
+      const { model: provider } = resolveAgentModel(source);
+      const messages = [{ role: "user", content: "hello" }] as never;
+      await compactionFor(source, provider)!
+        .compactor({ messages, abortSignal: undefined } as never)
+        .catch(() => undefined);
+    } finally {
+      await server.stop(true);
+    }
+
+    expect(bodies[0]).toBeDefined();
+    expect(bodies[0]).not.toHaveProperty("temperature");
+  });
+
   test("with neither there is nothing to measure against, so history is left whole", () => {
     expect(compactionFor({ provider: "openai", apiKey: "k" }, model)).toBeUndefined();
     expect(compactionFor({ model }, model)).toBeUndefined();
