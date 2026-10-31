@@ -13,6 +13,7 @@ import { FilesPanel } from "@/modules/files/components/files-panel";
 import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
+import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
@@ -33,13 +34,13 @@ function ThreadPage() {
   // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels();
-  const { overview, desktop, diff, files } = panels;
-  // Files, Changes and Desktop share one column, so the conversation keeps the same width whichever is open.
-  const sideOpen = diff.open || desktop.open || files.open;
+  const { overview, desktop, diff, files, terminal } = panels;
+  // Files, Changes, Desktop and Terminal share one column, so the conversation keeps the same width whichever is open.
+  const sideOpen = diff.open || desktop.open || files.open || terminal.open;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const side = useDefaultLayout({
     id: "aven.thread-side",
-    panelIds: ["files", "diff", "desktop"],
+    panelIds: ["files", "diff", "desktop", "terminal"],
     storage: safeStorage,
   });
   // What the pull request does not have yet (everything, before there is one): the badge shows it,
@@ -77,6 +78,13 @@ function ThreadPage() {
     sidePanels.push({
       id: "desktop",
       node: <DesktopPanel threadId={thread.id} onClose={desktop.close} />,
+    });
+  }
+
+  if (terminal.open) {
+    sidePanels.push({
+      id: "terminal",
+      node: <TerminalPanel threadId={thread.id} onClose={terminal.close} />,
     });
   }
 

@@ -172,6 +172,8 @@ const ws = new WebSocket(`${base.replace(/^http/, "ws").replace(/\/$/, "")}/runt
 } as unknown as string[]);
 ws.binaryType = "arraybuffer";
 const viewers = new Map<string, FakeDesktop>();
+// A pretend shell: it shows a prompt, echoes what is typed and answers each line with `ran: <line>`.
+const terminals = new Map<string, { line: string }>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
 
@@ -187,7 +189,21 @@ ws.onopen = () => send({ type: "hello", version: WIRE_VERSION, runs: [] });
 ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
-    if (frame) viewers.get(frame.viewerId)?.feed(frame.payload);
+    if (!frame) return;
+    const terminal = terminals.get(frame.viewerId);
+    if (!terminal) viewers.get(frame.viewerId)?.feed(frame.payload);
+    else {
+      const reply = (value: string) => ws.send(encodeViewerFrame(frame.viewerId, text(value)));
+      for (const char of new TextDecoder().decode(frame.payload)) {
+        if (char === "\r") {
+          reply(`\r\nran: ${terminal.line}\r\nfake$ `);
+          terminal.line = "";
+        } else {
+          terminal.line += char;
+          reply(char);
+        }
+      }
+    }
     return;
   }
   const message = JSON.parse(String(data)) as ControlPlaneToRuntime;
@@ -201,6 +217,20 @@ ws.onmessage = ({ data }) => {
     viewers.set(viewerId, new FakeDesktop((bytes) => ws.send(encodeViewerFrame(viewerId, bytes))));
   } else if (message.type === "desktop.close") {
     viewers.delete(message.viewerId);
+  } else if (message.type === "terminal.open") {
+    const { viewerId, cols, rows } = message;
+    if (!sandboxRunning) {
+      send({ type: "terminal.closed", viewerId, reason: "The thread's sandbox is not running" });
+      return;
+    }
+    event({ type: "terminal.open", cols, rows });
+    terminals.set(viewerId, { line: "" });
+    send({ type: "terminal.opened", viewerId });
+    ws.send(encodeViewerFrame(viewerId, text("fake$ ")));
+  } else if (message.type === "terminal.resize") {
+    event({ type: "terminal.resize", cols: message.cols, rows: message.rows });
+  } else if (message.type === "terminal.close") {
+    terminals.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.start" && !ASKING) {

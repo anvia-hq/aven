@@ -1,4 +1,4 @@
-import { Folder, GitDiff, List, Monitor } from "@mynaui/icons-react";
+import { Folder, GitDiff, List, Monitor, Terminal } from "@mynaui/icons-react";
 import type { ComponentType } from "react";
 
 import { Button } from "@/components/button";
@@ -17,6 +17,7 @@ export function ThreadHeader({ thread, panels }: Props) {
     { label: "Desktop", icon: Monitor, panel: panels.desktop },
     { label: "Changes", icon: GitDiff, panel: panels.diff },
     { label: "Files", icon: Folder, panel: panels.files },
+    { label: "Terminal", icon: Terminal, panel: panels.terminal },
   ];
   return (
     <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
