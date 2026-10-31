@@ -67,6 +67,9 @@ export const createBotChats = (runner: BotRunner, options: { askTimeoutMs?: numb
     await runner.wake(bot, userId, GREETING, await modelOf(userId, bot));
   },
 
+  // Which of the person's bots are at work, as it changes.
+  working: (userId: string, signal: AbortSignal) => runner.working(userId, signal),
+
   async *events(
     userId: string,
     botId: string,

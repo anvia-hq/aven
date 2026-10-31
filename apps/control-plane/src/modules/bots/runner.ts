@@ -42,6 +42,8 @@ export type BotReplier = {
 };
 
 type Channel = {
+  botId: string;
+  userId: string;
   /** The chat so far, kept current by applying events, so a client that connects gets it whole. */
   messages: BotChatMessage[];
   typing: boolean;
@@ -60,6 +62,8 @@ type Channel = {
 // server: a client that disconnects loses nothing and finds the chat as it is.
 export class BotRunner {
   #channels = new Map<string, Channel>();
+  // Who is watching which person's bots at work, to be told when one starts or stops.
+  #watchers = new Map<string, Set<() => void>>();
   #store: MemoryStore;
   #replier: BotReplier;
   #shutdown = new AbortController();
@@ -146,22 +150,63 @@ export class BotRunner {
     signal: AbortSignal,
   ): AsyncGenerator<BotEvent | null> {
     const channel = await this.#open(botId, userId);
-    const queue: BotEvent[] = [];
+    yield* this.#follow<BotEvent>(
+      (listener) => {
+        channel.subscribers.add(listener);
+        return () => {
+          channel.subscribers.delete(listener);
+          this.#release(botId, channel);
+        };
+      },
+      { type: "snapshot", messages: channel.messages, typing: channel.typing },
+      signal,
+    );
+  }
+
+  /** The ids of the person's bots that are at work on a reply now. */
+  workingOf(userId: string) {
+    return [...this.#channels.values()]
+      .filter((channel) => channel.userId === userId && channel.typing)
+      .map((channel) => channel.botId);
+  }
+
+  // Which of a person's bots are at work, now and each time that changes, with `null` as a
+  // keep-alive tick: what the sidebar draws as open eyes (decision 0064).
+  working(userId: string, signal: AbortSignal): AsyncGenerator<string[] | null> {
+    return this.#follow<string[]>(
+      (listener) => {
+        const watcher = () => listener(this.workingOf(userId));
+        const watchers = this.#watchers.get(userId) ?? new Set();
+        watchers.add(watcher);
+        this.#watchers.set(userId, watchers);
+        return () => void watchers.delete(watcher);
+      },
+      this.workingOf(userId),
+      signal,
+    );
+  }
+
+  // What a client is shown: `first`, then what `attach`'s listener is given, with `null` ticks.
+  async *#follow<T>(
+    attach: (listener: (item: T) => void) => () => void,
+    first: T,
+    signal: AbortSignal,
+  ): AsyncGenerator<T | null> {
+    const queue: T[] = [];
     let wake: (() => void) | undefined;
-    const listener = (event: BotEvent) => {
-      queue.push(event);
+    const detach = attach((item) => {
+      queue.push(item);
       wake?.();
-    };
-    channel.subscribers.add(listener);
+    });
     const aborted = new Promise<undefined>((resolve) => {
       signal.addEventListener("abort", () => resolve(undefined), { once: true });
     });
     try {
-      yield { type: "snapshot", messages: channel.messages, typing: channel.typing };
+      yield first;
       while (!signal.aborted) {
-        const event = queue.shift();
-        if (event) {
-          yield event;
+        const item = queue.shift();
+        if (item !== undefined) {
+          yield item;
           continue;
         }
         const timer = Bun.sleep(PING_MS).then(() => null);
@@ -173,8 +218,7 @@ export class BotRunner {
         if (woke === null && queue.length === 0 && !signal.aborted) yield null;
       }
     } finally {
-      channel.subscribers.delete(listener);
-      this.#release(botId, channel);
+      detach();
     }
   }
 
@@ -192,6 +236,8 @@ export class BotRunner {
     let channel = this.#channels.get(botId);
     if (!channel) {
       const made: Channel = {
+        botId,
+        userId,
         messages: [],
         typing: false,
         pending: 0,
@@ -228,8 +274,12 @@ export class BotRunner {
 
   #emit(channel: Channel, event: BotEvent) {
     channel.messages = applyBotEvent(channel.messages, event);
+    const working = channel.typing;
     channel.typing = isTyping(channel.typing, event);
     for (const subscriber of channel.subscribers) subscriber(event);
+    if (channel.typing !== working) {
+      for (const watcher of this.#watchers.get(channel.userId) ?? []) watcher();
+    }
   }
 
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on. What

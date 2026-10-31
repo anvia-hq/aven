@@ -17,6 +17,16 @@ export const botsRouter = (chats: BotChats) =>
         orNotFound(await botsService.update(user.id, params.id, body), "Bot not found"),
       { auth: true, params: botParams, body: updateBotBody },
     )
+    // Which of the person's bots are at work, now and each time that changes (decision 0064).
+    .get(
+      "/working",
+      async function* ({ user, request }) {
+        for await (const working of chats.working(user.id, request.signal)) {
+          yield working ? sse({ data: working }) : sse({ event: "ping", data: "" });
+        }
+      },
+      { auth: true },
+    )
     // The person says something; the bot's reply comes through the events.
     .post(
       "/:id/messages",

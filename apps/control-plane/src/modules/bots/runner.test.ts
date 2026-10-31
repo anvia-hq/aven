@@ -459,4 +459,63 @@ describe("BotRunner", () => {
       expect(shown(client.events)).toEqual(["bot to Scout: do A", "user from Scout: A is done"]);
     });
   });
+
+  describe("which bots are at work (decision 0064)", () => {
+    // What a person is told as it changes, until `stop` says it has been told enough.
+    async function follow(runner: BotRunner, userId: string) {
+      const controller = new AbortController();
+      const told: string[][] = [];
+      const done = (async () => {
+        for await (const working of runner.working(userId, controller.signal)) {
+          if (working) told.push(working);
+        }
+      })();
+      await until(() => told.length > 0);
+      return { told, stop: () => (controller.abort(), done) };
+    }
+
+    test("is told who is at work now, then when a bot starts and when it stops", async () => {
+      const gate = Promise.withResolvers<void>();
+      const runner = runnerWith({
+        store: fakeStore(),
+        createAgent: scripts([[send("one")], [text("")]]),
+        pause: async () => {
+          await gate.promise;
+        },
+      });
+      const watching = await follow(runner, USER);
+      expect(watching.told).toEqual([[]]);
+
+      await runner.send(bot, USER, "hello", model);
+      await until(() => watching.told.length === 2);
+      expect(watching.told[1]).toEqual([bot.id]);
+      expect(runner.workingOf(USER)).toEqual([bot.id]);
+
+      gate.resolve();
+      await until(() => watching.told.length === 3);
+      expect(watching.told[2]).toEqual([]);
+      await watching.stop();
+    });
+
+    test("a person is told of their own bots only", async () => {
+      const gate = Promise.withResolvers<void>();
+      const runner = runnerWith({
+        store: fakeStore(),
+        createAgent: scripts([[send("one")], [text("")]]),
+        pause: async () => {
+          await gate.promise;
+        },
+      });
+      const other = await follow(runner, "someone-else");
+
+      await runner.send(bot, USER, "hello", model);
+      await Bun.sleep(30);
+
+      expect(runner.workingOf(USER)).toEqual([bot.id]);
+      expect(runner.workingOf("someone-else")).toEqual([]);
+      expect(other.told).toEqual([[]]);
+      gate.resolve();
+      await other.stop();
+    });
+  });
 });
