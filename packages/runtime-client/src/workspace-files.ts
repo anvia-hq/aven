@@ -3,6 +3,7 @@ import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/protocol/runtime-wire";
 
 import { git, type Git } from "./git-clone";
+import { hostGit } from "./host-git";
 
 // A listing past this many entries is cut; a folder that large is not browsed by eye.
 const MAX_ENTRIES = 2000;
@@ -70,7 +71,7 @@ function rank(path: string, query: string) {
 export async function searchWorkspace(root: string, query: string, run: Git = git) {
   const wanted = query.trim().toLowerCase();
   const found: { path: string; rank: number }[] = [];
-  for (const path of await knownFiles(root, run)) {
+  for (const path of await knownFiles(root, hostGit(run))) {
     const at = rank(path, wanted);
     if (at !== undefined) found.push({ path, rank: at });
   }

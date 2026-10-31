@@ -1,7 +1,7 @@
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { authEnv, git, type Git } from "./git-clone";
-import { gitFailure, hardenedGit } from "./host-git";
+import { gitFailure, hostGit } from "./host-git";
 
 // A fetch that has not finished by then is stopped, so a stalled connection cannot hold a run.
 const FETCH_TIMEOUT_MS = 2 * 60_000;
@@ -37,7 +37,7 @@ export async function fetchBranch(
   run: Git = git,
 ): Promise<Fetched> {
   if (!isBranchName(branch)) throw new Error(`"${branch}" is not a branch name`);
-  const hardened = hardenedGit(run);
+  const hardened = hostGit(run);
   const ref = `refs/remotes/origin/${branch}`;
   const read = async () => {
     const found = await hardened(["rev-parse", "--verify", "--quiet", ref], { cwd: root });

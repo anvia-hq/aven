@@ -3,7 +3,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { fetchBranch } from "./fetch-branch";
 import { git, type Git } from "./git-clone";
-import { gitFailure, hardenedGit } from "./host-git";
+import { gitFailure, hostGit } from "./host-git";
 import { trackPushes } from "./track-pushes";
 
 /**
@@ -18,7 +18,7 @@ export async function updateRestoredWorkspace(
   run: Git = git,
 ) {
   await fetchBranch(root, access, access.defaultBranch, run);
-  const checkout = await hardenedGit(run)(
+  const checkout = await hostGit(run)(
     ["checkout", "-f", "-B", threadBranch(threadId), `origin/${access.defaultBranch}`],
     { cwd: root },
   );

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 
 import { git, type Git } from "./git-clone";
+import { hostGit } from "./host-git";
 import { remoteBase } from "./remote-base";
 import { trackPushes } from "./track-pushes";
 
@@ -36,14 +37,15 @@ async function workingTree(root: string, run: Git) {
 
 /** Remembers the working tree as the start of a turn; false when `root` holds no repository. */
 export async function markTurn(root: string, run: Git = git) {
-  const tree = await workingTree(root, run);
+  const host = hostGit(run);
+  const tree = await workingTree(root, host);
   if (!tree) return false;
-  const commit = await run(["commit-tree", tree, "-m", "Start of a turn"], {
+  const commit = await host(["commit-tree", tree, "-m", "Start of a turn"], {
     cwd: root,
     env: IDENTITY,
   });
   if (commit.code !== 0) return false;
-  const saved = await run(["update-ref", TURN_REF, commit.stdout.trim()], { cwd: root });
+  const saved = await host(["update-ref", TURN_REF, commit.stdout.trim()], { cwd: root });
   return saved.code === 0;
 }
 
@@ -64,9 +66,10 @@ async function turnStart(root: string, run: Git) {
 
 // The tree of the thread's branch as the remote has it, which is what its pull request holds; null
 // until the branch has been pushed.
-async function pushedTree(root: string, run: Git) {
+// `configure` writes the workspace's own configuration, which the agent's git reads; `run` reads it.
+async function pushedTree(root: string, run: Git, configure: Git) {
   // A workspace cloned before pushes were recorded learns it here, for the pushes to come.
-  await trackPushes(root, run);
+  await trackPushes(root, configure);
   const branch = await run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
   if (branch.code !== 0) return null;
   const pushed = await run(
@@ -76,9 +79,10 @@ async function pushedTree(root: string, run: Git) {
   return pushed.code === 0 ? pushed.stdout.trim() : null;
 }
 
-async function diffStart(root: string, scope: DiffScope, run: Git) {
+async function diffStart(root: string, scope: DiffScope, run: Git, configure: Git) {
   if (scope === "turn") return turnStart(root, run);
-  if (scope === "unshipped") return (await pushedTree(root, run)) ?? branchPoint(root, run);
+  if (scope === "unshipped")
+    return (await pushedTree(root, run, configure)) ?? branchPoint(root, run);
   return branchPoint(root, run);
 }
 
@@ -99,17 +103,19 @@ export async function threadDiff(
   scope: DiffScope,
   run: Git = git,
 ): Promise<ThreadDiff | null> {
-  const now = await workingTree(root, run);
+  const host = hostGit(run);
+  const now = await workingTree(root, host);
   if (!now) return null;
-  const from = await diffStart(root, scope, run);
+  const from = await diffStart(root, scope, host, run);
   if (!from) return { patch: "", truncated: false };
-  const diff = await run(
+  const diff = await host(
     [
       "-c",
       "core.quotepath=false",
       "diff",
       "--no-color",
       "--no-ext-diff",
+      "--no-textconv",
       "--find-renames",
       "--src-prefix=a/",
       "--dst-prefix=b/",
