@@ -1,4 +1,6 @@
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import { subagentInstructions } from "@aven/agents/subagent-instruction";
+import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
@@ -32,13 +34,15 @@ import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
 // run's token; this process never holds a provider key. The conversation is durable's own, so the
 // agent has no memory store.
-const defaultCreateAgent =
+export const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, attended, tools, skills, envNames, model }) => {
+  ({ id, attended, tools, skills, envNames, model, role }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       id,
       questions: attended,
+      instructions: role && subagentInstructions(role),
+      maxTurns: role && SUBAGENT_MAX_TURNS,
       provider: model.provider,
       modelId: model.modelId,
       apiKey: model.gatewayToken,

@@ -1063,12 +1063,12 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
-    // Every agent of the run can fetch (decision 0042); only the one with a person to talk to may
-    // define a goal, and only it may ask questions.
+    // Every agent of the run can fetch (decision 0042) and hand tasks to subagents (decision 0057);
+    // only the one with a person to talk to may define a goal, and only it may ask questions.
     expect(made).toEqual([
-      { id: "run-run-1", attended: true, tools: ["git_fetch", "define_goal"] },
-      { id: "goal-run-1", attended: false, tools: ["git_fetch"] },
-      { id: "run-run-1-report", attended: false, tools: ["git_fetch"] },
+      { id: "run-run-1", attended: true, tools: ["git_fetch", "spawn_agent", "define_goal"] },
+      { id: "goal-run-1", attended: false, tools: ["git_fetch", "spawn_agent"] },
+      { id: "run-run-1-report", attended: false, tools: ["git_fetch", "spawn_agent"] },
     ]);
     const texts = plane.received.flatMap((m) =>
       m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],

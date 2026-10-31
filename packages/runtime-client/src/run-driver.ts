@@ -5,6 +5,7 @@ import {
 } from "@anvia/core/agent/interactions";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import type { SkillListing } from "@aven/agents/skills";
+import type { SubagentType } from "@aven/agents/subagents";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
@@ -42,6 +43,8 @@ export type CreateRuntimeAgent = (input: {
   /** The names of the project's environment variables the run came with (decision 0045). */
   envNames?: readonly string[];
   model?: RunModel;
+  /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
+  role?: SubagentType;
 }) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
 export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
@@ -223,6 +226,8 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
+        const skills = state.record.skillListing;
+        const envNames = env?.map(({ name }) => name);
         const { agent, compaction } = context.createAgent({
           thread,
           id,
@@ -235,9 +240,22 @@ export function createRunDriver(context: DriverContext) {
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+            // Nobody is there to answer a subagent, and it is not journaled: its agent id only
+            // has to be its own.
+            createSubagent: ({ type, id: subagentId, tools }) =>
+              context.createAgent({
+                thread,
+                id: `${id}-${subagentId}`,
+                attended: false,
+                tools,
+                skills,
+                envNames,
+                model,
+                role: type,
+              }).agent,
           }),
-          skills: state.record.skillListing,
-          envNames: env?.map(({ name }) => name),
+          skills,
+          envNames,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
