@@ -1,6 +1,7 @@
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 
+import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 
@@ -25,8 +26,10 @@ export function useBots() {
     const saved = await attempt("Could not save the bot", () =>
       postJson<Bot>(`/bots/${bot.id}`, patch, "PATCH"),
     );
-    if (saved) await botsStore.refresh();
-    return saved !== null;
+    if (!saved) return false;
+    await botsStore.refresh();
+    toast.add({ title: "Bot saved", description: saved.name, type: "success" });
+    return true;
   }
 
   return {

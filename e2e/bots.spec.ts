@@ -47,4 +47,28 @@ test.describe("bots", () => {
     await expect(page.getByText("Could not send message")).toBeVisible();
     await expect(page.getByText("ANTHROPIC_API_KEY is not set")).toBeVisible();
   });
+
+  test("the person changes the bot's name and avatar", async ({ page }) => {
+    await registerUser(page, "bot-edit", "Bot Editor");
+    await page.goto("/bot");
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await page.getByLabel("Name").fill("Pip");
+    await page.getByLabel("Avatar").fill("🐦");
+    await page.getByLabel("Instruction").fill("Talk like a pirate.");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    await expect(page.getByText("Bot saved")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message" })).toHaveAttribute(
+      "placeholder",
+      "Message Pip",
+    );
+
+    // It is kept: the bot is the same after a reload, in the settings too.
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await expect(page.getByLabel("Instruction")).toHaveValue("Talk like a pirate.");
+    await expect(page.getByLabel("Avatar")).toHaveValue("🐦");
+  });
 });

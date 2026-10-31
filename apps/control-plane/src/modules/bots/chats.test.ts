@@ -117,4 +117,27 @@ run("createBotChats (postgres)", async () => {
     expect(await botMemoryStore.load({ scope: { sessionId: mine!.id, userId: bob } })).toEqual([]);
     await botMemoryStore.clear({ scope });
   });
+
+  test("the bot is run as the person has last changed it", async () => {
+    const [mine] = await botsService.list(alice);
+    const made: { name: string; instruction: string }[] = [];
+    const runner = new BotRunner({
+      store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
+      createAgent: ({ bot, deliver, memory }) => {
+        made.push({ name: bot.name, instruction: bot.instruction });
+        return createBotAgent({
+          model: scriptedModel([[text("")]]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        });
+      },
+      pause: async () => undefined,
+    });
+    await botsService.update(alice, mine!.id, { name: "Pip", instruction: "Talk like a pirate." });
+    await createBotChats(runner).send(alice, mine!.id, "ahoy");
+    expect(made).toEqual([{ name: "Pip", instruction: "Talk like a pirate." }]);
+  });
 });
