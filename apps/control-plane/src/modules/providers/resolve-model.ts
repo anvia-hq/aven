@@ -1,11 +1,31 @@
-import type { ModelConfig } from "@aven/agents/model";
+import type { ModelConfig, Provider } from "@aven/agents/model";
 
-import { UnprocessableError } from "../../errors";
+import { UnavailableError, UnprocessableError } from "../../errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
 import { modelCatalog } from "./model-catalog";
 import { effortsFor } from "./model-list";
 import { providersService } from "./service";
+
+// Azure and compatible servers have no shared environment key: the user's own is required or optional.
+export const ENV_KEYS: Partial<Record<Provider, string>> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
+
+/** The model a run asked for cannot be used, such as a missing environment key. */
+export class ModelUnavailableError extends UnavailableError {}
+
+// With no provider of their own, a sender runs on the environment's shared one.
+export function environmentModel(): ModelConfig {
+  const provider = (process.env.AGENT_PROVIDER ?? "anthropic") as Provider;
+  if (provider !== "openai" && provider !== "anthropic") {
+    throw new ModelUnavailableError(
+      `AGENT_PROVIDER must be "openai" or "anthropic", got "${provider}"`,
+    );
+  }
+  return { provider, modelId: process.env.AGENT_MODEL || undefined };
+}
 
 // A message asked for a provider, model or effort the user cannot run with.
 export class InvalidSelectionError extends UnprocessableError {}

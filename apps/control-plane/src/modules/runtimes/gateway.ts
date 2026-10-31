@@ -3,8 +3,8 @@ import { createHmac, randomBytes } from "node:crypto";
 import type { ModelConfig, Provider } from "@aven/agents/model";
 import type { RunModel } from "@aven/protocol/runtime-wire";
 
-import { UnavailableError } from "../../errors";
 import { defaultModelId } from "../providers/default-model";
+import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
 import { bearerToken } from "./bearer";
 
 const TOKEN_PREFIX = "avgw_";
@@ -45,26 +45,6 @@ const TOKEN_SECRET =
 
 const tokenFor = (scope: string) =>
   `${TOKEN_PREFIX}${createHmac("sha256", TOKEN_SECRET).update(`run-gateway:${scope}`).digest("base64url")}`;
-
-// Azure and compatible servers have no shared environment key: the user's own is required or optional.
-const ENV_KEYS: Partial<Record<Provider, string>> = {
-  anthropic: "ANTHROPIC_API_KEY",
-  openai: "OPENAI_API_KEY",
-};
-
-/** The model a run asked for cannot be used, such as a missing environment key. */
-export class ModelUnavailableError extends UnavailableError {}
-
-// With no provider of their own, a sender runs on the environment's shared one.
-export function environmentModel(): ModelConfig {
-  const provider = (process.env.AGENT_PROVIDER ?? "anthropic") as Provider;
-  if (provider !== "openai" && provider !== "anthropic") {
-    throw new ModelUnavailableError(
-      `AGENT_PROVIDER must be "openai" or "anthropic", got "${provider}"`,
-    );
-  }
-  return { provider, modelId: process.env.AGENT_MODEL || undefined };
-}
 
 // Lets a runtime use a model without ever holding the provider key (decision 0008). Each run gets
 // a token that maps to the sender's chosen provider, model and effort; the gateway adds the key,

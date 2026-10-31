@@ -8,7 +8,8 @@ import type {
 } from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
 
-import { environmentModel, type RunGateway } from "../runtimes/gateway";
+import { environmentModel } from "../providers/resolve-model";
+import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
 import { runIdentities, type RunIdentities, type RunIdentity } from "../workload-identity/grants";
 import type {
