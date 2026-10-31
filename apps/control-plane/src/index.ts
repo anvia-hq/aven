@@ -4,6 +4,7 @@ import { runsService, runtimeHub, shipService, threadMessages } from "./composit
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
+import { botsRouter } from "./modules/bots/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
 import { shipRouter } from "./modules/ship/router";
@@ -26,6 +27,7 @@ const app = new Elysia()
   .get("/health", () => ({ status: "ok" }))
   .use(artifactsRouter(runtimeHub))
   .use(authRouter)
+  .use(botsRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))
