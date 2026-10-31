@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { decodeViewerFrame, encodeViewerFrame } from "./runtime-wire";
+import { decodeViewerFrame, encodeViewerFrame } from "./viewer-frame";
 
 describe("viewer frames", () => {
   test("carry a viewer id and bytes both ways", () => {

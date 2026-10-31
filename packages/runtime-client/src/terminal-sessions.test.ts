@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { decodeViewerFrame, type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import type { ThreadWorkspaces } from "./sandbox";
 import { TerminalSessions } from "./terminal-sessions";

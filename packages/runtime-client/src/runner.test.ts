@@ -10,11 +10,8 @@ import {
 } from "@aven/agents/testing/scripted-model";
 import { z } from "zod";
 
-import {
-  decodeViewerFrame,
-  encodeViewerFrame,
-  type RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
+import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";

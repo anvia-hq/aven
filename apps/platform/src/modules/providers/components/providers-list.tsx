@@ -1,13 +1,8 @@
+import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import type { ReactNode } from "react";
 
 import { useProviders } from "../hooks/use-providers";
-import {
-  PROVIDER_DESCRIPTIONS,
-  PROVIDER_KINDS,
-  PROVIDER_LABELS,
-  type Provider,
-  type ProviderKind,
-} from "../types";
+import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
@@ -44,7 +39,7 @@ export function ProvidersList() {
 
   return (
     <div className="flex flex-col border-t">
-      {PROVIDER_KINDS.map((kind) => {
+      {PROVIDERS.map((kind) => {
         const ofKind = providers.filter((provider) => provider.kind === kind);
         return kind === "openai-compatible" ? (
           <CompatibleRow key={kind} kind={kind} providers={ofKind} />

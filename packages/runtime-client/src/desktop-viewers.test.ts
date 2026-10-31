@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SandboxDesktop } from "@anvia/sandbox";
-import { decodeViewerFrame, type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { DesktopViewers } from "./desktop-viewers";
 import { fakeDesktop } from "./testing/fake-desktop";

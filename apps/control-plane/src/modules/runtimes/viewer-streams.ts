@@ -1,8 +1,5 @@
-import {
-  decodeViewerFrame,
-  encodeViewerFrame,
-  type ControlPlaneToRuntime,
-} from "@aven/protocol/runtime-wire";
+import { type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { UnavailableError } from "../../errors";
 

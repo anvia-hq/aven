@@ -1,5 +1,5 @@
 import { errorMessage } from "@aven/agents/values";
-import { encodeViewerFrame } from "@aven/protocol/runtime-wire";
+import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import type { ViewerLink } from "./desktop-viewers";
 import type { ThreadWorkspaces } from "./sandbox";

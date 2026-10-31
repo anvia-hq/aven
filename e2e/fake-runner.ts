@@ -1,12 +1,8 @@
 // A runner for e2e whose desktop is pretend: it speaks the runtime wire and, for a viewer, a small
 // RFB (VNC) server that shows one red screen and reports the keys and clicks it receives. No
 // Docker. What it learns is printed as `EVENT {json}` lines for the spec to read.
-import {
-  WIRE_VERSION,
-  decodeViewerFrame,
-  encodeViewerFrame,
-  type ControlPlaneToRuntime,
-} from "../packages/protocol/src/runtime-wire";
+import { WIRE_VERSION, type ControlPlaneToRuntime } from "../packages/protocol/src/runtime-wire";
+import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
 
 const base = process.env.AVEN_URL!;
 const token = process.env.AVEN_RUNTIME_TOKEN!;

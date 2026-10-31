@@ -4,12 +4,8 @@ import { Elysia } from "elysia";
 import { db } from "@aven/db/client";
 import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
-import {
-  WIRE_VERSION,
-  decodeViewerFrame,
-  encodeViewerFrame,
-  type ControlPlaneToRuntime,
-} from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 import { eq } from "drizzle-orm";
 
 import { errorsRouter } from "../../errors";

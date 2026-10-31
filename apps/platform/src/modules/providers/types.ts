@@ -1,6 +1,6 @@
-export const PROVIDER_KINDS = ["openai", "anthropic", "azure", "openai-compatible"] as const;
+import type { Provider as WireProvider } from "@aven/protocol/runtime-wire";
 
-export type ProviderKind = (typeof PROVIDER_KINDS)[number];
+export type ProviderKind = WireProvider;
 
 export const PROVIDER_LABELS: Record<ProviderKind, string> = {
   openai: "OpenAI",

@@ -2,7 +2,6 @@ import { createCodingAgent } from "@aven/agents/coding-agent";
 import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
-  decodeViewerFrame,
   CloseCode,
   type ControlPlaneToRuntime,
   type CallMethod,
@@ -11,6 +10,7 @@ import {
   type RuntimeCalls,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import {
   artifactsReadParams,

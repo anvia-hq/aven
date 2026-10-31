@@ -1,11 +1,11 @@
 import type { SandboxDesktop } from "@anvia/sandbox";
 import { errorMessage } from "@aven/agents/values";
 import {
-  encodeViewerFrame,
   type DesktopCallMethod,
   type DesktopInfo,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
+import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { desktopCallParams } from "./call-params";
 import type { ThreadWorkspaces } from "./sandbox";

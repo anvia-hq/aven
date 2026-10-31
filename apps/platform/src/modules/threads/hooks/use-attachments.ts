@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
+import { ARTIFACT_MEDIA_TYPES } from "@aven/protocol/runtime-wire";
 
 import { toast } from "@/components/toast";
 import { fileSize } from "@/lib/format";
@@ -10,7 +11,7 @@ import type { AttachmentUpload } from "../types";
 export type PendingFile = { id: string; file: File; preview?: string };
 
 // The images a model is shown; anything else, an SVG included, only goes to the sandbox.
-const MODEL_IMAGES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const MODEL_IMAGES = new Set<string>(ARTIFACT_MEDIA_TYPES);
 
 function readBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
