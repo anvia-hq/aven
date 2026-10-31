@@ -24,7 +24,7 @@ function NewThread() {
     startThread(projectId, message, selection);
 
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col md:min-h-[calc(100svh-1rem)]">
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {/* Only once there are projects: before, the empty state below has the button. */}

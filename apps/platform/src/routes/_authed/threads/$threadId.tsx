@@ -81,7 +81,7 @@ function ThreadPage() {
   }
 
   return (
-    <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-svh">
+    <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
       <div className="min-h-0 flex-1">
         {/* The conversation stays the first panel whether or not the desktop is open, so opening
             it does not remount the conversation and lose a half-written reply. */}
