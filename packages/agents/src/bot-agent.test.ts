@@ -171,6 +171,29 @@ describe("createBotAgent", () => {
     expect(botInstructions(base)).not.toContain(CREATE_BOT_TOOL_NAME);
   });
 
+  test("a person who asks for two bots gets two in the one reply", async () => {
+    const made: string[] = [];
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([
+        [
+          toolCall(CREATE_BOT_TOOL_NAME, { name: "Analyst", instruction: "You analyse data." }),
+          toolCall(CREATE_BOT_TOOL_NAME, { name: "Scout", instruction: "You research." }),
+        ],
+        [send("Both are ready")],
+        [text("")],
+      ]),
+      deliver: async () => undefined,
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      createBot: async ({ name }) => (made.push(name), { name }),
+    });
+
+    await agent.generate({ prompt: "make me two bots", session: { sessionId: "b1" } });
+
+    expect(made).toEqual(["Analyst", "Scout"]);
+    expect(botInstructions({ ...base, createBots: true })).not.toContain("only one for each");
+  });
+
   test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {
     const changes: unknown[] = [];
     const agent = createBotAgent({
