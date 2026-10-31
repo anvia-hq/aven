@@ -14,6 +14,12 @@ export class ConflictError extends Error {}
 /** The caller is known but may not do this (403). */
 export class ForbiddenError extends Error {}
 
+/** `value`, unless there is none: then what the request names does not exist (404). */
+export function orNotFound<T>(value: T | null | undefined, message: string): T {
+  if (value === null || value === undefined) throw new NotFoundError(message);
+  return value;
+}
+
 /** What went wrong, in words: an Error's message, or whatever else was thrown as text. */
 export const describeError = (error: unknown) =>
   error instanceof Error ? error.message : String(error);

@@ -1,5 +1,6 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
+import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import { connectRouter } from "./connect";
 import { runGateway } from "./gateway";
@@ -36,8 +37,10 @@ export const runtimesRouter = (hub: RuntimeHub) =>
     .post(
       "/:id/rotate",
       async ({ params, organizationId, user }) => {
-        const rotated = await runtimesService.rotate(organizationId, user.id, params.id);
-        if (!rotated) return status(404, "Runtime not found");
+        const rotated = orNotFound(
+          await runtimesService.rotate(organizationId, user.id, params.id),
+          "Runtime not found",
+        );
         hub.disconnect(params.id, "Token rotated");
         return rotated;
       },
@@ -46,8 +49,10 @@ export const runtimesRouter = (hub: RuntimeHub) =>
     .delete(
       "/:id",
       async ({ params, organizationId, user }) => {
-        const revoked = await runtimesService.revoke(organizationId, user.id, params.id);
-        if (!revoked) return status(404, "Runtime not found");
+        const revoked = orNotFound(
+          await runtimesService.revoke(organizationId, user.id, params.id),
+          "Runtime not found",
+        );
         hub.disconnect(params.id, "Revoked");
         return revoked;
       },

@@ -1,5 +1,6 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
+import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import { importProjectBody, projectParams } from "./schema";
 import { projectsService } from "./service";
@@ -17,9 +18,7 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
   )
   .get(
     "/:id",
-    async ({ params, organizationId }) => {
-      const project = await projectsService.get(organizationId, params.id);
-      return project ?? status(404, "Project not found");
-    },
+    async ({ params, organizationId }) =>
+      orNotFound(await projectsService.get(organizationId, params.id), "Project not found"),
     { auth: true, org: true, params: projectParams },
   );

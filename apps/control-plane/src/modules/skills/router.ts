@@ -1,5 +1,6 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
+import { NotFoundError, orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import { skillParams, updateSkillBody, uploadSkillBody } from "./schema";
 import { skillsService } from "./service";
@@ -16,14 +17,16 @@ export const skillsRouter = new Elysia({ prefix: "/skills" })
   .patch(
     "/:id",
     async ({ params, body, user }) =>
-      (await skillsService.update(user.id, params.id, body)) ?? status(404, "Skill not found"),
+      orNotFound(await skillsService.update(user.id, params.id, body), "Skill not found"),
     { auth: true, params: skillParams, body: updateSkillBody },
   )
   .delete(
     "/:id",
-    async ({ params, user }) =>
-      (await skillsService.remove(user.id, params.id))
-        ? { ok: true }
-        : status(404, "Skill not found"),
+    async ({ params, user }) => {
+      if (!(await skillsService.remove(user.id, params.id))) {
+        throw new NotFoundError("Skill not found");
+      }
+      return { ok: true };
+    },
     { auth: true, params: skillParams },
   );

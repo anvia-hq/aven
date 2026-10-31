@@ -1,5 +1,6 @@
 import { Elysia, sse, status } from "elysia";
 
+import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import type { RunManager } from "../runs/service";
 import {
@@ -43,12 +44,11 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
     )
     .patch(
       "/:id",
-      async ({ params, body, organizationId }) => {
-        return (
-          (await threadsService.update(organizationId, params.id, body)) ??
-          status(404, "Thread not found")
-        );
-      },
+      async ({ params, body, organizationId }) =>
+        orNotFound(
+          await threadsService.update(organizationId, params.id, body),
+          "Thread not found",
+        ),
       { auth: true, org: true, params: threadParams, body: updateThreadBody },
     )
     .post(
@@ -80,8 +80,7 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
     .get(
       "/:id/events",
       async function* ({ params, organizationId, request }) {
-        const thread = await threadsService.get(organizationId, params.id);
-        if (!thread) return status(404, "Thread not found");
+        const thread = await threadsService.require(organizationId, params.id);
         for await (const event of runs.events(thread, request.signal)) {
           yield event ? sse({ data: event }) : sse({ event: "ping", data: "" });
         }

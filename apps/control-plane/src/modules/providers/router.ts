@@ -1,5 +1,6 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
+import { NotFoundError, orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
 import { listAgentModels } from "./model-list";
@@ -21,21 +22,22 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     "/:id/models",
     // `efforts` maps a model id to the reasoning levels it accepts; absent means none.
     async ({ params, user }) =>
-      (await providersService.listModels(user.id, params.id)) ?? status(404, "Provider not found"),
+      orNotFound(await providersService.listModels(user.id, params.id), "Provider not found"),
     { auth: true, params: providerParams },
   )
   .patch(
     "/:id",
     async ({ params, body, user }) =>
-      (await providersService.update(user.id, params.id, body)) ??
-      status(404, "Provider not found"),
+      orNotFound(await providersService.update(user.id, params.id, body), "Provider not found"),
     { auth: true, params: providerParams, body: updateProviderBody },
   )
   .delete(
     "/:id",
-    async ({ params, user }) =>
-      (await providersService.remove(user.id, params.id))
-        ? { ok: true }
-        : status(404, "Provider not found"),
+    async ({ params, user }) => {
+      if (!(await providersService.remove(user.id, params.id))) {
+        throw new NotFoundError("Provider not found");
+      }
+      return { ok: true };
+    },
     { auth: true, params: providerParams },
   );

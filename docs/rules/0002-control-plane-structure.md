@@ -6,7 +6,7 @@ Applies to `apps/control-plane` (Elysia on Bun, zod, `@aven/db`).
 
 ## Modules
 
-Each feature is a folder in `src/modules/<module-name>/` (kebab-case) with exactly:
+Each feature is a folder in `src/modules/<module-name>/` (kebab-case) with these files at its core:
 
 ```
 router.ts    Elysia instance: routes only, no business logic
@@ -15,10 +15,11 @@ service.ts   business logic and database access
 ```
 
 - Include only the files a module needs. `auth` has no `schema.ts` because Better Auth owns its request shapes.
+- A module may add helper files beside these, named for what they do (`runtimes/gateway.ts`, `threads/messages.ts`, `variables/project-router.ts`), when a service or a router would otherwise grow too large or mix concerns. The rules for each kind of file still apply: a second router is still routes only.
 - `router.ts` calls the service and validates with the schemas. It never touches `db` directly.
-- `service.ts` knows nothing about HTTP. Return data or `null`; let the router map that to a status.
+- `service.ts` knows nothing about HTTP. It returns data, and throws a typed error for an expected failure (see Errors).
 - `schema.ts` is zod only (Elysia accepts zod through Standard Schema). Do not use `t` from Elysia.
-- Export a single `<name>Router` from `router.ts` and a `<name>Service` object from `service.ts`.
+- Export a single `<name>Router` from each router file and a `<name>Service` object from `service.ts`. A router that needs a long-lived object (the runtime hub, the run manager) is a function taking it.
 
 ## Chaining
 
@@ -28,9 +29,11 @@ Build routers with a single method chain: `new Elysia({ prefix }).get().post().p
 
 `src/index.ts` is the entry point. It creates the app and mounts routers with `.use(<name>Router)`. It exports `type App` for typed clients. No barrel files.
 
+`src/composition.ts` makes the long-lived objects (the runtime hub, the run manager, the thread messages) once and `src/index.ts` hands them to the routers that need them, so modules that use each other's objects do not import each other.
+
 ## Errors
 
-Return `status(404, "message")` from `elysia` for expected errors. Validation errors are handled by Elysia (422).
+Throw the typed errors of `src/errors.ts` for expected failures (`NotFoundError` 404, `UnprocessableError` 422, `ConflictError` 409, `ForbiddenError` 403, `UnavailableError` 503); `errorsRouter`, mounted first, answers each with its status and message (decision 0055). A service throws them; where a service answers `null` for "not there", the router throws, with `orNotFound(value, "message")`. Keep `status(...)` for success statuses such as 202, for 401, and for the checks run before a handler (authentication, a WebSocket's origin). Validation errors are handled by Elysia (422).
 
 ## Config
 
