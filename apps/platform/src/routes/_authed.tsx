@@ -81,19 +81,19 @@ function AuthedLayout() {
       </aside>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
           border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
-          which together look the same. */}
+          which together look the same: both are drawn with real borders, so the content sits in the same
+          place on either. */}
       <div
         className={cn(
           "flex min-w-0 flex-1 md:my-2 md:mr-2",
           !inThread &&
-            "md:overflow-clip md:rounded-xl md:bg-background md:ring-1 md:ring-sidebar-border",
+            "md:overflow-clip md:rounded-xl md:border-y md:border-r md:border-sidebar-border md:bg-background",
         )}
       >
         <Sidebar
           collapsible="icon"
           className={cn(
-            "text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl",
-            inThread && "md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
+            "text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
           )}
         >
           <SidebarHeader>
