@@ -21,7 +21,7 @@ export function FileViewer({ threadId, path, running }: Props) {
       <PanelNotice>Binary file, {Math.ceil(file.size / KIB)} KiB. It is not shown.</PanelNotice>
     );
   }
-  return <Lines path={path} text={file.text} truncated={file.truncated} />;
+  return <Lines key={path} path={path} text={file.text} truncated={file.truncated} />;
 }
 
 // Text with line numbers, coloured once the colours are ready.
