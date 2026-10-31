@@ -2,21 +2,16 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { environmentVariables } from "@aven/db/schema/environment-variables";
+import { variableEvents } from "@aven/db/schema/variable-events";
 import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnavailableError } from "../../errors";
 import { encryptSecret } from "../providers/crypto";
 import { runtimesService } from "../runtimes/service";
 import { MAX_VARIABLES } from "./schema";
 import { TooManyVariablesError, variablesService } from "./service";
-
-const inProject = (organizationId: string, projectId: string) => ({
-  kind: "project" as const,
-  organizationId,
-  projectId,
-});
 
 const run =
   process.env.DATABASE_URL && process.env.PROVIDER_ENCRYPTION_KEY ? describe : describe.skip;
@@ -25,6 +20,12 @@ run("variablesService (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
+  const inProject = (organizationId: string, projectId: string, actorId = userId) => ({
+    kind: "project" as const,
+    organizationId,
+    projectId,
+    actorId,
+  });
   const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const { project } = await seedProject(orgA, userId, runner.id, "vars");
 
@@ -298,6 +299,119 @@ run("variablesService (postgres)", async () => {
         .set({ role: "member, admin" })
         .where(eq(members.id, `m-a-${otherId}`));
       await variablesService.set(asMember, "MEMBER_SET", { value: "1", secret: false });
+    });
+
+    describe("history (decision 0048)", () => {
+      const eventsOf = (name: string) =>
+        db
+          .select()
+          .from(variableEvents)
+          .where(eq(variableEvents.name, name))
+          .orderBy(asc(variableEvents.createdAt), asc(variableEvents.id));
+
+      test("a variable's life is a created, an updated and a removed event, by who did it", async () => {
+        const { project: tracked } = await seedProject(orgA, userId, runner.id, "tracked");
+        const scope = inProject(orgA, tracked.id);
+        await variablesService.set(scope, "TRACKED_ONE", { value: "a", secret: false });
+        await variablesService.set(scope, "TRACKED_ONE", { value: "b", secret: true });
+        await variablesService.remove(scope, "TRACKED_ONE");
+
+        const events = await eventsOf("TRACKED_ONE");
+        expect(events.map((event) => [event.action, event.secret])).toEqual([
+          ["created", false],
+          ["updated", true],
+          ["removed", true],
+        ]);
+        for (const event of events) {
+          expect(event).toMatchObject({
+            organizationId: orgA,
+            projectId: tracked.id,
+            userId: null,
+            actorId: userId,
+            source: "settings",
+          });
+        }
+      });
+
+      test("the scope of an event is the variable's: a person's own, the workspace's", async () => {
+        await variablesService.set(personal(orgA, userId), "TRACKED_PERSONAL", {
+          value: "x",
+          secret: false,
+        });
+        await variablesService.set(workspace(orgA), "TRACKED_WORKSPACE", {
+          value: "x",
+          secret: false,
+        });
+
+        const [mine] = await eventsOf("TRACKED_PERSONAL");
+        expect(mine).toMatchObject({ projectId: null, userId, actorId: userId });
+        const [shared] = await eventsOf("TRACKED_WORKSPACE");
+        expect(shared).toMatchObject({ projectId: null, userId: null, actorId: userId });
+      });
+
+      test("no value is kept, however it is read: not in a column, not in the text of a row", async () => {
+        await variablesService.set(personal(orgA, userId), "TRACKED_SECRET", {
+          value: "sk_live_a_value_that_must_not_be_kept_1234",
+          secret: true,
+        });
+
+        const rows = await eventsOf("TRACKED_SECRET");
+        expect(JSON.stringify(rows)).not.toContain("must_not_be_kept");
+        expect(JSON.stringify(rows)).not.toContain("1234");
+        expect(Object.keys(rows[0]!).sort()).toEqual(
+          [
+            "action",
+            "actorId",
+            "createdAt",
+            "id",
+            "name",
+            "organizationId",
+            "projectId",
+            "secret",
+            "source",
+            "userId",
+          ].sort(),
+        );
+      });
+
+      test("a change that fails leaves no event", async () => {
+        await expect(
+          variablesService.remove(workspace(orgA), "NEVER_EXISTED"),
+        ).rejects.toBeInstanceOf(NotFoundError);
+        expect(await eventsOf("NEVER_EXISTED")).toEqual([]);
+
+        const plain = `u-plain-${crypto.randomUUID().slice(0, 8)}`;
+        await db.insert(users).values({ id: plain, name: "P", email: `${plain}@aven.test` });
+        await db
+          .insert(members)
+          .values({ id: `m-plain-${plain}`, organizationId: orgA, userId: plain, role: "member" });
+        await expect(
+          variablesService.set(workspace(orgA, plain), "REFUSED", { value: "x", secret: false }),
+        ).rejects.toBeInstanceOf(ForbiddenError);
+        expect(await eventsOf("REFUSED")).toEqual([]);
+      });
+
+      test("an event outlives the variable and the person who made it", async () => {
+        const gone = `u-gone-${crypto.randomUUID().slice(0, 8)}`;
+        await db.insert(users).values({ id: gone, name: "G", email: `${gone}@aven.test` });
+        await db
+          .insert(members)
+          .values({ id: `m-gone-${gone}`, organizationId: orgA, userId: gone, role: "admin" });
+        await variablesService.set(workspace(orgA, gone), "OUTLIVES", {
+          value: "x",
+          secret: false,
+        });
+        await variablesService.remove(workspace(orgA, gone), "OUTLIVES");
+        expect(await variablesService.list(workspace(orgA))).not.toContainEqual(
+          expect.objectContaining({ name: "OUTLIVES" }),
+        );
+
+        await db.delete(users).where(eq(users.id, gone));
+
+        const events = await eventsOf("OUTLIVES");
+        expect(events.map((event) => event.action)).toEqual(["created", "removed"]);
+        expect(events.every((event) => event.actorId === null)).toBe(true);
+      });
     });
 
     test("the database refuses a row of two scopes", async () => {

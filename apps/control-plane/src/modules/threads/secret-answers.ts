@@ -57,9 +57,15 @@ export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
   const scope: Scope =
     input.scope === "personal"
       ? { kind: "personal", organizationId: input.organizationId, userId: input.userId }
-      : { kind: "project", organizationId: input.organizationId, projectId: input.projectId };
+      : {
+          kind: "project",
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          actorId: input.userId,
+        };
   for (const { questionId, value } of input.answers) {
-    await variablesService.set(scope, questionId, { value, secret: true });
+    // Recorded as the agent's request, so the history says how it came about (decision 0048).
+    await variablesService.set(scope, questionId, { value, secret: true }, "agent");
   }
   return input.answers.map(({ questionId }) => ({
     questionId,

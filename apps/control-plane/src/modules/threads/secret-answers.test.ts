@@ -1,5 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
+import { db } from "@aven/db/client";
+import { variableEvents } from "@aven/db/schema/variable-events";
+import { eq } from "drizzle-orm";
+
 import { ConflictError, UnprocessableError } from "../../errors";
 import { runtimesService } from "../runtimes/service";
 import { variablesService } from "../variables/service";
@@ -41,7 +45,12 @@ run("keepSecretAnswers (postgres)", async () => {
     scope: "project" as const,
     ...over,
   });
-  const inProject = { kind: "project" as const, organizationId: orgA, projectId: project.id };
+  const inProject = {
+    kind: "project" as const,
+    organizationId: orgA,
+    projectId: project.id,
+    actorId: userId,
+  };
   const mine = { kind: "personal" as const, organizationId: orgA, userId };
   const named = async (scope: typeof inProject | typeof mine) =>
     (await variablesService.list(scope)).map((variable) => variable.name);
@@ -64,6 +73,30 @@ run("keepSecretAnswers (postgres)", async () => {
       value: "sk_test_never_in_history_1234",
       secret: true,
     });
+  });
+
+  test("the history says it came from the agent's request, and holds no value", async () => {
+    await keepSecretAnswers(
+      input({
+        continuation: continuation("request_secret", ["HISTORY_KEY"]),
+        answers: [{ questionId: "HISTORY_KEY", value: "sk_history_must_not_be_kept_9999" }],
+      }),
+    );
+
+    const events = await db
+      .select()
+      .from(variableEvents)
+      .where(eq(variableEvents.name, "HISTORY_KEY"));
+    expect(events).toEqual([
+      expect.objectContaining({
+        action: "created",
+        secret: true,
+        source: "agent",
+        actorId: userId,
+        projectId: project.id,
+      }),
+    ]);
+    expect(JSON.stringify(events)).not.toContain("must_not_be_kept");
   });
 
   test("a person can keep it for themselves instead of the project", async () => {

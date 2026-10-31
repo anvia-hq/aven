@@ -5,6 +5,7 @@ import {
 } from "@aven/db/schema/environment-variables";
 import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
+import { variableEvents, type NewVariableEventRow } from "@aven/db/schema/variable-events";
 import type { RunEnvVar } from "@aven/protocol/runtime-wire";
 import { and, asc, count, eq, isNull, or, sql } from "drizzle-orm";
 
@@ -27,7 +28,13 @@ export type Scope =
       organizationId: string;
       /** Who is asking: only an owner or an admin may change them. */ actorId: string;
     }
-  | { kind: "project"; organizationId: string; projectId: string }
+  | {
+      kind: "project";
+      organizationId: string;
+      projectId: string;
+      /** Who is acting, for the history (decision 0048). */
+      actorId: string;
+    }
   | { kind: "personal"; organizationId: string; userId: string };
 
 const SCOPE_LABEL = { workspace: "workspace", project: "project", personal: "person" } as const;
@@ -71,6 +78,11 @@ const ownerOf = (scope: Scope) => ({
   projectId: scope.kind === "project" ? scope.projectId : null,
   userId: scope.kind === "personal" ? scope.userId : null,
 });
+
+// Who is acting, for the history: a person's own variables are only ever theirs.
+const actorOf = (scope: Scope) => (scope.kind === "personal" ? scope.userId : scope.actorId);
+
+type Source = NewVariableEventRow["source"];
 
 // A value that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is
 // unavailable, not a server bug: the owner fixes it by entering the value again.
@@ -134,42 +146,68 @@ export const variablesService = {
   },
 
   // Makes the variable or replaces its value and whether it is a secret.
-  async set(scope: Scope, name: string, body: SetVariableBody) {
+  // Makes the variable or replaces its value and whether it is a secret, and records it (decision
+  // 0048) in the same transaction, so there is no change without its event. `source` is how it
+  // was asked for: the settings, or the agent's request for a secret (decision 0047).
+  async set(scope: Scope, name: string, body: SetVariableBody, source: Source = "settings") {
     await requireScope(scope);
     if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
-    const [existing] = await db
-      .select({ id: variables.id })
-      .from(variables)
-      .where(and(inScope(scope), eq(variables.name, name)));
-    if (!existing) {
-      const [{ total }] = await db.select({ total: count() }).from(variables).where(inScope(scope));
-      if (total! >= MAX_VARIABLES) {
-        throw new TooManyVariablesError(
-          `A ${SCOPE_LABEL[scope.kind]} has at most ${MAX_VARIABLES} variables`,
-        );
-      }
-    }
     const values = {
       valueEncrypted: encryptSecret(body.value),
       secret: body.secret,
       valueHint: body.secret ? hint(body.value) : null,
     };
-    const [row] = await db
-      .insert(variables)
-      .values({ ...ownerOf(scope), name, ...values })
-      .onConflictDoUpdate({ ...conflictOf(scope), set: values })
-      .returning();
-    return view(row!);
+    const row = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ id: variables.id })
+        .from(variables)
+        .where(and(inScope(scope), eq(variables.name, name)));
+      if (!existing) {
+        const [{ total }] = await tx
+          .select({ total: count() })
+          .from(variables)
+          .where(inScope(scope));
+        if (total! >= MAX_VARIABLES) {
+          throw new TooManyVariablesError(
+            `A ${SCOPE_LABEL[scope.kind]} has at most ${MAX_VARIABLES} variables`,
+          );
+        }
+      }
+      const [saved] = await tx
+        .insert(variables)
+        .values({ ...ownerOf(scope), name, ...values })
+        .onConflictDoUpdate({ ...conflictOf(scope), set: values })
+        .returning();
+      await tx.insert(variableEvents).values({
+        ...ownerOf(scope),
+        actorId: actorOf(scope),
+        name,
+        action: existing ? "updated" : "created",
+        secret: body.secret,
+        source,
+      });
+      return saved!;
+    });
+    return view(row);
   },
 
   async remove(scope: Scope, name: string) {
     await requireScope(scope);
     if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
-    const removed = await db
-      .delete(variables)
-      .where(and(inScope(scope), eq(variables.name, name)))
-      .returning({ id: variables.id });
-    if (removed.length === 0) throw new NotFoundError("Variable not found");
+    await db.transaction(async (tx) => {
+      const [removed] = await tx
+        .delete(variables)
+        .where(and(inScope(scope), eq(variables.name, name)))
+        .returning({ secret: variables.secret });
+      if (!removed) throw new NotFoundError("Variable not found");
+      await tx.insert(variableEvents).values({
+        ...ownerOf(scope),
+        actorId: actorOf(scope),
+        name,
+        action: "removed",
+        secret: removed.secret,
+      });
+    });
   },
 
   // What a run gets in its commands' environment (decisions 0045 and 0046): the organization's

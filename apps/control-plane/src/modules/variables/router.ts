@@ -4,17 +4,19 @@ import { authRouter } from "../auth/router";
 import { nameParams, projectParams, setVariableBody, variableParams } from "./schema";
 import { variablesService, type Scope } from "./service";
 
-const inProject = (organizationId: string, projectId: string): Scope => ({
+const inProject = (organizationId: string, projectId: string, actorId: string): Scope => ({
   kind: "project",
   organizationId,
   projectId,
+  actorId,
 });
 
 export const variablesRouter = new Elysia({ prefix: "/projects/:id/variables" })
   .use(authRouter)
   .get(
     "/",
-    ({ params, organizationId }) => variablesService.list(inProject(organizationId, params.id)),
+    ({ params, organizationId, user }) =>
+      variablesService.list(inProject(organizationId, params.id, user.id)),
     {
       auth: true,
       org: true,
@@ -23,14 +25,14 @@ export const variablesRouter = new Elysia({ prefix: "/projects/:id/variables" })
   )
   .put(
     "/:name",
-    ({ params, body, organizationId }) =>
-      variablesService.set(inProject(organizationId, params.id), params.name, body),
+    ({ params, body, organizationId, user }) =>
+      variablesService.set(inProject(organizationId, params.id, user.id), params.name, body),
     { auth: true, org: true, params: variableParams, body: setVariableBody },
   )
   .delete(
     "/:name",
-    async ({ params, organizationId, set }) => {
-      await variablesService.remove(inProject(organizationId, params.id), params.name);
+    async ({ params, organizationId, user, set }) => {
+      await variablesService.remove(inProject(organizationId, params.id, user.id), params.name);
       set.status = 204;
     },
     { auth: true, org: true, params: variableParams },
