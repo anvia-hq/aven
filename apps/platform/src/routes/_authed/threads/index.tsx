@@ -1,16 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
 import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
-import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import { SUGGESTIONS } from "@/modules/threads/suggestions";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/threads/")({
@@ -19,7 +16,6 @@ export const Route = createFileRoute("/_authed/threads/")({
 
 function NewThread() {
   const startThread = useStartThread();
-  const { selection } = useModelSelection();
   const { projects, loaded } = useProjects();
   const recent = useThreads().threads.slice(0, 3);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
@@ -48,22 +44,6 @@ function NewThread() {
             <ProjectPicker value={projectId} onChange={setProjectId} />
 
             <PromptInput autoFocus onSubmit={start} />
-
-            <div className="flex flex-wrap gap-2" aria-label="Suggestions">
-              {SUGGESTIONS.map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full font-normal text-muted-foreground"
-                  onClick={() =>
-                    void start({ prompt: suggestion, attachments: [], mentions: [] }, selection)
-                  }
-                >
-                  {suggestion}
-                </Button>
-              ))}
-            </div>
           </>
         ))}
 
