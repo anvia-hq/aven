@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, attempt, postJson } from "@/lib/api";
 
+import { messageBody } from "../message-body";
 import type {
   ChatMessage,
   OutgoingMessage,
@@ -31,17 +32,6 @@ function parseEvent(data: string): RunEvent | null {
 // A live view of one thread. The server owns the run: this attaches over server-sent events,
 // gets a snapshot of the transcript, then applies events as they arrive. Reloading or leaving the
 // page never stops the agent, and reattaching shows the run still in progress.
-/** A message as `POST /threads/:id/messages` takes it: files and mentions only when there are any. */
-export function messageBody(
-  { prompt, attachments, mentions }: OutgoingMessage,
-  selection: RunSelection,
-) {
-  const body: Record<string, unknown> = { prompt, ...selection };
-  if (attachments.length > 0) body.attachments = attachments;
-  if (mentions.length > 0) body.mentions = mentions;
-  return body;
-}
-
 export function useThread(threadId: string) {
   const { threads, loaded, setRunning: setThreadRunning, refresh } = useThreads();
   const thread = threads.find((candidate) => candidate.id === threadId);

@@ -3,9 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 
+import { messageBody } from "../message-body";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
-import { messageBody } from "./use-thread";
 import { useThreads } from "./use-threads";
 
 const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 47)}...` : prompt);

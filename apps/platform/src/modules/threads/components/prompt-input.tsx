@@ -20,9 +20,10 @@ import { Input } from "@/components/input";
 
 import { useAttachments } from "../hooks/use-attachments";
 import { useComposerChat } from "../hooks/use-composer-chat";
-import { mentionOf, useMentions } from "../hooks/use-mentions";
+import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
+import { mentionOf } from "../mentions";
 import type { OutgoingMessage, RunSelection } from "../types";
 import { PendingAttachments } from "./attachment-list";
 import { MentionChip } from "./mention-chip";

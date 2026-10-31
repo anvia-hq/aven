@@ -4,9 +4,9 @@ import { useState } from "react";
 
 import { toast } from "@/components/toast";
 
+import { mentionOf } from "../mentions";
 import type { MessageMention, OutgoingMessage, RunSelection } from "../types";
 import type { useAttachments } from "./use-attachments";
-import { mentionOf } from "./use-mentions";
 
 type Draft = Pick<ComposerSubmitMessageArgs, "input" | "entities">;
 

@@ -1,23 +1,18 @@
 import type { ComposerTriggerDefinition, ComposerTriggerItem } from "@anvia/react-ui/chat";
-import { mentionToken, type MessageMention } from "@aven/protocol/events";
+import { mentionToken } from "@aven/protocol/events";
 import { useMemo, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
 import { useSkills } from "@/modules/skills/hooks/use-skills";
 
-type Mentionable = Pick<MessageMention, "type" | "name">;
+import type { Mentionable } from "../mentions";
 
 // Where a repository keeps its own skills (decision 0035).
 const REPO_SKILLS = ".aven/skills";
 // A search waits this long for the next key before it asks the runner.
 const SEARCH_DELAY_MS = 120;
 const MAX_SKILLS = 50;
-
-/** What a mention token is drawn from: its kind and name, kept on the composer's entity. */
-export function mentionOf(triggerId: string, id: string): Mentionable | undefined {
-  return triggerId === "file" || triggerId === "skill" ? { type: triggerId, name: id } : undefined;
-}
 
 const itemOf = (mention: Mentionable, detail?: string): ComposerTriggerItem => ({
   id: mention.name,
