@@ -4,7 +4,6 @@ import { db } from "@aven/db/client";
 import { runtimes, type RuntimeRow } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
-import { runtimeHub } from "./hub";
 import type { CreateRuntimeBody } from "./schema";
 
 const TOKEN_PREFIX = "avrt_";
@@ -88,18 +87,18 @@ export const runtimesService = {
   },
 
   // Only the owner can revoke. A project that uses the runtime keeps its row and fails to run.
+  // The caller cuts off a revoked runtime's connection.
   async revoke(organizationId: string, ownerId: string, id: string) {
     const [row] = await db
       .update(runtimes)
       .set({ revokedAt: new Date() })
       .where(ownedBy(organizationId, ownerId, id))
       .returning();
-    if (row) runtimeHub.disconnect(id, "Revoked");
     return row ? publicRuntime(row) : null;
   },
 
   // Replaces the token. The old one stops working at once and the runtime is cut off, so it must
-  // be restarted with the new one. Owner only.
+  // be restarted with the new one. The caller cuts the old connection off. Owner only.
   async rotate(organizationId: string, ownerId: string, id: string) {
     const { token, columns } = issueToken();
     const [row] = await db
@@ -107,9 +106,7 @@ export const runtimesService = {
       .set(columns)
       .where(ownedBy(organizationId, ownerId, id))
       .returning();
-    if (!row) return null;
-    runtimeHub.disconnect(id, "Token rotated");
-    return { runtime: publicRuntime(row), token };
+    return row ? { runtime: publicRuntime(row), token } : null;
   },
 
   // Resolves a connection token; a revoked or unknown token is simply not found.

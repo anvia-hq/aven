@@ -8,7 +8,7 @@ import { createMemoryStore } from "../../memory-store";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { runtimesRouter } from "./router";
 import { connectRouter } from "./connect";
-import { RuntimeHub, runtimeHub } from "./hub";
+import { RuntimeHub } from "./hub";
 import { runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -36,7 +36,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     async (digest) => (digest === SKILL_DIGEST ? SKILL_ARCHIVE : undefined),
   );
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
-  const full = new Elysia().use(runtimesRouter).listen({ port: 0 });
+  const full = new Elysia().use(runtimesRouter(hub)).listen({ port: 0 });
   const sockets: WebSocket[] = [];
   const threadIds: string[] = [];
 
@@ -114,7 +114,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
   test("is mounted at /runtimes/connect and shows online", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "r" });
     await open(full.server?.port, token, "/runtimes/connect");
-    await until(() => runtimeHub.isOnline(runtime.id));
+    await until(() => hub.isOnline(runtime.id));
   });
 
   test("repository access is only given for a live run, and for that run's own thread", async () => {
@@ -409,13 +409,13 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(hub.isOnline(other.runtime.id)).toBe(false);
   });
 
-  // These go through the service, which acts on the real hub, so they use the full app.
+  // These do what the router does: the service changes the row, then the hub cuts the runtime off.
   test("revoking cuts a connected runtime off and fails its live runs", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "x" });
     const ws = await open(full.server?.port, token, "/runtimes/connect");
-    await until(() => runtimeHub.isOnline(runtime.id));
+    await until(() => hub.isOnline(runtime.id));
     const lost: Error[] = [];
-    runtimeHub
+    hub
       .get(runtime.id)!
       .startRun(
         "run-revoke",
@@ -425,16 +425,17 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const closed = new Promise<number>((resolve) => {
       ws.onclose = (event) => resolve(event.code);
     });
-    await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
+    expect(await runtimesService.revoke(seed.orgA, seed.userId, runtime.id)).not.toBeNull();
+    hub.disconnect(runtime.id, "Revoked");
     expect(await closed).toBe(4002);
     expect(lost).toHaveLength(1);
-    expect(runtimeHub.isOnline(runtime.id)).toBe(false);
+    expect(hub.isOnline(runtime.id)).toBe(false);
   });
 
   test("rotating the token cuts the runtime off and only the new token connects", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "r" });
     const ws = await open(full.server?.port, token, "/runtimes/connect");
-    await until(() => runtimeHub.isOnline(runtime.id));
+    await until(() => hub.isOnline(runtime.id));
     const closed = new Promise<number>((resolve) => {
       ws.onclose = (event) => resolve(event.code);
     });
@@ -443,11 +444,12 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const rotated = await runtimesService.rotate(seed.orgA, seed.userId, runtime.id);
     expect(rotated?.token).not.toBe(token);
     expect(rotated?.runtime.tokenHint).toBe(rotated?.token.slice(-4));
+    hub.disconnect(runtime.id, "Token rotated");
     expect(await closed).toBe(4002);
 
     await expect(open(full.server?.port, token, "/runtimes/connect")).rejects.toThrow();
     await open(full.server?.port, rotated!.token, "/runtimes/connect");
-    await until(() => runtimeHub.isOnline(runtime.id));
+    await until(() => hub.isOnline(runtime.id));
     expect(JSON.stringify(await runtimesService.list(seed.orgA))).not.toContain(rotated!.token);
   });
 
