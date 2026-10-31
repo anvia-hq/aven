@@ -66,17 +66,17 @@ describe("spawn_agent", () => {
     expect(result.results[0]?.output).toContain("without saying anything");
   });
 
-  test("passes the call's identity and abort signal on", async () => {
+  test("passes each task's place in the call and the abort signal on", async () => {
     const seen: unknown[] = [];
     const tool = createSpawnAgentTool(async (_task, context) => {
       seen.push(context);
       return "ok";
     });
     const abortSignal = new AbortController().signal;
-    await tool.call({ tasks: [task("a"), task("b")] }, { operationId: "op-1", abortSignal });
+    await tool.call({ tasks: [task("a"), task("b")] }, { abortSignal });
     expect(seen).toEqual([
-      { index: 0, operationId: "op-1", abortSignal },
-      { index: 1, operationId: "op-1", abortSignal },
+      { index: 0, abortSignal },
+      { index: 1, abortSignal },
     ]);
   });
 

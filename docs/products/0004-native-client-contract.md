@@ -36,6 +36,7 @@ tool_start  { tool: Tool }
 tool_end    { id, status: "done" | "error", output?, image?: Image }
 run_resume  {}   the question was answered and the run continues in the same assistant message
 usage       { turn: Tokens, context?: Context }   one model call's tokens, and how full the context is; not part of the transcript; add `turn` to the totals
+subagent    { index, event: SubagentEvent }   what one subagent of the running `spawn_agent` call does (decision 0057); a client may ignore it
 done        {}
 error       { message }
 ```
@@ -44,7 +45,9 @@ error       { message }
 Message = { id, role: "user" | "assistant", parts: Part[], attachments?: Attachment[], mentions?: Mention[] }   attachments and mentions only on a user message
 Mention = { type: "file" | "skill", name, from, to }   where the token is in the message's text
 Part    = { type: "text", text } | { type: "tool", tool: Tool }
-Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output?, questions?: Question[], image?: Image }
+Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output?, questions?: Question[], image?: Image, subagents?: Subagent[] }
+Subagent = { index, description, type, status: "running" | "done" | "error", tools: Tool[], output? }   on a `spawn_agent` tool: its tasks, working from the start; `tools` have no output or diff
+SubagentEvent = { type: "tool_start", tool: Tool } | { type: "tool_end", id, status: "done" | "error" } | { type: "end", status: "done" | "error", output? }
 Image   = { name, mediaType, caption? }   an image the agent showed; GET /threads/:id/artifacts/:name serves it (decision 0033)
 Attachment = { name, mediaType, size, image? }   a file sent with a message; `image` is the name GET /threads/:id/artifacts/:name serves it by (decision 0034)
 Question = { id, text, choices?: [{ label, value }], allowCustom?: bool }
@@ -64,6 +67,7 @@ Keep `messages` and `running`. For each event:
 - `tool_start`: add `{ type: "tool", tool }` to the last assistant message.
 - `tool_end`: in the last assistant message, find the tool part with that `id` and set its `status` and `output`, and its `image` when the event has one.
 - `run_resume`: `running = true`; nothing is appended.
+- `subagent`: in the last assistant message, take the latest tool part named `spawn_agent` whose `status` is `running`, and in its `subagents` the one with that `index`. `tool_start` appends the tool to its `tools` (keep the latest 50), `tool_end` sets the `status` of the tool with that `id`, `end` sets the subagent's `status` and `output`. When a `tool_end` closes the `spawn_agent` tool, any subagent still `running` takes its `status`. A client that does not draw subagents can skip all of this: the call still ends with a `tool_end` whose `output` says how many finished.
 - `done`, `error`: `running = false`. (`error` should also be shown to the user.)
 - Anything else: ignore (new event types may be added; never fail on an unknown one).
 

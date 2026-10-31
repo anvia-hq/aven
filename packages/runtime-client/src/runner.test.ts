@@ -1262,6 +1262,13 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
     await until(() => stopped);
+    // What the subagent made of the cancel is told before the run ends, not after.
+    await Bun.sleep(50);
+    const types = plane.received.flatMap((m) =>
+      m.type === "run.end" ? ["end"] : m.type === "run.event" ? [m.event.type] : [],
+    );
+    expect(types.at(-1)).toBe("end");
+    expect(types).toContain("subagent");
   });
 
   test("a goal from a run that failed to file its transcript is not started by the next run", async () => {

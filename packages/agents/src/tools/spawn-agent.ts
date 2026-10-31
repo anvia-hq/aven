@@ -44,8 +44,6 @@ export type RunSubagent = (
   context: {
     /** Which of the call's tasks this is. */
     index: number;
-    /** Identifies the call, when the run has an identity for it; the same on a repeat. */
-    operationId?: string;
     abortSignal?: AbortSignal;
   },
 ) => Promise<string>;
@@ -77,11 +75,7 @@ Use it to search or understand a large codebase, to look into several independen
         tasks.map(async (task, index): Promise<SubagentResult> => {
           const { description, type } = task;
           try {
-            const output = await run(task, {
-              index,
-              operationId: context?.operationId,
-              abortSignal: context?.abortSignal,
-            });
+            const output = await run(task, { index, abortSignal: context?.abortSignal });
             return { description, type, status: "done", output: output.trim() || NOTHING };
           } catch (error) {
             return { description, type, status: "error", error: errorMessage(error) };
