@@ -29,7 +29,8 @@ function ProjectPage() {
     <div className="flex w-full min-w-0 flex-col">
       <ProjectHeader project={project} />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-4">
+      {/* The page is centered as one group, below the 2.5rem header, so the composer's `/` and `@` menus open upward with room. */}
+      <main className="mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-2xl flex-col justify-center gap-5 p-4">
         <PromptInput
           placeholder={`Ask anything about ${project.name}…`}
           onSubmit={(message, selection) => startThread(project.id, message, selection)}
