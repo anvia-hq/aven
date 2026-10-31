@@ -64,12 +64,12 @@ export const ThreadMessage = memo(function ThreadMessage({
   if (message.role === "user") {
     const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
-      <div className="ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
+      <div className="ml-auto flex max-w-[85%] flex-col items-end gap-2" data-role="user">
         {message.attachments?.length ? (
           <SentAttachments threadId={threadId} attachments={message.attachments} />
         ) : null}
         {text && (
-          <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">
+          <div className="w-fit max-w-full rounded-xl bg-accent px-4 py-3 [&_p]:whitespace-pre-line">
             {message.parts.map((part, index) =>
               part.type === "text" ? (
                 <Markdown key={index} components={{ code: mentionCode }}>
