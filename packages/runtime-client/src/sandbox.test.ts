@@ -594,6 +594,33 @@ live("a sandbox (real docker)", () => {
     expect(stopped.status).toBe("stopped");
     expect(await box.hasRunningProcesses()).toBe(false);
   }, 30_000);
+
+  test("the project's variables are in the environment of commands and processes, and a run without them has none (decision 0045)", async () => {
+    sandboxes.setProjectEnv(threadId, [{ name: "DATABASE_URL", value: "postgres://in-container" }]);
+    expect((await run("printenv DATABASE_URL")).stdout.trim()).toBe("postgres://in-container");
+
+    // A process gets them too, and the variables are not in the container's own environment.
+    await call(box, "start_process", {
+      command: "sh",
+      args: ["-c", "printenv DATABASE_URL > /workspace/from-process.txt"],
+    });
+    const written = join(root, "from-process.txt");
+    // The shell makes the file before the command fills it: wait for the content.
+    let content = "";
+    for (let tries = 0; tries < 100 && content === ""; tries++) {
+      await Bun.sleep(100);
+      content = await readFile(written, "utf8").catch(() => "");
+    }
+    expect(content).toBe("postgres://in-container\n");
+    // Leaves the sandbox as idle as it found it, for the test that follows.
+    for (let tries = 0; tries < 100 && (await box.hasRunningProcesses()); tries++) {
+      await Bun.sleep(100);
+    }
+
+    // The next run brings none: the last run's value is gone.
+    sandboxes.setProjectEnv(threadId, undefined);
+    expect((await run("printenv DATABASE_URL")).exitCode).toBe(1);
+  }, 60_000);
 });
 
 describe("Sandboxes.start", () => {
