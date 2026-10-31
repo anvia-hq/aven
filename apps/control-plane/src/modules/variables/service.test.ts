@@ -391,6 +391,74 @@ run("variablesService (postgres)", async () => {
         expect(await eventsOf("REFUSED")).toEqual([]);
       });
 
+      test("the history is read newest first, with who did it, and never a value", async () => {
+        const { project: read } = await seedProject(orgA, userId, runner.id, "readhistory");
+        const scope = inProject(orgA, read.id);
+        await variablesService.set(scope, "HIST_A", { value: "first-value", secret: false });
+        await variablesService.set(scope, "HIST_A", { value: "second-value", secret: true });
+        await variablesService.remove(scope, "HIST_A");
+
+        const history = await variablesService.history(scope);
+
+        expect(history.map((event) => event.action)).toEqual(["removed", "updated", "created"]);
+        expect(history.every((event) => event.name === "HIST_A" && event.actor === "T")).toBe(true);
+        expect(JSON.stringify(history)).not.toContain("-value");
+        expect(Object.keys(history[0]!).sort()).toEqual(
+          ["action", "actor", "createdAt", "id", "name", "secret", "source"].sort(),
+        );
+      });
+
+      test("each scope reads its own history only, and a person's own is theirs alone", async () => {
+        await variablesService.set(personal(orgA, otherId), "HIST_THEIRS", {
+          value: "x",
+          secret: false,
+        });
+        await variablesService.set(personal(orgA, userId), "HIST_MINE", {
+          value: "x",
+          secret: false,
+        });
+
+        const mine = (await variablesService.history(personal(orgA, userId))).map((e) => e.name);
+        const theirs = (await variablesService.history(personal(orgA, otherId))).map((e) => e.name);
+        expect(mine).toContain("HIST_MINE");
+        expect(mine).not.toContain("HIST_THEIRS");
+        expect(theirs).toContain("HIST_THEIRS");
+        expect(theirs).not.toContain("HIST_MINE");
+        // Neither shows in the workspace's, nor in another organization's.
+        const shared = (await variablesService.history(workspace(orgA))).map((e) => e.name);
+        expect(shared).not.toContain("HIST_MINE");
+        expect(await variablesService.history(workspace(orgB))).toEqual([]);
+      });
+
+      test("another organization's project has no history to read", async () => {
+        const { project: elsewhere } = await seedProject(orgA, userId, runner.id, "elsewhere");
+        await expect(
+          variablesService.history(inProject(orgB, elsewhere.id)),
+        ).rejects.toBeInstanceOf(NotFoundError);
+      });
+
+      test("only the latest hundred are read", async () => {
+        const { project: busy } = await seedProject(orgA, userId, runner.id, "busy");
+        await db.insert(variableEvents).values(
+          Array.from({ length: 105 }, (_, index) => ({
+            organizationId: orgA,
+            projectId: busy.id,
+            actorId: userId,
+            name: `BUSY_${index}`,
+            action: "created" as const,
+            secret: false,
+            createdAt: new Date(Date.now() - (105 - index) * 1000),
+          })),
+        );
+
+        const history = await variablesService.history(inProject(orgA, busy.id));
+
+        expect(history).toHaveLength(100);
+        // Newest first: the last inserted is the first read, the five oldest are cut.
+        expect(history[0]!.name).toBe("BUSY_104");
+        expect(history.map((event) => event.name)).not.toContain("BUSY_0");
+      });
+
       test("an event outlives the variable and the person who made it", async () => {
         const gone = `u-gone-${crypto.randomUUID().slice(0, 8)}`;
         await db.insert(users).values({ id: gone, name: "G", email: `${gone}@aven.test` });

@@ -5,9 +5,10 @@ import {
 } from "@aven/db/schema/environment-variables";
 import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
+import { users } from "@aven/db/schema/users";
 import { variableEvents, type NewVariableEventRow } from "@aven/db/schema/variable-events";
 import type { RunEnvVar } from "@aven/protocol/runtime-wire";
-import { and, asc, count, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnavailableError, UnprocessableError } from "../../errors";
 import { decryptSecret, encryptSecret } from "../providers/crypto";
@@ -51,6 +52,21 @@ function inScope(scope: Scope) {
       return and(organization, eq(variables.userId, scope.userId));
   }
 }
+
+// The events of a scope, by the same columns as its variables.
+function eventsInScope(scope: Scope) {
+  const organization = eq(variableEvents.organizationId, scope.organizationId);
+  switch (scope.kind) {
+    case "workspace":
+      return and(organization, isNull(variableEvents.projectId), isNull(variableEvents.userId));
+    case "project":
+      return and(organization, eq(variableEvents.projectId, scope.projectId));
+    case "personal":
+      return and(organization, eq(variableEvents.userId, scope.userId));
+  }
+}
+
+const HISTORY_LIMIT = 100;
 
 // Which unique index a name is held to in a scope, for an upsert to land on.
 function conflictOf(scope: Scope) {
@@ -189,6 +205,28 @@ export const variablesService = {
       return saved!;
     });
     return view(row);
+  },
+
+  // What was done to a scope's variables, newest first (decision 0048): by whom, never to what
+  // value. Who may read it is who may read the list; a person's own is theirs alone.
+  async history(scope: Scope) {
+    await requireScope(scope);
+    const rows = await db
+      .select({
+        id: variableEvents.id,
+        name: variableEvents.name,
+        action: variableEvents.action,
+        secret: variableEvents.secret,
+        source: variableEvents.source,
+        createdAt: variableEvents.createdAt,
+        actorName: users.name,
+      })
+      .from(variableEvents)
+      .leftJoin(users, eq(users.id, variableEvents.actorId))
+      .where(eventsInScope(scope))
+      .orderBy(desc(variableEvents.createdAt), desc(variableEvents.id))
+      .limit(HISTORY_LIMIT);
+    return rows.map(({ actorName, ...event }) => ({ ...event, actor: actorName }));
   },
 
   async remove(scope: Scope, name: string) {

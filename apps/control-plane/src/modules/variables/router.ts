@@ -23,6 +23,12 @@ export const variablesRouter = new Elysia({ prefix: "/projects/:id/variables" })
       params: projectParams,
     },
   )
+  .get(
+    "/history",
+    ({ params, organizationId, user }) =>
+      variablesService.history(inProject(organizationId, params.id, user.id)),
+    { auth: true, org: true, params: projectParams },
+  )
   .put(
     "/:name",
     ({ params, body, organizationId, user }) =>
@@ -50,6 +56,14 @@ function scopeRoutes(kind: "workspace" | "personal") {
     .get(
       "/",
       ({ organizationId, user }) => variablesService.list(scopeOf(organizationId, user.id)),
+      {
+        auth: true,
+        org: true,
+      },
+    )
+    .get(
+      "/history",
+      ({ organizationId, user }) => variablesService.history(scopeOf(organizationId, user.id)),
       {
         auth: true,
         org: true,

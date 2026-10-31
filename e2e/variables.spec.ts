@@ -208,4 +208,56 @@ test.describe("project environment variables", () => {
     await expect(inherited).toContainText("replaced by the project's");
     await expect(section).toContainText("TIER");
   });
+
+  test("every scope keeps a history of who changed what, and never the values", async ({
+    page,
+  }) => {
+    await openProject(page);
+    const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    const paths = {
+      project: `/api/projects/${projects[0]!.id}/variables`,
+      workspace: "/api/variables/workspace",
+      personal: "/api/variables/personal",
+    };
+
+    for (const path of Object.values(paths)) {
+      await page.request.put(`${path}/AUDITED`, { data: { value: "first", secret: false } });
+      await page.request.put(`${path}/AUDITED`, {
+        data: { value: "a-secret-value-that-stays-hidden-4321", secret: true },
+      });
+      await page.request.delete(`${path}/AUDITED`);
+
+      const response = await page.request.get(`${path}/history`);
+      expect(response.status()).toBe(200);
+      const history = (await response.json()) as {
+        name: string;
+        action: string;
+        secret: boolean;
+        source: string;
+        actor: string | null;
+      }[];
+      expect(history.map((event) => event.action)).toEqual(["removed", "updated", "created"]);
+      expect(history.every((event) => event.name === "AUDITED")).toBe(true);
+      expect(history.every((event) => event.actor === "Variables User")).toBe(true);
+      expect(history.every((event) => event.source === "settings")).toBe(true);
+      expect(await response.text()).not.toContain("stays-hidden");
+      expect(await response.text()).not.toContain("first");
+    }
+
+    // The scopes are separate: the project's history is not the workspace's.
+    const workspace = (await (await page.request.get(`${paths.workspace}/history`)).json()) as {
+      name: string;
+    }[];
+    expect(workspace).toHaveLength(3);
+  });
+
+  test("the history routes need a session", async ({ request }) => {
+    for (const path of [
+      "/api/variables/workspace/history",
+      "/api/variables/personal/history",
+      "/api/projects/00000000-0000-4000-8000-000000000000/variables/history",
+    ]) {
+      expect((await request.get(path)).status()).toBe(401);
+    }
+  });
 });
