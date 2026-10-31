@@ -1,29 +1,21 @@
-import { Hand, Monitor, Power } from "@mynaui/icons-react";
+import { Hand, Monitor } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
-import { Spinner } from "@/components/spinner";
 
 import { useDesktopControl } from "../hooks/use-desktop-control";
 import { useDesktopStatus } from "../hooks/use-desktop-status";
 import { useDesktopWake } from "../hooks/use-desktop-wake";
-import type { DesktopStatus } from "../types";
+import { sandboxView } from "../sandbox-view";
 import { DesktopViewer } from "./desktop-viewer";
+import { SandboxAsleepNotice } from "./sandbox-asleep-notice";
 
 type Props = {
   threadId: string;
   onClose: () => void;
 };
-
-type View = "loading" | "problem" | "no-sandbox" | "desktop";
-
-function viewOf(status: DesktopStatus | null, problem: string | null): View {
-  if (problem) return "problem";
-  if (!status) return "loading";
-  return status.available ? "desktop" : "no-sandbox";
-}
 
 function hintFor(inControl: boolean, heldByOther: boolean) {
   if (inControl) return "You are in control. The agent's inputs are paused.";
@@ -37,9 +29,9 @@ export function DesktopPanel({ threadId, onClose }: Props) {
   const { status, problem, refresh } = useDesktopStatus(threadId);
   const { controlling, busy, takeOver, giveBack } = useDesktopControl(threadId);
   const { waking, wake } = useDesktopWake(threadId, refresh);
-  const view = viewOf(status, problem);
+  const view = sandboxView(status, problem);
   const heldByOther = status?.available === true && status.held && !status.heldByMe;
-  const inControl = controlling && view === "desktop";
+  const inControl = controlling && view === "ready";
 
   return (
     <SidePanel
@@ -48,13 +40,13 @@ export function DesktopPanel({ threadId, onClose }: Props) {
       onClose={onClose}
       actions={
         <>
-          {view === "desktop" && (
+          {view === "ready" && (
             <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
               {hintFor(inControl, heldByOther)}
             </p>
           )}
-          {view !== "desktop" && <span className="flex-1" />}
-          {view === "desktop" &&
+          {view !== "ready" && <span className="flex-1" />}
+          {view === "ready" &&
             (inControl ? (
               <Button variant="outline" size="sm" onClick={() => void giveBack()}>
                 Give back
@@ -76,17 +68,13 @@ export function DesktopPanel({ threadId, onClose }: Props) {
         {view === "loading" && <Skeleton className="size-full rounded-none" />}
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "no-sandbox" && (
-          <PanelNotice>
-            <span className="flex flex-col items-center gap-4">
-              The thread's sandbox is not running. It starts when the agent works on this thread,
-              and stops after fifteen idle minutes. You can also wake it up to watch the desktop.
-              <Button variant="outline" disabled={waking} onClick={() => void wake()}>
-                {waking ? <Spinner /> : <Power />} {waking ? "Waking up" : "Wake up"}
-              </Button>
-            </span>
-          </PanelNotice>
+          <SandboxAsleepNotice
+            purpose="watch the desktop"
+            waking={waking}
+            onWake={() => void wake()}
+          />
         )}
-        {view === "desktop" && (
+        {view === "ready" && (
           <DesktopViewer threadId={threadId} viewOnly={!inControl} onEnded={() => void refresh()} />
         )}
       </div>

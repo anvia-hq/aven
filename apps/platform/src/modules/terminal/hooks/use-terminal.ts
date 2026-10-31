@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 
+import { wsUrl } from "@/lib/api";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 export type TerminalPhase = "connecting" | "connected" | "ended";
@@ -9,11 +10,9 @@ export type TerminalPhase = "connecting" | "connected" | "ended";
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 const FALLBACK_SIZE = { cols: 80, rows: 24 };
 
-// The stream goes through the platform's /api proxy, which carries WebSockets.
 function streamUrl(threadId: string, size: { cols: number; rows: number }) {
-  const scheme = window.location.protocol === "https:" ? "wss" : "ws";
   const { cols, rows } = size;
-  return `${scheme}://${window.location.host}/api/threads/${threadId}/terminal/stream?cols=${cols}&rows=${rows}`;
+  return wsUrl(`/threads/${threadId}/terminal/stream?cols=${cols}&rows=${rows}`);
 }
 
 // The page's own colours, resolved to something the terminal can paint: it cannot read `var()`.

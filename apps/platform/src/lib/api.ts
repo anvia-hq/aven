@@ -50,6 +50,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return (body.length > 0 ? JSON.parse(body) : undefined) as T;
 }
 
+// A WebSocket URL for `path` on the backend, through the platform's /api proxy, which carries
+// WebSockets.
+export function wsUrl(path: string) {
+  const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${scheme}://${window.location.host}/api${path}`;
+}
+
 export function postJson<T>(path: string, body: unknown, method = "POST") {
   return api<T>(path, {
     method,

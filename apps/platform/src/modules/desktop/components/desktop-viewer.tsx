@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
+import { wsUrl } from "@/lib/api";
 
 type Props = {
   threadId: string;
@@ -14,12 +15,6 @@ type Props = {
 };
 
 type Phase = "connecting" | "connected" | "ended";
-
-// The stream goes through the platform's /api proxy, which carries WebSockets.
-function streamUrl(threadId: string) {
-  const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${scheme}://${window.location.host}/api/threads/${threadId}/desktop/stream`;
-}
 
 // A thread's desktop, drawn by noVNC. The desktop is scaled to fit and never resized, because the
 // agent's screenshots and clicks are in the desktop's own coordinates.
@@ -38,7 +33,9 @@ export function DesktopViewer({ threadId, viewOnly, onEnded }: Props) {
     const element = target.current;
     if (!element) return;
     setPhase("connecting");
-    const rfb = new RFB(element, streamUrl(threadId), { wsProtocols: ["binary"] });
+    const rfb = new RFB(element, wsUrl(`/threads/${threadId}/desktop/stream`), {
+      wsProtocols: ["binary"],
+    });
     rfb.scaleViewport = true;
     rfb.resizeSession = false;
     rfb.background = "transparent";
