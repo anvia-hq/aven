@@ -2,6 +2,7 @@ import {
   Agent,
   createQuestionTool,
   createSummaryMemoryCompactor,
+  type AgentMemoryOptions,
   type AnyTool,
   type CompletionModel,
 } from "@anvia/core";
@@ -26,6 +27,8 @@ type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   id?: string;
   /** What the agent is told instead of the coding agent's own instructions: a subagent has its own (decision 0057). */
   instructions?: string;
+  /** Where the agent keeps its conversation itself, for a host that runs it with a `session` (a bot, decision 0058). */
+  memory?: AgentMemoryOptions;
   /** The skills in the sandbox, which the instructions list (decision 0035). */
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
@@ -58,6 +61,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     controls,
     maxTurns: options.maxTurns ?? 50,
     retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
+    memory: options.memory,
     tools,
   });
 
