@@ -8,7 +8,8 @@ import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-mod
 import type { Bot, BotEvent } from "@aven/protocol/bots";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import { BotRunner, type CreateBotAgent } from "./runner";
+import { BotRunner } from "./runner";
+import { inProcessReplier, type CreateBotAgent } from "./testing/in-process-replier";
 
 const USER = "u1";
 const model: ModelConfig = { provider: "openai" };
@@ -55,6 +56,21 @@ function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAg
     });
 }
 
+// A runner whose bot answers in this process, with the agent a test made.
+const runnerWith = (options: {
+  store: MemoryStore;
+  createAgent?: CreateBotAgent;
+  pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
+}) =>
+  new BotRunner({
+    store: options.store,
+    replier: inProcessReplier({
+      store: options.store,
+      createAgent: options.createAgent ?? scripts(),
+      pause: options.pause,
+    }),
+  });
+
 const until = async (condition: () => boolean) => {
   for (let tries = 0; !condition(); tries++) {
     if (tries > 2000) throw new Error("timed out");
@@ -90,7 +106,7 @@ const stopped = (events: BotEvent[]) =>
 describe("BotRunner", () => {
   test("the bot's messages come one after another, each after a pause worked out from it", async () => {
     const pauses: number[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("hey"), send("how was your day, my friend?")], [text("")]]),
       pause: async (ms) => void pauses.push(ms),
@@ -113,7 +129,7 @@ describe("BotRunner", () => {
   test("messages the model sends in one turn are typed one at a time", async () => {
     let typing = 0;
     let most = 0;
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("one"), send("two"), send("three")], [text("")]]),
       pause: async () => {
@@ -133,7 +149,7 @@ describe("BotRunner", () => {
   test("a message that comes while the bot is at work waits its turn", async () => {
     const store = fakeStore();
     const gates: (() => void)[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store,
       createAgent: scripts([[send("one")], [text("")]], [[send("two")], [text("")]]),
       pause: () => new Promise<void>((resolve) => gates.push(resolve)),
@@ -162,7 +178,7 @@ describe("BotRunner", () => {
     expect(history.map((message) => message.text)).toEqual(["first", "one", "second", "two"]);
 
     // A client that comes later, and a runner started afresh, both find the chat from the store.
-    const later = new BotRunner({ store });
+    const later = runnerWith({ store });
     const fresh = await watch(later);
     fresh.close();
     await fresh.done;
@@ -178,7 +194,7 @@ describe("BotRunner", () => {
 
   test("a client that connects mid-reply gets the chat so far and whether the bot is typing", async () => {
     const gates: (() => void)[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("one"), send("two")], [text("")]]),
       pause: () => new Promise<void>((resolve) => gates.push(resolve)),
@@ -200,7 +216,7 @@ describe("BotRunner", () => {
     let fail: () => void = () => undefined;
     const failing = new Promise<void>((resolve) => (fail = resolve));
     const next = scripts([[send("back")], [text("")]]);
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: (input) =>
         input.bot.name === "Pip"
@@ -235,7 +251,7 @@ describe("BotRunner", () => {
   });
 
   test("a bot that owes too many replies is not given more", async () => {
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts(...Array.from({ length: 6 }, () => [[send("x")], [text("")]])),
       pause: () => new Promise<void>(() => undefined),
@@ -263,7 +279,7 @@ describe("BotRunner", () => {
     let ended: () => void = () => undefined;
     const replyEnded = new Promise<void>((resolve) => (ended = resolve));
     const makeAgent = scripts([[send("hi")], [text("")]]);
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: counting,
       createAgent: (input) => {
         const agent = makeAgent(input);
@@ -289,11 +305,14 @@ describe("BotRunner", () => {
     again.close();
   });
 
-  test("a model that cannot be used is refused before anything is added", async () => {
+  test("a bot that cannot answer now is refused before anything is added", async () => {
     const runner = new BotRunner({
       store: fakeStore(),
-      createAgent: () => {
-        throw new Error("OPENAI_API_KEY is not set");
+      replier: {
+        ready: () => {
+          throw new UnavailableError("The bot's computer is offline");
+        },
+        answer: async () => undefined,
       },
     });
     const client = await watch(runner);
@@ -304,9 +323,14 @@ describe("BotRunner", () => {
   });
 
   test("shutting down ends a reply without calling it a failure", async () => {
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("never shown")], [text("")]]),
+      // The bot is "typing" until the shutdown reaches it.
+      pause: (_ms, signal) =>
+        new Promise<void>((_resolve, reject) =>
+          signal?.addEventListener("abort", () => reject(signal.reason)),
+        ),
     });
     const client = await watch(runner, stopped);
     await runner.send(bot, USER, "hello", model);

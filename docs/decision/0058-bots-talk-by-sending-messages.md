@@ -1,6 +1,6 @@
 # Bots are agents that talk by sending messages
 
-Status: accepted. Narrows 0008 for an agent with no sandbox.
+Status: accepted. Narrowed 0008 for an agent with no sandbox; superseded in that part by 0059, which gives a bot a computer and runs it on a runner.
 
 ## Context
 

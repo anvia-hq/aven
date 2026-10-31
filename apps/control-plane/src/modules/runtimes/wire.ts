@@ -3,6 +3,7 @@ import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
+  type BotMemoryParams,
   type CallMethod,
   type RunOutcome,
   type RuntimeToControlPlane,
@@ -13,6 +14,7 @@ import { z } from "zod";
 // `@aven/protocol` has the types and no runtime imports; the checking lives here.
 
 const runId = z.string().min(1);
+const replyId = z.string().min(1);
 
 // Listed by hand, since the protocol has only types; `satisfies` keeps each name one it knows.
 const outcomes = [
@@ -25,7 +27,11 @@ const callMethods = [
   "memory.append",
   "repo.access",
   "skills.get",
+  "bot.memory",
 ] as const satisfies readonly CallMethod[];
+
+// A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
+const BOT_SAY_MAX = 2000;
 
 // An image the agent showed: a name the runner gave it, so a client can only ask for it by that.
 const toolImage = z.object({
@@ -129,6 +135,16 @@ const frame = z.discriminatedUnion("type", [
     error: z.string().optional(),
     continuation: z.unknown().optional(),
   }),
+  z.object({
+    type: z.literal("bot.say"),
+    replyId: z.string().min(1),
+    text: z.string().min(1).max(BOT_SAY_MAX),
+  }),
+  z.object({
+    type: z.literal("bot.end"),
+    replyId: z.string().min(1),
+    error: z.string().optional(),
+  }),
   z.object({ type: z.literal("desktop.opened"), viewerId: z.string().min(1) }),
   z.object({
     type: z.literal("desktop.closed"),
@@ -171,6 +187,28 @@ export function parseRuntimeFrame(raw: string): RuntimeToControlPlane | null {
 
 const memoryParams = z.object({ runId });
 
+const anvia = z.custom<object>((value) => typeof value === "object" && value !== null);
+
+const botMemoryParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("load") }),
+  z.object({
+    replyId,
+    op: z.literal("append"),
+    runId,
+    turn: z.number().int().nonnegative(),
+    messages: z.array(anvia),
+  }),
+  z.object({ replyId, op: z.literal("snapshot") }),
+  z.object({
+    replyId,
+    op: z.literal("replacePrefix"),
+    runId,
+    revision: z.string(),
+    messageCount: z.number().int().nonnegative(),
+    replacement: anvia,
+  }),
+]);
+
 const appendParams = memoryParams.extend({
   turn: z.number().int().nonnegative(),
   messages: z.array(z.custom<Message>((value) => typeof value === "object" && value !== null)),
@@ -184,6 +222,8 @@ function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   return parsed.data;
 }
 
+export const parseBotMemoryParams = (params: unknown) =>
+  parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

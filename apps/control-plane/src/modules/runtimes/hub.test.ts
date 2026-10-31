@@ -176,6 +176,105 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     );
   });
 
+  describe("a bot's reply", () => {
+    const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as const;
+    const info = { id: "bot-1", name: "Pip", instruction: "" };
+
+    // A runner that is connected, a reply started on it, and what the reply heard.
+    const replying = async (name: string, answerMemory = async (): Promise<unknown> => null) => {
+      const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name });
+      const ws = await open(server.server?.port, token);
+      const received = inbox(ws);
+      await until(() => hub.isOnline(runtime.id));
+      const connection = hub.get(runtime.id)!;
+      const heard = {
+        said: [] as string[],
+        ended: [] as (string | undefined)[],
+        lost: [] as Error[],
+      };
+      const asked: unknown[] = [];
+      connection.startBotReply(
+        "reply-1",
+        { bot: info, prompt: "hi", model },
+        {
+          say: (text) => heard.said.push(text),
+          end: (error) => heard.ended.push(error),
+          lost: (error) => heard.lost.push(error),
+          memory: async (params) => (asked.push(params), answerMemory()),
+        },
+      );
+      return { ws, received, connection, heard, asked, runtime };
+    };
+
+    test("is sent to the runner, and what the bot says comes back in order, then the end", async () => {
+      const { ws, received, heard } = await replying("bot-say");
+      await until(() => received.some((m) => m.type === "bot.reply"));
+      expect(received.find((m) => m.type === "bot.reply")).toEqual({
+        type: "bot.reply",
+        replyId: "reply-1",
+        bot: info,
+        prompt: "hi",
+        model,
+      });
+
+      ws.send(JSON.stringify({ type: "bot.say", replyId: "reply-1", text: "one" }));
+      ws.send(JSON.stringify({ type: "bot.say", replyId: "reply-1", text: "two" }));
+      ws.send(JSON.stringify({ type: "bot.end", replyId: "reply-1" }));
+
+      await until(() => heard.ended.length === 1);
+      expect(heard.said).toEqual(["one", "two"]);
+      expect(heard.ended).toEqual([undefined]);
+    });
+
+    test("a runner can only speak for a reply the control plane started, and not after it ended", async () => {
+      const { ws, heard } = await replying("bot-forged");
+
+      ws.send(JSON.stringify({ type: "bot.say", replyId: "someone-elses", text: "forged" }));
+      ws.send(JSON.stringify({ type: "bot.end", replyId: "reply-1", error: "done" }));
+      await until(() => heard.ended.length === 1);
+      ws.send(JSON.stringify({ type: "bot.say", replyId: "reply-1", text: "late" }));
+      await Bun.sleep(100);
+
+      expect(heard.said).toEqual([]);
+      expect(heard.ended).toEqual(["done"]);
+    });
+
+    test("the runner's questions about the conversation are answered for the live reply only", async () => {
+      const { ws, received, asked } = await replying("bot-memory", async () => [{ role: "user" }]);
+
+      const known = await ask(ws, received, "bot.memory", { replyId: "reply-1", op: "load" });
+      expect(known).toMatchObject({ ok: true, result: [{ role: "user" }] });
+      expect(asked).toEqual([{ replyId: "reply-1", op: "load" }]);
+
+      const unknown = await ask(ws, received, "bot.memory", { replyId: "other", op: "load" });
+      expect(unknown.ok).toBe(false);
+      const clearing = await ask(ws, received, "bot.memory", { replyId: "reply-1", op: "clear" });
+      expect(clearing.ok).toBe(false);
+      expect(asked).toHaveLength(1);
+    });
+
+    test("a cancel is sent to the runner while the reply is live", async () => {
+      const { received, connection } = await replying("bot-cancel");
+
+      connection.cancelBotReply("reply-1", "Shutting down");
+      connection.cancelBotReply("never-started", "ignored");
+
+      await until(() => received.some((m) => m.type === "bot.cancel"));
+      expect(received.filter((m) => m.type === "bot.cancel")).toEqual([
+        { type: "bot.cancel", replyId: "reply-1", reason: "Shutting down" },
+      ]);
+    });
+
+    test("a reply is not held for the runner to come back: losing the connection ends it", async () => {
+      const { ws, heard } = await replying("bot-lost");
+
+      ws.close();
+
+      await until(() => heard.lost.length === 1);
+      expect(heard.lost[0]?.message).toBe("The runtime disconnected");
+    });
+  });
+
   test("a runtime is asked for only so many viewers at once", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "v" });
     await open(server.server?.port, token);

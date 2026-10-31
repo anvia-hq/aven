@@ -117,33 +117,66 @@ describe("Sandboxes starting a container", () => {
     await sandboxes.dispose();
   });
 
-  test("a sandbox acquired with no repository mounts an empty workspace and clones nothing", async () => {
-    const { calls, docker } = fakeDocker();
-    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
-    const git = async (args: string[], options: { cwd: string }) => {
-      if (args[0] === "clone") throw new Error("a bot's computer has no repository to clone");
-      return fakeGit(args, options);
+  describe("a sandbox acquired with no repository (a bot's computer, decision 0059)", () => {
+    const acquireBotSandbox = async () => {
+      const { calls, docker } = fakeDocker();
+      const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+      const git = async (args: string[], options: { cwd: string }) => {
+        if (args[0] === "clone") throw new Error("a bot's computer has no repository to clone");
+        return fakeGit(args, options);
+      };
+      const sandboxes = await Sandboxes.start({
+        image: "img",
+        home,
+        docker,
+        git,
+        connectTimeoutMs: 200,
+      });
+      const box = await sandboxes.acquire({ id: "bot-1" });
+      const started = () => calls.filter((args) => args[0] === "run");
+      return { box, calls, started, sandboxes, home };
     };
-    const sandboxes = await Sandboxes.start({
-      image: "img",
-      home,
-      docker,
-      git,
-      connectTimeoutMs: 200,
+
+    test("is an empty workspace that is kept, clones nothing, and starts no container yet", async () => {
+      const { started, sandboxes, home } = await acquireBotSandbox();
+
+      expect(started()).toHaveLength(0);
+      const dir = join(await realpath(home), "workspaces", "bot-1");
+      expect((await stat(dir)).isDirectory()).toBe(true);
+      // Nothing is cloned, so it is not a thread's workspace as far as its changes and files go.
+      expect(await sandboxes.workspace("bot-1")).toBeUndefined();
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
     });
 
-    await sandboxes.acquire({ id: "bot-1" }).catch(() => undefined);
+    test("its container is started by `start`, once however many ask, and mounts that workspace", async () => {
+      const { box, started, sandboxes, home } = await acquireBotSandbox();
 
-    const mounted = calls
-      .find((args) => args[0] === "run")
-      ?.find((arg) => arg.endsWith(":/workspace"));
-    const dir = join(await realpath(home), "workspaces", "bot-1");
-    expect(mounted).toBe(`${dir}:/workspace`);
-    expect((await stat(dir)).isDirectory()).toBe(true);
-    // Nothing is cloned, so it is not a thread's workspace as far as its changes and files go.
-    expect(await sandboxes.workspace("bot-1")).toBeUndefined();
-    await sandboxes.dispose();
-    await rm(home, { recursive: true, force: true });
+      await Promise.allSettled([box.start?.(), box.start?.()]);
+
+      expect(started()).toHaveLength(1);
+      const mounted = started()[0]?.find((arg) => arg.endsWith(":/workspace"));
+      expect(mounted).toBe(`${join(await realpath(home), "workspaces", "bot-1")}:/workspace`);
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    });
+
+    test("and by the first tool that needs it, which is how a bot that only talks never starts one", async () => {
+      const { box, started, sandboxes, home } = await acquireBotSandbox();
+      const exec = box.tools.find((tool) => tool.name === "exec_command")!;
+
+      // The daemon never dials in here, so the call fails after the container was started.
+      await Promise.resolve(exec.call({ command: "ls" }, undefined as never)).catch(
+        () => undefined,
+      );
+
+      expect(started()).toHaveLength(1);
+      expect(await box.hasRunningProcesses()).toBe(false);
+      // Asking whether anything runs did not start another.
+      expect(started()).toHaveLength(1);
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    });
   });
 
   test("a second acquire while the container is starting waits for it and does not restart it", async () => {
@@ -669,6 +702,66 @@ live("a sandbox (real docker)", () => {
     sandboxes.setProjectEnv(threadId, undefined);
     expect((await run("printenv DATABASE_URL")).exitCode).toBe(1);
   }, 60_000);
+});
+
+live("a bot's computer (real docker, decision 0059)", () => {
+  let sandboxes: Sandboxes;
+  let home: string;
+
+  beforeAll(async () => {
+    home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
+    sandboxes = await Sandboxes.start({ image: image!, home });
+  }, 120_000);
+
+  afterAll(async () => {
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+  });
+
+  const exec = (box: ThreadSandbox, command: string) =>
+    box.tools.find((tool) => tool.name === "exec_command")!.call({ command } as never) as Promise<{
+      exitCode: number;
+      stdout: string;
+    }>;
+
+  const running = async (id: string) =>
+    (
+      await new Response(
+        Bun.spawn(["docker", "ps", "-q", "--filter", `name=aven-sandbox-${id}`]).stdout,
+      ).text()
+    ).trim() !== "";
+
+  test("is off until a tool needs it, then runs commands in a workspace that is kept after it is freed", async () => {
+    const id = crypto.randomUUID();
+    const box = await sandboxes.acquire({ id });
+    expect(await running(id)).toBe(false);
+
+    // The first command starts the container.
+    await exec(box, "echo kept > note.txt");
+    expect(await running(id)).toBe(true);
+    expect((await exec(box, "pwd")).stdout).toContain("/workspace");
+
+    // Freed, it is gone; the next computer for the same bot finds the file again.
+    await sandboxes.release(id);
+    expect(await running(id)).toBe(false);
+    const again = await sandboxes.acquire({ id });
+    expect(await running(id)).toBe(false);
+    expect((await exec(again, "cat note.txt")).stdout).toBe("kept\n");
+    expect(await readFile(join(home, "workspaces", id, "note.txt"), "utf8")).toBe("kept\n");
+  }, 300_000);
+
+  test("a desktop call starts it too, and a bot's computer has no git repository", async () => {
+    const id = crypto.randomUUID();
+    const box = await sandboxes.acquire({ id });
+    const screenshot = box.tools.find((tool) => tool.name === "desktop_screenshot")!;
+
+    await Promise.resolve(screenshot.call({} as never));
+
+    expect(await running(id)).toBe(true);
+    expect((await exec(box, "git rev-parse --is-inside-work-tree 2>&1 || true")).stdout).toContain(
+      "not a git repository",
+    );
+  }, 300_000);
 });
 
 describe("Sandboxes.start", () => {

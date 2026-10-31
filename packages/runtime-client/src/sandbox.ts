@@ -36,6 +36,7 @@ import { ensureLocalExcludes } from "./local-excludes";
 import { runCommand } from "./run-command";
 import { SkillStore } from "./skills";
 import type { SnapshotStore } from "./snapshots";
+import { startedOnUse } from "./started-on-use";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 
@@ -86,6 +87,12 @@ export type ThreadSandbox = {
   tools: readonly AnyTool[];
   /** Whether a process the agent started there, such as a dev server, is still running. */
   hasRunningProcesses(): Promise<boolean>;
+  /**
+   * Starts the container now if it is not running, and resolves once it is up. A thread's is
+   * started by `acquire`; one acquired without a repository is started by its first tool, or by
+   * this (decision 0059).
+   */
+  start?(): Promise<void>;
 };
 
 type Docker = DockerRun;
@@ -203,7 +210,8 @@ export interface ThreadWorkspaces {
   /**
    * `repo` asks the control plane how to clone the thread's repository; it is called only when the
    * workspace holds no clone yet (decision 0013). Without it the workspace is an empty directory
-   * that is kept between acquires: a bot's computer has no repository (decision 0059).
+   * that is kept between acquires, and the container is started by the first tool that needs it:
+   * a bot's computer has no repository and mostly stays off (decision 0059).
    */
   acquire(
     thread: { id: string; organizationId?: string },
@@ -354,18 +362,24 @@ export class Sandboxes implements ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
   ): Promise<ThreadSandbox> {
     const root = await this.#workspace(thread, repo);
-    await this.#ensure(thread.id, root);
-    const runtime = withProjectEnv(this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR }), () =>
-      this.#projectEnv.get(thread.id),
+    const start = () => this.#ensure(thread.id, root);
+    // A thread's container is up before its run begins; a bot's when something first needs it.
+    const upWhenNeeded = <T extends object>(sandbox: T) =>
+      repo ? sandbox : startedOnUse(sandbox, start);
+    if (repo) await start();
+    const runtime = withProjectEnv(
+      upWhenNeeded(this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR })),
+      () => this.#projectEnv.get(thread.id),
     );
     return {
       tools: [
         ...sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
-        ...createDesktopTools({ sandbox: this.#hub.desktop(thread.id) }),
+        ...createDesktopTools({ sandbox: upWhenNeeded(this.#hub.desktop(thread.id)) }),
       ],
       // A container that is gone has nothing running, and asking it would wait for a daemon.
       hasRunningProcesses: async () =>
         this.#hub.isConnected(thread.id) && (await hasRunningProcesses(runtime)),
+      start,
     };
   }
 

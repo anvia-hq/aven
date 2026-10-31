@@ -237,6 +237,22 @@ describe("RunGateway", () => {
     gateway.revoke("r5");
   });
 
+  test("a model can be checked for a key without a grant being made", () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    try {
+      expect(() => gateway.check({ provider: "anthropic" })).toThrow(
+        "ANTHROPIC_API_KEY is not set",
+      );
+      expect(() => gateway.check({ provider: "anthropic", apiKey: "k" })).not.toThrow();
+      expect(() => gateway.check({ provider: "azure" })).toThrow("no API key");
+      // A compatible server needs no key.
+      expect(() => gateway.check({ provider: "openai-compatible" })).not.toThrow();
+    } finally {
+      if (saved) process.env.ANTHROPIC_API_KEY = saved;
+    }
+  });
+
   test("a missing key fails when the grant is issued, not mid-run", () => {
     const saved = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;

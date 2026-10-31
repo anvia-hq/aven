@@ -1,12 +1,14 @@
 import { describeError } from "./errors";
 import { botMemoryStore, memoryStore } from "./memory-store";
 import { createBotChats } from "./modules/bots/chats";
+import { RemoteBotReplier } from "./modules/bots/remote-replier";
 import { BotRunner } from "./modules/bots/runner";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
 import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
+import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createShipService } from "./modules/ship/service";
 import { skillsService } from "./modules/skills/service";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -46,6 +48,16 @@ export const threadMessages = createThreadMessages(runsService);
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.send });
 
-export const botRunner = new BotRunner({ store: botMemoryStore });
+// Every bot's computer is on one runner: the control plane's own, which every person has, or the one
+// `AVEN_BOT_RUNNER` names for a deployment that has turned its own off (decision 0059).
+export const botRunner = new BotRunner({
+  store: botMemoryStore,
+  replier: new RemoteBotReplier(
+    runtimeHub,
+    runGateway,
+    botMemoryStore,
+    process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID,
+  ),
+});
 
 export const botChats = createBotChats(botRunner);

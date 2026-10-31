@@ -1,0 +1,24 @@
+# A bot has a computer of its own, on a runner
+
+Status: accepted. Supersedes the part of 0058 that says a bot runs in the control plane; the rest of 0058 stands. Builds on 0008, 0010 and 0012.
+
+## Context
+
+A bot (0058) only talked. A person wants it to do things: look something up, run code, make a file. A thread's agent does that in a sandbox, the Docker container of 0010 with a shell, files and a desktop. A bot should have the same computer, one of its own that is kept from chat to chat.
+
+0058 ran the bot in the control plane because it had no shell and so nothing for 0008's rule to protect. With a computer it has a shell, so that reason is gone: the agent has to run where the sandbox is, on a runner.
+
+## Decision
+
+- **A bot's agent runs on a runner**, as a thread's does. The control plane sends `bot.reply` (wire version 24: the bot's id, name and instruction, what the person said, and a token for its model); the runner builds the bot's agent with `send_message` and the sandbox's tools, runs it with `generate`, and sends each message back as `bot.say` after the typing pause (`typingDelay`, now waited out on the runner), then `bot.end`, with the error if there was one. `bot.cancel` stops it.
+- **Its computer** is the sandbox of 0010 and 0012, keyed by the bot's id where a thread's is keyed by the thread's: the desktop image, a container that is started by the first tool that needs it, not by a reply (most replies are only talk, and a desktop is not worth starting for that), freed after the idle time, and a workspace directory kept under the runner's home. It has **no repository**: `Sandboxes.acquire` without a `repo` makes an empty directory and clones nothing (and starts no container: `startedOnUse` wraps its runtime and desktop so the first call starts it, and `ThreadSandbox.start` does too), so there is no clone, branch, GitHub account, variables, snapshot or `.aven/*` script. The tools are a thread's less `show_image`, which has nowhere to show an image to a bot's person; what they return is bounded (`boundedTools`) because the bot's conversation keeps it. The bot has up to 30 turns instead of 8.
+- **The conversation stays with the control plane**, in the agent memory tables as before (`botMemoryStore`). The runner reads and adds to it through one call, `bot.memory`, which carries the five operations of an Anvia memory store the agent uses (`load`, `append`, `snapshot` and `replacePrefix` for summarizing, and not `clear`: a runner cannot wipe a chat). The control plane answers from the live reply's own bot and owner, never from what the runner names (`answerBotMemory`), and refuses a reply it did not start. Summarizing a long chat (0058) works the same, through these calls, with the bot's own model.
+- **Model keys stay on the control plane**: a reply gets a gateway token like a run does (0008), ended with the reply.
+- **A reply does not survive a dropped connection**: it has no journal and no replay. The control plane ends it with an error and the person says it again; the runner aborts what it was doing. Replies of a bot still go one at a time, in the control plane (`BotRunner`), which is no longer where the agent runs but still owns the chat, its events, the queue and what is shown.
+- **Which runner**: the control plane's own, which every person has (`AVEN_LOCAL_RUNNER`), or the one `AVEN_BOT_RUNNER` names for a deployment that has turned its own off. A per-bot or per-person choice of runner is not built. A bot with no runner online is refused with a 503 before its message is added, as is one whose model has no key.
+
+## Consequences
+
+- A bot needs Docker and the sandbox image, through a runner, to answer at all: there is no talk-only fallback. A machine without Docker no longer chats with its bots.
+- The chat's tests move down a level: `BotRunner` is tested with a replier of its own (`inProcessReplier`, `loopbackReplier`), the runner's side with `BotReplies` and the wire in `runner.test.ts` and `hub.test.ts`, and e2e runs a real runner process with directories for computers (`e2e/bot-runner.ts`) whose agent reaches the pretend model through the control plane's gateway.
+- **Known limits**: the first tool a bot uses after being idle waits for its container to start, which takes seconds the person sees as typing; screenshots the bot takes are kept in its conversation, which grows quickly (the summary folds them); nothing limits what a bot does on its computer beyond the sandbox's own limits (0037) and its open network (0009).

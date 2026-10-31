@@ -15,6 +15,8 @@ run("createBotChats (postgres)", async () => {
   const { providers } = await import("@aven/db/schema/providers");
   const { createBotChats } = await import("./chats");
   const { BotRunner } = await import("./runner");
+  const { inProcessReplier } = await import("./testing/in-process-replier");
+  const { loopbackReplier } = await import("./testing/loopback-replier");
   const { botsService } = await import("./service");
 
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -47,8 +49,27 @@ run("createBotChats (postgres)", async () => {
     } satisfies MemoryStore;
   };
 
+  // A runner whose bot answers in this process, with the agent a test made.
+  const runnerWith = (options: {
+    store: MemoryStore;
+    createAgent?: Parameters<typeof inProcessReplier>[0]["createAgent"];
+    pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  }) =>
+    new BotRunner({
+      store: options.store,
+      replier: inProcessReplier({
+        store: options.store,
+        createAgent:
+          options.createAgent ??
+          (() => {
+            throw new Error("This runner is only read from");
+          }),
+        pause: options.pause,
+      }),
+    });
+
   const chats = () => {
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: keeping(),
       createAgent: ({ bot, deliver, memory }) =>
         createBotAgent({
@@ -91,7 +112,7 @@ run("createBotChats (postgres)", async () => {
     const [mine] = await botsService.list(alice);
     const scope = { sessionId: mine!.id, userId: alice };
     await botMemoryStore.clear({ scope });
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: botMemoryStore,
       createAgent: ({ bot, deliver, memory }) =>
         createBotAgent({
@@ -112,7 +133,7 @@ run("createBotChats (postgres)", async () => {
       if (event?.type === "typing" && !event.typing) controller.abort();
     }
 
-    const fresh = new BotRunner({ store: botMemoryStore });
+    const fresh = runnerWith({ store: botMemoryStore });
     const reopened = new AbortController();
     const [first] = await Array.fromAsync(
       (async function* () {
@@ -134,7 +155,7 @@ run("createBotChats (postgres)", async () => {
   test("the bot is run as the person has last changed it", async () => {
     const [mine] = await botsService.list(alice);
     const made: { name: string; instruction: string }[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
       createAgent: ({ bot, deliver, memory }) => {
         made.push({ name: bot.name, instruction: bot.instruction });
@@ -168,7 +189,7 @@ run("createBotChats (postgres)", async () => {
       })
       .returning();
     const used: { provider: string; modelId?: string }[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
       createAgent: ({ bot, model, deliver, memory }) => {
         used.push({ provider: model.provider, modelId: model.modelId });
@@ -210,7 +231,7 @@ run("createBotChats (postgres)", async () => {
       compactAfterTokens: 30_000,
     });
     const seen: { effort?: string; compactAfterTokens: number | null }[] = [];
-    const runner = new BotRunner({
+    const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
       createAgent: ({ bot, model, deliver, memory }) => {
         seen.push({ effort: model.reasoningEffort, compactAfterTokens: bot.compactAfterTokens });
@@ -230,7 +251,7 @@ run("createBotChats (postgres)", async () => {
     await botsService.update(alice, mine!.id, { providerId: null, compactAfterTokens: null });
   });
 
-  test("a long chat is summarized past the size the bot was given, and stays whole on screen", async () => {
+  test("a long chat is summarized past the size the bot was given, through the runner's calls, and stays whole on screen", async () => {
     const [mine] = await botsService.list(alice);
     const scope = { sessionId: mine!.id, userId: alice };
     await botMemoryStore.clear({ scope });
@@ -245,19 +266,22 @@ run("createBotChats (postgres)", async () => {
       spoke = !spoke;
       return spoke ? [toolCall("send_message", { text: "ok" })] : [text("")];
     };
+    // The runner's own code answers, and asks the real store through the answers of the control plane.
     const runner = new BotRunner({
       store: botMemoryStore,
-      createAgent: ({ bot, deliver, memory }) =>
-        createBotAgent({
-          model: scriptedModel(Array.from({ length: 30 }, () => decide)),
-          id: bot.id,
-          name: bot.name,
-          instruction: bot.instruction,
-          deliver,
-          memory,
-          compactAfterTokens: bot.compactAfterTokens ?? undefined,
-        }),
-      pause: async () => undefined,
+      replier: loopbackReplier({
+        store: botMemoryStore,
+        createAgent: ({ bot, deliver, memory }) =>
+          createBotAgent({
+            model: scriptedModel(Array.from({ length: 30 }, () => decide)),
+            id: bot.id,
+            name: bot.name,
+            instruction: bot.instruction,
+            deliver,
+            memory,
+            compactAfterTokens: bot.compactAfterTokens,
+          }),
+      }),
     });
     const botChats = createBotChats(runner);
 

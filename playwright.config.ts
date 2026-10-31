@@ -2,6 +2,8 @@ import { generateKeyPairSync } from "node:crypto";
 
 import { defineConfig } from "@playwright/test";
 
+import { BOT_RUNNER_HEALTH_PORT, BOT_RUNNER_ID } from "./e2e/bot-runner-config";
+
 // Separate ports and database so e2e never touches the dev servers or dev data.
 const API_PORT = 8100;
 const WEB_PORT = 5174;
@@ -47,6 +49,8 @@ export default defineConfig({
         MODEL_CATALOG_URL: "",
         // No built-in runner: e2e must not start containers, and a project then needs a runner.
         AVEN_LOCAL_RUNNER: "off",
+        // The bots' computers are on the runner e2e/bot-runner.ts connects as.
+        AVEN_BOT_RUNNER: BOT_RUNNER_ID,
         // GitHub is the fake one below, so importing a repository never reaches the real one.
         GITHUB_APP_ID: "1",
         GITHUB_APP_SLUG: "aven-e2e",
@@ -64,7 +68,15 @@ export default defineConfig({
       env: { FAKE_GITHUB_PORT: String(GITHUB_PORT) },
     },
     {
-      // A model a person's provider can point at; bots call it from the control plane.
+      // The runner the bots answer on, with directories for computers; it connects once the control
+      // plane is up, retrying until then.
+      command: "bun e2e/bot-runner.ts",
+      url: `http://localhost:${BOT_RUNNER_HEALTH_PORT}/health`,
+      reuseExistingServer: false,
+      env: { AVEN_URL: API_URL },
+    },
+    {
+      // A model a person's provider can point at; the control plane's gateway calls it for bots.
       command: "bun e2e/fake-model.ts",
       url: `${MODEL_URL}/health`,
       reuseExistingServer: false,

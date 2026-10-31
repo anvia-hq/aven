@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { RunEvent } from "@aven/protocol/events";
 
-import { parseRuntimeFrame } from "./wire";
+import { parseBotMemoryParams, parseRuntimeFrame } from "./wire";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
@@ -92,7 +92,7 @@ describe("calls from a runtime", () => {
     JSON.stringify({ type: "call", id: "c1", method, params: { runId: "r1" } });
 
   test("only the calls a runner makes today are accepted", () => {
-    for (const method of ["memory.append", "repo.access", "skills.get"]) {
+    for (const method of ["memory.append", "repo.access", "skills.get", "bot.memory"]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
   });
@@ -106,5 +106,53 @@ describe("calls from a runtime", () => {
     ]) {
       expect(parseRuntimeFrame(call(method))).toBeNull();
     }
+  });
+});
+
+describe("a bot's reply from a runtime", () => {
+  const say = (replyId: unknown, text: unknown) =>
+    JSON.stringify({ type: "bot.say", replyId, text });
+
+  test("what the bot says and the end of its reply are accepted", () => {
+    expect(parseRuntimeFrame(say("r1", "hello"))).toEqual({
+      type: "bot.say",
+      replyId: "r1",
+      text: "hello",
+    });
+    expect(
+      parseRuntimeFrame(JSON.stringify({ type: "bot.end", replyId: "r1", error: "no model" })),
+    ).toMatchObject({ type: "bot.end", error: "no model" });
+  });
+
+  test("a message is something the bot could have sent: not empty, and no longer than the tool allows", () => {
+    expect(parseRuntimeFrame(say("r1", ""))).toBeNull();
+    expect(parseRuntimeFrame(say("r1", "x".repeat(2001)))).toBeNull();
+    expect(parseRuntimeFrame(say("", "hi"))).toBeNull();
+    expect(parseRuntimeFrame(say("r1", 7))).toBeNull();
+  });
+
+  test("a runner can read and add to a bot's conversation and summarize it, but not clear it", () => {
+    const base = { replyId: "r1" };
+    expect(parseBotMemoryParams({ ...base, op: "load" })).toMatchObject({ op: "load" });
+    expect(
+      parseBotMemoryParams({ ...base, op: "append", runId: "x", turn: 1, messages: [{}] }),
+    ).toMatchObject({ op: "append" });
+    expect(parseBotMemoryParams({ ...base, op: "snapshot" })).toMatchObject({ op: "snapshot" });
+    expect(
+      parseBotMemoryParams({
+        ...base,
+        op: "replacePrefix",
+        runId: "x",
+        revision: "1",
+        messageCount: 2,
+        replacement: {},
+      }),
+    ).toMatchObject({ op: "replacePrefix" });
+
+    expect(() => parseBotMemoryParams({ ...base, op: "clear" })).toThrow();
+    expect(() => parseBotMemoryParams({ op: "load" })).toThrow();
+    expect(() =>
+      parseBotMemoryParams({ ...base, op: "append", runId: "x", turn: -1, messages: [] }),
+    ).toThrow();
   });
 });

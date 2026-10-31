@@ -25,3 +25,7 @@ export function lateBoundTools(
     },
   }));
 }
+
+// The same tools with what they return kept small. For a host that keeps what the tools returned,
+// such as a bot's conversation, rather than a journal.
+export const boundedTools = (tools: readonly AnyTool[]) => lateBoundTools(tools, () => tools);

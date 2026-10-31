@@ -1,7 +1,17 @@
 import type { MemoryStore } from "@anvia/core";
-import type { CallMethod, RepoAccess, RunThreadInfo } from "@aven/protocol/runtime-wire";
+import type {
+  BotMemoryParams,
+  CallMethod,
+  RepoAccess,
+  RunThreadInfo,
+} from "@aven/protocol/runtime-wire";
 
-import { parseAppendParams, parseMemoryParams, parseSkillsGetParams } from "./wire";
+import {
+  parseAppendParams,
+  parseBotMemoryParams,
+  parseMemoryParams,
+  parseSkillsGetParams,
+} from "./wire";
 
 /** What answering a runtime's call needs to know of the run it names. */
 export type CallRun = {
@@ -12,9 +22,17 @@ export type CallRun = {
   skills: Set<string>;
 };
 
+/** What answering a runner's call about a bot's conversation needs of the reply it names. */
+export type CallBotReply = {
+  /** Answers for the reply's own bot and for no other. */
+  memory(params: BotMemoryParams): Promise<unknown>;
+};
+
 export type RuntimeCallContext = {
   /** A live run of the connection the call came over. */
   findRun(runId: string): CallRun | undefined;
+  /** A live bot reply of the connection the call came over. */
+  findBotReply(replyId: string): CallBotReply | undefined;
   store: MemoryStore;
   repoAccess(threadId: string): Promise<RepoAccess>;
   skillArchive(digest: string): Promise<Uint8Array | undefined>;
@@ -28,14 +46,23 @@ function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   return { runId, run };
 }
 
+// A bot's conversation, for the live reply the call names: what the reply's own sink says it is.
+function answerBotMemory(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
+  const call = parseBotMemoryParams(params);
+  const reply = findBotReply(call.replyId);
+  if (!reply) throw new Error("Unknown or finished reply");
+  return reply.memory(call);
+}
+
 // Answers what a runtime asks of the control plane: to add a turn to the transcript, which the control plane
 // owns, how to clone the repository, and the run's skills. All only for the run's own thread; the scope comes from
 // our record of the run, never from what the runtime sends.
 export async function answerRuntimeCall(
   method: CallMethod,
   params: unknown,
-  { findRun, store, repoAccess, skillArchive }: RuntimeCallContext,
+  { findRun, findBotReply, store, repoAccess, skillArchive }: RuntimeCallContext,
 ) {
+  if (method === "bot.memory") return answerBotMemory(params, findBotReply);
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
   if (method === "skills.get") {

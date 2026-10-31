@@ -1,9 +1,6 @@
-import type { AgentMemoryOptions, MemoryStore } from "@anvia/core";
-import { createBotAgent } from "@aven/agents/bot-agent";
-import { typingDelay } from "@aven/agents/bot-delay";
+import type { MemoryStore } from "@anvia/core";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
 import type { ModelConfig } from "@aven/agents/model";
-import type { DeliverMessage } from "@aven/agents/tools/send-message";
 import {
   applyBotEvent,
   botMessageId,
@@ -20,40 +17,26 @@ const PING_MS = 5_000;
 // How many replies a bot may owe at once: the one it is on and those waiting behind it.
 const MAX_PENDING = 5;
 
-type BotAgent = Pick<ReturnType<typeof createBotAgent>, "generate">;
-
-/** Makes the agent of one message. Tests make theirs with a scripted model. */
-export type CreateBotAgent = (input: {
+/** What answering one message of a bot needs (decision 0059). */
+export type BotReplyInput = {
   bot: Bot;
+  userId: string;
   model: ModelConfig;
-  deliver: DeliverMessage;
-  memory: AgentMemoryOptions;
-}) => BotAgent;
+  /** What the person said. */
+  prompt: string;
+  /** Shows a message the bot sent, once it has been "typed". */
+  say(text: string): void;
+  /** Stops the reply: a shutdown. */
+  signal: AbortSignal;
+};
 
-const defaultCreateAgent: CreateBotAgent = ({ bot, model, deliver, memory }) =>
-  createBotAgent({
-    ...model,
-    id: bot.id,
-    name: bot.name,
-    instruction: bot.instruction,
-    deliver,
-    memory,
-    compactAfterTokens: bot.compactAfterTokens ?? undefined,
-  });
-
-// What makes a message "typed": the wait before it shows, which a cancel cuts short.
-const sleep = (ms: number, signal?: AbortSignal) =>
-  new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(signal.reason);
-      },
-      { once: true },
-    );
-  });
+/** How a bot answers: the runner it works on is behind this, so the chat does not depend on it. */
+export type BotReplier = {
+  /** Throws when the bot cannot answer now (its computer is offline, or the model has no key), before a message is added. */
+  ready(model: ModelConfig): void;
+  /** Resolves when the bot has said all it will; rejects when it could not. */
+  answer(input: BotReplyInput): Promise<void>;
+};
 
 type Channel = {
   /** The chat so far, kept current by applying events, so a client that connects gets it whole. */
@@ -75,50 +58,30 @@ type Channel = {
 export class BotRunner {
   #channels = new Map<string, Channel>();
   #store: MemoryStore;
-  #createAgent: CreateBotAgent;
-  #pause: (ms: number, signal?: AbortSignal) => Promise<void>;
+  #replier: BotReplier;
   #shutdown = new AbortController();
 
-  constructor(deps: {
-    store: MemoryStore;
-    createAgent?: CreateBotAgent;
-    pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
-  }) {
+  constructor(deps: { store: MemoryStore; replier: BotReplier }) {
     this.#store = deps.store;
-    this.#createAgent = deps.createAgent ?? defaultCreateAgent;
-    this.#pause = deps.pause ?? sleep;
+    this.#replier = deps.replier;
   }
 
   // The person says something to the bot. Returns once the message is in the chat; the reply
-  // comes as events. Throws if the model cannot be used, before anything is added.
+  // comes as events. Throws if the bot cannot answer now, before anything is added.
   async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
+    this.#replier.ready(model);
     const channel = await this.#open(bot.id, userId);
     if (channel.pending >= MAX_PENDING) {
       throw new ConflictError("The bot has a lot to answer already; give it a moment");
     }
     // A client may have detached while this waited, which dropped the channel; it is in use again.
     this.#channels.set(bot.id, channel);
-    const session = this.#scope(bot.id, userId);
-    const deliver: DeliverMessage = async (message, { abortSignal }) => {
-      await this.#pause(typingDelay(message), abortSignal);
-      this.#say(channel, "bot", message);
-    };
-    let agent: BotAgent;
-    try {
-      agent = this.#createAgent({
-        bot,
-        model,
-        deliver,
-        memory: { store: this.#store, savePolicy: "turn" },
-      });
-    } catch (error) {
-      throw new UnavailableError(describeError(error));
-    }
-
     this.#say(channel, "user", text);
     channel.pending += 1;
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
-    channel.tail = channel.tail.then(() => this.#reply(bot, channel, agent, text, session));
+    channel.tail = channel.tail.then(() =>
+      this.#reply({ bot, userId, model, prompt: text }, channel),
+    );
   }
 
   // Attaches a client: yields the chat, then live events, with `null` as a keep-alive tick.
@@ -215,15 +178,14 @@ export class BotRunner {
   }
 
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on.
-  async #reply(
-    bot: Bot,
-    channel: Channel,
-    agent: BotAgent,
-    text: string,
-    session: { sessionId: string; userId: string },
-  ) {
+  async #reply(input: Omit<BotReplyInput, "say" | "signal">, channel: Channel) {
+    const { bot } = input;
     try {
-      await agent.generate({ prompt: text, session, abortSignal: this.#shutdown.signal });
+      await this.#replier.answer({
+        ...input,
+        say: (text) => this.#say(channel, "bot", text),
+        signal: this.#shutdown.signal,
+      });
     } catch (error) {
       if (!this.#shutdown.signal.aborted) {
         console.warn(`Bot ${bot.id} could not reply:`, error);

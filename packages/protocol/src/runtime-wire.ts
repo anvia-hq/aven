@@ -177,6 +177,18 @@ export type RunIdentityCredential = { credential: string };
 /** What a skill's digest looks like. */
 export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
 
+/**
+ * The bot a runner answers for (decision 0059). Its id names its computer on the runner, the way a
+ * thread's id names the thread's.
+ */
+export type BotReplyInfo = {
+  id: string;
+  name: string;
+  instruction: string;
+  /** Tokens past which the bot's chat is summarized; none means 70% of the model's window. */
+  compactAfterTokens?: number;
+};
+
 export type ControlPlaneToRuntime =
   | {
       type: "run.start";
@@ -205,6 +217,13 @@ export type ControlPlaneToRuntime =
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
+  /**
+   * The person said something to a bot: the runner has the bot's agent answer, on the bot's own
+   * computer, and says each message the bot sends with `bot.say` (decision 0059). A reply does not
+   * survive a dropped connection.
+   */
+  | { type: "bot.reply"; replyId: string; bot: BotReplyInfo; prompt: string; model: RunModel }
+  | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
   | { type: "run.attach"; runId: string; after: number }
   /** The control plane has the end of this run, or does not follow it: forget it. */
@@ -239,6 +258,10 @@ export type RuntimeToControlPlane =
       continuation?: unknown;
     }
   | { type: "call"; id: string; method: CallMethod; params: unknown }
+  /** The bot sent a message, after the pause that makes it look typed; the control plane shows it. */
+  | { type: "bot.say"; replyId: string; text: string }
+  /** The reply is over; `error` says why when the bot's agent threw. */
+  | { type: "bot.end"; replyId: string; error?: string }
   /** The viewer is streaming; its bytes follow as binary frames. */
   | { type: "desktop.opened"; viewerId: string }
   /** The viewer ended, or could not start: `reason` says why in words. */
@@ -258,7 +281,14 @@ export type RepoCallMethod = "repo.access";
 /** The runtime fetches a skill of the run (decision 0035); params are `{ runId, digest }`. */
 export type SkillsCallMethod = "skills.get";
 
-export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod;
+/**
+ * The runner reads and adds to the bot's conversation, which the control plane keeps (decision 0059):
+ * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
+ * cannot wipe a chat. Messages are Anvia's.
+ */
+export type BotCallMethod = "bot.memory";
+
+export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
 /** What a runtime needs to clone a thread's repository. The token is short-lived and read-only. */
 export type RepoAccess = {
@@ -281,8 +311,25 @@ type MemoryAppendParams = {
   messages: unknown[];
 };
 
+/** What a runner asks of a bot's conversation; `replyId` names the live reply it is working on. */
+export type BotMemoryParams = { replyId: string } & (
+  | { op: "load" }
+  | { op: "append"; runId: string; turn: number; messages: unknown[] }
+  /** The conversation as the model sees it now: the latest summary and what came after it. */
+  | { op: "snapshot" }
+  | {
+      op: "replacePrefix";
+      runId: string;
+      revision: string;
+      messageCount: number;
+      replacement: unknown;
+    }
+);
+
 /** The calls a runner makes today, by method: what it sends and what the control plane answers. */
 export type RuntimeCalls = {
+  /** The answer is Anvia's: messages for `load`, `{ revision, messages }` for `snapshot`, `{ status }` for `replacePrefix`, null for the others. */
+  "bot.memory": { params: BotMemoryParams; result: unknown };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -299,4 +346,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 23;
+export const WIRE_VERSION = 24;

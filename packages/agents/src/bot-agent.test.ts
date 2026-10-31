@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { Message, MemoryStore } from "@anvia/core";
+import { createTool, type Message, type MemoryStore } from "@anvia/core";
+import { z } from "zod";
 
-import { createBotAgent } from "./bot-agent";
+import { BOT_COMPUTER_MAX_TURNS, BOT_MAX_TURNS, createBotAgent } from "./bot-agent";
 import { TYPING_MAX_MS, TYPING_MIN_MS, typingDelay } from "./bot-delay";
 import { botInstructions } from "./bot-instruction";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
@@ -45,6 +46,17 @@ describe("botInstructions", () => {
 
   test("has no persona section when there is nothing to put in it", () => {
     expect(botInstructions({ name: "Pip", instruction: "  " })).not.toContain("<persona>");
+  });
+
+  test("says it only talks, until it has a computer, and then says what the computer is", () => {
+    const talking = botInstructions({ name: "Pip", instruction: "" });
+    expect(talking).toContain("you have no files, commands or internet");
+    expect(talking).not.toContain("<computer>");
+
+    const working = botInstructions({ name: "Pip", instruction: "", computer: true });
+    expect(working).toContain("You have a computer of your own");
+    expect(working).toContain("<computer>");
+    expect(working).not.toContain("no files, commands or internet");
   });
 });
 
@@ -92,6 +104,38 @@ describe("createBotAgent", () => {
     await agent.generate({ prompt: "my name is Ana", session: { sessionId: "b1" } });
     await agent.generate({ prompt: "who am I?", session: { sessionId: "b1" } });
     expect(seen[0]).toContain("my name is Ana");
+  });
+
+  test("a computer's tools come after send_message, and give the bot more turns to work in", async () => {
+    const lookup = createTool({
+      name: "run_it",
+      description: "Runs something on the computer.",
+      inputSchema: z.object({}),
+      execute: async () => "42",
+    });
+    const delivered: string[] = [];
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([[toolCall("run_it", {})], [send("it came to 42")], [text("")]]),
+      deliver: async (message) => void delivered.push(message),
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      computer: [lookup],
+    });
+    expect(agent.tools.map((tool) => tool.name)).toEqual([SEND_MESSAGE_TOOL_NAME, "run_it"]);
+
+    await agent.generate({ prompt: "what is it?", session: { sessionId: "b1" } });
+    expect(delivered).toEqual(["it came to 42"]);
+    expect(agent.defaultMaxTurns).toBe(BOT_COMPUTER_MAX_TURNS);
+  });
+
+  test("a bot with no computer keeps the short limit on turns", () => {
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      deliver: async () => undefined,
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(agent.defaultMaxTurns).toBe(BOT_MAX_TURNS);
   });
 
   test("a cancelled delivery stops the run", async () => {

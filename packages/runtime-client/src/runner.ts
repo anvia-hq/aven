@@ -21,6 +21,12 @@ import {
   filesCallParams,
   filesSearchParams,
 } from "./call-params";
+import {
+  BotReplies,
+  defaultCreateBotAgent,
+  type BotRepliesContext,
+  type CreateBotReplyAgent,
+} from "./bot-replies";
 import { DesktopViewers } from "./desktop-viewers";
 import { TerminalSessions } from "./terminal-sessions";
 import { threadDiff } from "./thread-diff";
@@ -62,6 +68,10 @@ export type RuntimeOptions = {
   /** The registration token shown once when the runtime was created. */
   token: string;
   createAgent?: CreateRuntimeAgent;
+  /** Builds the agent of a bot's reply (decision 0059). Replaced in tests. */
+  createBotAgent?: CreateBotReplyAgent;
+  /** How long a bot's message "types" before it is sent. Replaced in tests. */
+  typingPause?: BotRepliesContext["pause"];
   /** Gives each thread its sandbox and workspace (decision 0010). */
   sandbox: ThreadWorkspaces;
   /** The SQLite file runs are journaled in (decision 0021). Only one runner may use it at a time. */
@@ -192,7 +202,13 @@ export function startRuntime(options: RuntimeOptions) {
   }
 
   const hasRun = (threadId: string) =>
-    [...driver.live.values()].some((run) => run.threadId === threadId);
+    bots.has(threadId) || [...driver.live.values()].some((run) => run.threadId === threadId);
+
+  // A run or a reply is about to use the sandbox: it must not be released as idle.
+  async function starting(threadId: string) {
+    clearTimeout(idleTimers.get(threadId));
+    await releasing.get(threadId);
+  }
 
   // A run, or a process the agent left running (a dev server), keeps the sandbox; the check comes
   // round again after another idle period.
@@ -222,6 +238,18 @@ export function startRuntime(options: RuntimeOptions) {
     await options.sandbox.release(threadId);
   }
 
+  // Answers for the bots, each on its own computer (decision 0059).
+  const bots = new BotReplies({
+    sandbox: options.sandbox,
+    createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),
+    send,
+    call,
+    boxes,
+    starting,
+    finished: scheduleIdleRelease,
+    pause: options.typingPause,
+  });
+
   const driver = createRunDriver({
     journal,
     records,
@@ -232,10 +260,7 @@ export function startRuntime(options: RuntimeOptions) {
     report,
     boxes,
     controlPlane: origin,
-    async starting(threadId) {
-      clearTimeout(idleTimers.get(threadId));
-      await releasing.get(threadId);
-    },
+    starting,
     finished: scheduleIdleRelease,
     stopped: () => stopped,
   });
@@ -313,6 +338,12 @@ export function startRuntime(options: RuntimeOptions) {
         return;
       case "run.cancel":
         await driver.cancel(message.runId, message.reason);
+        return;
+      case "bot.reply":
+        bots.start(message);
+        return;
+      case "bot.cancel":
+        bots.cancel(message.replyId, message.reason);
         return;
       case "run.attach":
         for (const missed of outbox.attach(message.runId, message.after)) send(missed);
@@ -396,6 +427,8 @@ export function startRuntime(options: RuntimeOptions) {
       // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
       terminals.closeAll();
+      // A bot's reply is not taken up again after a reconnect: the control plane ends it.
+      bots.abortAll("The connection to the control plane dropped");
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
         options.onRefused?.(event.reason || "Refused by the control plane");
@@ -420,6 +453,7 @@ export function startRuntime(options: RuntimeOptions) {
       for (const timer of idleTimers.values()) clearTimeout(timer);
       viewers.closeAll();
       terminals.closeAll();
+      bots.abortAll("The runner is stopping");
       socket?.close();
       await Promise.all(releasing.values());
       await options.sandbox.dispose();

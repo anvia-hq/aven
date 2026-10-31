@@ -8,11 +8,13 @@ import {
   toolCall,
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
+import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
 import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
+import type { CreateBotReplyAgent } from "./bot-replies";
 import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
@@ -49,6 +51,11 @@ function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
         // The transcript the runner sends home is taken, unless a test says otherwise.
         if (message.type === "call" && message.method === "memory.append" && transcripts.stored)
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
+        // A bot's conversation: nothing said before, and whatever is added is taken.
+        if (message.type === "call" && message.method === "bot.memory") {
+          const result = (message.params as { op: string }).op === "load" ? [] : null;
+          ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
+        }
       },
     },
   });
@@ -1602,5 +1609,119 @@ describe("startRuntime runs", () => {
       // The second session (its divider and its reply), then the report.
       expect(filed).toEqual([2, 1]);
     });
+  });
+});
+
+describe("startRuntime answering for a bot", () => {
+  const botReply = {
+    type: "bot.reply",
+    replyId: "reply-1",
+    bot: { id: "bot-1", name: "Pip", instruction: "" },
+    prompt: "hello",
+    model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
+  };
+
+  // A bot whose model says one thing, then stops.
+  const botThat =
+    (...texts: string[]): CreateBotReplyAgent =>
+    ({ deliver, memory }) =>
+      new Agent({
+        id: "bot",
+        model: scriptedModel([
+          texts.map((say) => toolCall("send_message", { text: say })),
+          [text("")],
+        ]),
+        instructions: "x",
+        memory,
+        tools: [createSendMessageTool(deliver)],
+      });
+
+  test("the bot's messages arrive one by one, then the reply ends, on the bot's own sandbox", async () => {
+    const { sandbox, up } = slowSandbox();
+    const acquired: string[] = [];
+    const counting: ThreadWorkspaces = {
+      ...sandbox,
+      acquire: async (thread, repo) => (acquired.push(thread.id), sandbox.acquire(thread, repo)),
+    };
+    up();
+    const { plane, runtime } = connect({
+      sandbox: counting,
+      createBotAgent: botThat("hey!", "how are you?"),
+      typingPause: async () => undefined,
+    });
+    await runtime.ready;
+
+    plane.send(botReply);
+
+    await until(() => plane.received.some((message) => message.type === "bot.end"));
+    expect(plane.received.filter((message) => message.type.startsWith("bot."))).toEqual([
+      { type: "bot.say", replyId: "reply-1", text: "hey!" },
+      { type: "bot.say", replyId: "reply-1", text: "how are you?" },
+      { type: "bot.end", replyId: "reply-1" },
+    ]);
+    expect(acquired).toEqual(["bot-1"]);
+    // Its conversation was read and written through the control plane.
+    const operations = plane.received.flatMap((message) =>
+      message.type === "call" && message.method === "bot.memory"
+        ? [(message.params as { op: string }).op]
+        : [],
+    );
+    expect(operations[0]).toBe("load");
+    expect(operations.slice(1).length).toBeGreaterThan(0);
+    expect(new Set(operations.slice(1))).toEqual(new Set(["append"]));
+  });
+
+  test("a cancel from the control plane stops the reply", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const typing = Promise.withResolvers<void>();
+    const { plane, runtime } = connect({
+      sandbox,
+      createBotAgent: botThat("never sent"),
+      typingPause: (_ms, signal) =>
+        new Promise<void>((_resolve, reject) => {
+          typing.resolve();
+          signal?.addEventListener("abort", () => reject(signal.reason));
+        }),
+    });
+    await runtime.ready;
+
+    plane.send(botReply);
+    await typing.promise;
+    plane.send({ type: "bot.cancel", replyId: "reply-1", reason: "Shutting down" });
+
+    await until(() => plane.received.some((message) => message.type === "bot.end"));
+    expect(plane.received.find((message) => message.type === "bot.end")).toEqual({
+      type: "bot.end",
+      replyId: "reply-1",
+      error: "Shutting down",
+    });
+  });
+
+  test("the bot's sandbox is kept while it answers and freed when it has been idle", async () => {
+    const { sandbox, up, released } = slowSandbox();
+    up();
+    const typing = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<void>();
+    const { plane, runtime } = connect({
+      sandbox,
+      createBotAgent: botThat("a slow thought"),
+      idleReleaseMs: 30,
+      typingPause: async () => {
+        typing.resolve();
+        await finish.promise;
+      },
+    });
+    await runtime.ready;
+
+    plane.send(botReply);
+    await typing.promise;
+    await Bun.sleep(150);
+    // Well past the idle time, but the bot is still answering.
+    expect(released).toEqual([]);
+
+    finish.resolve();
+    await until(() => released.length === 1);
+    expect(released).toEqual(["bot-1"]);
   });
 });

@@ -2,9 +2,12 @@ import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
+  BotMemoryParams,
+  BotReplyInfo,
   CallMethod,
   ControlPlaneToRuntime,
   RepoAccess,
+  RunModel,
   RunnerCallMethod,
   RunOutcome,
   RuntimeToControlPlane,
@@ -19,8 +22,8 @@ import { ViewerStreams, type ViewerSink } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
 
 export class RuntimeOfflineError extends UnavailableError {
-  constructor() {
-    super("The runtime for this project is offline");
+  constructor(message = "The runtime for this project is offline") {
+    super(message);
   }
 }
 
@@ -31,6 +34,18 @@ export type RunSink = {
   end(outcome: RunOutcome, error?: string, continuation?: unknown): void;
   /** The connection dropped before the run ended. */
   lost(error: Error): void;
+};
+
+/** What a started bot reply reports back (decision 0059). */
+export type BotReplySink = {
+  /** The bot sent a message. */
+  say(text: string): void;
+  /** The reply finished; `error` is set when the runner reports the bot's agent threw. */
+  end(error?: string): void;
+  /** The connection dropped before the reply ended: a reply does not wait for the runner to return. */
+  lost(error: Error): void;
+  /** Answers the runner's calls about the bot's conversation, for this reply's bot. */
+  memory(params: BotMemoryParams): Promise<unknown>;
 };
 
 type Run = {
@@ -56,6 +71,7 @@ export const DEFAULT_GRACE_MS = 60_000;
 // of the run, never from what the runtime sends.
 export class RuntimeConnection {
   #runs = new Map<string, Run>();
+  #botReplies = new Map<string, BotReplySink>();
   #viewers: ViewerStreams;
   #calls: PendingCalls;
   #closed = false;
@@ -94,6 +110,27 @@ export class RuntimeConnection {
       appended: new Set(),
       skills: new Set(skills),
     });
+  }
+
+  // Has the runner's bot answer a message; what it says comes back to `sink`. Throws when the
+  // runner is offline.
+  startBotReply(
+    replyId: string,
+    input: { bot: BotReplyInfo; prompt: string; model: RunModel },
+    sink: BotReplySink,
+  ) {
+    this.#botReplies.set(replyId, sink);
+    try {
+      this.post({ type: "bot.reply", replyId, ...input });
+    } catch (error) {
+      this.#botReplies.delete(replyId);
+      throw error;
+    }
+  }
+
+  // Asks the runner to stop a reply; it ends with the runner's `bot.end`.
+  cancelBotReply(replyId: string, reason: string) {
+    if (this.#botReplies.has(replyId)) this.post({ type: "bot.cancel", replyId, reason });
   }
 
   // Takes over a run that was following a connection that dropped, and asks for what it missed.
@@ -171,6 +208,12 @@ export class RuntimeConnection {
       case "run.end":
         this.#endRun(message);
         return;
+      case "bot.say":
+        this.#botReplies.get(message.replyId)?.say(message.text);
+        return;
+      case "bot.end":
+        this.#endBotReply(message.replyId, message.error);
+        return;
       case "call":
         await this.#answer(message.id, message.method, message.params);
         return;
@@ -201,10 +244,17 @@ export class RuntimeConnection {
     run.sink.end(outcome, error, continuation);
   }
 
+  #endBotReply(replyId: string, error?: string) {
+    const sink = this.#botReplies.get(replyId);
+    this.#botReplies.delete(replyId);
+    sink?.end(error);
+  }
+
   async #answer(id: string, method: CallMethod, params: unknown) {
     try {
       const result = await answerRuntimeCall(method, params, {
         findRun: (runId) => this.#runs.get(runId),
+        findBotReply: (replyId) => this.#botReplies.get(replyId),
         store: this.hub.store,
         repoAccess: this.hub.repoAccess,
         skillArchive: this.hub.skillArchive,
@@ -217,6 +267,13 @@ export class RuntimeConnection {
 
   #reply(reply: ControlPlaneToRuntime) {
     this.send(JSON.stringify(reply));
+  }
+
+  // A bot's reply is not held for the runner to come back: it ends, and the person says it again.
+  #loseBotReplies() {
+    const replies = [...this.#botReplies.values()];
+    this.#botReplies.clear();
+    for (const reply of replies) reply.lost(new Error("The runtime disconnected"));
   }
 
   // The socket closed: calls in flight fail. Its runs are held for the runtime to reconnect to,
@@ -232,6 +289,7 @@ export class RuntimeConnection {
     } else if (runs.length > 0) {
       this.hub.hold(this.runtimeId, runs);
     }
+    this.#loseBotReplies();
     this.#viewers.closeAll("The runtime disconnected");
     this.#calls.rejectAll("The runtime disconnected");
     this.hub.detach(this);

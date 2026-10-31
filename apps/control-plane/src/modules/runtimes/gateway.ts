@@ -55,17 +55,29 @@ export class RunGateway {
 
   constructor(private upstreams: { anthropic: string; openai: string } = DEFAULT_UPSTREAMS) {}
 
-  // Throws when the model cannot be used (such as a missing environment key), before any run starts.
-  // With a `scope` (a thread), the token is the same every time: a run parked on the agent's
-  // question keeps the model client it was built with, so the run that answers must reach the
-  // model with that token (decision 0021). The grant still lasts only as long as the run.
-  issue(runId: string, config: ModelConfig, scope?: string): RunModel {
+  // The key the model is reached with: the provider's own, else the environment's. Throws when
+  // there is none, so a person is told before anything starts.
+  #keyOf(config: ModelConfig) {
     const envKey = ENV_KEYS[config.provider];
     const key = config.apiKey ?? (envKey && process.env[envKey]);
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
     }
     if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
+    return key;
+  }
+
+  // Throws when the model cannot be used (such as a missing environment key), and grants nothing.
+  check(config: ModelConfig) {
+    this.#keyOf(config);
+  }
+
+  // Throws when the model cannot be used (such as a missing environment key), before any run starts.
+  // With a `scope` (a thread), the token is the same every time: a run parked on the agent's
+  // question keeps the model client it was built with, so the run that answers must reach the
+  // model with that token (decision 0021). The grant still lasts only as long as the run.
+  issue(runId: string, config: ModelConfig, scope?: string): RunModel {
+    const key = this.#keyOf(config);
     const token = scope
       ? tokenFor(scope)
       : `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
