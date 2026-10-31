@@ -10,7 +10,7 @@
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.985 0.0018 250);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.2 0.009 250);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.009 250);
