@@ -20,13 +20,28 @@ Read what exists before asking anything:
 - `git log --oneline -30` and `gh pr list --state merged --limit 10`: the real commit style (conventional commits? ticket numbers?), whether pull requests are squashed, who reviews;
 - scripts named `ship`, `release`, `prepare`, `verify` in `package.json`, a `Makefile` or a `justfile`.
 
-Then ask the user only what you could not find, in one message, with your guess for each so they can just confirm:
+Then ask the user, in one message, with your guess for each so they can just confirm. Skip a question only when the repository answers it for certain:
 
+**Where the work goes**
+
+- Which branch do pull requests target: the default branch, or another one (a `develop` or release branch)? Does it depend on the kind of change?
+- Branch names: keep the thread's own branch, or follow a pattern (`feat/<topic>`, a ticket number)?
 - Draft pull request or ready for review?
+- Reviewers, labels, a ticket or issue to link?
+
+**What the pull request holds**
+
+- What should the description say: a summary of the change, why, how it was tested, risks, follow-ups? Use the repository's template if there is one.
+- Should it include **proof** that the change works? Offer the options and let them pick any: command output of the checks and tests, screenshots of the changed screens, a screen recording of the flow (a Playwright test run with video on, or a recording of the desktop with `ffmpeg`), before and after images. Ask which changes need proof (every UI change? only when asked?) and where the files go: committed to the branch in a folder such as `.aven/proof/` (and whether that folder should be removed before merging), or described in text only. `gh` cannot attach files to a pull request, so proof files must be in the branch, with the description linking to them.
+- Is anything not allowed in the description (internal links, customer names)?
+
+**How it is checked and merged**
+
 - Which checks must pass locally before pushing?
 - Squash, rebase or merge? Should the agent turn on auto-merge, or leave merging to people?
-- Reviewers, labels, a ticket or issue to link?
 - Anything that must **not** happen (pushing to the default branch, touching a lockfile by hand, shipping with failing tests)?
+
+Check what the proof needs before promising it: Playwright and its browsers are in the sandbox only if the project's `.aven/setup` installs them (`ffmpeg` and Chromium are in the sandbox image). If the user wants Playwright proof and the project lacks it, say so and suggest adding it to `/setup-env`.
 
 ## 2. Write `.aven/ship.md`
 
@@ -39,15 +54,17 @@ Ship this thread's work.
 2. Rebase onto the default branch: `git fetch origin main && git rebase origin/main`.
 3. Run the checks CI runs: `bun run typecheck && bun run lint && bun test`. Fix what you broke; if something fails that you cannot fix, stop and tell me.
 4. Push the branch with `git push -u origin HEAD`. Never force-push main.
-5. Open a pull request with `gh pr create --draft`, filling in .github/pull_request_template.md. Label it `needs-review`. If one is already open for this branch, the push updates it.
-6. Do not merge. Tell me the pull request's URL.
+5. Record proof for UI changes: run `bunx playwright test e2e/<spec> --video=on`, copy the videos and screenshots into `.aven/proof/`, commit and push them.
+6. Open a pull request against `develop` with `gh pr create --draft --base develop`, filling in .github/pull_request_template.md and linking the proof files under "How it was tested". Label it `needs-review`. If one is already open for this branch, the push updates it.
+7. Do not merge. Tell me the pull request's URL.
 ```
 
 Rules:
 
 - **Commands, not wishes.** "Run the checks" is weak; `bun run typecheck && bun test` is what the agent can run.
 - **Say what to do when a step fails.** Stop and tell the user, or fix and retry, or skip: decide for each.
-- **Nothing the agent cannot do.** It acts as the user with `gh` and `git`; it has no browser and no access to other systems.
+- **Name the base branch.** The prompt ends with a line naming the default branch; if pull requests go elsewhere, say so with `--base`.
+- **Nothing the agent cannot do.** It acts as the user with `gh` and `git`, and has a desktop browser in its sandbox but no access to other systems.
 - **No secrets.** The file is committed.
 - Under 10,000 characters, and shorter is better: a long prompt is followed less carefully.
 
