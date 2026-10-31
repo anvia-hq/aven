@@ -1,4 +1,4 @@
-import type { MemoryCompactionMessage, Message } from "@anvia/core";
+import type { Message } from "@anvia/core";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
@@ -22,11 +22,7 @@ const outcomes = [
   "error",
 ] as const satisfies readonly RunOutcome[];
 const callMethods = [
-  "memory.load",
   "memory.append",
-  "memory.clear",
-  "memory.snapshot",
-  "memory.replacePrefix",
   "repo.access",
   "skills.get",
 ] as const satisfies readonly CallMethod[];
@@ -145,14 +141,6 @@ const appendParams = memoryParams.extend({
   messages: z.array(z.custom<Message>((value) => typeof value === "object" && value !== null)),
 });
 
-const replacePrefixParams = memoryParams.extend({
-  revision: z.string(),
-  messageCount: z.number().int().positive(),
-  replacement: z.custom<MemoryCompactionMessage>(
-    (value) => typeof value === "object" && value !== null,
-  ),
-});
-
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
@@ -164,5 +152,3 @@ function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
-export const parseReplacePrefixParams = (params: unknown) =>
-  parseParams(replacePrefixParams, params);

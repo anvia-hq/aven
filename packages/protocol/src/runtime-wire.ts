@@ -249,13 +249,8 @@ export type RuntimeToControlPlane =
   | { type: "terminal.closed"; viewerId: string; reason: string }
   | Reply;
 
-/** The runtime reads and writes the conversation, which the control plane owns. */
-export type MemoryCallMethod =
-  | "memory.load"
-  | "memory.append"
-  | "memory.clear"
-  | "memory.snapshot"
-  | "memory.replacePrefix";
+/** The runtime adds a turn to the transcript, which the control plane owns (decision 0021). */
+export type MemoryCallMethod = "memory.append";
 
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
@@ -304,4 +299,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 21;
+export const WIRE_VERSION = 22;

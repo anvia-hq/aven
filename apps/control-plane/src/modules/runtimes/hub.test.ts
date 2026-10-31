@@ -247,7 +247,11 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     });
 
     // An unknown run id is refused, whatever scope the runtime claims.
-    const unknown = await ask(ws, received, "memory.load", { runId: "someone-elses" });
+    const unknown = await ask(ws, received, "memory.append", {
+      runId: "someone-elses",
+      turn: 0,
+      messages: [],
+    });
     expect(unknown.ok).toBe(false);
 
     const message = { role: "user", content: [{ type: "text", text: "hi" }] };
@@ -259,32 +263,15 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     });
     expect(appended.ok).toBe(true);
     // It landed in the thread the control plane bound the run to.
-    const loaded = await ask(ws, received, "memory.load", { runId: "run-1" });
-    expect(JSON.stringify(loaded.result)).toContain("hi");
+    const loaded = await store.load({
+      scope: { sessionId: thread.id, metadata: { organizationId: seed.orgA } },
+    });
+    expect(JSON.stringify(loaded)).toContain("hi");
     expect(
       await store.load({
         scope: { sessionId: "other-thread", metadata: { organizationId: "other-org" } },
       }),
     ).toEqual([]);
-
-    // Compaction goes through the same run-bound scope: a snapshot of this thread's history, and a
-    // summary replacing its prefix.
-    const snapshot = await ask(ws, received, "memory.snapshot", { runId: "run-1" });
-    expect(snapshot.ok).toBe(true);
-    const { revision } = snapshot.result as { revision: string };
-    const replaced = await ask(ws, received, "memory.replacePrefix", {
-      runId: "run-1",
-      revision,
-      messageCount: 1,
-      replacement: {
-        role: "system",
-        content: "summary of hi",
-        metadata: { anvia: { memoryCompaction: { version: 1, compactedMessageCount: 1 } } },
-      },
-    });
-    expect(replaced.result).toEqual({ status: "committed" });
-    const badReplace = await ask(ws, received, "memory.replacePrefix", { runId: "run-1" });
-    expect(badReplace.ok).toBe(false);
 
     // Once the run ends, the runtime can no longer write to it.
     ws.send(JSON.stringify({ type: "run.end", runId: "run-1", seq: 1, outcome: "response" }));
@@ -322,7 +309,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     ]) {
       ws.send(frame);
     }
-    const noParams = await ask(ws, received, "memory.load", undefined);
+    const noParams = await ask(ws, received, "repo.access", undefined);
     expect(noParams.ok).toBe(false);
     const badAppend = await ask(ws, received, "memory.append", { runId: "run-bad", turn: "0" });
     expect(badAppend.ok).toBe(false);

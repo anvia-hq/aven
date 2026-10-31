@@ -41,3 +41,25 @@ describe("run events from a runtime", () => {
     expect(parseRuntimeFrame(frame({ type: "done" }))).toBeNull();
   });
 });
+
+describe("calls from a runtime", () => {
+  const call = (method: string) =>
+    JSON.stringify({ type: "call", id: "c1", method, params: { runId: "r1" } });
+
+  test("only the calls a runner makes today are accepted", () => {
+    for (const method of ["memory.append", "repo.access", "skills.get"]) {
+      expect(parseRuntimeFrame(call(method))).not.toBeNull();
+    }
+  });
+
+  test("the transcript cannot be read, cleared or rewritten (wire version 22)", () => {
+    for (const method of [
+      "memory.load",
+      "memory.clear",
+      "memory.snapshot",
+      "memory.replacePrefix",
+    ]) {
+      expect(parseRuntimeFrame(call(method))).toBeNull();
+    }
+  });
+});

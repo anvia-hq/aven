@@ -1,12 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type { CallMethod, RepoAccess, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
-import {
-  parseAppendParams,
-  parseMemoryParams,
-  parseReplacePrefixParams,
-  parseSkillsGetParams,
-} from "./wire";
+import { parseAppendParams, parseMemoryParams, parseSkillsGetParams } from "./wire";
 
 /** What answering a runtime's call needs to know of the run it names. */
 export type CallRun = {
@@ -25,11 +20,6 @@ export type RuntimeCallContext = {
   skillArchive(digest: string): Promise<Uint8Array | undefined>;
 };
 
-function requireCompaction(store: MemoryStore) {
-  if (!store.compaction) throw new Error("This conversation store does not support compaction");
-  return store.compaction;
-}
-
 // Every call names a run, which must be a live one of the connection it came over.
 function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   const { runId } = parseMemoryParams(params);
@@ -38,7 +28,7 @@ function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   return { runId, run };
 }
 
-// Answers what a runtime asks of the control plane: the conversation, which the control plane
+// Answers what a runtime asks of the control plane: to add a turn to the transcript, which the control plane
 // owns, how to clone the repository, and the run's skills. All only for the run's own thread; the scope comes from
 // our record of the run, never from what the runtime sends.
 export async function answerRuntimeCall(
@@ -59,36 +49,15 @@ export async function answerRuntimeCall(
     sessionId: run.thread.id,
     metadata: { organizationId: run.thread.organizationId },
   };
-  switch (method) {
-    case "memory.load":
-      return store.load({ scope });
-    case "memory.append": {
-      const { turn, messages } = parseAppendParams(params);
-      // A runtime that did not hear the reply asks again.
-      if (run.appended.has(turn)) return null;
-      run.appended.add(turn);
-      try {
-        await store.append({ scope, runId, turn, messages });
-      } catch (error) {
-        run.appended.delete(turn);
-        throw error;
-      }
-      return null;
-    }
-    case "memory.clear":
-      await store.clear({ scope });
-      return null;
-    case "memory.snapshot":
-      return requireCompaction(store).snapshot({ scope });
-    case "memory.replacePrefix": {
-      const { revision, messageCount, replacement } = parseReplacePrefixParams(params);
-      return requireCompaction(store).replacePrefix({
-        scope,
-        runId,
-        revision,
-        messageCount,
-        replacement,
-      });
-    }
+  const { turn, messages } = parseAppendParams(params);
+  // A runtime that did not hear the reply asks again.
+  if (run.appended.has(turn)) return null;
+  run.appended.add(turn);
+  try {
+    await store.append({ scope, runId, turn, messages });
+  } catch (error) {
+    run.appended.delete(turn);
+    throw error;
   }
+  return null;
 }
