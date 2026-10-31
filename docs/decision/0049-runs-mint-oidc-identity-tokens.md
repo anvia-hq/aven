@@ -4,7 +4,7 @@ Status: accepted. Builds on 0008 (the control plane's model gateway and per-run 
 
 ## Context
 
-A project that deploys to a cloud, or reaches a private network, needs a credential in the sandbox. Variables and secrets (0045 to 0047) work, but a stored key is long-lived, as broad as whatever it was minted with, and readable by everything the agent runs. Most clouds and tools (Google Cloud Workload Identity Federation, AWS, Vault, Tailscale, GitHub Actions' own consumers) can instead trust an OIDC issuer and exchange a short-lived signed token for access, scoped by the token's claims.
+A project that deploys to a cloud, or reaches a private network, needs a credential in the sandbox. Variables and secrets (0045 to 0047) work, but a stored key is long-lived, as broad as whatever it was minted with, and readable by everything the agent runs. Most clouds and tools (Google Cloud Workload Identity Federation, AWS, Vault, Tailscale) can instead trust an OIDC issuer and exchange a short-lived signed token for access, scoped by the token's claims.
 
 ## Decision
 

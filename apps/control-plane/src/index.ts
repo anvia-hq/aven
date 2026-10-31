@@ -19,6 +19,7 @@ import { skillsRouter } from "./modules/skills/router";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
 import { scopedVariablesRouter, variablesRouter } from "./modules/variables/router";
+import { workloadIdentityRouter } from "./modules/workload-identity/router";
 
 const app = new Elysia()
   .use(errorsRouter)
@@ -38,7 +39,8 @@ const app = new Elysia()
   .use(threadsRouter)
   .use(usersRouter)
   .use(scopedVariablesRouter)
-  .use(variablesRouter);
+  .use(variablesRouter)
+  .use(workloadIdentityRouter);
 
 const port = Number(process.env.PORT ?? 8000);
 if (!Number.isInteger(port) || port <= 0)
