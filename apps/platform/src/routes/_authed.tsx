@@ -9,6 +9,8 @@ import {
 import { Cog, Search } from "@mynaui/icons-react";
 import type { CSSProperties } from "react";
 
+import { cn } from "cn";
+
 import { AvenMark } from "@/components/brand-icons";
 import { Button } from "@/components/button";
 import {
@@ -47,9 +49,11 @@ function AuthedLayout() {
 
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
-  const inSettings = useRouterState({ select: (state) => state.location.pathname }).startsWith(
-    "/settings",
-  );
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const inSettings = pathname.startsWith("/settings");
+  // A thread draws its own card for the conversation, so its side panels can be cards of their own
+  // on the frame beside it, level with it.
+  const inThread = /^\/threads\/[^/]+/.test(pathname);
 
   if (inSettings) {
     return (
@@ -75,11 +79,22 @@ function AuthedLayout() {
           <AvenMark className="w-5" />
         </Link>
       </aside>
-      {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own border. */}
-      <div className="flex min-w-0 flex-1 md:my-2 md:mr-2 md:overflow-clip md:rounded-xl md:bg-background md:ring-1 md:ring-sidebar-border">
+      {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
+          border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
+          which together look the same. */}
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 md:my-2 md:mr-2",
+          !inThread &&
+            "md:overflow-clip md:rounded-xl md:bg-background md:ring-1 md:ring-sidebar-border",
+        )}
+      >
         <Sidebar
           collapsible="icon"
-          className="text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl"
+          className={cn(
+            "text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl",
+            inThread && "md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
+          )}
         >
           <SidebarHeader>
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
@@ -115,7 +130,7 @@ function AuthedLayout() {
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
-        <SidebarInset>
+        <SidebarInset className={cn(inThread && "md:bg-transparent")}>
           <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">
             <SidebarTrigger />
             <span className="text-sm font-medium">Aven</span>

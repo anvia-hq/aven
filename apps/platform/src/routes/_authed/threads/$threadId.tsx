@@ -23,6 +23,10 @@ import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
+// The divider between cards is a gap of the frame's colour, wide enough to grab.
+const GAP_HANDLE =
+  "bg-transparent aria-[orientation=vertical]:w-2 aria-[orientation=vertical]:after:w-2 aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:after:h-2";
+
 export const Route = createFileRoute("/_authed/threads/$threadId")({
   component: ThreadPage,
 });
@@ -99,7 +103,7 @@ function ThreadPage() {
           onLayoutChanged={layout.onLayoutChanged}
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
-            <div className="@container flex h-full min-w-0 flex-col">
+            <div className="@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-r-xl md:border-y md:border-r md:border-sidebar-border">
               <ThreadHeader thread={thread} panels={panels} />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
@@ -154,8 +158,10 @@ function ThreadPage() {
           </ResizablePanel>
           {sideOpen && (
             <>
-              <ResizableHandle withHandle />
+              <ResizableHandle className={GAP_HANDLE} />
               <ResizablePanel id="side" defaultSize="50" minSize="25">
+                {/* Each panel is a card on the frame, level with the conversation's; the gap between
+                    two is their divider. */}
                 <ResizablePanelGroup
                   orientation="vertical"
                   defaultLayout={side.defaultLayout}
@@ -163,7 +169,7 @@ function ThreadPage() {
                 >
                   {sidePanels.map((panel, index) => (
                     <Fragment key={panel.id}>
-                      {index > 0 && <ResizableHandle withHandle />}
+                      {index > 0 && <ResizableHandle className={GAP_HANDLE} />}
                       <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
                         {panel.node}
                       </ResizablePanel>

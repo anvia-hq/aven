@@ -13,11 +13,14 @@ type Props = {
   children: ReactNode;
 };
 
-// A panel beside a thread's conversation: a header with its name, its own actions and a close
-// button, over the panel's body.
+// A panel beside a thread's conversation, drawn as a card of its own: a header with its name, its
+// own actions and a close button, over the panel's body.
 export function SidePanel({ title, icon: Icon, actions, onClose, children }: Props) {
   return (
-    <section className="flex size-full min-w-0 flex-col" aria-label={title}>
+    <section
+      className="flex size-full min-w-0 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-background"
+      aria-label={title}
+    >
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <Icon className="size-4 text-muted-foreground" />
         <h2 className="text-sm font-medium">{title}</h2>
