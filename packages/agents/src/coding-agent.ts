@@ -24,6 +24,8 @@ type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   maxTurns?: number;
   /** The agent's id. A durable run registers one agent per run, so each needs its own. Defaults to "coding". */
   id?: string;
+  /** What the agent is told instead of the coding agent's own instructions: a subagent has its own (decision 0057). */
+  instructions?: string;
   /** The skills in the sandbox, which the instructions list (decision 0035). */
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
@@ -46,7 +48,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     id: options.id ?? "coding",
     model,
     instructions: [
-      INSTRUCTIONS,
+      options.instructions ?? INSTRUCTIONS,
       skillsInstructions(options.skills ?? []),
       environmentInstructions(options.envNames ?? []),
     ]

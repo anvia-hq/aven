@@ -22,6 +22,9 @@ export const SECRET_TOOL_NAME = "request_secret";
 
 export const SHOW_IMAGE_TOOL_NAME = "show_image";
 
+/** The agent hands tasks to subagents (decision 0057): its result is theirs, in the order asked. */
+export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";
+
 /** An image the agent showed the user (decision 0033). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
 export type ToolImage = { name: string; mediaType: string; caption?: string };
 

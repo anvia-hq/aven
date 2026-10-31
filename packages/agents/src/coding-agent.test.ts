@@ -38,6 +38,20 @@ describe("createCodingAgent", () => {
     expect(createCodingAgent({ ...base, questions: false }).agent.tools).toEqual([]);
   });
 
+  test("takes the instructions it is given instead of the coding agent's", () => {
+    const base = {
+      provider: "openai",
+      apiKey: "test-key",
+      tools: [],
+      webSearch: false,
+      questions: false,
+    } as const;
+    expect(createCodingAgent(base).agent.instructions).toContain("<role>");
+    expect(createCodingAgent({ ...base, instructions: "Only look." }).agent.instructions).toBe(
+      "Only look.",
+    );
+  });
+
   test("a question suspends the run and the answer resumes it", async () => {
     const model = scriptedModel([
       [
