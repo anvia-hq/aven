@@ -19,6 +19,7 @@ test("every part of the instructions is a closed, named section", () => {
   const text = [INSTRUCTIONS, skills, environmentInstructions(["X"])].join("\n\n");
   const { opens, closes } = tagsBalance(text);
   expect(opens.length).toBeGreaterThan(5);
-  expect(closes).toEqual(opens);
+  // An <example> sits inside <output>, so the closing order differs from the opening order.
+  expect([...closes].sort()).toEqual([...opens].sort());
   expect(new Set(opens).size).toBe(opens.length);
 });
