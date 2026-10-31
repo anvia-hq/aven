@@ -188,6 +188,8 @@ export type BotReplyInfo = {
   id: string;
   name: string;
   instruction: string;
+  /** What the bot is for, as it is now; the bot may change it (decision 0061). */
+  description: string;
   /** Tokens past which the bot's chat is summarized; none means 70% of the model's window. */
   compactAfterTokens?: number;
   /** Whether this bot may make others, a power of the person's main bot (decision 0060). */

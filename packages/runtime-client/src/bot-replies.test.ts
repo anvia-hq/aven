@@ -3,6 +3,7 @@ import { Agent, createTool, type AnyTool } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
+import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
@@ -16,7 +17,7 @@ const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as co
 const message: BotReplyMessage = {
   type: "bot.reply",
   replyId: "r1",
-  bot: { id: "bot-1", name: "Pip", instruction: "", canCreateBots: false },
+  bot: { id: "bot-1", name: "Pip", instruction: "", description: "A pal.", canCreateBots: false },
   prompt: "hello",
   model,
 };
@@ -26,13 +27,18 @@ const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(
 // An agent that sends what a script says to, then stops.
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
-  ({ deliver, computer, memory, createBot }) =>
+  ({ deliver, computer, memory, createBot, updateSelf }) =>
     new Agent({
       id: "bot",
       model: scriptedModel(steps),
       instructions: "x",
       memory,
-      tools: [createSendMessageTool(deliver), ...computer, ...makingBots(createBot)],
+      tools: [
+        createSendMessageTool(deliver),
+        ...computer,
+        ...makingBots(createBot),
+        createUpdateSelfTool(updateSelf),
+      ],
     });
 
 const sandboxWith = (acquired: { id: string; repo: unknown }[] = []): ThreadWorkspaces => ({
@@ -70,6 +76,7 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
     call: async (method, params) => {
       calls.push({ method, params });
       if (method === "bot.create") return { id: "b2", name: (params as { name: string }).name };
+      if (method === "bot.update") return { name: "Pip", description: "Now for research." };
       return memoryAnswer(params);
     },
     boxes,
@@ -179,6 +186,41 @@ describe("BotReplies", () => {
       { type: "bot.say", replyId: "r1", text: "Scout is ready" },
       { type: "bot.end", replyId: "r1" },
     ]);
+  });
+
+  test("any bot changes itself by asking the control plane, for its own reply", async () => {
+    const run = harness(
+      agentThat(
+        [toolCall("update_self", { description: "Now for research." })],
+        [toolCall("send_message", { text: "Done" })],
+        [text("")],
+      ),
+    );
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(run.calls).toContainEqual({
+      method: "bot.update",
+      params: { replyId: "r1", description: "Now for research." },
+    });
+    expect(run.sent).toEqual([
+      { type: "bot.say", replyId: "r1", text: "Done" },
+      { type: "bot.end", replyId: "r1" },
+    ]);
+  });
+
+  test("the agent is told the bot's description as it is now", async () => {
+    let described: string | undefined;
+    const run = harness((input) => {
+      described = input.bot.description;
+      return agentThat([text("")])(input);
+    });
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(described).toBe("A pal.");
   });
 
   test("a bot that may not make bots is not given the tool", async () => {

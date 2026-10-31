@@ -8,6 +8,7 @@ import { botInstructions } from "./bot-instruction";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { CREATE_BOT_TOOL_NAME } from "./tools/create-bot";
 import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
+import { UPDATE_SELF_TOOL_NAME } from "./tools/update-self";
 
 const send = (message: string) => toolCall(SEND_MESSAGE_TOOL_NAME, { text: message });
 
@@ -168,6 +169,36 @@ describe("createBotAgent", () => {
     expect(plain.tools.map((tool) => tool.name)).toEqual([SEND_MESSAGE_TOOL_NAME]);
     expect(botInstructions({ ...base, createBots: true })).toContain(CREATE_BOT_TOOL_NAME);
     expect(botInstructions(base)).not.toContain(CREATE_BOT_TOOL_NAME);
+  });
+
+  test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {
+    const changes: unknown[] = [];
+    const agent = createBotAgent({
+      ...base,
+      description: "Looks things up.",
+      model: scriptedModel([
+        [toolCall(UPDATE_SELF_TOOL_NAME, { name: "Scout" })],
+        [send("Call me Scout")],
+        [text("")],
+      ]),
+      deliver: async () => undefined,
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      updateSelf: async (change) => (changes.push(change), { name: "Scout", description: "" }),
+    });
+    expect(agent.tools.map((tool) => tool.name)).toEqual([
+      SEND_MESSAGE_TOOL_NAME,
+      UPDATE_SELF_TOOL_NAME,
+    ]);
+    await agent.generate({ prompt: "call yourself Scout", session: { sessionId: "b1" } });
+    expect(changes).toEqual([{ name: "Scout" }]);
+
+    const told = botInstructions({ ...base, self: { description: "Looks things up." } });
+    expect(told).toContain("<yourself>");
+    expect(told).toContain("Your description now: Looks things up.");
+    expect(botInstructions({ ...base, self: { description: "" } })).not.toContain(
+      "description now",
+    );
+    expect(botInstructions(base)).not.toContain(UPDATE_SELF_TOOL_NAME);
   });
 
   test("a cancelled delivery stops the run", async () => {

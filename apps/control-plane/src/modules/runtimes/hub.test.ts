@@ -178,7 +178,13 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
   describe("a bot's reply", () => {
     const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as const;
-    const info = { id: "bot-1", name: "Pip", instruction: "", canCreateBots: false };
+    const info = {
+      id: "bot-1",
+      name: "Pip",
+      instruction: "",
+      description: "",
+      canCreateBots: false,
+    };
 
     // A runner that is connected, a reply started on it, and what the reply heard.
     const replying = async (name: string, answerMemory = async (): Promise<unknown> => null) => {

@@ -4,6 +4,7 @@ import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-mode
 import { botInstructions } from "./bot-instruction";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
 import { createSendMessageTool, type DeliverMessage } from "./tools/send-message";
+import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
 
 // A bot answers with a few messages, so a handful of turns is plenty.
 export const BOT_MAX_TURNS = 8;
@@ -26,6 +27,10 @@ type BotAgentOptions = ModelSource & {
   computer?: readonly AnyTool[];
   /** Makes another bot, for the person's main bot only (decision 0060); without it the bot cannot. */
   createBot?: CreateBot;
+  /** What the bot's description is now. */
+  description?: string;
+  /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
+  updateSelf?: UpdateSelf;
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -41,6 +46,8 @@ export function createBotAgent({
   compactAfterTokens,
   computer = [],
   createBot,
+  description = "",
+  updateSelf,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -53,11 +60,19 @@ export function createBotAgent({
       instruction,
       computer: computer.length > 0,
       createBots: Boolean(createBot),
+      self: updateSelf ? { description } : undefined,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
-    tools: [createSendMessageTool(deliver), ...computer, ...makingBots(createBot)],
+    tools: [
+      createSendMessageTool(deliver),
+      ...computer,
+      ...makingBots(createBot),
+      ...changingSelf(updateSelf),
+    ],
   });
 }
 
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
+const changingSelf = (updateSelf?: UpdateSelf) =>
+  updateSelf ? [createUpdateSelfTool(updateSelf)] : [];

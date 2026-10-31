@@ -3,6 +3,7 @@ import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
+import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { DeliverMessage } from "@aven/agents/tools/send-message";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
@@ -29,13 +30,15 @@ export type CreateBotReplyAgent = (input: {
   computer: readonly AnyTool[];
   /** Makes another bot; only for the person's main bot (decision 0060). */
   createBot?: CreateBot;
+  /** Changes the bot's own name, description or instruction (decision 0061). */
+  updateSelf: UpdateSelf;
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, deliver, memory, computer, createBot }) =>
+  ({ bot, model, deliver, memory, computer, createBot, updateSelf }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -52,6 +55,8 @@ export const defaultCreateBotAgent =
       memory,
       computer,
       createBot,
+      description: bot.description,
+      updateSelf,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -161,6 +166,7 @@ export class BotReplies {
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
       // The control plane says whether this bot may, and holds to it whatever is asked here.
+      updateSelf: (changes) => call("bot.update", { replyId, ...changes }),
       createBot: bot.canCreateBots
         ? (input) => call("bot.create", { replyId, ...input })
         : undefined,

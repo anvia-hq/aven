@@ -53,6 +53,7 @@ export function loopbackReplier(options: {
             id: bot.id,
             name: bot.name,
             instruction: bot.instruction,
+            description: bot.description,
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
             canCreateBots: false,
           },
