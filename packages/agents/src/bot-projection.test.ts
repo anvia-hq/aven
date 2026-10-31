@@ -7,6 +7,44 @@ const call = (toolCallId: string, input: Record<string, string>) =>
   ({ type: "tool-call", toolCallId, toolName: "send_message", input }) as const;
 
 describe("botMessagesToChat", () => {
+  test("what the bot does on its computer is not part of the chat: not its commands, nor what came back, nor a screenshot", () => {
+    const messages: Message[] = [
+      { role: "user", content: "run it" },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "x1",
+            toolName: "exec_command",
+            input: { command: "ls" },
+          },
+          { type: "tool-call", toolCallId: "x2", toolName: "desktop_screenshot", input: {} },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "x1",
+            toolName: "exec_command",
+            output: { type: "json", value: { stdout: "secret.txt" } },
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [{ type: "image", image: { type: "data", data: "AAAA" }, mediaType: "image/png" }],
+      },
+      { role: "assistant", content: [call("c1", { text: "done" })] },
+    ];
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "run it" },
+      { id: "m-1", role: "bot", text: "done" },
+    ]);
+  });
+
   test("shows what the person said and each message the bot sent, in order", () => {
     const messages: Message[] = [
       { role: "user", content: "hello" },

@@ -2,7 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
-- **24**: a runner can answer for a bot, `bot.reply` and `bot.cancel` from the control plane and `bot.say` and `bot.end` back, and reads and writes the bot's conversation with `bot.memory` (decision 0059).
+- **24**: a runner can answer for a bot, `bot.reply` and `bot.cancel` from the control plane and `bot.say` and `bot.end` back, and reads and adds to the bot's conversation with `bot.memory` (decision 0059).
 - **23**: a run's events can carry what a subagent does, `subagent` events and the `subagents` of a `spawn_agent` tool part (decision 0057).
 - **22**: a runtime can no longer call `memory.load`, `memory.clear`, `memory.snapshot` or `memory.replacePrefix`; runs keep their history in the durable journal and only add to the transcript with `memory.append` (decision 0021).
 - **21**: a runner can run a shell for a thread on a pseudo-terminal, `terminal.open`, `terminal.resize` and `terminal.close` (decision 0053).

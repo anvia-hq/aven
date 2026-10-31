@@ -147,6 +147,18 @@ describe("RemoteBotReplier", () => {
     expect(lost.grants.revoked).toEqual(lost.grants.issued);
   });
 
+  test("a reply whose turn comes after a shutdown never reaches the runner", async () => {
+    const run = fakeRunner();
+    const controller = new AbortController();
+    controller.abort(new Error("Shutting down"));
+
+    await expect(run.replier.answer(input(() => undefined, controller.signal))).rejects.toThrow(
+      "Shutting down",
+    );
+    expect(run.started).toEqual([]);
+    expect(run.grants.issued).toEqual([]);
+  });
+
   test("a cancel reaches the runner, which ends the reply", async () => {
     const run = fakeRunner();
     const controller = new AbortController();

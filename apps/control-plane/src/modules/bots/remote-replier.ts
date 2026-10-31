@@ -24,6 +24,8 @@ export class RemoteBotReplier implements BotReplier {
   }
 
   async answer({ bot, userId, model, prompt, say, signal }: BotReplyInput) {
+    // A shutdown that came while the reply waited its turn: there is nothing left to answer.
+    signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
     // Throws when the model cannot be used (no key); the runner gets a token, not the key.
