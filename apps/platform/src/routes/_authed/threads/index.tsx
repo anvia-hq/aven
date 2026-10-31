@@ -29,11 +29,7 @@ function NewThread() {
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {/* Only once there are projects: before, the empty state below has the button. */}
         {loaded && projects.length > 0 && (
-          <ImportRepositoryDialog
-            variant="outline"
-            size="sm"
-            onImported={(project) => setProjectId(project.id)}
-          />
+          <ImportRepositoryDialog size="sm" onImported={(project) => setProjectId(project.id)} />
         )}
       </header>
 
