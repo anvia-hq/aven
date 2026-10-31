@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { resetOrganizationData } from "@/modules/organizations/hooks/use-organizations";
 import { resetPlatformConfig } from "@/modules/platform/hooks/use-platform-config";
-import { resetProviders } from "@/modules/settings/hooks/use-providers";
+import { resetProviders } from "@/modules/providers/hooks/use-providers";
 import { resetSkills } from "@/modules/settings/hooks/use-skills";
 import { resetModelSelection } from "@/modules/threads/hooks/use-model-selection";
 

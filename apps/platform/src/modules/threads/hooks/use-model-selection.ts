@@ -1,8 +1,8 @@
 import { getDefaultStore, useAtomValue } from "jotai";
 
-import { useProvidersModels } from "@/modules/settings/hooks/use-provider-models";
-import { useProviders } from "@/modules/settings/hooks/use-providers";
-import type { Provider } from "@/modules/settings/types";
+import { useProvidersModels } from "@/modules/providers/hooks/use-provider-models";
+import { useProviders } from "@/modules/providers/hooks/use-providers";
+import type { Provider } from "@/modules/providers/types";
 
 import {
   modelSelectionAtom,

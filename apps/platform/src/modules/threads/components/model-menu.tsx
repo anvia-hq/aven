@@ -12,7 +12,7 @@ import {
   CommandList,
 } from "@/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
-import { ProviderLogo } from "@/modules/settings/components/provider-logo";
+import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 
 import type { useModelSelection } from "../hooks/use-model-selection";
 import { EffortSlider, effortName } from "./effort-slider";
