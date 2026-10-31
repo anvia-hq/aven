@@ -19,7 +19,8 @@ import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
 import { usersRouter } from "./modules/users/router";
-import { scopedVariablesRouter, variablesRouter } from "./modules/variables/router";
+import { projectVariablesRouter } from "./modules/variables/project-router";
+import { variablesRouter } from "./modules/variables/router";
 import { workloadIdentityRouter } from "./modules/workload-identity/router";
 
 const app = new Elysia()
@@ -40,8 +41,8 @@ const app = new Elysia()
   .use(terminalRouter(runtimeHub))
   .use(threadsRouter(runsService, threadMessages))
   .use(usersRouter)
-  .use(scopedVariablesRouter)
   .use(variablesRouter)
+  .use(projectVariablesRouter)
   .use(workloadIdentityRouter);
 
 const port = Number(process.env.PORT ?? 8000);

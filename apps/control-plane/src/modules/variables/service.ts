@@ -40,29 +40,17 @@ export type Scope =
 
 const SCOPE_LABEL = { workspace: "workspace", project: "project", personal: "person" } as const;
 
-// The rows of a scope: the organization's, and then whichever of project and person it names.
-function inScope(scope: Scope) {
-  const organization = eq(variables.organizationId, scope.organizationId);
+// The rows of a scope, in the variables or their events, which share the columns: the
+// organization's, and then whichever of project and person it names.
+function inScope(scope: Scope, table: typeof variables | typeof variableEvents = variables) {
+  const organization = eq(table.organizationId, scope.organizationId);
   switch (scope.kind) {
     case "workspace":
-      return and(organization, isNull(variables.projectId), isNull(variables.userId));
+      return and(organization, isNull(table.projectId), isNull(table.userId));
     case "project":
-      return and(organization, eq(variables.projectId, scope.projectId));
+      return and(organization, eq(table.projectId, scope.projectId));
     case "personal":
-      return and(organization, eq(variables.userId, scope.userId));
-  }
-}
-
-// The events of a scope, by the same columns as its variables.
-function eventsInScope(scope: Scope) {
-  const organization = eq(variableEvents.organizationId, scope.organizationId);
-  switch (scope.kind) {
-    case "workspace":
-      return and(organization, isNull(variableEvents.projectId), isNull(variableEvents.userId));
-    case "project":
-      return and(organization, eq(variableEvents.projectId, scope.projectId));
-    case "personal":
-      return and(organization, eq(variableEvents.userId, scope.userId));
+      return and(organization, eq(table.userId, scope.userId));
   }
 }
 
@@ -146,7 +134,6 @@ export const variablesService = {
     return rows.map(view);
   },
 
-  // Makes the variable or replaces its value and whether it is a secret.
   // Makes the variable or replaces its value and whether it is a secret, and records it (decision
   // 0048) in the same transaction, so there is no change without its event. `source` is how it
   // was asked for: the settings, or the agent's request for a secret (decision 0047).
@@ -208,7 +195,7 @@ export const variablesService = {
       })
       .from(variableEvents)
       .leftJoin(users, eq(users.id, variableEvents.actorId))
-      .where(eventsInScope(scope))
+      .where(inScope(scope, variableEvents))
       .orderBy(desc(variableEvents.createdAt), desc(variableEvents.id))
       .limit(HISTORY_LIMIT);
     return rows.map(({ actorName, ...event }) => ({ ...event, actor: actorName }));
