@@ -5,26 +5,20 @@ import { bridgeToRunner, originAllowed } from "../../websocket";
 import { authRouter } from "../auth/router";
 import { createDesktopService } from "../desktop/service";
 import type { RuntimeHub } from "../runtimes/hub";
-import type { TerminalHandle, ViewerHandle } from "../runtimes/viewer-streams";
-import { terminalControl, terminalSize } from "../terminal/schema";
-import { createTerminalService } from "../terminal/service";
+import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { botRunnerFor, requireOwnBot } from "./computer";
 import { botParams } from "./schema";
 
 // noVNC offers this subprotocol and fails the connection if the server does not pick it.
 const VIEWER_SUBPROTOCOL = "binary";
 
-// Watching and driving a bot's computer, as a person does a thread's (decisions 0015, 0053 and
-// 0059): the same calls and the same streams, found through the bot's owner, not an organization.
-// The bot is the person's own, so what they see and type is their own computer.
+// Watching and driving a bot's desktop, as a person does a thread's (decisions 0015 and 0059): the
+// same calls and the same stream, found through the bot's owner, not an organization. A bot has no
+// terminal for a person: its shell is the bot's own.
 export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
   const runner = botRunnerFor(hub, runtimeId);
   const desktop = createDesktopService(runner, { what: "The bot's computer" });
-  const terminal = createTerminalService(runner, (userId, _you, botId) =>
-    requireOwnBot(userId, botId),
-  );
   const viewers = bridgeToRunner<ViewerHandle>("The viewer is too slow");
-  const terminals = bridgeToRunner<TerminalHandle>("The terminal is too slow");
 
   return new Elysia({ prefix: "/bots" })
     .use(authRouter)
@@ -67,32 +61,6 @@ export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
       },
       close(ws) {
         viewers.close(ws);
-      },
-    })
-    .ws("/:id/terminal/stream", {
-      auth: true,
-      params: botParams,
-      query: terminalSize,
-      async beforeHandle({ request, status, user, params }) {
-        if (!originAllowed(request)) return status(403, "Forbidden origin");
-        await terminal.requireShell(user.id, user.id, params.id);
-      },
-      async open(ws) {
-        const { user, params, query } = ws.data;
-        await terminals.open(ws, (sink) => terminal.open(user.id, params.id, query, sink));
-      },
-      message(ws, message) {
-        const shell = terminals.handle(ws);
-        if (!shell) return;
-        if (ArrayBuffer.isView(message)) {
-          shell.write(bytesOf(message));
-          return;
-        }
-        const control = terminalControl.safeParse(message);
-        if (control.success) shell.resize(control.data.cols, control.data.rows);
-      },
-      close(ws) {
-        terminals.close(ws);
       },
     });
 };

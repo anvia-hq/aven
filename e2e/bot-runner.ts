@@ -1,7 +1,7 @@
 // A runner for the bots' e2e (decision 0059): the real runner, with each bot's computer a temporary
 // directory instead of a container, so no Docker. Its agent reaches the model through the control
 // plane's gateway, as in production, and the person's provider is the pretend model (e2e/fake-model.ts).
-// A computer is "running" once it is woken, and then has a pretend desktop and a pretend shell.
+// A computer is "running" once it is woken, and then has a pretend desktop.
 import { startRuntime } from "../packages/runtime-client/src/runner";
 import type { ThreadWorkspaces } from "../packages/runtime-client/src/sandbox";
 import { directoryWorkspaces } from "../packages/runtime-client/src/testing/directory-workspaces";
@@ -41,11 +41,6 @@ function pretendDesktop() {
   } as unknown as Desktop;
 }
 
-// A shell that shows a prompt and answers each line with `ran: <line>`, on the pseudo-terminal the
-// runner gives it, which echoes what is typed.
-const PRETEND_SHELL =
-  'printf "fake$ "; while IFS= read -r line; do echo "ran: $line"; printf "fake$ "; done';
-
 const running = new Set<string>();
 const workspaces = directoryWorkspaces();
 const sandbox: ThreadWorkspaces = {
@@ -55,10 +50,6 @@ const sandbox: ThreadWorkspaces = {
     return { ...box, start: async () => void running.add(thread.id) };
   },
   desktop: (id) => (running.has(id) ? pretendDesktop() : undefined),
-  shell: (id) =>
-    running.has(id)
-      ? { argv: ["sh", "-c", PRETEND_SHELL], env: { TERM: "xterm-256color" }, hangup: ["true"] }
-      : undefined,
   async release(id) {
     running.delete(id);
     await workspaces.release(id);

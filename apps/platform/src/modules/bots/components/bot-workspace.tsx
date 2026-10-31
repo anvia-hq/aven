@@ -11,13 +11,13 @@ import { BotChat } from "./bot-chat";
 import { BotHeader } from "./bot-header";
 import { BotSidePanels } from "./bot-side-panels";
 
-// The bot's chat, with its computer's Desktop and Terminal beside it when they are open, laid out as
-// a thread's conversation and side panels are.
+// The bot's chat, with its computer's desktop beside it when it is open, laid out as a thread's
+// conversation and side panel are.
 export function BotWorkspace({ bot }: { bot: Bot }) {
-  // Side by side needs room; on a narrow screen the panels stack under the chat.
+  // Side by side needs room; on a narrow screen the desktop stacks under the chat.
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useBotPanels();
-  const sideOpen = panels.desktop.open || panels.terminal.open;
+  const sideOpen = panels.desktop.open;
   // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
     id: `aven.bot-panels.${wide ? "row" : "column"}`,
@@ -45,7 +45,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
             <>
               <ResizableHandle className={GAP_HANDLE} />
               <ResizablePanel id="side" defaultSize="50" minSize="25">
-                <BotSidePanels botId={bot.id} panels={panels} handleClassName={GAP_HANDLE} />
+                <BotSidePanels botId={bot.id} panels={panels} />
               </ResizablePanel>
             </>
           )}

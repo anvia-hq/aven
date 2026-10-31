@@ -6,7 +6,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
   const { Elysia } = await import("elysia");
   const { db } = await import("@aven/db/client");
   const { WIRE_VERSION } = await import("@aven/protocol/runtime-wire");
-  const { decodeViewerFrame, encodeViewerFrame } = await import("@aven/protocol/viewer-frame");
+  const { encodeViewerFrame } = await import("@aven/protocol/viewer-frame");
   const { errorsRouter } = await import("../../errors");
   const { createMemoryStore } = await import("../../memory-store");
   const { signUp } = await import("../../testing/sign-up");
@@ -48,8 +48,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     }
   };
 
-  // The runner the bots are on: answers the calls about a desktop, opens streams, and echoes a
-  // shell's keystrokes in uppercase.
+  // The runner the bots are on: answers the calls about a desktop and opens its stream.
   const seen = { messages: [] as ControlPlaneToRuntime[] };
   const calls = () =>
     seen.messages.flatMap((message) => (message.type === "call" ? [message] : []));
@@ -63,21 +62,12 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
       resolve();
     };
     ws.onmessage = (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        const frame = decodeViewerFrame(new Uint8Array(event.data));
-        if (!frame) return;
-        const typed = new TextDecoder().decode(frame.payload).toUpperCase();
-        ws.send(encodeViewerFrame(frame.viewerId, new TextEncoder().encode(typed)));
-        return;
-      }
+      if (event.data instanceof ArrayBuffer) return;
       const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
       seen.messages.push(message);
       if (message.type === "desktop.open") {
         ws.send(JSON.stringify({ type: "desktop.opened", viewerId: message.viewerId }));
         ws.send(encodeViewerFrame(message.viewerId, new TextEncoder().encode("RFB 003.008\n")));
-      }
-      if (message.type === "terminal.open") {
-        ws.send(JSON.stringify({ type: "terminal.opened", viewerId: message.viewerId }));
       }
       if (message.type === "call") {
         const result =
@@ -163,7 +153,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     expect(calls()).toHaveLength(before);
   });
 
-  test("streams the desktop to the browser and the browser's bytes back", async () => {
+  test("streams the desktop to the browser", async () => {
     const { ws, events } = open(`/bots/${mine!.id}/desktop/stream`, owner.token, {
       protocols: ["binary"],
     });
@@ -200,41 +190,6 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
 
     // Refused before the socket was upgraded, not opened and closed again.
     for (const refused of [others, anonymous, foreign]) expect(refused.events.opened).toBe(false);
-    expect(opens()).toBe(before);
-  });
-
-  test("opens a shell of the asked size on the bot's computer, and carries keystrokes and output", async () => {
-    const { ws, events } = open(`/bots/${mine!.id}/terminal/stream?cols=100&rows=30`, owner.token);
-
-    await until(() =>
-      seen.messages.some(
-        (message) => message.type === "terminal.open" && message.threadId === mine!.id,
-      ),
-    );
-    expect(seen.messages.find((message) => message.type === "terminal.open")).toMatchObject({
-      cols: 100,
-      rows: 30,
-    });
-    ws.send(new TextEncoder().encode("ls\n"));
-    await until(() => events.messages.length === 1);
-    expect(events.messages[0]).toBe("LS\n");
-
-    ws.send(JSON.stringify({ type: "resize", cols: 80, rows: 24 }));
-    await until(() => seen.messages.some((message) => message.type === "terminal.resize"));
-    ws.close();
-    await until(() => seen.messages.some((message) => message.type === "terminal.close"));
-  });
-
-  test("a shell is refused for another person's bot", async () => {
-    const opens = () => seen.messages.filter((message) => message.type === "terminal.open").length;
-    const before = opens();
-
-    const others = open(`/bots/${theirs!.id}/terminal/stream?cols=80&rows=24`, owner.token);
-    await until(() => others.events.failed || others.events.closed !== undefined);
-    const anonymous = open(`/bots/${mine!.id}/terminal/stream?cols=80&rows=24`, undefined);
-    await until(() => anonymous.events.failed || anonymous.events.closed !== undefined);
-
-    for (const refused of [others, anonymous]) expect(refused.events.opened).toBe(false);
     expect(opens()).toBe(before);
   });
 });

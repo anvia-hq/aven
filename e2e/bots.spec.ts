@@ -214,9 +214,8 @@ test.describe("bots", () => {
     await expect.poll(size).toBeNull();
   });
 
-  // The bot's computer (decision 0059): its desktop and shell are the thread's own panels, beside the
-  // chat. It is off until it is woken, since a bot that only talks never starts one.
-  test("the person wakes the bot's computer, watches its desktop and types in its terminal", async ({
+  // The bot's computer (decision 0059): its desktop is the thread's own panel, beside the chat. It is off until it is woken, since a bot that only talks never starts one.
+  test("the person wakes the bot's computer and watches and takes over its desktop", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1400, height: 800 });
@@ -247,23 +246,12 @@ test.describe("bots", () => {
     ).toBeVisible();
     await desktop.getByRole("button", { name: "Give back" }).click();
 
-    // The same computer has a shell, which is up already.
-    await page.getByRole("button", { name: "Terminal", exact: true }).click();
-    const terminal = page.getByRole("region", { name: "Terminal" });
-    await expect(terminal.locator(".xterm-rows")).toContainText("fake$");
-    await terminal.locator(".xterm").click();
-    await page.keyboard.type("echo hi");
-    await page.keyboard.press("Enter");
-    await expect(terminal.locator(".xterm-rows")).toContainText("ran: echo hi");
-
     // What is open is remembered, and the chat is still there beside it.
     await page.reload();
     await expect(page.getByRole("region", { name: "Desktop" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Terminal" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
 
     await page.getByRole("button", { name: "Close desktop" }).click();
-    await page.getByRole("button", { name: "Close terminal" }).click();
     await expect(page.getByRole("region", { name: "Desktop" })).toBeHidden();
   });
 
