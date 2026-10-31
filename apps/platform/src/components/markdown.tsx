@@ -1,4 +1,4 @@
-import { Github } from "@mynaui/icons-react";
+import { GithubSolid } from "@mynaui/icons-react";
 import { StreamMarkdown } from "@anvia/react-ui/stream";
 import type { ComponentProps } from "react";
 import type { Components } from "react-markdown";
@@ -15,7 +15,7 @@ function ExternalLink({
   return (
     <a {...props} target="_blank" rel="noreferrer noopener">
       {props.href && PULL_REQUEST_URL.test(props.href) && (
-        <Github className="mr-1 inline size-[1em] align-[-0.125em]" />
+        <GithubSolid className="mr-1 inline size-[1em] align-[-0.125em]" />
       )}
       {children}
     </a>
