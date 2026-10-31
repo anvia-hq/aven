@@ -52,6 +52,7 @@ export const threadMessages = {
       userId,
     });
     const identity = await runIdentity(thread, userId);
+    await threadsService.markRunBy(thread.id, userId);
     await runsService.start(thread, prompt, model, {
       attachments,
       mentions,
@@ -91,6 +92,7 @@ export const threadMessages = {
       userId,
     });
     const identity = await runIdentity(thread, userId);
+    await threadsService.markRunBy(thread.id, userId);
     await runsService.answer(thread, continuation, kept, model, skills, github, env, identity);
   },
 };

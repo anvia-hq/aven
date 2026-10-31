@@ -27,10 +27,11 @@ export const terminalRouter = (hub: RuntimeHub) => {
       if (!originAllowed(request)) return status(403, "Forbidden origin");
       // A thread of another organization is not found before any socket is upgraded.
       const thread = await threadsService.require(organizationId, params.id);
-      // The shell sees what the last run was given: its sender's GitHub account and personal
-      // variables. Only the thread's own person gets in.
-      if (thread.createdBy !== user.id)
-        return status(403, "Only the thread's creator has its terminal");
+      // The shell sees what the latest run was given: its sender's GitHub account and personal
+      // variables. Only that person gets in; before any run, the thread's creator.
+      if ((thread.lastRunBy ?? thread.createdBy) !== user.id) {
+        return status(403, "Only the person the thread last ran as has its terminal");
+      }
     },
     async open(ws) {
       const { organizationId, params, query } = ws.data;

@@ -1,0 +1,2 @@
+ALTER TABLE "threads" ADD COLUMN "last_run_by" text;--> statement-breakpoint
+ALTER TABLE "threads" ADD CONSTRAINT "threads_last_run_by_users_id_fk" FOREIGN KEY ("last_run_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

@@ -38,6 +38,11 @@ export const threadsService = {
     return thread ?? null;
   },
 
+  // A run was sent as this person: their credentials are what the thread's sandbox now holds.
+  async markRunBy(threadId: string, userId: string) {
+    await db.update(threads).set({ lastRunBy: userId }).where(eq(threads.id, threadId));
+  },
+
   // Like `get`, for a route that cannot go on without the thread.
   async require(organizationId: string, id: string) {
     const thread = await this.get(organizationId, id);
