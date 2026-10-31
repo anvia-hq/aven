@@ -87,8 +87,21 @@ async function readPlainFile(path: string) {
   }
 }
 
-// A `.git` git can be pointed at safely: a folder, its HEAD and configuration plain files, and none
-// of what is linked a link out of it, which git would write through.
+// Whether a link is anywhere under `dir`, or `depth` levels down: git writes refs and reflogs
+// anywhere under `refs` and `logs`, and objects one folder down in `objects`, through any link.
+async function hasLink(dir: string, depth = Infinity): Promise<boolean> {
+  if (depth === 0) return false;
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  if (entries.some((entry) => entry.isSymbolicLink())) return true;
+  const folders = entries.filter((entry) => entry.isDirectory());
+  const found = await Promise.all(
+    folders.map((entry) => hasLink(join(dir, entry.name), depth - 1)),
+  );
+  return found.includes(true);
+}
+
+// A `.git` git can be pointed at safely: a folder, its HEAD and configuration plain files, and no
+// link where git writes, which it would write through to wherever the link points.
 async function isSafeRepository(repo: string) {
   if ((await kindOf(repo)) !== "directory") return false;
   if ((await kindOf(join(repo, "HEAD"))) !== "file") return false;
@@ -98,7 +111,13 @@ async function isSafeRepository(repo: string) {
   );
   const linked = kinds.slice(0, LINKED.length);
   const redirects = kinds.slice(LINKED.length);
-  return !linked.includes("link") && redirects.every((kind) => kind === "missing");
+  if (linked.includes("link") || redirects.some((kind) => kind !== "missing")) return false;
+  const nested = await Promise.all([
+    hasLink(join(repo, "refs")),
+    hasLink(join(repo, "logs")),
+    hasLink(join(repo, "objects"), 2),
+  ]);
+  return !nested.includes(true);
 }
 
 // The workspace's configuration reduced to what describes the repository, as a file for git.

@@ -1,5 +1,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -160,5 +170,18 @@ describe("git the runner runs on a workspace", () => {
 
     expect(await markTurn(root)).toBe(false);
     expect(await Bun.file(join(outside, "aven", "turn")).exists()).toBe(false);
+  });
+
+  test("refuses a link deeper in .git where git writes, so nothing is written there", async () => {
+    for (const inside of [join("refs", "aven"), join("logs", "refs"), join("objects", "ab")]) {
+      const { base, root } = await workspace();
+      const outside = join(base, "outside");
+      await mkdir(outside);
+      await rm(join(root, ".git", inside), { recursive: true, force: true });
+      await symlink(outside, join(root, ".git", inside));
+
+      expect(await markTurn(root)).toBe(false);
+      expect(await readdir(outside)).toEqual([]);
+    }
   });
 });
