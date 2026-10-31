@@ -74,7 +74,7 @@ test.describe("bots", () => {
     // It is in the sidebar once the reply is over, under the main bot, and opens on its own page.
     const scout = page.getByRole("link", { name: /Scout/ });
     await expect(scout).toBeVisible();
-    await expect(scout).toContainText("You research what the person asks");
+    await expect(scout).toContainText("Researches what you ask.");
     await scout.click();
     await expect(page).toHaveURL(/\/bot\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
@@ -100,8 +100,61 @@ test.describe("bots", () => {
       avatar: "🔭",
       isMain: false,
       providerId: null,
+      description: "Researches what you ask.",
       instruction: "You research what the person asks and report what you found.",
     });
+  });
+
+  // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
+  test("a bot renames itself and writes its own description when asked", async ({ page }) => {
+    // Three replies, each waiting out its typing pauses.
+    test.slow();
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await registerUser(page, "bot-self", "Self Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "I am Pip now")).toBeVisible();
+
+    // The page picks the change up when the reply is over: the tile, the header, the placeholder.
+    await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await expect(page.getByText("Keeps you company.")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message" })).toHaveAttribute(
+      "placeholder",
+      "Message Pip",
+    );
+
+    // It is the person's to see and change too: the description is in the bot's settings.
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await expect(page.getByLabel("Description")).toHaveValue("Keeps you company.");
+    await page.getByLabel("Description").fill("Your pal at the keyboard.");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Your pal at the keyboard.")).toBeVisible();
+
+    // A bot the main bot made changes itself the same way, and has its settings in its header.
+    await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+    await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(page.getByText("Say hello to Scout.")).toBeVisible();
+    await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "I am Pip now")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
+    await page.getByRole("main").getByRole("button", { name: "Bot settings" }).click();
+    await expect(page.getByLabel("Name")).toHaveValue("Pip");
+    await expect(page.getByLabel("Description")).toHaveValue("Keeps you company.");
   });
 
   test("a bot that does not exist sends the person back to the main bot", async ({ page }) => {

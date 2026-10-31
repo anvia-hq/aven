@@ -59,7 +59,7 @@ export function BotSidebar() {
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {lastMessages[bot.id] || bot.instruction}
+                  {lastMessages[bot.id] || bot.description || "No messages yet"}
                 </span>
               </div>
             </SidebarMenuButton>

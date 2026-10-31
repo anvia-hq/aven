@@ -16,6 +16,7 @@ export function useBotForm(bot: Bot, onDone: () => void) {
     setSubmitting(true);
     const saved = await update(bot, {
       name: String(data.get("name") ?? "").trim(),
+      description: String(data.get("description") ?? "").trim(),
       avatar: String(data.get("avatar") ?? "").trim(),
       instruction: String(data.get("instruction") ?? "").trim(),
     });

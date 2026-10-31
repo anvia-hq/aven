@@ -5,6 +5,7 @@ export type { Bot, BotChatMessage, BotEvent } from "@aven/protocol/bots";
 export type BotPatch = {
   name?: string;
   instruction?: string;
+  description?: string;
   avatar?: string;
   /** Null puts the bot back on the person's default model. */
   providerId?: string | null;
