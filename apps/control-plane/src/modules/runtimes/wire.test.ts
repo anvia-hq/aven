@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  BOT_AVATAR_MAX,
-  BOT_DESCRIPTION_MAX,
-  BOT_INSTRUCTION_MAX,
-  BOT_NAME_MAX,
-} from "@aven/protocol/bots";
+import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import type { RunEvent } from "@aven/protocol/events";
 
 import {
@@ -175,21 +170,18 @@ describe("a bot's reply from a runtime", () => {
   });
 
   test("a bot a runner asks for has a name and an instruction within the limits of settings", () => {
-    const made = { replyId: "r1", name: " Scout ", instruction: " You research. ", avatar: "🔭" };
+    const made = { replyId: "r1", name: " Scout ", instruction: " You research. " };
     expect(parseBotCreateParams(made)).toEqual({
       replyId: "r1",
       name: "Scout",
       instruction: "You research.",
-      avatar: "🔭",
     });
-    expect(parseBotCreateParams({ ...made, avatar: undefined }).avatar).toBeUndefined();
 
     for (const bad of [
       { ...made, name: "" },
       { ...made, name: "x".repeat(BOT_NAME_MAX + 1) },
       { ...made, instruction: " " },
       { ...made, instruction: "x".repeat(BOT_INSTRUCTION_MAX + 1) },
-      { ...made, avatar: "x".repeat(BOT_AVATAR_MAX + 1) },
       { ...made, replyId: "" },
     ]) {
       expect(() => parseBotCreateParams(bad)).toThrow();

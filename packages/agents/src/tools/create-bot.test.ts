@@ -7,10 +7,10 @@ describe("create_bot", () => {
     const asked: NewBotInput[] = [];
     const tool = createCreateBotTool(async (input) => (asked.push(input), { name: "Scout" }));
 
-    const result = await tool.call({ name: " Scout ", instruction: "You research.", avatar: "🔭" });
+    const result = await tool.call({ name: " Scout ", instruction: "You research." });
 
     expect(tool.name).toBe(CREATE_BOT_TOOL_NAME);
-    expect(asked).toEqual([{ name: "Scout", instruction: "You research.", avatar: "🔭" }]);
+    expect(asked).toEqual([{ name: "Scout", instruction: "You research." }]);
     expect(result).toEqual({ created: true, name: "Scout" });
   });
 

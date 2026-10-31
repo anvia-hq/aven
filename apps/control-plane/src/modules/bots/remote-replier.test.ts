@@ -221,7 +221,6 @@ describe("RemoteBotReplier", () => {
             name: "Scout",
             instruction: "You research.",
             description: undefined,
-            avatar: undefined,
           },
         },
       ]);

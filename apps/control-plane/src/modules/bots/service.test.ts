@@ -70,13 +70,12 @@ run("botsService (postgres)", async () => {
       name: "Scout",
       instruction: "You research.",
       description: "Looks things up.",
-      avatar: "🔭",
     });
     expect(made).toMatchObject({
       name: "Scout",
       instruction: "You research.",
       description: "Looks things up.",
-      avatar: "🔭",
+      avatar: "",
       isMain: false,
       providerId: null,
       modelId: null,

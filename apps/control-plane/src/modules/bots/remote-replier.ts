@@ -49,9 +49,9 @@ export class RemoteBotReplier implements BotReplier {
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
       lost: (error: Error) => ended.reject(error),
       memory: answerBotMemory(this.store, { sessionId: bot.id, userId }),
-      create: async ({ name, instruction, description, avatar }: NewBot) => {
+      create: async ({ name, instruction, description }: NewBot) => {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");
-        const made = await this.bots.create(userId, { name, instruction, description, avatar });
+        const made = await this.bots.create(userId, { name, instruction, description });
         return { id: made.id, name: made.name };
       },
       // The bot is the reply's, whichever bot the runner might name.

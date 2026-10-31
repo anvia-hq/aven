@@ -1,10 +1,5 @@
 import type { Message } from "@anvia/core";
-import {
-  BOT_AVATAR_MAX,
-  BOT_DESCRIPTION_MAX,
-  BOT_INSTRUCTION_MAX,
-  BOT_NAME_MAX,
-} from "@aven/protocol/bots";
+import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
@@ -225,7 +220,6 @@ const botCreateParams = z.object({
   name: z.string().trim().min(1).max(BOT_NAME_MAX),
   instruction: z.string().trim().min(1).max(BOT_INSTRUCTION_MAX),
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
-  avatar: z.string().trim().max(BOT_AVATAR_MAX).optional(),
 });
 
 // What a bot changes about itself: some of its name, description and instruction, never nothing.

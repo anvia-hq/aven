@@ -4,7 +4,8 @@
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
 export const BOT_DESCRIPTION_MAX = 200;
-export const BOT_AVATAR_MAX = 16;
+// Room for a generated look, `{"seed":…,"family":…,"color":…}` (decision 0062), or a short text.
+export const BOT_AVATAR_MAX = 120;
 // How many bots a person may have, so a bot that makes bots cannot go on making them (decision 0060).
 export const BOT_LIMIT = 20;
 export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;
@@ -16,7 +17,7 @@ export type Bot = {
   instruction: string;
   /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
   description: string;
-  /** A short string, an emoji; empty shows the name's first letter. */
+  /** The bot's look as JSON (`{"seed","family","color"}`, each optional), or a short text; empty means the look drawn from the bot's id (decision 0062). */
   avatar: string;
   /** The provider and model the bot talks with; none means the person's default (decision 0058). */
   providerId: string | null;

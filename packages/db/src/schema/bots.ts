@@ -27,7 +27,7 @@ export const bots = pgTable(
     instruction: text("instruction").notNull(),
     /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
     description: text("description").notNull().default(""),
-    /** A short string, an emoji; empty until the person picks one. */
+    /** The look as JSON (`{"seed","family","color"}`, each optional), or a short text; empty until the person picks one, which shows the look drawn from the bot's id (decision 0062). */
     avatar: text("avatar").notNull().default(""),
     /**
      * The model the bot talks with: one of the person's providers and one of its models. Without a

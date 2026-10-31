@@ -340,7 +340,6 @@ export type BotCreateParams = {
   /** What the new bot is for and how it works, written to it. */
   instruction: string;
   description?: string;
-  avatar?: string;
 };
 
 /**

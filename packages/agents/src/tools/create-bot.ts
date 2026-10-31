@@ -1,10 +1,5 @@
 import { createTool } from "@anvia/core";
-import {
-  BOT_AVATAR_MAX,
-  BOT_DESCRIPTION_MAX,
-  BOT_INSTRUCTION_MAX,
-  BOT_NAME_MAX,
-} from "@aven/protocol/bots";
+import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import { z } from "zod";
 
 export const CREATE_BOT_TOOL_NAME = "create_bot";
@@ -30,12 +25,6 @@ export const createBotSchema = z.object({
     .max(BOT_DESCRIPTION_MAX)
     .optional()
     .describe("A line on what the new bot is for, shown under its name in the person's list."),
-  avatar: z
-    .string()
-    .trim()
-    .max(BOT_AVATAR_MAX)
-    .optional()
-    .describe("One emoji for the bot's avatar; leave it out for none."),
 });
 
 export type NewBotInput = z.infer<typeof createBotSchema>;

@@ -33,7 +33,7 @@ const view = (row: BotRow): Bot => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-/** What a new bot is: a name, what it is for, and an avatar if it has one. */
+/** What a new bot is: a name, what it is told to be like, and what it is for if that is said. It has no avatar: it is drawn from its id until the person picks one (decision 0062). */
 export type NewBot = Omit<BotCreateParams, "replyId">;
 
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
@@ -56,14 +56,14 @@ export const botsService = {
 
   // A bot made for the person, which answers with their default model until they pick another. A
   // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060).
-  async create(userId: string, { name, instruction, description = "", avatar = "" }: NewBot) {
+  async create(userId: string, { name, instruction, description = "" }: NewBot) {
     const [owned] = await db.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
     if ((owned?.total ?? 0) >= BOT_LIMIT) {
       throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
     }
     const [row] = await db
       .insert(bots)
-      .values({ userId, name, instruction, description, avatar })
+      .values({ userId, name, instruction, description })
       .returning();
     return view(row!);
   },
