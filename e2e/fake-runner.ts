@@ -28,6 +28,8 @@ const QUESTIONS = [
 // variable to set. What the resumed run is given, the answer and the variables, is printed.
 const SECRET = process.env.FAKE_SECRET === "1";
 const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
+// A run that hands two tasks to subagents (decision 0057), tells what they do, and ends.
+const SUBAGENTS = process.env.FAKE_SUBAGENTS === "1";
 const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
 const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";
 if (process.env.FAKE_QUESTION === "2") {
@@ -229,6 +231,56 @@ ws.onmessage = ({ data }) => {
     terminals.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
+  } else if (message.type === "run.start" && SUBAGENTS) {
+    const { runId } = message;
+    const say = (event: unknown) =>
+      send({ type: "run.event", runId, seq: numbered(runId), event } as never);
+    const tool = (id: string, name: string, target: string) => ({
+      id,
+      name,
+      target,
+      status: "running",
+    });
+    const subagent = (index: number, description: string, type: string) => ({
+      index,
+      description,
+      type,
+      status: "running",
+      tools: [],
+    });
+    say({ type: "text", delta: "Looking into it." });
+    say({
+      type: "tool_start",
+      tool: {
+        id: "s1",
+        name: "spawn_agent",
+        target: "2 tasks",
+        status: "running",
+        subagents: [
+          subagent(0, "Find the auth middleware", "explore"),
+          subagent(1, "Add a test", "general"),
+        ],
+      },
+    });
+    say({
+      type: "subagent",
+      index: 0,
+      event: { type: "tool_start", tool: tool("a1", "read_file", "src/auth.ts") },
+    });
+    say({ type: "subagent", index: 0, event: { type: "tool_end", id: "a1", status: "done" } });
+    say({
+      type: "subagent",
+      index: 0,
+      event: { type: "end", status: "done", output: "Auth lives in **src/auth.ts**." },
+    });
+    say({
+      type: "subagent",
+      index: 1,
+      event: { type: "end", status: "error", output: "The model refused." },
+    });
+    say({ type: "tool_end", id: "s1", status: "done", output: "1 finished, 1 failed" });
+    say({ type: "text", delta: "Auth is in src/auth.ts; the test could not be written." });
+    send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
   } else if (message.type === "run.start" && !ASKING) {
     // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
     event({ type: "started", prompt: message.prompt, mentions: message.mentions });

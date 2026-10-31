@@ -6,6 +6,7 @@ import type {
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
+  SubagentPart,
   ToolImage,
   ToolPart,
 } from "@aven/protocol/events";
@@ -19,6 +20,7 @@ export type {
   MessagePart,
   QuestionAnswer,
   QuestionPrompt,
+  SubagentPart,
   ToolImage,
   ToolPart,
 };

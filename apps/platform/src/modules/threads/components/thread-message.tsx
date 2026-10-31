@@ -11,17 +11,20 @@ import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
+import { SubagentCard } from "./subagent-card";
 import { ToolGroup } from "./tool-group";
 
 type Block =
   | { type: "text"; text: string }
   | { type: "question"; tool: ToolPart }
   | { type: "image"; image: ToolImage }
+  | { type: "subagents"; tool: ToolPart }
   | { type: "tools"; tools: ToolPart[] };
 
 // Consecutive tool calls become one block, so a burst of work reads as a single row. A question
 // stands apart: the user has to see it, not find it inside a collapsed group. So does an image the
-// agent showed, once it is done; while it is being kept it is a tool call like any other.
+// agent showed, once it is done; while it is being kept it is a tool call like any other. So do
+// the subagents it handed tasks to: their work is something to follow, one card each.
 function blocks(parts: MessagePart[]) {
   const result: Block[] = [];
   for (const part of parts) {
@@ -29,6 +32,7 @@ function blocks(parts: MessagePart[]) {
     if (part.type === "text") result.push(part);
     else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
     else if (part.tool.image) result.push({ type: "image", image: part.tool.image });
+    else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
     else if (last?.type === "tools") last.tools.push(part.tool);
     else result.push({ type: "tools", tools: [part.tool] });
   }
@@ -49,6 +53,15 @@ function AssistantBlock({
   }
   if (block.type === "question") return <QuestionBlock tool={block.tool} />;
   if (block.type === "image") return <ImageBlock threadId={threadId} image={block.image} />;
+  if (block.type === "subagents") {
+    return (
+      <div className="flex min-w-0 flex-col">
+        {block.tool.subagents?.map((subagent) => (
+          <SubagentCard key={subagent.index} subagent={subagent} />
+        ))}
+      </div>
+    );
+  }
   return <ToolGroup tools={block.tools} />;
 }
 
