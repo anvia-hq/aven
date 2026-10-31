@@ -11,7 +11,7 @@ import {
 } from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
 
-export type ModelChoice = { provider: Provider; modelId: string };
+type ModelChoice = { provider: Provider; modelId: string };
 
 // Threads whose choice is remembered; past this, the least recently used are forgotten.
 const MAX_THREADS = 200;

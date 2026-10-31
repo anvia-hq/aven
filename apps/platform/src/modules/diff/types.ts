@@ -4,7 +4,7 @@ export type ThreadDiffResponse =
   | { available: true; patch: string; truncated: boolean };
 
 /** `turn` is what the latest run changed; `all` everything since the branch left the default branch. */
-export const DIFF_SCOPES = ["turn", "all"] as const;
+const DIFF_SCOPES = ["turn", "all"] as const;
 
 export type DiffScope = (typeof DIFF_SCOPES)[number];
 
@@ -14,7 +14,7 @@ export type ThreadDiffScope = DiffScope | "unshipped";
 export const isDiffScope = (value: unknown): value is DiffScope =>
   (DIFF_SCOPES as readonly unknown[]).includes(value);
 
-export const DIFF_LAYOUTS = ["unified", "split"] as const;
+const DIFF_LAYOUTS = ["unified", "split"] as const;
 
 export type DiffLayout = (typeof DIFF_LAYOUTS)[number];
 

@@ -46,7 +46,7 @@ export type NewProvider = {
 };
 
 /** The reasoning levels a model accepts, lowest first, and the one it uses when none is sent. */
-export type ModelEfforts = { options: string[]; defaultValue: string | null };
+type ModelEfforts = { options: string[]; defaultValue: string | null };
 
 /** What a provider offers: its model ids, and the effort levels of those that have any. */
 export type ProviderModels = { models: string[]; efforts: Record<string, ModelEfforts> };

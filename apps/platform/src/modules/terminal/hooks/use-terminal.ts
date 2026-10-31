@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { wsUrl } from "@/lib/api";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
-export type TerminalPhase = "connecting" | "connected" | "ended";
+type TerminalPhase = "connecting" | "connected" | "ended";
 
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 const FALLBACK_SIZE = { cols: 80, rows: 24 };

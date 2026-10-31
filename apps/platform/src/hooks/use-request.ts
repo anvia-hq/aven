@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 
 /** The answer to a request: what came back, or what to tell the user. Null until there is one. */
-export type Loaded<T> = { data: T; error: null } | { data: null; error: string } | null;
+type Loaded<T> = { data: T; error: null } | { data: null; error: string } | null;
 
 type Options = {
   /**

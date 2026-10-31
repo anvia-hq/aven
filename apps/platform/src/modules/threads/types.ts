@@ -39,7 +39,7 @@ export type RunSelection = { providerId?: string; modelId?: string; reasoningEff
 /** How an answer to a request for a secret is kept (decision 0047): whose variable it becomes, or that it is declined. */
 export type SecretChoice = { secretScope: "project" | "personal"; skipSecrets?: boolean };
 
-export type ThreadState = "open" | "snoozed" | "archived";
+type ThreadState = "open" | "snoozed" | "archived";
 
 export type Thread = {
   id: string;
