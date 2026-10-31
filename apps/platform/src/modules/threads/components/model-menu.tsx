@@ -3,15 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 
 import type { useModelSelection } from "../hooks/use-model-selection";
@@ -73,39 +66,16 @@ export function ModelMenu({ model }: Props) {
               </Button>
               <span className="font-medium">Choose model</span>
             </div>
-            <Command>
-              <CommandInput placeholder={loadingModels ? "Loading models…" : "Search models…"} />
-              <CommandList className="max-h-60">
-                <CommandEmpty>No models found</CommandEmpty>
-                {providers.map((item) => (
-                  <CommandGroup
-                    key={item.id}
-                    heading={
-                      <span className="flex items-center gap-1.5">
-                        <ProviderLogo kind={item.kind} />
-                        {item.name}
-                      </span>
-                    }
-                  >
-                    {choices
-                      .filter((choice) => choice.provider.id === item.id)
-                      .map((choice) => (
-                        <CommandItem
-                          key={choice.modelId}
-                          value={`${choice.modelId} ${item.name} ${item.id}`}
-                          data-checked={item.id === provider.id && choice.modelId === modelId}
-                          onSelect={() => {
-                            model.selectModel(choice);
-                            setChoosing(false);
-                          }}
-                        >
-                          <span className="truncate">{choice.modelId}</span>
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-                ))}
-              </CommandList>
-            </Command>
+            <ModelChoiceList
+              providers={providers}
+              choices={choices}
+              loading={loadingModels}
+              selected={{ providerId: provider.id, modelId }}
+              onSelect={(choice) => {
+                model.selectModel(choice);
+                setChoosing(false);
+              }}
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-3 p-4">

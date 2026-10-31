@@ -29,6 +29,9 @@ export type Provider = {
   createdAt: string;
 };
 
+/** A model a person can pick, and the provider it comes from. */
+export type ModelChoice = { provider: Provider; modelId: string };
+
 /** What an edit may change; an omitted key is kept, and a null model falls back to the default. */
 export type ProviderPatch = {
   name?: string;

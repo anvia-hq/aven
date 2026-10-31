@@ -81,4 +81,56 @@ test.describe("bots", () => {
     await expect(page.getByLabel("Instruction")).toHaveValue("Talk like a pirate.");
     await expect(page.getByLabel("Avatar")).toHaveValue("🐦");
   });
+
+  test("the person chooses the model a bot talks with", async ({ page }) => {
+    await registerUser(page, "bot-model", "Model Chooser");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+    const { id: providerId } = (await provider.json()) as { id: string };
+
+    await page.goto("/settings/bots");
+    const model = page.getByRole("button", { name: "Model of Aven" });
+    await expect(model).toContainText("Default model");
+
+    await model.click();
+    await page.getByRole("option", { name: "fake-model" }).click();
+    await expect(page.getByText("Bot saved")).toBeVisible();
+    await expect(model).toContainText("fake-model");
+
+    const bots = (await (await page.request.get("/api/bots")).json()) as {
+      providerId: string | null;
+      modelId: string | null;
+    }[];
+    expect(bots[0]).toMatchObject({ providerId, modelId: "fake-model" });
+
+    // It is kept, and the bot answers on it.
+    await page.reload();
+    await expect(model).toContainText("fake-model");
+    await page.goto("/bot");
+    await page.getByRole("textbox", { name: "Message" }).fill("which model?");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "You said: which model?")).toBeVisible();
+
+    // And back to the default.
+    await page.goto("/settings/bots");
+    await model.click();
+    await page.getByRole("button", { name: "Use my default model" }).click();
+    await expect(model).toContainText("Default model");
+  });
+
+  test("with no provider there is no model to choose", async ({ page }) => {
+    await registerUser(page, "bot-model-none", "No Provider");
+    await page.goto("/settings/bots");
+    await expect(page.getByText("Your main bot")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Add a provider to choose a model" }),
+    ).toBeVisible();
+  });
 });

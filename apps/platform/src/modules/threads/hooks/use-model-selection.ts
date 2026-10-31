@@ -1,8 +1,7 @@
 import { getDefaultStore, useAtomValue } from "jotai";
 
-import { useProvidersModels } from "@/modules/providers/hooks/use-provider-models";
-import { useProviders } from "@/modules/providers/hooks/use-providers";
-import type { Provider } from "@/modules/providers/types";
+import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";
+import type { ModelChoice } from "@/modules/providers/types";
 
 import {
   modelSelectionAtom,
@@ -10,8 +9,6 @@ import {
   type SavedSelection,
 } from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
-
-type ModelChoice = { provider: Provider; modelId: string };
 
 // Threads whose choice is remembered; past this, the least recently used are forgotten.
 const MAX_THREADS = 200;
@@ -60,7 +57,7 @@ export function rememberModelSelection(threadId: string, selection: RunSelection
 // it still exists, else the user's default. Effort levels belong to the model, so they come from
 // its listing and reset to the model's own default whenever the model changes.
 export function useModelSelection(threadId?: string) {
-  const { providers, loaded } = useProviders();
+  const { providers, loaded, byProvider, choices, loading } = useModelChoices();
   const last = useAtomValue(modelSelectionAtom);
   const threads = useAtomValue(threadModelSelectionsAtom);
   const saved = (threadId ? threads[threadId] : undefined) ?? last;
@@ -71,17 +68,8 @@ export function useModelSelection(threadId?: string) {
     providers.find((item) => item.isDefault) ??
     providers[0];
   const own = saved?.providerId === provider?.id ? saved : null;
-  const { byProvider, loading } = useProvidersModels(providers.map((item) => item.id));
 
   const modelId = own?.modelId ?? provider?.modelId ?? null;
-  // Every provider's models in one list: the configured one first, then whatever it listed.
-  const choices: ModelChoice[] = providers.flatMap((item) => {
-    const listed = byProvider[item.id]?.models ?? [];
-    return [...new Set([item.modelId, ...listed])]
-      .filter((id): id is string => Boolean(id))
-      .map((id) => ({ provider: item, modelId: id }));
-  });
-
   const control = modelId && provider ? byProvider[provider.id]?.efforts[modelId] : undefined;
   const levels = control?.options ?? [];
   const fallback = control?.defaultValue ?? (levels.includes("medium") ? "medium" : levels[0]);

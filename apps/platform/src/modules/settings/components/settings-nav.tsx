@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   BookOpen,
+  ChatDots,
   Cog,
   Key,
   Servers,
@@ -23,6 +24,7 @@ const groups = [
     items: [
       { to: "/settings/profile", label: "Profile", icon: Cog },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
+      { to: "/settings/bots", label: "Bots", icon: ChatDots },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
       { to: "/settings/environment-variables", label: "Environment variables", icon: Key },
     ],
