@@ -70,7 +70,8 @@ export type DiffCallMethod = "diff.get";
  * branch, and `unshipped` what is not yet on the branch's remote copy, which is what the pull request
  * holds: the same as `all` until the branch has been pushed.
  */
-export type DiffScope = "turn" | "all" | "unshipped";
+export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
+export type DiffScope = (typeof DIFF_SCOPES)[number];
 
 /** A thread's changes as a unified patch; `truncated` when the patch was cut to keep it small. */
 export type ThreadDiff = {

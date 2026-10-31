@@ -1,10 +1,12 @@
 import { asRecord } from "@aven/agents/values";
-import type {
-  ArtifactsReadParams,
-  DesktopCallParams,
-  DiffGetParams,
-  FilesCallParams,
-  FilesSearchParams,
+import {
+  DIFF_SCOPES,
+  type ArtifactsReadParams,
+  type DesktopCallParams,
+  type DiffGetParams,
+  type DiffScope,
+  type FilesCallParams,
+  type FilesSearchParams,
 } from "@aven/protocol/runtime-wire";
 
 // The params of the control plane's calls, checked: the control plane is trusted, but a call of the
@@ -12,13 +14,12 @@ import type {
 
 const invalid = () => new Error("Invalid parameters");
 
+const isDiffScope = (value: unknown): value is DiffScope =>
+  (DIFF_SCOPES as readonly unknown[]).includes(value);
+
 export function diffGetParams(params: unknown): DiffGetParams {
   const { threadId, scope } = asRecord(params);
-  if (
-    typeof threadId !== "string" ||
-    (scope !== "turn" && scope !== "all" && scope !== "unshipped")
-  )
-    throw invalid();
+  if (typeof threadId !== "string" || !isDiffScope(scope)) throw invalid();
   return { threadId, scope };
 }
 
