@@ -25,6 +25,9 @@ const modelSelection = {
   reasoningEffort: z.string().trim().min(1).max(20).optional(),
 };
 
+// Shipping runs on the model the thread's composer has, which the client names the same way.
+export const shipBody = z.object(modelSelection).optional();
+
 // A file sent with a message, its bytes in base64; sizes are checked once decoded (decision 0034).
 const attachment = z.object({
   name: z.string().trim().min(1).max(255),

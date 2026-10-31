@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import type { RuntimeHub } from "../runtimes/hub";
-import { threadParams } from "../threads/schema";
+import { shipBody, threadParams } from "../threads/schema";
 import { createShipService } from "./service";
 
 // Ships a thread by sending its agent the ship prompt (decision 0044). Like a message, it answers
@@ -10,9 +10,9 @@ import { createShipService } from "./service";
 export const shipRouter = (hub: RuntimeHub, service = createShipService(hub)) =>
   new Elysia({ prefix: "/threads" }).use(authRouter).post(
     "/:id/ship",
-    async ({ params, organizationId, user }) => {
-      await service.ship(organizationId, user.id, params.id);
+    async ({ params, body, organizationId, user }) => {
+      await service.ship(organizationId, user.id, params.id, body);
       return status(202, { ok: true });
     },
-    { auth: true, org: true, params: threadParams },
+    { auth: true, org: true, params: threadParams, body: shipBody },
   );

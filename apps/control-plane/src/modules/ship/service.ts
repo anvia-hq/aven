@@ -5,6 +5,7 @@ import { ConflictError } from "../../errors";
 import { createFilesService } from "../files/service";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
+import type { ModelSelection } from "../providers/resolve-model";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadMessages } from "../threads/messages";
@@ -36,7 +37,7 @@ type ShipDeps = {
     organizationId: string,
     userId: string,
     threadId: string,
-    body: { prompt: string },
+    body: { prompt: string } & ModelSelection,
   ) => Promise<void>;
 };
 
@@ -69,7 +70,14 @@ export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {})
     ((...args: Parameters<typeof threadMessages.send>) => threadMessages.send(...args));
 
   return {
-    async ship(organizationId: string, userId: string, threadId: string) {
+    // `selection` is the model the thread is on; without it the person's default provider runs, which
+    // may be another provider than the thread's earlier runs used.
+    async ship(
+      organizationId: string,
+      userId: string,
+      threadId: string,
+      selection: ModelSelection = {},
+    ) {
       const project = await load(organizationId, threadId);
       const connection = await userTokens.use(userId);
       if (!connection) throw new GithubNotConnectedError();
@@ -80,7 +88,7 @@ export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {})
         branch: threadBranch(threadId),
         base: project.defaultBranch,
       });
-      await send(organizationId, userId, threadId, { prompt });
+      await send(organizationId, userId, threadId, { prompt, ...selection });
     },
   };
 }

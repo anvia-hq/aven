@@ -22,7 +22,14 @@ function setup(
   } = {},
 ) {
   const { connected = true, approved = true, canPush = true } = options;
-  const sent: { organizationId: string; userId: string; threadId: string; prompt: string }[] = [];
+  const sent: {
+    organizationId: string;
+    userId: string;
+    threadId: string;
+    prompt: string;
+    providerId?: string;
+    modelId?: string;
+  }[] = [];
   const checked: string[] = [];
   const service = createShipService({} as RuntimeHub, {
     load: async () => project,
@@ -42,7 +49,7 @@ function setup(
     },
     readShipFile: options.file ?? (async () => null),
     send: async (organizationId, userId, id, body) => {
-      sent.push({ organizationId, userId, threadId: id, prompt: body.prompt });
+      sent.push({ organizationId, userId, threadId: id, ...body });
     },
   });
   return { service, sent, checked };
@@ -60,6 +67,14 @@ describe("shipping a thread", () => {
     // The branch the thread works on and the repository's own default branch.
     expect(sent[0]!.prompt).toContain("git fetch origin develop");
     expect(sent[0]!.prompt).toContain("This thread's branch is aven/abcdef12");
+  });
+
+  test("runs on the model the thread is on, when the button says which", async () => {
+    const { service, sent } = setup();
+
+    await service.ship("org-1", "user-1", threadId, { providerId: "p", modelId: "m" });
+
+    expect(sent[0]).toMatchObject({ providerId: "p", modelId: "m" });
   });
 
   test("sends the repository's own prompt when it has .aven/ship.md", async () => {
