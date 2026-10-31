@@ -16,6 +16,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 
 import { Button } from "@/components/button";
@@ -41,6 +42,8 @@ type Props = {
   autoFocus?: boolean;
   /** The thread this composer replies in, whose own model choice it uses; none for a new thread. */
   threadId?: string;
+  /** More controls for the toolbar, beside the attach button, such as the project of a new thread. */
+  tools?: ReactNode;
 };
 
 type Draft = Pick<ComposerSubmitMessageArgs, "input" | "entities">;
@@ -88,6 +91,7 @@ function Composer({
   onStop,
   autoFocus,
   threadId,
+  tools,
 }: Props) {
   const composer = useComposer();
   const [sending, setSending] = useState(false);
@@ -209,6 +213,7 @@ function Composer({
         >
           <Paperclip />
         </Button>
+        {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
           {running ? (

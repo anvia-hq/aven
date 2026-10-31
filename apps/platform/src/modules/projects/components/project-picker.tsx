@@ -1,40 +1,40 @@
+import { Folder } from "@mynaui/icons-react";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
 
 import { useProjects } from "../hooks/use-projects";
-import type { Project } from "../types";
-import { ImportRepositoryDialog } from "./import-repository-dialog";
 
 type Props = {
   value: string | undefined;
   onChange: (projectId: string) => void;
 };
 
-// Every thread belongs to a project; this picks one, or imports a repository and picks that.
+// Every thread belongs to a project; this picks one. Small enough to sit in the composer's toolbar,
+// where it looks like the model chip beside it.
 export function ProjectPicker({ value, onChange }: Props) {
   const { projects } = useProjects();
 
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        items={projects.map((project) => ({ value: project.id, label: project.name }))}
-        value={value ?? ""}
-        onValueChange={(next) => next && onChange(next)}
+    <Select
+      items={projects.map((project) => ({ value: project.id, label: project.name }))}
+      value={value ?? ""}
+      onValueChange={(next) => next && onChange(next)}
+    >
+      <SelectTrigger
+        size="sm"
+        aria-label="Project"
+        className="max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-muted-foreground dark:bg-muted/50"
       >
-        <SelectTrigger aria-label="Project" className="min-w-52">
-          <SelectValue placeholder="Choose a project" />
-        </SelectTrigger>
-        <SelectContent>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <ImportRepositoryDialog
-        variant="outline"
-        onImported={(project: Project) => onChange(project.id)}
-      />
-    </div>
+        <Folder />
+        <SelectValue placeholder="Choose a project" />
+      </SelectTrigger>
+      <SelectContent>
+        {projects.map((project) => (
+          <SelectItem key={project.id} value={project.id}>
+            {project.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

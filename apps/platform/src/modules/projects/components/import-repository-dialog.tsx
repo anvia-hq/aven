@@ -21,15 +21,16 @@ import { ImportRepositoryNotice } from "./import-repository-notice";
 type Props = {
   onImported?: (project: Project) => void;
   variant?: ComponentProps<typeof Button>["variant"];
+  size?: ComponentProps<typeof Button>["size"];
 };
 
-export function ImportRepositoryDialog({ onImported, variant }: Props) {
+export function ImportRepositoryDialog({ onImported, variant, size }: Props) {
   const state = useImportRepository(onImported);
   const { stage } = state;
 
   return (
     <Dialog open={state.open} onOpenChange={state.handleOpenChange}>
-      <DialogTrigger render={<Button variant={variant} />}>
+      <DialogTrigger render={<Button variant={variant} size={size} />}>
         <Github /> Import repository
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">

@@ -24,33 +24,47 @@ function NewThread() {
     startThread(projectId, message, selection);
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-6 p-4">
-      <div className="flex flex-col gap-1.5 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">What should we build?</h1>
-        <p className="text-sm text-muted-foreground">
-          Start a thread inside a project. The agent reads, edits and runs code there.
-        </p>
-      </div>
+    <div className="flex min-h-svh flex-col">
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
+        <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
+        {/* Only once there are projects: before, the empty state below has the button. */}
+        {loaded && projects.length > 0 && (
+          <ImportRepositoryDialog
+            variant="outline"
+            size="sm"
+            onImported={(project) => setProjectId(project.id)}
+          />
+        )}
+      </header>
 
-      {/* Nothing until projects load: swapping the picker for the empty state would remount, and so close, an open dialog. */}
-      {loaded &&
-        (projects.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
-            <p className="text-sm text-muted-foreground">Import a repository to get started.</p>
-            <ImportRepositoryDialog onImported={(project) => setProjectId(project.id)} />
-          </div>
-        ) : (
-          <>
-            <ProjectPicker value={projectId} onChange={setProjectId} />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
+        <div className="flex flex-col gap-1.5 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">What should we build?</h2>
+          <p className="text-sm text-muted-foreground">
+            Start a thread inside a project. The agent reads, edits and runs code there.
+          </p>
+        </div>
 
-            <PromptInput autoFocus onSubmit={start} />
-          </>
-        ))}
+        {/* Nothing until projects load: swapping the composer for the empty state would remount, and so close, an open dialog. */}
+        {loaded &&
+          (projects.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
+              <p className="text-sm text-muted-foreground">Import a repository to get started.</p>
+              <ImportRepositoryDialog onImported={(project) => setProjectId(project.id)} />
+            </div>
+          ) : (
+            <PromptInput
+              autoFocus
+              onSubmit={start}
+              tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
+            />
+          ))}
 
-      <section aria-label="Recent threads" className="flex flex-col gap-1">
-        <h2 className="px-3 text-xs font-medium text-muted-foreground">Recent</h2>
-        <ThreadList threads={recent} empty="No threads yet." />
-      </section>
-    </main>
+        <section aria-label="Recent threads" className="flex flex-col gap-1">
+          <h3 className="px-3 text-xs font-medium text-muted-foreground">Recent</h3>
+          <ThreadList threads={recent} empty="No threads yet." />
+        </section>
+      </main>
+    </div>
   );
 }
