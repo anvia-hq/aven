@@ -16,7 +16,8 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
-import { startRuntime, type CreateRuntimeAgent } from "./runner";
+import type { CreateRuntimeAgent } from "./run-driver";
+import { startRuntime } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { fakeDesktop } from "./testing/fake-desktop";

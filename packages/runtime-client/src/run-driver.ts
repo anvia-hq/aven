@@ -1,34 +1,48 @@
-import type { AnyTool, Message } from "@anvia/core";
+import type { Agent, AnyTool, Message } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
-import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
-import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
-import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
+import type { DurableAgentRegistration } from "@anvia/durable";
+import type { SkillListing } from "@aven/agents/skills";
+import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
+  RunModel,
   RunThreadInfo,
   RuntimeCalls,
   RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
 import { keepAttachments, promptOf } from "./attachments";
-import type { CreateRuntimeAgent } from "./runner";
 import type { GoalEnd } from "./durable-goals";
 import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
 import type { DurableEnd } from "./durable-events";
 import { verifyWith } from "./goal-assessment";
-import { fetchBranch } from "./fetch-branch";
 import { goalReport, goalSessionMessage } from "./goal-report";
-import { lateBoundTools } from "./late-bound-tools";
 import type { RunOutbox, Source } from "./run-outbox";
 import { redactingTools, secretRedactor } from "./secret-redaction";
 import type { RunRecord, RunRecords } from "./run-records";
+import { toolsForRun } from "./run-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { markTurn } from "./thread-diff";
+
+export type CreateRuntimeAgent = (input: {
+  thread: RunThreadInfo;
+  /** The agent's id: durable registers one agent per run. */
+  id: string;
+  /** Whether a person is there to answer: only then may the agent ask a question. */
+  attended: boolean;
+  /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
+  tools: readonly AnyTool[];
+  /** The skills in the sandbox, for the instructions (decision 0035). */
+  skills?: readonly SkillListing[];
+  /** The names of the project's environment variables the run came with (decision 0045). */
+  envNames?: readonly string[];
+  model?: RunModel;
+}) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
 export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
 
@@ -173,9 +187,11 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<RunScope> {
     const { env } = message ?? {};
     const { runId, thread, model } = initial;
+    // Read-only access to the thread's repository, asked for each time it is needed.
+    const repoAccess = () => context.call("repo.access", { runId });
     await context.starting(thread.id);
     // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
-    const box = await context.sandbox.acquire(thread, () => context.call("repo.access", { runId }));
+    const box = await context.sandbox.acquire(thread, repoAccess);
     if (run.cancelReason) throw new Error(run.cancelReason);
     context.boxes.set(thread.id, box);
     await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
@@ -207,36 +223,19 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
-        // For a person who has not connected GitHub, so the sandbox cannot fetch itself: it is done
-        // here, on the host, with the read-only access the control plane gives this run (decision 0042).
-        const gitFetch = createGitFetchTool(async (branch) => {
-          const root = await context.sandbox.workspace(thread.id);
-          if (!root) throw new Error("The thread has no workspace yet");
-          return fetchBranch(root, await context.call("repo.access", { runId }), branch);
-        });
-        const bound: AnyTool[] = [...lateBoundTools(box.tools, current), gitFetch];
-        // Only an agent with a person to set the repository up with may save its environment,
-        // which can take many minutes (decision 0043); a runner without snapshots has no tool.
-        const sandbox = context.sandbox;
-        const saveEnvironment = sandbox.saveEnvironment
-          ? [
-              createSaveEnvironmentTool(async () =>
-                sandbox.saveEnvironment!(thread, await context.call("repo.access", { runId })),
-              ),
-            ]
-          : [];
         const { agent, compaction } = context.createAgent({
           thread,
           id,
           attended,
-          // Only an agent with a person to talk to may take on a goal.
-          tools: attended
-            ? [
-                ...bound,
-                ...saveEnvironment,
-                createDefineGoalTool((goal) => activeRun(thread.id)?.save({ goal })),
-              ]
-            : bound,
+          tools: toolsForRun({
+            sandbox: context.sandbox,
+            thread,
+            tools: box.tools,
+            current,
+            attended,
+            repoAccess,
+            defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+          }),
           skills: state.record.skillListing,
           envNames: env?.map(({ name }) => name),
           model,

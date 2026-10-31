@@ -1,7 +1,4 @@
-import type { Agent, AnyTool } from "@anvia/core";
-import type { DurableAgentRegistration } from "@anvia/durable";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import type { SkillListing } from "@aven/agents/skills";
 import { errorMessage } from "@aven/agents/values";
 import {
   WIRE_VERSION,
@@ -10,10 +7,8 @@ import {
   type ControlPlaneToRuntime,
   type CallMethod,
   type FilesCallMethod,
-  type RunModel,
   type RunnerCallMethod,
   type RuntimeCalls,
-  type RunThreadInfo,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
@@ -29,25 +24,10 @@ import { TerminalSessions } from "./terminal-sessions";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
-import { createRunDriver, type DriverContext } from "./run-driver";
+import { createRunDriver, type CreateRuntimeAgent, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-
-export type CreateRuntimeAgent = (input: {
-  thread: RunThreadInfo;
-  /** The agent's id: durable registers one agent per run. */
-  id: string;
-  /** Whether a person is there to answer: only then may the agent ask a question. */
-  attended: boolean;
-  /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
-  tools: readonly AnyTool[];
-  /** The skills in the sandbox, for the instructions (decision 0035). */
-  skills?: readonly SkillListing[];
-  /** The names of the project's environment variables the run came with (decision 0045). */
-  envNames?: readonly string[];
-  model?: RunModel;
-}) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
 // Builds the agent for a run. The model is reached through the control plane's gateway with the
 // run's token; this process never holds a provider key. The conversation is durable's own, so the
