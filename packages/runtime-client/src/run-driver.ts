@@ -65,6 +65,30 @@ type RunScope = {
 const withoutPrompt = (messages: Message[]) =>
   messages[0]?.role === "user" ? messages.slice(1) : messages;
 
+// Gives the thread's sandbox what the starting run brought, of what the sandbox can take: who the
+// sender is on GitHub, an identity to mint tokens with, and the project's variables. All of it is
+// kept in memory and out of the record and the journal; a run taken up after a restart has none.
+async function prepareRun(
+  sandbox: ThreadWorkspaces,
+  runId: string,
+  threadId: string,
+  message: RunMessage | undefined,
+  controlPlane: string,
+) {
+  const { github, identity, env } = message ?? {};
+  // The GitHub account the sender gave this run, or none (decision 0044). A failure to sign in
+  // does not fail the run: it has no GitHub.
+  await sandbox.signInGithub?.(threadId, github).catch((error: unknown) => {
+    console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
+  });
+  // What `aven id-token` mints tokens with; a failure does not fail the run (decision 0049).
+  await sandbox.signInIdentity?.(threadId, identity, controlPlane).catch((error: unknown) => {
+    console.warn(`Run ${runId} could not sign in to mint identity tokens:`, errorMessage(error));
+  });
+  // The project's variables for this run's commands, until the next message (decision 0045).
+  sandbox.setProjectEnv?.(threadId, env);
+}
+
 export type DriverContext = {
   journal: Promise<DurableRuns>;
   records: RunRecords;
@@ -147,31 +171,14 @@ export function createRunDriver(context: DriverContext) {
     run: Live,
     message?: RunMessage,
   ): Promise<RunScope> {
-    const { github, env, identity } = message ?? {};
+    const { env } = message ?? {};
     const { runId, thread, model } = initial;
     await context.starting(thread.id);
     // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
     const box = await context.sandbox.acquire(thread, () => context.call("repo.access", { runId }));
     if (run.cancelReason) throw new Error(run.cancelReason);
     context.boxes.set(thread.id, box);
-    // The GitHub account the sender gave this run, or none; kept in memory and out of the record
-    // and the journal (decision 0044). A failure to sign in does not fail the run: it has no GitHub.
-    await context.sandbox.signInGithub?.(thread.id, github).catch((error: unknown) => {
-      console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
-    });
-    // What `aven id-token` mints tokens with; in memory and the container only, like the GitHub
-    // account, and a failure does not fail the run (decision 0049).
-    await context.sandbox
-      .signInIdentity?.(thread.id, identity, context.controlPlane)
-      .catch((error: unknown) => {
-        console.warn(
-          `Run ${runId} could not sign in to mint identity tokens:`,
-          errorMessage(error),
-        );
-      });
-    // The project's variables for this run's commands, in memory like the GitHub account; a run
-    // taken up after a restart has none until the next message (decision 0045).
-    context.sandbox.setProjectEnv?.(thread.id, env);
+    await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
     // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     // What this turn changes is measured from here; a run picked up again after a restart, or
