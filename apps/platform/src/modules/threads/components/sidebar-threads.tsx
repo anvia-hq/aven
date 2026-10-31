@@ -28,7 +28,7 @@ export function SidebarThreads() {
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+      <div className="flex items-center justify-between pr-2 pl-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
         <span>Threads</span>
         <Button
           variant="ghost"
