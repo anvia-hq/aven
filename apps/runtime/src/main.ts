@@ -1,5 +1,6 @@
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
+import { sandboxConfigFromEnv } from "@aven/runtime-client/sandbox-config";
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -14,22 +15,6 @@ if (!base || !token) {
 }
 
 const url = `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;
-// Every thread runs in its own container on this machine (decision 0010): Docker and the sandbox
-// image are required, and there is no mode that runs the agent's commands directly on this machine.
-const image = process.env.AVEN_SANDBOX_IMAGE || "aven-sandbox-desktop:dev";
-
-// An unset variable is fine; a set one that is not a positive number is a mistake worth stopping for.
-function positiveNumber(name: string) {
-  const value = process.env[name];
-  if (!value) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    console.error(`${name} must be a positive number, got "${value}".`);
-    process.exit(1);
-  }
-  return parsed;
-}
-
 // Stopping works whichever comes first: a signal while still connecting, or a refusal.
 let runtime: ReturnType<typeof startRuntime> | undefined;
 let stopping: Promise<void> | undefined;
@@ -44,18 +29,14 @@ function exit(code: number) {
 process.on("SIGINT", () => void exit(0));
 process.on("SIGTERM", () => void exit(0));
 
-const sandbox = await Sandboxes.start({
-  image,
-  platform: process.env.AVEN_SANDBOX_PLATFORM || undefined,
-  runtime: process.env.AVEN_SANDBOX_RUNTIME || undefined,
-  home: process.env.AVEN_RUNTIME_HOME || undefined,
-  memoryMb: positiveNumber("AVEN_SANDBOX_MEMORY_MB"),
-  cpus: positiveNumber("AVEN_SANDBOX_CPUS"),
-  pidsLimit: positiveNumber("AVEN_SANDBOX_PIDS_LIMIT"),
-}).catch((error: unknown) => {
-  console.error(errorMessage(error));
-  process.exit(1);
-});
+// Every thread runs in its own container on this machine (decision 0010): Docker and the sandbox
+// image are required, and there is no mode that runs the agent's commands directly on this machine.
+const sandbox = await Promise.resolve()
+  .then(() => Sandboxes.start(sandboxConfigFromEnv()))
+  .catch((error: unknown) => {
+    console.error(errorMessage(error));
+    process.exit(1);
+  });
 
 runtime = startRuntime({
   url,
