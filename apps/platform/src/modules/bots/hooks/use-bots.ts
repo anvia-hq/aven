@@ -25,14 +25,15 @@ export function useBots() {
     if (bots === null) void botsStore.refresh();
   }, [bots]);
 
-  // False on failure (already toasted).
-  async function update(bot: Bot, patch: BotPatch) {
+  // False on failure (already toasted). `quiet` skips the confirmation, for a change made in small
+  // steps, such as a slider.
+  async function update(bot: Bot, patch: BotPatch, { quiet = false } = {}) {
     const saved = await attempt("Could not save the bot", () =>
       postJson<Bot>(`/bots/${bot.id}`, patch, "PATCH"),
     );
     if (!saved) return false;
     await botsStore.refresh();
-    toast.add({ title: "Bot saved", description: saved.name, type: "success" });
+    if (!quiet) toast.add({ title: "Bot saved", description: saved.name, type: "success" });
     return true;
   }
 

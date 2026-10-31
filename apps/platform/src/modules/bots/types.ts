@@ -9,4 +9,8 @@ export type BotPatch = {
   /** Null puts the bot back on the person's default model. */
   providerId?: string | null;
   modelId?: string | null;
+  /** A level of the bot's model; changing the model drops it. */
+  reasoningEffort?: string | null;
+  /** Tokens past which the chat is summarized; null leaves it to the model. */
+  compactAfterTokens?: number | null;
 };

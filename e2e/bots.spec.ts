@@ -133,4 +133,84 @@ test.describe("bots", () => {
       page.getByRole("link", { name: "Add a provider to choose a model" }),
     ).toBeVisible();
   });
+
+  test("the person sets how hard the bot's model thinks", async ({ page }) => {
+    await registerUser(page, "bot-effort", "Effort Setter");
+    // The listing of a real OpenAI key is out of reach here; the server still checks the effort
+    // against what the SDK knows of gpt-5.
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "openai", name: "OpenAI", apiKey: "sk-test-1234", modelId: "gpt-5" },
+    });
+    expect(provider.ok()).toBe(true);
+    await page.route("**/api/providers/*/models", (route) =>
+      route.fulfill({
+        json: {
+          models: ["gpt-5"],
+          efforts: {
+            "gpt-5": { options: ["minimal", "low", "medium", "high"], defaultValue: "medium" },
+          },
+        },
+      }),
+    );
+
+    await page.goto("/settings/bots");
+    // On the default model there is nothing to set yet.
+    await expect(page.getByText("Choose a model above to set how hard it thinks.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Model of Aven" }).click();
+    await page.getByRole("option", { name: "gpt-5" }).click();
+    const slider = page.getByRole("slider", { name: "Reasoning effort" });
+    await expect(slider).toBeVisible();
+    await expect(slider).toHaveAttribute("aria-valuetext", "medium");
+
+    await slider.focus();
+    await slider.press("End");
+    await expect(slider).toHaveAttribute("aria-valuetext", "high");
+    await expect
+      .poll(async () => {
+        const bots = (await (await page.request.get("/api/bots")).json()) as {
+          reasoningEffort: string | null;
+        }[];
+        return bots[0]?.reasoningEffort;
+      })
+      .toBe("high");
+
+    await page.reload();
+    await expect(page.getByRole("slider", { name: "Reasoning effort" })).toHaveAttribute(
+      "aria-valuetext",
+      "high",
+    );
+  });
+
+  test("the person sets the size past which the chat is summarized", async ({ page }) => {
+    await registerUser(page, "bot-compact", "Compaction Setter");
+    await page.goto("/settings/bots");
+    const field = page.getByRole("spinbutton", { name: /Summarize the chat of Aven/ });
+    await expect(field).toHaveValue("");
+
+    await field.fill("50000");
+    await field.press("Enter");
+    await expect(page.getByText("Bot saved")).toBeVisible();
+    const size = async () =>
+      (
+        (await (await page.request.get("/api/bots")).json()) as {
+          compactAfterTokens: number | null;
+        }[]
+      )[0]?.compactAfterTokens;
+    expect(await size()).toBe(50000);
+
+    await page.reload();
+    await expect(field).toHaveValue("50000");
+
+    // Too small is told in words and not saved; empty goes back to the model's own.
+    await field.fill("10");
+    await field.press("Enter");
+    await expect(page.getByText(/Use a whole number of tokens from 1,000/)).toBeVisible();
+    await expect(field).toHaveValue("50000");
+    expect(await size()).toBe(50000);
+
+    await field.fill("");
+    await field.press("Enter");
+    await expect.poll(size).toBeNull();
+  });
 });
