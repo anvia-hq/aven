@@ -483,6 +483,48 @@ describe("startRuntime", () => {
       expect(JSON.stringify(built)).not.toContain("very-secret");
     });
 
+    test("a secret a command prints never reaches the control plane; a plain variable does", async () => {
+      const exec = createTool({
+        name: "exec_command",
+        description: "Runs a command",
+        inputSchema: z.object({}),
+        execute: async () => ({ stdout: "DB=postgres://very-secret-value MODE=development-mode" }),
+      });
+      const { sandbox } = envSandbox();
+      const { plane, runtime } = connect({
+        sandbox: {
+          ...sandbox,
+          acquire: async () => ({ tools: [exec], hasRunningProcesses: async () => false }),
+        },
+        createAgent: ({ id, tools }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [...tools],
+            model: scriptedModel([
+              [{ type: "tool-call", toolCallId: "c1", toolName: "exec_command", input: {} }],
+              [text("done")],
+            ]),
+          }),
+        }),
+      });
+      await runtime.ready;
+
+      plane.send({
+        ...runStart,
+        env: [
+          { name: "DATABASE_URL", value: "postgres://very-secret-value", secret: true },
+          { name: "MODE", value: "development-mode" },
+        ],
+      });
+      await until(() => plane.received.some((message) => message.type === "run.end"));
+
+      const sent = JSON.stringify(plane.received);
+      expect(sent).not.toContain("very-secret-value");
+      expect(sent).toContain("[redacted]");
+      expect(sent).toContain("development-mode");
+    });
+
     test("they are in memory only: no file in the runner's data folder holds them", async () => {
       const { sandbox } = envSandbox();
       const journal = journalPath();

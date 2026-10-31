@@ -46,6 +46,16 @@ test.describe("project environment variables", () => {
     await expect(page.getByText("sk-never-shown")).toHaveCount(0);
   });
 
+  test("says what a secret is hidden from", async ({ page }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await expect(page.getByText("hidden from the output")).toHaveCount(0);
+    await page.getByRole("switch", { name: "Secret" }).click();
+    await expect(
+      page.getByText(/8 characters or more is also hidden from the output/),
+    ).toBeVisible();
+  });
+
   test("refuses a reserved name", async ({ page }) => {
     const section = await openProject(page);
 

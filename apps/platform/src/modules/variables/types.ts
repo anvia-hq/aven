@@ -17,6 +17,9 @@ export const NAME_PATTERN = "[A-Za-z_][A-Za-z0-9_]*";
 export const MAX_NAME_LENGTH = 128;
 export const MAX_VALUE_LENGTH = 8192;
 export const MAX_VARIABLES = 100;
+// A secret at least this long is hidden from the output of the agent's commands; a shorter one is
+// not (runtime-client/src/secret-redaction.ts).
+export const MIN_REDACTED_LENGTH = 8;
 
 // Names the runner or the sandbox rely on, which a variable cannot take.
 const RESERVED = /^(PATH|HOME|USER|SHELL|PWD|LD_.*|AVEN_.*|GH_.*|GITHUB_.*|GIT_.*)$/i;

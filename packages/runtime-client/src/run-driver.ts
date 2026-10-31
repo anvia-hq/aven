@@ -27,6 +27,7 @@ import { fetchBranch } from "./fetch-branch";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { lateBoundTools } from "./late-bound-tools";
 import type { RunOutbox, Source } from "./run-outbox";
+import { redactingTools, secretRedactor } from "./secret-redaction";
 import type { RunRecord, RunRecords } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { markTurn } from "./thread-diff";
@@ -171,7 +172,12 @@ export function createRunDriver(context: DriverContext) {
     }
     const journaled = await context.journal;
     // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
-    const current = () => context.boxes.get(thread.id)?.tools;
+    // What its tools give back hides this run's secrets, the goal's checks included (decision 0045).
+    const redact = secretRedactor(env);
+    const current = () => {
+      const tools = context.boxes.get(thread.id)?.tools;
+      return tools && redact ? redactingTools(tools, redact) : tools;
+    };
 
     return {
       runId,

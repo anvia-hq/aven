@@ -15,7 +15,13 @@ import { Switch } from "@/components/switch";
 import { TextField } from "@/components/text-field";
 
 import { useVariableForm } from "../hooks/use-variable-form";
-import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, NAME_PATTERN, type Variable } from "../types";
+import {
+  MAX_NAME_LENGTH,
+  MAX_VALUE_LENGTH,
+  MIN_REDACTED_LENGTH,
+  NAME_PATTERN,
+  type Variable,
+} from "../types";
 
 type Props = {
   projectId: string;
@@ -78,6 +84,12 @@ export function VariableDialog({ projectId, variable, label }: Props) {
             />
             <span>Secret</span>
           </div>
+          {form.secret && (
+            <p className="text-xs text-muted-foreground">
+              A value of {MIN_REDACTED_LENGTH} characters or more is also hidden from the output of
+              the agent's commands. A shorter one is not.
+            </p>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={form.submitting}>
               {editing ? "Save changes" : "Add variable"}

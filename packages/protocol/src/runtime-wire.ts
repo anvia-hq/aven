@@ -155,9 +155,10 @@ export type RunGithub = { token: string; id: number; login: string; name: string
 
 /**
  * An environment variable of the thread's project, given to the commands the agent runs (decision
- * 0045). The runner holds it in memory only, never in a record, the journal or a snapshot.
+ * 0045). The runner holds it in memory only, never in a record, the journal or a snapshot, and hides a
+ * secret's value from what the agent's tools give back.
  */
-export type RunEnvVar = { name: string; value: string };
+export type RunEnvVar = { name: string; value: string; secret?: boolean };
 
 /** What a skill's digest looks like. */
 export const SKILL_DIGEST = /^[0-9a-f]{64}$/;

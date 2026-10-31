@@ -98,7 +98,7 @@ export const variablesService = {
       .from(projectVariables)
       .where(eq(projectVariables.projectId, projectId))
       .orderBy(asc(projectVariables.name));
-    return rows.map((row) => ({ name: row.name, value: readValue(row) }));
+    return rows.map((row) => ({ name: row.name, value: readValue(row), secret: row.secret }));
   },
 
   async remove(organizationId: string, projectId: string, name: string) {

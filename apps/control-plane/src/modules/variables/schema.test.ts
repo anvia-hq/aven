@@ -36,8 +36,13 @@ describe("setVariableBody", () => {
     expect(setVariableBody.parse({ value: "x" })).toEqual({ value: "x", secret: false });
   });
 
-  test("an empty value is allowed, one over the limit is not", () => {
+  test("an empty value is allowed for a plain variable, one over the limit is not", () => {
     expect(setVariableBody.safeParse({ value: "" }).success).toBe(true);
     expect(setVariableBody.safeParse({ value: "x".repeat(8193) }).success).toBe(false);
+  });
+
+  test("a secret needs a value", () => {
+    expect(setVariableBody.safeParse({ value: "", secret: true }).success).toBe(false);
+    expect(setVariableBody.safeParse({ value: "x", secret: true }).success).toBe(true);
   });
 });

@@ -20,6 +20,6 @@ Status: accepted. Builds on 0043 (environments: setup script and snapshots). Fol
 ## Consequences
 
 - A command the agent runs can read and print any value, including a secret, and a prompt injected into what the agent reads could steer it to. The guard is the person watching the thread and what they choose to put in as a secret; a project should hold keys it is happy to give an agent, as with GitHub in 0044.
-- A transcript may show a secret if a command prints it. The runner does not redact.
+- **A secret is hidden from what the agent's tools give back**: the runner replaces every occurrence of a secret's value, in every string of a tool result, with `[redacted]` before the result reaches the model, the journal or the control plane, goal checks included. A secret shorter than 8 characters is not hidden (it would be cut out of ordinary text, and is guessable), and the settings page says so. Only the value as it is: a command that prints it encoded (base64, URL-escaped) or in pieces is not caught, and an output that reaches the agent by another way than a tool (a file the agent writes and later reads) is read as it is. A secret needs a value; an empty one is only for a plain variable.
 - Per-user secrets (a personal key) and organization-wide variables are not here; Amp has both, and either can come later.
 - Wire version goes to 19. The control plane stores values; the runner never persists them.

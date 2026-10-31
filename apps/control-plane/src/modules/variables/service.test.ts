@@ -103,8 +103,8 @@ run("variablesService (postgres)", async () => {
     await variablesService.set(orgA, mine.id, "A_SECRET", { value: "s3cret", secret: true });
 
     expect(await variablesService.forRun(mine.id)).toEqual([
-      { name: "A_SECRET", value: "s3cret" },
-      { name: "B_PLAIN", value: "plain" },
+      { name: "A_SECRET", value: "s3cret", secret: true },
+      { name: "B_PLAIN", value: "plain", secret: false },
     ]);
     expect(await variablesService.forRun(crypto.randomUUID())).toEqual([]);
   });
