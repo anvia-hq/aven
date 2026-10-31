@@ -117,6 +117,35 @@ describe("Sandboxes starting a container", () => {
     await sandboxes.dispose();
   });
 
+  test("a sandbox acquired with no repository mounts an empty workspace and clones nothing", async () => {
+    const { calls, docker } = fakeDocker();
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const git = async (args: string[], options: { cwd: string }) => {
+      if (args[0] === "clone") throw new Error("a bot's computer has no repository to clone");
+      return fakeGit(args, options);
+    };
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git,
+      connectTimeoutMs: 200,
+    });
+
+    await sandboxes.acquire({ id: "bot-1" }).catch(() => undefined);
+
+    const mounted = calls
+      .find((args) => args[0] === "run")
+      ?.find((arg) => arg.endsWith(":/workspace"));
+    const dir = join(await realpath(home), "workspaces", "bot-1");
+    expect(mounted).toBe(`${dir}:/workspace`);
+    expect((await stat(dir)).isDirectory()).toBe(true);
+    // Nothing is cloned, so it is not a thread's workspace as far as its changes and files go.
+    expect(await sandboxes.workspace("bot-1")).toBeUndefined();
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+  });
+
   test("a second acquire while the container is starting waits for it and does not restart it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));

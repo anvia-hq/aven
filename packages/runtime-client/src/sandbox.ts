@@ -202,11 +202,12 @@ async function preflight(config: SandboxConfig, { docker: run, git: gitRun }: Ho
 export interface ThreadWorkspaces {
   /**
    * `repo` asks the control plane how to clone the thread's repository; it is called only when the
-   * workspace holds no clone yet (decision 0013).
+   * workspace holds no clone yet (decision 0013). Without it the workspace is an empty directory
+   * that is kept between acquires: a bot's computer has no repository (decision 0059).
    */
   acquire(
     thread: { id: string; organizationId?: string },
-    repo: () => Promise<RepoAccess>,
+    repo?: () => Promise<RepoAccess>,
   ): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
@@ -350,7 +351,7 @@ export class Sandboxes implements ThreadWorkspaces {
 
   async acquire(
     thread: { id: string; organizationId?: string },
-    repo: () => Promise<RepoAccess>,
+    repo?: () => Promise<RepoAccess>,
   ): Promise<ThreadSandbox> {
     const root = await this.#workspace(thread, repo);
     await this.#ensure(thread.id, root);
@@ -440,7 +441,7 @@ export class Sandboxes implements ThreadWorkspaces {
   // The thread's workspace: the repository cloned on first use (or restored from its snapshot) and
   // kept for its later runs. Real path, so the file tools' confinement and the bind mount agree on
   // what the directory is.
-  #workspace(thread: { id: string; organizationId?: string }, repo: () => Promise<RepoAccess>) {
+  #workspace(thread: { id: string; organizationId?: string }, repo?: () => Promise<RepoAccess>) {
     const known = this.#roots.get(thread.id);
     if (known) return known;
     const preparing = this.#prepare(thread, repo);
@@ -450,7 +451,11 @@ export class Sandboxes implements ThreadWorkspaces {
     return preparing;
   }
 
-  async #prepare(thread: { id: string; organizationId?: string }, repo: () => Promise<RepoAccess>) {
+  async #prepare(
+    thread: { id: string; organizationId?: string },
+    repo?: () => Promise<RepoAccess>,
+  ) {
+    if (!repo) return this.#emptyWorkspace(thread.id);
     const root = await this.#fillWorkspace(thread, repo);
     // A package manager's store left in the workspace is never a change; for a workspace that
     // exists already as much as for a new one.
@@ -458,6 +463,13 @@ export class Sandboxes implements ThreadWorkspaces {
       console.warn(`Could not keep package stores out of git in ${root}:`, error);
     });
     return root;
+  }
+
+  // A directory with nothing in it, made once and kept: there is no repository to clone.
+  async #emptyWorkspace(threadId: string) {
+    const dir = this.#workspaceDir(threadId);
+    await mkdir(dir, { recursive: true });
+    return realpath(dir);
   }
 
   async #fillWorkspace(

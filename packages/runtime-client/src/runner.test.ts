@@ -203,7 +203,7 @@ describe("startRuntime desktops", () => {
     // `acquire` asks for the repository only when the workspace holds no clone yet.
     const unclonedSandbox: ThreadWorkspaces = {
       ...sandbox,
-      acquire: async (thread, repo) => (await repo(), sandbox.acquire(thread, repo)),
+      acquire: async (thread, repo) => (await repo?.(), sandbox.acquire(thread, repo)),
     };
     const { plane, runtime } = connect({ sandbox: unclonedSandbox });
     await runtime.ready;
@@ -618,7 +618,7 @@ describe("startRuntime", () => {
     let given: unknown;
     const sandbox: ThreadWorkspaces = {
       async acquire(_thread, repo): Promise<ThreadSandbox> {
-        given = await repo();
+        given = await repo?.();
         return { tools: [], hasRunningProcesses: async () => false };
       },
       desktop: () => undefined,
