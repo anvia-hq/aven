@@ -7,6 +7,7 @@ import type { BotReplyInfo, RunModel } from "@aven/protocol/runtime-wire";
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import { RemoteBotReplier } from "./remote-replier";
+import type { NewBot } from "./service";
 
 const bot: Bot = {
   id: "b1",
@@ -31,7 +32,14 @@ const store: MemoryStore = {
 };
 
 // A connection that remembers what it was asked and lets a test play the runner.
-function fakeRunner(options: { online?: boolean; keyless?: boolean; store?: MemoryStore } = {}) {
+function fakeRunner(
+  options: {
+    online?: boolean;
+    keyless?: boolean;
+    store?: MemoryStore;
+    makeBot?: (userId: string, bot: NewBot) => Promise<Bot>;
+  } = {},
+) {
   const started: { replyId: string; bot: BotReplyInfo; prompt: string; model: RunModel }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
@@ -66,7 +74,13 @@ function fakeRunner(options: { online?: boolean; keyless?: boolean; store?: Memo
     issue: (replyId: string) => (grants.issued.push(replyId), runModel),
     revoke: (replyId: string) => void grants.revoked.push(replyId),
   };
-  const replier = new RemoteBotReplier(hub, gateway, options.store ?? store, "runner-1");
+  const replier = new RemoteBotReplier(
+    hub,
+    gateway,
+    options.store ?? store,
+    "runner-1",
+    options.makeBot ?? (async () => bot),
+  );
   const only = () => [...sinks.values()][0]!;
   return { replier, started, cancelled, grants, asked, only };
 }
@@ -109,6 +123,7 @@ describe("RemoteBotReplier", () => {
         name: "Pip",
         instruction: "Talk like a pirate.",
         compactAfterTokens: 30_000,
+        canCreateBots: true,
       },
       prompt: "ahoy",
       model: runModel,
@@ -183,5 +198,42 @@ describe("RemoteBotReplier", () => {
     expect(scopes).toEqual([{ sessionId: "b1", userId: "u1" }]);
     run.only().end();
     await answering;
+  });
+
+  describe("a bot that makes bots", () => {
+    const made: Bot = { ...bot, id: "b2", name: "Scout", isMain: false };
+    const wanted = { replyId: "x", name: "Scout", instruction: "You research." };
+
+    test("the main bot's new bot is made for its own person, and the runner is told which", async () => {
+      const calls: { userId: string; bot: NewBot }[] = [];
+      const run = fakeRunner({
+        makeBot: async (userId, newBot) => (calls.push({ userId, bot: newBot }), made),
+      });
+      const answering = run.replier.answer(input(() => undefined));
+
+      const result = await run.only().create(wanted);
+
+      expect(result).toEqual({ id: "b2", name: "Scout" });
+      expect(calls).toEqual([
+        { userId: "u1", bot: { name: "Scout", instruction: "You research.", avatar: undefined } },
+      ]);
+      run.only().end();
+      await answering;
+    });
+
+    test("another bot may not, and is not told it can", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ makeBot: async (userId) => (calls.push(userId), made) });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        bot: { ...bot, isMain: false },
+      });
+
+      expect(run.started[0]!.bot.canCreateBots).toBe(false);
+      await expect(run.only().create(wanted)).rejects.toThrow("Only your main bot");
+      expect(calls).toEqual([]);
+      run.only().end();
+      await answering;
+    });
   });
 });

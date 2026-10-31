@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import { BOT_LIMIT } from "@aven/protocol/bots";
+
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("botsService (postgres)", async () => {
@@ -51,6 +53,46 @@ run("botsService (postgres)", async () => {
     expect(theirs!.name).toBe("Aven");
     expect(await botsService.get(bob, mine!.id)).toBeNull();
     expect(await botsService.update(bob, mine!.id, { name: "Mine now" })).toBeNull();
+  });
+
+  test("a bot made for a person is theirs, not the main one, and answers with their default model", async () => {
+    const made = await botsService.create(alice, {
+      name: "Scout",
+      instruction: "You research.",
+      avatar: "🔭",
+    });
+    expect(made).toMatchObject({
+      name: "Scout",
+      instruction: "You research.",
+      avatar: "🔭",
+      isMain: false,
+      providerId: null,
+      modelId: null,
+    });
+
+    const [first, ...others] = await botsService.list(alice);
+    expect(first?.isMain).toBe(true);
+    expect(others.map((bot) => bot.id)).toContain(made.id);
+    expect((await botsService.list(bob)).map((bot) => bot.id)).not.toContain(made.id);
+    expect(await botsService.get(bob, made.id)).toBeNull();
+  });
+
+  test("a person can have only so many bots", async () => {
+    const carol = `u-carol-${suffix}`;
+    await db.insert(users).values({ id: carol, name: "Carol", email: `${carol}@aven.test` });
+    try {
+      await botsService.list(carol);
+      for (let i = 1; i < BOT_LIMIT; i++) {
+        await botsService.create(carol, { name: `Bot ${i}`, instruction: "x" });
+      }
+      expect(await botsService.list(carol)).toHaveLength(BOT_LIMIT);
+      await expect(
+        botsService.create(carol, { name: "One too many", instruction: "x" }),
+      ).rejects.toThrow(UnprocessableError);
+      expect(await botsService.list(carol)).toHaveLength(BOT_LIMIT);
+    } finally {
+      await db.delete(users).where(eq(users.id, carol));
+    }
   });
 
   const addProvider = async (userId: string, name: string) => {

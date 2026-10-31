@@ -190,6 +190,8 @@ export type BotReplyInfo = {
   instruction: string;
   /** Tokens past which the bot's chat is summarized; none means 70% of the model's window. */
   compactAfterTokens?: number;
+  /** Whether this bot may make others, a power of the person's main bot (decision 0060). */
+  canCreateBots: boolean;
 };
 
 export type ControlPlaneToRuntime =
@@ -289,7 +291,7 @@ export type SkillsCallMethod = "skills.get";
  * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
  * cannot wipe a chat. Messages are Anvia's.
  */
-export type BotCallMethod = "bot.memory";
+export type BotCallMethod = "bot.memory" | "bot.create";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -329,10 +331,23 @@ export type BotMemoryParams = { replyId: string } & (
     }
 );
 
+/** What a bot asks for when it makes another (decision 0060); `replyId` names the live reply it is working on. */
+export type BotCreateParams = {
+  replyId: string;
+  name: string;
+  /** What the new bot is for and how it works, written to it. */
+  instruction: string;
+  avatar?: string;
+};
+
+/** The bot that was made. It uses the person's default model until they pick another. */
+export type BotCreated = { id: string; name: string };
+
 /** The calls a runner makes today, by method: what it sends and what the control plane answers. */
 export type RuntimeCalls = {
   /** The answer is Anvia's: messages for `load`, `{ revision, messages }` for `snapshot`, `{ status }` for `replacePrefix`, null for the others. */
   "bot.memory": { params: BotMemoryParams; result: unknown };
+  "bot.create": { params: BotCreateParams; result: BotCreated };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -349,4 +364,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 24;
+export const WIRE_VERSION = 25;

@@ -1,8 +1,10 @@
 import type { Message } from "@anvia/core";
+import { BOT_AVATAR_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
+  type BotCreateParams,
   type BotMemoryParams,
   type CallMethod,
   type RunOutcome,
@@ -28,6 +30,7 @@ const callMethods = [
   "repo.access",
   "skills.get",
   "bot.memory",
+  "bot.create",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -209,6 +212,14 @@ const botMemoryParams = z.discriminatedUnion("op", [
   }),
 ]);
 
+// The same limits as a person changing the bot in settings.
+const botCreateParams = z.object({
+  replyId,
+  name: z.string().trim().min(1).max(BOT_NAME_MAX),
+  instruction: z.string().trim().min(1).max(BOT_INSTRUCTION_MAX),
+  avatar: z.string().trim().max(BOT_AVATAR_MAX).optional(),
+});
+
 const appendParams = memoryParams.extend({
   turn: z.number().int().nonnegative(),
   messages: z.array(z.custom<Message>((value) => typeof value === "object" && value !== null)),
@@ -224,6 +235,8 @@ function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
 
 export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
+export const parseBotCreateParams = (params: unknown) =>
+  parseParams(botCreateParams, params) as BotCreateParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

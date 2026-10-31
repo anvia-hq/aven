@@ -1,5 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type {
+  BotCreated,
+  BotCreateParams,
   BotMemoryParams,
   CallMethod,
   RepoAccess,
@@ -8,6 +10,7 @@ import type {
 
 import {
   parseAppendParams,
+  parseBotCreateParams,
   parseBotMemoryParams,
   parseMemoryParams,
   parseSkillsGetParams,
@@ -26,6 +29,8 @@ export type CallRun = {
 export type CallBotReply = {
   /** Answers for the reply's own bot and for no other. */
   memory(params: BotMemoryParams): Promise<unknown>;
+  /** Makes a bot for the reply's owner, when the reply's bot may. */
+  create(params: BotCreateParams): Promise<BotCreated>;
 };
 
 export type RuntimeCallContext = {
@@ -54,6 +59,14 @@ function answerBotMemory(params: unknown, findBotReply: RuntimeCallContext["find
   return reply.memory(call);
 }
 
+// A bot made by a bot, for the live reply the call names; whether this bot may is the reply's to say.
+function answerBotCreate(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
+  const call = parseBotCreateParams(params);
+  const reply = findBotReply(call.replyId);
+  if (!reply) throw new Error("Unknown or finished reply");
+  return reply.create(call);
+}
+
 // Answers what a runtime asks of the control plane: to add a turn to the transcript, which the control plane
 // owns, how to clone the repository, and the run's skills. All only for the run's own thread; the scope comes from
 // our record of the run, never from what the runtime sends.
@@ -63,6 +76,7 @@ export async function answerRuntimeCall(
   { findRun, findBotReply, store, repoAccess, skillArchive }: RuntimeCallContext,
 ) {
   if (method === "bot.memory") return answerBotMemory(params, findBotReply);
+  if (method === "bot.create") return answerBotCreate(params, findBotReply);
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
   if (method === "skills.get") {

@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
+import { BOT_AVATAR_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import type { RunEvent } from "@aven/protocol/events";
 
-import { parseBotMemoryParams, parseRuntimeFrame } from "./wire";
+import { parseBotCreateParams, parseBotMemoryParams, parseRuntimeFrame } from "./wire";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
@@ -92,7 +93,13 @@ describe("calls from a runtime", () => {
     JSON.stringify({ type: "call", id: "c1", method, params: { runId: "r1" } });
 
   test("only the calls a runner makes today are accepted", () => {
-    for (const method of ["memory.append", "repo.access", "skills.get", "bot.memory"]) {
+    for (const method of [
+      "memory.append",
+      "repo.access",
+      "skills.get",
+      "bot.memory",
+      "bot.create",
+    ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
   });
@@ -154,5 +161,27 @@ describe("a bot's reply from a runtime", () => {
     expect(() =>
       parseBotMemoryParams({ ...base, op: "append", runId: "x", turn: -1, messages: [] }),
     ).toThrow();
+  });
+
+  test("a bot a runner asks for has a name and an instruction within the limits of settings", () => {
+    const made = { replyId: "r1", name: " Scout ", instruction: " You research. ", avatar: "🔭" };
+    expect(parseBotCreateParams(made)).toEqual({
+      replyId: "r1",
+      name: "Scout",
+      instruction: "You research.",
+      avatar: "🔭",
+    });
+    expect(parseBotCreateParams({ ...made, avatar: undefined }).avatar).toBeUndefined();
+
+    for (const bad of [
+      { ...made, name: "" },
+      { ...made, name: "x".repeat(BOT_NAME_MAX + 1) },
+      { ...made, instruction: " " },
+      { ...made, instruction: "x".repeat(BOT_INSTRUCTION_MAX + 1) },
+      { ...made, avatar: "x".repeat(BOT_AVATAR_MAX + 1) },
+      { ...made, replyId: "" },
+    ]) {
+      expect(() => parseBotCreateParams(bad)).toThrow();
+    }
   });
 });

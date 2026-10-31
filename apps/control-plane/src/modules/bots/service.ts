@@ -1,8 +1,9 @@
 import { db } from "@aven/db/client";
 import { bots, type BotRow } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
-import type { Bot } from "@aven/protocol/bots";
-import { and, desc, eq } from "drizzle-orm";
+import { BOT_LIMIT, type Bot } from "@aven/protocol/bots";
+import type { BotCreateParams } from "@aven/protocol/runtime-wire";
+import { and, count, desc, eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
@@ -31,6 +32,9 @@ const view = (row: BotRow): Bot => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
+/** What a new bot is: a name, what it is for, and an avatar if it has one. */
+export type NewBot = Omit<BotCreateParams, "replyId">;
+
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
 
 export const botsService = {
@@ -47,6 +51,17 @@ export const botsService = {
       .where(eq(bots.userId, userId))
       .orderBy(desc(bots.isMain), bots.createdAt);
     return rows.map(view);
+  },
+
+  // A bot made for the person, which answers with their default model until they pick another. A
+  // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060).
+  async create(userId: string, { name, instruction, avatar = "" }: NewBot) {
+    const [owned] = await db.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
+    if ((owned?.total ?? 0) >= BOT_LIMIT) {
+      throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
+    }
+    const [row] = await db.insert(bots).values({ userId, name, instruction, avatar }).returning();
+    return view(row!);
   },
 
   async get(userId: string, id: string) {

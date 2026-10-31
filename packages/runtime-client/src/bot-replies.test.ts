@@ -15,7 +15,7 @@ const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as co
 const message: BotReplyMessage = {
   type: "bot.reply",
   replyId: "r1",
-  bot: { id: "bot-1", name: "Pip", instruction: "" },
+  bot: { id: "bot-1", name: "Pip", instruction: "", canCreateBots: false },
   prompt: "hello",
   model,
 };

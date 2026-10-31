@@ -3,6 +3,7 @@ import { botMemoryStore, memoryStore } from "./memory-store";
 import { createBotChats } from "./modules/bots/chats";
 import { RemoteBotReplier } from "./modules/bots/remote-replier";
 import { BotRunner } from "./modules/bots/runner";
+import { botsService } from "./modules/bots/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
@@ -54,7 +55,13 @@ export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
 export const botRunner = new BotRunner({
   store: botMemoryStore,
-  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId),
+  replier: new RemoteBotReplier(
+    runtimeHub,
+    runGateway,
+    botMemoryStore,
+    botRuntimeId,
+    (userId, bot) => botsService.create(userId, bot),
+  ),
 });
 
 export const botChats = createBotChats(botRunner);

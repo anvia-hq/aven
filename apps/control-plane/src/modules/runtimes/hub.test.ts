@@ -178,7 +178,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
   describe("a bot's reply", () => {
     const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as const;
-    const info = { id: "bot-1", name: "Pip", instruction: "" };
+    const info = { id: "bot-1", name: "Pip", instruction: "", canCreateBots: false };
 
     // A runner that is connected, a reply started on it, and what the reply heard.
     const replying = async (name: string, answerMemory = async (): Promise<unknown> => null) => {
@@ -201,6 +201,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           end: (error) => heard.ended.push(error),
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
+          create: async (params) => (asked.push(params), { id: "bot-2", name: params.name }),
         },
       );
       return { ws, received, connection, heard, asked, runtime };
@@ -250,6 +251,25 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect(unknown.ok).toBe(false);
       const clearing = await ask(ws, received, "bot.memory", { replyId: "reply-1", op: "clear" });
       expect(clearing.ok).toBe(false);
+      expect(asked).toHaveLength(1);
+    });
+
+    test("a bot made by the runner is made for the live reply only, and with a name and an instruction", async () => {
+      const { ws, received, asked } = await replying("bot-create");
+      const made = { replyId: "reply-1", name: "Scout", instruction: "You research." };
+
+      expect(await ask(ws, received, "bot.create", made)).toMatchObject({
+        ok: true,
+        result: { id: "bot-2", name: "Scout" },
+      });
+      expect(asked).toEqual([made]);
+
+      const unknown = await ask(ws, received, "bot.create", { ...made, replyId: "other" });
+      expect(unknown.ok).toBe(false);
+      const nameless = await ask(ws, received, "bot.create", { ...made, name: "  " });
+      expect(nameless.ok).toBe(false);
+      const empty = await ask(ws, received, "bot.create", { ...made, instruction: "" });
+      expect(empty.ok).toBe(false);
       expect(asked).toHaveLength(1);
     });
 

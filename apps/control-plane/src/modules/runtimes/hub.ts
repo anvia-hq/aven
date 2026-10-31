@@ -2,6 +2,8 @@ import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
+  BotCreated,
+  BotCreateParams,
   BotMemoryParams,
   BotReplyInfo,
   CallMethod,
@@ -46,6 +48,8 @@ export type BotReplySink = {
   lost(error: Error): void;
   /** Answers the runner's calls about the bot's conversation, for this reply's bot. */
   memory(params: BotMemoryParams): Promise<unknown>;
+  /** Makes a bot for this reply's person, if the reply's bot may (decision 0060). */
+  create(params: BotCreateParams): Promise<BotCreated>;
 };
 
 type Run = {

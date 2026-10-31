@@ -54,6 +54,7 @@ export function loopbackReplier(options: {
             name: bot.name,
             instruction: bot.instruction,
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
+            canCreateBots: false,
           },
           prompt,
           model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },

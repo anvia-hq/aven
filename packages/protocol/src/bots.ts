@@ -4,6 +4,8 @@
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
 export const BOT_AVATAR_MAX = 16;
+// How many bots a person may have, so a bot that makes bots cannot go on making them (decision 0060).
+export const BOT_LIMIT = 20;
 export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;
 
 export type Bot = {
