@@ -64,10 +64,11 @@ export const ThreadMessage = memo(function ThreadMessage({
   streaming?: boolean;
 }) {
   if (message.role === "user") {
-    const shipRequest = shipRequestOf(
-      message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
-    );
-    if (shipRequest !== null) return <ShipRequestCard prompt={shipRequest} />;
+    const isShipRequest =
+      shipRequestOf(
+        message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+      ) !== null;
+    if (isShipRequest) return <ShipRequestCard />;
     const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
       <div className="ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
