@@ -6,6 +6,7 @@ import {
   ownedByResponsesApi,
   withAnthropicReasoning,
   withOwnReasoning,
+  withResponsesToolCallIds,
 } from "./own-reasoning";
 import { scriptedModel } from "./testing/scripted-model";
 
@@ -78,5 +79,55 @@ describe("reasoning a provider takes back", () => {
       { role: "user", content: "Again" },
       assistant(reasoning("thinking_2"), { type: "text", text: "On it." }),
     ]);
+  });
+});
+
+describe("tool calls a provider takes back", () => {
+  const call = (toolCallId: string, extra: { callId?: string } = {}): AssistantContentPart => ({
+    type: "tool-call",
+    toolCallId,
+    toolName: "send_message",
+    input: { text: "hi" },
+    ...extra,
+  });
+  const ids = (history: Message[]) =>
+    history.flatMap((message) =>
+      message.role === "assistant" && typeof message.content !== "string"
+        ? message.content.flatMap((part) =>
+            part.type === "tool-call" ? [{ id: part.toolCallId, callId: part.callId }] : [],
+          )
+        : [],
+    );
+
+  test("a call another provider issued gets an id the Responses API takes, and keeps its own as the call id the result is matched by", async () => {
+    const asked = await seen(
+      [assistant(call("toolu_014fPacb")), assistant(call("call_send_message_ab12"))],
+      withResponsesToolCallIds,
+    );
+    expect(ids(asked)).toEqual([
+      { id: "fc_toolu_014fPacb", callId: "toolu_014fPacb" },
+      { id: "fc_call_send_message_ab12", callId: "call_send_message_ab12" },
+    ]);
+  });
+
+  test("a call the Responses API issued is left as it is", async () => {
+    const own = assistant(call("fc_0abc", { callId: "call_xyz" }));
+    expect(ids(await seen([own], withResponsesToolCallIds))).toEqual([
+      { id: "fc_0abc", callId: "call_xyz" },
+    ]);
+  });
+
+  test("a call that already has a call id keeps it", async () => {
+    const asked = await seen(
+      [assistant(call("toolu_1", { callId: "call_9" }))],
+      withResponsesToolCallIds,
+    );
+    expect(ids(asked)).toEqual([{ id: "fc_toolu_1", callId: "call_9" }]);
+  });
+
+  test("the stored history is not changed", async () => {
+    const stored = [assistant(call("toolu_1"))];
+    await seen(stored, withResponsesToolCallIds);
+    expect(ids(stored)).toEqual([{ id: "toolu_1", callId: undefined }]);
   });
 });

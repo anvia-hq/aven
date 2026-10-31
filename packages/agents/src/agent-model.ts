@@ -1,7 +1,12 @@
 import { createSummaryMemoryCompactor, type CompletionModel } from "@anvia/core";
 
 import { azureApiFor, createModel, providerOptionsFor, type ModelConfig } from "./model";
-import { ownedByResponsesApi, withAnthropicReasoning, withOwnReasoning } from "./own-reasoning";
+import {
+  ownedByResponsesApi,
+  withAnthropicReasoning,
+  withOwnReasoning,
+  withResponsesToolCallIds,
+} from "./own-reasoning";
 
 /** Where an agent's model comes from: a provider's config to build it from, or a model already built. */
 export type ModelSource = ModelConfig | { model: CompletionModel };
@@ -34,13 +39,14 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
   };
 }
 
-// What an agent's earlier runs left may be another provider's reasoning, which this one rejects.
+// What an agent's earlier runs left may be another provider's reasoning, or tool calls it issued,
+// which this one rejects.
 function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
   if (config.provider === "anthropic") return withAnthropicReasoning(model);
   const responses =
     config.provider === "openai" ||
     (config.provider === "azure" && azureApiFor(config.modelId ?? "") === "responses");
-  return responses ? withOwnReasoning(model, ownedByResponsesApi) : model;
+  return responses ? withResponsesToolCallIds(withOwnReasoning(model, ownedByResponsesApi)) : model;
 }
 
 // A ready model carries no provider settings; a model config also picks the provider's options

@@ -25,6 +25,70 @@ describe("resolveAgentModel", () => {
   });
 });
 
+describe("history from another provider, sent to the Responses API", () => {
+  // What OpenAI is sent for a chat that began on Claude: its tool call is `toolu_…`, which the
+  // Responses API refused with `Invalid 'input[1].id'. Expected an ID that begins with 'fc'`.
+  test("a tool call another provider issued is sent with an id the API takes, matched to its result", async () => {
+    const bodies: { input: Record<string, unknown>[] }[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push((await request.json()) as { input: Record<string, unknown>[] });
+        return Response.json({ error: { message: "stop here" } }, { status: 400 });
+      },
+    });
+    try {
+      const { model } = resolveAgentModel({
+        provider: "openai",
+        apiKey: "k",
+        modelId: "gpt-5",
+        baseUrl: `http://localhost:${server.port}/v1`,
+      });
+      await model
+        .completion({
+          chatHistory: [
+            { role: "user", content: "hello" },
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId: "toolu_014fPacb",
+                  toolName: "send_message",
+                  input: { text: "hi" },
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolCallId: "toolu_014fPacb",
+                  toolName: "send_message",
+                  output: { type: "json", value: { sent: true } },
+                },
+              ],
+            },
+            { role: "user", content: "what tools do you have?" },
+          ],
+          documents: [],
+          tools: [],
+        })
+        .catch(() => undefined);
+    } finally {
+      await server.stop(true);
+    }
+
+    const items = bodies[0]!.input;
+    const sentCall = items.find((item) => item.type === "function_call")!;
+    const sentResult = items.find((item) => item.type === "function_call_output")!;
+    expect(String(sentCall.id)).toMatch(/^fc/);
+    expect(sentCall.call_id).toBe("toolu_014fPacb");
+    expect(sentResult.call_id).toBe(sentCall.call_id);
+  });
+});
+
 describe("compactionFor", () => {
   test("summarizes at 70% of the model's context window", () => {
     const source = { provider: "openai", apiKey: "k", contextWindow: 100_000 } as const;
