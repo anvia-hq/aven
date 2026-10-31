@@ -71,7 +71,7 @@ export const ThreadMessage = memo(function ThreadMessage({
     if (isShipRequest) return <ShipRequestCard />;
     const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
-      <div className="ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
+      <div className="my-3 ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
         {message.attachments?.length ? (
           <SentAttachments threadId={threadId} attachments={message.attachments} />
         ) : null}
