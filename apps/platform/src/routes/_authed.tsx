@@ -78,6 +78,9 @@ function AuthedLayout() {
         >
           <AvenMark className="w-5" />
         </Link>
+        <div className="mt-auto mb-1">
+          <ThemeSelector />
+        </div>
       </aside>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
           border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
@@ -102,7 +105,6 @@ function AuthedLayout() {
                 <UserCard name={user.name} onSignOut={signOut} />
               </div>
               <div className="flex shrink-0 items-center group-data-[collapsible=icon]:flex-col">
-                <ThemeSelector />
                 <Button
                   variant="ghost"
                   size="icon-sm"
