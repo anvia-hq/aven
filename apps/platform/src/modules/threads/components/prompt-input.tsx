@@ -25,10 +25,10 @@ import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { mentionOf } from "../mentions";
 import type { OutgoingMessage, RunSelection } from "../types";
-import { PendingAttachments } from "./attachment-list";
 import { MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { ModelMenu } from "./model-menu";
+import { PendingAttachments } from "./pending-attachments";
 
 type Props = {
   // Resolves to whether the message was taken; the text and files are only cleared when it was.

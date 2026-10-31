@@ -6,10 +6,10 @@ import { Markdown } from "@/components/markdown";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
 import type { ChatMessage, MessagePart, ToolImage, ToolPart } from "../types";
-import { SentAttachments } from "./attachment-list";
 import { ImageBlock } from "./image-block";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
+import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { ToolGroup } from "./tool-group";
 
