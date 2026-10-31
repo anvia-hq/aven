@@ -1,4 +1,4 @@
-import { Folder, GitDiff, LayoutDashboard, Monitor } from "@mynaui/icons-react";
+import { Folder, GitDiff, Monitor, PanelRight } from "@mynaui/icons-react";
 import type { ComponentType } from "react";
 
 import { Button } from "@/components/button";
@@ -13,7 +13,7 @@ type Props = {
 
 export function ThreadHeader({ thread, panels }: Props) {
   const toggles = [
-    { label: "Overview", icon: LayoutDashboard, panel: panels.overview },
+    { label: "Overview", icon: PanelRight, panel: panels.overview },
     { label: "Desktop", icon: Monitor, panel: panels.desktop },
     { label: "Changes", icon: GitDiff, panel: panels.diff },
     { label: "Files", icon: Folder, panel: panels.files },
