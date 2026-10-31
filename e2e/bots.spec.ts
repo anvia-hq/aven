@@ -108,6 +108,68 @@ test.describe("bots", () => {
     });
   });
 
+  // The person mentions a bot with `@`, and the main bot writes to it and tells what it said
+  // (decision 0063): the exchange is in the other bot's own chat.
+  test("the person mentions a bot and the main bot asks it and tells what it said", async ({
+    page,
+  }) => {
+    // Two replies on the main bot, one on the other, each waiting out its typing pauses.
+    test.slow();
+    await registerUser(page, "bot-mention", "Mention Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const message = page.getByRole("textbox", { name: "Message" });
+    await message.fill("make a bot for research");
+    await message.press("Enter");
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+
+    // `@` offers the person's other bots, and not the one written to.
+    await message.click();
+    await page.keyboard.type("Ask @Sco");
+    const menu = page.getByRole("listbox", { name: "Mention" });
+    await expect(menu.getByRole("option", { name: /Scout/ })).toBeVisible();
+    await expect(menu.getByRole("option", { name: /Aven/ })).toHaveCount(0);
+    await page.keyboard.press("Enter");
+    await expect(message.locator('[data-mention="bot"]')).toHaveText("Scout");
+    await page.keyboard.type(" to do A, B and C");
+    await page.keyboard.press("Enter");
+
+    // What was sent shows the bot as a chip, and the main bot says what Scout answered.
+    const sent = page
+      .locator('[data-slot="bubble-content"]')
+      .filter({ hasText: "to do A, B and C" });
+    await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
+    await expect(bubble(page, "Scout answered")).toBeVisible();
+    await expect(message).toHaveText("");
+
+    // The other bot's own chat has the message as the main bot's, and its answer.
+    await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(page.getByText("from Aven")).toBeVisible();
+    await expect(bubble(page, "A, B and C")).toBeVisible();
+    await expect(bubble(page, "You said: [from bot Aven] A, B and C")).toBeVisible();
+
+    // Only the main bot writes to the others, so `@` offers nothing in this chat.
+    await page.getByRole("textbox", { name: "Message" }).click();
+    await page.keyboard.type("@Av");
+    await expect(page.getByRole("listbox", { name: "Mention" })).toHaveCount(0);
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Backspace");
+
+    // It is the chat's, so it is there after a reload, with who it is from.
+    await page.reload();
+    await expect(page.getByText("from Aven")).toBeVisible();
+    await expect(bubble(page, "Hey there!")).toBeVisible();
+  });
+
   // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
   test("a bot renames itself and writes its own description when asked", async ({ page }) => {
     // Three replies, each waiting out its typing pauses.
@@ -133,8 +195,8 @@ test.describe("bots", () => {
     await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
     await expect(page.getByText("Keeps you company.")).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Message" })).toHaveAttribute(
-      "placeholder",
+    await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
+      "data-placeholder",
       "Message Pip",
     );
 
@@ -186,8 +248,8 @@ test.describe("bots", () => {
 
     await expect(page.getByText("Bot saved")).toBeVisible();
     await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Message" })).toHaveAttribute(
-      "placeholder",
+    await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
+      "data-placeholder",
       "Message Pip",
     );
 

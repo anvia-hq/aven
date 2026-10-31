@@ -1,19 +1,20 @@
 import { cn } from "cn";
 
-import { Bubble, BubbleContent } from "@/components/bubble";
-import { Markdown } from "@/components/markdown";
-import { Message, MessageContent } from "@/components/message";
+import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { useBotChat } from "../hooks/use-bot-chat";
+import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 import { BotComposer } from "./bot-composer";
+import { BotChatBubble, isPersons, speakerOf } from "./bot-chat-bubble";
 
 // A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
 // from the bot arrive one after another, each as the bot sends it, close together; a change of
 // speaker leaves more room.
 export function BotChat({ bot }: { bot: Bot }) {
   const { messages, typing, error, send } = useBotChat(bot.id);
+  const { bots } = useBots();
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
 
   return (
@@ -28,29 +29,18 @@ export function BotChat({ bot }: { bot: Bot }) {
                 Say hello to {bot.name}.
               </p>
             )}
-            {messages.map((message, index) => {
-              const mine = message.role === "user";
-              const sameSpeaker = messages[index - 1]?.role === message.role;
-              return (
-                <Message
-                  key={message.id}
-                  align={mine ? "end" : "start"}
-                  className={cn(index > 0 && (sameSpeaker ? "mt-1.5" : "mt-5"))}
-                >
-                  <MessageContent>
-                    <Bubble variant={mine ? "tinted" : "muted"} align={mine ? "end" : "start"}>
-                      <BubbleContent className="rounded-2xl">
-                        {mine ? (
-                          <span className="whitespace-pre-wrap">{message.text}</span>
-                        ) : (
-                          <Markdown>{message.text}</Markdown>
-                        )}
-                      </BubbleContent>
-                    </Bubble>
-                  </MessageContent>
-                </Message>
-              );
-            })}
+            {messages.map((message, index) => (
+              <Message
+                key={message.id}
+                align={isPersons(message) ? "end" : "start"}
+                className={cn(
+                  index > 0 &&
+                    (speakerOf(messages[index - 1]!) === speakerOf(message) ? "mt-1.5" : "mt-5"),
+                )}
+              >
+                <BotChatBubble message={message} bots={bots} />
+              </Message>
+            ))}
             {typing && <TypingIndicator name={bot.name} />}
             {error && (
               <p
@@ -64,7 +54,12 @@ export function BotChat({ bot }: { bot: Bot }) {
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
-            <BotComposer onSend={send} placeholder={`Message ${bot.name}`} />
+            <BotComposer
+              botId={bot.id}
+              main={bot.isMain}
+              onSend={send}
+              placeholder={`Message ${bot.name}`}
+            />
           </div>
         </div>
       </div>

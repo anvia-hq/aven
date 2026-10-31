@@ -51,6 +51,7 @@ const updateSelf = (id: string) => ({
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
   update_self: "I am Pip now",
+  message_bot: "Scout answered",
 };
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string } }[] };
@@ -58,6 +59,13 @@ type Turn = ChatMessage & { tool_calls?: { function: { name: string } }[] };
 const calledTool = (message: Turn | undefined, name: string) =>
   message?.tool_calls?.some((call) => call.function.name === name) ?? false;
 
+const messageBot = (id: string, bot: string) => ({
+  id,
+  type: "function",
+  function: { name: "message_bot", arguments: JSON.stringify({ bot, text: "A, B and C" }) },
+});
+
+const askedABot = (message: Turn) => calledTool(message, "message_bot");
 const madeABot = (message: Turn) => calledTool(message, "create_bot");
 const changedItself = (message: Turn) => calledTool(message, "update_self");
 
@@ -83,6 +91,14 @@ Bun.serve({
     // Asked for a bot, the main bot makes one (decision 0060) and says so once it is made.
     if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
       return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");
+    }
+    // Asked to ask a bot, the main bot writes to the first bot of its list, by the id its instructions
+    // give, as a model reads it (decision 0063).
+    if (/ask @/i.test(heard) && !body.messages.some(askedABot)) {
+      const everything = body.messages.map((message) => textOf(message.content)).join("\n");
+      const peer = /\(id: ([0-9a-f-]{36})\)/.exec(everything)?.[1];
+      if (peer)
+        return reply({ content: null, tool_calls: [messageBot("call_1", peer)] }, "tool_calls");
     }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {

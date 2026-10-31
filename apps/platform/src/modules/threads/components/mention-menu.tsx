@@ -5,10 +5,16 @@ import {
 } from "@anvia/react-ui/chat";
 import { useEffect, useRef } from "react";
 
+const NOTHING_MATCHES: Record<string, string> = {
+  file: "No file matches",
+  skill: "No skill matches",
+  bot: "No bot matches",
+};
+
 // What the menu says while it has nothing to pick.
 function emptyMenu({ loading, trigger }: ComposerTriggerState) {
   if (loading) return "Searching…";
-  return trigger.id === "file" ? "No file matches" : "No skill matches";
+  return NOTHING_MATCHES[trigger.id] ?? "Nothing matches";
 }
 
 // One choice of the menu. The arrow keys move the selection, but Anvia leaves the list where it
