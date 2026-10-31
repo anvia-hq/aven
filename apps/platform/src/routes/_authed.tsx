@@ -123,11 +123,13 @@ function AuthedLayout() {
           <SidebarFooter>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="sm"
               aria-label="Settings"
+              className="justify-start group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:p-0"
               onClick={() => navigate({ to: "/settings/profile" })}
             >
               <Cog />
+              <span className="group-data-[collapsible=icon]:hidden">Settings</span>
             </Button>
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
