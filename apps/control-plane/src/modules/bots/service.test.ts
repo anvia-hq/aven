@@ -8,6 +8,7 @@ run("botsService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");
   const { eq, inArray } = await import("drizzle-orm");
+  const { bots } = await import("@aven/db/schema/bots");
   const { providers } = await import("@aven/db/schema/providers");
   const { UnprocessableError } = await import("../../errors");
   const { botsService } = await import("./service");
@@ -103,6 +104,55 @@ run("botsService (postgres)", async () => {
       expect(await botsService.list(carol)).toHaveLength(BOT_LIMIT);
     } finally {
       await db.delete(users).where(eq(users.id, carol));
+    }
+  });
+
+  test("bots made at once still stop at the limit", async () => {
+    const dave = `u-dave-${suffix}`;
+    await db.insert(users).values({ id: dave, name: "Dave", email: `${dave}@aven.test` });
+    try {
+      await botsService.list(dave);
+      const attempts = await Promise.allSettled(
+        Array.from({ length: BOT_LIMIT + 5 }, (_, i) =>
+          botsService.create(dave, { name: `Bot ${i}`, instruction: "x" }),
+        ),
+      );
+      expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(
+        BOT_LIMIT - 1,
+      );
+      expect(await botsService.list(dave)).toHaveLength(BOT_LIMIT);
+    } finally {
+      await db.delete(users).where(eq(users.id, dave));
+    }
+  });
+
+  test("a change that is not about the model leaves it alone, even one that can no longer be checked", async () => {
+    const erin = `u-erin-${suffix}`;
+    await db.insert(users).values({ id: erin, name: "Erin", email: `${erin}@aven.test` });
+    try {
+      const [main] = await botsService.list(erin);
+      const provider = await addProvider(erin, "Erin's");
+      // An effort its model does not take, as when a model is retired: written past the checks.
+      await db
+        .update(bots)
+        .set({ providerId: provider.id, modelId: "fast-1", reasoningEffort: "no-longer-offered" })
+        .where(eq(bots.id, main!.id));
+      await expect(
+        botsService.update(erin, main!.id, { reasoningEffort: "no-longer-offered" }),
+      ).rejects.toThrow();
+
+      const renamed = await botsService.update(erin, main!.id, { name: "Pip", description: "Hi" });
+      expect(renamed).toMatchObject({
+        name: "Pip",
+        description: "Hi",
+        providerId: provider.id,
+        modelId: "fast-1",
+        reasoningEffort: "no-longer-offered",
+      });
+      // Nothing to change is not an error either.
+      expect(await botsService.update(erin, main!.id, {})).toMatchObject({ name: "Pip" });
+    } finally {
+      await db.delete(users).where(eq(users.id, erin));
     }
   });
 

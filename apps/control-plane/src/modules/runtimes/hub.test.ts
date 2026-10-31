@@ -283,6 +283,37 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect(asked).toHaveLength(1);
     });
 
+    test("what a runner adds to a bot call is dropped: the person, the bot and the powers are the reply's", async () => {
+      const { ws, received, asked } = await replying("bot-rogue");
+      const rogue = { botId: "other-bot", userId: "mallory", isMain: true, avatar: "x" };
+
+      await ask(ws, received, "bot.create", {
+        replyId: "reply-1",
+        name: "Scout",
+        instruction: "You research.",
+        ...rogue,
+      });
+      await ask(ws, received, "bot.update", { replyId: "reply-1", name: "Pip", ...rogue });
+
+      expect(asked).toEqual([
+        { replyId: "reply-1", name: "Scout", instruction: "You research." },
+        { replyId: "reply-1", name: "Pip" },
+      ]);
+    });
+
+    test("a call with a parameter that is wrong says which, so the bot can put it right", async () => {
+      const { ws, received } = await replying("bot-invalid");
+
+      const refused = await ask(ws, received, "bot.create", {
+        replyId: "reply-1",
+        name: " ",
+        instruction: "x",
+      });
+
+      expect(refused.ok).toBe(false);
+      expect(refused.error).toContain("Invalid parameters: name");
+    });
+
     test("a bot's change to itself is made for the live reply only, and is never nothing", async () => {
       const { ws, received, asked } = await replying("bot-update");
       const change = { replyId: "reply-1", description: "Looks things up." };

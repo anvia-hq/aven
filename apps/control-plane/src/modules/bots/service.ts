@@ -3,7 +3,7 @@ import { bots, type BotRow } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
 import { BOT_LIMIT, type Bot } from "@aven/protocol/bots";
 import type { BotCreateParams } from "@aven/protocol/runtime-wire";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
@@ -33,7 +33,10 @@ const view = (row: BotRow): Bot => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-/** What a new bot is: a name, what it is told to be like, and what it is for if that is said. It has no avatar: it is drawn from its id until the person picks one (decision 0062). */
+/**
+ * What a new bot is: a name, what it is told to be like, and what it is for if that is said. It has
+ * no avatar: its id draws one until the person picks one (decision 0062).
+ */
 export type NewBot = Omit<BotCreateParams, "replyId">;
 
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
@@ -55,17 +58,21 @@ export const botsService = {
   },
 
   // A bot made for the person, which answers with their default model until they pick another. A
-  // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060).
+  // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060);
+  // the lock makes calls made at once count one after another, or each would see room for one more.
   async create(userId: string, { name, instruction, description = "" }: NewBot) {
-    const [owned] = await db.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
-    if ((owned?.total ?? 0) >= BOT_LIMIT) {
-      throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
-    }
-    const [row] = await db
-      .insert(bots)
-      .values({ userId, name, instruction, description })
-      .returning();
-    return view(row!);
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`bots:${userId}`}))`);
+      const [owned] = await tx.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
+      if ((owned?.total ?? 0) >= BOT_LIMIT) {
+        throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
+      }
+      const [row] = await tx
+        .insert(bots)
+        .values({ userId, name, instruction, description })
+        .returning();
+      return view(row!);
+    });
   },
 
   async get(userId: string, id: string) {
@@ -78,18 +85,29 @@ export const botsService = {
     if (!current) return null;
 
     const { providerId, modelId, reasoningEffort, ...details } = body;
-    if (providerId) await requireOwnProvider(userId, providerId);
-    const model = modelAfter(current, { providerId, modelId, reasoningEffort });
-    await requireEffortOf(userId, model);
+    // A change that is not about the model leaves it alone: the catalog is not asked about a model
+    // nobody touched, and a model chosen at the same moment is not written over.
+    const touchesModel = [providerId, modelId, reasoningEffort].some(
+      (value) => value !== undefined,
+    );
+    const model = touchesModel
+      ? await checkedModel(userId, current, { providerId, modelId, reasoningEffort })
+      : {};
+    const changes = { ...details, ...model };
+    if (Object.values(changes).every((value) => value === undefined)) return view(current);
 
-    const [row] = await db
-      .update(bots)
-      .set({ ...details, ...model })
-      .where(ownBot(userId, id))
-      .returning();
+    const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();
     return row ? view(row) : null;
   },
 };
+
+// The model a change leads to, once its provider is the person's and its effort the model's.
+async function checkedModel(userId: string, current: BotModel, change: ModelChange) {
+  if (change.providerId) await requireOwnProvider(userId, change.providerId);
+  const model = modelAfter(current, change);
+  await requireEffortOf(userId, model);
+  return model;
+}
 
 type BotModel = Pick<BotRow, "providerId" | "modelId" | "reasoningEffort">;
 type ModelChange = Pick<UpdateBotBody, "providerId" | "modelId" | "reasoningEffort">;

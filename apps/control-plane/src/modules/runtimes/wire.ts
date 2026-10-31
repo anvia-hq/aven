@@ -245,7 +245,11 @@ const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIG
 
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
-  if (!parsed.success) throw new Error("Invalid parameters for this memory call");
+  if (!parsed.success) {
+    // Said in words, since the runner's agent reads it and must know what to change.
+    const issue = parsed.error.issues[0]!;
+    throw new Error(`Invalid parameters: ${issue.path.join(".") || "params"} ${issue.message}`);
+  }
   return parsed.data;
 }
 

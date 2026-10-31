@@ -56,28 +56,18 @@ function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   return { runId, run };
 }
 
-// A bot's conversation, for the live reply the call names: what the reply's own sink says it is.
-function answerBotMemory(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
-  const call = parseBotMemoryParams(params);
+// A call about a bot, for the live reply it names: what the reply's own sink does, and never a bot
+// or a person the runner names (decisions 0059, 0060 and 0061).
+function answerBotCall<Params extends { replyId: string }, Result>(
+  params: unknown,
+  parse: (params: unknown) => Params,
+  findBotReply: RuntimeCallContext["findBotReply"],
+  act: (reply: CallBotReply, call: Params) => Promise<Result>,
+) {
+  const call = parse(params);
   const reply = findBotReply(call.replyId);
   if (!reply) throw new Error("Unknown or finished reply");
-  return reply.memory(call);
-}
-
-// A bot made by a bot, for the live reply the call names; whether this bot may is the reply's to say.
-function answerBotCreate(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
-  const call = parseBotCreateParams(params);
-  const reply = findBotReply(call.replyId);
-  if (!reply) throw new Error("Unknown or finished reply");
-  return reply.create(call);
-}
-
-// A bot changing itself, for the live reply the call names: its bot is the reply's, never the runner's word.
-function answerBotUpdate(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
-  const call = parseBotUpdateParams(params);
-  const reply = findBotReply(call.replyId);
-  if (!reply) throw new Error("Unknown or finished reply");
-  return reply.update(call);
+  return act(reply, call);
 }
 
 // Answers what a runtime asks of the control plane: to add a turn to the transcript, which the control plane
@@ -88,9 +78,21 @@ export async function answerRuntimeCall(
   params: unknown,
   { findRun, findBotReply, store, repoAccess, skillArchive }: RuntimeCallContext,
 ) {
-  if (method === "bot.memory") return answerBotMemory(params, findBotReply);
-  if (method === "bot.create") return answerBotCreate(params, findBotReply);
-  if (method === "bot.update") return answerBotUpdate(params, findBotReply);
+  if (method === "bot.memory") {
+    return answerBotCall(params, parseBotMemoryParams, findBotReply, (reply, call) =>
+      reply.memory(call),
+    );
+  }
+  if (method === "bot.create") {
+    return answerBotCall(params, parseBotCreateParams, findBotReply, (reply, call) =>
+      reply.create(call),
+    );
+  }
+  if (method === "bot.update") {
+    return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>
+      reply.update(call),
+    );
+  }
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
   if (method === "skills.get") {

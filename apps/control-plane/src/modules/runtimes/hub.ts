@@ -2,12 +2,7 @@ import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
-  BotCreated,
-  BotCreateParams,
-  BotMemoryParams,
   BotReplyInfo,
-  BotUpdated,
-  BotUpdateParams,
   CallMethod,
   ControlPlaneToRuntime,
   RepoAccess,
@@ -20,7 +15,7 @@ import type {
 
 import { describeError, UnavailableError } from "../../errors";
 import { PendingCalls } from "./pending-calls";
-import { answerRuntimeCall } from "./runtime-calls";
+import { answerRuntimeCall, type CallBotReply } from "./runtime-calls";
 import { runtimesService } from "./service";
 import { ViewerStreams, type ViewerSink } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
@@ -40,20 +35,14 @@ export type RunSink = {
   lost(error: Error): void;
 };
 
-/** What a started bot reply reports back (decision 0059). */
-export type BotReplySink = {
+/** What a started bot reply reports back (decision 0059), and answers for its own bot (decisions 0060 and 0061). */
+export type BotReplySink = CallBotReply & {
   /** The bot sent a message. */
   say(text: string): void;
   /** The reply finished; `error` is set when the runner reports the bot's agent threw. */
   end(error?: string): void;
   /** The connection dropped before the reply ended: a reply does not wait for the runner to return. */
   lost(error: Error): void;
-  /** Answers the runner's calls about the bot's conversation, for this reply's bot. */
-  memory(params: BotMemoryParams): Promise<unknown>;
-  /** Makes a bot for this reply's person, if the reply's bot may (decision 0060). */
-  create(params: BotCreateParams): Promise<BotCreated>;
-  /** Changes this reply's own bot (decision 0061). */
-  update(params: BotUpdateParams): Promise<BotUpdated>;
 };
 
 type Run = {
