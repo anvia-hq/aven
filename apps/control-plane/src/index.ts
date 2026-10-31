@@ -1,6 +1,13 @@
 import { Elysia } from "elysia";
 
-import { runsService, runtimeHub, shipService, threadMessages } from "./composition";
+import {
+  botChats,
+  botRunner,
+  runsService,
+  runtimeHub,
+  shipService,
+  threadMessages,
+} from "./composition";
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
@@ -27,7 +34,7 @@ const app = new Elysia()
   .get("/health", () => ({ status: "ok" }))
   .use(artifactsRouter(runtimeHub))
   .use(authRouter)
-  .use(botsRouter)
+  .use(botsRouter(botChats))
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))
@@ -57,6 +64,7 @@ const localRunner = await startLocalRunner(port);
 const shutdown = async () => {
   await localRunner?.stop();
   runsService.dispose();
+  botRunner.dispose();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);

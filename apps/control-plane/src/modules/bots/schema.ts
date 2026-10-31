@@ -11,3 +11,7 @@ export const updateBotBody = z.object({
 });
 
 export type UpdateBotBody = z.infer<typeof updateBotBody>;
+
+export const sendBotMessageBody = z.object({ text: z.string().trim().min(1).max(4000) });
+
+export type SendBotMessageBody = z.infer<typeof sendBotMessageBody>;

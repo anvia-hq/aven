@@ -17,3 +17,29 @@ export type Bot = {
   createdAt: string;
   updatedAt: string;
 };
+
+/** One message of a bot's chat: the person's, or one the bot sent. */
+export type BotChatMessage = { id: string; role: "user" | "bot"; text: string };
+
+/** What a client hears about a bot's chat (decision 0058): not a `RunEvent`, which would join several messages into one. */
+export type BotEvent =
+  /** The whole chat, sent when a client connects. `typing` is whether the bot is at work on a reply. */
+  | { type: "snapshot"; messages: BotChatMessage[]; typing: boolean }
+  | { type: "message"; message: BotChatMessage }
+  | { type: "typing"; typing: boolean }
+  | { type: "error"; message: string };
+
+/** The id of the message at `index` in a chat; a snapshot and the live events agree on it. */
+export const botMessageId = (index: number) => `m-${index}`;
+
+/** The chat after one more event. */
+export function applyBotEvent(messages: BotChatMessage[], event: BotEvent): BotChatMessage[] {
+  if (event.type === "snapshot") return event.messages;
+  if (event.type === "message") return [...messages, event.message];
+  return messages;
+}
+
+/** Whether the bot is typing after one more event. */
+export function isTyping(previous: boolean, event: BotEvent) {
+  return event.type === "snapshot" || event.type === "typing" ? event.typing : previous;
+}

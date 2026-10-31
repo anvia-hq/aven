@@ -1,5 +1,7 @@
 import { describeError } from "./errors";
-import { memoryStore } from "./memory-store";
+import { botMemoryStore, memoryStore } from "./memory-store";
+import { createBotChats } from "./modules/bots/chats";
+import { BotRunner } from "./modules/bots/runner";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
@@ -43,3 +45,7 @@ export const runsService = new RunManager({
 export const threadMessages = createThreadMessages(runsService);
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.send });
+
+export const botRunner = new BotRunner({ store: botMemoryStore });
+
+export const botChats = createBotChats(botRunner);
