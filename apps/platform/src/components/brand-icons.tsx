@@ -1,10 +1,10 @@
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
 // Brand marks from Lobe Icons (MIT, https://github.com/lobehub/lobe-icons), the static SVGs copied
-// in as components: one colour that follows the text colour, sized by the caller. They are logos,
-// so they are not in the mynaui set.
+// in as components, sized by the caller. The plain ones are one colour that follows the text colour;
+// the Claude and Azure ones keep their own colours. They are logos, so they are not in the mynaui set.
 
 export function GithubMark(props: IconProps) {
   return (
@@ -22,26 +22,76 @@ export function OpenAiMark(props: IconProps) {
   );
 }
 
-export function AnthropicMark(props: IconProps) {
+export function ClaudeColorMark(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" aria-hidden {...props}>
-      <path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" />
+    <svg viewBox="0 0 24 24" fillRule="nonzero" aria-hidden {...props}>
+      <path
+        fill="#D97757"
+        d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"
+      />
     </svg>
   );
 }
 
-export function AzureMark(props: IconProps) {
+export function AzureColorMark(props: IconProps) {
+  // Gradients are found by id, and two logos on a page must not share one.
+  const id = useId().replace(/:/g, "");
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" aria-hidden {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden {...props}>
       <path
-        fillOpacity=".75"
+        fill={`url(#${id}-0)`}
+        d="M7.242 1.613A1.11 1.11 0 018.295.857h6.977L8.03 22.316a1.11 1.11 0 01-1.052.755h-5.43a1.11 1.11 0 01-1.053-1.466L7.242 1.613z"
+      />
+      <path
+        fill="#0078D4"
         d="M18.397 15.296H7.4a.51.51 0 00-.347.882l7.066 6.595c.206.192.477.298.758.298h6.226l-2.706-7.775z"
       />
       <path
-        fillOpacity=".5"
-        d="M8.295.857c-.477 0-.9.304-1.053.756L.495 21.605a1.11 1.11 0 001.052 1.466h5.43c.477 0 .9-.304 1.053-.755l1.341-3.975-2.318-2.163a.51.51 0 01.347-.882h3L15.271.857H8.295z"
+        fill={`url(#${id}-1)`}
+        d="M15.272.857H7.497L0 23.071h7.775l1.596-4.73 5.068 4.73h6.665l-2.707-7.775h-7.998L15.272.857z"
       />
-      <path d="M17.193 1.613a1.11 1.11 0 00-1.052-.756h-7.81.035c.477 0 .9.304 1.052.756l6.748 19.992a1.11 1.11 0 01-1.052 1.466h-.12 7.895a1.11 1.11 0 001.052-1.466L17.193 1.613z" />
+      <path
+        fill={`url(#${id}-2)`}
+        d="M17.193 1.613a1.11 1.11 0 00-1.052-.756h-7.81.035c.477 0 .9.304 1.052.756l6.748 19.992a1.11 1.11 0 01-1.052 1.466h-.12 7.895a1.11 1.11 0 001.052-1.466L17.193 1.613z"
+      />
+      <defs>
+        <linearGradient
+          id={`${id}-0`}
+          gradientUnits="userSpaceOnUse"
+          x1="8.247"
+          x2="1.002"
+          y1="1.626"
+          y2="23.03"
+        >
+          <stop stopColor="#114A8B" />
+          <stop offset="1" stopColor="#0669BC" />
+        </linearGradient>
+        <linearGradient
+          id={`${id}-1`}
+          gradientUnits="userSpaceOnUse"
+          x1="14.042"
+          x2="12.324"
+          y1="15.302"
+          y2="15.888"
+        >
+          <stop stopOpacity=".3" />
+          <stop offset=".071" stopOpacity=".2" />
+          <stop offset=".321" stopOpacity=".1" />
+          <stop offset=".623" stopOpacity=".05" />
+          <stop offset="1" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient
+          id={`${id}-2`}
+          gradientUnits="userSpaceOnUse"
+          x1="12.841"
+          x2="20.793"
+          y1="1.626"
+          y2="22.814"
+        >
+          <stop stopColor="#3CCBF4" />
+          <stop offset="1" stopColor="#2892DF" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
