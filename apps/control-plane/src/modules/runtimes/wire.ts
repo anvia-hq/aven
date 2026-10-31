@@ -36,6 +36,23 @@ const toolImage = z.object({
 
 // The events a runtime's agent projects. Anything else (a snapshot, `done`) is the control plane's
 // to send, so a runtime cannot forge a client's view of the conversation beyond its own run.
+// What a subagent's tool call shows: the call and what it acts on, no output.
+const subagentTool = z.object({
+  id: z.string(),
+  name: z.string(),
+  target: z.string(),
+  status: z.enum(["running", "done", "error"]),
+});
+
+const subagentPart = z.object({
+  index: z.number().int().nonnegative(),
+  description: z.string(),
+  type: z.string(),
+  status: z.enum(["running", "done", "error"]),
+  tools: z.array(subagentTool),
+  output: z.string().optional(),
+});
+
 const toolPart = z.object({
   id: z.string(),
   name: z.string(),
@@ -54,6 +71,7 @@ const toolPart = z.object({
     )
     .optional(),
   image: toolImage.optional(),
+  subagents: z.array(subagentPart).optional(),
 });
 
 const tokenCount = z.number().int().nonnegative();
@@ -68,6 +86,23 @@ const runEvent = z.discriminatedUnion("type", [
     status: z.enum(["done", "error"]),
     output: z.string().optional(),
     image: toolImage.optional(),
+  }),
+  z.object({
+    type: z.literal("subagent"),
+    index: z.number().int().nonnegative(),
+    event: z.discriminatedUnion("type", [
+      z.object({ type: z.literal("tool_start"), tool: subagentTool }),
+      z.object({
+        type: z.literal("tool_end"),
+        id: z.string(),
+        status: z.enum(["done", "error"]),
+      }),
+      z.object({
+        type: z.literal("end"),
+        status: z.enum(["done", "error"]),
+        output: z.string().optional(),
+      }),
+    ]),
   }),
   z.object({
     type: z.literal("usage"),

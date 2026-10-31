@@ -215,6 +215,10 @@ export function createRunDriver(context: DriverContext) {
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
+    // Events reach the control plane as the journal records them.
+    const forward: Emit = (event: RunEvent, source) =>
+      report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source);
+
     return {
       runId,
       thread,
@@ -240,6 +244,8 @@ export function createRunDriver(context: DriverContext) {
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+            // A subagent is not in the journal, so what it does is sent as it happens.
+            emit: (event) => forward(event),
             // Nobody is there to answer a subagent, and it is not journaled: its agent id only
             // has to be its own.
             createSubagent: ({ type, id: subagentId, tools }) =>
@@ -260,9 +266,7 @@ export function createRunDriver(context: DriverContext) {
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
       },
-      // Events reach the control plane as the journal records them.
-      forward: (event: RunEvent, source) =>
-        report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source),
+      forward,
       // The transcript the control plane keeps, filed as each part of the run ends.
       async file(messages) {
         if (messages.length === 0) return;

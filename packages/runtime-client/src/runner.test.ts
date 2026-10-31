@@ -1144,6 +1144,126 @@ describe("startRuntime runs", () => {
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
   });
 
+  test("an agent hands tasks to subagents that work at the same time, and the control plane hears them", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    // Neither subagent finishes before both have started: they run beside each other, not in turn.
+    const started = Promise.withResolvers<void>();
+    let working = 0;
+    const together = async () => {
+      if (++working === 2) started.resolve();
+      await started.promise;
+      return [text("found it")];
+    };
+    const scripts: Record<string, ScriptStep[]> = {
+      "run-run-1": [
+        [
+          {
+            type: "tool-call",
+            toolCallId: "s1",
+            toolName: "spawn_agent",
+            input: {
+              tasks: [
+                { description: "Find auth", prompt: "where is auth", type: "explore" },
+                { description: "Write a test", prompt: "test it", type: "general" },
+              ],
+            },
+          },
+        ],
+        [text("Both are done.")],
+      ],
+      "run-run-1-subagent-explore-0": [together],
+      "run-run-1-subagent-general-1": [together],
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools, role }) => ({
+        agent: new Agent({
+          id,
+          instructions: role ? `subagent ${role}` : "x",
+          tools: [...tools],
+          model: scriptedModel(scripts[id] ?? []),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+    const events = plane.received.flatMap((m) => (m.type === "run.event" ? [m.event] : []));
+    expect(events.filter((event) => event.type === "subagent")).toEqual([
+      { type: "subagent", index: 0, event: { type: "end", status: "done", output: "found it" } },
+      { type: "subagent", index: 1, event: { type: "end", status: "done", output: "found it" } },
+    ]);
+    const spawn = events.find((event) => event.type === "tool_start");
+    expect(spawn).toMatchObject({
+      tool: { name: "spawn_agent", target: "2 tasks", subagents: [{ index: 0 }, { index: 1 }] },
+    });
+    expect(events.find((event) => event.type === "tool_end")).toMatchObject({
+      id: "s1",
+      status: "done",
+      output: "2 finished",
+    });
+  });
+
+  test("a cancel reaches the subagents, which stop what they were doing", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const waiting = Promise.withResolvers<void>();
+    let stopped = false;
+    // Holds the subagent until it is told to stop; a signal that never came would hang this test.
+    const wait = createTool({
+      name: "wait",
+      description: "Waits.",
+      inputSchema: z.object({}),
+      execute: async (_input, context) => {
+        waiting.resolve();
+        await new Promise<void>((resolve) =>
+          context?.abortSignal?.addEventListener("abort", () => resolve(), { once: true }),
+        );
+        stopped = true;
+        return "stopped";
+      },
+    });
+    const scripts: Record<string, ScriptStep[]> = {
+      "run-run-1": [
+        [
+          {
+            type: "tool-call",
+            toolCallId: "s1",
+            toolName: "spawn_agent",
+            input: { tasks: [{ description: "Wait", prompt: "wait", type: "general" }] },
+          },
+        ],
+        [text("never")],
+      ],
+      "run-run-1-subagent-general-0": [
+        [{ type: "tool-call", toolCallId: "w1", toolName: "wait", input: {} }],
+        [text("never")],
+      ],
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools, role }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: role ? [...tools, wait] : [...tools],
+          model: scriptedModel(scripts[id] ?? []),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await waiting.promise;
+
+    plane.send({ type: "run.cancel", runId: "run-1", reason: "Cancelled by user" });
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
+    await until(() => stopped);
+  });
+
   test("a goal from a run that failed to file its transcript is not started by the next run", async () => {
     const { sandbox, up } = slowSandbox();
     up();

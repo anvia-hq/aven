@@ -127,7 +127,7 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
   return tool;
 }
 
-function clip(text: string) {
+export function clip(text: string) {
   return text.length > MAX_UI_OUTPUT_CHARS
     ? `${text.slice(0, MAX_UI_OUTPUT_CHARS)}\n… [truncated]`
     : text;

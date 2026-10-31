@@ -42,7 +42,10 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
  * and what its model calls used, which count toward the thread but not toward its context. Its
  * text, and what its tools returned, are its own: the agent gets them in the call's result.
  */
-export function projectSubagentEvent(event: AgentStreamEvent, index: number): RunEvent | undefined {
+export function projectSubagentEvent(
+  event: AgentStreamEvent<unknown, unknown>,
+  index: number,
+): RunEvent | undefined {
   switch (event.type) {
     case "tool_call": {
       const { id, name, target, status } = projectToolCall(event.toolCall);

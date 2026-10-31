@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type { RunEvent } from "@aven/protocol/events";
+
 import { parseRuntimeFrame } from "./wire";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
@@ -34,6 +36,49 @@ describe("run events from a runtime", () => {
     ).toBeNull();
     expect(
       parseRuntimeFrame(frame({ type: "context", usedTokens: 1, contextWindow: 0 })),
+    ).toBeNull();
+  });
+
+  test("a subagent's activity is accepted, and a spawn_agent tool part keeps its subagents", () => {
+    const tool = { id: "t1", name: "read_file", target: "a.ts", status: "running" } as const;
+    const events: RunEvent[] = [
+      { type: "subagent", index: 2, event: { type: "tool_start", tool } },
+      { type: "subagent", index: 2, event: { type: "tool_end", id: "t1", status: "done" } },
+      { type: "subagent", index: 2, event: { type: "end", status: "error", output: "no model" } },
+      {
+        type: "tool_start",
+        tool: {
+          id: "s1",
+          name: "spawn_agent",
+          target: "1 task",
+          status: "running",
+          subagents: [
+            {
+              index: 0,
+              description: "Find auth",
+              type: "explore",
+              status: "running",
+              tools: [tool],
+            },
+          ],
+        },
+      },
+    ];
+    for (const event of events)
+      expect(parseRuntimeFrame(frame(event))).toEqual({
+        type: "run.event",
+        runId: "r1",
+        seq: 1,
+        event,
+      });
+  });
+
+  test("a subagent event needs a whole number for its place in the call", () => {
+    const end = { type: "end", status: "done" };
+    expect(parseRuntimeFrame(frame({ type: "subagent", index: -1, event: end }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ type: "subagent", index: 0.5, event: end }))).toBeNull();
+    expect(
+      parseRuntimeFrame(frame({ type: "subagent", index: 0, event: { type: "text" } })),
     ).toBeNull();
   });
 

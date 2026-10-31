@@ -6,6 +6,8 @@ import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import { z } from "zod";
 
+import type { RunEvent } from "@aven/protocol/events";
+
 import { defaultCreateAgent } from "./runner";
 import { subagentRunner, type CreateSubagent } from "./subagent-runner";
 
@@ -35,7 +37,7 @@ const task = (type: "explore" | "general", prompt = "look") => ({
 describe("subagentRunner", () => {
   test("returns the last message of the subagent, which worked with its type's tools", async () => {
     const { create, made } = scripted({ "subagent-explore-0": [[text("It is in src/a.ts:3")]] });
-    const run = subagentRunner(parentTools, create);
+    const run = subagentRunner(parentTools, create, () => {});
 
     expect(await run(task("explore"), { index: 0 })).toBe("It is in src/a.ts:3");
     expect(made).toEqual([{ id: "subagent-explore-0", tools: ["read_file", "exec_command"] }]);
@@ -54,9 +56,67 @@ describe("subagentRunner", () => {
         [text("a.ts says: contents of a.ts")],
       ],
     });
-    const run = subagentRunner([readFile], create);
+    const run = subagentRunner([readFile], create, () => {});
 
     expect(await run(task("explore"), { index: 0 })).toBe("a.ts says: contents of a.ts");
+  });
+
+  test("tells what it does as it goes, and how it ended", async () => {
+    const readFile = createTool({
+      name: "read_file",
+      description: "Reads a file.",
+      inputSchema: z.object({ path: z.string() }),
+      execute: ({ path }) => `contents of ${path}`,
+    });
+    const { create } = scripted({
+      "subagent-explore-3": [
+        [{ type: "tool-call", toolCallId: "c1", toolName: "read_file", input: { path: "a.ts" } }],
+        [text("a.ts is fine")],
+      ],
+    });
+    const told: RunEvent[] = [];
+    await subagentRunner([readFile], create, (event) => told.push(event))(task("explore"), {
+      index: 3,
+    });
+
+    expect(told.filter((event) => event.type === "usage")).toHaveLength(2);
+    expect(told.filter((event) => event.type === "subagent")).toEqual([
+      {
+        type: "subagent",
+        index: 3,
+        event: {
+          type: "tool_start",
+          tool: { id: "c1", name: "read_file", target: "a.ts", status: "running" },
+        },
+      },
+      { type: "subagent", index: 3, event: { type: "tool_end", id: "c1", status: "done" } },
+      {
+        type: "subagent",
+        index: 3,
+        event: { type: "end", status: "done", output: "a.ts is fine" },
+      },
+    ]);
+  });
+
+  test("tells that it failed, and why", async () => {
+    const create: CreateSubagent = ({ tools }) =>
+      createCodingAgent({
+        model: scriptedModel([]),
+        tools,
+        webSearch: false,
+        questions: false,
+      }).agent;
+    const told: RunEvent[] = [];
+    await expect(
+      subagentRunner(parentTools, create, (event) => told.push(event))(task("general"), {
+        index: 1,
+      }),
+    ).rejects.toThrow();
+    expect(told.at(-1)).toMatchObject({
+      type: "subagent",
+      index: 1,
+      event: { type: "end", status: "error", output: expect.stringContaining("no step 1") },
+    });
   });
 
   test("a subagent that fails, or is cancelled, is an error for the call", async () => {
@@ -67,13 +127,13 @@ describe("subagentRunner", () => {
         webSearch: false,
         questions: false,
       }).agent;
-    const run = subagentRunner(parentTools, create);
+    const run = subagentRunner(parentTools, create, () => {});
     await expect(run(task("explore"), { index: 0 })).rejects.toThrow("no step 1 scripted");
 
     const controller = new AbortController();
     controller.abort(new Error("cancelled"));
     await expect(
-      subagentRunner(parentTools, scripted({}).create)(task("explore"), {
+      subagentRunner(parentTools, scripted({}).create, () => {})(task("explore"), {
         index: 0,
         abortSignal: controller.signal,
       }),
@@ -85,7 +145,7 @@ describe("subagentRunner", () => {
       "subagent-explore-0": [[text("auth lives in src/auth.ts")]],
       "subagent-general-1": [[text("added the test in src/auth.test.ts")]],
     });
-    const spawn = createSpawnAgentTool(subagentRunner(parentTools, create));
+    const spawn = createSpawnAgentTool(subagentRunner(parentTools, create, () => {}));
     let toolResult: unknown;
     const parent = createCodingAgent({
       model: scriptedModel([
