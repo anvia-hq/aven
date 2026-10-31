@@ -7,7 +7,6 @@ import type {
 } from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
 
-import { describeError, UnavailableError } from "../../errors";
 import { runnerFor, type Available } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { fileAnswer, folderAnswer, searchAnswer } from "./schema";
@@ -27,10 +26,9 @@ export function createFilesService(hub: RuntimeHub) {
     params: FilesCallParams | FilesSearchParams,
     schema: z.ZodType<T>,
   ) =>
-    // The runtime's own reason stays in the log; the client gets a fixed message.
-    runner.ask(organizationId, method, params, schema, (error) => {
-      console.warn(`The ${method} call was refused:`, describeError(error));
-      throw new UnavailableError("The files could not be read");
+    runner.ask(organizationId, method, params, schema, {
+      logged: `The ${method} call was refused:`,
+      message: "The files could not be read",
     });
 
   return {

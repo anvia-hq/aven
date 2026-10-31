@@ -1,7 +1,7 @@
 import type { DesktopInfo } from "@aven/protocol/runtime-wire";
 
-import { ConflictError, describeError, UnavailableError } from "../../errors";
-import { runnerFor, type Available } from "../runtimes/ask-runner";
+import { ConflictError, UnavailableError } from "../../errors";
+import { runnerFor, type Available, type Refusal } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { ViewerSink } from "../runtimes/viewer-streams";
 import { desktopControl, desktopInfo } from "./schema";
@@ -34,26 +34,23 @@ export type DesktopStatus = Available<{
   expiresAt?: string;
 }>;
 
-// The runtime's own reason stays in the log; the client gets a fixed message.
-const refused =
-  (what: string) =>
-  (error: unknown): never => {
-    const reason = describeError(error);
-    console.warn(`The desktop ${what} was refused:`, reason);
-    if (/locked/i.test(reason)) throw new DesktopTakenError();
-    throw new UnavailableError(`The desktop ${what} failed`);
-  };
+// A desktop held by someone else is said so; anything else is a fixed message.
+const refused = (what: string): Refusal => ({
+  logged: `The desktop ${what} was refused:`,
+  message: `The desktop ${what} failed`,
+  instead: (reason) => (/locked/i.test(reason) ? new DesktopTakenError() : undefined),
+});
 
 // Wake-up fails for a reason a person can act on only when the thread has never run.
-const wakeRefused = (error: unknown): never => {
-  const reason = describeError(error);
-  console.warn("The sandbox wake-up was refused:", reason);
-  if (/no workspace/i.test(reason)) {
-    throw new ConflictError(
-      "The thread has no workspace yet. Its sandbox starts when the agent first works on it",
-    );
-  }
-  throw new UnavailableError("The sandbox could not be started");
+const wakeRefused: Refusal = {
+  logged: "The sandbox wake-up was refused:",
+  message: "The sandbox could not be started",
+  instead: (reason) =>
+    /no workspace/i.test(reason)
+      ? new ConflictError(
+          "The thread has no workspace yet. Its sandbox starts when the agent first works on it",
+        )
+      : undefined,
 };
 
 function statusOf(info: DesktopInfo, userId: string): DesktopStatus {
