@@ -3,9 +3,10 @@ import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 
+// A thread's own page is marked in the thread list below, so Threads is active on the list only.
 const tabs = [
-  { to: "/threads", label: "Threads", icon: Chat },
-  { to: "/projects", label: "Projects", icon: Folder },
+  { to: "/threads", label: "Threads", icon: Chat, exact: true },
+  { to: "/projects", label: "Projects", icon: Folder, exact: false },
 ] as const;
 
 export function SidebarTabs() {
@@ -14,7 +15,7 @@ export function SidebarTabs() {
   return (
     <SidebarMenu className="px-2">
       {tabs.map((tab) => {
-        const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
+        const active = pathname === tab.to || (!tab.exact && pathname.startsWith(`${tab.to}/`));
         return (
           <SidebarMenuItem key={tab.to}>
             <SidebarMenuButton render={<Link to={tab.to} />} isActive={active} tooltip={tab.label}>
