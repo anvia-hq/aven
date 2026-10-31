@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sendMessageBody } from "./schema";
+import { answerQuestionBody, sendMessageBody } from "./schema";
 
 const prompt = "fix @src/app.ts with /writing-skills";
 const file = { type: "file", name: "src/app.ts", from: 4, to: 15 };
@@ -35,5 +35,26 @@ describe("a message's mentions", () => {
       mentions: [{ type: "skill", name: "Bad_Name", from: 0, to: 9 }],
     };
     expect(sendMessageBody.safeParse(slash).success).toBe(false);
+  });
+});
+
+describe("answerQuestionBody (decision 0047)", () => {
+  const answers = [{ questionId: "STRIPE_API_KEY", value: "sk_test_1234" }];
+
+  test("a secret becomes the project's unless the person says otherwise", () => {
+    expect(answerQuestionBody.parse({ answers }).secretScope).toBe("project");
+    expect(answerQuestionBody.parse({ answers, secretScope: "personal" }).secretScope).toBe(
+      "personal",
+    );
+  });
+
+  test("the workspace is not a choice, and neither is anything else", () => {
+    for (const secretScope of ["workspace", "everyone", ""]) {
+      expect(answerQuestionBody.safeParse({ answers, secretScope }).success).toBe(false);
+    }
+  });
+
+  test("a person can decline", () => {
+    expect(answerQuestionBody.parse({ answers, skipSecrets: true }).skipSecrets).toBe(true);
   });
 });

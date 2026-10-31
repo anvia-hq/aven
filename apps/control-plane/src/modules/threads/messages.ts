@@ -5,6 +5,7 @@ import { runsService } from "../runs/service";
 import { skillsService } from "../skills/service";
 import { variablesService } from "../variables/service";
 import { prepareAttachments } from "./attachments";
+import { keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 
@@ -39,7 +40,7 @@ export const threadMessages = {
     organizationId: string,
     userId: string,
     threadId: string,
-    { answers, ...selection }: AnswerQuestionBody,
+    { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
   ) {
     const thread = await threadsService.require(organizationId, threadId);
     const continuation = await threadsService.continuation(thread.id);
@@ -47,11 +48,22 @@ export const threadMessages = {
     const model = await resolveModel(userId, selection);
     const skills = await skillsService.forRun(userId);
     const github = await githubUserTokenService.forRun(userId);
+    // A request for a secret is stored here and the agent told only that it was (decision 0047),
+    // before the run's variables are read, so the run that resumes has it.
+    const kept = await keepSecretAnswers({
+      organizationId,
+      userId,
+      projectId: thread.projectId,
+      continuation,
+      answers,
+      scope: secretScope,
+      skip: skipSecrets,
+    });
     const env = await variablesService.forRun({
       organizationId,
       projectId: thread.projectId,
       userId,
     });
-    await runsService.answer(thread, continuation, answers, model, skills, github, env);
+    await runsService.answer(thread, continuation, kept, model, skills, github, env);
   },
 };

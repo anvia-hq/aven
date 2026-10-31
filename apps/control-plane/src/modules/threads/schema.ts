@@ -91,6 +91,10 @@ export const answerQuestionBody = z.object({
     )
     .min(1)
     .max(4),
+  // For a request for a secret (decision 0047): whose variable it becomes, or that the person
+  // would rather not give it. Ignored for any other question.
+  secretScope: z.enum(["project", "personal"]).default("project"),
+  skipSecrets: z.boolean().optional(),
   ...modelSelection,
 });
 
