@@ -1,4 +1,5 @@
 import { Github } from "@mynaui/icons-react";
+import type { ComponentProps } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -19,15 +20,16 @@ import { ImportRepositoryNotice } from "./import-repository-notice";
 
 type Props = {
   onImported?: (project: Project) => void;
+  variant?: ComponentProps<typeof Button>["variant"];
 };
 
-export function ImportRepositoryDialog({ onImported }: Props) {
+export function ImportRepositoryDialog({ onImported, variant }: Props) {
   const state = useImportRepository(onImported);
   const { stage } = state;
 
   return (
     <Dialog open={state.open} onOpenChange={state.handleOpenChange}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button variant={variant} />}>
         <Github /> Import repository
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">

@@ -24,9 +24,9 @@ function NewThread() {
     startThread(projectId, message, selection);
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-5 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">What should we build?</h1>
+    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-6 p-4">
+      <div className="flex flex-col gap-1.5 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">What should we build?</h1>
         <p className="text-sm text-muted-foreground">
           Start a thread inside a project. The agent reads, edits and runs code there.
         </p>
@@ -47,8 +47,8 @@ function NewThread() {
           </>
         ))}
 
-      <section aria-label="Recent threads" className="flex flex-col gap-2">
-        <h2 className="text-sm text-muted-foreground">Recent</h2>
+      <section aria-label="Recent threads" className="flex flex-col gap-1">
+        <h2 className="px-3 text-xs font-medium text-muted-foreground">Recent</h2>
         <ThreadList threads={recent} empty="No threads yet." />
       </section>
     </main>

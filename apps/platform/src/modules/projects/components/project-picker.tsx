@@ -20,7 +20,7 @@ export function ProjectPicker({ value, onChange }: Props) {
         value={value ?? ""}
         onValueChange={(next) => next && onChange(next)}
       >
-        <SelectTrigger aria-label="Project" className="w-full">
+        <SelectTrigger aria-label="Project" className="min-w-52">
           <SelectValue placeholder="Choose a project" />
         </SelectTrigger>
         <SelectContent>
@@ -31,7 +31,10 @@ export function ProjectPicker({ value, onChange }: Props) {
           ))}
         </SelectContent>
       </Select>
-      <ImportRepositoryDialog onImported={(project: Project) => onChange(project.id)} />
+      <ImportRepositoryDialog
+        variant="outline"
+        onImported={(project: Project) => onChange(project.id)}
+      />
     </div>
   );
 }

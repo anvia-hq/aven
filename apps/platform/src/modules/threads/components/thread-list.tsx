@@ -11,13 +11,13 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
   const { projects } = useProjects();
 
   return (
-    <ul className="flex flex-col divide-y overflow-hidden rounded-lg border">
+    <ul className="flex flex-col gap-0.5">
       {threads.map((thread) => (
         <li key={thread.id}>
           <Link
             to="/threads/$threadId"
             params={{ threadId: thread.id }}
-            className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
           >
             <span className="min-w-0 flex-1 truncate text-sm">{thread.title}</span>
             {thread.state !== "open" && (
@@ -29,7 +29,7 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
               <Folder className="size-3.5" />
               {projects.find((project) => project.id === thread.projectId)?.name}
             </span>
-            <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
+            <span className="shrink-0 text-right text-xs whitespace-nowrap text-muted-foreground">
               {timeAgo(thread.updatedAt, true)}
             </span>
           </Link>
