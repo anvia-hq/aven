@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { projectToolOutput } from "../projection";
+import { projectToolOutput } from "../tool-projection";
 import { createShowImageTool, MAX_IMAGE_BYTES } from "./show-image";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);

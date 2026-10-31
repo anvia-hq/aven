@@ -3,7 +3,8 @@ import {
   parseAgentContinuation,
 } from "@anvia/core/agent/interactions";
 import type { ModelConfig } from "@aven/agents/model";
-import { messagesToChat, usageFromHistory } from "@aven/agents/projection";
+import { messagesToChat } from "@aven/agents/projection";
+import { usageFromHistory } from "@aven/agents/usage";
 import {
   applyEvent,
   applyUsage,

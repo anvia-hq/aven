@@ -6,12 +6,9 @@ import type {
   Usage,
 } from "@anvia/core";
 import type { DurableEvent } from "@anvia/durable";
-import {
-  projectStreamEvent,
-  projectToolCall,
-  projectToolEnd,
-  tokenUsageOf,
-} from "@aven/agents/projection";
+import { projectStreamEvent } from "@aven/agents/projection";
+import { projectToolCall, projectToolEnd } from "@aven/agents/tool-projection";
+import { tokenUsageOf } from "@aven/agents/usage";
 import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
 

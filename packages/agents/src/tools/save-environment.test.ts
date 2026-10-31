@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { projectToolOutput } from "../projection";
+import { projectToolOutput } from "../tool-projection";
 import { createSaveEnvironmentTool } from "./save-environment";
 
 describe("save_environment", () => {

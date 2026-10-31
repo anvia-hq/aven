@@ -9,7 +9,7 @@ import {
   type DurableRun,
 } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
-import { projectToolEnd } from "@aven/agents/projection";
+import { projectToolEnd } from "@aven/agents/tool-projection";
 import type { SandboxToolName } from "@aven/agents/sandbox-tools";
 import { asRecord } from "@aven/agents/values";
 import type { RunEvent } from "@aven/protocol/events";
