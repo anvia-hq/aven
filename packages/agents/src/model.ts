@@ -4,6 +4,7 @@ import { AzureOpenAIClient } from "@anvia/azure";
 import { OpenAIClient } from "@anvia/openai";
 import type { Provider } from "@aven/protocol/runtime-wire";
 
+import { DEFAULT_MODEL_IDS } from "./model-defaults";
 import { nullFreeStream } from "./null-free-stream";
 
 export type { Provider };
@@ -32,12 +33,6 @@ export type ModelConfig = {
   /** The model's context window in tokens; without it the agent cannot report context usage. */
   contextWindow?: number;
 };
-
-// `azure` and `openai-compatible` have no default: every resource and server names its own models.
-export const DEFAULT_MODEL_IDS = {
-  openai: "gpt-5.6",
-  anthropic: "claude-sonnet-5",
-} as const satisfies Partial<Record<Provider, string>>;
 
 const contextLimitsFor = (config: ModelConfig) =>
   config.contextWindow ? { contextWindow: config.contextWindow } : undefined;

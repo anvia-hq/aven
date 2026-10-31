@@ -2,6 +2,8 @@ import { createTool } from "@anvia/core";
 import { SHOW_IMAGE_TOOL_NAME, type ToolImage } from "@aven/protocol/events";
 import { z } from "zod";
 
+import { imageType } from "../image-type";
+
 /** Larger images are refused; a chart or a screenshot is far smaller. */
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -11,25 +13,6 @@ export type ImageFiles = {
   /** Keeps a copy of the image and returns the name it is served by. */
   save(bytes: Uint8Array, mediaType: string): Promise<string>;
 };
-
-const startsWith = (bytes: Uint8Array, at: number, prefix: readonly number[]) =>
-  prefix.every((byte, index) => bytes[at + index] === byte);
-
-const ascii = (text: string) => [...text].map((char) => char.charCodeAt(0));
-
-/**
- * The type of an image, from its first bytes rather than its name; null for anything else. SVG is
- * left out on purpose: it can carry script.
- */
-export function imageType(bytes: Uint8Array) {
-  if (startsWith(bytes, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
-  if (startsWith(bytes, 0, [0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (startsWith(bytes, 0, ascii("GIF8"))) return "image/gif";
-  if (startsWith(bytes, 0, ascii("RIFF")) && startsWith(bytes, 8, ascii("WEBP"))) {
-    return "image/webp";
-  }
-  return null;
-}
 
 // Shows the user an image the agent made in its sandbox, such as a chart (decision 0033). A copy is
 // kept, so the image stays as it was when shown even if the file changes or goes.
