@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **28**: the answer to `bot.ask` names the bot that answered, `bot` (decision 0063).
 - **27**: the main bot's reply carries the person's other bots, `peers` on `bot.reply`, and a runner can have it write to one and wait for its answer, `bot.ask` (decision 0063).
 - **26**: a bot can change its own name, description and instruction, `bot.update` (decision 0061); `bot.create` can carry a `description`.
 - **25**: the bot a runner answers for says whether it may make bots, `canCreateBots` on `bot.reply`, and a runner can ask the control plane to make one, `bot.create` (decision 0060).

@@ -208,7 +208,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
           create: async (params) => (asked.push(params), { id: "bot-2", name: params.name }),
-          ask: async (params) => (asked.push(params), { replies: [`heard ${params.text}`] }),
+          ask: async (params) => (
+            asked.push(params),
+            { bot: "Scout", replies: [`heard ${params.text}`] }
+          ),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
@@ -309,7 +312,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
       expect(
         await ask(ws, received, "bot.ask", { ...message, userId: "mallory", from: "someone else" }),
-      ).toMatchObject({ ok: true, result: { replies: ["heard do A"] } });
+      ).toMatchObject({ ok: true, result: { bot: "Scout", replies: ["heard do A"] } });
       expect(asked).toEqual([message]);
 
       expect((await ask(ws, received, "bot.ask", { ...message, replyId: "other" })).ok).toBe(false);

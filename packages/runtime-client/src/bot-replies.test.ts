@@ -88,7 +88,7 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
       calls.push({ method, params });
       timeouts.push(options?.timeoutMs);
       if (method === "bot.create") return { id: "b2", name: (params as { name: string }).name };
-      if (method === "bot.ask") return { replies: ["A is done"] };
+      if (method === "bot.ask") return { bot: "Scout", replies: ["A is done"] };
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
       return memoryAnswer(params);
     },
@@ -301,7 +301,7 @@ describe("BotReplies", () => {
         computer: [],
         updateSelf: async () => ({ name: "Pip", description: "" }),
         createBot: canCreateBots ? async () => ({ id: "b2", name: "Scout" }) : undefined,
-        messageBot: canCreateBots ? async () => ({ replies: [] }) : undefined,
+        messageBot: canCreateBots ? async () => ({ bot: "Scout", replies: [] }) : undefined,
       }) as unknown as { tools: { name: string }[]; instructions: string };
 
     test("every bot can change itself and knows its own description", () => {

@@ -35,23 +35,48 @@ export type Bot = {
 };
 
 /**
- * One message of a bot's chat: the person's, or one the bot sent. A message another bot sent to
- * this one (decision 0063) is a `user` message with the sender's name in `from`.
+ * The other bot of a message between two bots (decision 0063). The chat shows these as one line
+ * that opens, not as bubbles, as the Anvia harness does.
  */
-export type BotChatMessage = { id: string; role: "user" | "bot"; text: string; from?: string };
+export type BotChatPeer = {
+  name: string;
+  /** Known when the message was sent live; a chat read back from what the bot remembers has the name only. */
+  id?: string;
+  /** `to`: this bot wrote it to the peer. `from`: the peer wrote it to this bot. */
+  direction: "to" | "from";
+};
 
-// What a bot is told when a bot, not the person, is the one who wrote to it (decision 0063): the
-// text with its sender in front, which the bot's instructions explain and the chat reads back.
+/**
+ * One message of a bot's chat: the person's, or one the bot sent. A message with a `peer` is one
+ * between this bot and another bot, not the person's: what the other asked, what this bot said back.
+ */
+export type BotChatMessage = {
+  id: string;
+  role: "user" | "bot";
+  text: string;
+  peer?: BotChatPeer;
+};
+
+// What a bot is told when someone other than the person wrote to it (decision 0063): the text
+// with its sender in front, which the bot's instructions explain and the chat reads back. A bot
+// that wrote to it is named; the app itself, to wake a bot with a task, is a note, which the chat
+// does not show.
 const FROM_BOT = /^\[from bot ([^\]\n]+)\] ([\s\S]*)$/;
+const NOTE = /^\[note\] ([\s\S]*)$/;
 
 /** The prompt a bot is given for a message another bot sent it. */
 export const botPrompt = (from: string, text: string) =>
   `[from bot ${from.replace(/[\]\n]/g, " ")}] ${text}`;
 
-/** Who sent a prompt and what it said, when it is one a bot sent; otherwise nothing is split off. */
-export function parseBotPrompt(prompt: string): { from?: string; text: string } {
-  const match = FROM_BOT.exec(prompt);
-  return match ? { from: match[1]!, text: match[2]! } : { text: prompt };
+/** The prompt a bot is given for a note from the app: not the person's, and not shown to them. */
+export const botNote = (text: string) => `[note] ${text}`;
+
+/** Who sent a prompt and what it said: a bot, the app (a note), or the person, whose text is left whole. */
+export function parseBotPrompt(prompt: string): { from?: string; note?: boolean; text: string } {
+  const bot = FROM_BOT.exec(prompt);
+  if (bot) return { from: bot[1]!, text: bot[2]! };
+  const note = NOTE.exec(prompt);
+  return note ? { note: true, text: note[1]! } : { text: prompt };
 }
 
 /** How long a bot waits for another to answer it (decision 0063), and so how long a call for that may take. */

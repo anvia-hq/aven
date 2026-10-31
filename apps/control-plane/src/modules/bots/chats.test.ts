@@ -116,10 +116,24 @@ run("createBotChats (postgres)", async () => {
       pause: () => new Promise<void>(() => undefined),
     });
 
-  test("one bot of a person writes to another and hears what it sent, which is in the other's own chat", async () => {
-    const [main] = await botsService.list(alice);
-    const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
-    const runner = runnerWith({
+  // The messages of a bot's chat as they are now, read from a runner.
+  const chatOf = async (runner: InstanceType<typeof BotRunner>, botId: string, userId: string) => {
+    const controller = new AbortController();
+    const [messages] = await Array.fromAsync(
+      (async function* () {
+        for await (const event of runner.events(botId, userId, controller.signal)) {
+          if (event?.type === "snapshot") {
+            controller.abort();
+            yield event.messages;
+          }
+        }
+      })(),
+    );
+    return messages!;
+  };
+
+  const sayingOwnName = () =>
+    runnerWith({
       store: keeping(),
       createAgent: ({ bot, deliver, memory }) =>
         createBotAgent({
@@ -136,24 +150,73 @@ run("createBotChats (postgres)", async () => {
       pause: async () => undefined,
     });
 
-    const answered = await createBotChats(runner).ask(alice, main!, scout.id, "do A");
-
-    expect(answered).toEqual({ replies: ["Scout did A"] });
-    const controller = new AbortController();
-    const [first] = await Array.fromAsync(
-      (async function* () {
-        for await (const event of runner.events(scout.id, alice, controller.signal)) {
-          if (event?.type === "snapshot") {
-            controller.abort();
-            yield event.messages;
-          }
+  test("one bot of a person writes to another and hears what it sent, and both chats have the exchange between bots", async () => {
+    const [main] = await botsService.list(alice);
+    const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
+    const runner = sayingOwnName();
+    // The asking bot is answering, so its chat is open; the exchange is added to it as it happens.
+    const asking = runner.events(main!.id, alice, new AbortController().signal);
+    await asking.next();
+    const heard: string[] = [];
+    void (async () => {
+      for await (const event of asking) {
+        if (event?.type === "message" && event.message.peer) {
+          heard.push(
+            `${event.message.role} ${event.message.peer.direction}: ${event.message.text}`,
+          );
         }
-      })(),
-    );
-    expect(first).toEqual([
-      { id: "m-0", role: "user", text: "do A", from: main!.name },
-      { id: "m-1", role: "bot", text: "Scout did A" },
+      }
+    })();
+
+    const { bot, replies } = await createBotChats(runner).ask(alice, main!, scout.id, "do A");
+    await Bun.sleep(5);
+
+    expect({ bot, replies }).toEqual({ bot: "Scout", replies: ["Scout did A"] });
+    expect(heard).toEqual(["bot to: do A", "user from: Scout did A"]);
+    // Read back from what the bot remembers, which names the other bot and has not its id.
+    expect(await chatOf(runner, scout.id, alice)).toEqual([
+      {
+        id: "m-0",
+        role: "user",
+        text: "do A",
+        peer: { name: main!.name, direction: "from" },
+      },
+      {
+        id: "m-1",
+        role: "bot",
+        text: "Scout did A",
+        peer: { name: main!.name, direction: "to" },
+      },
     ]);
+  });
+
+  test("a bot just made says hello unasked, in its own chat, with no note shown", async () => {
+    const scout = await botsService.create(alice, { name: "Hello", instruction: "You greet." });
+    const runner = runnerWith({
+      store: keeping(),
+      createAgent: ({ bot, deliver, memory }) =>
+        createBotAgent({
+          model: scriptedModel([
+            [toolCall("send_message", { text: `Hi, I am ${bot.name}` })],
+            [text("")],
+          ]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        }),
+      pause: async () => undefined,
+    });
+    const botChats = createBotChats(runner);
+
+    await botChats.greet(alice, scout.id);
+    await Bun.sleep(20);
+
+    expect(await chatOf(runner, scout.id, alice)).toEqual([
+      { id: "m-0", role: "bot", text: "Hi, I am Hello" },
+    ]);
+    await expect(botChats.greet(bob, scout.id)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test("a bot cannot write to itself, to a bot that is not its person's, or to one that is not there", async () => {

@@ -1,6 +1,12 @@
 import type { Message } from "@anvia/core";
-import { botMessageId, parseBotPrompt, type BotChatMessage } from "@aven/protocol/bots";
+import {
+  botMessageId,
+  parseBotPrompt,
+  type BotChatMessage,
+  type BotChatPeer,
+} from "@aven/protocol/bots";
 
+import { MESSAGE_BOT_TOOL_NAME, messageBotSchema } from "./tools/message-bot";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
 
 const textOf = (content: Extract<Message, { role: "user" }>["content"]) =>
@@ -8,28 +14,63 @@ const textOf = (content: Extract<Message, { role: "user" }>["content"]) =>
     ? content
     : content.map((part) => (part.type === "text" ? part.text : "")).join("");
 
-// Rebuilds a bot's chat from its stored memory: what the person said or another bot did, and each message the bot
-// sent with `send_message`. Whatever else the bot wrote or did is not part of the chat.
+type Answer = { bot?: string; replies: string[] };
+
+// What each `message_bot` call was answered with, by the call's id, read from the tool results.
+function answersOf(messages: readonly Message[]) {
+  const answers = new Map<string, Answer>();
+  for (const message of messages) {
+    if (message.role !== "tool") continue;
+    for (const part of message.content) {
+      if (part.type !== "tool-result" || part.toolName !== MESSAGE_BOT_TOOL_NAME) continue;
+      if (part.output.type !== "json") continue;
+      const { bot, replies } = part.output.value as { bot?: unknown; replies?: unknown };
+      answers.set(part.toolCallId, {
+        bot: typeof bot === "string" ? bot : undefined,
+        replies: Array.isArray(replies) ? replies.filter((each) => typeof each === "string") : [],
+      });
+    }
+  }
+  return answers;
+}
+
+// Rebuilds a bot's chat from its stored memory: what the person said, each message the bot sent
+// with `send_message`, and, between bots (decision 0063), what another bot wrote to it, what it said
+// back, and what the bot it wrote to answered. Whatever else the bot wrote or did is not part of
+// the chat, nor is a note from the app.
 export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[] {
   const chat: BotChatMessage[] = [];
-  const add = (role: BotChatMessage["role"], text: string, from?: string) =>
-    chat.push(
-      from
-        ? { id: botMessageId(chat.length), role, text, from }
-        : { id: botMessageId(chat.length), role, text },
-    );
+  const answers = answersOf(messages);
+  // Who the bot's messages go to, while it answers a bot rather than the person.
+  let replyingTo: BotChatPeer | undefined;
+  const add = (role: BotChatMessage["role"], text: string, peer?: BotChatPeer) => {
+    const message: BotChatMessage = { id: botMessageId(chat.length), role, text };
+    if (peer) message.peer = peer;
+    chat.push(message);
+  };
 
   for (const message of messages) {
     if (message.role === "user") {
-      const prompt = textOf(message.content).trim();
-      // A message another bot sent (decision 0063) is shown as that bot's, without its prefix.
-      const { from, text } = parseBotPrompt(prompt);
-      if (text) add("user", text, from);
+      const { from, note, text } = parseBotPrompt(textOf(message.content).trim());
+      replyingTo = from ? { name: from, direction: "to" } : undefined;
+      if (note || !text) continue;
+      add("user", text, from ? { name: from, direction: "from" } : undefined);
     } else if (message.role === "assistant" && typeof message.content !== "string") {
       for (const part of message.content) {
-        if (part.type !== "tool-call" || part.toolName !== SEND_MESSAGE_TOOL_NAME) continue;
-        const sent = sendMessageSchema.safeParse(part.input);
-        if (sent.success) add("bot", sent.data.text);
+        if (part.type !== "tool-call") continue;
+        if (part.toolName === SEND_MESSAGE_TOOL_NAME) {
+          const sent = sendMessageSchema.safeParse(part.input);
+          if (sent.success) add("bot", sent.data.text, replyingTo);
+        } else if (part.toolName === MESSAGE_BOT_TOOL_NAME) {
+          const asked = messageBotSchema.safeParse(part.input);
+          if (!asked.success) continue;
+          const answer = answers.get(part.toolCallId);
+          const name = answer?.bot ?? "a bot";
+          add("bot", asked.data.text, { name, id: asked.data.bot, direction: "to" });
+          for (const reply of answer?.replies ?? []) {
+            add("user", reply, { name, id: asked.data.bot, direction: "from" });
+          }
+        }
       }
     }
   }

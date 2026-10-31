@@ -4,10 +4,12 @@ import type { ModelConfig } from "@aven/agents/model";
 import {
   applyBotEvent,
   botMessageId,
+  botNote,
   botPrompt,
   isTyping,
   type Bot,
   type BotChatMessage,
+  type BotChatPeer,
   type BotEvent,
 } from "@aven/protocol/bots";
 
@@ -70,29 +72,55 @@ export class BotRunner {
   // The person says something to the bot. Returns once the message is in the chat; the reply
   // comes as events. Throws if the bot cannot answer now, before anything is added.
   async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
-    await this.#enqueue({ bot, userId, model, prompt: text });
+    await this.#enqueue({ bot, userId, model, prompt: text, shown: { text } });
   }
 
   // Another bot writes to this one (decision 0063). The message waits its turn like the person's
-  // and is shown in the chat as the other bot's; the reply is the bot's as always, shown to the
-  // person too, and what it sent comes back to the asker. Resolves when the reply is over.
-  async ask(bot: Bot, userId: string, from: string, text: string, model: ModelConfig) {
-    const { answered } = await this.#enqueue({
+  // and is in the chat as a message between bots; the bot answers it as it would the person, and
+  // what it says is its answer to that bot, in the same place. Resolves once the message is in
+  // line, with the answer to wait for, which is what the bot sent and why it failed if it did.
+  async ask(
+    bot: Bot,
+    userId: string,
+    from: Pick<Bot, "id" | "name">,
+    text: string,
+    model: ModelConfig,
+  ) {
+    const peer = { id: from.id, name: from.name };
+    return this.#enqueue({
       bot,
       userId,
       model,
-      prompt: botPrompt(from, text),
-      from,
-      shown: text,
+      prompt: botPrompt(from.name, text),
+      shown: { text, peer: { ...peer, direction: "from" } },
+      replyingTo: peer,
     });
-    return answered;
   }
 
-  // Puts one message in the chat and the reply it asks for in line, behind those already there.
-  // Resolves once it is in line, with the reply to wait for: inside an object, since a promise
-  // returned from here would be waited for.
-  async #enqueue(input: Omit<BotReplyInput, "say" | "signal"> & { from?: string; shown?: string }) {
-    const { bot, userId, model, prompt, from, shown = prompt } = input;
+  // The app wakes the bot with a note the chat does not show, such as to greet its person when it
+  // was just made (decision 0063). What the bot says is in the chat as usual.
+  async wake(bot: Bot, userId: string, note: string, model: ModelConfig) {
+    await this.#enqueue({ bot, userId, model, prompt: botNote(note), shown: null });
+  }
+
+  // Adds a message to the bot's chat as it is open now, when it is: the chat of a bot that is
+  // answering and wrote to another bot, whose message and answer belong in it (decision 0063).
+  note(botId: string, role: BotChatMessage["role"], text: string, peer: BotChatPeer) {
+    const channel = this.#channels.get(botId);
+    if (channel) this.#say(channel, role, text, peer);
+  }
+
+  // Puts one message in the chat, if it is to be shown, and the reply it asks for in line, behind
+  // those already there. Resolves once it is in line, with the reply to wait for: inside an
+  // object, since a promise returned from here would be waited for.
+  async #enqueue(
+    input: Omit<BotReplyInput, "say" | "signal"> & {
+      shown: { text: string; peer?: BotChatPeer } | null;
+      /** The bot the reply answers, when it is not the person. */
+      replyingTo?: { id: string; name: string };
+    },
+  ) {
+    const { bot, userId, model, prompt, shown, replyingTo } = input;
     this.#replier.ready(model);
     const channel = await this.#open(bot.id, userId);
     if (channel.pending >= MAX_PENDING) {
@@ -100,10 +128,12 @@ export class BotRunner {
     }
     // A client may have detached while this waited, which dropped the channel; it is in use again.
     this.#channels.set(bot.id, channel);
-    this.#say(channel, "user", shown, from);
+    if (shown) this.#say(channel, "user", shown.text, shown.peer);
     channel.pending += 1;
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
-    const answered = channel.tail.then(() => this.#reply({ bot, userId, model, prompt }, channel));
+    const answered = channel.tail.then(() =>
+      this.#reply({ bot, userId, model, prompt }, channel, replyingTo),
+    );
     channel.tail = answered.then(() => undefined);
     return { answered };
   }
@@ -190,9 +220,9 @@ export class BotRunner {
     if (channel.subscribers.size === 0 && channel.pending === 0) this.#channels.delete(botId);
   }
 
-  #say(channel: Channel, role: BotChatMessage["role"], text: string, from?: string) {
+  #say(channel: Channel, role: BotChatMessage["role"], text: string, peer?: BotChatPeer) {
     const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
-    if (from) message.from = from;
+    if (peer) message.peer = peer;
     this.#emit(channel, { type: "message", message });
   }
 
@@ -204,7 +234,11 @@ export class BotRunner {
 
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on. What
   // the bot sent, and why it failed if it did, is what a bot that asked for it is told.
-  async #reply(input: Omit<BotReplyInput, "say" | "signal">, channel: Channel) {
+  async #reply(
+    input: Omit<BotReplyInput, "say" | "signal">,
+    channel: Channel,
+    replyingTo?: { id: string; name: string },
+  ) {
     const { bot } = input;
     const said: string[] = [];
     let error: string | undefined;
@@ -213,7 +247,7 @@ export class BotRunner {
         ...input,
         say: (text) => {
           said.push(text);
-          this.#say(channel, "bot", text);
+          this.#say(channel, "bot", text, replyingTo && { ...replyingTo, direction: "to" });
         },
         signal: this.#shutdown.signal,
       });

@@ -62,6 +62,7 @@ export const botRunner = new BotRunner({
     create: (userId, bot) => botsService.create(userId, bot),
     update: (userId, id, changes) => botsService.update(userId, id, changes),
     ask: (userId, from, botId, text) => botChats.ask(userId, from, botId, text),
+    greet: (userId, botId) => botChats.greet(userId, botId),
   }),
 });
 

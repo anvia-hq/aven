@@ -22,6 +22,8 @@ export type BotKeeper = {
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
   /** One of the person's bots answers a message from `from`, another of them, and says what it sent back. */
   ask(userId: string, from: Bot, botId: string, text: string): Promise<BotAnswered>;
+  /** A bot just made says hello to its person, unasked (decision 0063). */
+  greet(userId: string, botId: string): Promise<void>;
 };
 
 // The bot's computer is on a runner, so its agent runs there (decision 0059): it is sent each
@@ -62,6 +64,11 @@ export class RemoteBotReplier implements BotReplier {
       create: async ({ name, instruction, description }: NewBot) => {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");
         const made = await this.bots.create(userId, { name, instruction, description });
+        // Not waited for: the new bot's hello is its own reply, in its own chat, and a person with
+        // no model to answer with is told that when they speak to it, not now.
+        this.bots.greet(userId, made.id).catch((error: unknown) => {
+          console.warn(`Bot ${made.id} could not greet its person:`, error);
+        });
         return { id: made.id, name: made.name };
       },
       // The asker is the reply's bot, whichever bot the runner might name, and only the main one.

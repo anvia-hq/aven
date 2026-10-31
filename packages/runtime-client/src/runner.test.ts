@@ -1714,7 +1714,12 @@ describe("startRuntime answering for a bot", () => {
     await Bun.sleep(300);
     const ask = asked() as Extract<RuntimeToControlPlane, { type: "call" }>;
     expect(ask.params).toEqual({ bot: SCOUT, text: "do A", replyId: "reply-1" });
-    plane.send({ type: "reply", id: ask.id, ok: true, result: { replies: ["A is done"] } });
+    plane.send({
+      type: "reply",
+      id: ask.id,
+      ok: true,
+      result: { bot: "Scout", replies: ["A is done"] },
+    });
 
     await until(() => plane.received.some((message) => message.type === "bot.end"));
     expect(plane.received.filter((message) => message.type.startsWith("bot."))).toEqual([

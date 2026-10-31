@@ -79,7 +79,8 @@ function fakeRunner(
     list: async () => [bot],
     create: async () => bot,
     update: async () => bot,
-    ask: async () => ({ replies: [] }),
+    ask: async () => ({ bot: "Scout", replies: [] }),
+    greet: async () => undefined,
     ...options.bots,
   });
   const only = () => [...sinks.values()][0]!;
@@ -237,6 +238,44 @@ describe("RemoteBotReplier", () => {
       await answering;
     });
 
+    test("the new bot says hello to its person, unasked, and is not waited for", async () => {
+      const greeted: { userId: string; botId: string }[] = [];
+      const run = fakeRunner({
+        bots: {
+          create: async () => made,
+          greet: async (userId, botId) => {
+            greeted.push({ userId, botId });
+            await new Promise(() => undefined);
+          },
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      // A hello that never ends does not hold up the main bot's tool call.
+      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout" });
+      expect(greeted).toEqual([{ userId: "u1", botId: "b2" }]);
+      run.only().end();
+      await answering;
+    });
+
+    test("a hello that fails does not fail making the bot", async () => {
+      const run = fakeRunner({
+        bots: {
+          create: async () => made,
+          greet: async () => {
+            throw new Error("no model to answer with");
+          },
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout" });
+      run.only().end();
+      await answering;
+    });
+
     test("another bot may not, and is not told it can", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ bots: { create: async (userId) => (calls.push(userId), made) } });
@@ -325,7 +364,7 @@ describe("RemoteBotReplier", () => {
           list: async () => [bot, scout],
           ask: async (userId, from, botId, text) => (
             asked.push({ userId, from: from.id, botId, text }),
-            { replies: ["A done"] }
+            { bot: "Scout", replies: ["A done"] }
           ),
         },
       });
@@ -335,7 +374,7 @@ describe("RemoteBotReplier", () => {
 
       const answered = await run.only().ask({ replyId: "x", bot: "b2", text: "do A" });
 
-      expect(answered).toEqual({ replies: ["A done"] });
+      expect(answered).toEqual({ bot: "Scout", replies: ["A done"] });
       expect(asked).toEqual([{ userId: "u1", from: "b1", botId: "b2", text: "do A" }]);
       run.only().end();
       await answering;
@@ -346,7 +385,7 @@ describe("RemoteBotReplier", () => {
       const run = fakeRunner({
         bots: {
           list: async () => [bot, scout],
-          ask: async (userId) => (asked.push(userId), { replies: [] }),
+          ask: async (userId) => (asked.push(userId), { bot: "Scout", replies: [] }),
         },
       });
       const answering = run.replier.answer({ ...input(() => undefined), bot: scout });

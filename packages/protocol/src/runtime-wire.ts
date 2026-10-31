@@ -370,8 +370,8 @@ export type BotUpdated = { name: string; description: string };
  */
 export type BotAskParams = { replyId: string; bot: string; text: string };
 
-/** What the other bot sent back, one entry for each message; none when it chose to say nothing. */
-export type BotAnswered = { replies: string[] };
+/** The bot that answered and what it sent back, one entry for each message; none when it chose to say nothing. */
+export type BotAnswered = { bot: string; replies: string[] };
 
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string };
@@ -399,4 +399,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 27;
+export const WIRE_VERSION = 28;

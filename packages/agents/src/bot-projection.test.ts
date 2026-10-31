@@ -92,17 +92,115 @@ describe("botMessagesToChat", () => {
     expect(botMessagesToChat(messages)).toEqual([]);
   });
 
-  test("a message another bot sent is the other bot's in the chat, without the prefix the bot was given", () => {
+  test("a message another bot sent is between the bots in the chat, and so is what the bot said back, without the prefix", () => {
     const messages: Message[] = [
       { role: "user", content: "[from bot Aven] Do A, B and C." },
       { role: "assistant", content: [call("c1", { text: "A, B and C are done" })] },
       { role: "user", content: "thanks, from me" },
+      { role: "assistant", content: [call("c2", { text: "you are welcome" })] },
     ];
 
     expect(botMessagesToChat(messages)).toEqual([
-      { id: "m-0", role: "user", text: "Do A, B and C.", from: "Aven" },
-      { id: "m-1", role: "bot", text: "A, B and C are done" },
+      {
+        id: "m-0",
+        role: "user",
+        text: "Do A, B and C.",
+        peer: { name: "Aven", direction: "from" },
+      },
+      {
+        id: "m-1",
+        role: "bot",
+        text: "A, B and C are done",
+        peer: { name: "Aven", direction: "to" },
+      },
       { id: "m-2", role: "user", text: "thanks, from me" },
+      { id: "m-3", role: "bot", text: "you are welcome" },
+    ]);
+  });
+
+  test("a note from the app is not part of the chat, and what the bot says to it is the person's", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[note] You were just created. Introduce yourself." },
+      { role: "assistant", content: [call("c1", { text: "Hi, I am Scout" })] },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "bot", text: "Hi, I am Scout" },
+    ]);
+  });
+
+  test("a bot that wrote to another has what it wrote and what came back as messages between bots", () => {
+    const scout = "11111111-2222-4333-8444-555555555555";
+    const messages: Message[] = [
+      { role: "user", content: "ask @Scout to do A" },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "m1",
+            toolName: "message_bot",
+            input: { bot: scout, text: "do A" },
+          },
+          call("c1", { text: "Scout is on it" }),
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "m1",
+            toolName: "message_bot",
+            output: { type: "json", value: { bot: "Scout", replies: ["A is done", "and tested"] } },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "c1",
+            toolName: "send_message",
+            output: { type: "json", value: { sent: true } },
+          },
+        ],
+      },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "ask @Scout to do A" },
+      { id: "m-1", role: "bot", text: "do A", peer: { name: "Scout", id: scout, direction: "to" } },
+      {
+        id: "m-2",
+        role: "user",
+        text: "A is done",
+        peer: { name: "Scout", id: scout, direction: "from" },
+      },
+      {
+        id: "m-3",
+        role: "user",
+        text: "and tested",
+        peer: { name: "Scout", id: scout, direction: "from" },
+      },
+      { id: "m-4", role: "bot", text: "Scout is on it" },
+    ]);
+  });
+
+  test("a call to another bot that has no answer yet is only what was written", () => {
+    const scout = "11111111-2222-4333-8444-555555555555";
+    const messages: Message[] = [
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "m1",
+            toolName: "message_bot",
+            input: { bot: scout, text: "do A" },
+          },
+        ],
+      },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "bot", text: "do A", peer: { name: "a bot", id: scout, direction: "to" } },
     ]);
   });
 });

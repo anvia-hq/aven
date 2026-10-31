@@ -6,6 +6,10 @@ import { environmentModel, resolveModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
 
+// What a bot just made is told, in a note: the harness's words for it.
+const GREETING =
+  "You were just created. Introduce yourself to the person now: a short hello, who you are, and what you can do for them, in one or two short messages. You may end with one easy question to get started. Do not mention this note.";
+
 // The bot's own model, else the person's default, else the environment's.
 async function modelOf(userId: string, bot: Bot) {
   return (
@@ -36,19 +40,31 @@ export const createBotChats = (runner: BotRunner, options: { askTimeoutMs?: numb
     await runner.send(bot, userId, text, await modelOf(userId, bot));
   },
 
-  // A bot writes to another of the person's bots and waits for what it says back (decision 0063).
-  // The other bot answers as it would the person: in its own chat, with its own memory.
+  // A bot writes to another of the person's bots and waits for what it sends back (decision 0063).
+  // The other bot answers as it would the person, in its own chat and with its own memory. The
+  // asking bot's chat gets the message and the answer, as messages between bots.
   async ask(userId: string, from: Bot, botId: string, text: string): Promise<BotAnswered> {
     if (botId === from.id) throw new UnprocessableError("A bot cannot message itself");
     const bot = orNotFound(await botsService.get(userId, botId), "No such bot");
-    const answered = await within(
-      runner.ask(bot, userId, from.name, text, await modelOf(userId, bot)),
+    const { answered } = await runner.ask(bot, userId, from, text, await modelOf(userId, bot));
+    const peer = { id: bot.id, name: bot.name };
+    runner.note(from.id, "bot", text, { ...peer, direction: "to" });
+    const said = await within(
+      answered,
       options.askTimeoutMs ?? BOT_ASK_TIMEOUT_MS,
       `${bot.name} has not answered yet and is still working on it; its answer will be in its chat`,
     );
-    if (answered.error)
-      throw new UnavailableError(`${bot.name} could not answer: ${answered.error}`);
-    return { replies: answered.said };
+    if (said.error) throw new UnavailableError(`${bot.name} could not answer: ${said.error}`);
+    for (const reply of said.said)
+      runner.note(from.id, "user", reply, { ...peer, direction: "from" });
+    return { bot: bot.name, replies: said.said };
+  },
+
+  // A bot that was just made says hello to its person (decision 0063), unasked: the app wakes it
+  // with a note the chat does not show. No model, or no runner, and it stays quiet until spoken to.
+  async greet(userId: string, botId: string) {
+    const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
+    await runner.wake(bot, userId, GREETING, await modelOf(userId, bot));
   },
 
   async *events(

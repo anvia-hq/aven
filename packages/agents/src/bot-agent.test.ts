@@ -232,7 +232,10 @@ describe("createBotAgent", () => {
       ]),
       deliver: async () => undefined,
       memory: { store: fakeStore(), savePolicy: "turn" },
-      messageBot: async (input) => (asked.push(input), { replies: ["A, B and C are done"] }),
+      messageBot: async (input) => (
+        asked.push(input),
+        { bot: "Scout", replies: ["A, B and C are done"] }
+      ),
     });
     expect(main.tools.map((tool) => tool.name)).toEqual([
       SEND_MESSAGE_TOOL_NAME,

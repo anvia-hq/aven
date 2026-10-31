@@ -341,8 +341,23 @@ describe("BotRunner", () => {
     expect(typed(client.events)).toEqual(["snapshot", "user: hello", "typing", "stopped"]);
   });
 
-  describe("a bot another bot writes to (decision 0063)", () => {
-    test("shows the message as the other bot's, and tells the asker what the bot sent", async () => {
+  describe("messages between bots (decision 0063)", () => {
+    const aven = { id: "main", name: "Aven" };
+    // Each message as the chat shows it: who said it, and to or from which bot if it was a bot.
+    const shown = (events: BotEvent[]) =>
+      events.flatMap((event) =>
+        event.type === "message"
+          ? [
+              `${event.message.role}${
+                event.message.peer
+                  ? ` ${event.message.peer.direction} ${event.message.peer.name}`
+                  : ""
+              }: ${event.message.text}`,
+            ]
+          : [],
+      );
+
+    test("a bot written to has the message as one between bots, and what it says back is to that bot", async () => {
       const store = fakeStore();
       const runner = runnerWith({
         store,
@@ -350,27 +365,31 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
 
-      const answered = await runner.ask(bot, USER, "Aven", "do A and B", model);
+      const { answered } = await runner.ask(bot, USER, aven, "do A and B", model);
+      const said = await answered;
       await client.done;
 
-      expect(answered).toEqual({ said: ["A is done", "B is done"], error: undefined });
-      expect(typed(client.events)).toEqual([
-        "snapshot",
-        "user: do A and B",
-        "typing",
-        "bot: A is done",
-        "bot: B is done",
-        "stopped",
+      expect(said).toEqual({ said: ["A is done", "B is done"], error: undefined });
+      expect(shown(client.events)).toEqual([
+        "user from Aven: do A and B",
+        "bot to Aven: A is done",
+        "bot to Aven: B is done",
       ]);
-      const shown = client.events.find((event) => event.type === "message");
-      expect(shown).toMatchObject({ message: { role: "user", text: "do A and B", from: "Aven" } });
-      // The bot was told who wrote, and the chat read back from what it remembers says the same.
+      expect(client.events.find((event) => event.type === "message")).toMatchObject({
+        message: { peer: { id: "main", name: "Aven", direction: "from" } },
+      });
+      // The bot was told who wrote, and the chat read back from what it remembers is the same.
       const remembered = await store.load({ scope: { sessionId: bot.id, userId: USER } });
-      expect(botMessagesToChat(remembered)[0]).toMatchObject({ text: "do A and B", from: "Aven" });
       expect(JSON.stringify(remembered[0])).toContain("[from bot Aven] do A and B");
+      expect(
+        botMessagesToChat(remembered).map(
+          (message) =>
+            `${message.role} ${message.peer?.direction} ${message.peer?.name}: ${message.text}`,
+        ),
+      ).toEqual(["user from Aven: do A and B", "bot to Aven: A is done", "bot to Aven: B is done"]);
     });
 
-    test("tells the asker why when the bot could not answer", async () => {
+    test("the answer says why when the bot could not answer", async () => {
       const runner = runnerWith({
         store: fakeStore(),
         createAgent: () => ({
@@ -380,12 +399,12 @@ describe("BotRunner", () => {
         }),
       });
 
-      const answered = await runner.ask(bot, USER, "Aven", "hello?", model);
+      const { answered } = await runner.ask(bot, USER, aven, "hello?", model);
 
-      expect(answered).toEqual({ said: [], error: "the model is down" });
+      expect(await answered).toEqual({ said: [], error: "the model is down" });
     });
 
-    test("waits behind what the bot is already answering, and is refused when it has too much to answer", async () => {
+    test("a message waits behind what the bot is already answering, and is the next reply's", async () => {
       const gate = Promise.withResolvers<void>();
       const runner = runnerWith({
         store: fakeStore(),
@@ -396,16 +415,48 @@ describe("BotRunner", () => {
       });
       await runner.send(bot, USER, "hello", model);
 
+      const { answered } = await runner.ask(bot, USER, aven, "and you?", model);
       let settled = false;
-      const asking = runner.ask(bot, USER, "Aven", "and you?", model).then((answered) => {
-        settled = true;
-        return answered;
-      });
+      void answered.then(() => (settled = true));
       await Bun.sleep(30);
       expect(settled).toBe(false);
 
       gate.resolve();
-      expect(await asking).toEqual({ said: ["two"], error: undefined });
+      expect(await answered).toEqual({ said: ["two"], error: undefined });
+    });
+
+    test("a note from the app wakes the bot without showing the note, and what it says is the person's", async () => {
+      const store = fakeStore();
+      const runner = runnerWith({
+        store,
+        createAgent: scripts([[send("Hi, I am Pip")], [text("")]]),
+      });
+      const client = await watch(runner, stopped);
+
+      await runner.wake(bot, USER, "Say hello.", model);
+      await client.done;
+
+      expect(shown(client.events)).toEqual(["bot: Hi, I am Pip"]);
+      const remembered = await store.load({ scope: { sessionId: bot.id, userId: USER } });
+      expect(JSON.stringify(remembered[0])).toContain("[note] Say hello.");
+      expect(botMessagesToChat(remembered).map((message) => message.text)).toEqual([
+        "Hi, I am Pip",
+      ]);
+    });
+
+    test("a message is added to the chat of a bot that is open, and to none that is not", async () => {
+      const runner = runnerWith({ store: fakeStore() });
+      const peer = { id: "b2", name: "Scout", direction: "to" } as const;
+      runner.note(bot.id, "bot", "nobody is watching", peer);
+
+      const client = await watch(runner);
+      runner.note(bot.id, "bot", "do A", peer);
+      runner.note(bot.id, "user", "A is done", { ...peer, direction: "from" });
+      await until(() => shown(client.events).length === 2);
+      client.close();
+      await client.done;
+
+      expect(shown(client.events)).toEqual(["bot to Scout: do A", "user from Scout: A is done"]);
     });
   });
 });
