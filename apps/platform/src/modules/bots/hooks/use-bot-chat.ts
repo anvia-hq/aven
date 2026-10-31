@@ -49,8 +49,11 @@ export function useBotChat(botId: string) {
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
       if (event.type === "error") setError(event.message);
       if (event.type === "typing" && event.typing) setError(null);
-      // A reply that has ended may have made a bot: the main bot can (decision 0060).
-      if (event.type === "typing" && !event.typing) void refreshBots();
+      // A reply that ends may have made a bot or changed one (decisions 0060 and 0061), and a chat
+      // that opens is the first look at what changed while another was open.
+      if (event.type === "snapshot" || (event.type === "typing" && !event.typing)) {
+        void refreshBots();
+      }
     };
     source.onerror = () => {
       // The browser retries on its own; only a stream it has given up on is lost.

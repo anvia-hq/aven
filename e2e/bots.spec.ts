@@ -54,6 +54,8 @@ test.describe("bots", () => {
   test("the main bot makes a new bot when asked, and it has a chat of its own", async ({
     page,
   }) => {
+    // Two replies, each waiting out its typing pauses.
+    test.slow();
     await registerUser(page, "bot-maker", "Maker Person");
     const provider = await page.request.post("/api/providers", {
       data: {
@@ -94,7 +96,8 @@ test.describe("bots", () => {
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
     // What the main bot wrote is what was made: the person's own bot, on their default model.
-    const [, scoutRow] = await (await page.request.get("/api/bots")).json();
+    const allBots = (await (await page.request.get("/api/bots")).json()) as { name: string }[];
+    const scoutRow = allBots.find((bot) => bot.name === "Scout");
     expect(scoutRow).toMatchObject({
       name: "Scout",
       avatar: "",
@@ -206,6 +209,9 @@ test.describe("bots", () => {
     const family = await look.getAttribute("data-family");
     const color = await look.getAttribute("data-color");
     expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+    // Something other than what the id drew, so every change below is one that can be seen.
+    const shape = family === "hexagon" ? "square" : "hexagon";
+    const paint = color?.toLowerCase() === "#ff7a00" ? "#10a6ff" : "#ff7a00";
 
     // The same bot looks the same on the next visit, without anything having been saved.
     await page.reload();
@@ -215,40 +221,43 @@ test.describe("bots", () => {
     await page.getByRole("button", { name: "Bot settings" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: "Change avatar" }).click();
-    await page
-      .getByRole("group", { name: "Shape" })
-      .getByRole("button", { name: "hexagon" })
-      .click();
-    await page.getByRole("button", { name: "Color #ff7a00" }).click();
+    await page.getByRole("group", { name: "Shape" }).getByRole("button", { name: shape }).click();
+    await page.getByRole("button", { name: `Color ${paint}` }).click();
     // The avatar in the dialog changes before anything is saved.
     const preview = dialog
       .getByRole("button", { name: "Change avatar" })
       .locator("svg[data-family]");
-    await expect(preview).toHaveAttribute("data-family", "hexagon");
-    await expect(preview).toHaveAttribute("data-color", "#ff7a00");
+    await expect(preview).toHaveAttribute("data-family", shape);
+    await expect(preview).toHaveAttribute("data-color", paint);
     await expect(look).toHaveAttribute("data-family", family!);
 
     await page.keyboard.press("Escape");
     await dialog.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Bot saved")).toBeVisible();
-    await expect(look).toHaveAttribute("data-family", "hexagon");
-    await expect(look).toHaveAttribute("data-color", "#ff7a00");
+    await expect(look).toHaveAttribute("data-family", shape);
+    await expect(look).toHaveAttribute("data-color", paint);
 
     // It is kept, and the picker opens on it.
     await page.reload();
-    await expect(look).toHaveAttribute("data-family", "hexagon");
+    await expect(look).toHaveAttribute("data-family", shape);
     await page.getByRole("button", { name: "Bot settings" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Change avatar" }).click();
     await expect(
-      page.getByRole("group", { name: "Shape" }).getByRole("button", { name: "hexagon" }),
+      page.getByRole("group", { name: "Shape" }).getByRole("button", { name: shape }),
     ).toHaveAttribute("aria-pressed", "true");
 
-    // Generate offers characters to choose from; closing without saving keeps what was kept.
+    // Generate offers characters to choose from. Escape closes the picker first and the dialog
+    // next, and nothing was saved: after a reload the bot is as it was.
     await page.getByRole("tab", { name: "Generate" }).click();
-    await page.getByRole("button", { name: "Use this character" }).first().click();
+    await page.getByRole("button", { name: "Character 1", exact: true }).click();
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("group", { name: "Characters" })).toBeHidden();
+    await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(look).toHaveAttribute("data-family", "hexagon");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.reload();
+    await expect(look).toHaveAttribute("data-family", shape);
+    await expect(look).toHaveAttribute("data-color", paint);
 
     // Reset goes back to the character the bot's id draws.
     await page.getByRole("button", { name: "Bot settings" }).click();

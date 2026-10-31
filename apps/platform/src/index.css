@@ -76,11 +76,9 @@
   --sidebar-ring: oklch(0.5 0.01 250);
 }
 
-/* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
-:root,
-.dark {
+/* What a bot's face is drawn with (decision 0062): one color in both themes, like an illustration. */
+:root {
   --avatar-face: oklch(0.2 0.01 250);
-  --avatar-eye: oklch(0.99 0 0);
 }
 
 @theme inline {
@@ -106,7 +104,6 @@
   --color-effort: var(--effort);
   --color-frame: var(--frame);
   --color-avatar-face: var(--avatar-face);
-  --color-avatar-eye: var(--avatar-eye);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

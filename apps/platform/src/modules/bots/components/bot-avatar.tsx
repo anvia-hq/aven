@@ -71,20 +71,20 @@ function Face({ look }: { look: Look }) {
 // by 48 one, and the size is forced with `!` because a sidebar button sizes every svg in it to 16px.
 export function BotAvatar({
   bot,
-  size,
   className,
   children,
 }: {
   bot: Pick<Bot, "id" | "avatar">;
-  size?: "default" | "sm" | "lg";
   className?: string;
   children?: ReactNode;
 }) {
   const setting = parseAvatarSetting(bot.avatar);
-  const text = setting === null && bot.avatar !== "";
+  // Text from before characters is drawn as it is; anything that looks like a setting but is not
+  // one this client reads, such as a later version's, is left to the character the id draws.
+  const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
   const look = avatarFor(bot.id, setting ?? undefined);
   return (
-    <Avatar size={size} className={className}>
+    <Avatar className={className}>
       {text ? (
         <AvatarFallback className="bg-primary text-[length:inherit] text-primary-foreground">
           {bot.avatar}

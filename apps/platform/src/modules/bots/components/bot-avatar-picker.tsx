@@ -17,7 +17,8 @@ import {
 import { BotAvatar } from "./bot-avatar";
 
 const VARIANTS = 15;
-const CHOICE = "size-11 rounded-full p-0.5";
+// The avatars in the picker stand still: about thirty bobbing at once is a distraction and a cost.
+const CHOICE = "size-11 rounded-full p-0.5 [&_.bot-body]:animate-none";
 
 const newSeeds = () => Array.from({ length: VARIANTS }, randomSeed);
 
@@ -45,7 +46,6 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
     <Popover>
       <PopoverTrigger
         aria-label="Change avatar"
-        title="Change avatar"
         className="w-fit rounded-full outline-offset-4 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring data-popup-open:scale-105"
       >
         <BotAvatar bot={{ id: botId, avatar: value }} className="size-18" />
@@ -100,10 +100,10 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
           </TabsContent>
           <TabsContent value="generate" className="flex flex-col gap-3 pt-2">
             <div role="group" aria-label="Characters" className="grid grid-cols-5 gap-1.5">
-              {seeds.map((seed) => (
+              {seeds.map((seed, index) => (
                 <Toggle
                   key={seed}
-                  aria-label="Use this character"
+                  aria-label={`Character ${index + 1}`}
                   className={CHOICE}
                   pressed={setting.seed === seed}
                   onPressedChange={() => onChange(formatAvatarSetting({ seed }))}

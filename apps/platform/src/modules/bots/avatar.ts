@@ -11,7 +11,7 @@ export type Part =
   | { kind: "path"; d: string }
   | { kind: "polygon"; points: string };
 
-export type Point = { x: number; y: number };
+type Point = { x: number; y: number };
 
 type Family = {
   name: string;
@@ -98,7 +98,7 @@ export const colors: readonly string[] = [
 ];
 
 export const faces = ["smile", "grin", "curious", "glance"] as const;
-export type Face = (typeof faces)[number];
+type Face = (typeof faces)[number];
 
 export type Avatar = {
   family: string;
@@ -152,8 +152,11 @@ export function avatarFor(id: string, setting?: AvatarSetting): Avatar {
   };
 }
 
-/** A seed for a character the person has not seen before. */
-export const randomSeed = () => crypto.randomUUID().slice(0, 8);
+/** A seed for a character the person has not seen before. Not `randomUUID`, which a page on plain http, such as a LAN address, does not have. */
+export const randomSeed = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 
 const FAMILY = /^[a-z]{3,12}$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;

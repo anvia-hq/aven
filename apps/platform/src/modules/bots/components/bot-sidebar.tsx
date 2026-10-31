@@ -1,11 +1,10 @@
 import { Star } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
 
 import { AvatarBadge } from "@/components/avatar";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 
-import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
+import { useBotLastMessages } from "../hooks/use-bot-last-messages";
 import { useBots } from "../hooks/use-bots";
 import { BotAvatar } from "./bot-avatar";
 import { BotSettingsDialog } from "./bot-settings-dialog";
@@ -14,7 +13,7 @@ import { BotSettingsDialog } from "./bot-settings-dialog";
 // with its avatar, its name and what it said last, or what it is for until it has said anything.
 export function BotSidebar() {
   const { bots, main } = useBots();
-  const lastMessages = useAtomValue(botLastMessagesAtom);
+  const lastMessages = useBotLastMessages();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const others = bots.filter((bot) => !bot.isMain);
 
@@ -55,7 +54,7 @@ export function BotSidebar() {
               tooltip={bot.name}
               className="gap-3"
             >
-              <BotAvatar bot={bot} className="size-10" />
+              <BotAvatar bot={bot} className="size-10 group-data-[collapsible=icon]:size-8" />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
