@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, type ReactNode } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { cn } from "cn";
@@ -8,18 +7,14 @@ import { NotFound } from "@/components/not-found";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
-import { FilesPanel } from "@/modules/files/components/files-panel";
-import { ChangesBadge } from "@/modules/diff/components/changes-badge";
-import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
-import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
-import { ShipButton } from "@/modules/threads/components/ship-button";
+import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
+import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
@@ -42,13 +37,8 @@ function ThreadPage() {
   // Files, Changes, Desktop and Terminal share one column, so the conversation keeps the same width whichever is open.
   const sideOpen = diff.open || desktop.open || files.open || terminal.open;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
-  const side = useDefaultLayout({
-    id: "aven.thread-side",
-    panelIds: ["files", "diff", "desktop", "terminal"],
-    storage: safeStorage,
-  });
   // What the pull request does not have yet (everything, before there is one): the badge shows it,
-  // and Update PR has nothing to send without it.
+  // and Update PR has nothing to send without it. Asked for here, before the thread has loaded.
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
@@ -61,35 +51,6 @@ function ThreadPage() {
 
   if (!thread) {
     return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
-  }
-
-  const sidePanels: { id: string; node: ReactNode }[] = [];
-  if (files.open) {
-    sidePanels.push({
-      id: "files",
-      node: (
-        <FilesPanel key={thread.id} threadId={thread.id} running={running} onClose={files.close} />
-      ),
-    });
-  }
-  if (diff.open) {
-    sidePanels.push({
-      id: "diff",
-      node: <DiffPanel threadId={thread.id} running={running} onClose={diff.close} />,
-    });
-  }
-  if (desktop.open) {
-    sidePanels.push({
-      id: "desktop",
-      node: <DesktopPanel threadId={thread.id} onClose={desktop.close} />,
-    });
-  }
-
-  if (terminal.open) {
-    sidePanels.push({
-      id: "terminal",
-      node: <TerminalPanel threadId={thread.id} onClose={terminal.close} />,
-    });
   }
 
   return (
@@ -122,19 +83,7 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
-                    <div className="flex items-center justify-end gap-2 pb-2">
-                      <ChangesBadge
-                        empty={unshipped.files.length === 0}
-                        additions={unshipped.additions}
-                        deletions={unshipped.deletions}
-                      />
-                      <ShipButton
-                        thread={thread}
-                        upToDate={
-                          unshipped.loaded && !unshipped.problem && unshipped.files.length === 0
-                        }
-                      />
-                    </div>
+                    <ShipBar thread={thread} unshipped={unshipped} />
                     {question ? (
                       <AnswerForm
                         key={question.id}
@@ -160,22 +109,12 @@ function ThreadPage() {
             <>
               <ResizableHandle className={GAP_HANDLE} />
               <ResizablePanel id="side" defaultSize="50" minSize="25">
-                {/* Each panel is a card on the frame, level with the conversation's; the gap between
-                    two is their divider. */}
-                <ResizablePanelGroup
-                  orientation="vertical"
-                  defaultLayout={side.defaultLayout}
-                  onLayoutChanged={side.onLayoutChanged}
-                >
-                  {sidePanels.map((panel, index) => (
-                    <Fragment key={panel.id}>
-                      {index > 0 && <ResizableHandle className={GAP_HANDLE} />}
-                      <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
-                        {panel.node}
-                      </ResizablePanel>
-                    </Fragment>
-                  ))}
-                </ResizablePanelGroup>
+                <ThreadSidePanels
+                  threadId={thread.id}
+                  running={running}
+                  panels={panels}
+                  handleClassName={GAP_HANDLE}
+                />
               </ResizablePanel>
             </>
           )}
