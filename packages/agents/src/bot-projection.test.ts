@@ -91,4 +91,18 @@ describe("botMessagesToChat", () => {
     ];
     expect(botMessagesToChat(messages)).toEqual([]);
   });
+
+  test("a message another bot sent is the other bot's in the chat, without the prefix the bot was given", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[from bot Aven] Do A, B and C." },
+      { role: "assistant", content: [call("c1", { text: "A, B and C are done" })] },
+      { role: "user", content: "thanks, from me" },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "Do A, B and C.", from: "Aven" },
+      { id: "m-1", role: "bot", text: "A, B and C are done" },
+      { id: "m-2", role: "user", text: "thanks, from me" },
+    ]);
+  });
 });

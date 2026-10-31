@@ -1,9 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
+import {
+  BOT_DESCRIPTION_MAX,
+  BOT_INSTRUCTION_MAX,
+  BOT_MESSAGE_MAX,
+  BOT_NAME_MAX,
+} from "@aven/protocol/bots";
 import type { RunEvent } from "@aven/protocol/events";
 
 import {
+  parseBotAskParams,
   parseBotCreateParams,
   parseBotMemoryParams,
   parseBotUpdateParams,
@@ -105,6 +111,7 @@ describe("calls from a runtime", () => {
       "bot.memory",
       "bot.create",
       "bot.update",
+      "bot.ask",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
@@ -212,6 +219,26 @@ describe("a bot changing itself", () => {
       { replyId: "r1", instruction: "x".repeat(BOT_INSTRUCTION_MAX + 1) },
     ]) {
       expect(() => parseBotUpdateParams(bad)).toThrow();
+    }
+  });
+});
+
+describe("a bot writing to another bot", () => {
+  const other = "11111111-2222-4333-8444-555555555555";
+
+  test("names the other bot by its id and says something, within what a message may hold", () => {
+    expect(parseBotAskParams({ replyId: "r1", bot: other, text: " do A " })).toEqual({
+      replyId: "r1",
+      bot: other,
+      text: "do A",
+    });
+    for (const bad of [
+      { replyId: "r1", bot: "Scout", text: "hi" },
+      { replyId: "r1", bot: other, text: " " },
+      { replyId: "r1", bot: other, text: "x".repeat(BOT_MESSAGE_MAX + 1) },
+      { replyId: "", bot: other, text: "hi" },
+    ]) {
+      expect(() => parseBotAskParams(bad)).toThrow();
     }
   });
 });

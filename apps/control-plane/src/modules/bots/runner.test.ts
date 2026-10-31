@@ -340,4 +340,72 @@ describe("BotRunner", () => {
     await client.done;
     expect(typed(client.events)).toEqual(["snapshot", "user: hello", "typing", "stopped"]);
   });
+
+  describe("a bot another bot writes to (decision 0063)", () => {
+    test("shows the message as the other bot's, and tells the asker what the bot sent", async () => {
+      const store = fakeStore();
+      const runner = runnerWith({
+        store,
+        createAgent: scripts([[send("A is done"), send("B is done")], [text("")]]),
+      });
+      const client = await watch(runner, stopped);
+
+      const answered = await runner.ask(bot, USER, "Aven", "do A and B", model);
+      await client.done;
+
+      expect(answered).toEqual({ said: ["A is done", "B is done"], error: undefined });
+      expect(typed(client.events)).toEqual([
+        "snapshot",
+        "user: do A and B",
+        "typing",
+        "bot: A is done",
+        "bot: B is done",
+        "stopped",
+      ]);
+      const shown = client.events.find((event) => event.type === "message");
+      expect(shown).toMatchObject({ message: { role: "user", text: "do A and B", from: "Aven" } });
+      // The bot was told who wrote, and the chat read back from what it remembers says the same.
+      const remembered = await store.load({ scope: { sessionId: bot.id, userId: USER } });
+      expect(botMessagesToChat(remembered)[0]).toMatchObject({ text: "do A and B", from: "Aven" });
+      expect(JSON.stringify(remembered[0])).toContain("[from bot Aven] do A and B");
+    });
+
+    test("tells the asker why when the bot could not answer", async () => {
+      const runner = runnerWith({
+        store: fakeStore(),
+        createAgent: () => ({
+          generate: async () => {
+            throw new Error("the model is down");
+          },
+        }),
+      });
+
+      const answered = await runner.ask(bot, USER, "Aven", "hello?", model);
+
+      expect(answered).toEqual({ said: [], error: "the model is down" });
+    });
+
+    test("waits behind what the bot is already answering, and is refused when it has too much to answer", async () => {
+      const gate = Promise.withResolvers<void>();
+      const runner = runnerWith({
+        store: fakeStore(),
+        createAgent: scripts([[send("one")], [text("")]], [[send("two")], [text("")]]),
+        pause: async () => {
+          await gate.promise;
+        },
+      });
+      await runner.send(bot, USER, "hello", model);
+
+      let settled = false;
+      const asking = runner.ask(bot, USER, "Aven", "and you?", model).then((answered) => {
+        settled = true;
+        return answered;
+      });
+      await Bun.sleep(30);
+      expect(settled).toBe(false);
+
+      gate.resolve();
+      expect(await asking).toEqual({ said: ["two"], error: undefined });
+    });
+  });
 });

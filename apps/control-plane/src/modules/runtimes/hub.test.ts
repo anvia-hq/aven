@@ -208,6 +208,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
           create: async (params) => (asked.push(params), { id: "bot-2", name: params.name }),
+          ask: async (params) => (asked.push(params), { replies: [`heard ${params.text}`] }),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
@@ -299,6 +300,22 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         { replyId: "reply-1", name: "Scout", instruction: "You research." },
         { replyId: "reply-1", name: "Pip" },
       ]);
+    });
+
+    test("a bot's message to another bot is asked for the live reply only, and the other bot is a real id", async () => {
+      const { ws, received, asked } = await replying("bot-ask");
+      const other = "11111111-2222-4333-8444-555555555555";
+      const message = { replyId: "reply-1", bot: other, text: "do A" };
+
+      expect(
+        await ask(ws, received, "bot.ask", { ...message, userId: "mallory", from: "someone else" }),
+      ).toMatchObject({ ok: true, result: { replies: ["heard do A"] } });
+      expect(asked).toEqual([message]);
+
+      expect((await ask(ws, received, "bot.ask", { ...message, replyId: "other" })).ok).toBe(false);
+      expect((await ask(ws, received, "bot.ask", { ...message, bot: "Scout" })).ok).toBe(false);
+      expect((await ask(ws, received, "bot.ask", { ...message, text: " " })).ok).toBe(false);
+      expect(asked).toHaveLength(1);
     });
 
     test("a call with a parameter that is wrong says which, so the bot can put it right", async () => {

@@ -1,7 +1,12 @@
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import type { Bot } from "@aven/protocol/bots";
-import type { BotUpdateParams } from "@aven/protocol/runtime-wire";
+import type {
+  BotAnswered,
+  BotAskParams,
+  BotPeer,
+  BotUpdateParams,
+} from "@aven/protocol/runtime-wire";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
@@ -12,8 +17,11 @@ import type { NewBot } from "./service";
 
 /** What a reply may do to the person's bots: make one, or change the one it is for. */
 export type BotKeeper = {
+  list(userId: string): Promise<Bot[]>;
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
+  /** One of the person's bots answers a message from `from`, another of them, and says what it sent back. */
+  ask(userId: string, from: Bot, botId: string, text: string): Promise<BotAnswered>;
 };
 
 // The bot's computer is on a runner, so its agent runs there (decision 0059): it is sent each
@@ -44,6 +52,8 @@ export class RemoteBotReplier implements BotReplier {
     // Throws when the model cannot be used (no key); the runner gets a token, not the key.
     const runModel = this.gateway.issue(replyId, model);
     const ended = Promise.withResolvers<void>();
+    // The main bot is told which bots it may write to; no other bot may write to any.
+    const peers = bot.isMain ? await this.#peersOf(userId, bot.id) : undefined;
     const sink = {
       say,
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
@@ -53,6 +63,11 @@ export class RemoteBotReplier implements BotReplier {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");
         const made = await this.bots.create(userId, { name, instruction, description });
         return { id: made.id, name: made.name };
+      },
+      // The asker is the reply's bot, whichever bot the runner might name, and only the main one.
+      ask: async ({ bot: botId, text }: Omit<BotAskParams, "replyId">) => {
+        if (!bot.isMain) throw new Error("Only your main bot can message bots");
+        return this.bots.ask(userId, bot, botId, text);
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
@@ -73,6 +88,7 @@ export class RemoteBotReplier implements BotReplier {
             description: bot.description,
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
             canCreateBots: bot.isMain,
+            peers,
           },
           prompt,
           model: runModel,
@@ -85,6 +101,13 @@ export class RemoteBotReplier implements BotReplier {
       signal.removeEventListener("abort", cancel);
       this.gateway.revoke(replyId);
     }
+  }
+
+  async #peersOf(userId: string, selfId: string): Promise<BotPeer[]> {
+    const bots = await this.bots.list(userId);
+    return bots
+      .filter((other) => other.id !== selfId)
+      .map(({ id, name, description }) => ({ id, name, description }));
   }
 
   #connection() {

@@ -1,5 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type {
+  BotAnswered,
+  BotAskParams,
   BotCreated,
   BotCreateParams,
   BotMemoryParams,
@@ -12,6 +14,7 @@ import type {
 
 import {
   parseAppendParams,
+  parseBotAskParams,
   parseBotCreateParams,
   parseBotMemoryParams,
   parseBotUpdateParams,
@@ -36,6 +39,8 @@ export type CallBotReply = {
   create(params: BotCreateParams): Promise<BotCreated>;
   /** Changes the reply's own bot, and no other. */
   update(params: BotUpdateParams): Promise<BotUpdated>;
+  /** Has another of the person's bots answer the reply's bot, when that is the main one (decision 0063). */
+  ask(params: BotAskParams): Promise<BotAnswered>;
 };
 
 export type RuntimeCallContext = {
@@ -87,6 +92,9 @@ export async function answerRuntimeCall(
     return answerBotCall(params, parseBotCreateParams, findBotReply, (reply, call) =>
       reply.create(call),
     );
+  }
+  if (method === "bot.ask") {
+    return answerBotCall(params, parseBotAskParams, findBotReply, (reply, call) => reply.ask(call));
   }
   if (method === "bot.update") {
     return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>

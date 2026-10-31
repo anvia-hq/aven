@@ -53,9 +53,16 @@ export const shipService = createShipService(runtimeHub, { send: threadMessages.
 // `AVEN_BOT_RUNNER` names for a deployment that has turned its own off (decision 0059).
 export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
+// A bot's message to another bot is answered through the chats, which are made from the runner,
+// which is made from the replier: the replier reaches them when it is asked, not when it is made.
 export const botRunner = new BotRunner({
   store: botMemoryStore,
-  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId, botsService),
+  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId, {
+    list: (userId) => botsService.list(userId),
+    create: (userId, bot) => botsService.create(userId, bot),
+    update: (userId, id, changes) => botsService.update(userId, id, changes),
+    ask: (userId, from, botId, text) => botChats.ask(userId, from, botId, text),
+  }),
 });
 
 export const botChats = createBotChats(botRunner);

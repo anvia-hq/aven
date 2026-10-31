@@ -8,6 +8,8 @@ export const BOT_DESCRIPTION_MAX = 200;
 export const BOT_AVATAR_MAX = 120;
 // How many bots a person may have, so a bot that makes bots cannot go on making them (decision 0060).
 export const BOT_LIMIT = 20;
+// The most one message to a bot may hold, from the person or from another bot (decision 0063).
+export const BOT_MESSAGE_MAX = 4000;
 export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;
 
 export type Bot = {
@@ -32,8 +34,28 @@ export type Bot = {
   updatedAt: string;
 };
 
-/** One message of a bot's chat: the person's, or one the bot sent. */
-export type BotChatMessage = { id: string; role: "user" | "bot"; text: string };
+/**
+ * One message of a bot's chat: the person's, or one the bot sent. A message another bot sent to
+ * this one (decision 0063) is a `user` message with the sender's name in `from`.
+ */
+export type BotChatMessage = { id: string; role: "user" | "bot"; text: string; from?: string };
+
+// What a bot is told when a bot, not the person, is the one who wrote to it (decision 0063): the
+// text with its sender in front, which the bot's instructions explain and the chat reads back.
+const FROM_BOT = /^\[from bot ([^\]\n]+)\] ([\s\S]*)$/;
+
+/** The prompt a bot is given for a message another bot sent it. */
+export const botPrompt = (from: string, text: string) =>
+  `[from bot ${from.replace(/[\]\n]/g, " ")}] ${text}`;
+
+/** Who sent a prompt and what it said, when it is one a bot sent; otherwise nothing is split off. */
+export function parseBotPrompt(prompt: string): { from?: string; text: string } {
+  const match = FROM_BOT.exec(prompt);
+  return match ? { from: match[1]!, text: match[2]! } : { text: prompt };
+}
+
+/** How long a bot waits for another to answer it (decision 0063), and so how long a call for that may take. */
+export const BOT_ASK_TIMEOUT_MS = 300_000;
 
 /** What a client hears about a bot's chat (decision 0058): not a `RunEvent`, which would join several messages into one. */
 export type BotEvent =

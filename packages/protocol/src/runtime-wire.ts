@@ -194,7 +194,15 @@ export type BotReplyInfo = {
   compactAfterTokens?: number;
   /** Whether this bot may make others, a power of the person's main bot (decision 0060). */
   canCreateBots: boolean;
+  /**
+   * The person's other bots, for a bot that may message them, the main one (decision 0063); a bot
+   * that may not has none, which is different from none to message.
+   */
+  peers?: BotPeer[];
 };
+
+/** A bot another bot may message: how to name it in a call, and what it is for. */
+export type BotPeer = { id: string; name: string; description: string };
 
 export type ControlPlaneToRuntime =
   | {
@@ -293,7 +301,7 @@ export type SkillsCallMethod = "skills.get";
  * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
  * cannot wipe a chat. Messages are Anvia's.
  */
-export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update";
+export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update" | "bot.ask";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -356,6 +364,15 @@ export type BotUpdateParams = {
 /** What the bot is now. Its instruction applies from the next message, not the reply that changed it. */
 export type BotUpdated = { name: string; description: string };
 
+/**
+ * A bot writes to another of the person's bots and waits for its answer (decision 0063);
+ * `replyId` names the live reply it is working on, which must be the main bot's.
+ */
+export type BotAskParams = { replyId: string; bot: string; text: string };
+
+/** What the other bot sent back, one entry for each message; none when it chose to say nothing. */
+export type BotAnswered = { replies: string[] };
+
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string };
 
@@ -365,6 +382,7 @@ export type RuntimeCalls = {
   "bot.memory": { params: BotMemoryParams; result: unknown };
   "bot.create": { params: BotCreateParams; result: BotCreated };
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
+  "bot.ask": { params: BotAskParams; result: BotAnswered };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -381,4 +399,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 26;
+export const WIRE_VERSION = 27;

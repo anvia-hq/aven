@@ -4,6 +4,7 @@ import type { ModelConfig } from "@aven/agents/model";
 import {
   applyBotEvent,
   botMessageId,
+  botPrompt,
   isTyping,
   type Bot,
   type BotChatMessage,
@@ -69,6 +70,29 @@ export class BotRunner {
   // The person says something to the bot. Returns once the message is in the chat; the reply
   // comes as events. Throws if the bot cannot answer now, before anything is added.
   async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
+    await this.#enqueue({ bot, userId, model, prompt: text });
+  }
+
+  // Another bot writes to this one (decision 0063). The message waits its turn like the person's
+  // and is shown in the chat as the other bot's; the reply is the bot's as always, shown to the
+  // person too, and what it sent comes back to the asker. Resolves when the reply is over.
+  async ask(bot: Bot, userId: string, from: string, text: string, model: ModelConfig) {
+    const { answered } = await this.#enqueue({
+      bot,
+      userId,
+      model,
+      prompt: botPrompt(from, text),
+      from,
+      shown: text,
+    });
+    return answered;
+  }
+
+  // Puts one message in the chat and the reply it asks for in line, behind those already there.
+  // Resolves once it is in line, with the reply to wait for: inside an object, since a promise
+  // returned from here would be waited for.
+  async #enqueue(input: Omit<BotReplyInput, "say" | "signal"> & { from?: string; shown?: string }) {
+    const { bot, userId, model, prompt, from, shown = prompt } = input;
     this.#replier.ready(model);
     const channel = await this.#open(bot.id, userId);
     if (channel.pending >= MAX_PENDING) {
@@ -76,12 +100,12 @@ export class BotRunner {
     }
     // A client may have detached while this waited, which dropped the channel; it is in use again.
     this.#channels.set(bot.id, channel);
-    this.#say(channel, "user", text);
+    this.#say(channel, "user", shown, from);
     channel.pending += 1;
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
-    channel.tail = channel.tail.then(() =>
-      this.#reply({ bot, userId, model, prompt: text }, channel),
-    );
+    const answered = channel.tail.then(() => this.#reply({ bot, userId, model, prompt }, channel));
+    channel.tail = answered.then(() => undefined);
+    return { answered };
   }
 
   // Attaches a client: yields the chat, then live events, with `null` as a keep-alive tick.
@@ -166,8 +190,9 @@ export class BotRunner {
     if (channel.subscribers.size === 0 && channel.pending === 0) this.#channels.delete(botId);
   }
 
-  #say(channel: Channel, role: BotChatMessage["role"], text: string) {
-    const message = { id: botMessageId(channel.messages.length), role, text };
+  #say(channel: Channel, role: BotChatMessage["role"], text: string, from?: string) {
+    const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
+    if (from) message.from = from;
     this.#emit(channel, { type: "message", message });
   }
 
@@ -177,24 +202,32 @@ export class BotRunner {
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 
-  // One reply. It never throws: a failure is told to the clients, and the next reply goes on.
+  // One reply. It never throws: a failure is told to the clients, and the next reply goes on. What
+  // the bot sent, and why it failed if it did, is what a bot that asked for it is told.
   async #reply(input: Omit<BotReplyInput, "say" | "signal">, channel: Channel) {
     const { bot } = input;
+    const said: string[] = [];
+    let error: string | undefined;
     try {
       await this.#replier.answer({
         ...input,
-        say: (text) => this.#say(channel, "bot", text),
+        say: (text) => {
+          said.push(text);
+          this.#say(channel, "bot", text);
+        },
         signal: this.#shutdown.signal,
       });
-    } catch (error) {
+    } catch (failure) {
       if (!this.#shutdown.signal.aborted) {
-        console.warn(`Bot ${bot.id} could not reply:`, error);
-        this.#emit(channel, { type: "error", message: describeError(error) });
+        console.warn(`Bot ${bot.id} could not reply:`, failure);
+        error = describeError(failure);
+        this.#emit(channel, { type: "error", message: error });
       }
     } finally {
       channel.pending -= 1;
       if (channel.pending === 0) this.#emit(channel, { type: "typing", typing: false });
       this.#release(bot.id, channel);
     }
+    return { said, error };
   }
 }

@@ -76,8 +76,10 @@ function fakeRunner(
     revoke: (replyId: string) => void grants.revoked.push(replyId),
   };
   const replier = new RemoteBotReplier(hub, gateway, options.store ?? store, "runner-1", {
+    list: async () => [bot],
     create: async () => bot,
     update: async () => bot,
+    ask: async () => ({ replies: [] }),
     ...options.bots,
   });
   const only = () => [...sinks.values()][0]!;
@@ -114,6 +116,7 @@ describe("RemoteBotReplier", () => {
   test("sends the runner the bot, what was said and a token for its model", async () => {
     const run = fakeRunner();
     const answering = run.replier.answer(input(() => undefined));
+    await Bun.sleep(0);
 
     expect(run.started).toHaveLength(1);
     expect(run.started[0]).toMatchObject({
@@ -139,6 +142,7 @@ describe("RemoteBotReplier", () => {
     const run = fakeRunner();
     const said: string[] = [];
     const answering = run.replier.answer(input((text) => said.push(text)));
+    await Bun.sleep(0);
 
     run.only().say("arr");
     run.only().say("matey");
@@ -151,12 +155,14 @@ describe("RemoteBotReplier", () => {
   test("a reply the runner ends with an error fails, and so does one it loses", async () => {
     const failed = fakeRunner();
     const first = failed.replier.answer(input(() => undefined));
+    await Bun.sleep(0);
     failed.only().end("the model is down");
     await expect(first).rejects.toThrow("the model is down");
     expect(failed.grants.revoked).toEqual(failed.grants.issued);
 
     const lost = fakeRunner();
     const second = lost.replier.answer(input(() => undefined));
+    await Bun.sleep(0);
     lost.only().lost(new Error("The runtime disconnected"));
     await expect(second).rejects.toThrow("The runtime disconnected");
     expect(lost.grants.revoked).toEqual(lost.grants.issued);
@@ -178,6 +184,7 @@ describe("RemoteBotReplier", () => {
     const run = fakeRunner();
     const controller = new AbortController();
     const answering = run.replier.answer(input(() => undefined, controller.signal));
+    await Bun.sleep(0);
 
     controller.abort(new Error("Shutting down"));
     expect(run.cancelled).toEqual([{ replyId: run.started[0]!.replyId, reason: "Shutting down" }]);
@@ -192,6 +199,7 @@ describe("RemoteBotReplier", () => {
       store: { ...store, load: async ({ scope }) => (scopes.push(scope), []) },
     });
     const answering = run.replier.answer(input(() => undefined));
+    await Bun.sleep(0);
 
     await run.only().memory({ replyId: "whatever the runner says", op: "load" });
 
@@ -210,6 +218,7 @@ describe("RemoteBotReplier", () => {
         bots: { create: async (userId, newBot) => (calls.push({ userId, bot: newBot }), made) },
       });
       const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
 
       const result = await run.only().create(wanted);
 
@@ -235,6 +244,7 @@ describe("RemoteBotReplier", () => {
         ...input(() => undefined),
         bot: { ...bot, isMain: false },
       });
+      await Bun.sleep(0);
 
       expect(run.started[0]!.bot.canCreateBots).toBe(false);
       await expect(run.only().create(wanted)).rejects.toThrow("Only your main bot");
@@ -259,6 +269,7 @@ describe("RemoteBotReplier", () => {
         ...input(() => undefined),
         bot: { ...bot, isMain: false },
       });
+      await Bun.sleep(0);
 
       const result = await run.only().update({ replyId: "x", description: "Looks things up." });
 
@@ -277,8 +288,76 @@ describe("RemoteBotReplier", () => {
     test("a bot that is gone cannot be changed", async () => {
       const run = fakeRunner({ bots: { update: async () => null } });
       const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
 
       await expect(run.only().update({ replyId: "x", name: "Pip 2" })).rejects.toThrow("no longer");
+      run.only().end();
+      await answering;
+    });
+  });
+
+  describe("a bot that writes to other bots", () => {
+    const scout: Bot = {
+      ...bot,
+      id: "b2",
+      name: "Scout",
+      description: "Looks things up.",
+      isMain: false,
+    };
+
+    test("the main bot is told which bots it may write to, not itself", async () => {
+      const run = fakeRunner({ bots: { list: async () => [bot, scout] } });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(5);
+      await Bun.sleep(0);
+
+      expect(run.started[0]!.bot.peers).toEqual([
+        { id: "b2", name: "Scout", description: "Looks things up." },
+      ]);
+      run.only().end();
+      await answering;
+    });
+
+    test("it writes as itself, for its own person, and hears what the other bot sent", async () => {
+      const asked: { userId: string; from: string; botId: string; text: string }[] = [];
+      const run = fakeRunner({
+        bots: {
+          list: async () => [bot, scout],
+          ask: async (userId, from, botId, text) => (
+            asked.push({ userId, from: from.id, botId, text }),
+            { replies: ["A done"] }
+          ),
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(5);
+      await Bun.sleep(0);
+
+      const answered = await run.only().ask({ replyId: "x", bot: "b2", text: "do A" });
+
+      expect(answered).toEqual({ replies: ["A done"] });
+      expect(asked).toEqual([{ userId: "u1", from: "b1", botId: "b2", text: "do A" }]);
+      run.only().end();
+      await answering;
+    });
+
+    test("another bot may not, and is given no one to write to", async () => {
+      const asked: string[] = [];
+      const run = fakeRunner({
+        bots: {
+          list: async () => [bot, scout],
+          ask: async (userId) => (asked.push(userId), { replies: [] }),
+        },
+      });
+      const answering = run.replier.answer({ ...input(() => undefined), bot: scout });
+      await Bun.sleep(5);
+      await Bun.sleep(0);
+
+      expect(run.started[0]!.bot.peers).toBeUndefined();
+      await expect(run.only().ask({ replyId: "x", bot: "b1", text: "hi" })).rejects.toThrow(
+        "Only your main bot",
+      );
+      expect(asked).toEqual([]);
       run.only().end();
       await answering;
     });

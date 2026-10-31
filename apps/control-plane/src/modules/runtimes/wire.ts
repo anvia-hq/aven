@@ -1,9 +1,15 @@
 import type { Message } from "@anvia/core";
-import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
+import {
+  BOT_DESCRIPTION_MAX,
+  BOT_INSTRUCTION_MAX,
+  BOT_MESSAGE_MAX,
+  BOT_NAME_MAX,
+} from "@aven/protocol/bots";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
+  type BotAskParams,
   type BotCreateParams,
   type BotMemoryParams,
   type BotUpdateParams,
@@ -33,6 +39,7 @@ const callMethods = [
   "bot.memory",
   "bot.create",
   "bot.update",
+  "bot.ask",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -222,6 +229,13 @@ const botCreateParams = z.object({
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
 });
 
+// A bot writes to another of the person's bots, named by its id.
+const botAskParams = z.object({
+  replyId,
+  bot: z.uuid(),
+  text: z.string().trim().min(1).max(BOT_MESSAGE_MAX),
+});
+
 // What a bot changes about itself: some of its name, description and instruction, never nothing.
 const botUpdateParams = z
   .object({
@@ -257,6 +271,8 @@ export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
+export const parseBotAskParams = (params: unknown) =>
+  parseParams(botAskParams, params) as BotAskParams;
 export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

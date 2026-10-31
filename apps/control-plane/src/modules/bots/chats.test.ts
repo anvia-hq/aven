@@ -10,7 +10,7 @@ run("createBotChats (postgres)", async () => {
   const { createBotAgent } = await import("@aven/agents/bot-agent");
   const { botMessagesToChat } = await import("@aven/agents/bot-projection");
   const { scriptedModel, text, toolCall } = await import("@aven/agents/testing/scripted-model");
-  const { NotFoundError } = await import("../../errors");
+  const { NotFoundError, UnavailableError, UnprocessableError } = await import("../../errors");
   const { botMemoryStore } = await import("../../memory-store");
   const { providers } = await import("@aven/db/schema/providers");
   const { createBotChats } = await import("./chats");
@@ -98,6 +98,89 @@ run("createBotChats (postgres)", async () => {
       if (seen.length === 2) controller.abort();
     }
     expect(seen).toEqual(["hello", "hi Alice"]);
+  });
+
+  // A bot's reply that never ends, to see what asking one does when it takes too long.
+  const slowRunner = () =>
+    runnerWith({
+      store: keeping(),
+      createAgent: ({ bot, deliver, memory }) =>
+        createBotAgent({
+          model: scriptedModel([[toolCall("send_message", { text: "late" })], [text("")]]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        }),
+      pause: () => new Promise<void>(() => undefined),
+    });
+
+  test("one bot of a person writes to another and hears what it sent, which is in the other's own chat", async () => {
+    const [main] = await botsService.list(alice);
+    const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
+    const runner = runnerWith({
+      store: keeping(),
+      createAgent: ({ bot, deliver, memory }) =>
+        createBotAgent({
+          model: scriptedModel([
+            [toolCall("send_message", { text: `${bot.name} did A` })],
+            [text("")],
+          ]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        }),
+      pause: async () => undefined,
+    });
+
+    const answered = await createBotChats(runner).ask(alice, main!, scout.id, "do A");
+
+    expect(answered).toEqual({ replies: ["Scout did A"] });
+    const controller = new AbortController();
+    const [first] = await Array.fromAsync(
+      (async function* () {
+        for await (const event of runner.events(scout.id, alice, controller.signal)) {
+          if (event?.type === "snapshot") {
+            controller.abort();
+            yield event.messages;
+          }
+        }
+      })(),
+    );
+    expect(first).toEqual([
+      { id: "m-0", role: "user", text: "do A", from: main!.name },
+      { id: "m-1", role: "bot", text: "Scout did A" },
+    ]);
+  });
+
+  test("a bot cannot write to itself, to a bot that is not its person's, or to one that is not there", async () => {
+    const [main] = await botsService.list(alice);
+    const [theirs] = await botsService.list(bob);
+    const botChats = chats();
+
+    await expect(botChats.ask(alice, main!, main!.id, "hi")).rejects.toBeInstanceOf(
+      UnprocessableError,
+    );
+    await expect(botChats.ask(alice, main!, theirs!.id, "hi")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    await expect(
+      botChats.ask(alice, main!, "00000000-0000-4000-8000-000000000000", "hi"),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  test("a bot that takes too long is said to be still at work, and its answer goes on to its chat", async () => {
+    const [main] = await botsService.list(alice);
+    const scout = await botsService.create(alice, { name: "Slow", instruction: "x" });
+    const botChats = createBotChats(slowRunner(), { askTimeoutMs: 30 });
+
+    const asking = botChats.ask(alice, main!, scout.id, "hurry");
+
+    await expect(asking).rejects.toBeInstanceOf(UnavailableError);
+    await expect(asking).rejects.toThrow("still working on it");
   });
 
   test("nobody else can talk to it or listen in", async () => {

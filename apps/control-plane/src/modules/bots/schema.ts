@@ -3,6 +3,7 @@ import {
   BOT_COMPACT_TOKENS,
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
+  BOT_MESSAGE_MAX,
   BOT_NAME_MAX,
 } from "@aven/protocol/bots";
 import { z } from "zod";
@@ -33,6 +34,6 @@ export const updateBotBody = z.object({
 
 export type UpdateBotBody = z.infer<typeof updateBotBody>;
 
-export const sendBotMessageBody = z.object({ text: z.string().trim().min(1).max(4000) });
+export const sendBotMessageBody = z.object({ text: z.string().trim().min(1).max(BOT_MESSAGE_MAX) });
 
 export type SendBotMessageBody = z.infer<typeof sendBotMessageBody>;
