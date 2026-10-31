@@ -4,7 +4,7 @@ import { z } from "zod";
 export const SAVE_ENVIRONMENT_TOOL_NAME = "save_environment";
 
 /** Runs the repository's `.aven/setup` in a fresh setup container and keeps the result as the snapshot. */
-export type SaveEnvironment = (abortSignal?: AbortSignal) => Promise<unknown>;
+type SaveEnvironment = (abortSignal?: AbortSignal) => Promise<unknown>;
 
 // Saves the repository's environment (decision 0043): the host runs the setup script in a fresh
 // container, so what is kept is what the script makes, and new threads on the repository start

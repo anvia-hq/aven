@@ -4,7 +4,7 @@ import { z } from "zod";
 export const GIT_FETCH_TOOL_NAME = "git_fetch";
 
 /** What a fetch did: where `origin/<branch>` is now and where it was (null if it was not there). */
-export type FetchedBranch = { branch: string; commit: string; previous: string | null };
+type FetchedBranch = { branch: string; commit: string; previous: string | null };
 
 /** Fetches a branch of the thread's repository into its workspace as `origin/<branch>`. */
 export type FetchRemote = (

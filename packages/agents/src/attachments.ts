@@ -18,7 +18,7 @@ function formatSize(bytes: number) {
 }
 
 /** What the agent is told about the files that came with a message. */
-export function attachmentNote(kept: readonly KeptAttachment[]) {
+function attachmentNote(kept: readonly KeptAttachment[]) {
   const lines = kept.map((file) => {
     const shown = file.image ? ", shown to you below" : "";
     return `- ${file.path} (${file.mediaType}, ${formatSize(file.size)}${shown})`;

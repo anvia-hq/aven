@@ -3,7 +3,7 @@
 
 export type DiffLine = { type: "add" | "del" | "ctx"; text: string };
 
-export type QuestionChoice = { label: string; value: string };
+type QuestionChoice = { label: string; value: string };
 
 /** One thing the agent asks the user. With `choices` the user picks one; `allowCustom` also lets them write their own answer. */
 export type QuestionPrompt = {

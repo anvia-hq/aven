@@ -5,7 +5,7 @@ import type { CompletionModel, CompletionRequest, Message } from "@anvia/core";
 // issued (`rs_…`) and rejects Anthropic's `thinking_0` with a 400, and Anthropic wants its signed
 // thinking blocks. Reasoning another provider made is not needed to continue, so it is left out of
 // what a request replays. The run's own reasoning, made by this model, passes untouched.
-export type ReasoningOwnership = (id: string | undefined) => boolean;
+type ReasoningOwnership = (id: string | undefined) => boolean;
 
 export const ownedByResponsesApi: ReasoningOwnership = (id) => id?.startsWith("rs_") ?? false;
 export const ownedByAnthropic: ReasoningOwnership = (id) => id?.startsWith("thinking_") ?? false;

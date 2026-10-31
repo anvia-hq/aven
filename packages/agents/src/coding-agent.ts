@@ -14,7 +14,7 @@ import { createSecretRequestTool } from "./tools/request-secret";
 import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 
-export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
+type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   /** What the agent can do: files, commands and processes in its sandbox, supplied by the host. */
   tools: readonly AnyTool[];
   /** Enable `web_search`. Defaults to whether `TAVILY_API_KEY` is set. */

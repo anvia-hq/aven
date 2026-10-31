@@ -8,7 +8,7 @@ import { imageType } from "../image-type";
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 /** Where the image tool reads from and where it keeps what it shows; any `SandboxRuntime` reads. */
-export type ImageFiles = {
+type ImageFiles = {
   readFile(options: { path: string; abortSignal?: AbortSignal }): Promise<Uint8Array>;
   /** Keeps a copy of the image and returns the name it is served by. */
   save(bytes: Uint8Array, mediaType: string): Promise<string>;

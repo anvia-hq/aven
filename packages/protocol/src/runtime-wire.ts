@@ -63,7 +63,7 @@ export type DesktopCallMethod =
   | "desktop.wake";
 
 /** What the control plane asks of a runner about a thread's changes (decision 0030); params are `{ threadId, scope }`. */
-export type DiffCallMethod = "diff.get";
+type DiffCallMethod = "diff.get";
 
 /**
  * `turn` is what the thread's latest run changed, `all` everything since its branch left the default
@@ -95,7 +95,7 @@ export type FileContent =
   | { kind: "missing" };
 
 /** What the control plane asks of a runner for an image the agent showed (decision 0033); params are `{ threadId, name }`. */
-export type ArtifactsCallMethod = "artifacts.read";
+type ArtifactsCallMethod = "artifacts.read";
 
 /** An image a runner keeps, its bytes in base64; null on the wire when there is no such image. */
 export type ArtifactContent = { mediaType: string; data: string };
@@ -272,14 +272,14 @@ export type RepoAccess = {
   token: string;
 };
 
-export type RepoAccessParams = { runId: string };
+type RepoAccessParams = { runId: string };
 
-export type SkillsGetParams = { runId: string; digest: string };
+type SkillsGetParams = { runId: string; digest: string };
 
 /** A skill's folder as a `.tar.gz`, in base64. */
-export type SkillArchive = { data: string };
+type SkillArchive = { data: string };
 
-export type MemoryAppendParams = {
+type MemoryAppendParams = {
   runId: string;
   turn: number;
   /** Messages in Anvia's format, as stored in conversation memory; opaque on the wire. */

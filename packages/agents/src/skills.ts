@@ -19,7 +19,7 @@ export const MAX_SKILL_NAME = 64;
 export type SkillListing = { name: string; description: string; path: string };
 
 /** Why a skill folder was left out. */
-export function skillProblem(error: unknown) {
+function skillProblem(error: unknown) {
   if (error instanceof SkillValidationError)
     return error.issues.map((issue) => issue.message).join("; ");
   return errorMessage(error);

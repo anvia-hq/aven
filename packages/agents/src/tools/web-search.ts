@@ -18,15 +18,13 @@ export const webSearchInput = z.object({
     .describe("Only return results published within this window."),
 });
 
-export type WebSearchInput = z.infer<typeof webSearchInput>;
-
-export type WebSearchResult = {
+type WebSearchResult = {
   title: string;
   url: string;
   content: string;
 };
 
-export type WebSearchOutput = {
+type WebSearchOutput = {
   answer: string | null;
   results: WebSearchResult[];
 };
@@ -36,7 +34,7 @@ type TavilyResponse = {
   results?: { title?: string; url?: string; content?: string }[];
 };
 
-export type WebSearchOptions = {
+type WebSearchOptions = {
   /** Defaults to `TAVILY_API_KEY`. */
   apiKey?: string;
   /** Overridable for tests. */
