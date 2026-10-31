@@ -95,3 +95,12 @@ export function AzureColorMark(props: IconProps) {
     </svg>
   );
 }
+
+// Aven's own mark: a blocky A, drawn from the logo file (the viewBox is cropped to the shape).
+export function AvenMark(props: IconProps) {
+  return (
+    <svg viewBox="296 367 642 501" fill="currentColor" fillRule="evenodd" aria-hidden {...props}>
+      <path d="M475 367H896A42 42 0 0 1 938 409V826A42 42 0 0 1 896 868H820A42 42 0 0 1 778 826V778A40 40 0 0 0 738 738H515A40 40 0 0 0 475 778V826A42 42 0 0 1 433 868H338A42 42 0 0 1 296 826V527A42 42 0 0 1 338 485H390A43 43 0 0 0 433 442V409A42 42 0 0 1 475 367ZM513 487H740A38 38 0 0 1 778 525V596A38 38 0 0 1 740 634H513A38 38 0 0 1 475 596V525A38 38 0 0 1 513 487Z" />
+    </svg>
+  );
+}
