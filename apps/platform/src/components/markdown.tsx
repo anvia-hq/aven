@@ -1,10 +1,25 @@
+import { Github } from "@mynaui/icons-react";
 import { StreamMarkdown } from "@anvia/react-ui/stream";
 import type { ComponentProps } from "react";
 import type { Components } from "react-markdown";
 
-// Agent text can link anywhere; never navigate the app away from the thread.
-function ExternalLink({ node: _node, ...props }: ComponentProps<"a"> & { node?: unknown }) {
-  return <a {...props} target="_blank" rel="noreferrer noopener" />;
+const PULL_REQUEST_URL = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
+
+// Agent text can link anywhere; never navigate the app away from the thread. A pull request link
+// carries the GitHub mark, so it reads as one at a glance.
+function ExternalLink({
+  node: _node,
+  children,
+  ...props
+}: ComponentProps<"a"> & { node?: unknown }) {
+  return (
+    <a {...props} target="_blank" rel="noreferrer noopener">
+      {props.href && PULL_REQUEST_URL.test(props.href) && (
+        <Github className="mr-1 inline size-[1em] align-[-0.125em]" />
+      )}
+      {children}
+    </a>
+  );
 }
 
 const components = { a: ExternalLink };
