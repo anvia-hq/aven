@@ -1,0 +1,22 @@
+# A run can mint OIDC identity tokens
+
+Status: accepted. Builds on 0008 (the control plane's model gateway and per-run tokens), 0044 (credentials signed into the sandbox per run) and 0045 to 0047 (variables and secrets). Follows Amp, whose orbs have `amp orb id-token`: "service providers that support OIDC can trust the identity provided by Amp and grant permissions to your orb based on that identity, without having to inject any secrets into orbs".
+
+## Context
+
+A project that deploys to a cloud, or reaches a private network, needs a credential in the sandbox. Variables and secrets (0045 to 0047) work, but a stored key is long-lived, as broad as whatever it was minted with, and readable by everything the agent runs. Most clouds and tools (Google Cloud Workload Identity Federation, AWS, Vault, Tailscale, GitHub Actions' own consumers) can instead trust an OIDC issuer and exchange a short-lived signed token for access, scoped by the token's claims.
+
+## Decision
+
+- **The control plane is an OIDC issuer.** Issuer `<BETTER_AUTH_URL>/api/workload-identity` (the platform's `/api` proxy strips the prefix, so the control plane serves `/workload-identity/...`), with `/.well-known/openid-configuration` and `/jwks.json`, public and unauthenticated as an issuer must be. Tokens are ES256 JWTs. The signing key is `WORKLOAD_IDENTITY_PRIVATE_KEY` (a PKCS#8 PEM, one line with literal `\n` allowed); without one a key is made per process, so tokens do not survive a restart and a provider cannot be configured against it, which is fine for development. The key id is the key's JWK thumbprint, so a rotated key is a new `kid` and the old one can stay in the JWKS until its tokens expire.
+- **A run gets an identity credential, as it gets a model token (0008).** When a run starts, the control plane issues a random credential tied to the run's context (organization, project, thread, the sender) and gives it to the runner as `identity` on `run.start` and `run.resume` (wire version 20). It ends with the run, like the gateway grant. The context stays on the control plane: the runner and the sandbox hold a token that means nothing without it, so the agent cannot claim another thread's or person's identity.
+- **`POST /workload-identity/token` mints a token for it.** Authenticated by that credential, taking `audience` (required: the service the token is for), `subjectScope` (`thread`, the default, `project` or `organization`) and `lifetime` in seconds (60 to 3600, default 600, as Amp's 10 minutes to an hour). The claims are the standard `iss`, `aud`, `sub`, `iat`, `nbf`, `exp` and `jti`, with `organization_id`, `project_id`, `thread_id`, `user_id` and `email`. `sub` is `thread:<id>`, `project:<id>` or `organization:<id>` by the scope, so a provider's trust rule can be as narrow as one thread or as wide as the workspace; the claims stay whatever the scope, as in Amp, and a rule that must be narrow matches the claim it means.
+- **In the sandbox it is `aven id-token --audience <aud> [--subject-scope <scope>] [--lifetime <seconds>]`**, which prints only the token, so it works in command substitution and credential helpers. It is a small script in the sandbox image that reads the credential the runner wrote at the start of the run, as `gh` is signed in (0044), and calls the control plane. The runner reaches the control plane at its own origin; the container gets that origin with a loopback host replaced by `host.docker.internal`, which a container already resolves.
+- **The agent is told it exists**, with the rule to prefer it to asking for a key when a service trusts Aven's issuer.
+
+## Consequences
+
+- No long-lived secret for a service that supports OIDC: the token expires in minutes and is scoped by its claims. A token a run minted stays valid until it expires even after the run ends; short lifetimes are the answer, as in Amp.
+- A provider's trust rule decides what a token can do. A rule that matches only the issuer lets every Aven thread of every organization in. The docs for the feature say to match `sub` or `organization_id`.
+- The control plane must be reachable by the provider for the JWKS (a public URL); one on a laptop cannot be an issuer a cloud trusts. A self-hosted control plane is its own issuer, with its own key and URL.
+- Not covered: the setup container (0043) gets no identity yet. Amp gives setup a project- or workspace-scoped one, since it has no thread; that is a later step, as is a token exchange for a provider's own credentials.
