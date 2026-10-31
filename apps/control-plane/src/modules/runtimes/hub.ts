@@ -6,6 +6,8 @@ import type {
   BotCreateParams,
   BotMemoryParams,
   BotReplyInfo,
+  BotUpdated,
+  BotUpdateParams,
   CallMethod,
   ControlPlaneToRuntime,
   RepoAccess,
@@ -50,6 +52,8 @@ export type BotReplySink = {
   memory(params: BotMemoryParams): Promise<unknown>;
   /** Makes a bot for this reply's person, if the reply's bot may (decision 0060). */
   create(params: BotCreateParams): Promise<BotCreated>;
+  /** Changes this reply's own bot (decision 0061). */
+  update(params: BotUpdateParams): Promise<BotUpdated>;
 };
 
 type Run = {

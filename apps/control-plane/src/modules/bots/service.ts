@@ -21,6 +21,7 @@ const view = (row: BotRow): Bot => ({
   id: row.id,
   name: row.name,
   instruction: row.instruction,
+  description: row.description,
   avatar: row.avatar,
   providerId: row.providerId,
   // A model is the provider's: with the provider gone, so is its model.
@@ -55,12 +56,15 @@ export const botsService = {
 
   // A bot made for the person, which answers with their default model until they pick another. A
   // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060).
-  async create(userId: string, { name, instruction, avatar = "" }: NewBot) {
+  async create(userId: string, { name, instruction, description = "", avatar = "" }: NewBot) {
     const [owned] = await db.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
     if ((owned?.total ?? 0) >= BOT_LIMIT) {
       throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
     }
-    const [row] = await db.insert(bots).values({ userId, name, instruction, avatar }).returning();
+    const [row] = await db
+      .insert(bots)
+      .values({ userId, name, instruction, description, avatar })
+      .returning();
     return view(row!);
   },
 

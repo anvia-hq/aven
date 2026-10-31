@@ -1,9 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
-import { BOT_AVATAR_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
+import {
+  BOT_AVATAR_MAX,
+  BOT_DESCRIPTION_MAX,
+  BOT_INSTRUCTION_MAX,
+  BOT_NAME_MAX,
+} from "@aven/protocol/bots";
 import type { RunEvent } from "@aven/protocol/events";
 
-import { parseBotCreateParams, parseBotMemoryParams, parseRuntimeFrame } from "./wire";
+import {
+  parseBotCreateParams,
+  parseBotMemoryParams,
+  parseBotUpdateParams,
+  parseRuntimeFrame,
+} from "./wire";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
@@ -99,6 +109,7 @@ describe("calls from a runtime", () => {
       "skills.get",
       "bot.memory",
       "bot.create",
+      "bot.update",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
@@ -182,6 +193,33 @@ describe("a bot's reply from a runtime", () => {
       { ...made, replyId: "" },
     ]) {
       expect(() => parseBotCreateParams(bad)).toThrow();
+    }
+  });
+});
+
+describe("a bot changing itself", () => {
+  test("some of its name, description and instruction, within the limits of settings", () => {
+    expect(parseBotUpdateParams({ replyId: "r1", name: " Scout " })).toMatchObject({
+      name: "Scout",
+    });
+    expect(
+      parseBotUpdateParams({ replyId: "r1", description: " Looks things up. " }),
+    ).toMatchObject({ description: "Looks things up." });
+    // Clearing a description or an instruction is a change, as it is in settings.
+    expect(parseBotUpdateParams({ replyId: "r1", description: "" }).description).toBe("");
+    expect(parseBotUpdateParams({ replyId: "r1", instruction: "" }).instruction).toBe("");
+  });
+
+  test("never nothing, and never more than settings allows", () => {
+    for (const bad of [
+      { replyId: "r1" },
+      { replyId: "", name: "Scout" },
+      { replyId: "r1", name: " " },
+      { replyId: "r1", name: "x".repeat(BOT_NAME_MAX + 1) },
+      { replyId: "r1", description: "x".repeat(BOT_DESCRIPTION_MAX + 1) },
+      { replyId: "r1", instruction: "x".repeat(BOT_INSTRUCTION_MAX + 1) },
+    ]) {
+      expect(() => parseBotUpdateParams(bad)).toThrow();
     }
   });
 });

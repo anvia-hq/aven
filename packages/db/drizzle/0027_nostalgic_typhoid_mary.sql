@@ -1,0 +1,1 @@
+ALTER TABLE "bots" ADD COLUMN "description" text DEFAULT '' NOT NULL;

@@ -25,6 +25,8 @@ export const bots = pgTable(
     name: text("name").notNull(),
     /** What the person told the bot to be like. */
     instruction: text("instruction").notNull(),
+    /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
+    description: text("description").notNull().default(""),
     /** A short string, an emoji; empty until the person picks one. */
     avatar: text("avatar").notNull().default(""),
     /**

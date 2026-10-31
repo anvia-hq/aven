@@ -55,13 +55,7 @@ export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
 export const botRunner = new BotRunner({
   store: botMemoryStore,
-  replier: new RemoteBotReplier(
-    runtimeHub,
-    runGateway,
-    botMemoryStore,
-    botRuntimeId,
-    (userId, bot) => botsService.create(userId, bot),
-  ),
+  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId, botsService),
 });
 
 export const botChats = createBotChats(botRunner);

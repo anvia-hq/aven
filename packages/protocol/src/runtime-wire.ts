@@ -291,7 +291,7 @@ export type SkillsCallMethod = "skills.get";
  * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
  * cannot wipe a chat. Messages are Anvia's.
  */
-export type BotCallMethod = "bot.memory" | "bot.create";
+export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -337,8 +337,23 @@ export type BotCreateParams = {
   name: string;
   /** What the new bot is for and how it works, written to it. */
   instruction: string;
+  description?: string;
   avatar?: string;
 };
+
+/**
+ * What a bot changes about itself (decision 0061); `replyId` names the live reply, whose bot is
+ * the one changed. What is left out stays, and at least one is given.
+ */
+export type BotUpdateParams = {
+  replyId: string;
+  name?: string;
+  description?: string;
+  instruction?: string;
+};
+
+/** What the bot is now. Its instruction applies from the next message, not the reply that changed it. */
+export type BotUpdated = { name: string; description: string };
 
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string };
@@ -348,6 +363,7 @@ export type RuntimeCalls = {
   /** The answer is Anvia's: messages for `load`, `{ revision, messages }` for `snapshot`, `{ status }` for `replacePrefix`, null for the others. */
   "bot.memory": { params: BotMemoryParams; result: unknown };
   "bot.create": { params: BotCreateParams; result: BotCreated };
+  "bot.update": { params: BotUpdateParams; result: BotUpdated };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -364,4 +380,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 25;
+export const WIRE_VERSION = 26;

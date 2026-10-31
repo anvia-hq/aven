@@ -46,6 +46,16 @@ run("botsService (postgres)", async () => {
     expect((await botsService.list(alice))[0]).toMatchObject({ name: "Pip", isMain: true });
   });
 
+  test("a bot's description is its own, starts empty, and can be written and cleared", async () => {
+    const [main] = await botsService.list(alice);
+    expect(main?.description).toBe("");
+    const written = await botsService.update(alice, main!.id, { description: "Your companion" });
+    expect(written).toMatchObject({ description: "Your companion", name: main!.name });
+    expect(await botsService.update(alice, main!.id, { description: "" })).toMatchObject({
+      description: "",
+    });
+  });
+
   test("bots are scoped to their person", async () => {
     const [mine] = await botsService.list(alice);
     const [theirs] = await botsService.list(bob);
@@ -59,11 +69,13 @@ run("botsService (postgres)", async () => {
     const made = await botsService.create(alice, {
       name: "Scout",
       instruction: "You research.",
+      description: "Looks things up.",
       avatar: "🔭",
     });
     expect(made).toMatchObject({
       name: "Scout",
       instruction: "You research.",
+      description: "Looks things up.",
       avatar: "🔭",
       isMain: false,
       providerId: null,

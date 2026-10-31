@@ -3,6 +3,7 @@
 
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
+export const BOT_DESCRIPTION_MAX = 200;
 export const BOT_AVATAR_MAX = 16;
 // How many bots a person may have, so a bot that makes bots cannot go on making them (decision 0060).
 export const BOT_LIMIT = 20;
@@ -13,6 +14,8 @@ export type Bot = {
   name: string;
   /** What the person told the bot to be like; the bot's own rules for messaging come on top of it. */
   instruction: string;
+  /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
+  description: string;
   /** A short string, an emoji; empty shows the name's first letter. */
   avatar: string;
   /** The provider and model the bot talks with; none means the person's default (decision 0058). */

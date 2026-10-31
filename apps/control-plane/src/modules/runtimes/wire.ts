@@ -1,11 +1,17 @@
 import type { Message } from "@anvia/core";
-import { BOT_AVATAR_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
+import {
+  BOT_AVATAR_MAX,
+  BOT_DESCRIPTION_MAX,
+  BOT_INSTRUCTION_MAX,
+  BOT_NAME_MAX,
+} from "@aven/protocol/bots";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
   type BotCreateParams,
   type BotMemoryParams,
+  type BotUpdateParams,
   type CallMethod,
   type RunOutcome,
   type RuntimeToControlPlane,
@@ -31,6 +37,7 @@ const callMethods = [
   "skills.get",
   "bot.memory",
   "bot.create",
+  "bot.update",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -217,8 +224,23 @@ const botCreateParams = z.object({
   replyId,
   name: z.string().trim().min(1).max(BOT_NAME_MAX),
   instruction: z.string().trim().min(1).max(BOT_INSTRUCTION_MAX),
+  description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
   avatar: z.string().trim().max(BOT_AVATAR_MAX).optional(),
 });
+
+// What a bot changes about itself: some of its name, description and instruction, never nothing.
+const botUpdateParams = z
+  .object({
+    replyId,
+    name: z.string().trim().min(1).max(BOT_NAME_MAX).optional(),
+    description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
+    instruction: z.string().trim().max(BOT_INSTRUCTION_MAX).optional(),
+  })
+  .refine(
+    ({ name, description, instruction }) =>
+      [name, description, instruction].some((value) => value !== undefined),
+    { message: "Nothing to change" },
+  );
 
 const appendParams = memoryParams.extend({
   turn: z.number().int().nonnegative(),
@@ -237,6 +259,8 @@ export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
+export const parseBotUpdateParams = (params: unknown) =>
+  parseParams(botUpdateParams, params) as BotUpdateParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

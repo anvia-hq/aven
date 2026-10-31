@@ -6,13 +6,14 @@ import type { BotReplyInfo, RunModel } from "@aven/protocol/runtime-wire";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
-import { RemoteBotReplier } from "./remote-replier";
+import { RemoteBotReplier, type BotKeeper } from "./remote-replier";
 import type { NewBot } from "./service";
 
 const bot: Bot = {
   id: "b1",
   name: "Pip",
   instruction: "Talk like a pirate.",
+  description: "",
   avatar: "",
   providerId: null,
   modelId: null,
@@ -37,7 +38,7 @@ function fakeRunner(
     online?: boolean;
     keyless?: boolean;
     store?: MemoryStore;
-    makeBot?: (userId: string, bot: NewBot) => Promise<Bot>;
+    bots?: Partial<BotKeeper>;
   } = {},
 ) {
   const started: { replyId: string; bot: BotReplyInfo; prompt: string; model: RunModel }[] = [];
@@ -74,13 +75,11 @@ function fakeRunner(
     issue: (replyId: string) => (grants.issued.push(replyId), runModel),
     revoke: (replyId: string) => void grants.revoked.push(replyId),
   };
-  const replier = new RemoteBotReplier(
-    hub,
-    gateway,
-    options.store ?? store,
-    "runner-1",
-    options.makeBot ?? (async () => bot),
-  );
+  const replier = new RemoteBotReplier(hub, gateway, options.store ?? store, "runner-1", {
+    create: async () => bot,
+    update: async () => bot,
+    ...options.bots,
+  });
   const only = () => [...sinks.values()][0]!;
   return { replier, started, cancelled, grants, asked, only };
 }
@@ -207,7 +206,7 @@ describe("RemoteBotReplier", () => {
     test("the main bot's new bot is made for its own person, and the runner is told which", async () => {
       const calls: { userId: string; bot: NewBot }[] = [];
       const run = fakeRunner({
-        makeBot: async (userId, newBot) => (calls.push({ userId, bot: newBot }), made),
+        bots: { create: async (userId, newBot) => (calls.push({ userId, bot: newBot }), made) },
       });
       const answering = run.replier.answer(input(() => undefined));
 
@@ -215,7 +214,15 @@ describe("RemoteBotReplier", () => {
 
       expect(result).toEqual({ id: "b2", name: "Scout" });
       expect(calls).toEqual([
-        { userId: "u1", bot: { name: "Scout", instruction: "You research.", avatar: undefined } },
+        {
+          userId: "u1",
+          bot: {
+            name: "Scout",
+            instruction: "You research.",
+            description: undefined,
+            avatar: undefined,
+          },
+        },
       ]);
       run.only().end();
       await answering;
@@ -223,7 +230,7 @@ describe("RemoteBotReplier", () => {
 
     test("another bot may not, and is not told it can", async () => {
       const calls: string[] = [];
-      const run = fakeRunner({ makeBot: async (userId) => (calls.push(userId), made) });
+      const run = fakeRunner({ bots: { create: async (userId) => (calls.push(userId), made) } });
       const answering = run.replier.answer({
         ...input(() => undefined),
         bot: { ...bot, isMain: false },
@@ -232,6 +239,46 @@ describe("RemoteBotReplier", () => {
       expect(run.started[0]!.bot.canCreateBots).toBe(false);
       await expect(run.only().create(wanted)).rejects.toThrow("Only your main bot");
       expect(calls).toEqual([]);
+      run.only().end();
+      await answering;
+    });
+  });
+
+  describe("a bot that changes itself", () => {
+    test("any bot changes its own record, for its own person, whichever bot the runner names", async () => {
+      const calls: { userId: string; id: string; changes: unknown }[] = [];
+      const run = fakeRunner({
+        bots: {
+          update: async (userId, id, changes) => (
+            calls.push({ userId, id, changes }),
+            { ...bot, isMain: false, name: "Scout 2", description: "Looks things up." }
+          ),
+        },
+      });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        bot: { ...bot, isMain: false },
+      });
+
+      const result = await run.only().update({ replyId: "x", description: "Looks things up." });
+
+      expect(result).toEqual({ name: "Scout 2", description: "Looks things up." });
+      expect(calls).toEqual([
+        {
+          userId: "u1",
+          id: "b1",
+          changes: { name: undefined, description: "Looks things up.", instruction: undefined },
+        },
+      ]);
+      run.only().end();
+      await answering;
+    });
+
+    test("a bot that is gone cannot be changed", async () => {
+      const run = fakeRunner({ bots: { update: async () => null } });
+      const answering = run.replier.answer(input(() => undefined));
+
+      await expect(run.only().update({ replyId: "x", name: "Pip 2" })).rejects.toThrow("no longer");
       run.only().end();
       await answering;
     });

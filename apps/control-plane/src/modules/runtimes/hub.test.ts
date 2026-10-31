@@ -202,6 +202,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
           create: async (params) => (asked.push(params), { id: "bot-2", name: params.name }),
+          update: async (params) => (
+            asked.push(params),
+            { name: params.name ?? "Pip", description: params.description ?? "" }
+          ),
         },
       );
       return { ws, received, connection, heard, asked, runtime };
@@ -270,6 +274,25 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect(nameless.ok).toBe(false);
       const empty = await ask(ws, received, "bot.create", { ...made, instruction: "" });
       expect(empty.ok).toBe(false);
+      expect(asked).toHaveLength(1);
+    });
+
+    test("a bot's change to itself is made for the live reply only, and is never nothing", async () => {
+      const { ws, received, asked } = await replying("bot-update");
+      const change = { replyId: "reply-1", description: "Looks things up." };
+
+      expect(await ask(ws, received, "bot.update", change)).toMatchObject({
+        ok: true,
+        result: { name: "Pip", description: "Looks things up." },
+      });
+      expect(asked).toEqual([change]);
+
+      const unknown = await ask(ws, received, "bot.update", { ...change, replyId: "other" });
+      expect(unknown.ok).toBe(false);
+      const nothing = await ask(ws, received, "bot.update", { replyId: "reply-1" });
+      expect(nothing.ok).toBe(false);
+      const nameless = await ask(ws, received, "bot.update", { replyId: "reply-1", name: " " });
+      expect(nameless.ok).toBe(false);
       expect(asked).toHaveLength(1);
     });
 

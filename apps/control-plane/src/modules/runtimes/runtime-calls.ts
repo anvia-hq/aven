@@ -3,6 +3,8 @@ import type {
   BotCreated,
   BotCreateParams,
   BotMemoryParams,
+  BotUpdated,
+  BotUpdateParams,
   CallMethod,
   RepoAccess,
   RunThreadInfo,
@@ -12,6 +14,7 @@ import {
   parseAppendParams,
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotUpdateParams,
   parseMemoryParams,
   parseSkillsGetParams,
 } from "./wire";
@@ -31,6 +34,8 @@ export type CallBotReply = {
   memory(params: BotMemoryParams): Promise<unknown>;
   /** Makes a bot for the reply's owner, when the reply's bot may. */
   create(params: BotCreateParams): Promise<BotCreated>;
+  /** Changes the reply's own bot, and no other. */
+  update(params: BotUpdateParams): Promise<BotUpdated>;
 };
 
 export type RuntimeCallContext = {
@@ -67,6 +72,14 @@ function answerBotCreate(params: unknown, findBotReply: RuntimeCallContext["find
   return reply.create(call);
 }
 
+// A bot changing itself, for the live reply the call names: its bot is the reply's, never the runner's word.
+function answerBotUpdate(params: unknown, findBotReply: RuntimeCallContext["findBotReply"]) {
+  const call = parseBotUpdateParams(params);
+  const reply = findBotReply(call.replyId);
+  if (!reply) throw new Error("Unknown or finished reply");
+  return reply.update(call);
+}
+
 // Answers what a runtime asks of the control plane: to add a turn to the transcript, which the control plane
 // owns, how to clone the repository, and the run's skills. All only for the run's own thread; the scope comes from
 // our record of the run, never from what the runtime sends.
@@ -77,6 +90,7 @@ export async function answerRuntimeCall(
 ) {
   if (method === "bot.memory") return answerBotMemory(params, findBotReply);
   if (method === "bot.create") return answerBotCreate(params, findBotReply);
+  if (method === "bot.update") return answerBotUpdate(params, findBotReply);
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
   if (method === "skills.get") {
