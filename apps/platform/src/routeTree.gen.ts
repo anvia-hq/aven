@@ -13,10 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
-import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
-import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
@@ -26,8 +25,10 @@ import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/se
 import { Route as AuthedSettingsRuntimesRouteImport } from './routes/_authed/settings/runtimes'
 import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
 import { Route as AuthedSettingsWorkspaceVariablesRouteImport } from './routes/_authed/settings/workspace-variables'
-import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
-import { Route as AuthedThreadsThreadIdRouteImport } from './routes/_authed/threads/$threadId'
+import { Route as AuthedShellProjectsIndexRouteImport } from './routes/_authed/_shell/projects/index'
+import { Route as AuthedShellProjectsProjectIdRouteImport } from './routes/_authed/_shell/projects/$projectId'
+import { Route as AuthedShellThreadsIndexRouteImport } from './routes/_authed/_shell/threads/index'
+import { Route as AuthedShellThreadsThreadIdRouteImport } from './routes/_authed/_shell/threads/$threadId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,6 +49,10 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedShellRoute = AuthedShellRouteImport.update({
+  id: '/_shell',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -59,16 +64,6 @@ const AcceptInvitationInvitationIdRoute =
     path: '/accept-invitation/$invitationId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
-  id: '/projects/',
-  path: '/projects/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
-  id: '/projects/$projectId',
-  path: '/projects/$projectId',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -116,16 +111,29 @@ const AuthedSettingsWorkspaceVariablesRoute =
     path: '/workspace-variables',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
-const AuthedThreadsIndexRoute = AuthedThreadsIndexRouteImport.update({
+const AuthedShellProjectsIndexRoute =
+  AuthedShellProjectsIndexRouteImport.update({
+    id: '/projects/',
+    path: '/projects/',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellProjectsProjectIdRoute =
+  AuthedShellProjectsProjectIdRouteImport.update({
+    id: '/projects/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellThreadsIndexRoute = AuthedShellThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedShellRoute,
 } as any)
-const AuthedThreadsThreadIdRoute = AuthedThreadsThreadIdRouteImport.update({
-  id: '/threads/$threadId',
-  path: '/threads/$threadId',
-  getParentRoute: () => AuthedRoute,
-} as any)
+const AuthedShellThreadsThreadIdRoute =
+  AuthedShellThreadsThreadIdRouteImport.update({
+    id: '/threads/$threadId',
+    path: '/threads/$threadId',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -133,7 +141,6 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -142,17 +149,17 @@ export interface FileRoutesByFullPath {
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
-  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
-  '/projects/': typeof AuthedProjectsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
-  '/threads/': typeof AuthedThreadsIndexRoute
+  '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
+  '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
+  '/projects/': typeof AuthedShellProjectsIndexRoute
+  '/threads/': typeof AuthedShellThreadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -161,10 +168,11 @@ export interface FileRoutesByTo {
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
-  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
-  '/projects': typeof AuthedProjectsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
-  '/threads': typeof AuthedThreadsIndexRoute
+  '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
+  '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
+  '/projects': typeof AuthedShellProjectsIndexRoute
+  '/threads': typeof AuthedShellThreadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -172,9 +180,9 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authed/_shell': typeof AuthedShellRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
-  '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/platform': typeof AuthedSettingsPlatformRoute
@@ -183,10 +191,11 @@ export interface FileRoutesById {
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
-  '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
-  '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
-  '/_authed/threads/': typeof AuthedThreadsIndexRoute
+  '/_authed/_shell/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
+  '/_authed/_shell/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
+  '/_authed/_shell/projects/': typeof AuthedShellProjectsIndexRoute
+  '/_authed/_shell/threads/': typeof AuthedShellThreadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -196,7 +205,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/accept-invitation/$invitationId'
-    | '/projects/$projectId'
     | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
@@ -205,9 +213,10 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/skills'
     | '/settings/workspace-variables'
+    | '/settings/'
+    | '/projects/$projectId'
     | '/threads/$threadId'
     | '/projects/'
-    | '/settings/'
     | '/threads/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,7 +224,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/accept-invitation/$invitationId'
-    | '/projects/$projectId'
     | '/settings/environment-variables'
     | '/settings/members'
     | '/settings/platform'
@@ -224,9 +232,10 @@ export interface FileRouteTypes {
     | '/settings/runtimes'
     | '/settings/skills'
     | '/settings/workspace-variables'
+    | '/settings'
+    | '/projects/$projectId'
     | '/threads/$threadId'
     | '/projects'
-    | '/settings'
     | '/threads'
   id:
     | '__root__'
@@ -234,9 +243,9 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/register'
+    | '/_authed/_shell'
     | '/_authed/settings'
     | '/accept-invitation/$invitationId'
-    | '/_authed/projects/$projectId'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/members'
     | '/_authed/settings/platform'
@@ -245,10 +254,11 @@ export interface FileRouteTypes {
     | '/_authed/settings/runtimes'
     | '/_authed/settings/skills'
     | '/_authed/settings/workspace-variables'
-    | '/_authed/threads/$threadId'
-    | '/_authed/projects/'
     | '/_authed/settings/'
-    | '/_authed/threads/'
+    | '/_authed/_shell/projects/$projectId'
+    | '/_authed/_shell/threads/$threadId'
+    | '/_authed/_shell/projects/'
+    | '/_authed/_shell/threads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -289,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/_shell': {
+      id: '/_authed/_shell'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedShellRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -302,20 +319,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/accept-invitation/$invitationId'
       preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/projects/': {
-      id: '/_authed/projects/'
-      path: '/projects'
-      fullPath: '/projects/'
-      preLoaderRoute: typeof AuthedProjectsIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/projects/$projectId': {
-      id: '/_authed/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
-      preLoaderRoute: typeof AuthedProjectsProjectIdRouteImport
-      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/': {
       id: '/_authed/settings/'
@@ -380,22 +383,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsWorkspaceVariablesRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
-    '/_authed/threads/': {
-      id: '/_authed/threads/'
+    '/_authed/_shell/projects/': {
+      id: '/_authed/_shell/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthedShellProjectsIndexRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/projects/$projectId': {
+      id: '/_authed/_shell/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthedShellProjectsProjectIdRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/threads/': {
+      id: '/_authed/_shell/threads/'
       path: '/threads'
       fullPath: '/threads/'
-      preLoaderRoute: typeof AuthedThreadsIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      preLoaderRoute: typeof AuthedShellThreadsIndexRouteImport
+      parentRoute: typeof AuthedShellRoute
     }
-    '/_authed/threads/$threadId': {
-      id: '/_authed/threads/$threadId'
+    '/_authed/_shell/threads/$threadId': {
+      id: '/_authed/_shell/threads/$threadId'
       path: '/threads/$threadId'
       fullPath: '/threads/$threadId'
-      preLoaderRoute: typeof AuthedThreadsThreadIdRouteImport
-      parentRoute: typeof AuthedRoute
+      preLoaderRoute: typeof AuthedShellThreadsThreadIdRouteImport
+      parentRoute: typeof AuthedShellRoute
     }
   }
 }
+
+interface AuthedShellRouteChildren {
+  AuthedShellProjectsProjectIdRoute: typeof AuthedShellProjectsProjectIdRoute
+  AuthedShellThreadsThreadIdRoute: typeof AuthedShellThreadsThreadIdRoute
+  AuthedShellProjectsIndexRoute: typeof AuthedShellProjectsIndexRoute
+  AuthedShellThreadsIndexRoute: typeof AuthedShellThreadsIndexRoute
+}
+
+const AuthedShellRouteChildren: AuthedShellRouteChildren = {
+  AuthedShellProjectsProjectIdRoute: AuthedShellProjectsProjectIdRoute,
+  AuthedShellThreadsThreadIdRoute: AuthedShellThreadsThreadIdRoute,
+  AuthedShellProjectsIndexRoute: AuthedShellProjectsIndexRoute,
+  AuthedShellThreadsIndexRoute: AuthedShellThreadsIndexRoute,
+}
+
+const AuthedShellRouteWithChildren = AuthedShellRoute._addFileChildren(
+  AuthedShellRouteChildren,
+)
 
 interface AuthedSettingsRouteChildren {
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
@@ -427,19 +462,13 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 )
 
 interface AuthedRouteChildren {
+  AuthedShellRoute: typeof AuthedShellRouteWithChildren
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
-  AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
-  AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
-  AuthedProjectsIndexRoute: typeof AuthedProjectsIndexRoute
-  AuthedThreadsIndexRoute: typeof AuthedThreadsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedShellRoute: AuthedShellRouteWithChildren,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
-  AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
-  AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
-  AuthedProjectsIndexRoute: AuthedProjectsIndexRoute,
-  AuthedThreadsIndexRoute: AuthedThreadsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

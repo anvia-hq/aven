@@ -10,7 +10,7 @@ import { useThreads } from "@/modules/threads/hooks/use-threads";
 import { InheritedVariables } from "@/modules/variables/components/inherited-variables";
 import { VariablesSection } from "@/modules/variables/components/variables-section";
 
-export const Route = createFileRoute("/_authed/projects/$projectId")({
+export const Route = createFileRoute("/_authed/_shell/projects/$projectId")({
   component: ProjectPage,
 });
 

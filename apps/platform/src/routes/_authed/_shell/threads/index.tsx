@@ -10,7 +10,7 @@ import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
-export const Route = createFileRoute("/_authed/threads/")({
+export const Route = createFileRoute("/_authed/_shell/threads/")({
   component: NewThread,
 });
 

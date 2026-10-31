@@ -22,7 +22,7 @@ import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 const GAP_HANDLE =
   "bg-transparent aria-[orientation=vertical]:w-2 aria-[orientation=vertical]:after:w-2 aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:after:h-2";
 
-export const Route = createFileRoute("/_authed/threads/$threadId")({
+export const Route = createFileRoute("/_authed/_shell/threads/$threadId")({
   component: ThreadPage,
 });
 

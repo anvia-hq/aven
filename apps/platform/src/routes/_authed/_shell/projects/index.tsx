@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
 import { ProjectGrid } from "@/modules/projects/components/project-grid";
 
-export const Route = createFileRoute("/_authed/projects/")({
+export const Route = createFileRoute("/_authed/_shell/projects/")({
   component: Projects,
 });
 
