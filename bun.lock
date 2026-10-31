@@ -78,7 +78,6 @@
       "name": "@aven/runtime",
       "version": "0.0.0",
       "dependencies": {
-        "@aven/agents": "workspace:*",
         "@aven/runtime-client": "workspace:*",
       },
     },
@@ -120,6 +119,8 @@
         "@anvia/sandbox": "1.3.2",
         "@aven/agents": "workspace:*",
         "@aven/protocol": "workspace:*",
+      },
+      "devDependencies": {
         "zod": "^4.6.7",
       },
     },

@@ -1,6 +1,7 @@
-import { errorMessage } from "@aven/agents/values";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 // A runner: connects out to a control plane and hosts the sandboxes its threads run in. Create one in the
 // control plane's settings to get its token (shown once), then:
