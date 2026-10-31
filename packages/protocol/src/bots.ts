@@ -12,6 +12,9 @@ export type Bot = {
   instruction: string;
   /** A short string, an emoji; empty shows the name's first letter. */
   avatar: string;
+  /** The provider and model the bot talks with; none means the person's default (decision 0058). */
+  providerId: string | null;
+  modelId: string | null;
   /** The person's main bot: the one they always have. */
   isMain: boolean;
   createdAt: string;

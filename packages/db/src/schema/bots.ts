@@ -1,6 +1,7 @@
 import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+import { providers } from "./providers";
 import { users } from "./users";
 
 // A bot a person talks to (decision 0058). Tied to the user, like providers and skills: it follows
@@ -17,6 +18,13 @@ export const bots = pgTable(
     instruction: text("instruction").notNull(),
     /** A short string, an emoji; empty until the person picks one. */
     avatar: text("avatar").notNull().default(""),
+    /**
+     * The model the bot talks with: one of the person's providers and one of its models. Without a
+     * provider the bot uses the person's default; without a model, the provider's own. A provider
+     * that is removed leaves the bot on the default.
+     */
+    providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
+    modelId: text("model_id"),
     isMain: boolean("is_main").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

@@ -11,6 +11,7 @@ run("createBotChats (postgres)", async () => {
   const { scriptedModel, text, toolCall } = await import("@aven/agents/testing/scripted-model");
   const { NotFoundError } = await import("../../errors");
   const { botMemoryStore } = await import("../../memory-store");
+  const { providers } = await import("@aven/db/schema/providers");
   const { createBotChats } = await import("./chats");
   const { BotRunner } = await import("./runner");
   const { botsService } = await import("./service");
@@ -150,5 +151,47 @@ run("createBotChats (postgres)", async () => {
     await botsService.update(alice, mine!.id, { name: "Pip", instruction: "Talk like a pirate." });
     await createBotChats(runner).send(alice, mine!.id, "ahoy");
     expect(made).toEqual([{ name: "Pip", instruction: "Talk like a pirate." }]);
+  });
+
+  test("the bot runs on the model it was given, else the person's default", async () => {
+    process.env.MODEL_CATALOG_URL = "";
+    const [mine] = await botsService.list(alice);
+    const [provider] = await db
+      .insert(providers)
+      .values({
+        userId: alice,
+        kind: "openai-compatible",
+        name: "Bot's own",
+        baseUrl: "http://localhost:1/v1",
+        modelId: "provider-model",
+      })
+      .returning();
+    const used: { provider: string; modelId?: string }[] = [];
+    const runner = new BotRunner({
+      store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
+      createAgent: ({ bot, model, deliver, memory }) => {
+        used.push({ provider: model.provider, modelId: model.modelId });
+        return createBotAgent({
+          model: scriptedModel([[text("")]]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        });
+      },
+      pause: async () => undefined,
+    });
+    const chats = createBotChats(runner);
+
+    await botsService.update(alice, mine!.id, { providerId: provider!.id, modelId: "chosen-1" });
+    await chats.send(alice, mine!.id, "one");
+    await botsService.update(alice, mine!.id, { providerId: provider!.id });
+    await chats.send(alice, mine!.id, "two");
+    expect(used).toEqual([
+      { provider: "openai-compatible", modelId: "chosen-1" },
+      { provider: "openai-compatible", modelId: "provider-model" },
+    ]);
+    await botsService.update(alice, mine!.id, { providerId: null });
   });
 });

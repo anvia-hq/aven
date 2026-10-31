@@ -17,6 +17,8 @@ const bot: Bot = {
   name: "Pip",
   instruction: "",
   avatar: "",
+  providerId: null,
+  modelId: null,
   isMain: true,
   createdAt: "",
   updatedAt: "",

@@ -176,6 +176,13 @@
       "when": 1793429699858,
       "tag": "0024_slow_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793431760343,
+      "tag": "0025_overconfident_jazinda",
+      "breakpoints": true
     }
   ]
 }
