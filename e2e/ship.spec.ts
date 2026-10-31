@@ -26,9 +26,7 @@ test.describe("shipping a thread", () => {
     await page.goto(`/threads/${threadId}`);
     await expect(page.getByRole("link", { name: /#7/ })).toHaveCount(0);
     // What would be shipped, as lines added and removed, beside the button above the composer.
-    await expect(page.getByTitle("Changes since the branch left the default branch")).toHaveText(
-      "+2 -1",
-    );
+    await expect(page.getByTitle("Changes not shipped yet")).toHaveText("+2 -1");
 
     // The agent opens the pull request with gh, as the person (the pretend GitHub keeps it).
     await page.request.post("http://localhost:8101/repos/acme/shiny-app/pulls");
