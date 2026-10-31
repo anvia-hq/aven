@@ -4,16 +4,17 @@ import { Refresh } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
+import type { Computer } from "@/modules/desktop/computer";
 
 import { useTerminal } from "../hooks/use-terminal";
 
 type Props = {
-  threadId: string;
+  computer: Computer;
 };
 
-// A shell in the thread's sandbox, with an overlay while it connects and once it has ended.
-export function TerminalViewer({ threadId }: Props) {
-  const { target, phase, reason, reconnect } = useTerminal(threadId);
+// A shell in a computer, with an overlay while it connects and once it has ended.
+export function TerminalViewer({ computer }: Props) {
+  const { target, phase, reason, reconnect } = useTerminal(computer);
 
   return (
     <div className="relative size-full bg-background">

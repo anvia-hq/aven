@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { wsUrl } from "@/lib/api";
 
+import type { Computer } from "../computer";
+
 type Phase = "connecting" | "connected" | "ended";
 
-// A thread's desktop, drawn by noVNC into `target`. The desktop is scaled to fit and never resized,
-// because the agent's screenshots and clicks are in the desktop's own coordinates. A connection
-// that ends stays ended until `reconnect`.
-export function useDesktopStream(threadId: string, viewOnly: boolean, onEnded: () => void) {
+// A computer's desktop, drawn by noVNC into `target`. The desktop is scaled to fit and never
+// resized, because the agent's screenshots and clicks are in the desktop's own coordinates. A
+// connection that ends stays ended until `reconnect`.
+export function useDesktopStream({ path }: Computer, viewOnly: boolean, onEnded: () => void) {
   const target = useRef<HTMLDivElement>(null);
   const client = useRef<RFB | null>(null);
   const [phase, setPhase] = useState<Phase>("connecting");
@@ -23,7 +25,7 @@ export function useDesktopStream(threadId: string, viewOnly: boolean, onEnded: (
     const element = target.current;
     if (!element) return;
     setPhase("connecting");
-    const rfb = new RFB(element, wsUrl(`/threads/${threadId}/desktop/stream`), {
+    const rfb = new RFB(element, wsUrl(`${path}/desktop/stream`), {
       wsProtocols: ["binary"],
     });
     rfb.scaleViewport = true;
@@ -40,7 +42,7 @@ export function useDesktopStream(threadId: string, viewOnly: boolean, onEnded: (
       rfb.disconnect();
       client.current = null;
     };
-  }, [threadId, attempt]);
+  }, [path, attempt]);
 
   useEffect(() => {
     if (client.current) client.current.viewOnly = viewOnly;

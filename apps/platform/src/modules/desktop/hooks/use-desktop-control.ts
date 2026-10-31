@@ -3,16 +3,18 @@ import { useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { api, attempt, errorMessage } from "@/lib/api";
 
+import type { Computer } from "../computer";
+
 // The control plane gives control for a minute at a time; this renews it well before that.
 const RENEW_MS = 20_000;
 
-// Taking over a thread's desktop: the agent's inputs fail while a person holds it. Control is kept
-// by renewing while this is mounted and given back on leaving, and a closed tab's lease runs out.
-export function useDesktopControl(threadId: string) {
+// Taking over a desktop: the agent's inputs fail while a person holds it. Control is kept by
+// renewing while this is mounted and given back on leaving, and a closed tab's lease runs out.
+export function useDesktopControl({ path }: Computer) {
   const [controlling, setControlling] = useState(false);
   const [busy, setBusy] = useState(false);
-  const takeoverPath = `/threads/${threadId}/desktop/takeover`;
-  const releasePath = `/threads/${threadId}/desktop/release`;
+  const takeoverPath = `${path}/desktop/takeover`;
+  const releasePath = `${path}/desktop/release`;
 
   async function takeOver() {
     setBusy(true);

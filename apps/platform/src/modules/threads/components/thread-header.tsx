@@ -1,7 +1,5 @@
 import { Folder, GitDiff, List, Monitor, Terminal } from "@mynaui/icons-react";
-import type { ComponentType } from "react";
-
-import { Button } from "@/components/button";
+import { PanelToggle } from "@/components/panel-toggle";
 
 import type { ThreadPanels } from "../hooks/use-thread-panels";
 import type { Thread } from "../types";
@@ -32,27 +30,5 @@ export function ThreadHeader({ thread, panels }: Props) {
         />
       ))}
     </header>
-  );
-}
-
-type ToggleProps = {
-  label: string;
-  icon: ComponentType;
-  open: boolean;
-  onToggle: () => void;
-};
-
-function PanelToggle({ label, icon: Icon, open, onToggle }: ToggleProps) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className={open ? "bg-accent" : undefined}
-      aria-label={label}
-      aria-pressed={open}
-      onClick={onToggle}
-    >
-      <Icon />
-    </Button>
   );
 }

@@ -32,7 +32,7 @@ type Viewer = {
 const MAX_BUFFERED_BYTES = 4 * 1024 * 1024;
 const DRAIN_POLL_MS = 10;
 
-const NOT_RUNNING = "The thread's sandbox is not running";
+const NOT_RUNNING = "The sandbox is not running";
 
 // The desktops of this runner's sandboxes, streamed to viewers the control plane opens (decision
 // 0015). Watching never starts a sandbox: a thread whose container is not running has no desktop to

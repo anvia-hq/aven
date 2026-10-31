@@ -32,7 +32,7 @@ describe("DesktopViewers", () => {
     const { viewers, sent } = setup(undefined);
     await viewers.open(viewerId, "t1");
     expect(sent).toEqual([
-      { type: "desktop.closed", viewerId, reason: "The thread's sandbox is not running" },
+      { type: "desktop.closed", viewerId, reason: "The sandbox is not running" },
     ]);
     expect(viewers.watching("t1")).toBe(0);
   });

@@ -40,9 +40,9 @@ export function AppShell({ user, sidebar }: Props) {
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  // A thread draws its own card for the conversation, so its side panels can be cards of their own
-  // on the frame beside it, level with it.
-  const inThread = /^\/threads\/[^/]+/.test(pathname);
+  // A thread, and the bot, draw their own card for the conversation, so their side panels can be
+  // cards of their own on the frame beside it, level with it.
+  const drawsOwnCards = /^\/(threads\/[^/]+|bot)(\/|$)/.test(pathname);
 
   return (
     <SidebarProvider
@@ -72,7 +72,7 @@ export function AppShell({ user, sidebar }: Props) {
       <div
         className={cn(
           "flex min-w-0 flex-1 md:my-2 md:mr-2",
-          !inThread &&
+          !drawsOwnCards &&
             "md:overflow-clip md:rounded-xl md:border-y md:border-r md:border-sidebar-border md:bg-background",
         )}
       >
@@ -114,7 +114,7 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
-        <SidebarInset className={cn(inThread && "md:bg-transparent")}>
+        <SidebarInset className={cn(drawsOwnCards && "md:bg-transparent")}>
           <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">
             <SidebarTrigger />
             <span className="text-sm font-medium">Aven</span>

@@ -214,6 +214,59 @@ test.describe("bots", () => {
     await expect.poll(size).toBeNull();
   });
 
+  // The bot's computer (decision 0059): its desktop and shell are the thread's own panels, beside the
+  // chat. It is off until it is woken, since a bot that only talks never starts one.
+  test("the person wakes the bot's computer, watches its desktop and types in its terminal", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await registerUser(page, "bot-computer", "Computer Person");
+    await page.goto("/bot");
+
+    await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    const desktop = page.getByRole("region", { name: "Desktop" });
+    await expect(desktop.getByText("The bot's computer is not running.")).toBeVisible();
+    await expect(desktop.locator("canvas")).toHaveCount(0);
+
+    await desktop.getByRole("button", { name: "Wake up" }).click();
+    const canvas = desktop.locator("canvas");
+    await expect(canvas).toBeVisible();
+    await expect(async () => {
+      const pixel = await canvas.evaluate((element) => {
+        const context = (element as HTMLCanvasElement).getContext("2d")!;
+        return Array.from(context.getImageData(10, 10, 1, 1).data);
+      });
+      expect(pixel).toEqual([255, 0, 0, 255]);
+    }).toPass({ timeout: 10_000 });
+
+    // Watching first; taking over is the person's to ask for.
+    await expect(desktop.getByText("Watching. Take over to click and type.")).toBeVisible();
+    await desktop.getByRole("button", { name: "Take over" }).click();
+    await expect(
+      desktop.getByText("You are in control. The agent's inputs are paused."),
+    ).toBeVisible();
+    await desktop.getByRole("button", { name: "Give back" }).click();
+
+    // The same computer has a shell, which is up already.
+    await page.getByRole("button", { name: "Terminal", exact: true }).click();
+    const terminal = page.getByRole("region", { name: "Terminal" });
+    await expect(terminal.locator(".xterm-rows")).toContainText("fake$");
+    await terminal.locator(".xterm").click();
+    await page.keyboard.type("echo hi");
+    await page.keyboard.press("Enter");
+    await expect(terminal.locator(".xterm-rows")).toContainText("ran: echo hi");
+
+    // What is open is remembered, and the chat is still there beside it.
+    await page.reload();
+    await expect(page.getByRole("region", { name: "Desktop" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Terminal" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Close desktop" }).click();
+    await page.getByRole("button", { name: "Close terminal" }).click();
+    await expect(page.getByRole("region", { name: "Desktop" })).toBeHidden();
+  });
+
   test("on a phone the chat fits the screen, composer included", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 });
     await registerUser(page, "bot-phone", "Phone Person");

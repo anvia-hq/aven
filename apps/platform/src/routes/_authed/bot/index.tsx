@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { BotChat } from "@/modules/bots/components/bot-chat";
+import { BotWorkspace } from "@/modules/bots/components/bot-workspace";
 import { useBots } from "@/modules/bots/hooks/use-bots";
 
 export const Route = createFileRoute("/_authed/bot/")({
@@ -11,5 +11,5 @@ export const Route = createFileRoute("/_authed/bot/")({
 function BotPage() {
   const { main } = useBots();
   if (!main) return null;
-  return <BotChat key={main.id} bot={main} />;
+  return <BotWorkspace key={main.id} bot={main} />;
 }

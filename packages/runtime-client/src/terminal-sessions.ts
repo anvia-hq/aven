@@ -22,7 +22,7 @@ const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 // A paste that the terminal does not take is held; this much at most.
 const MAX_UNWRITTEN_BYTES = 1024 * 1024;
 
-const NOT_RUNNING = "The thread's sandbox is not running";
+const NOT_RUNNING = "The sandbox is not running";
 
 const clamp = (value: number, max: number) => Math.min(max, Math.max(1, Math.trunc(value) || 1));
 

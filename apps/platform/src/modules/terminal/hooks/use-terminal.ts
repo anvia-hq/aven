@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 
 import { wsUrl } from "@/lib/api";
+import type { Computer } from "@/modules/desktop/computer";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 type TerminalPhase = "connecting" | "connected" | "ended";
@@ -10,9 +11,9 @@ type TerminalPhase = "connecting" | "connected" | "ended";
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 const FALLBACK_SIZE = { cols: 80, rows: 24 };
 
-function streamUrl(threadId: string, size: { cols: number; rows: number }) {
+function streamUrl(path: string, size: { cols: number; rows: number }) {
   const { cols, rows } = size;
-  return wsUrl(`/threads/${threadId}/terminal/stream?cols=${cols}&rows=${rows}`);
+  return wsUrl(`${path}/terminal/stream?cols=${cols}&rows=${rows}`);
 }
 
 // The page's own colours, resolved to something the terminal can paint: it cannot read `var()`.
@@ -35,11 +36,11 @@ function terminalTheme() {
   };
 }
 
-// A shell in the thread's sandbox (decision 0053), drawn by xterm.js. Keystrokes go to the control
+// A shell in a computer (decisions 0053 and 0059), drawn by xterm.js. Keystrokes go to the control
 // plane as binary messages and the shell's output comes back the same way; a resize is JSON text.
 // A shell that ends, or a connection that drops, leaves the screen as it was until `reconnect`
 // starts a new shell.
-export function useTerminal(threadId: string) {
+export function useTerminal({ path }: Computer) {
   const target = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const [phase, setPhase] = useState<TerminalPhase>("connecting");
@@ -64,7 +65,7 @@ export function useTerminal(threadId: string) {
     fit.fit();
     terminal.current = term;
 
-    const ws = new WebSocket(streamUrl(threadId, term.cols ? term : FALLBACK_SIZE));
+    const ws = new WebSocket(streamUrl(path, term.cols ? term : FALLBACK_SIZE));
     ws.binaryType = "arraybuffer";
     const encoder = new TextEncoder();
     // Anything typed before the connection opens is dropped, as it would go nowhere.
@@ -97,7 +98,7 @@ export function useTerminal(threadId: string) {
       term.dispose();
       terminal.current = null;
     };
-  }, [threadId, attempt]);
+  }, [path, attempt]);
 
   useEffect(() => {
     if (terminal.current) terminal.current.options.theme = terminalTheme();

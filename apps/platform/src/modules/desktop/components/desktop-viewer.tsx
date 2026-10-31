@@ -3,19 +3,20 @@ import { Refresh } from "@mynaui/icons-react";
 import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
 
+import type { Computer } from "../computer";
 import { useDesktopStream } from "../hooks/use-desktop-stream";
 
 type Props = {
-  threadId: string;
+  computer: Computer;
   /** Watch only: nothing the person does reaches the desktop. */
   viewOnly: boolean;
   /** The connection ended, so the caller can look again at why. */
   onEnded: () => void;
 };
 
-// A thread's desktop, drawn by noVNC, with what the connection is doing over it until it is up.
-export function DesktopViewer({ threadId, viewOnly, onEnded }: Props) {
-  const { target, phase, reconnect } = useDesktopStream(threadId, viewOnly, onEnded);
+// A computer's desktop, drawn by noVNC, with what the connection is doing over it until it is up.
+export function DesktopViewer({ computer, viewOnly, onEnded }: Props) {
+  const { target, phase, reconnect } = useDesktopStream(computer, viewOnly, onEnded);
 
   return (
     <div className="relative size-full bg-muted">

@@ -3,6 +3,7 @@ import { useDefaultLayout } from "react-resizable-panels";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
+import { threadComputer } from "@/modules/desktop/computer";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
@@ -46,14 +47,14 @@ export function ThreadSidePanels({ threadId, running, panels, handleClassName }:
   if (desktop.open) {
     sidePanels.push({
       id: "desktop",
-      node: <DesktopPanel threadId={threadId} onClose={desktop.close} />,
+      node: <DesktopPanel computer={threadComputer(threadId)} onClose={desktop.close} />,
     });
   }
 
   if (terminal.open) {
     sidePanels.push({
       id: "terminal",
-      node: <TerminalPanel threadId={threadId} onClose={terminal.close} />,
+      node: <TerminalPanel computer={threadComputer(threadId)} onClose={terminal.close} />,
     });
   }
 

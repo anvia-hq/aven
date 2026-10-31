@@ -2,21 +2,22 @@ import { useState } from "react";
 
 import { useRequest } from "@/hooks/use-request";
 
+import type { Computer } from "../computer";
 import type { DesktopStatus } from "../types";
 
 const POLL_MS = 5_000;
 
-// Where a thread's desktop is, refreshed while the caller is mounted: the sandbox comes and goes
+// Where a computer's desktop is, refreshed while the caller is mounted: the sandbox comes and goes
 // as the agent works and goes idle, without the page doing anything.
-export function useDesktopStatus(threadId: string) {
+export function useDesktopStatus({ path }: Computer) {
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // Every answer is about the thread's one desktop; what was known about another thread says
-  // nothing about this one.
-  const answer = useRequest<DesktopStatus>(`/threads/${threadId}/desktop`, {
+  // Every answer is about one computer's desktop; what was known about another says nothing about
+  // this one.
+  const answer = useRequest<DesktopStatus>(`${path}/desktop`, {
     key: "desktop",
     pollMs: POLL_MS,
-    resetOn: threadId,
+    resetOn: path,
     refreshKey: refreshCount,
   });
 

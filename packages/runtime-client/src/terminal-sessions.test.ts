@@ -57,7 +57,7 @@ describe("TerminalSessions", () => {
     const { sessions, sent } = setup(false);
     sessions.open(viewerId, "t1", size);
     expect(sent).toEqual([
-      { type: "terminal.closed", viewerId, reason: "The thread's sandbox is not running" },
+      { type: "terminal.closed", viewerId, reason: "The sandbox is not running" },
     ]);
     expect(sessions.count("t1")).toBe(0);
   });

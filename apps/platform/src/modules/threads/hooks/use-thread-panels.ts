@@ -1,9 +1,4 @@
-import { useLocalStorage } from "@/hooks/use-local-storage";
-
-function usePanel(key: string, initial: boolean) {
-  const [open, setOpen] = useLocalStorage(key, initial);
-  return { open, toggle: () => setOpen(!open), close: () => setOpen(false) };
-}
+import { usePanel } from "@/hooks/use-panel";
 
 // Which panels are open beside a thread, remembered. The overview is on until closed; the others
 // open when asked for.

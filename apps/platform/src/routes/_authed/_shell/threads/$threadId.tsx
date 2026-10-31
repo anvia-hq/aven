@@ -7,6 +7,7 @@ import { NotFound } from "@/components/not-found";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -17,10 +18,6 @@ import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
-
-// The divider between cards is a gap of the frame's colour, wide enough to grab.
-const GAP_HANDLE =
-  "bg-transparent aria-[orientation=vertical]:w-2 aria-[orientation=vertical]:after:w-2 aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:after:h-2";
 
 export const Route = createFileRoute("/_authed/_shell/threads/$threadId")({
   component: ThreadPage,

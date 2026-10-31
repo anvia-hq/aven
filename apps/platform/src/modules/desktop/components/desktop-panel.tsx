@@ -5,6 +5,7 @@ import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
 
+import type { Computer } from "../computer";
 import { useDesktopControl } from "../hooks/use-desktop-control";
 import { useDesktopStatus } from "../hooks/use-desktop-status";
 import { useDesktopWake } from "../hooks/use-desktop-wake";
@@ -13,7 +14,7 @@ import { DesktopViewer } from "./desktop-viewer";
 import { SandboxAsleepNotice } from "./sandbox-asleep-notice";
 
 type Props = {
-  threadId: string;
+  computer: Computer;
   onClose: () => void;
 };
 
@@ -23,12 +24,12 @@ function hintFor(inControl: boolean, heldByOther: boolean) {
   return "Watching. Take over to click and type.";
 }
 
-// The thread's desktop beside the conversation: watch it live, or take it over so the agent's
+// The computer's desktop beside the conversation: watch it live, or take it over so the agent's
 // inputs pause while you drive it.
-export function DesktopPanel({ threadId, onClose }: Props) {
-  const { status, problem, refresh } = useDesktopStatus(threadId);
-  const { controlling, busy, takeOver, giveBack } = useDesktopControl(threadId);
-  const { waking, wake } = useDesktopWake(threadId, refresh);
+export function DesktopPanel({ computer, onClose }: Props) {
+  const { status, problem, refresh } = useDesktopStatus(computer);
+  const { controlling, busy, takeOver, giveBack } = useDesktopControl(computer);
+  const { waking, wake } = useDesktopWake(computer, refresh);
   const view = sandboxView(status, problem);
   const heldByOther = status?.available === true && status.held && !status.heldByMe;
   const inControl = controlling && view === "ready";
@@ -69,13 +70,14 @@ export function DesktopPanel({ threadId, onClose }: Props) {
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "no-sandbox" && (
           <SandboxAsleepNotice
+            asleep={computer.asleep}
             purpose="watch the desktop"
             waking={waking}
             onWake={() => void wake()}
           />
         )}
         {view === "ready" && (
-          <DesktopViewer threadId={threadId} viewOnly={!inControl} onEnded={() => void refresh()} />
+          <DesktopViewer computer={computer} viewOnly={!inControl} onEnded={() => void refresh()} />
         )}
       </div>
     </SidePanel>
