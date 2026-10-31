@@ -46,9 +46,25 @@ export type SetupInput = {
   timeoutMs?: number;
 };
 
-// A setup container is the sandbox image with a way to install system packages: no
-// `no-new-privileges`, so `sudo` works. It only lives for the length of one setup and its commit.
-export function setupRunArgs(input: SetupInput & { name: string }) {
+export type ContainerBase = {
+  name: string;
+  /** What the container is for, as a label beside `aven.sandbox=1`, which every runner container has. */
+  label: string;
+  memoryMb: number;
+  cpus: number;
+  pidsLimit: number;
+  /** Passed to `docker run --platform`; the host's own when not set. */
+  platform?: string;
+  /** Passed to `docker run --runtime`; the daemon's default when not set. */
+  runtime?: string;
+};
+
+// The `docker run` arguments a runner's containers share, up to the image: `beforeLimits` and
+// `afterLimits` are the container's own, in their place among them.
+export function containerBaseArgs(
+  input: ContainerBase,
+  { beforeLimits = [], afterLimits }: { beforeLimits?: string[]; afterLimits: string[] },
+) {
   const args = [
     "run",
     "-d",
@@ -57,7 +73,8 @@ export function setupRunArgs(input: SetupInput & { name: string }) {
     "--label",
     "aven.sandbox=1",
     "--label",
-    `aven.setup=${input.key}`,
+    input.label,
+    ...beforeLimits,
     "--memory",
     `${input.memoryMb}m`,
     "--cpus",
@@ -66,11 +83,20 @@ export function setupRunArgs(input: SetupInput & { name: string }) {
     String(input.pidsLimit),
     "--shm-size",
     "512m",
-    "-v",
-    `${input.root}:${WORKSPACE_DIR}`,
+    ...afterLimits,
   ];
   if (input.platform) args.push("--platform", input.platform);
   if (input.runtime) args.push("--runtime", input.runtime);
+  return args;
+}
+
+// A setup container is the sandbox image with a way to install system packages: no
+// `no-new-privileges`, so `sudo` works. It only lives for the length of one setup and its commit.
+export function setupRunArgs(input: SetupInput & { name: string }) {
+  const args = containerBaseArgs(
+    { ...input, label: `aven.setup=${input.key}` },
+    { afterLimits: ["-v", `${input.root}:${WORKSPACE_DIR}`] },
+  );
   args.push(input.baseImage, "sleep", "infinity");
   return args;
 }
@@ -85,9 +111,8 @@ const tail = (text: string, lines = 20) => text.trimEnd().split("\n").slice(-lin
 
 /**
  * Runs the repository's `.aven/setup` in a setup container and commits the container as
- * `input.image` (decision 0043). Returns the id of the base image it started from. A script that
- * fails, or runs too long, throws with the end of its output, and nothing is committed; the
- * container is removed either way.
+ * `input.image` (decision 0043). A script that fails, or runs too long, throws with the end of its
+ * output, and nothing is committed; the container is removed either way.
  */
 export async function setupEnvironment(input: SetupInput) {
   const { docker } = input;
@@ -97,8 +122,6 @@ export async function setupEnvironment(input: SetupInput) {
     const inspected = await docker(["image", "inspect", "--format", "{{.Id}}", input.baseImage]);
     if (inspected.code !== 0)
       throw new Error(`The sandbox image ${input.baseImage} is not available`);
-    const baseImageId = inspected.stdout.trim();
-
     const started = await docker(setupRunArgs({ ...input, name }));
     if (started.code !== 0) {
       throw new Error(
@@ -157,7 +180,6 @@ export async function setupEnvironment(input: SetupInput) {
         `Could not save the environment: ${committed.stderr.trim() || committed.stdout}`,
       );
     }
-    return { baseImageId };
   } finally {
     await docker(["rm", "-f", name]).catch(() => undefined);
   }

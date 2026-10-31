@@ -19,7 +19,14 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
-import { RESUME_SCRIPT, hostUser, scriptState, type DockerRun } from "./environment-setup";
+import {
+  RESUME_SCRIPT,
+  containerBaseArgs,
+  hostUser,
+  scriptState,
+  type ContainerBase,
+  type DockerRun,
+} from "./environment-setup";
 import { Environments } from "./environments";
 import { git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
@@ -83,8 +90,7 @@ const SIGN_IN_TIMEOUT_MS = 30_000;
 
 const docker: Docker = (args, options) => runCommand(["docker", ...args], options);
 
-type DockerRunInput = {
-  name: string;
+type DockerRunInput = Omit<ContainerBase, "label"> & {
   threadId: string;
   image: string;
   /** The thread's workspace on this machine. */
@@ -97,55 +103,34 @@ type DockerRunInput = {
   host: string;
   hubPort: number;
   token: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  /** Passed to `docker run --platform`; the host's own when not set. */
-  platform?: string;
-  /** Passed to `docker run --runtime`; the daemon's default when not set. */
-  runtime?: string;
   /** `uid:gid` to run as, so files written to the bind mount belong to the host user. */
   user?: string;
 };
 
 // The `docker run` arguments for one thread's container.
 export function dockerRunArgs(input: DockerRunInput) {
-  const args = [
-    "run",
-    "-d",
-    "--name",
-    input.name,
-    "--label",
-    "aven.sandbox=1",
-    "--label",
-    `aven.thread=${input.threadId}`,
-    "--add-host",
-    `${input.host}:host-gateway`,
-    "--memory",
-    `${input.memoryMb}m`,
-    "--cpus",
-    String(input.cpus),
-    "--pids-limit",
-    String(input.pidsLimit),
-    "--shm-size",
-    "512m",
-    "--security-opt",
-    "no-new-privileges",
-    "-v",
-    `${input.root}:${WORKSPACE_DIR}`,
-    "-v",
-    `${input.uploads}:${UPLOADS_DIR}:ro`,
-    "-v",
-    `${input.skills}:${SKILLS_DIR}:ro`,
-    "-e",
-    `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
-    "-e",
-    `ANVIA_SANDBOX_TOKEN=${input.token}`,
-    "-e",
-    `ANVIA_SANDBOX_WORKDIR=${WORKSPACE_DIR}`,
-  ];
-  if (input.platform) args.push("--platform", input.platform);
-  if (input.runtime) args.push("--runtime", input.runtime);
+  const args = containerBaseArgs(
+    { ...input, label: `aven.thread=${input.threadId}` },
+    {
+      beforeLimits: ["--add-host", `${input.host}:host-gateway`],
+      afterLimits: [
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        `${input.root}:${WORKSPACE_DIR}`,
+        "-v",
+        `${input.uploads}:${UPLOADS_DIR}:ro`,
+        "-v",
+        `${input.skills}:${SKILLS_DIR}:ro`,
+        "-e",
+        `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
+        "-e",
+        `ANVIA_SANDBOX_TOKEN=${input.token}`,
+        "-e",
+        `ANVIA_SANDBOX_WORKDIR=${WORKSPACE_DIR}`,
+      ],
+    },
+  );
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;

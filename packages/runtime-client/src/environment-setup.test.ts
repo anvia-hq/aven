@@ -62,9 +62,8 @@ describe("running a repository's setup", () => {
     });
     const given = await input(fake.docker);
 
-    const result = await setupEnvironment(given);
+    await setupEnvironment(given);
 
-    expect(result).toEqual({ baseImageId: "sha256:base" });
     expect(fake.verbs()).toEqual(["rm", "inspect", "run", "exec", "commit", "rm"]);
     const run = fake.calls[2]!.args;
     expect(run).toContain("aven-sandbox:dev");
