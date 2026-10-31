@@ -10,8 +10,8 @@ import { variableEvents, type NewVariableEventRow } from "@aven/db/schema/variab
 import type { RunEnvVar } from "@aven/protocol/runtime-wire";
 import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
-import { ForbiddenError, NotFoundError, UnavailableError, UnprocessableError } from "../../errors";
-import { decryptSecret, encryptSecret } from "../providers/crypto";
+import { ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
+import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";
 
 const HINT_MIN_LENGTH = 12;
@@ -100,16 +100,12 @@ const actorOf = (scope: Scope) => (scope.kind === "personal" ? scope.userId : sc
 
 type Source = NewVariableEventRow["source"];
 
-// A value that cannot be decrypted (a rotated PROVIDER_ENCRYPTION_KEY, a damaged row) is
-// unavailable, not a server bug: the owner fixes it by entering the value again.
-function readValue(row: EnvironmentVariableRow) {
-  try {
-    return decryptSecret(row.valueEncrypted);
-  } catch (error) {
-    console.error(`Could not decrypt variable ${row.id}:`, error);
-    throw new UnavailableError(`The saved value of ${row.name} could not be read; enter it again`);
-  }
-}
+// A value that cannot be decrypted is unavailable: the owner enters the value again.
+const readValue = (row: EnvironmentVariableRow) =>
+  decryptOrUnavailable(row.valueEncrypted, {
+    logged: `Could not decrypt variable ${row.id}:`,
+    message: `The saved value of ${row.name} could not be read; enter it again`,
+  });
 
 // Only a long secret shows its end: a short one (a PIN, a word) would be shown whole.
 const hint = (value: string) => (value.length >= HINT_MIN_LENGTH ? value.slice(-4) : null);

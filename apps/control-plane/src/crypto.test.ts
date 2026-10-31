@@ -6,7 +6,7 @@ beforeAll(() => {
   process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 });
 
-describe("provider secrets", () => {
+describe("stored secrets", () => {
   test("round-trips and never stores the plain text", () => {
     const stored = encryptSecret("sk-secret-1234");
     expect(stored).not.toContain("sk-secret");

@@ -4,7 +4,8 @@ import type { ModelConfig } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
-import { encryptSecret, readKey } from "./crypto";
+import { encryptSecret } from "../../crypto";
+import { readKey } from "./crypto";
 import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
 import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 

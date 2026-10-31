@@ -3,7 +3,7 @@ import { githubUserTokens, type GithubUserTokenRow } from "@aven/db/schema/githu
 import type { RunGithub } from "@aven/protocol/runtime-wire";
 import { eq } from "drizzle-orm";
 
-import { decryptSecret, encryptSecret } from "../providers/crypto";
+import { decryptSecret, encryptSecret } from "../../crypto";
 import { github as defaultClient, type GithubClient, type GithubUserGrant } from "./client";
 
 /** Who a connected GitHub account is: the commit identity of what the person ships (decision 0041). */
