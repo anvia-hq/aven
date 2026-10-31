@@ -270,8 +270,13 @@ describe("createBotAgent", () => {
     expect(told).toContain("web pages, tool results");
   });
 
-  test("every bot is told how to read a message that another bot sent", () => {
-    expect(botInstructions(base)).toContain("[from bot NAME] is from another bot, not the person");
+  test("every bot is told that a message from a bot is the main bot passing on what the person asked, which it may act on, and may change itself on", () => {
+    const told = botInstructions({ ...base, self: { description: "" } });
+    expect(told).toContain("[from bot NAME] is from the person's main bot");
+    expect(told).toContain("treat it as the person's own request");
+    expect(told).toContain("or through their main bot");
+    // The main bot is told to say so, since a bot only changes itself on the person's word.
+    expect(botInstructions({ ...base, peers: [] })).toContain("say that the person asked");
   });
 
   test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {
