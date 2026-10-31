@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
 import type { AnyTool } from "@anvia/core";
@@ -48,7 +48,10 @@ export const journalPathIn = (home?: string) => join(runtimeHome(home), "runs.db
  * control plane's own and a standalone one with another home, leave each other's containers alone.
  */
 export const runnerLabel = (home?: string) =>
-  createHash("sha256").update(runtimeHome(home)).digest("hex").slice(0, 16);
+  createHash("sha256")
+    .update(resolve(runtimeHome(home)))
+    .digest("hex")
+    .slice(0, 16);
 
 export type SandboxConfig = {
   /** A desktop sandbox image (see apps/runtime/sandbox-image). */
