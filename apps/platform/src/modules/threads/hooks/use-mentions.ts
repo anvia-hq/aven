@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
-import { useSkills } from "@/modules/settings/hooks/use-skills";
+import { useSkills } from "@/modules/skills/hooks/use-skills";
 
 type Mentionable = Pick<MessageMention, "type" | "name">;
 
