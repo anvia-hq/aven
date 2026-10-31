@@ -20,6 +20,16 @@ Read, in this order, and stop when you know enough:
 - a `Dockerfile` or `docker-compose.yml`: system packages and services it names;
 - what is already in the sandbox: run `node -v`, `bun -v`, `python3 --version`, `go version`, `cargo --version`. Install only what is missing or the wrong version.
 
+### Follow the repository's versions
+
+The repository already says which versions it runs on. Make the environment match them; do not take whatever the sandbox's package manager offers.
+
+- Write down, before you write the script, the version of every runtime, database and service the project names, and **where it says so**: the image tags in `docker-compose.yml` (`postgres:16`, `redis:7`), the `services:` images and `setup-*` versions in `.github/workflows`, `.tool-versions`, `.nvmrc`, `engines`, the `Dockerfile`'s `FROM` lines, and the lockfile's own tool versions. When two sources disagree, CI wins, then compose, then the README, and say which you followed.
+- Match at least the **major** version. A database or a runtime one major version off is a different environment: query planners, extensions, SQL features and defaults change, and a migration that passes here can fail in production.
+- Debian's own package is usually not the version asked for (the sandbox's `apt` has one PostgreSQL major, one Redis, one of everything). Get the right one from the vendor's apt repository (PostgreSQL's `apt.postgresql.org`, Redis's `packages.redis.io`, NodeSource, and so on), from the version manager the project already uses, or from an official release archive.
+- **Never substitute silently.** If you cannot install the version the repository names, stop and tell the user what you would use instead and why, and ask. If they agree, say so in the script's header comment. A difference you accept must never show up for the first time in a pull request's "Risks".
+- The same goes for the way a service runs: if compose sets environment (`POSTGRES_USER`, `POSTGRES_DB`, a password, ports, extensions, `command:` flags), reproduce those, so the project's `DATABASE_URL` works unchanged.
+
 Do not guess. If something that matters is unclear (a private registry, a license key, a database the tests need), ask the user.
 
 ## 2. Write `.aven/setup`
@@ -60,13 +70,22 @@ If a thread needs something quick each time its container starts (a login, a cac
 
 Every process the setup script starts is stopped when it ends, so a database is never left running in the snapshot. And `sudo` works only in the setup container: thread containers run with `no-new-privileges`, so `.aven/resume` runs as the plain user `node`. Split the work:
 
-- **`.aven/setup` installs the server** with `sudo apt-get install -y --no-install-recommends postgresql`, and the project's dependencies as usual.
+- **`.aven/setup` installs the server in the version the repository uses** (see "Follow the repository's versions"), and the project's dependencies as usual. Debian's `postgresql` package is only right when its major version is the one compose and CI name. For another major version, use PostgreSQL's apt repository, here for version 16:
+
+  ```bash
+  sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg
+  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+  echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+  sudo apt-get update
+  sudo apt-get install -y --no-install-recommends postgresql-16
+  ```
+
 - **`.aven/resume` runs a server of its own as `node`**, with no `sudo`: a data directory in the home folder, started on a socket in `/tmp` (the default one is not writable) and reached over `localhost`. It makes the data directory and the database only when they are missing, so it can run any number of times and takes a fraction of a second:
 
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
-  PGBIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)
+  PGBIN=/usr/lib/postgresql/16/bin   # the major version the repository uses
   PGDATA="$HOME/pgdata"
   [ -d "$PGDATA" ] || "$PGBIN/initdb" -D "$PGDATA" -U app --auth=trust > /dev/null
   "$PGBIN/pg_ctl" -D "$PGDATA" status > /dev/null \
@@ -89,7 +108,7 @@ Call `save_environment`. It can take many minutes. If it fails, the error holds 
 
 When it is saved, say in a few lines:
 
-- what the script installs;
+- what the script installs, with the **version of each service and where the repository names it**; any difference from the repository's versions, which you asked about first;
 - that new threads on this repository now start from the snapshot;
 - that **the `.aven` folder must be committed** (the user ships it with their Ship button, or you can commit it if they ask), because the snapshot is made again from the repository's script after 72 hours and when it changes;
 - that the next step is `/setup-ship`, which sets up how this repository's changes are shipped.
