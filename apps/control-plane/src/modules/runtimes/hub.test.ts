@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 
+import { createMemoryStore } from "../../memory-store";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { runtimesRouter } from "./router";
 import { connectRouter } from "./connect";

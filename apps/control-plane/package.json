@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@anvia/core": "^1.17.2",
+    "@anvia/memory-drizzle": "^1.1.5",
     "@aven/agents": "workspace:*",
     "@aven/db": "workspace:*",
     "@aven/protocol": "workspace:*",

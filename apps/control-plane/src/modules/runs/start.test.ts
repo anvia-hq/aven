@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ConversationStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/protocol/events";
 
 import { UnavailableError } from "../../errors";
+import type { ConversationStore } from "../../memory-store";
 import { memoryContinuations } from "../../testing/memory-continuations";
 import type { Runtime, RunResult, RunThread, RuntimeRun } from "./runtime";
 import { RunBusyError, RunManager } from "./service";

@@ -1,16 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createTool, type CompletionModel, type MemoryStore, type Message } from "@anvia/core";
+import { createTool, type Message } from "@anvia/core";
 import { z } from "zod";
 
-import { createCodingAgent, historyStoreFor } from "./coding-agent";
-import { createMemoryStore } from "./memory";
+import { createCodingAgent } from "./coding-agent";
 import { createModel } from "./model";
 import { scriptedModel, text } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
-
-// Just enough surface for the store's constructor checks; nothing here touches a database.
-const noop = () => undefined;
-const stubDb = { select: noop, insert: noop, delete: noop, transaction: noop, execute: noop };
 
 const echo = createTool({
   name: "echo",
@@ -33,19 +28,6 @@ describe("createCodingAgent", () => {
       expect(agent.tools.map((tool) => tool.name)).toEqual(["echo"]);
     },
   );
-
-  test("accepts a memory store", () => {
-    const store = createMemoryStore(stubDb);
-    const { agent } = createCodingAgent({
-      provider: "openai",
-      apiKey: "test-key",
-      tools: [],
-      webSearch: false,
-      memory: store,
-    });
-    expect(agent.memory?.store).toBe(store);
-    expect(agent.memory?.savePolicy).toBe("turn");
-  });
 
   test("gives the agent ask_user and request_secret unless turned off", () => {
     const base = { provider: "openai", apiKey: "test-key", tools: [], webSearch: false } as const;
@@ -168,23 +150,21 @@ describe("createModel", () => {
 });
 
 describe("history from earlier runs", () => {
+  // Reasoning the Responses API made, which Anthropic rejects.
   const reasoning = {
     type: "reasoning" as const,
+    id: "rs_earlier",
     text: "",
     details: [{ type: "text" as const, text: "", signature: "sig" }],
   };
-  const history: Message[] = [
+  const messages: Message[] = [
     { role: "user", content: "What is this app about?" },
     {
       role: "assistant",
       content: [reasoning, { type: "text", text: "It is a monorepo." }],
     },
+    { role: "user", content: "Thanks" },
   ];
-  const store: MemoryStore = {
-    load: async () => history,
-    append: async () => undefined,
-    clear: async () => undefined,
-  };
 
   // What the agent would send to the provider: a local server stands in for it and refuses.
   async function sentToAnthropic() {
@@ -203,12 +183,8 @@ describe("history from earlier runs", () => {
         baseUrl: `http://localhost:${server.port}`,
         tools: [],
         webSearch: false,
-        memory: store,
       });
-      const stream = agent.stream({
-        prompt: "Thanks",
-        session: { sessionId: "thread", metadata: { organizationId: "org" } },
-      });
+      const stream = agent.stream({ messages });
       await (async () => {
         for await (const _ of stream) void _;
         await stream.result;
@@ -219,18 +195,10 @@ describe("history from earlier runs", () => {
     return JSON.stringify(bodies[0]);
   }
 
-  test("an Anthropic run does not replay thinking from earlier runs", async () => {
+  test("an Anthropic run does not replay another provider's reasoning", async () => {
     const body = await sentToAnthropic();
     expect(body).toContain("It is a monorepo.");
     expect(body).not.toContain("thinking");
-  });
-
-  test("only an Anthropic run gets the reasoning-free history; every other store is used as it is", () => {
-    const tools = [] as const;
-    expect(historyStoreFor({ provider: "anthropic", tools, memory: store })).not.toBe(store);
-    expect(historyStoreFor({ provider: "openai", tools, memory: store })).toBe(store);
-    expect(historyStoreFor({ provider: "openai-compatible", tools, memory: store })).toBe(store);
-    expect(historyStoreFor({ model: {} as CompletionModel, tools, memory: store })).toBe(store);
-    expect(historyStoreFor({ provider: "anthropic", tools })).toBeUndefined();
+    expect(body).not.toContain("rs_earlier");
   });
 });

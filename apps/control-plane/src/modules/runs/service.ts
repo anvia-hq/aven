@@ -2,7 +2,6 @@ import {
   assertAgentInteractionResponse,
   parseAgentContinuation,
 } from "@anvia/core/agent/interactions";
-import type { ConversationStore } from "@aven/agents/memory";
 import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat, usageFromHistory } from "@aven/agents/projection";
 import {
@@ -17,7 +16,7 @@ import {
 import type { RunAttachment, RunEnvVar, RunGithub, RunSkill } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
-import { memoryStore } from "../../memory-store";
+import { memoryStore, type ConversationStore } from "../../memory-store";
 import { syncPullRequest } from "../threads/pull-request";
 import { threadsService } from "../threads/service";
 import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";

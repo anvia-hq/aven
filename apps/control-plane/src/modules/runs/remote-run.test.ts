@@ -1,12 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
 import { journalPath } from "@aven/runtime-client/testing/journal-path";
 import { Elysia } from "elysia";
 
+import { createMemoryStore } from "../../memory-store";
 import { memoryContinuations } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";

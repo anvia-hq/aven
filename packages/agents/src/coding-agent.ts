@@ -4,10 +4,8 @@ import {
   createSummaryMemoryCompactor,
   type AnyTool,
   type CompletionModel,
-  type MemoryStore,
 } from "@anvia/core";
 
-import { withoutStoredReasoning } from "./memory";
 import { azureApiFor, createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { environmentInstructions } from "./environment";
 import { INSTRUCTIONS } from "./instruction";
@@ -26,8 +24,6 @@ export type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   maxTurns?: number;
   /** The agent's id. A durable run registers one agent per run, so each needs its own. Defaults to "coding". */
   id?: string;
-  /** Persist conversations; see `createMemoryStore`. Omit for stateless runs, and for durable ones, which keep their own history. */
-  memory?: MemoryStore;
   /** The skills in the sandbox, which the instructions list (decision 0035). */
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
@@ -45,8 +41,6 @@ export function createCodingAgent(options: CodingAgentOptions) {
   if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());
 
   const { model, providerOptions, controls } = resolveModel(options);
-  const store = historyStoreFor(options);
-  // The summarizer holds nothing between calls, so the memory store and the host can share it.
   const compaction = compactionFor(options, model);
   const agent = new Agent({
     id: options.id ?? "coding",
@@ -63,11 +57,6 @@ export function createCodingAgent(options: CodingAgentOptions) {
     maxTurns: options.maxTurns ?? 50,
     retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
     tools,
-    memory: store && {
-      store,
-      savePolicy: "turn",
-      compaction: store.compaction && compaction,
-    },
   });
 
   // For a host that keeps the history itself (a durable run): what to register beside the agent.
@@ -87,13 +76,6 @@ function compactionFor(options: CodingAgentOptions, model: CompletionModel) {
     trigger: { afterTokens: Math.floor(contextWindow * COMPACT_AT) },
     compactor: createSummaryMemoryCompactor({ model }),
   };
-}
-
-// Anthropic rejects thinking replayed from an earlier run, so its runs start without it.
-export function historyStoreFor(options: CodingAgentOptions) {
-  const { memory } = options;
-  const anthropic = "provider" in options && options.provider === "anthropic";
-  return memory && anthropic ? withoutStoredReasoning(memory) : memory;
 }
 
 // What a thread's earlier runs left may be another provider's reasoning, which this one rejects.

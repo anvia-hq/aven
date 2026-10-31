@@ -9,7 +9,6 @@ import {
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import { createMemoryStore } from "@aven/agents/memory";
 import type { RunEvent } from "@aven/protocol/events";
 
 import { Elysia } from "elysia";
@@ -18,6 +17,7 @@ import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-work
 import { journalPath } from "@aven/runtime-client/testing/journal-path";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
+import { createMemoryStore } from "../../memory-store";
 import { memoryContinuations } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";

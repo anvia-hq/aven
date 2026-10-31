@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { createMemoryStore } from "@aven/agents/memory";
 import { db } from "@aven/db/client";
 import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
@@ -9,6 +8,7 @@ import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime
 import { eq } from "drizzle-orm";
 
 import { errorsRouter } from "../../errors";
+import { createMemoryStore } from "../../memory-store";
 import { auth, authService } from "../auth/service";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
