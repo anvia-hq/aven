@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { applyEvent, isRunning, mentionToken, type ChatMessage, type RunEvent } from "./events";
+import {
+  SUBAGENT_TOOLS_KEPT,
+  applyEvent,
+  isRunning,
+  mentionToken,
+  type ChatMessage,
+  type RunEvent,
+} from "./events";
 
 type Fixture = {
   name: string;
@@ -90,5 +97,82 @@ describe("applyEvent with mentions", () => {
   test("a mention's token is its sign and its name", () => {
     expect(mentionToken({ type: "file", name: "src/a.ts" })).toBe("@src/a.ts");
     expect(mentionToken({ type: "skill", name: "notes" })).toBe("/notes");
+  });
+});
+
+describe("applyEvent with subagents", () => {
+  const spawn = (): RunEvent => ({
+    type: "tool_start",
+    tool: {
+      id: "s1",
+      name: "spawn_agent",
+      target: "2 tasks",
+      status: "running",
+      subagents: [
+        { index: 0, description: "Find auth", type: "explore", status: "running", tools: [] },
+        { index: 1, description: "Write a test", type: "general", status: "running", tools: [] },
+      ],
+    },
+  });
+  const run = (...events: RunEvent[]) =>
+    events
+      .reduce(applyEvent, [] as ChatMessage[])
+      .at(-1)
+      ?.parts.at(-1);
+  const subagents = (part: ReturnType<typeof run>) =>
+    part?.type === "tool" ? part.tool.subagents : undefined;
+  const read = (id: string): RunEvent => ({
+    type: "subagent",
+    index: 1,
+    event: { type: "tool_start", tool: { id, name: "read_file", target: id, status: "running" } },
+  });
+
+  test("a subagent's tool calls go under it, and no other subagent's", () => {
+    const part = run({ type: "run_start", prompt: "go" }, spawn(), read("a.ts"), {
+      type: "subagent",
+      index: 1,
+      event: { type: "tool_end", id: "a.ts", status: "done" },
+    });
+    expect(subagents(part)?.[0]?.tools).toEqual([]);
+    expect(subagents(part)?.[1]?.tools).toEqual([
+      { id: "a.ts", name: "read_file", target: "a.ts", status: "done" },
+    ]);
+  });
+
+  test("a subagent ends on its own, while the call and the others go on", () => {
+    const part = run({ type: "run_start", prompt: "go" }, spawn(), {
+      type: "subagent",
+      index: 0,
+      event: { type: "end", status: "done", output: "It is in src/a.ts" },
+    });
+    expect(subagents(part)?.map(({ status }) => status)).toEqual(["done", "running"]);
+    expect(subagents(part)?.[0]?.output).toBe("It is in src/a.ts");
+    expect(part?.type === "tool" && part.tool.status).toBe("running");
+  });
+
+  test("a subagent keeps only its latest tool calls", () => {
+    const calls = Array.from({ length: SUBAGENT_TOOLS_KEPT + 5 }, (_, i) => read(`f${i}`));
+    const part = run({ type: "run_start", prompt: "go" }, spawn(), ...calls);
+    const tools = subagents(part)?.[1]?.tools;
+    expect(tools).toHaveLength(SUBAGENT_TOOLS_KEPT);
+    expect(tools?.[0]?.id).toBe("f5");
+  });
+
+  test("a call that fails ends the subagents still working, and keeps those that finished", () => {
+    const part = run(
+      { type: "run_start", prompt: "go" },
+      spawn(),
+      { type: "subagent", index: 0, event: { type: "end", status: "done", output: "ok" } },
+      { type: "tool_end", id: "s1", status: "error", output: "cancelled" },
+    );
+    expect(subagents(part)?.map(({ status }) => status)).toEqual(["done", "error"]);
+  });
+
+  test("an event for a call that is not running changes nothing", () => {
+    const before = [spawn(), { type: "tool_end", id: "s1", status: "done" } as const].reduce(
+      applyEvent,
+      applyEvent([], { type: "run_start", prompt: "go" }),
+    );
+    expect(applyEvent(before, read("late"))).toEqual(before);
   });
 });

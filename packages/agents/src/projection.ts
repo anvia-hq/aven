@@ -8,7 +8,12 @@ import {
 } from "@aven/protocol/events";
 
 import { sentMessage } from "./attachments";
-import { projectToolCall, projectToolEnd, projectToolOutput } from "./tool-projection";
+import {
+  projectToolCall,
+  projectToolEnd,
+  projectToolOutput,
+  withSubagentResults,
+} from "./tool-projection";
 import { contextOf, tokenUsageOf } from "./usage";
 
 // Only these run events ever reach a client. Turn events carry full history and the system prompt,
@@ -27,6 +32,32 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
         turn: tokenUsageOf(event.response.usage),
         context: contextOf(event.response.contextUsage),
       };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * What a subagent's stream tells a client (decision 0057): the tools it calls, by what they act on,
+ * and what its model calls used, which count toward the thread but not toward its context. Its
+ * text, and what its tools returned, are its own: the agent gets them in the call's result.
+ */
+export function projectSubagentEvent(event: AgentStreamEvent, index: number): RunEvent | undefined {
+  switch (event.type) {
+    case "tool_call": {
+      const { id, name, target, status } = projectToolCall(event.toolCall);
+      return {
+        type: "subagent",
+        index,
+        event: { type: "tool_start", tool: { id, name, target, status } },
+      };
+    }
+    case "tool_result": {
+      const { id, status } = projectToolEnd(event.toolCallId, event.output, event.toolName);
+      return { type: "subagent", index, event: { type: "tool_end", id, status } };
+    }
+    case "turn_end":
+      return { type: "usage", turn: tokenUsageOf(event.response.usage) };
     default:
       return undefined;
   }
@@ -80,6 +111,8 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
           target.tool.status = status;
           target.tool.output = output;
           if (image) target.tool.image = image;
+          const { subagents } = withSubagentResults(target.tool, part.output);
+          if (subagents) target.tool.subagents = subagents;
         }
       }
     }

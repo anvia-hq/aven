@@ -28,6 +28,25 @@ export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";
 /** An image the agent showed the user (decision 0033). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
 export type ToolImage = { name: string; mediaType: string; caption?: string };
 
+/**
+ * One subagent of a `spawn_agent` call (decision 0057): a task the agent handed over, by its place
+ * in the call. `tools` are what it called, as it works, for the live view; a transcript rebuilt
+ * from storage has none, only how it ended.
+ */
+export type SubagentPart = {
+  index: number;
+  description: string;
+  /** What kind of subagent it is: `explore` or `general`. */
+  type: string;
+  status: "running" | "done" | "error";
+  tools: ToolPart[];
+  /** What it sent back (or why it failed), once it has. */
+  output?: string;
+};
+
+/** How many of a subagent's tool calls a transcript keeps: the latest. */
+export const SUBAGENT_TOOLS_KEPT = 50;
+
 export type ToolPart = {
   id: string;
   name: string;
@@ -40,7 +59,15 @@ export type ToolPart = {
   questions?: QuestionPrompt[];
   /** Set on the image tool once it is done: the image to show. */
   image?: ToolImage;
+  /** Set on `spawn_agent`: its tasks, as they go. */
+  subagents?: SubagentPart[];
 };
+
+/** What a subagent does, told as it happens. A tool call carries no more than what it acts on. */
+export type SubagentEvent =
+  | { type: "tool_start"; tool: Pick<ToolPart, "id" | "name" | "target" | "status"> }
+  | { type: "tool_end"; id: string; status: "done" | "error" }
+  | { type: "end"; status: "done" | "error"; output?: string };
 
 /** How much of the model's context window the conversation fills, as of the latest model call. */
 export type ContextUsage = { usedTokens: number; contextWindow: number };
@@ -143,6 +170,11 @@ export type RunEvent =
       image?: ToolImage;
     }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
+  /**
+   * A subagent of the `spawn_agent` call that is running, by its index in the call (decision 0057).
+   * An agent runs one tool call at a time, so the call is the latest running one.
+   */
+  | { type: "subagent"; index: number; event: SubagentEvent }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -189,6 +221,25 @@ export function isRunning(previous: boolean, event: RunEvent) {
       return false;
     default:
       return previous;
+  }
+}
+
+function applySubagentEvent(subagent: SubagentPart, event: SubagentEvent): SubagentPart {
+  switch (event.type) {
+    case "tool_start":
+      return {
+        ...subagent,
+        tools: [...subagent.tools, event.tool].slice(-SUBAGENT_TOOLS_KEPT),
+      };
+    case "tool_end":
+      return {
+        ...subagent,
+        tools: subagent.tools.map((tool) =>
+          tool.id === event.id ? { ...tool, status: event.status } : tool,
+        ),
+      };
+    case "end":
+      return { ...subagent, status: event.status, output: event.output };
   }
 }
 
@@ -245,9 +296,30 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
           if (part.type !== "tool" || part.tool.id !== event.id) return part;
           const tool: ToolPart = { ...part.tool, status: event.status, output: event.output };
           if (event.image) tool.image = event.image;
+          // A subagent still working when its call ends (the call failed) is not working any more.
+          if (tool.subagents)
+            tool.subagents = tool.subagents.map((subagent) =>
+              subagent.status === "running" ? { ...subagent, status: event.status } : subagent,
+            );
           return { type: "tool", tool };
         }),
       );
+    case "subagent":
+      return updateLastAssistant(messages, (parts) => {
+        const call = parts.findLastIndex(
+          (part) =>
+            part.type === "tool" &&
+            part.tool.name === SPAWN_AGENT_TOOL_NAME &&
+            part.tool.status === "running",
+        );
+        return parts.map((part, at) => {
+          if (at !== call || part.type !== "tool") return part;
+          const subagents = part.tool.subagents?.map((subagent) =>
+            subagent.index === event.index ? applySubagentEvent(subagent, event.event) : subagent,
+          );
+          return { type: "tool", tool: { ...part.tool, subagents } };
+        });
+      });
     default:
       // `done` and `error` do not change the transcript; clients show an error as it arrives
       // (see isRunning) and every client's reducer must agree, per fixtures/reducer.json.

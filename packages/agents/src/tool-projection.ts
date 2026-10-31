@@ -4,9 +4,11 @@ import {
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
+  SPAWN_AGENT_TOOL_NAME,
   type DiffLine,
   type QuestionPrompt,
   type RunEvent,
+  type SubagentPart,
   type ToolImage,
   type ToolPart,
 } from "@aven/protocol/events";
@@ -88,6 +90,22 @@ function questionsOf(input: unknown): QuestionPrompt[] {
   });
 }
 
+// The tasks of a `spawn_agent` call as they begin: every subagent is there, working, from the start.
+function subagentsOf(input: unknown): SubagentPart[] {
+  const { tasks } = asRecord(input);
+  if (!Array.isArray(tasks)) return [];
+  return tasks.map((entry, index) => {
+    const task = asRecord(entry);
+    return {
+      index,
+      description: asString(task.description),
+      type: asString(task.type),
+      status: "running",
+      tools: [],
+    };
+  });
+}
+
 export function projectToolCall(call: ToolCallPart): ToolPart {
   const tool: ToolPart = {
     id: call.toolCallId,
@@ -101,6 +119,10 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
   }
   if (call.toolName === QUESTION_TOOL_NAME || call.toolName === SECRET_TOOL_NAME) {
     tool.questions = questionsOf(call.input);
+  }
+  if (call.toolName === SPAWN_AGENT_TOOL_NAME) {
+    tool.subagents = subagentsOf(call.input);
+    tool.target = tool.subagents.length === 1 ? "1 task" : `${tool.subagents.length} tasks`;
   }
   return tool;
 }
@@ -125,6 +147,34 @@ function jsonText(value: unknown) {
       .join("\n");
   }
   return JSON.stringify(value);
+}
+
+// What each subagent of a finished `spawn_agent` call said, from the call's result.
+function subagentResults(value: unknown) {
+  const { results } = asRecord(value);
+  if (!Array.isArray(results)) return [];
+  return results.map((entry) => {
+    const result = asRecord(entry);
+    return result.status === "error"
+      ? { status: "error" as const, output: clip(asString(result.error)) }
+      : { status: "done" as const, output: clip(asString(result.output)) };
+  });
+}
+
+/**
+ * `spawn_agent`'s tool part with how each subagent ended, from the call's result: a rebuilt
+ * transcript has no live events. When the call itself failed, none of them finished.
+ */
+export function withSubagentResults(tool: ToolPart, output: ToolResultOutput): ToolPart {
+  if (!tool.subagents) return tool;
+  const results = output.type === "json" ? subagentResults(output.value) : [];
+  return {
+    ...tool,
+    subagents: tool.subagents.map((subagent) => {
+      const result = results[subagent.index];
+      return { ...subagent, status: result?.status ?? "error", output: result?.output };
+    }),
+  };
 }
 
 // The image a result of the image tool carries, when it has one of the right shape. Only that
@@ -162,6 +212,16 @@ export function projectToolOutput(
         return { status: "done", output: `Showed ${asString(asRecord(output.value).path)}`, image };
       }
       // What these tools did, in the words they gave it.
+      if (toolName === SPAWN_AGENT_TOOL_NAME) {
+        const results = subagentResults(output.value);
+        const failed = results.filter(({ status }) => status === "error").length;
+        return {
+          status: "done",
+          output: failed
+            ? `${results.length - failed} finished, ${failed} failed`
+            : `${results.length} finished`,
+        };
+      }
       const said =
         toolName && SUMMARISED_TOOLS.has(toolName) ? asString(asRecord(output.value).summary) : "";
       return { status: "done", output: clip(said || jsonText(output.value)) };

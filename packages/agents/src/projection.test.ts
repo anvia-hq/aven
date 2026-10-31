@@ -3,7 +3,7 @@ import { createTool } from "@anvia/core";
 import { z } from "zod";
 
 import { createCodingAgent } from "./coding-agent";
-import { messagesToChat, projectStreamEvent } from "./projection";
+import { messagesToChat, projectStreamEvent, projectSubagentEvent } from "./projection";
 import {
   applyEvent,
   pendingQuestion,
@@ -13,6 +13,7 @@ import {
 } from "@aven/protocol/events";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
+import { createSpawnAgentTool } from "./tools/spawn-agent";
 import { usageFromHistory } from "./usage";
 
 // Stand-ins for the sandbox's tools: they return what @anvia/sandbox's tools return.
@@ -256,5 +257,82 @@ describe("questions", () => {
       toolCall: { ...call, input: { questions: [{ id: 1 }, { id: "ok", text: "Fine?" }] } },
     } as never);
     expect(event).toMatchObject({ tool: { questions: [{ id: "ok", text: "Fine?" }] } });
+  });
+});
+
+describe("subagents", () => {
+  test("a subagent's stream tells a client its tools and its usage, not its text", async () => {
+    const { agent } = createCodingAgent({
+      tools: [readFile],
+      webSearch: false,
+      questions: false,
+      model: scriptedModel([
+        [text("Looking."), toolCall("read_file", { path: "a.txt" }, "c1")],
+        [text("It says hello.")],
+      ]),
+    });
+    const stream = agent.stream({ prompt: "look" });
+    const events: RunEvent[] = [];
+    for await (const event of stream) {
+      const projected = projectSubagentEvent(event, 2);
+      if (projected) events.push(projected);
+    }
+    expect(events.map((event) => event.type)).toEqual(["subagent", "usage", "subagent", "usage"]);
+    expect(events[0]).toEqual({
+      type: "subagent",
+      index: 2,
+      event: {
+        type: "tool_start",
+        tool: { id: "c1", name: "read_file", target: "a.txt", status: "running" },
+      },
+    });
+    expect(events[2]).toEqual({
+      type: "subagent",
+      index: 2,
+      event: { type: "tool_end", id: "c1", status: "done" },
+    });
+    // What its model calls used counts toward the thread; the context is the agent's own.
+    for (const usage of events.filter((event) => event.type === "usage"))
+      expect(usage).not.toHaveProperty("context");
+  });
+
+  test("a stored transcript shows how each subagent ended", async () => {
+    const spawn = createSpawnAgentTool(async ({ description }) => {
+      if (description === "bad") throw new Error("no model");
+      return "src/auth.ts";
+    });
+    const { agent } = createCodingAgent({
+      tools: [spawn],
+      webSearch: false,
+      questions: false,
+      model: scriptedModel([
+        [
+          {
+            type: "tool-call",
+            toolCallId: "s1",
+            toolName: "spawn_agent",
+            input: {
+              tasks: [
+                { description: "good", prompt: "p", type: "explore" },
+                { description: "bad", prompt: "q", type: "general" },
+              ],
+            },
+          },
+        ],
+        [text("Done")],
+      ]),
+    });
+    const stream = agent.stream({ prompt: "go" });
+    for await (const _event of stream);
+    const part = messagesToChat((await stream.result).messages)[1]?.parts[0];
+    if (part?.type !== "tool") throw new Error("expected the tool call");
+    expect(part.tool).toMatchObject({ name: "spawn_agent", status: "done", target: "2 tasks" });
+    expect(part.tool.output).toBe("1 finished, 1 failed");
+    expect(
+      part.tool.subagents?.map(({ description, status, output }) => [description, status, output]),
+    ).toEqual([
+      ["good", "done", "src/auth.ts"],
+      ["bad", "error", "no model"],
+    ]);
   });
 });

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { projectToolOutput, toolTarget } from "./tool-projection";
+import {
+  projectToolCall,
+  projectToolOutput,
+  toolTarget,
+  withSubagentResults,
+} from "./tool-projection";
 
 describe("the sandbox's tools", () => {
   test("each shows what it acts on", () => {
@@ -58,5 +63,64 @@ describe("the sandbox's tools", () => {
       }).output,
     ).toBe("directory\tsrc\nfile\ta.txt");
     expect(json({ id: "p1", status: "running" }).output).toBe('{"id":"p1","status":"running"}');
+  });
+});
+
+describe("spawn_agent", () => {
+  const input = {
+    tasks: [
+      { description: "Find auth", prompt: "p", type: "explore" },
+      { description: "Write a test", prompt: "q", type: "general" },
+    ],
+  };
+  const call = { type: "tool-call", toolCallId: "s1", toolName: "spawn_agent", input } as const;
+
+  test("a call shows every subagent working from the start", () => {
+    expect(projectToolCall(call)).toEqual({
+      id: "s1",
+      name: "spawn_agent",
+      target: "2 tasks",
+      status: "running",
+      subagents: [
+        { index: 0, description: "Find auth", type: "explore", status: "running", tools: [] },
+        { index: 1, description: "Write a test", type: "general", status: "running", tools: [] },
+      ],
+    });
+  });
+
+  const results = {
+    results: [
+      { description: "Find auth", type: "explore", status: "done", output: "src/auth.ts" },
+      { description: "Write a test", type: "general", status: "error", error: "no model" },
+    ],
+  };
+
+  test("its result reads as how many finished, not as the subagents' answers", () => {
+    expect(projectToolOutput({ type: "json", value: results as never }, "spawn_agent")).toEqual({
+      status: "done",
+      output: "1 finished, 1 failed",
+    });
+  });
+
+  test("the result says how each subagent ended; a failed call ends them all as failed", () => {
+    const tool = projectToolCall(call);
+    const ended = withSubagentResults(tool, { type: "json", value: results as never });
+    expect(ended.subagents?.map(({ status, output }) => [status, output])).toEqual([
+      ["done", "src/auth.ts"],
+      ["error", "no model"],
+    ]);
+    const failed = withSubagentResults(tool, { type: "error-text", value: "cancelled" });
+    expect(failed.subagents?.map(({ status }) => status)).toEqual(["error", "error"]);
+    expect(tool.subagents?.map(({ status }) => status)).toEqual(["running", "running"]);
+  });
+
+  test("another tool's part is left as it is", () => {
+    const read = projectToolCall({
+      type: "tool-call",
+      toolCallId: "r1",
+      toolName: "read_file",
+      input: { path: "a" },
+    });
+    expect(withSubagentResults(read, { type: "text", value: "x" })).toBe(read);
   });
 });
