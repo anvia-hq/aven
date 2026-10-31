@@ -11,10 +11,7 @@ import type {
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
-import { memoryStore } from "../../memory-store";
 import { describeError, UnavailableError } from "../../errors";
-import { projectsService } from "../projects/service";
-import { skillsService } from "../skills/service";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
 import { runtimesService } from "./service";
@@ -51,8 +48,8 @@ type Run = {
 
 type RunEnd = Extract<RuntimeToControlPlane, { type: "run.end" }>;
 
-// How long a run waits for its runtime to reconnect before it is given up as lost.
-const DEFAULT_GRACE_MS = 60_000;
+/** How long a run waits for its runtime to reconnect before it is given up as lost. */
+export const DEFAULT_GRACE_MS = 60_000;
 
 // One connected runtime. The runtime is not trusted: it may only touch runs this connection
 // started, only while they are live, and the conversation scope always comes from our own record
@@ -354,10 +351,3 @@ export class RuntimeHub {
     }
   }
 }
-
-export const runtimeHub = new RuntimeHub(
-  memoryStore,
-  (threadId) => projectsService.repoAccess(threadId),
-  DEFAULT_GRACE_MS,
-  (digest) => skillsService.archive(digest),
-);

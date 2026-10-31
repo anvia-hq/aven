@@ -1,7 +1,7 @@
 import { ConflictError } from "../../errors";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
-import { runsService } from "../runs/service";
+import type { RunManager } from "../runs/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
@@ -30,8 +30,8 @@ async function runIdentity(
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
 // environment's shared one), with the sender's skills, acting as their GitHub account, and with the project's
-// environment variables. Kept out of `service.ts`, which `runs` depends on.
-export const threadMessages = {
+// environment variables. The runs are given, so `threads` does not depend on how they are made.
+export const createThreadMessages = (runs: RunManager) => ({
   async send(
     organizationId: string,
     userId: string,
@@ -53,7 +53,7 @@ export const threadMessages = {
     });
     const identity = await runIdentity(thread, userId);
     await threadsService.markRunBy(thread.id, userId);
-    await runsService.start(thread, prompt, model, {
+    await runs.start(thread, prompt, model, {
       attachments,
       mentions,
       skills,
@@ -93,6 +93,8 @@ export const threadMessages = {
     });
     const identity = await runIdentity(thread, userId);
     await threadsService.markRunBy(thread.id, userId);
-    await runsService.answer(thread, continuation, kept, model, skills, github, env, identity);
+    await runs.answer(thread, continuation, kept, model, skills, github, env, identity);
   },
-};
+});
+
+export type ThreadMessages = ReturnType<typeof createThreadMessages>;

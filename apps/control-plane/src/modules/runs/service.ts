@@ -17,14 +17,9 @@ import {
 import type { RunAttachment, RunEnvVar, RunGithub, RunSkill } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
-import { memoryStore, type ConversationStore } from "../../memory-store";
-import { syncPullRequest } from "../threads/pull-request";
-import { threadsService } from "../threads/service";
+import type { ConversationStore } from "../../memory-store";
 import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
-import { RemoteRuntime } from "./remote-runtime";
-import { runGateway } from "../runtimes/gateway";
 import type { RunIdentity } from "../workload-identity/grants";
-import { runtimeHub } from "../runtimes/hub";
 
 type ActiveRun = {
   handle: RuntimeRun;
@@ -348,22 +343,3 @@ function errorMessage(error: unknown) {
   const message = describeError(error);
   return message.length > 300 ? `${message.slice(0, 300)}…` : message;
 }
-
-export const runsService = new RunManager({
-  store: memoryStore,
-  runtime: new RemoteRuntime(runtimeHub, runGateway),
-  onRunFinished: async (thread) => {
-    await threadsService.touch(thread.id);
-    // The agent may have opened the thread's pull request (decision 0044); the badge learns of it here.
-    await syncPullRequest(thread).catch((error: unknown) => {
-      console.warn(
-        `Could not look for the pull request of thread ${thread.id}:`,
-        describeError(error),
-      );
-    });
-  },
-  continuations: {
-    save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
-    clear: (threadId) => threadsService.clearContinuation(threadId),
-  },
-});

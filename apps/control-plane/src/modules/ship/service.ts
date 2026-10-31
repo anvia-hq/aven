@@ -9,7 +9,6 @@ import { githubUserTokenService } from "../github/user-tokens";
 import type { ModelSelection } from "../providers/resolve-model";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
-import { threadMessages } from "../threads/messages";
 import { threadsService } from "../threads/service";
 import { SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
 
@@ -47,7 +46,10 @@ type ShipDeps = {
 // signed in as the person, in the thread where they can watch it. Before that, Aven makes sure
 // the person can do it at all: GitHub connected, the app approved to write, and write access to
 // the repository, each a 409 that says what to do.
-export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {}) {
+export function createShipService(
+  hub: RuntimeHub,
+  deps: Partial<ShipDeps> & Pick<ShipDeps, "send">,
+) {
   const files = createFilesService(hub);
   const github = deps.github ?? githubService;
   const userTokens = deps.userTokens ?? githubUserTokenService;
@@ -66,9 +68,7 @@ export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {})
       const file = await files.read(organizationId, threadId, SHIP_PROMPT_FILE);
       return file.available ? file : null;
     });
-  const send =
-    deps.send ??
-    ((...args: Parameters<typeof threadMessages.send>) => threadMessages.send(...args));
+  const { send } = deps;
 
   return {
     // `selection` is the model the thread is on; without it the person's default provider runs, which

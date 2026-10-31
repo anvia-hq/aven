@@ -32,10 +32,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       sent.push({ userId, threadId, prompt: body.prompt });
     },
   });
-  const server = new Elysia()
-    .use(errorsRouter)
-    .use(shipRouter({} as RuntimeHub, service))
-    .listen({ port: 0 });
+  const server = new Elysia().use(errorsRouter).use(shipRouter(service)).listen({ port: 0 });
   const base = `http://localhost:${server.server?.port}`;
   const emails: string[] = [];
   const organizationIds: string[] = [];

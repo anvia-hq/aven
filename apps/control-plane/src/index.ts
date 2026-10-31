@@ -1,20 +1,20 @@
 import { Elysia } from "elysia";
 
+import { runsService, runtimeHub, threadMessages } from "./composition";
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
 import { shipRouter } from "./modules/ship/router";
+import { createShipService } from "./modules/ship/service";
 import { filesRouter } from "./modules/files/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
-import { runtimeHub } from "./modules/runtimes/hub";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
-import { runsService } from "./modules/runs/service";
 import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
@@ -29,7 +29,7 @@ const app = new Elysia()
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
-  .use(shipRouter(runtimeHub))
+  .use(shipRouter(createShipService(runtimeHub, { send: threadMessages.send })))
   .use(filesRouter(runtimeHub))
   .use(githubRouter())
   .use(platformRouter)
@@ -38,7 +38,7 @@ const app = new Elysia()
   .use(runtimesRouter(runtimeHub))
   .use(skillsRouter)
   .use(terminalRouter(runtimeHub))
-  .use(threadsRouter)
+  .use(threadsRouter(runsService, threadMessages))
   .use(usersRouter)
   .use(scopedVariablesRouter)
   .use(variablesRouter)
