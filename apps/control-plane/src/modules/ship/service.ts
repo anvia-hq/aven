@@ -1,4 +1,5 @@
 import type { FileContent } from "@aven/protocol/runtime-wire";
+import { wrapShipRequest } from "@aven/protocol/ship-request";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { ConflictError } from "../../errors";
@@ -88,7 +89,11 @@ export function createShipService(hub: RuntimeHub, deps: Partial<ShipDeps> = {})
         branch: threadBranch(threadId),
         base: project.defaultBranch,
       });
-      await send(organizationId, userId, threadId, { prompt, ...selection });
+      // Wrapped, so the thread can show it as a card and not as a long message.
+      await send(organizationId, userId, threadId, {
+        prompt: wrapShipRequest(prompt),
+        ...selection,
+      });
     },
   };
 }

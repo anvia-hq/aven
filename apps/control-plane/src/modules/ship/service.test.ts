@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { FileContent } from "@aven/protocol/runtime-wire";
+import { shipRequestOf } from "@aven/protocol/ship-request";
 
 import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "../github/client";
 import type { RuntimeHub } from "../runtimes/hub";
@@ -89,7 +90,9 @@ describe("shipping a thread", () => {
 
     await service.ship("org-1", "user-1", threadId);
 
-    expect(sent[0]!.prompt.startsWith("Squash, then use our merge queue.")).toBe(true);
+    expect(shipRequestOf(sent[0]!.prompt)?.startsWith("Squash, then use our merge queue.")).toBe(
+      true,
+    );
   });
 
   test("a person who has not connected GitHub is told to, and nothing is sent", async () => {
