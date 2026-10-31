@@ -1,7 +1,4 @@
-import {
-  assertAgentInteractionResponse,
-  parseAgentContinuation,
-} from "@anvia/core/agent/interactions";
+import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
 import { usageFromHistory } from "@aven/agents/usage";
@@ -14,12 +11,12 @@ import {
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
-import type { RunAttachment, RunEnvVar, RunGithub, RunSkill } from "@aven/protocol/runtime-wire";
+import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import type { ConversationStore } from "../../memory-store";
+import { parseSaved } from "./continuation";
 import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
-import type { RunIdentity } from "../workload-identity/grants";
 
 type ActiveRun = {
   handle: RuntimeRun;
@@ -119,10 +116,7 @@ export class RunManager {
     continuation: unknown,
     answers: QuestionAnswer[],
     model?: ModelConfig | null,
-    skills: RunSkill[] = [],
-    github?: RunGithub,
-    env?: RunEnvVar[],
-    identity?: RunIdentity,
+    { skills = [], github, env, identity }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -323,15 +317,6 @@ export class RunManager {
     Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
-  }
-}
-
-// A runtime is not trusted, and a stored continuation outlives the process that wrote it.
-function parseSaved(continuation: unknown) {
-  try {
-    return parseAgentContinuation(continuation);
-  } catch {
-    throw new ConflictError("The agent's question can no longer be answered; send a new message");
   }
 }
 

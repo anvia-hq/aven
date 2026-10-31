@@ -1,10 +1,8 @@
-import {
-  assertAgentInteractionResponse,
-  parseAgentContinuation,
-} from "@anvia/core/agent/interactions";
+import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { SECRET_TOOL_NAME } from "@aven/protocol/events";
 
-import { ConflictError, describeError, UnprocessableError } from "../../errors";
+import { describeError, UnprocessableError } from "../../errors";
+import { parseSaved } from "../runs/continuation";
 import { variableName } from "../variables/schema";
 import { variablesService, type Scope } from "../variables/service";
 
@@ -27,13 +25,7 @@ type Input = {
 // agent is given a note in their place: the value reaches the model, the run's journal and the
 // transcript nowhere. Any other question's answers are returned as they are.
 export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
-  let saved;
-  try {
-    saved = parseAgentContinuation(input.continuation);
-  } catch {
-    throw new ConflictError("The agent's question can no longer be answered; send a new message");
-  }
-  const { interaction } = saved;
+  const { interaction } = parseSaved(input.continuation);
   if (interaction.type !== "tool-question" || interaction.toolName !== SECRET_TOOL_NAME) {
     return input.answers;
   }

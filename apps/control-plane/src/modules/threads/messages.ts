@@ -27,6 +27,30 @@ async function runIdentity(
   };
 }
 
+// What a run carries for its sender: their skills and their GitHub account.
+async function senderExtras(userId: string) {
+  const skills = await skillsService.forRun(userId);
+  const github = await githubUserTokenService.forRun(userId);
+  return { skills, github };
+}
+
+// What a run carries for its sender in this thread's project: the variables and who the run is.
+// Also records the sender as the person the thread last ran as, just before the run starts.
+async function threadExtras(
+  organizationId: string,
+  thread: { id: string; organizationId: string; projectId: string },
+  userId: string,
+) {
+  const env = await variablesService.forRun({
+    organizationId,
+    projectId: thread.projectId,
+    userId,
+  });
+  const identity = await runIdentity(thread, userId);
+  await threadsService.markRunBy(thread.id, userId);
+  return { env, identity };
+}
+
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
 // environment's shared one), with the sender's skills, acting as their GitHub account, and with the project's
@@ -44,23 +68,9 @@ export const createThreadMessages = (runs: RunManager) => ({
     const attachments = prepareAttachments(files);
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
-    const skills = await skillsService.forRun(userId);
-    const github = await githubUserTokenService.forRun(userId);
-    const env = await variablesService.forRun({
-      organizationId,
-      projectId: thread.projectId,
-      userId,
-    });
-    const identity = await runIdentity(thread, userId);
-    await threadsService.markRunBy(thread.id, userId);
-    await runs.start(thread, prompt, model, {
-      attachments,
-      mentions,
-      skills,
-      github,
-      env,
-      identity,
-    });
+    const sender = await senderExtras(userId);
+    const scoped = await threadExtras(organizationId, thread, userId);
+    await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
   },
 
   async answer(
@@ -73,8 +83,7 @@ export const createThreadMessages = (runs: RunManager) => ({
     const continuation = await threadsService.continuation(thread.id);
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
     const model = await resolveModel(userId, selection);
-    const skills = await skillsService.forRun(userId);
-    const github = await githubUserTokenService.forRun(userId);
+    const sender = await senderExtras(userId);
     // A request for a secret is stored here and the agent told only that it was (decision 0047),
     // before the run's variables are read, so the run that resumes has it.
     const kept = await keepSecretAnswers({
@@ -86,14 +95,8 @@ export const createThreadMessages = (runs: RunManager) => ({
       scope: secretScope,
       skip: skipSecrets,
     });
-    const env = await variablesService.forRun({
-      organizationId,
-      projectId: thread.projectId,
-      userId,
-    });
-    const identity = await runIdentity(thread, userId);
-    await threadsService.markRunBy(thread.id, userId);
-    await runs.answer(thread, continuation, kept, model, skills, github, env, identity);
+    const scoped = await threadExtras(organizationId, thread, userId);
+    await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
   },
 });
 
