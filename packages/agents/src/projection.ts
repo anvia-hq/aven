@@ -13,6 +13,7 @@ import {
   messageId,
   NO_USAGE,
   QUESTION_TOOL_NAME,
+  SECRET_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
   type ChatMessage,
   type ContextUsage,
@@ -115,7 +116,9 @@ export function projectToolCall(call: ToolCallPart): ToolPart {
     const diff = editDiff(call.input);
     if (diff) tool.diff = diff;
   }
-  if (call.toolName === QUESTION_TOOL_NAME) tool.questions = questionsOf(call.input);
+  if (call.toolName === QUESTION_TOOL_NAME || call.toolName === SECRET_TOOL_NAME) {
+    tool.questions = questionsOf(call.input);
+  }
   return tool;
 }
 

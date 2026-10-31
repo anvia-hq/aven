@@ -17,6 +17,9 @@ export type QuestionAnswer = { questionId: string; value: string };
 
 export const QUESTION_TOOL_NAME = "ask_user";
 
+/** The agent asks for a secret (decision 0047): a question whose answer is stored, never shown to the agent. */
+export const SECRET_TOOL_NAME = "request_secret";
+
 export const SHOW_IMAGE_TOOL_NAME = "show_image";
 
 /** An image the agent showed the user (decision 0033). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
@@ -145,9 +148,8 @@ export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | un
   const part = messages.at(-1)?.parts.at(-1);
   if (part?.type !== "tool") return undefined;
   const { tool } = part;
-  return tool.name === QUESTION_TOOL_NAME && tool.questions && tool.status === "running"
-    ? tool
-    : undefined;
+  const asks = tool.name === QUESTION_TOOL_NAME || tool.name === SECRET_TOOL_NAME;
+  return asks && tool.questions && tool.status === "running" ? tool : undefined;
 }
 
 /** What the user answered, read from the finished question tool's output; empty if it has none. */

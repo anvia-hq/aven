@@ -253,6 +253,26 @@ describe("questions", () => {
     });
   });
 
+  test("a request_secret call carries its questions, and a stored one is pending until it is answered", () => {
+    const secret = { id: "STRIPE_API_KEY", text: "What is the Stripe API key for testing?" };
+    const request = {
+      type: "tool-call",
+      toolCallId: "s1",
+      toolName: "request_secret",
+      input: { questions: [secret] },
+    } as const;
+
+    expect(projectStreamEvent({ type: "tool_call", toolCall: request } as never)).toMatchObject({
+      type: "tool_start",
+      tool: { name: "request_secret", questions: [secret] },
+    });
+    const pending = messagesToChat([
+      { role: "user", content: "set up stripe" },
+      { role: "assistant", content: [request] },
+    ]);
+    expect(pendingQuestion(pending)?.questions).toEqual([secret]);
+  });
+
   test("blank text before a tool call is not a part, so the calls stay together", () => {
     const read = (id: string) =>
       ({ type: "tool-call", toolCallId: id, toolName: "read_file", input: { path: id } }) as const;
