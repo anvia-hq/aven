@@ -9,7 +9,7 @@ import { readKey } from "./crypto";
 import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
 import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 
-export class InvalidProviderError extends UnprocessableError {}
+class InvalidProviderError extends UnprocessableError {}
 
 type ProviderKind = ModelConfig["provider"];
 

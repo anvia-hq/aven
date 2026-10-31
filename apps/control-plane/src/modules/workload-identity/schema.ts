@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-export const SUBJECT_SCOPES = ["thread", "project", "organization"] as const;
+const SUBJECT_SCOPES = ["thread", "project", "organization"] as const;
 
-export const DEFAULT_LIFETIME_SECONDS = 600;
+const DEFAULT_LIFETIME_SECONDS = 600;
 
 export const mintTokenBody = z.object({
   /** The service the token is for; it must be the `aud` that service checks. */

@@ -48,7 +48,7 @@ export class GithubNoPushAccessError extends ConflictError {
   }
 }
 
-export class GithubApiError extends UnavailableError {
+class GithubApiError extends UnavailableError {
   constructor(
     message: string,
     /** The status GitHub answered with. */

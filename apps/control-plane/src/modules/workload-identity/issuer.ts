@@ -5,7 +5,7 @@
 
 const ALGORITHM = { name: "ECDSA", namedCurve: "P-256" } as const;
 
-export type PublicJwk = {
+type PublicJwk = {
   kty: "EC";
   crv: "P-256";
   x: string;
