@@ -14,6 +14,20 @@ describe("create_bot", () => {
     expect(result).toEqual({ created: true, name: "Scout" });
   });
 
+  test("says what the bot is for when the model does, and a blank line means nothing", async () => {
+    const asked: NewBotInput[] = [];
+    const tool = createCreateBotTool(async (input) => (asked.push(input), { name: "Scout" }));
+
+    await tool.call({
+      name: "Scout",
+      instruction: "You research.",
+      description: " Looks things up. ",
+    });
+    await tool.call({ name: "Scout", instruction: "You research.", description: "   " });
+
+    expect(asked.map((input) => input.description)).toEqual(["Looks things up.", ""]);
+  });
+
   test("a bot with no name or no instruction is not asked for", async () => {
     const asked: NewBotInput[] = [];
     const tool = createCreateBotTool(async (input) => (asked.push(input), { name: "x" }));

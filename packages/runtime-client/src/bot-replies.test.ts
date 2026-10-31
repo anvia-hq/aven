@@ -7,7 +7,12 @@ import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-import { BotReplies, type BotReplyMessage, type CreateBotReplyAgent } from "./bot-replies";
+import {
+  BotReplies,
+  defaultCreateBotAgent,
+  type BotReplyMessage,
+  type CreateBotReplyAgent,
+} from "./bot-replies";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
 const tool = (name: string): AnyTool =>
@@ -221,6 +226,44 @@ describe("BotReplies", () => {
     await run.until();
 
     expect(described).toBe("A pal.");
+  });
+
+  // Through the real builder, not the test's own: what the agent is made with is what it can do.
+  describe("the agent the runner builds", () => {
+    const build = (canCreateBots: boolean) =>
+      defaultCreateBotAgent("http://control-plane")({
+        bot: { ...message.bot, canCreateBots },
+        model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
+        deliver: async () => undefined,
+        memory: {
+          store: {
+            load: async () => [],
+            append: async () => undefined,
+            clear: async () => undefined,
+          },
+          savePolicy: "turn",
+        },
+        computer: [],
+        updateSelf: async () => ({ name: "Pip", description: "" }),
+        createBot: canCreateBots ? async () => ({ name: "Scout" }) : undefined,
+      }) as unknown as { tools: { name: string }[]; instructions: string };
+
+    test("every bot can change itself and knows its own description", () => {
+      const agent = build(false);
+      expect(agent.tools.map((each) => each.name)).toEqual(["send_message", "update_self"]);
+      expect(agent.instructions).toContain("Your description now: A pal.");
+      expect(agent.instructions).not.toContain("<making-bots>");
+    });
+
+    test("the main bot can make bots too", () => {
+      const agent = build(true);
+      expect(agent.tools.map((each) => each.name)).toEqual([
+        "send_message",
+        "create_bot",
+        "update_self",
+      ]);
+      expect(agent.instructions).toContain("<making-bots>");
+    });
   });
 
   test("a bot that may not make bots is not given the tool", async () => {

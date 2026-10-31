@@ -166,9 +166,9 @@ export class BotReplies {
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
       // The control plane says whether this bot may, and holds to it whatever is asked here.
-      updateSelf: (changes) => call("bot.update", { replyId, ...changes }),
+      updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       createBot: bot.canCreateBots
-        ? (input) => call("bot.create", { replyId, ...input })
+        ? (input) => call("bot.create", { ...input, replyId })
         : undefined,
     });
   }
