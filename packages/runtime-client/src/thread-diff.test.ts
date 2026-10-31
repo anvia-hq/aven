@@ -56,6 +56,28 @@ describe("a thread's changes", () => {
     expect(diff?.patch).toContain("+++ b/b.txt");
   });
 
+  test("what is unshipped is what the pushed branch lacks, and the whole branch stays whole after a push", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    const commit = (message: string) =>
+      sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await writeFile(join(root, "b.txt"), "new\n");
+    await sh(root, "add", ".");
+    await commit("work");
+
+    // Not pushed yet: everything on the branch is still to ship.
+    expect((await threadDiff(root, "unshipped"))?.patch).toContain("+++ b/b.txt");
+
+    await sh(root, "push", "-q", "-u", "origin", "HEAD");
+    expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
+    // The pushed branch is not the default one: the pull request still holds b.txt.
+    expect((await threadDiff(root, "all"))?.patch).toContain("+++ b/b.txt");
+
+    await writeFile(join(root, "c.txt"), "later\n");
+    const later = (await threadDiff(root, "unshipped"))?.patch;
+    expect(later).toContain("+++ b/c.txt");
+    expect(later).not.toContain("b.txt");
+  });
+
   test("the whole branch shows every change, new files included", async () => {
     const { root } = await workspace();
     await writeFile(join(root, "a.txt"), "one\nthree\n");

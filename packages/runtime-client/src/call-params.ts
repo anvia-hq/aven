@@ -14,7 +14,11 @@ const invalid = () => new Error("Invalid parameters");
 
 export function diffGetParams(params: unknown): DiffGetParams {
   const { threadId, scope } = asRecord(params);
-  if (typeof threadId !== "string" || (scope !== "turn" && scope !== "all")) throw invalid();
+  if (
+    typeof threadId !== "string" ||
+    (scope !== "turn" && scope !== "all" && scope !== "unshipped")
+  )
+    throw invalid();
   return { threadId, scope };
 }
 

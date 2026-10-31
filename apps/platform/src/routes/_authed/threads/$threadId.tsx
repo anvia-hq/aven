@@ -12,6 +12,7 @@ import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
 import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
+import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
@@ -41,6 +42,9 @@ function ThreadPage() {
     panelIds: ["files", "diff", "desktop"],
     storage: safeStorage,
   });
+  // What the pull request does not have yet (everything, before there is one): the badge shows it,
+  // and Update PR has nothing to send without it.
+  const unshipped = useThreadDiff(threadId, "unshipped", running);
   // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
     id: `aven.thread-panels.${wide ? "row" : "column"}`,
@@ -107,8 +111,17 @@ function ThreadPage() {
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
                     <div className="flex items-center justify-end gap-2 pb-2">
-                      <ChangesBadge threadId={thread.id} running={running} />
-                      <ShipButton thread={thread} />
+                      <ChangesBadge
+                        empty={unshipped.files.length === 0}
+                        additions={unshipped.additions}
+                        deletions={unshipped.deletions}
+                      />
+                      <ShipButton
+                        thread={thread}
+                        upToDate={
+                          unshipped.loaded && !unshipped.problem && unshipped.files.length === 0
+                        }
+                      />
                     </div>
                     {question ? (
                       <AnswerForm

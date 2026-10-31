@@ -6,11 +6,15 @@ import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 import { useShipThread } from "../hooks/use-ship-thread";
 import type { Thread } from "../types";
 
-type Props = { thread: Thread };
+type Props = {
+  thread: Thread;
+  /** Whether the pull request already has everything the thread changed; there is nothing to update. */
+  upToDate: boolean;
+};
 
 // Ships the thread as a pull request, as the person; once there is one, it links to it and ships
 // again as an update.
-export function ShipButton({ thread }: Props) {
+export function ShipButton({ thread, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
   const account = useGithubAccount();
   const shipped = thread.pullRequestUrl !== null;
@@ -49,7 +53,8 @@ export function ShipButton({ thread }: Props) {
         variant={shipped ? "outline" : "default"}
         size="sm"
         className="shadow-md"
-        disabled={thread.running || shipping}
+        disabled={thread.running || shipping || (shipped && upToDate)}
+        title={shipped && upToDate ? "Nothing new since the last push" : undefined}
         onClick={() => void ship()}
       >
         <Rocket />

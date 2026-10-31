@@ -1,7 +1,7 @@
 import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-const scopes = ["turn", "all"] as const satisfies readonly DiffScope[];
+const scopes = ["turn", "all", "unshipped"] as const satisfies readonly DiffScope[];
 
 export const diffQuery = z.object({ scope: z.enum(scopes).default("turn") });
 

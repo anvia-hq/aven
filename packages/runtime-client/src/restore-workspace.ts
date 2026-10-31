@@ -4,6 +4,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 import { fetchBranch } from "./fetch-branch";
 import { git, type Git } from "./git-clone";
 import { gitFailure, hardenedGit } from "./host-git";
+import { trackPushes } from "./track-pushes";
 
 /**
  * Brings a workspace restored from a snapshot up to date for its own thread (decision 0043): the
@@ -23,4 +24,5 @@ export async function updateRestoredWorkspace(
   );
   if (checkout.code !== 0)
     throw gitFailure("Could not update the workspace", checkout, access.token);
+  await trackPushes(root, run);
 }

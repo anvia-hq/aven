@@ -8,6 +8,9 @@ export const DIFF_SCOPES = ["turn", "all"] as const;
 
 export type DiffScope = (typeof DIFF_SCOPES)[number];
 
+/** What `useThreadDiff` can ask for: the panel's two, and `unshipped`, what the pull request does not have yet. */
+export type ThreadDiffScope = DiffScope | "unshipped";
+
 export const isDiffScope = (value: unknown): value is DiffScope =>
   (DIFF_SCOPES as readonly unknown[]).includes(value);
 

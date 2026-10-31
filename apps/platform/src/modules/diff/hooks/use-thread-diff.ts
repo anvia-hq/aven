@@ -3,14 +3,14 @@ import { useMemo } from "react";
 import { useRequest } from "@/hooks/use-request";
 
 import { parsePatch } from "../parse-patch";
-import type { DiffScope, ThreadDiffResponse } from "../types";
+import type { ThreadDiffResponse, ThreadDiffScope } from "../types";
 
 const POLL_MS = 4_000;
 
 // A thread's changes, read when asked for and again as the agent works: while a run goes on they
 // are looked at every few seconds, and once more when it ends. What was shown stays until the new
 // answer arrives, so the list does not flicker.
-export function useThreadDiff(threadId: string, scope: DiffScope, running: boolean) {
+export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running: boolean) {
   // `running` changes the polling, so the end of a run is looked at once more. What was known
   // about another thread says nothing about this one.
   const answer = useRequest<ThreadDiffResponse>(`/threads/${threadId}/diff?scope=${scope}`, {

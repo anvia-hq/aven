@@ -5,6 +5,7 @@ import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 
 import { git, type Git } from "./git-clone";
 import { remoteBase } from "./remote-base";
+import { trackPushes } from "./track-pushes";
 
 // Where the working tree stood when the thread's latest run began (decision 0030).
 const TURN_REF = "refs/aven/turn";
@@ -61,6 +62,26 @@ async function turnStart(root: string, run: Git) {
   return start.code === 0 ? start.stdout.trim() : null;
 }
 
+// The tree of the thread's branch as the remote has it, which is what its pull request holds; null
+// until the branch has been pushed.
+async function pushedTree(root: string, run: Git) {
+  // A workspace cloned before pushes were recorded learns it here, for the pushes to come.
+  await trackPushes(root, run);
+  const branch = await run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
+  if (branch.code !== 0) return null;
+  const pushed = await run(
+    ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch.stdout.trim()}^{tree}`],
+    { cwd: root },
+  );
+  return pushed.code === 0 ? pushed.stdout.trim() : null;
+}
+
+async function diffStart(root: string, scope: DiffScope, run: Git) {
+  if (scope === "turn") return turnStart(root, run);
+  if (scope === "unshipped") return (await pushedTree(root, run)) ?? branchPoint(root, run);
+  return branchPoint(root, run);
+}
+
 function cut(patch: string): ThreadDiff {
   const bytes = new TextEncoder().encode(patch);
   if (bytes.length <= MAX_PATCH_BYTES) return { patch, truncated: false };
@@ -70,7 +91,7 @@ function cut(patch: string): ThreadDiff {
 
 /**
  * What a thread changed, as a unified patch: since its latest run began (`turn`) or since its
- * branch left the default branch (`all`). Null when the workspace is not a repository. A thread
+ * branch left the default branch (`all`) or since it was last pushed (`unshipped`). Null when the workspace is not a repository. A thread
  * whose turn was never marked has no start to compare with, so its turn is empty.
  */
 export async function threadDiff(
@@ -80,7 +101,7 @@ export async function threadDiff(
 ): Promise<ThreadDiff | null> {
   const now = await workingTree(root, run);
   if (!now) return null;
-  const from = scope === "turn" ? await turnStart(root, run) : await branchPoint(root, run);
+  const from = await diffStart(root, scope, run);
   if (!from) return { patch: "", truncated: false };
   const diff = await run(
     [

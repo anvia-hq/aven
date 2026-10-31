@@ -5,6 +5,7 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { runCommand, type CommandOutput } from "./run-command";
+import { trackPushes } from "./track-pushes";
 
 export type Git = (
   args: string[],
@@ -69,6 +70,7 @@ export async function cloneRepository(
     if (cloned.code !== 0) throw new Error(redact(cloned.stderr || cloned.stdout));
     const branched = await run(["checkout", "-b", threadBranch(threadId)], { cwd: dir });
     if (branched.code !== 0) throw new Error(redact(branched.stderr || branched.stdout));
+    await trackPushes(dir, run);
   } catch (error) {
     await clearDirectory(dir);
     throw new Error(`Could not clone ${access.cloneUrl}: ${errorMessage(error)}`);

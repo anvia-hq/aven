@@ -63,8 +63,12 @@ export type DesktopCallMethod =
 /** What the control plane asks of a runner about a thread's changes (decision 0030); params are `{ threadId, scope }`. */
 export type DiffCallMethod = "diff.get";
 
-/** `turn` is what the thread's latest run changed, `all` everything since its branch left the default branch. */
-export type DiffScope = "turn" | "all";
+/**
+ * `turn` is what the thread's latest run changed, `all` everything since its branch left the default
+ * branch, and `unshipped` what is not yet on the branch's remote copy, which is what the pull request
+ * holds: the same as `all` until the branch has been pushed.
+ */
+export type DiffScope = "turn" | "all" | "unshipped";
 
 /** A thread's changes as a unified patch; `truncated` when the patch was cut to keep it small. */
 export type ThreadDiff = {
