@@ -17,7 +17,7 @@ export function BotChat({ bot }: { bot: Bot }) {
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
 
   return (
-    <div className="flex h-svh min-w-0 flex-col md:h-[calc(100svh-1rem-2px)]">
+    <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-[calc(100svh-1rem-2px)]">
       {/* As in a thread: the conversation scrolls the full height, behind the composer. */}
       <div className="relative min-h-0 flex-1">
         <div ref={scroll} className="h-full overflow-y-auto">

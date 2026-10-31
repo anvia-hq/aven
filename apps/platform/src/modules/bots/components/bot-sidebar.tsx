@@ -41,7 +41,7 @@ export function BotSidebar() {
               {main.name}
             </span>
           </Link>
-          <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/tile:opacity-100 group-hover/tile:opacity-100 group-data-[collapsible=icon]:hidden">
+          <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/tile:opacity-100 group-hover/tile:opacity-100 pointer-coarse:opacity-100 group-data-[collapsible=icon]:hidden">
             <BotSettingsDialog bot={main} />
           </div>
         </div>

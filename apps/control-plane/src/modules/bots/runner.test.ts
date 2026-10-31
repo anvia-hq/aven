@@ -249,6 +249,46 @@ describe("BotRunner", () => {
     client.close();
   });
 
+  test("a chat nobody is watching when its reply ends is dropped, and read again when asked for", async () => {
+    const store = fakeStore();
+    let reads = 0;
+    const counting: MemoryStore = {
+      ...store,
+      load: async (options) => {
+        reads += 1;
+        return store.load(options);
+      },
+    };
+    const gates: (() => void)[] = [];
+    let ended: () => void = () => undefined;
+    const replyEnded = new Promise<void>((resolve) => (ended = resolve));
+    const makeAgent = scripts([[send("hi")], [text("")]]);
+    const runner = new BotRunner({
+      store: counting,
+      createAgent: (input) => {
+        const agent = makeAgent(input);
+        return { generate: (...args) => agent.generate(...args).finally(ended) };
+      },
+      pause: () => new Promise<void>((resolve) => gates.push(resolve)),
+    });
+
+    const client = await watch(runner);
+    await runner.send(bot, USER, "hello", model);
+    await until(() => gates.length === 1);
+    // The client leaves while the bot is still at work; the reply goes on without it.
+    client.close();
+    await client.done;
+    gates[0]!();
+    await replyEnded;
+    await Bun.sleep(1);
+
+    reads = 0;
+    const again = await watch(runner);
+    expect(reads).toBe(1);
+    expect(again.events[0]).toMatchObject({ type: "snapshot", typing: false });
+    again.close();
+  });
+
   test("a model that cannot be used is refused before anything is added", async () => {
     const runner = new BotRunner({
       store: fakeStore(),

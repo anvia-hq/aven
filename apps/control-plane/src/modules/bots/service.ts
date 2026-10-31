@@ -58,40 +58,48 @@ export const botsService = {
     const [current] = await db.select().from(bots).where(ownBot(userId, id));
     if (!current) return null;
 
-    const { providerId, modelId, reasoningEffort, ...rest } = body;
-    const changes: Partial<BotRow> = { ...rest };
-    const providerAfter = providerId === undefined ? current.providerId : providerId;
-    // Only one of the person's own providers.
+    const { providerId, modelId, reasoningEffort, ...details } = body;
     if (providerId) await requireOwnProvider(userId, providerId);
+    const model = modelAfter(current, { providerId, modelId, reasoningEffort });
+    await requireEffortOf(userId, model);
 
-    if (!providerAfter) {
-      // A bot on the default has no model or effort of its own to keep.
-      changes.providerId = null;
-      changes.modelId = null;
-      changes.reasoningEffort = null;
-    } else {
-      changes.providerId = providerAfter;
-      // A model, and its effort, belong to the provider they were chosen from: a changed one
-      // starts without them unless the same request names them.
-      const changed = providerId !== undefined || modelId !== undefined;
-      changes.modelId = changed ? null : current.modelId;
-      changes.reasoningEffort = changed ? null : current.reasoningEffort;
-      if (modelId !== undefined) changes.modelId = modelId;
-      if (reasoningEffort !== undefined) changes.reasoningEffort = reasoningEffort;
-      if (changes.reasoningEffort) {
-        // Refused here, in words, if the model does not take it; not when the bot next speaks.
-        await resolveModel(userId, {
-          providerId: providerAfter,
-          modelId: changes.modelId ?? undefined,
-          reasoningEffort: changes.reasoningEffort,
-        });
-      }
-    }
-
-    const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();
+    const [row] = await db
+      .update(bots)
+      .set({ ...details, ...model })
+      .where(ownBot(userId, id))
+      .returning();
     return row ? view(row) : null;
   },
 };
+
+type BotModel = Pick<BotRow, "providerId" | "modelId" | "reasoningEffort">;
+type ModelChange = Pick<UpdateBotBody, "providerId" | "modelId" | "reasoningEffort">;
+
+// What the bot's model is after a change, and what was left out of it stays. A bot on the default
+// has no model or effort of its own. A model, and its effort, belong to the provider they were
+// chosen from: a changed one starts without them unless the same change names them.
+function modelAfter(current: BotModel, change: ModelChange): BotModel {
+  const providerId = change.providerId === undefined ? current.providerId : change.providerId;
+  if (!providerId) return { providerId: null, modelId: null, reasoningEffort: null };
+  const changed = change.providerId !== undefined || change.modelId !== undefined;
+  const kept = changed ? { modelId: null, reasoningEffort: null } : current;
+  return {
+    providerId,
+    modelId: change.modelId === undefined ? kept.modelId : change.modelId,
+    reasoningEffort:
+      change.reasoningEffort === undefined ? kept.reasoningEffort : change.reasoningEffort,
+  };
+}
+
+// An effort the model does not take is refused here, in words, not when the bot next speaks.
+async function requireEffortOf(userId: string, model: BotModel) {
+  if (!model.providerId || !model.reasoningEffort) return;
+  await resolveModel(userId, {
+    providerId: model.providerId,
+    modelId: model.modelId ?? undefined,
+    reasoningEffort: model.reasoningEffort,
+  });
+}
 
 async function requireOwnProvider(userId: string, providerId: string) {
   const [row] = await db

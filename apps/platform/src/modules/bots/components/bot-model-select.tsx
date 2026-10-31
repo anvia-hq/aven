@@ -6,19 +6,17 @@ import { Button } from "@/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
-import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";
 import type { ModelChoice } from "@/modules/providers/types";
 
+import { useBotModel } from "../hooks/use-bot-model";
 import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 
 // The model a bot talks with: any model of any of the person's providers, or their default.
 export function BotModelSelect({ bot }: { bot: Bot }) {
-  const { providers, loaded, choices, loading } = useModelChoices();
+  const { providers, loaded, choices, loading, provider, modelId } = useBotModel(bot);
   const { update } = useBots();
   const [open, setOpen] = useState(false);
-  const provider = providers.find((item) => item.id === bot.providerId);
-  const modelId = bot.modelId ?? provider?.modelId ?? null;
 
   // Without a provider there is nothing to choose: the shared model of the server answers.
   if (loaded && providers.length === 0) {

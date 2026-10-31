@@ -213,4 +213,15 @@ test.describe("bots", () => {
     await field.press("Enter");
     await expect.poll(size).toBeNull();
   });
+
+  test("on a phone the chat fits the screen, composer included", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await registerUser(page, "bot-phone", "Phone Person");
+    await page.goto("/bot");
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeInViewport({ ratio: 1 });
+    // The shell's top bar and the chat together are the screen: the page itself does not scroll.
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+      800,
+    );
+  });
 });
