@@ -6,6 +6,7 @@ import { attempt, postJson } from "@/lib/api";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import type { BotChatMessage } from "../types";
+import { refreshBots } from "./use-bots";
 
 function parseEvent(data: string): BotEvent | null {
   try {
@@ -48,6 +49,8 @@ export function useBotChat(botId: string) {
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
       if (event.type === "error") setError(event.message);
       if (event.type === "typing" && event.typing) setError(null);
+      // A reply that has ended may have made a bot: the main bot can (decision 0060).
+      if (event.type === "typing" && !event.typing) void refreshBots();
     };
     source.onerror = () => {
       // The browser retries on its own; only a stream it has given up on is lost.

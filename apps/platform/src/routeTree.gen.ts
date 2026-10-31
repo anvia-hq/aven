@@ -18,6 +18,7 @@ import { Route as AuthedBotRouteImport } from './routes/_authed/bot'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
+import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
@@ -75,6 +76,11 @@ const AcceptInvitationInvitationIdRoute =
 const AuthedBotIndexRoute = AuthedBotIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedBotRoute,
+} as any)
+const AuthedBotBotIdRoute = AuthedBotBotIdRouteImport.update({
+  id: '/$botId',
+  path: '/$botId',
   getParentRoute: () => AuthedBotRoute,
 } as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/bot': typeof AuthedBotRouteWithChildren
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/bot/$botId': typeof AuthedBotBotIdRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/bot/$botId': typeof AuthedBotBotIdRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/_authed/bot': typeof AuthedBotRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/_authed/bot/$botId': typeof AuthedBotBotIdRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/bot'
     | '/settings'
     | '/accept-invitation/$invitationId'
+    | '/bot/$botId'
     | '/settings/bots'
     | '/settings/environment-variables'
     | '/settings/members'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/accept-invitation/$invitationId'
+    | '/bot/$botId'
     | '/settings/bots'
     | '/settings/environment-variables'
     | '/settings/members'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/_authed/bot'
     | '/_authed/settings'
     | '/accept-invitation/$invitationId'
+    | '/_authed/bot/$botId'
     | '/_authed/settings/bots'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/members'
@@ -366,6 +378,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/bot/'
       preLoaderRoute: typeof AuthedBotIndexRouteImport
+      parentRoute: typeof AuthedBotRoute
+    }
+    '/_authed/bot/$botId': {
+      id: '/_authed/bot/$botId'
+      path: '/$botId'
+      fullPath: '/bot/$botId'
+      preLoaderRoute: typeof AuthedBotBotIdRouteImport
       parentRoute: typeof AuthedBotRoute
     }
     '/_authed/settings/': {
@@ -488,10 +507,12 @@ const AuthedShellRouteWithChildren = AuthedShellRoute._addFileChildren(
 )
 
 interface AuthedBotRouteChildren {
+  AuthedBotBotIdRoute: typeof AuthedBotBotIdRoute
   AuthedBotIndexRoute: typeof AuthedBotIndexRoute
 }
 
 const AuthedBotRouteChildren: AuthedBotRouteChildren = {
+  AuthedBotBotIdRoute: AuthedBotBotIdRoute,
   AuthedBotIndexRoute: AuthedBotIndexRoute,
 }
 

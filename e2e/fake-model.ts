@@ -25,6 +25,26 @@ const sendMessage = (id: string, text: string) => ({
   function: { name: "send_message", arguments: JSON.stringify({ text }) },
 });
 
+const createBot = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "create_bot",
+    arguments: JSON.stringify({
+      name: "Scout",
+      instruction: "You research what the person asks and report what you found.",
+      avatar: "🔭",
+    }),
+  },
+});
+
+type Turn = ChatMessage & { tool_calls?: { function: { name: string } }[] };
+
+const calledTool = (message: Turn | undefined, name: string) =>
+  message?.tool_calls?.some((call) => call.function.name === name) ?? false;
+
+const madeABot = (message: Turn) => calledTool(message, "create_bot");
+
 Bun.serve({
   port: modelPort,
   async fetch(request) {
@@ -36,8 +56,20 @@ Bun.serve({
     if (body.stream) return new Response("the fake model does not stream", { status: 400 });
 
     const last = body.messages.at(-1);
-    if (last?.role === "tool") return reply({ content: "ok" }, "stop");
+    if (last?.role === "tool") {
+      // After a bot is made it is said; after anything else the model stops.
+      const call = body.messages.findLast((message) => message.role === "assistant");
+      if (!calledTool(call, "create_bot")) return reply({ content: "ok" }, "stop");
+      return reply(
+        { content: null, tool_calls: [sendMessage("call_2", "Scout is ready")] },
+        "tool_calls",
+      );
+    }
     const heard = textOf(last?.content);
+    // Asked for a bot, the main bot makes one (decision 0060) and says so once it is made.
+    if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
+      return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");
+    }
     return reply(
       {
         content: null,

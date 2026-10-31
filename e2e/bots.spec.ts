@@ -49,6 +49,68 @@ test.describe("bots", () => {
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
   });
 
+  // The main bot makes a bot when asked (decision 0060): it shows in the sidebar, has a chat of
+  // its own, and a person's other bots do not make bots.
+  test("the main bot makes a new bot when asked, and it has a chat of its own", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-maker", "Maker Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await expect(page.getByRole("link", { name: "Scout" })).toBeHidden();
+    await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+
+    // It is in the sidebar once the reply is over, under the main bot, and opens on its own page.
+    const scout = page.getByRole("link", { name: /Scout/ });
+    await expect(scout).toBeVisible();
+    await expect(scout).toContainText("You research what the person asks");
+    await scout.click();
+    await expect(page).toHaveURL(/\/bot\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
+    await expect(page.getByText("Say hello to Scout.")).toBeVisible();
+
+    // Its chat is its own: it answers, and the main bot's words are not in it.
+    await page.getByRole("textbox", { name: "Message" }).fill("hello scout");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "You said: hello scout")).toBeVisible();
+    await expect(bubble(page, "Scout is ready")).toBeHidden();
+
+    // It stays after a reload, and the main bot is still the one at /bot.
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
+    await page.getByRole("link", { name: "Aven, main bot" }).click();
+    await expect(page).toHaveURL(/\/bot$/);
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+
+    // What the main bot wrote is what was made: the person's own bot, on their default model.
+    const [, scoutRow] = await (await page.request.get("/api/bots")).json();
+    expect(scoutRow).toMatchObject({
+      name: "Scout",
+      avatar: "🔭",
+      isMain: false,
+      providerId: null,
+      instruction: "You research what the person asks and report what you found.",
+    });
+  });
+
+  test("a bot that does not exist sends the person back to the main bot", async ({ page }) => {
+    await registerUser(page, "bot-stranger", "Stranger");
+    await page.goto("/bot/00000000-0000-4000-8000-000000000000");
+    await expect(page).toHaveURL(/\/bot$/);
+    await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
+  });
+
   test("a person with no model is told why nothing was sent", async ({ page }) => {
     await registerUser(page, "bot-none", "No Model");
     await page.goto("/bot");

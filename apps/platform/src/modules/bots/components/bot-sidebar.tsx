@@ -11,11 +11,11 @@ import { BotAvatar } from "./bot-avatar";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
 // The bot's own sidebar: the main bot as a tile on top, and under it the person's other bots, each
-// with its avatar, its name and what it said last.
+// with its avatar, its name and what it said last, or what it is for until it has said anything.
 export function BotSidebar() {
   const { bots, main } = useBots();
   const lastMessages = useAtomValue(botLastMessagesAtom);
-  const active = useRouterState({ select: (state) => state.location.pathname.startsWith("/bot") });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const others = bots.filter((bot) => !bot.isMain);
 
   return (
@@ -26,7 +26,7 @@ export function BotSidebar() {
             to="/bot"
             aria-label={`${main.name}, main bot`}
             className="flex w-28 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-xs text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-1"
-            data-active={active}
+            data-active={pathname === "/bot" || pathname === "/bot/"}
           >
             <BotAvatar
               bot={main}
@@ -49,12 +49,17 @@ export function BotSidebar() {
       <SidebarMenu className="px-2">
         {others.map((bot) => (
           <SidebarMenuItem key={bot.id}>
-            <SidebarMenuButton render={<Link to="/bot" />} size="lg" tooltip={bot.name}>
+            <SidebarMenuButton
+              render={<Link to="/bot/$botId" params={{ botId: bot.id }} />}
+              isActive={pathname === `/bot/${bot.id}`}
+              size="lg"
+              tooltip={bot.name}
+            >
               <BotAvatar bot={bot} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {lastMessages[bot.id] || "No messages yet"}
+                  {lastMessages[bot.id] || bot.instruction}
                 </span>
               </div>
             </SidebarMenuButton>

@@ -11,6 +11,9 @@ import type { Bot, BotPatch } from "../types";
 
 const botsStore = createListStore<Bot>({ path: "/bots", atom: botsAtom, label: "bots" });
 
+// Fetches the list again, for a change made elsewhere: a bot the main bot made shows up this way.
+export const refreshBots = () => botsStore.refresh();
+
 // Bots belong to the signed-in user, so drop them on sign-out; the next user refetches.
 export function resetBots() {
   botsStore.reset();
