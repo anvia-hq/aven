@@ -14,7 +14,7 @@ import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
-import { QuestionForm } from "@/modules/threads/components/question-form";
+import { AnswerForm } from "@/modules/threads/components/answer-form";
 import { ShipButton } from "@/modules/threads/components/ship-button";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
@@ -111,7 +111,7 @@ function ThreadPage() {
                       <ShipButton thread={thread} />
                     </div>
                     {question ? (
-                      <QuestionForm
+                      <AnswerForm
                         key={question.id}
                         tool={question}
                         threadId={thread.id}

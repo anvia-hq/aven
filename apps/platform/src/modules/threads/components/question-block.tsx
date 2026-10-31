@@ -1,6 +1,14 @@
 import { CheckCircle, QuestionCircle } from "@mynaui/icons-react";
 
-import { questionAnswers, type ToolPart } from "@aven/protocol/events";
+import { questionAnswers, SECRET_TOOL_NAME, type ToolPart } from "@aven/protocol/events";
+
+function headline(tool: ToolPart, count: number, waiting: boolean) {
+  if (tool.name === SECRET_TOOL_NAME) {
+    return waiting ? "Waiting for a secret" : "A secret was asked for; you answered privately";
+  }
+  if (waiting) return "Waiting for your answer";
+  return `You answered ${count === 1 ? "a question" : `${count} questions`}`;
+}
 
 // The agent's question in the conversation: what it asked, and what was answered or that it waits.
 // Answering happens in the composer's place (`QuestionForm`), not here.
@@ -17,9 +25,7 @@ export function QuestionBlock({ tool }: { tool: ToolPart }) {
     >
       <header className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
         <Icon className={waiting ? "size-4 shrink-0" : "size-4 shrink-0 text-success"} />
-        {waiting
-          ? "Waiting for your answer"
-          : `You answered ${prompts.length === 1 ? "a question" : `${prompts.length} questions`}`}
+        {headline(tool, prompts.length, waiting)}
       </header>
       <ol className="divide-y">
         {prompts.map((prompt, index) => (

@@ -36,6 +36,9 @@ export type OutgoingMessage = {
 /** What a message asks to run with; omitted fields fall back to the sender's default provider. */
 export type RunSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
 
+/** How an answer to a request for a secret is kept (decision 0047): whose variable it becomes, or that it is declined. */
+export type SecretChoice = { secretScope: "project" | "personal"; skipSecrets?: boolean };
+
 export type ThreadState = "open" | "snoozed" | "archived";
 
 export type Thread = {

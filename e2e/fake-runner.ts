@@ -28,6 +28,12 @@ const QUESTIONS = [
     allowCustom: true,
   },
 ];
+// With FAKE_SECRET it is a `request_secret` instead (decision 0047): one question whose id is the
+// variable to set. What the resumed run is given, the answer and the variables, is printed.
+const SECRET = process.env.FAKE_SECRET === "1";
+const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
+const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
+const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";
 if (process.env.FAKE_QUESTION === "2") {
   QUESTIONS.unshift({
     id: "size",
@@ -197,7 +203,7 @@ ws.onmessage = ({ data }) => {
     viewers.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
-  } else if (message.type === "run.start" && !process.env.FAKE_QUESTION) {
+  } else if (message.type === "run.start" && !ASKING) {
     // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
     event({ type: "started", prompt: message.prompt, mentions: message.mentions });
     if (process.env.FAKE_RUN_ENDS) {
@@ -210,9 +216,15 @@ ws.onmessage = ({ data }) => {
       });
       send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
     }
-  } else if (message.type === "run.start" && process.env.FAKE_QUESTION) {
+  } else if (message.type === "run.start" && ASKING) {
     const { runId } = message;
-    const ask = { id: "q1", name: "ask_user", target: "", status: "running", questions: QUESTIONS };
+    const ask = {
+      id: "q1",
+      name: ASKED_TOOL,
+      target: "",
+      status: "running",
+      questions: ASKED,
+    };
     send({
       type: "run.event",
       runId,
@@ -237,17 +249,17 @@ ws.onmessage = ({ data }) => {
         interaction: {
           type: "tool-question",
           id: "i1",
-          toolName: "ask_user",
+          toolName: ASKED_TOOL,
           toolCallId: "q1",
           internalCallId: "c1",
-          questions: QUESTIONS,
+          questions: ASKED,
         },
         state: {},
       },
     });
-  } else if (message.type === "run.resume" && process.env.FAKE_QUESTION) {
+  } else if (message.type === "run.resume" && ASKING) {
     const { runId, response } = message;
-    event({ type: "answered", response });
+    event({ type: "answered", response, env: message.env });
     const output = JSON.stringify({ answers: (response as { answers: unknown }).answers });
     send({
       type: "run.event",

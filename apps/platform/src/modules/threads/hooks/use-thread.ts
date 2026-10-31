@@ -10,7 +10,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, attempt, postJson } from "@/lib/api";
 
-import type { ChatMessage, OutgoingMessage, QuestionAnswer, RunSelection } from "../types";
+import type {
+  ChatMessage,
+  OutgoingMessage,
+  QuestionAnswer,
+  RunSelection,
+  SecretChoice,
+} from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -106,9 +112,9 @@ export function useThread(threadId: string) {
 
   // True once the answers are accepted; the run then continues, and the stream shows it.
   const answer = useCallback(
-    async (answers: QuestionAnswer[], selection: RunSelection = {}) => {
+    async (answers: QuestionAnswer[], selection: RunSelection = {}, secret?: SecretChoice) => {
       const sent = await attempt("Could not send answer", async () => {
-        await postJson(`/threads/${threadId}/answer`, { answers, ...selection });
+        await postJson(`/threads/${threadId}/answer`, { answers, ...selection, ...secret });
         return true;
       });
       return sent ?? false;
