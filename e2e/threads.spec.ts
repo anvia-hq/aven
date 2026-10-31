@@ -47,6 +47,23 @@ test.describe("threads", () => {
     await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
   });
 
+  test("hovering a thread in the sidebar offers to archive it", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
+    await addRunner(page);
+    await createProject(page, "project");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("archive me");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    const item = page.locator("[data-slot=sidebar-menu-item]", { hasText: "archive me" });
+    await item.hover();
+    await item.getByRole("button", { name: "Archive archive me" }).click();
+
+    await expect(page).toHaveURL(/\/threads$/);
+    await expect(page.getByText("Thread archived")).toBeVisible();
+    await expect(item).toHaveCount(0);
+  });
+
   test("a prompt without choosing a project is refused and kept", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     await addRunner(page);

@@ -1,10 +1,16 @@
-import { Cloudy, Plus } from "@mynaui/icons-react";
+import { Archive, Cloudy, Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 
 import { Button } from "@/components/button";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/sidebar";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
+import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
 
@@ -12,6 +18,7 @@ export function SidebarThreads() {
   const navigate = useNavigate();
   const threads = useThreads().threads.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
+  const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   function hostLabel(thread: Thread) {
@@ -45,6 +52,14 @@ export function SidebarThreads() {
               />
               <span className="flex-1 truncate">{thread.title}</span>
             </SidebarMenuButton>
+            <SidebarMenuAction
+              showOnHover
+              aria-label={`Archive ${thread.title}`}
+              title="Archive"
+              onClick={() => void archive(thread)}
+            >
+              <Archive />
+            </SidebarMenuAction>
           </SidebarMenuItem>
         ))}
         {threads.length === 0 && (

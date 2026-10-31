@@ -17,7 +17,9 @@ export const Route = createFileRoute("/_authed/threads/")({
 function NewThread() {
   const startThread = useStartThread();
   const { projects, loaded } = useProjects();
-  const recent = useThreads().threads.slice(0, 3);
+  const recent = useThreads()
+    .threads.filter((thread) => thread.state === "open")
+    .slice(0, 3);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
