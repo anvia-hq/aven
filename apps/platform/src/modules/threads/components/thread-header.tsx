@@ -44,8 +44,9 @@ type ToggleProps = {
 function PanelToggle({ label, icon: Icon, open, onToggle }: ToggleProps) {
   return (
     <Button
-      variant={open ? "secondary" : "ghost"}
+      variant="ghost"
       size="icon-sm"
+      className={open ? "bg-accent" : undefined}
       aria-label={label}
       aria-pressed={open}
       onClick={onToggle}
