@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { SkillValidationError, skill } from "@anvia/core";
 import type { Skill } from "@anvia/core/skills";
 
+import { section } from "./instruction";
 import { errorMessage } from "./values";
 
 /** Where the sandbox has the skills of a run (decision 0035); read-only. */
@@ -57,9 +58,10 @@ export async function readSkillFolders(dir: string) {
 /** What the agent is told about the skills it has; empty without any. */
 export function skillsInstructions(skills: readonly SkillListing[]) {
   if (skills.length === 0) return "";
-  return [
+  const body = [
     "You have skills: instructions for particular kinds of task, kept as files in the sandbox. Before a task one of them fits, read its SKILL.md and follow it. Read it with exec_command, for example cat /skills/<name>/SKILL.md: read_file only reaches /workspace, and the skills are in /skills (one of the repository's, in /workspace/.aven/skills, can be read with read_file too). A skill's other files (references/, scripts/) are next to its SKILL.md; read them the same way when it says to, and run its scripts with exec_command. Skills are read-only.",
     "Available skills:",
     ...skills.map((entry) => `- ${entry.name}: ${entry.description} (${entry.path})`),
   ].join("\n");
+  return section("skills", body);
 }
