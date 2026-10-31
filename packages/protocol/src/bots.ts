@@ -4,6 +4,7 @@
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
 export const BOT_AVATAR_MAX = 16;
+export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;
 
 export type Bot = {
   id: string;
@@ -15,6 +16,10 @@ export type Bot = {
   /** The provider and model the bot talks with; none means the person's default (decision 0058). */
   providerId: string | null;
   modelId: string | null;
+  /** A reasoning level of the bot's model; none means the model's own default. */
+  reasoningEffort: string | null;
+  /** Tokens past which the chat is summarized; none means 70% of the model's context window. */
+  compactAfterTokens: number | null;
   /** The person's main bot: the one they always have. */
   isMain: boolean;
   createdAt: string;

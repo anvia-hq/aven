@@ -15,6 +15,7 @@ run("botsService (postgres)", async () => {
   const bob = `u-bob-${suffix}`;
 
   beforeAll(async () => {
+    process.env.MODEL_CATALOG_URL = "";
     await db.insert(users).values([
       { id: alice, name: "Alice", email: `${alice}@aven.test` },
       { id: bob, name: "Bob", email: `${bob}@aven.test` },
@@ -101,6 +102,79 @@ run("botsService (postgres)", async () => {
     expect(await botsService.get(alice, main!.id)).toMatchObject({
       providerId: null,
       modelId: null,
+    });
+  });
+
+  const addOpenAi = async (userId: string) => {
+    const [row] = await db
+      .insert(providers)
+      .values({ userId, kind: "openai", name: "OpenAI", modelId: "gpt-5" })
+      .returning();
+    return row!;
+  };
+
+  test("a reasoning effort must be one the bot's model takes", async () => {
+    const [main] = await botsService.list(alice);
+    const openai = await addOpenAi(alice);
+    await botsService.update(alice, main!.id, { providerId: openai.id, modelId: "gpt-5" });
+
+    const set = await botsService.update(alice, main!.id, { reasoningEffort: "high" });
+    expect(set).toMatchObject({ providerId: openai.id, modelId: "gpt-5", reasoningEffort: "high" });
+    await expect(botsService.update(alice, main!.id, { reasoningEffort: "turbo" })).rejects.toThrow(
+      'does not support the "turbo" reasoning effort',
+    );
+    expect((await botsService.get(alice, main!.id))?.reasoningEffort).toBe("high");
+
+    // A compatible server has no levels at all.
+    const compatible = await addProvider(alice, "Compatible");
+    await expect(
+      botsService.update(alice, main!.id, {
+        providerId: compatible.id,
+        modelId: "any",
+        reasoningEffort: "high",
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    await botsService.update(alice, main!.id, { providerId: null });
+  });
+
+  test("a changed model starts without an effort, and a bot on the default has none", async () => {
+    const [main] = await botsService.list(alice);
+    const openai = await addOpenAi(alice);
+    await botsService.update(alice, main!.id, {
+      providerId: openai.id,
+      modelId: "gpt-5",
+      reasoningEffort: "low",
+    });
+    // The same request that changes the model may name the effort for it.
+    expect(
+      await botsService.update(alice, main!.id, { modelId: "o3", reasoningEffort: "high" }),
+    ).toMatchObject({ modelId: "o3", reasoningEffort: "high" });
+    expect(await botsService.update(alice, main!.id, { modelId: "gpt-5" })).toMatchObject({
+      modelId: "gpt-5",
+      reasoningEffort: null,
+    });
+
+    await botsService.update(alice, main!.id, { reasoningEffort: "medium" });
+    expect(await botsService.update(alice, main!.id, { name: "Pip" })).toMatchObject({
+      reasoningEffort: "medium",
+    });
+    expect(await botsService.update(alice, main!.id, { providerId: null })).toMatchObject({
+      providerId: null,
+      reasoningEffort: null,
+    });
+  });
+
+  test("the size at which the chat is summarized can be set and cleared", async () => {
+    const [main] = await botsService.list(alice);
+    expect(main?.compactAfterTokens).toBeNull();
+    expect(await botsService.update(alice, main!.id, { compactAfterTokens: 40_000 })).toMatchObject(
+      { compactAfterTokens: 40_000 },
+    );
+    expect(await botsService.update(alice, main!.id, { name: "Pip" })).toMatchObject({
+      compactAfterTokens: 40_000,
+    });
+    expect(await botsService.update(alice, main!.id, { compactAfterTokens: null })).toMatchObject({
+      compactAfterTokens: null,
     });
   });
 });

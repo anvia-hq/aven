@@ -5,6 +5,7 @@ import type { Bot } from "@aven/protocol/bots";
 import { and, desc, eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
+import { resolveModel } from "../providers/resolve-model";
 import type { UpdateBotBody } from "./schema";
 
 // The main bot a person starts with, until they change it.
@@ -23,6 +24,8 @@ const view = (row: BotRow): Bot => ({
   providerId: row.providerId,
   // A model is the provider's: with the provider gone, so is its model.
   modelId: row.providerId ? row.modelId : null,
+  reasoningEffort: row.providerId ? row.reasoningEffort : null,
+  compactAfterTokens: row.compactAfterTokens,
   isMain: row.isMain,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
@@ -52,17 +55,39 @@ export const botsService = {
   },
 
   async update(userId: string, id: string, body: UpdateBotBody) {
-    const { providerId, modelId, ...rest } = body;
+    const [current] = await db.select().from(bots).where(ownBot(userId, id));
+    if (!current) return null;
+
+    const { providerId, modelId, reasoningEffort, ...rest } = body;
     const changes: Partial<BotRow> = { ...rest };
-    if (providerId !== undefined) {
-      // Only one of the person's own providers, and a model belongs to the provider it was
-      // chosen from: a new provider starts without one unless the same request names it.
-      if (providerId) await requireOwnProvider(userId, providerId);
-      changes.providerId = providerId;
-      changes.modelId = providerId ? (modelId ?? null) : null;
-    } else if (modelId !== undefined) {
-      changes.modelId = modelId;
+    const providerAfter = providerId === undefined ? current.providerId : providerId;
+    // Only one of the person's own providers.
+    if (providerId) await requireOwnProvider(userId, providerId);
+
+    if (!providerAfter) {
+      // A bot on the default has no model or effort of its own to keep.
+      changes.providerId = null;
+      changes.modelId = null;
+      changes.reasoningEffort = null;
+    } else {
+      changes.providerId = providerAfter;
+      // A model, and its effort, belong to the provider they were chosen from: a changed one
+      // starts without them unless the same request names them.
+      const changed = providerId !== undefined || modelId !== undefined;
+      changes.modelId = changed ? null : current.modelId;
+      changes.reasoningEffort = changed ? null : current.reasoningEffort;
+      if (modelId !== undefined) changes.modelId = modelId;
+      if (reasoningEffort !== undefined) changes.reasoningEffort = reasoningEffort;
+      if (changes.reasoningEffort) {
+        // Refused here, in words, if the model does not take it; not when the bot next speaks.
+        await resolveModel(userId, {
+          providerId: providerAfter,
+          modelId: changes.modelId ?? undefined,
+          reasoningEffort: changes.reasoningEffort,
+        });
+      }
     }
+
     const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();
     return row ? view(row) : null;
   },

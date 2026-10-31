@@ -27,8 +27,10 @@ type CodingAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   id?: string;
   /** What the agent is told instead of the coding agent's own instructions: a subagent has its own (decision 0057). */
   instructions?: string;
-  /** Where the agent keeps its conversation itself, for a host that runs it with a `session` (a bot, decision 0058). */
+  /** Where the agent keeps its conversation itself, for a host that runs it with a `session` (a bot, decision 0058). Old history in it is summarized like a thread's. */
   memory?: AgentMemoryOptions;
+  /** The history size, in tokens, past which it is summarized, instead of 70% of the model's context window. */
+  compactAfterTokens?: number;
   /** The skills in the sandbox, which the instructions list (decision 0035). */
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
@@ -61,7 +63,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     controls,
     maxTurns: options.maxTurns ?? 50,
     retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
-    memory: options.memory,
+    memory: options.memory && compaction ? { ...options.memory, compaction } : options.memory,
     tools,
   });
 
@@ -73,13 +75,17 @@ export function createCodingAgent(options: CodingAgentOptions) {
 // request and the summary itself.
 const COMPACT_AT = 0.7;
 
-// Old history is summarized by the run's own model once it passes the trigger. Without a known
-// context window there is nothing to measure against, so history is left whole.
+// Old history is summarized by the run's own model once it passes the trigger: the size the host
+// gave, else 70% of the model's context window. Without either there is nothing to measure
+// against, so history is left whole.
 function compactionFor(options: CodingAgentOptions, model: CompletionModel) {
   const contextWindow = "contextWindow" in options ? options.contextWindow : undefined;
-  if (!contextWindow) return undefined;
+  const afterTokens =
+    options.compactAfterTokens ??
+    (contextWindow ? Math.floor(contextWindow * COMPACT_AT) : undefined);
+  if (!afterTokens) return undefined;
   return {
-    trigger: { afterTokens: Math.floor(contextWindow * COMPACT_AT) },
+    trigger: { afterTokens },
     compactor: createSummaryMemoryCompactor({ model }),
   };
 }

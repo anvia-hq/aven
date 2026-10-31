@@ -16,6 +16,7 @@ export const createBotChats = (runner: BotRunner) => ({
       (await resolveModel(userId, {
         providerId: bot.providerId ?? undefined,
         modelId: bot.modelId ?? undefined,
+        reasoningEffort: bot.reasoningEffort ?? undefined,
       })) ?? environmentModel();
     await runner.send(bot, userId, text, model);
   },

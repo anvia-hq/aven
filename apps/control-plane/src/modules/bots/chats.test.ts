@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { MemoryStore, Message } from "@anvia/core";
+import type { CompletionRequest, MemoryStore, Message } from "@anvia/core";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -8,6 +8,7 @@ run("createBotChats (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
   const { createBotAgent } = await import("@aven/agents/bot-agent");
+  const { botMessagesToChat } = await import("@aven/agents/bot-projection");
   const { scriptedModel, text, toolCall } = await import("@aven/agents/testing/scripted-model");
   const { NotFoundError } = await import("../../errors");
   const { botMemoryStore } = await import("../../memory-store");
@@ -193,5 +194,105 @@ run("createBotChats (postgres)", async () => {
       { provider: "openai-compatible", modelId: "provider-model" },
     ]);
     await botsService.update(alice, mine!.id, { providerId: null });
+  });
+
+  test("the bot's effort and its compaction size reach the agent", async () => {
+    process.env.MODEL_CATALOG_URL = "";
+    const [mine] = await botsService.list(alice);
+    const [openai] = await db
+      .insert(providers)
+      .values({ userId: alice, kind: "openai", name: "OpenAI", modelId: "gpt-5" })
+      .returning();
+    await botsService.update(alice, mine!.id, {
+      providerId: openai!.id,
+      modelId: "gpt-5",
+      reasoningEffort: "high",
+      compactAfterTokens: 30_000,
+    });
+    const seen: { effort?: string; compactAfterTokens: number | null }[] = [];
+    const runner = new BotRunner({
+      store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
+      createAgent: ({ bot, model, deliver, memory }) => {
+        seen.push({ effort: model.reasoningEffort, compactAfterTokens: bot.compactAfterTokens });
+        return createBotAgent({
+          model: scriptedModel([[text("")]]),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+        });
+      },
+      pause: async () => undefined,
+    });
+    await createBotChats(runner).send(alice, mine!.id, "hi");
+    expect(seen).toEqual([{ effort: "high", compactAfterTokens: 30_000 }]);
+    await botsService.update(alice, mine!.id, { providerId: null, compactAfterTokens: null });
+  });
+
+  test("a long chat is summarized past the size the bot was given, and stays whole on screen", async () => {
+    const [mine] = await botsService.list(alice);
+    const scope = { sessionId: mine!.id, userId: alice };
+    await botMemoryStore.clear({ scope });
+    await botsService.update(alice, mine!.id, { compactAfterTokens: 1000 });
+
+    // A model that sends "ok" to each message, and summarizes when asked (a request with no tools).
+    const requests: string[] = [];
+    let spoke = false;
+    const decide = (request: CompletionRequest) => {
+      requests.push(JSON.stringify(request));
+      if (!request.tools?.length) return [text("SUMMARY OF EARLIER TALK")];
+      spoke = !spoke;
+      return spoke ? [toolCall("send_message", { text: "ok" })] : [text("")];
+    };
+    const runner = new BotRunner({
+      store: botMemoryStore,
+      createAgent: ({ bot, deliver, memory }) =>
+        createBotAgent({
+          model: scriptedModel(Array.from({ length: 30 }, () => decide)),
+          id: bot.id,
+          name: bot.name,
+          instruction: bot.instruction,
+          deliver,
+          memory,
+          compactAfterTokens: bot.compactAfterTokens ?? undefined,
+        }),
+      pause: async () => undefined,
+    });
+    const botChats = createBotChats(runner);
+
+    const say = async (message: string) => {
+      const stream = runner.events(mine!.id, alice, new AbortController().signal);
+      await stream.next();
+      await botChats.send(alice, mine!.id, message);
+      for await (const event of stream) {
+        if (event?.type === "typing" && !event.typing) break;
+      }
+    };
+    // About 1,250 tokens each, past the size, so every turn after the first has old ones to fold.
+    const filler = "apples and oranges ".repeat(260);
+    await say(`FIRSTMARK ${filler}`);
+    await say(`second ${filler}`);
+    await say(`third ${filler}`);
+    await say(`fourth ${filler}`);
+
+    const lastAsked = requests.findLast((request) => request.includes("fourth"))!;
+    expect(lastAsked).toContain("SUMMARY OF EARLIER TALK");
+    expect(lastAsked).not.toContain("FIRSTMARK");
+
+    // The conversation the person sees is whole: nothing was lost to the summary.
+    const chat = botMessagesToChat(await botMemoryStore.load({ scope }));
+    expect(chat.map((message) => message.text.slice(0, 9))).toEqual([
+      "FIRSTMARK",
+      "ok",
+      "second ap",
+      "ok",
+      "third app",
+      "ok",
+      "fourth ap",
+      "ok",
+    ]);
+    await botMemoryStore.clear({ scope });
+    await botsService.update(alice, mine!.id, { compactAfterTokens: null });
   });
 });

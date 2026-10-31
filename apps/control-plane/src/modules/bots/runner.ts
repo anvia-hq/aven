@@ -38,6 +38,7 @@ const defaultCreateAgent: CreateBotAgent = ({ bot, model, deliver, memory }) =>
     instruction: bot.instruction,
     deliver,
     memory,
+    compactAfterTokens: bot.compactAfterTokens ?? undefined,
   });
 
 // What makes a message "typed": the wait before it shows, which a cancel cuts short.

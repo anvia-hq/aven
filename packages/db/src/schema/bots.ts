@@ -1,4 +1,13 @@
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 import { providers } from "./providers";
@@ -25,6 +34,10 @@ export const bots = pgTable(
      */
     providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
     modelId: text("model_id"),
+    /** One of the model's reasoning levels; only a bot with a model of its own has one. */
+    reasoningEffort: text("reasoning_effort"),
+    /** The size of the chat, in tokens, past which old turns are summarized; null is the model's 70%. */
+    compactAfterTokens: integer("compact_after_tokens"),
     isMain: boolean("is_main").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

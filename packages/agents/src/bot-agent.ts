@@ -17,6 +17,8 @@ type BotAgentOptions = (ModelConfig | { model: CompletionModel }) & {
   deliver: DeliverMessage;
   /** Where the conversation is kept. */
   memory: AgentMemoryOptions;
+  /** The size of the conversation, in tokens, past which it is summarized; by default 70% of the model's window. */
+  compactAfterTokens?: number;
 };
 
 // A bot is an agent with one tool: it talks by sending messages (decision 0058). It runs through
@@ -27,6 +29,7 @@ export function createBotAgent({
   instruction,
   deliver,
   memory,
+  compactAfterTokens,
   ...model
 }: BotAgentOptions) {
   return createCodingAgent({
@@ -38,5 +41,6 @@ export function createBotAgent({
     questions: false,
     maxTurns: BOT_MAX_TURNS,
     memory,
+    compactAfterTokens,
   }).agent;
 }

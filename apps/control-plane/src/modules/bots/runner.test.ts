@@ -19,6 +19,8 @@ const bot: Bot = {
   avatar: "",
   providerId: null,
   modelId: null,
+  reasoningEffort: null,
+  compactAfterTokens: null,
   isMain: true,
   createdAt: "",
   updatedAt: "",

@@ -1,4 +1,9 @@
-import { BOT_AVATAR_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
+import {
+  BOT_AVATAR_MAX,
+  BOT_COMPACT_TOKENS,
+  BOT_INSTRUCTION_MAX,
+  BOT_NAME_MAX,
+} from "@aven/protocol/bots";
 import { z } from "zod";
 
 export const botParams = z.object({ id: z.uuid() });
@@ -12,6 +17,16 @@ export const updateBotBody = z.object({
   // model to the provider.
   providerId: z.uuid().nullable().optional(),
   modelId: z.string().trim().min(1).max(200).nullable().optional(),
+  // A level of the bot's model, checked against it. A changed model starts without one.
+  reasoningEffort: z.string().trim().min(1).max(50).nullable().optional(),
+  // Null leaves it to the model: 70% of its context window.
+  compactAfterTokens: z
+    .number()
+    .int()
+    .min(BOT_COMPACT_TOKENS.min)
+    .max(BOT_COMPACT_TOKENS.max)
+    .nullable()
+    .optional(),
 });
 
 export type UpdateBotBody = z.infer<typeof updateBotBody>;
