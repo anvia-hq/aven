@@ -1,6 +1,6 @@
 # Anthropic rejects thinking blocks replayed from an earlier run
 
-Status: the workaround below (`withoutStoredReasoning`) was removed as unused; see "Now".
+Status: worked around by `withAnthropicReasoning` (see "Now"); checked against the live API on 2026-10-31.
 
 ## Symptom
 
@@ -28,7 +28,9 @@ An assistant message that held nothing but thinking is dropped from the replayed
 
 ## Now
 
-Since runs go through `@anvia/durable` (decision 0021), the runner's agent has no memory store: its history is durable's own, so the wrapper above was never on a production run's path and was removed with the agent's `memory` option. The live path is `withOwnReasoning` (`packages/agents/src/own-reasoning.ts`), which `createCodingAgent` puts around an Anthropic model: each request keeps only reasoning whose id Anthropic issued (`thinking_…`) and leaves out another provider's. It does not drop Anthropic's own thinking from earlier runs. Whether that history still triggers this error has not been checked against the live API.
+Since runs go through `@anvia/durable` (decision 0021), the runner's agent has no memory store: durable keeps each thread's conversation, thinking included, and the next message's run replays it. The wrapper above was never on that path and was removed with the agent's `memory` option, which left the bug in place: retested on 2026-10-31 with `claude-haiku-5-5` at high effort, a second run over the first's history succeeded with the same tools and failed with the 400 above once the tool list differed, which happens in a thread when, say, the person connects GitHub and `git_fetch` goes.
+
+`createCodingAgent` now wraps an Anthropic model in `withAnthropicReasoning` (`packages/agents/src/own-reasoning.ts`): each request keeps only Anthropic's own thinking (`thinking_…`), and only in the turn in progress, the messages after the person's latest one, which a run's tool loop needs to continue. Thinking from earlier turns is left out of the request and stays in the history. With it, the same retest succeeds with either tool list.
 
 ## Not done
 

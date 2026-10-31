@@ -9,7 +9,7 @@ import {
 import { azureApiFor, createModel, providerOptionsFor, type ModelConfig } from "./model";
 import { environmentInstructions } from "./environment";
 import { INSTRUCTIONS } from "./instruction";
-import { ownedByAnthropic, ownedByResponsesApi, withOwnReasoning } from "./own-reasoning";
+import { ownedByResponsesApi, withAnthropicReasoning, withOwnReasoning } from "./own-reasoning";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
@@ -80,7 +80,7 @@ function compactionFor(options: CodingAgentOptions, model: CompletionModel) {
 
 // What a thread's earlier runs left may be another provider's reasoning, which this one rejects.
 function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
-  if (config.provider === "anthropic") return withOwnReasoning(model, ownedByAnthropic);
+  if (config.provider === "anthropic") return withAnthropicReasoning(model);
   const responses =
     config.provider === "openai" ||
     (config.provider === "azure" && azureApiFor(config.modelId ?? "") === "responses");

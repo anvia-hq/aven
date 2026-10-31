@@ -1,4 +1,4 @@
-import type { CompletionModel, CompletionRequest, Message } from "@anvia/core";
+import type { CompletionModel, CompletionRequest, Message, ReasoningPart } from "@anvia/core";
 
 // A person picks the model per message (decision 0007), so one thread's history can hold reasoning
 // from several providers. A provider takes back only its own: the Responses API wants the ids it
@@ -10,21 +10,37 @@ type ReasoningOwnership = (id: string | undefined) => boolean;
 export const ownedByResponsesApi: ReasoningOwnership = (id) => id?.startsWith("rs_") ?? false;
 export const ownedByAnthropic: ReasoningOwnership = (id) => id?.startsWith("thinking_") ?? false;
 
-function onlyOwn(history: Message[], owns: ReasoningOwnership): Message[] {
-  return history.flatMap((message) => {
-    if (message.role !== "assistant" || typeof message.content === "string") return [message];
-    const content = message.content.filter((part) => part.type !== "reasoning" || owns(part.id));
-    if (content.length === message.content.length) return [message];
-    // An assistant message of nothing but another provider's thinking would be an empty turn.
-    return content.length > 0 ? [{ ...message, content }] : [];
-  });
+// The message with only the reasoning `keep` accepts; none when nothing else was in it, since an
+// assistant message of nothing but dropped thinking would be an empty turn.
+function keepingReasoning(message: Message, keep: (part: ReasoningPart) => boolean): Message[] {
+  if (message.role !== "assistant" || typeof message.content === "string") return [message];
+  const content = message.content.filter((part) => part.type !== "reasoning" || keep(part));
+  if (content.length === message.content.length) return [message];
+  return content.length > 0 ? [{ ...message, content }] : [];
+}
+
+const onlyOwn = (history: Message[], owns: ReasoningOwnership) =>
+  history.flatMap((message) => keepingReasoning(message, (part) => owns(part.id)));
+
+// Anthropic binds a thinking block's signature to what preceded it, so thinking from an earlier turn
+// is refused once anything before it differs, such as the tools of a later run (bug 0001). Only the
+// turn in progress, after the person's latest message, needs its thinking back: its tool calls
+// continue from it.
+function onlyThisTurns(history: Message[]) {
+  const start = history.findLastIndex((message) => message.role === "user");
+  return history.flatMap((message, index) =>
+    index > start ? [message] : keepingReasoning(message, () => false),
+  );
 }
 
 // A proxy, not a copy: a model's methods use its private state, so they must run on the model itself.
-export function withOwnReasoning<T extends CompletionModel>(model: T, owns: ReasoningOwnership): T {
+function withChatHistory<T extends CompletionModel>(
+  model: T,
+  change: (history: Message[]) => Message[],
+): T {
   const clean = (request: CompletionRequest) => ({
     ...request,
-    chatHistory: onlyOwn(request.chatHistory, owns),
+    chatHistory: change(request.chatHistory),
   });
   return new Proxy(model, {
     get(target, key) {
@@ -36,4 +52,13 @@ export function withOwnReasoning<T extends CompletionModel>(model: T, owns: Reas
       return value.bind(target);
     },
   });
+}
+
+export function withOwnReasoning<T extends CompletionModel>(model: T, owns: ReasoningOwnership): T {
+  return withChatHistory(model, (history) => onlyOwn(history, owns));
+}
+
+/** Anthropic's thinking, only its own and only from the turn in progress. */
+export function withAnthropicReasoning<T extends CompletionModel>(model: T): T {
+  return withChatHistory(model, (history) => onlyThisTurns(onlyOwn(history, ownedByAnthropic)));
 }
