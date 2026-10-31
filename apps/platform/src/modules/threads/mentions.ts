@@ -12,7 +12,7 @@ export function mentionOf(triggerId: string, id: string): Mentionable | undefine
 
 // A mention inside Markdown travels as inline code that starts with this character, which the
 // reader never types, and `mentionCode` draws it back as the chip.
-export const MENTION_MARK = "";
+export const MENTION_MARK = "\uE000";
 
 /**
  * A message's text with each mention's token swapped for a marker Markdown leaves alone, so the

@@ -5,6 +5,7 @@ import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
 import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
+import { createShipService } from "./modules/ship/service";
 import { skillsService } from "./modules/skills/service";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
@@ -40,3 +41,5 @@ export const runsService = new RunManager({
 });
 
 export const threadMessages = createThreadMessages(runsService);
+
+export const shipService = createShipService(runtimeHub, { send: threadMessages.send });

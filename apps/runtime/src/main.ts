@@ -31,12 +31,15 @@ process.on("SIGTERM", () => void exit(0));
 
 // Every thread runs in its own container on this machine (decision 0010): Docker and the sandbox
 // image are required, and there is no mode that runs the agent's commands directly on this machine.
-const sandbox = await Promise.resolve()
-  .then(() => Sandboxes.start(sandboxConfigFromEnv()))
-  .catch((error: unknown) => {
+async function startSandboxes() {
+  try {
+    return await Sandboxes.start(sandboxConfigFromEnv());
+  } catch (error) {
     console.error(errorMessage(error));
     process.exit(1);
-  });
+  }
+}
+const sandbox = await startSandboxes();
 
 runtime = startRuntime({
   url,

@@ -45,6 +45,7 @@ export async function answerRuntimeCall(
     if (!archive) throw new Error("This run has no such skill");
     return { data: archive.toBase64() };
   }
+  if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {
     sessionId: run.thread.id,
     metadata: { organizationId: run.thread.organizationId },

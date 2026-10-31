@@ -1,13 +1,12 @@
 import { Elysia } from "elysia";
 
-import { runsService, runtimeHub, threadMessages } from "./composition";
+import { runsService, runtimeHub, shipService, threadMessages } from "./composition";
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
 import { shipRouter } from "./modules/ship/router";
-import { createShipService } from "./modules/ship/service";
 import { filesRouter } from "./modules/files/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
@@ -29,7 +28,7 @@ const app = new Elysia()
   .use(authRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
-  .use(shipRouter(createShipService(runtimeHub, { send: threadMessages.send })))
+  .use(shipRouter(shipService))
   .use(filesRouter(runtimeHub))
   .use(githubRouter())
   .use(platformRouter)
