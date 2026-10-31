@@ -1,9 +1,10 @@
+import type { Provider } from "@aven/protocol/runtime-wire";
+
 // Which of a provider's models can drive the agent. `GET /models` lists everything the key can
 // reach (embeddings, speech, image models), so openai and anthropic lists are filtered through the
 // models.dev catalog (https://models.dev/api.json). Ids it does not know, or any id while it is
 // unreachable, fall back to a name check.
 
-type Kind = "openai" | "anthropic" | "azure" | "openai-compatible";
 type Entry = {
   usable: boolean;
   deprecated: boolean;
@@ -56,7 +57,7 @@ const OPENAI_CHAT = /^(gpt-|o\d|chatgpt-)/;
 const OPENAI_OTHER =
   /embedding|whisper|tts|audio|image|realtime|transcribe|moderation|search|dall-e|davinci|babbage|instruct/;
 
-export function looksLikeChatModel(kind: Kind, id: string) {
+export function looksLikeChatModel(kind: Provider, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
   if (kind === "azure") return true; // a deployment's name is the owner's, not the model's
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
@@ -79,7 +80,7 @@ export function createModelCatalog(
   now: () => number = Date.now,
   catalogUrl: () => string = configuredUrl,
 ) {
-  let entries: Partial<Record<Kind, Map<string, Entry>>> | null = null;
+  let entries: Partial<Record<Provider, Map<string, Entry>>> | null = null;
   // Context windows of every provider's models by lowercase name: a model has the window it has on
   // whatever host serves it, which matters where the host's own entry is thin (Azure).
   let windows = new Map<string, number[]>();
@@ -96,7 +97,7 @@ export function createModelCatalog(
       const res = await fetchFn(url, { signal: AbortSignal.timeout(8_000) });
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
-      const next: Partial<Record<Kind, Map<string, Entry>>> = {};
+      const next: Partial<Record<Provider, Map<string, Entry>>> = {};
       for (const kind of ["openai", "anthropic", "azure"] as const) {
         const models = json[kind]?.models ?? {};
         next[kind] = new Map(
@@ -136,7 +137,7 @@ export function createModelCatalog(
     }
   }
 
-  async function lookup(kind: Kind) {
+  async function lookup(kind: Provider) {
     if (now() >= nextTry) loading ??= refresh().finally(() => (loading = null));
     // The first load is waited for; later refreshes happen behind a stale catalog.
     if (!entries) await loading;
@@ -145,7 +146,7 @@ export function createModelCatalog(
 
   return {
     // `ids` that can drive the agent, current ones only.
-    async chatModels(kind: Kind, ids: string[]) {
+    async chatModels(kind: Provider, ids: string[]) {
       if (kind === "openai-compatible") return ids;
       const known = await lookup(kind);
       return ids.filter((id) => {
@@ -155,26 +156,26 @@ export function createModelCatalog(
     },
     // The reasoning levels the catalog lists for a model, or null. Only a fallback for models the
     // SDK does not know: the SDK's own list wins, because it rejects anything else.
-    async efforts(kind: Kind, id: string) {
+    async efforts(kind: Provider, id: string) {
       if (kind === "openai-compatible") return null;
       const levels = (await lookup(kind))?.get(id)?.efforts;
       return levels?.length ? levels : null;
     },
     // The model's context window in tokens, or null when the catalog does not know it. Without
     // one the agent cannot report how full the context is.
-    async contextWindow(kind: Kind, id: string) {
+    async contextWindow(kind: Provider, id: string) {
       if (kind === "openai-compatible") return null;
       const own = (await lookup(kind))?.get(id)?.contextWindow ?? null;
       if (own !== null || kind !== "azure") return own;
       return commonWindow(windows.get(id.toLowerCase()));
     },
     // Whether a model takes images: false only when the catalog says it does not.
-    async seesImages(kind: Kind, id: string) {
+    async seesImages(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
       return (await lookup(kind))?.get(id)?.images ?? true;
     },
     // Whether a model a message names can run: refused only when the catalog says it cannot.
-    async canRun(kind: Kind, id: string) {
+    async canRun(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
       const entry = (await lookup(kind))?.get(id);
       return entry ? entry.usable : looksLikeChatModel(kind, id);

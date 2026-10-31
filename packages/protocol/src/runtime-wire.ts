@@ -9,7 +9,9 @@ export type RunThreadInfo = {
   organizationId: string;
 };
 
-export type Provider = "openai" | "anthropic" | "azure" | "openai-compatible";
+/** The kinds of model provider, in the order a client lists them. */
+export const PROVIDERS = ["openai", "anthropic", "azure", "openai-compatible"] as const;
+export type Provider = (typeof PROVIDERS)[number];
 
 /** How a run ended: `response` is a normal finish, `error` means the run threw. */
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
