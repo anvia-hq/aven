@@ -6,6 +6,7 @@ import { BOT_COMPUTER_MAX_TURNS, BOT_MAX_TURNS, createBotAgent } from "./bot-age
 import { TYPING_MAX_MS, TYPING_MIN_MS, typingDelay } from "./bot-delay";
 import { botInstructions } from "./bot-instruction";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
+import { CREATE_BOT_TOOL_NAME } from "./tools/create-bot";
 import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
 
 const send = (message: string) => toolCall(SEND_MESSAGE_TOOL_NAME, { text: message });
@@ -136,6 +137,37 @@ describe("createBotAgent", () => {
       memory: { store: fakeStore(), savePolicy: "turn" },
     });
     expect(agent.defaultMaxTurns).toBe(BOT_MAX_TURNS);
+  });
+
+  test("a bot that may make bots has the tool, and is told when to use it; any other has neither", async () => {
+    const made: string[] = [];
+    const maker = createBotAgent({
+      ...base,
+      model: scriptedModel([
+        [toolCall(CREATE_BOT_TOOL_NAME, { name: "Scout", instruction: "You research." })],
+        [send("Scout is ready")],
+        [text("")],
+      ]),
+      deliver: async () => undefined,
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      createBot: async ({ name }) => (made.push(name), { name }),
+    });
+    expect(maker.tools.map((tool) => tool.name)).toEqual([
+      SEND_MESSAGE_TOOL_NAME,
+      CREATE_BOT_TOOL_NAME,
+    ]);
+    await maker.generate({ prompt: "make me a research bot", session: { sessionId: "b1" } });
+    expect(made).toEqual(["Scout"]);
+
+    const plain = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      deliver: async () => undefined,
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(plain.tools.map((tool) => tool.name)).toEqual([SEND_MESSAGE_TOOL_NAME]);
+    expect(botInstructions({ ...base, createBots: true })).toContain(CREATE_BOT_TOOL_NAME);
+    expect(botInstructions(base)).not.toContain(CREATE_BOT_TOOL_NAME);
   });
 
   test("a cancelled delivery stops the run", async () => {

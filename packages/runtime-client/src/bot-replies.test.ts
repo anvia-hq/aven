@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
+import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
@@ -20,16 +21,18 @@ const message: BotReplyMessage = {
   model,
 };
 
+const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
+
 // An agent that sends what a script says to, then stops.
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
-  ({ deliver, computer, memory }) =>
+  ({ deliver, computer, memory, createBot }) =>
     new Agent({
       id: "bot",
       model: scriptedModel(steps),
       instructions: "x",
       memory,
-      tools: [createSendMessageTool(deliver), ...computer],
+      tools: [createSendMessageTool(deliver), ...computer, ...makingBots(createBot)],
     });
 
 const sandboxWith = (acquired: { id: string; repo: unknown }[] = []): ThreadWorkspaces => ({
@@ -66,6 +69,7 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
     },
     call: async (method, params) => {
       calls.push({ method, params });
+      if (method === "bot.create") return { id: "b2", name: (params as { name: string }).name };
       return memoryAnswer(params);
     },
     boxes,
@@ -153,6 +157,41 @@ describe("BotReplies", () => {
     expect(run.acquired).toEqual([{ id: "bot-1", repo: undefined }]);
     expect(computer.map((each) => each.name)).toEqual(["exec_command"]);
     expect(run.boxes.has("bot-1")).toBe(true);
+  });
+
+  test("the main bot makes a bot by asking the control plane, for its own reply", async () => {
+    const run = harness(
+      agentThat(
+        [toolCall("create_bot", { name: "Scout", instruction: "You research." })],
+        [toolCall("send_message", { text: "Scout is ready" })],
+        [text("")],
+      ),
+    );
+
+    run.replies.start({ ...message, bot: { ...message.bot, canCreateBots: true } });
+    await run.until();
+
+    expect(run.calls).toContainEqual({
+      method: "bot.create",
+      params: { replyId: "r1", name: "Scout", instruction: "You research." },
+    });
+    expect(run.sent).toEqual([
+      { type: "bot.say", replyId: "r1", text: "Scout is ready" },
+      { type: "bot.end", replyId: "r1" },
+    ]);
+  });
+
+  test("a bot that may not make bots is not given the tool", async () => {
+    let offered: unknown = "unset";
+    const run = harness((input) => {
+      offered = input.createBot;
+      return agentThat([text("")])(input);
+    });
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(offered).toBeUndefined();
   });
 
   test("its conversation is asked of the control plane, not kept here", async () => {
