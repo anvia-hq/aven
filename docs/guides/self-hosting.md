@@ -59,7 +59,7 @@ It moves the `aven` command, the server and the runner on that machine to the la
 a prerelease): settings and secrets are kept, new settings are added, the new images are pulled and
 the database is migrated when the server starts. A server's runners are updated one machine at a
 time, the same way; Settings > Runtimes marks a runner that is behind with "Update available".
-`aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
+The images of earlier releases are removed afterwards (a sandbox image is several gigabytes). `aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
 backup before updating (below) if you may want to go back.
 
 ## Backup and restore

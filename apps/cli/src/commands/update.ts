@@ -1,6 +1,7 @@
 import { stringFlag, type Args } from "../args";
 import { run } from "../compose";
 import { downloadVerified, installBinary, latestVersion, platformName } from "../release";
+import { removeStaleImages } from "../prune-images";
 import { version } from "../version";
 import { runnerUpgrade } from "./runner";
 import { serverUpgrade } from "./server";
@@ -33,6 +34,7 @@ export async function finish() {
   const runner = await runnerUpgrade(version);
   if (!server && !runner)
     console.log("Neither a server nor a runner is installed on this machine.");
+  else await removeStaleImages(version);
   console.log(
     `aven ${version} is installed${server ? ", the server is updated" : ""}${runner ? ", the runner is updated" : ""}.`,
   );
