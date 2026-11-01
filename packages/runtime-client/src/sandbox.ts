@@ -8,7 +8,6 @@ import type { AnyTool } from "@anvia/core";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { SKILLS_DIR } from "@aven/agents/skills";
-import { asRecord } from "@aven/agents/values";
 
 import type { SandboxDesktop } from "@anvia/sandbox";
 import type {
@@ -34,10 +33,12 @@ import { identitySignInCommand } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { runCommand } from "./run-command";
+import { preflight, type HostCommands } from "./sandbox-preflight";
 import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import type { SnapshotStore } from "./snapshots";
 import { startedOnUse } from "./started-on-use";
+import { terminalShell } from "./terminal-shell";
 import { threadProcesses, type ThreadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
@@ -101,8 +102,6 @@ export type ThreadSandbox = {
 
 type Docker = DockerRun;
 
-const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
-const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const CONNECT_POLL_MS = 50;
 // `.aven/resume` is for a quick login or repair: the agent waits this long for it, then goes on.
@@ -155,58 +154,6 @@ export function dockerRunArgs(input: DockerRunInput) {
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;
-}
-
-function safeJson(text: string): Record<string, unknown> {
-  try {
-    return asRecord(JSON.parse(text));
-  } catch {
-    return {};
-  }
-}
-
-/** What a runner runs on its own machine: Docker for the containers, git for the clones. */
-type HostCommands = { docker: Docker; git: Git };
-
-// What a runner needs before it can take a thread: the image, git, and a platform and runtime
-// Docker knows. Each failure says what to do about it.
-async function preflight(config: SandboxConfig, { docker: run, git: gitRun }: HostCommands) {
-  const check = await run(["image", "inspect", config.image]).catch(() => ({
-    code: 1,
-    stdout: "",
-    stderr: "docker is not installed or not running",
-  }));
-  if (check.code !== 0) {
-    throw new Error(
-      `The sandbox image ${config.image} is not available (${check.stderr.trim() || "unknown error"}). ` +
-        `Docker must be running; build the image with: docker build -t ${config.image} apps/runtime/sandbox-image`,
-    );
-  }
-  const gitCheck = await gitRun(["--version"], { cwd: "." }).catch(() => ({
-    code: 1,
-    stdout: "",
-    stderr: "git is not installed",
-  }));
-  if (gitCheck.code !== 0) {
-    throw new Error("git is required to clone each thread's repository but was not found");
-  }
-  if (config.platform !== undefined && !PLATFORM_PATTERN.test(config.platform)) {
-    throw new Error(
-      `The sandbox platform "${config.platform}" is not one Docker knows; use linux/amd64 or linux/arm64`,
-    );
-  }
-  if (config.runtime !== undefined) {
-    if (!RUNTIME_PATTERN.test(config.runtime)) {
-      throw new Error(`The sandbox runtime "${config.runtime}" is not a Docker runtime name`);
-    }
-    const info = await run(["info", "--format", "{{json .Runtimes}}"]);
-    const registered: Record<string, unknown> = info.code === 0 ? safeJson(info.stdout) : {};
-    if (!(config.runtime in registered)) {
-      throw new Error(
-        `The Docker daemon has no runtime "${config.runtime}" (AVEN_SANDBOX_RUNTIME); for gVisor, install runsc and register it with \`runsc install\`, then restart Docker`,
-      );
-    }
-  }
 }
 
 /** What a runner needs to run a thread: the sandbox its agent works in. */
@@ -393,33 +340,7 @@ export class Sandboxes implements ThreadWorkspaces {
     if (!/^[\w-]+$/.test(sessionId)) throw new Error("Invalid terminal id");
     if (!this.#running.has(threadId) || !this.#hub.isConnected(threadId)) return undefined;
     const project = this.#projectEnv.get(threadId) ?? {};
-    const name = this.#name(threadId);
-    // The shell is its session's leader, so its pid, kept in a file, names every process of it.
-    const pidFile = `/tmp/.aven-terminal-${sessionId}`;
-    const argv = [
-      "docker",
-      "exec",
-      "-it",
-      "-w",
-      WORKSPACE_DIR,
-      "-e",
-      "TERM=xterm-256color",
-      // Named without a value, Docker takes each from this command's own environment.
-      ...Object.keys(project).flatMap((variable) => ["-e", variable]),
-      name,
-      "sh",
-      "-c",
-      `echo $$ > ${pidFile}; exec bash`,
-    ];
-    const hangup = [
-      "docker",
-      "exec",
-      name,
-      "sh",
-      "-c",
-      `pid=$(cat ${pidFile} 2>/dev/null) && pkill -HUP -s "$pid"; rm -f ${pidFile}`,
-    ];
-    return { argv, env: { ...process.env, ...project } as Record<string, string>, hangup };
+    return terminalShell({ container: this.#name(threadId), sessionId, project });
   }
 
   async workspace(threadId: string) {
