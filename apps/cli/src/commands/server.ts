@@ -1,11 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
 import { stringFlag, type Args } from "../args";
 import { composeCommand, dockerProblem, run } from "../compose";
-import { parseEnv } from "../env-file";
+import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
 import { writeServerFiles } from "../server-files";
@@ -87,4 +87,28 @@ export async function serverLogs(service: string | undefined, follow: boolean) {
   if (follow) args.push("-f");
   if (service) args.push(service);
   await run(composeCommand(serverDir(), args));
+}
+
+/**
+ * Brings an installed server to a release: the compose file of this version of `aven`, new settings
+ * added to `.env`, the release pinned, the images pulled and the stack started again. Returns false
+ * when no server is installed here.
+ */
+export async function serverUpgrade(release: string) {
+  const dir = serverDir();
+  const envPath = join(dir, ".env");
+  const existing = await readFile(envPath, "utf8").catch(() => undefined);
+  if (existing === undefined) return false;
+
+  await writeFile(join(dir, "docker-compose.yml"), compose);
+  // The file keeps its owner-only mode when it is written again.
+  await writeFile(
+    envPath,
+    setEnv(addMissingKeys(existing, envTemplate), { AVEN_VERSION: release }),
+  );
+  // A version's images never change, but `latest` does.
+  if (release === "latest") await runCompose(dir, ["pull"]);
+  await runCompose(dir, ["up", "-d"]);
+  await waitUntilHealthy(dir);
+  return true;
 }

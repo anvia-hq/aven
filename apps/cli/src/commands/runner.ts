@@ -5,6 +5,7 @@ import { stringFlag, type Args } from "../args";
 import { capture, dockerProblem, exec, run } from "../compose";
 import { waitForHealthy } from "../health";
 import { logsDir, runnerEnvFile } from "../home";
+import { parseEnv } from "../env-file";
 import { loadRunnerEnv, writeRunnerEnv } from "../runner-config";
 import { selfCommand } from "../self";
 import { serviceManager } from "../service-manager";
@@ -14,7 +15,8 @@ const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner
 const manager = () => serviceManager(names);
 const logFile = () => join(logsDir(), "runner.log");
 
-const imageFor = () => `ghcr.io/anvia-hq/aven-sandbox:${version === "dev" ? "latest" : version}`;
+const IMAGE_REPOSITORY = "ghcr.io/anvia-hq/aven-sandbox";
+const imageFor = (release: string) => `${IMAGE_REPOSITORY}:${release}`;
 
 /** Installs this machine as a runner of a control plane and starts it as a service. */
 export async function runnerInstall(args: Args) {
@@ -40,7 +42,7 @@ export async function runnerInstall(args: Args) {
   if (!(await waitForHealthy(`${base}/health`, { timeoutMs: 0 })))
     throw new Error(`Cannot reach the control plane at ${base}/health. Check the address.`);
 
-  const image = stringFlag(args, "image") ?? imageFor();
+  const image = stringFlag(args, "image") ?? imageFor(version === "dev" ? "latest" : version);
   if ((await exec(["docker", "image", "inspect", image])).code !== 0) {
     console.log(`Pulling the sandbox image ${image} (several GB the first time)...`);
     if ((await run(["docker", "pull", image])) !== 0) throw new Error(`Could not pull ${image}`);
@@ -116,4 +118,34 @@ export async function runnerUninstall() {
   console.log(
     `The runner service is removed. Its settings stay in ${runnerEnvFile()} and its sandboxes' files in the runtime home (AVEN_RUNTIME_HOME, ~/.aven/runtime by default).`,
   );
+}
+
+/**
+ * Brings an installed runner to a release: the sandbox image of that release, if the runner uses
+ * the one Aven publishes (a runner set up with its own `--image` keeps it), and a restart. Threads
+ * already running keep their container; the next one uses the new image. Returns false when no
+ * runner is installed here.
+ */
+export async function runnerUpgrade(release: string) {
+  const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
+  if (text === undefined) return false;
+  const env = parseEnv(text);
+  if (
+    env.AVEN_URL &&
+    env.AVEN_RUNTIME_TOKEN &&
+    env.AVEN_SANDBOX_IMAGE?.startsWith(`${IMAGE_REPOSITORY}:`)
+  ) {
+    const image = imageFor(release);
+    if ((await exec(["docker", "image", "inspect", image])).code !== 0) {
+      console.log(`Pulling the sandbox image ${image}...`);
+      if ((await run(["docker", "pull", image])) !== 0) throw new Error(`Could not pull ${image}`);
+    }
+    await writeRunnerEnv(runnerEnvFile(), {
+      url: env.AVEN_URL,
+      token: env.AVEN_RUNTIME_TOKEN,
+      image,
+    });
+  }
+  await manager().restart();
+  return true;
 }

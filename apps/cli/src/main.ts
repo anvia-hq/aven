@@ -16,6 +16,7 @@ import {
   runnerStop,
   runnerUninstall,
 } from "./commands/runner";
+import { update } from "./commands/update";
 import { version } from "./version";
 
 const usage = `aven ${version}
@@ -39,6 +40,8 @@ Runner (this machine hosts sandboxes for a server):
   runner run  Run in the foreground (what the service runs)
 
 Other:
+  update [--release X]
+              Update aven, the server and the runner on this machine
   version     Print the version
   help        Print this help
 `;
@@ -75,6 +78,8 @@ async function main(argv: string[]) {
       if (sub === "logs") return runnerLogs(follows(args));
       if (sub === "uninstall") return runnerUninstall();
       throw new Error(`Unknown command "runner ${sub}".\n\n${usage}`);
+    case "update":
+      return update(args);
     case "start":
     case "restart":
       return serverStart();

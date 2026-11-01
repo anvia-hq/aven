@@ -1,7 +1,7 @@
 import { createPrivateKey } from "node:crypto";
 import { describe, expect, test } from "bun:test";
 
-import { newSecrets, newServerEnv, parseEnv, setEnv } from "./env-file";
+import { addMissingKeys, newSecrets, newServerEnv, parseEnv, setEnv } from "./env-file";
 
 describe("parseEnv", () => {
   test("reads values, keeping what follows the first =", () => {
@@ -50,5 +50,18 @@ describe("newServerEnv", () => {
     expect(env.TRUSTED_ORIGINS).toBe("http://localhost:3900");
     expect(env.BETTER_AUTH_SECRET).not.toBe("");
     expect(env.PLATFORM_OWNER_EMAILS).toBe("");
+  });
+});
+
+describe("addMissingKeys", () => {
+  test("adds what the template has and the file lacks, making secrets, and changes nothing else", () => {
+    const template = "A=1\nB=2\nAVEN_LOCAL_RUNNER_TOKEN=\n";
+    const out = parseEnv(addMissingKeys("A=mine\n", template));
+    expect(out.A).toBe("mine");
+    expect(out.B).toBe("2");
+    expect(out.AVEN_LOCAL_RUNNER_TOKEN).toMatch(/^avrt_/);
+    expect(addMissingKeys("A=1\nB=2\nAVEN_LOCAL_RUNNER_TOKEN=x\n", template)).toBe(
+      "A=1\nB=2\nAVEN_LOCAL_RUNNER_TOKEN=x\n",
+    );
   });
 });

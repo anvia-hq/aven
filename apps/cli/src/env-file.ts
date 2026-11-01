@@ -40,6 +40,19 @@ export function newSecrets() {
   };
 }
 
+/**
+ * An existing `.env` with what a newer template has added: a key it lacks gets the template's value,
+ * or a new secret when it is one the installer makes. What is there is never changed.
+ */
+export function addMissingKeys(existing: string, template: string) {
+  const have = parseEnv(existing);
+  const secrets: Record<string, string> = newSecrets();
+  const missing: Record<string, string> = {};
+  for (const [key, value] of Object.entries(parseEnv(template)))
+    if (!(key in have)) missing[key] = secrets[key] ?? value;
+  return setEnv(existing, missing);
+}
+
 export type ServerEnvOptions = {
   /** Where people open Aven, such as http://localhost:3000. No path. */
   origin: string;
