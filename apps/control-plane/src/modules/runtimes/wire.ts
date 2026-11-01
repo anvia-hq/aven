@@ -1,5 +1,6 @@
 import type { Message } from "@anvia/core";
 import { botQuestionsSchema, toQuestions } from "@aven/agents/tools/ask-question";
+import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -11,6 +12,7 @@ import {
   ARTIFACT_NAME,
   SKILL_DIGEST,
   type BotQuestionParams,
+  type BotScheduleParams,
   type BotSendParams,
   type BotCreateParams,
   type BotMemoryParams,
@@ -43,6 +45,7 @@ const callMethods = [
   "bot.update",
   "bot.send",
   "bot.question",
+  "bot.schedule",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -238,6 +241,39 @@ const botQuestionParams = z.object({
   questions: botQuestionsSchema.transform(toQuestions),
 });
 
+// A bot looks at its schedules, or makes, changes or deletes one. How it is for the cron to be
+// right, and the timezone, is for the schedules to say: here it is only shaped.
+const scheduleName = z.string().trim().min(1).max(SCHEDULE_NAME_MAX);
+const scheduleCron = z.string().trim().min(1).max(100);
+const scheduleTimezone = z.string().trim().min(1).max(64);
+const schedulePrompt = z.string().trim().min(1).max(SCHEDULE_PROMPT_MAX);
+const scheduleBot = z.string().trim().min(1).max(64);
+const scheduleId = z.uuid();
+const botScheduleParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("list") }),
+  z.object({
+    replyId,
+    op: z.literal("create"),
+    name: scheduleName,
+    cron: scheduleCron,
+    prompt: schedulePrompt,
+    timezone: scheduleTimezone.optional(),
+    bot: scheduleBot.optional(),
+  }),
+  z.object({
+    replyId,
+    op: z.literal("update"),
+    id: scheduleId,
+    name: scheduleName.optional(),
+    cron: scheduleCron.optional(),
+    prompt: schedulePrompt.optional(),
+    timezone: scheduleTimezone.optional(),
+    enabled: z.boolean().optional(),
+    bot: scheduleBot.optional(),
+  }),
+  z.object({ replyId, op: z.literal("delete"), id: scheduleId }),
+]);
+
 // A bot writes to another of the person's bots, named by its handle.
 const botSendParams = z.object({
   replyId,
@@ -285,6 +321,8 @@ export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
 export const parseBotQuestionParams = (params: unknown) =>
   parseParams(botQuestionParams, params) as BotQuestionParams;
+export const parseBotScheduleParams = (params: unknown) =>
+  parseParams(botScheduleParams, params) as BotScheduleParams;
 export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>

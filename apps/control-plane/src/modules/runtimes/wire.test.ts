@@ -11,6 +11,7 @@ import type { RunEvent } from "@aven/protocol/events";
 import {
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotScheduleParams,
   parseBotSendParams,
   parseBotUpdateParams,
   parseRuntimeFrame,
@@ -113,6 +114,7 @@ describe("calls from a runtime", () => {
       "bot.update",
       "bot.send",
       "bot.question",
+      "bot.schedule",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
@@ -240,6 +242,61 @@ describe("a bot writing to another bot", () => {
       { replyId: "", to: "scout", text: "hi" },
     ]) {
       expect(() => parseBotSendParams(bad)).toThrow();
+    }
+  });
+});
+
+describe("a bot's schedules", () => {
+  const id = "11111111-2222-4333-8444-555555555555";
+
+  test("each operation is shaped, and a made one has a name, a cron and a task", () => {
+    expect(parseBotScheduleParams({ replyId: "r1", op: "list" })).toEqual({
+      replyId: "r1",
+      op: "list",
+    });
+    expect(
+      parseBotScheduleParams({
+        replyId: "r1",
+        op: "create",
+        name: " n ",
+        cron: "0 7 * * *",
+        prompt: "p",
+        bot: "scout",
+      }),
+    ).toEqual({
+      replyId: "r1",
+      op: "create",
+      name: "n",
+      cron: "0 7 * * *",
+      prompt: "p",
+      bot: "scout",
+    });
+    expect(parseBotScheduleParams({ replyId: "r1", op: "update", id, enabled: false })).toEqual({
+      replyId: "r1",
+      op: "update",
+      id,
+      enabled: false,
+    });
+    expect(parseBotScheduleParams({ replyId: "r1", op: "delete", id })).toEqual({
+      replyId: "r1",
+      op: "delete",
+      id,
+    });
+  });
+
+  test("what is missing, empty, too long or not an id is refused, and so is an operation there is not", () => {
+    const create = { replyId: "r1", op: "create", name: "n", cron: "0 7 * * *", prompt: "p" };
+    for (const bad of [
+      { replyId: "r1", op: "run" },
+      { ...create, name: " " },
+      { ...create, cron: "" },
+      { ...create, prompt: " " },
+      { ...create, prompt: "x".repeat(20_001) },
+      { replyId: "r1", op: "update", id: "x" },
+      { replyId: "r1", op: "delete", id: "x" },
+      { replyId: "", op: "list" },
+    ]) {
+      expect(() => parseBotScheduleParams(bad)).toThrow();
     }
   });
 });

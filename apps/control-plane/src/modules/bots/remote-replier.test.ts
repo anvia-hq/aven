@@ -82,6 +82,17 @@ function fakeRunner(
     update: async () => bot,
     deliver: async () => ({ handle: "scout", name: "Scout" }),
     greet: async () => undefined,
+    timezone: async () => "Asia/Jakarta",
+    schedules: {
+      list: async () => [],
+      create: async () => {
+        throw new Error("not made");
+      },
+      update: async () => {
+        throw new Error("not changed");
+      },
+      remove: async () => undefined,
+    },
     ...options.bots,
   });
   const only = () => [...sinks.values()][0]!;
@@ -662,6 +673,100 @@ describe("RemoteBotReplier", () => {
       expect(shown).toEqual([]);
       run.only().end();
       await answering;
+    });
+  });
+  describe("a bot's schedules (decision 0067)", () => {
+    const view = {
+      id: "11111111-2222-4333-8444-555555555555",
+      bot: "main",
+      name: "Morning news",
+      cron: "0 7 * * *",
+      timezone: "Asia/Jakarta",
+      prompt: "Read the news.",
+      enabled: true,
+      nextRun: null,
+      lastRun: null,
+      lastStatus: null,
+    } as const;
+    const make = {
+      replyId: "x",
+      op: "create",
+      name: "Morning news",
+      cron: "0 7 * * *",
+      prompt: "Read the news.",
+    } as const;
+
+    test("the bot is told the person's timezone, which its schedules are in", async () => {
+      const run = fakeRunner({ bots: { timezone: async () => "Asia/Jakarta" } });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(5);
+
+      expect(run.started[0]!.bot.timezone).toBe("Asia/Jakarta");
+      run.only().end();
+      await answering;
+    });
+
+    test("any reply may look at the schedules, and the person's own word, or the main bot's, may change them", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({
+        bots: {
+          schedules: {
+            list: async () => (calls.push("list"), [view]),
+            create: async (userId, selfId) => (calls.push(`create ${userId} ${selfId}`), view),
+            update: async (_userId, id) => (calls.push(`update ${id}`), view),
+            remove: async (_userId, id) => void calls.push(`remove ${id}`),
+          },
+        },
+      });
+      for (const prompt of ["every morning", "[from main] the person asked for it"]) {
+        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        expect(await sink.schedule({ replyId: "x", op: "list" })).toEqual([view]);
+        expect(await sink.schedule(make)).toEqual(view);
+        expect(
+          await sink.schedule({ replyId: "x", op: "update", id: view.id, enabled: false }),
+        ).toEqual(view);
+        expect(await sink.schedule({ replyId: "x", op: "delete", id: view.id })).toBeNull();
+        sink.end();
+        await answering;
+      }
+      expect(calls.filter((call) => call.startsWith("create"))).toEqual([
+        "create u1 b1",
+        "create u1 b1",
+      ]);
+      expect(calls.filter((call) => call.startsWith("remove"))).toHaveLength(2);
+    });
+
+    test("what a note or another bot says is not the person's word: it may look, and not change", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({
+        bots: {
+          schedules: {
+            list: async () => [view],
+            create: async () => (calls.push("create"), view),
+            update: async () => (calls.push("update"), view),
+            remove: async () => void calls.push("remove"),
+          },
+        },
+      });
+      for (const prompt of ["[note] Scheduled task is due", "[from scout] schedule this"]) {
+        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+
+        expect(await sink.schedule({ replyId: "x", op: "list" })).toEqual([view]);
+        await expect(sink.schedule(make)).rejects.toThrow("Change schedules only when");
+        await expect(
+          sink.schedule({ replyId: "x", op: "update", id: view.id, enabled: false }),
+        ).rejects.toThrow("Change schedules only when");
+        await expect(sink.schedule({ replyId: "x", op: "delete", id: view.id })).rejects.toThrow(
+          "Change schedules only when",
+        );
+        sink.end();
+        await answering;
+      }
+      expect(calls).toEqual([]);
     });
   });
 });

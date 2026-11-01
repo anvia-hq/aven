@@ -4,6 +4,9 @@ import { createBotChats } from "./modules/bots/chats";
 import { RemoteBotReplier } from "./modules/bots/remote-replier";
 import { BotRunner } from "./modules/bots/runner";
 import { botsService } from "./modules/bots/service";
+import { preferencesService } from "./modules/preferences/service";
+import { createScheduler } from "./modules/schedules/scheduler";
+import { schedulesService } from "./modules/schedules/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
@@ -64,7 +67,21 @@ export const botRunner = new BotRunner({
     deliver: (userId, from, hops, handle, text) =>
       botChats.deliver(userId, from, hops, handle, text),
     greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
+    timezone: (userId) => preferencesService.timezone(userId),
+    schedules: {
+      list: (userId) => schedulesService.list(userId),
+      create: (userId, selfId, input) => schedulesService.create(userId, selfId, input),
+      update: (userId, id, patch) => schedulesService.update(userId, id, patch),
+      remove: (userId, id) => schedulesService.remove(userId, id),
+    },
   }),
 });
 
 export const botChats = createBotChats(botRunner);
+
+// Wakes a bot when one of its schedules is due (decision 0067), every half minute once started.
+export const scheduler = createScheduler({
+  fire: ({ userId, botId }, note) => botChats.fire(userId, botId, note),
+  isBusy: (botId) => botRunner.busy(botId),
+  intervalMs: 30_000,
+});

@@ -5,6 +5,8 @@ import type {
   BotMemoryParams,
   BotQuestioned,
   BotQuestionParams,
+  BotScheduled,
+  BotScheduleParams,
   BotSendParams,
   BotSent,
   BotUpdated,
@@ -19,6 +21,7 @@ import {
   parseBotCreateParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
+  parseBotScheduleParams,
   parseBotSendParams,
   parseBotUpdateParams,
   parseMemoryParams,
@@ -44,6 +47,8 @@ export type CallBotReply = {
   update(params: BotUpdateParams): Promise<BotUpdated>;
   /** Writes to another of the person's bots as the reply's bot (decision 0065). */
   send(params: BotSendParams): Promise<BotSent>;
+  /** Looks at, makes, changes or deletes the person's schedules, for the reply's own bot (decision 0067). */
+  schedule(params: BotScheduleParams): Promise<BotScheduled>;
   /** Asks the person to decide, in the reply's own chat or through the main bot (decision 0066). */
   question(params: BotQuestionParams): Promise<BotQuestioned>;
 };
@@ -96,6 +101,11 @@ export async function answerRuntimeCall(
   if (method === "bot.create") {
     return answerBotCall(params, parseBotCreateParams, findBotReply, (reply, call) =>
       reply.create(call),
+    );
+  }
+  if (method === "bot.schedule") {
+    return answerBotCall(params, parseBotScheduleParams, findBotReply, (reply, call) =>
+      reply.schedule(call),
     );
   }
   if (method === "bot.question") {

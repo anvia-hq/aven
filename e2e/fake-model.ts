@@ -62,6 +62,19 @@ const askQuestion = (id: string) => ({
   },
 });
 
+const createSchedule = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "create_schedule",
+    arguments: JSON.stringify({
+      name: "Morning news",
+      cron: "0 7 * * *",
+      prompt: "Read the news and send the person a short summary.",
+    }),
+  },
+});
+
 const updateSelf = (id: string) => ({
   id,
   type: "function",
@@ -75,6 +88,7 @@ const updateSelf = (id: string) => ({
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
   update_self: "I am Pip now",
+  create_schedule: "Scheduled: Morning news",
 };
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
@@ -158,6 +172,13 @@ Bun.serve({
     // Needing a decision, a bot asks the person with a card (decision 0066) and stops.
     if (/need a decision/i.test(heard)) {
       return reply({ content: null, tool_calls: [askQuestion("call_1")] }, "tool_calls");
+    }
+    // Asked for something on a schedule, a bot sets it (decision 0067) and says so.
+    if (
+      /every morning/i.test(heard) &&
+      !body.messages.some((message) => calledTool(message, "create_schedule"))
+    ) {
+      return reply({ content: null, tool_calls: [createSchedule("call_1")] }, "tool_calls");
     }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {

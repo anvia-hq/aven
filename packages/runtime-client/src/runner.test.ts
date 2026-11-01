@@ -1658,6 +1658,7 @@ describe("startRuntime answering for a bot", () => {
       description: "",
       canCreateBots: false,
       peers: [],
+      timezone: "UTC",
     },
     prompt: "hello",
     model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },

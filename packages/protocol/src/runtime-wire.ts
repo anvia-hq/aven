@@ -3,6 +3,7 @@
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
 import type { BotQuestion } from "./bots";
+import type { BotScheduleView } from "./schedules";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
 export type RunThreadInfo = {
@@ -199,6 +200,8 @@ export type BotReplyInfo = {
   canCreateBots: boolean;
   /** The person's other bots, which this one may write to (decision 0065). */
   peers: BotPeer[];
+  /** The person's timezone, which the bot's schedules are in unless it says another (decision 0067). */
+  timezone: string;
 };
 
 /** A bot another bot may write to: how to name it in a call, and what it is for. */
@@ -306,7 +309,8 @@ export type BotCallMethod =
   | "bot.create"
   | "bot.update"
   | "bot.send"
-  | "bot.question";
+  | "bot.question"
+  | "bot.schedule";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -388,6 +392,37 @@ export type BotQuestionParams = { replyId: string; questions: BotQuestion[] };
 /** Where the question went: nothing is set when it is on the person's screen, else the bot that will ask. */
 export type BotQuestioned = { relayed?: { handle: string; name: string; text: string } };
 
+/**
+ * A bot looks at its schedules, or makes, changes or deletes one (decision 0067); `replyId` names
+ * the live reply it is working on. What is left out of an update stays.
+ */
+export type BotScheduleParams = { replyId: string } & (
+  | { op: "list" }
+  | {
+      op: "create";
+      name: string;
+      cron: string;
+      prompt: string;
+      timezone?: string;
+      /** The handle of the bot that runs it; the one asking when left out. */
+      bot?: string;
+    }
+  | {
+      op: "update";
+      id: string;
+      name?: string;
+      cron?: string;
+      prompt?: string;
+      timezone?: string;
+      enabled?: boolean;
+      bot?: string;
+    }
+  | { op: "delete"; id: string }
+);
+
+/** A schedule for `create` and `update`, all of them for `list`, nothing for `delete`. */
+export type BotScheduled = BotScheduleView | BotScheduleView[] | null;
+
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string; handle: string };
 
@@ -399,6 +434,7 @@ export type RuntimeCalls = {
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
   "bot.send": { params: BotSendParams; result: BotSent };
   "bot.question": { params: BotQuestionParams; result: BotQuestioned };
+  "bot.schedule": { params: BotScheduleParams; result: BotScheduled };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -415,4 +451,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 30;
+export const WIRE_VERSION = 31;

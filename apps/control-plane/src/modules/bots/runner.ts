@@ -163,6 +163,11 @@ export class BotRunner {
     );
   }
 
+  /** Whether the bot has a reply to give now or waiting: a schedule that comes due then is skipped. */
+  busy(botId: string) {
+    return (this.#channels.get(botId)?.pending ?? 0) > 0;
+  }
+
   /** The ids of the person's bots that are at work on a reply now. */
   workingOf(userId: string) {
     return [...this.#channels.values()]

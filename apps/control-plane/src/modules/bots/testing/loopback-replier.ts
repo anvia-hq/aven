@@ -58,6 +58,7 @@ export function loopbackReplier(options: {
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
             canCreateBots: false,
             peers: [],
+            timezone: "UTC",
           },
           prompt,
           model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },

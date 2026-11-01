@@ -11,16 +11,20 @@ import type {
   BotPeer,
   BotQuestioned,
   BotQuestionParams,
+  BotScheduled,
+  BotScheduleParams,
   BotSendParams,
   BotSent,
   BotUpdateParams,
 } from "@aven/protocol/runtime-wire";
+import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { answerBotMemory } from "./memory-answer";
 import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
+import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
 
 /** What a reply may do to the person's bots: make one, or change the one it is for. */
@@ -30,6 +34,15 @@ export type BotKeeper = {
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
   /** `from` writes to another of the person's bots by its handle; `hops` messages between bots led to it (decision 0065). */
   deliver(userId: string, from: Bot, hops: number, handle: string, text: string): Promise<BotSent>;
+  /** The person's timezone, which a bot's schedules are in unless it says another (decision 0067). */
+  timezone(userId: string): Promise<string>;
+  /** The person's schedules, which a bot may look at, make, change and delete (decision 0067). */
+  schedules: {
+    list(userId: string): Promise<BotScheduleView[]>;
+    create(userId: string, selfId: string, input: ScheduleInput): Promise<BotScheduleView>;
+    update(userId: string, id: string, patch: SchedulePatch): Promise<BotScheduleView>;
+    remove(userId: string, id: string): Promise<void>;
+  };
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string, hops: number): Promise<void>;
 };
@@ -76,6 +89,7 @@ export class RemoteBotReplier implements BotReplier {
     // Every bot is told which bots it may write to. Asked before anything is granted, so a failure
     // here leaves nothing to take back.
     const peers = await this.#peersOf(userId, bot.id);
+    const timezone = await this.bots.timezone(userId);
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -138,6 +152,34 @@ export class RemoteBotReplier implements BotReplier {
         const sent = await sendToBot(main.handle, text);
         return { relayed: { handle: sent.handle, name: sent.name, text } };
       },
+      // A person's schedules are theirs: any bot may look, and only their own word, or the main
+      // bot's passing it on, may change one. What a note or another bot says is not their word, so
+      // a scheduled run cannot make more schedules (decisions 0065 and 0067).
+      schedule: async (params: BotScheduleParams): Promise<BotScheduled> => {
+        if (params.op === "list") return this.bots.schedules.list(userId);
+        if (!personsWord && !mainBotsWord) {
+          throw new Error(
+            "Change schedules only when the person asks you to, or the main bot passes it on",
+          );
+        }
+        if (params.op === "delete") {
+          await this.bots.schedules.remove(userId, params.id);
+          return null;
+        }
+        if (params.op === "update") {
+          const { name, cron, prompt, timezone, enabled, bot: target } = params;
+          const patch = { name, cron, prompt, timezone, enabled, bot: target };
+          return this.bots.schedules.update(userId, params.id, patch);
+        }
+        const { name, cron, prompt, timezone, bot: target } = params;
+        return this.bots.schedules.create(userId, bot.id, {
+          name,
+          cron,
+          prompt,
+          timezone,
+          bot: target,
+        });
+      },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
         if (!personsWord && !mainBotsWord) {
@@ -164,6 +206,7 @@ export class RemoteBotReplier implements BotReplier {
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
             canCreateBots: bot.isMain,
             peers,
+            timezone,
           },
           prompt,
           model: runModel,

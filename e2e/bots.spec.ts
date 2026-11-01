@@ -250,6 +250,58 @@ test.describe("bots", () => {
     await expect(page.getByRole("form", { name: "Answer Aven" })).toHaveCount(0);
   });
 
+  // A bot sets a task to run on a schedule when asked, in the person's timezone (decision 0067).
+  test("a bot schedules a task when asked, and the person can see and pause it", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-schedule", "Schedule Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const message = page.getByRole("textbox", { name: "Message" });
+    await message.fill("every morning tell me the news");
+    await message.press("Enter");
+    await expect(bubble(page, "Scheduled: Morning news")).toBeVisible();
+
+    // Their browser's timezone was the default, so "7 in the morning" is theirs.
+    const preferences = await (await page.request.get("/api/preferences")).json();
+    expect(preferences.timezone).toBeTruthy();
+    const schedules = await (await page.request.get("/api/schedules")).json();
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]).toMatchObject({
+      bot: "main",
+      name: "Morning news",
+      cron: "0 7 * * *",
+      timezone: preferences.timezone,
+      enabled: true,
+    });
+    expect(schedules[0].nextRun).toBeTruthy();
+
+    // The person can pause it, and then it has no next time.
+    const paused = await page.request.patch(`/api/schedules/${schedules[0].id}`, {
+      data: { enabled: false },
+    });
+    expect(paused.ok()).toBe(true);
+    expect((await paused.json()).nextRun).toBeNull();
+
+    // And choose another timezone in settings.
+    await page.goto("/settings/profile");
+    await page.getByRole("combobox", { name: "Timezone" }).click();
+    await page.getByRole("option", { name: "Asia/Jakarta" }).click();
+    await expect(page.getByText("Timezone saved")).toBeVisible();
+    expect((await (await page.request.get("/api/preferences")).json()).timezone).toBe(
+      "Asia/Jakarta",
+    );
+  });
+
   // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
   test("a bot renames itself and writes its own description when asked", async ({ page }) => {
     // Three replies, each waiting out its typing pauses.

@@ -30,6 +30,7 @@ const message: BotReplyMessage = {
     description: "A pal.",
     canCreateBots: false,
     peers: [],
+    timezone: "Asia/Jakarta",
   },
   prompt: "hello",
   model,
@@ -306,6 +307,46 @@ describe("BotReplies", () => {
     expect(asked[1]).toBeUndefined();
   });
 
+  test("a bot's schedules are asked of the control plane, for its own reply, and its timezone is the person's", async () => {
+    let timezone: string | undefined;
+    const view = { id: "s1", bot: "pip", name: "News", cron: "0 7 * * *" };
+    const run = harness((input) => {
+      timezone = input.bot.timezone;
+      return {
+        generate: async () => {
+          await input.schedules.list();
+          await input.schedules.create({ name: "News", cron: "0 7 * * *", prompt: "Read it." });
+          await input.schedules.update("s1", { enabled: false });
+          await input.schedules.remove("s1");
+          return { type: "response" } as never;
+        },
+      };
+    });
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(timezone).toBe("Asia/Jakarta");
+    expect(
+      run.calls.filter((call) => (call as { method: string }).method === "bot.schedule"),
+    ).toEqual([
+      { method: "bot.schedule", params: { replyId: "r1", op: "list" } },
+      {
+        method: "bot.schedule",
+        params: {
+          replyId: "r1",
+          op: "create",
+          name: "News",
+          cron: "0 7 * * *",
+          prompt: "Read it.",
+        },
+      },
+      { method: "bot.schedule", params: { replyId: "r1", op: "update", id: "s1", enabled: false } },
+      { method: "bot.schedule", params: { replyId: "r1", op: "delete", id: "s1" } },
+    ]);
+    expect(view.id).toBe("s1");
+  });
+
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
     const run = harness(
       agentThat(
@@ -353,6 +394,16 @@ describe("BotReplies", () => {
         },
         model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
         send: async () => "Sent",
+        schedules: {
+          list: async () => [],
+          create: async () => {
+            throw new Error("not made");
+          },
+          update: async () => {
+            throw new Error("not changed");
+          },
+          remove: async () => undefined,
+        },
         peers: [{ handle: "scout", name: "Scout", description: "Looks things up." }],
         memory: {
           store: {
@@ -384,6 +435,10 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "create_schedule",
+        "list_schedules",
+        "update_schedule",
+        "delete_schedule",
         "update_self",
       ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
@@ -395,6 +450,10 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "create_schedule",
+        "list_schedules",
+        "update_schedule",
+        "delete_schedule",
         "create_bot",
         "update_self",
       ]);

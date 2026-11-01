@@ -5,8 +5,10 @@ import { errorMessage } from "@aven/agents/values";
 import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
+import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { SendMessage } from "@aven/agents/tools/send-message";
 import { parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
+import type { BotScheduleView } from "@aven/protocol/schedules";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
   BotPeer,
@@ -35,6 +37,8 @@ export type CreateBotReplyAgent = (input: {
   createBot?: CreateBot;
   /** Asks the person to decide; not given when the reply answers a note, since nobody is there (decision 0066). */
   askQuestion?: AskQuestion;
+  /** The person's schedules, which the bot may look at and, on their word, change (decision 0067). */
+  schedules: ScheduleHost;
   /** The bots this one may write to: the reply's own list, to which a bot it makes is added (decision 0065). */
   peers: BotPeer[];
   /** Changes the bot's own name, description or instruction (decision 0061). */
@@ -45,7 +49,7 @@ export type CreateBotReplyAgent = (input: {
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, send, memory, computer, createBot, askQuestion, peers, updateSelf }) =>
+  ({ bot, model, send, memory, computer, createBot, askQuestion, schedules, peers, updateSelf }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -64,6 +68,8 @@ export const defaultCreateBotAgent =
       computer,
       createBot,
       askQuestion,
+      schedules,
+      timezone: bot.timezone,
       peers,
       description: bot.description,
       updateSelf,
@@ -189,6 +195,15 @@ export class BotReplies {
         savePolicy: "turn",
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
+      schedules: {
+        list: async () =>
+          (await call("bot.schedule", { replyId, op: "list" })) as BotScheduleView[],
+        create: async (input) =>
+          (await call("bot.schedule", { replyId, op: "create", ...input })) as BotScheduleView,
+        update: async (id, patch) =>
+          (await call("bot.schedule", { replyId, op: "update", id, ...patch })) as BotScheduleView,
+        remove: async (id) => void (await call("bot.schedule", { replyId, op: "delete", id })),
+      },
       // A note wakes the bot with no one to answer; the control plane holds to that as well.
       askQuestion: parseBotPrompt(prompt).note
         ? undefined

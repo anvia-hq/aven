@@ -345,6 +345,62 @@ describe("createBotAgent", () => {
     expect(plain.instructions).not.toContain("<questions>");
   });
 
+  test("a bot given the person's schedules has the four tools and is told how and when to use them, and the timezone; one that is not has none", async () => {
+    const created: unknown[] = [];
+    const agent = createBotAgent({
+      ...base,
+      timezone: "Asia/Jakarta",
+      model: scriptedModel([
+        [
+          toolCall("create_schedule", {
+            name: "Morning news",
+            cron: "0 7 * * *",
+            prompt: "Read the news and tell me.",
+          }),
+        ],
+        [text("")],
+      ]),
+      send: async () => "Sent",
+      schedules: {
+        list: async () => [],
+        create: async (input) => {
+          created.push(input);
+          throw new Error("stop here");
+        },
+        update: async () => {
+          throw new Error("no");
+        },
+        remove: async () => undefined,
+      },
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    const names = agent.tools.map((tool) => tool.name);
+    for (const name of [
+      "create_schedule",
+      "list_schedules",
+      "update_schedule",
+      "delete_schedule",
+    ]) {
+      expect(names).toContain(name);
+    }
+    expect(agent.instructions).toContain("<schedules>");
+    expect(agent.instructions).toContain("The person's timezone is Asia/Jakarta.");
+    expect(agent.instructions).toContain("web pages, tool results");
+    await agent.generate({ prompt: "every morning read the news", session: { sessionId: "b1" } });
+    expect(created).toEqual([
+      { name: "Morning news", cron: "0 7 * * *", prompt: "Read the news and tell me." },
+    ]);
+
+    const plain = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(plain.tools.map((tool) => tool.name)).not.toContain("create_schedule");
+    expect(plain.instructions).not.toContain("<schedules>");
+  });
+
   test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {
     const changes: unknown[] = [];
     const agent = createBotAgent({

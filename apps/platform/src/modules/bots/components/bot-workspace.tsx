@@ -4,6 +4,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
+import { useDefaultTimezone } from "@/modules/settings/hooks/use-timezone";
 
 import { useBotPanels } from "../hooks/use-bot-panels";
 import type { Bot } from "../types";
@@ -16,6 +17,8 @@ import { BotSidePanels } from "./bot-side-panels";
 export function BotWorkspace({ bot }: { bot: Bot }) {
   // Side by side needs room; on a narrow screen the desktop stacks under the chat.
   const wide = useMediaQuery("(min-width: 1024px)");
+  // What the person's bots schedule is on their clock, which this browser tells until they choose.
+  useDefaultTimezone();
   const panels = useBotPanels();
   const sideOpen = panels.desktop.open;
   // Each orientation and each set of panels keeps its own sizes.

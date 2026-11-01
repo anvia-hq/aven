@@ -6,6 +6,7 @@ import {
   botRuntimeId,
   runsService,
   runtimeHub,
+  scheduler,
   shipService,
   threadMessages,
 } from "./composition";
@@ -20,10 +21,12 @@ import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
+import { preferencesRouter } from "./modules/preferences/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
+import { schedulesRouter } from "./modules/schedules/router";
 import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
@@ -44,9 +47,11 @@ const app = new Elysia()
   .use(filesRouter(runtimeHub))
   .use(githubRouter())
   .use(platformRouter)
+  .use(preferencesRouter)
   .use(projectsRouter)
   .use(providersRouter)
   .use(runtimesRouter(runtimeHub))
+  .use(schedulesRouter)
   .use(skillsRouter)
   .use(terminalRouter(runtimeHub))
   .use(threadsRouter(runsService, threadMessages))
@@ -66,12 +71,15 @@ const localRunner = await startLocalRunner(port);
 // `bun --watch` restarts.
 const shutdown = async () => {
   await localRunner?.stop();
+  await scheduler.close();
   runsService.dispose();
   botRunner.dispose();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
+scheduler.start();
 
 console.log(`control-plane listening on ${app.server?.url}`);
 

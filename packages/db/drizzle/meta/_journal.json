@@ -218,6 +218,13 @@
       "when": 1793449592727,
       "tag": "0030_oval_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793496546015,
+      "tag": "0031_fearless_the_renegades",
+      "breakpoints": true
     }
   ]
 }

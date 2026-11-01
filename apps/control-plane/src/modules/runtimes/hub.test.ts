@@ -186,6 +186,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       description: "",
       canCreateBots: false,
       peers: [],
+      timezone: "UTC",
     };
 
     // A runner that is connected, a reply started on it, and what the reply heard.
@@ -215,6 +216,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           ),
           send: async (params) => (asked.push(params), { handle: params.to, name: "Scout" }),
           question: async (params) => (asked.push(params), {}),
+          schedule: async (params) => (asked.push(params), params.op === "list" ? [] : null),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }

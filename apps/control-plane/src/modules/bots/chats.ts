@@ -68,6 +68,13 @@ export const createBotChats = (runner: BotRunner) => ({
     await runner.wake(bot, userId, GREETING, hops, await modelOf(userId, bot));
   },
 
+  // A schedule is due (decision 0067): the bot is woken with the task as a note, as it is to greet
+  // its person, and what it says is in its chat.
+  async fire(userId: string, botId: string, note: string) {
+    const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
+    await runner.wake(bot, userId, note, 0, await modelOf(userId, bot));
+  },
+
   // Which of the person's bots are at work, as it changes.
   working: (userId: string, signal: AbortSignal) => runner.working(userId, signal),
 
