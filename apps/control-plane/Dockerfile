@@ -23,6 +23,8 @@ COPY apps/control-plane apps/control-plane
 COPY packages packages
 
 ENV NODE_ENV=production PORT=8000 AVEN_LOCAL_RUNNER=off
+# Nothing here needs root: the server only writes temporary files.
+USER bun
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
   CMD bun -e "const r = await fetch('http://localhost:8000/health'); process.exit(r.ok ? 0 : 1)"
