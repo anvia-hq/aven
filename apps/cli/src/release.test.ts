@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -105,5 +105,20 @@ describe("installBinary", () => {
     expect(await readFile(target, "utf8")).toBe("#!/bin/sh\necho new\n");
     expect((await stat(target)).mode & 0o111).not.toBe(0);
     expect((await exec(["ls", "-A", dir])).out).not.toContain(".aven-update-");
+  });
+
+  test("says to use sudo when the directory is not writable", async () => {
+    const bin = join(dir, "readonly");
+    await mkdir(bin);
+    await writeFile(join(bin, "aven"), "old");
+    await chmod(bin, 0o555);
+    try {
+      await expect(installBinary(new Uint8Array([1]), join(bin, "aven"))).rejects.toThrow(
+        "Run the update with sudo",
+      );
+    } finally {
+      await chmod(bin, 0o755);
+    }
+    expect(await readFile(join(bin, "aven"), "utf8")).toBe("old");
   });
 });

@@ -151,7 +151,6 @@ pick_bin_dir() {
   elif [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then bin_dir=/usr/local/bin
   else bin_dir="$HOME/.local/bin"
   fi
-  mkdir -p "$bin_dir"
 }
 
 download_aven() {
@@ -167,6 +166,7 @@ download_aven() {
   [ "$expected" = "$actual" ] || fail "$file does not match its checksum. Nothing was installed."
   tar -xzf "$tmp/$file" -C "$tmp"
   # A new file beside the old one, then one rename: an `aven` that is running is not disturbed.
+  mkdir -p "$bin_dir"
   install -m 755 "$tmp/aven" "$bin_dir/.aven.new"
   mv -f "$bin_dir/.aven.new" "$bin_dir/aven"
   # Cleaned here, not by a trap: the script ends in `exec`, which would skip it.
@@ -199,9 +199,30 @@ run_aven() {
   exec "${cmd[@]}"
 }
 
+usage() {
+  cat <<'USAGE'
+Installs Aven: the `aven` command, then a server and a runner on this machine.
+
+  curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash
+
+Only a runner, for a server somewhere else (Settings > Runtimes shows this with the token):
+
+  curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- \
+    --runner --url https://aven.example.com/api --token avrt_...
+
+Everything after `bash -s --` goes to `aven install` (see `aven help`). Run it again to update.
+
+Settings, as environment variables:
+  AVEN_INSTALL_VERSION  a release such as 0.3.0 (default: the latest)
+  AVEN_BIN_DIR          where to put `aven` (default: /usr/local/bin if writable, else ~/.local/bin)
+  AVEN_RELEASES_URL     where releases are (default: https://github.com/anvia-hq/aven/releases)
+  AVEN_YES=1            install Docker and git without asking when they are missing
+USAGE
+}
+
 main() {
   case "${1:-}" in
-    -h | --help) sed -n '2,/^[^#]/{/^#/p;}' "$0" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
+    -h | --help) usage; exit 0 ;;
   esac
   detect_platform
   need_tools

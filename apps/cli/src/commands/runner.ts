@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { stringFlag, type Args } from "../args";
@@ -67,16 +67,18 @@ export async function runnerInstall(args: Args) {
   }
 
   await writeRunnerEnv(runnerEnvFile(), { url: base, token, image });
+  const logSize = (await stat(logFile()).catch(() => undefined))?.size ?? 0;
   await manager().install(serviceDefinition());
   console.log(`The runner is installed as a service. Its log: ${logFile()}`);
-  console.log(await outcome());
+  console.log(await outcome(logSize));
 }
 
-// What the runner said about connecting, for the first half minute.
-async function outcome() {
+// What the runner said about connecting, for the first half minute. Only what the log gained since
+// `from`: an earlier run's "connected" must not read as this one's.
+async function outcome(from: number) {
   for (let i = 0; i < 30; i++) {
     const log = await readFile(logFile(), "utf8").catch(() => "");
-    const lines = log.split("\n");
+    const lines = log.slice(from).split("\n");
     const last = lines.findLast((line) =>
       /runtime connected|refused|not available|required/.test(line),
     );

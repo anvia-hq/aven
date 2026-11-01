@@ -69,8 +69,9 @@ export async function downloadVerified(
 
 /** Replaces the program at `target` with the `aven` inside a release archive. The new file is made beside it, so the swap is one rename and a running copy is not disturbed. */
 export async function installBinary(archive: Uint8Array, target: string) {
-  const work = await mkdtemp(join(dirname(target), ".aven-update-"));
+  let work: string | undefined;
   try {
+    work = await mkdtemp(join(dirname(target), ".aven-update-"));
     await writeFile(join(work, "aven.tar.gz"), archive);
     const unpacked = await exec(["tar", "-xzf", join(work, "aven.tar.gz"), "-C", work]);
     if (unpacked.code !== 0) throw new Error(`Could not unpack the release: ${unpacked.out}`);
@@ -83,6 +84,6 @@ export async function installBinary(archive: Uint8Array, target: string) {
       );
     throw error;
   } finally {
-    await rm(work, { recursive: true, force: true });
+    if (work) await rm(work, { recursive: true, force: true });
   }
 }
