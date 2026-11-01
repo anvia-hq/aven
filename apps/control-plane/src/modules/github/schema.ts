@@ -24,6 +24,11 @@ export const manifestQuery = z.object({
     .regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/, "not a GitHub organization name")
     .max(39)
     .optional(),
+  /** Whether any account or organization may install the app, not only its owner. */
+  public: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
 });
 
 export const appCallbackQuery = z.object({

@@ -34,8 +34,12 @@ Things to know:
   for every install on `localhost`, so you will probably have to pick another name on GitHub's
   confirmation page. Give the **Organization** field a name if a GitHub organization should own the
   app rather than you.
-- The app is private: only the account or organization that owns it can install it. A team should
-  create it under its organization.
+- By default the app is private: only the account or organization that owns it can install it. To
+  install it on several organizations, turn on **Allow installing on other accounts and
+  organizations** before pressing Create. For an app that already exists, make it public in its
+  settings on GitHub (**Advanced > Make public**). Public only means anyone may install it; nobody can
+  use it without this server's credentials. Either way an organization's owner may have to approve
+  the install, because the app asks for write access to code and pull requests.
 - If you would rather make the app yourself, set the `GITHUB_APP_*` variables in
   `~/.aven/server/.env` (see [`.env.example`](.env.example)); an app set there is used instead.
 - This flow has been tested against a stand-in for GitHub, not yet against github.com.

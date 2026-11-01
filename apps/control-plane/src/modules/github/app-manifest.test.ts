@@ -24,6 +24,11 @@ describe("appManifest", () => {
     });
     expect(manifest.default_events).toEqual([]);
   });
+
+  test("is private unless asked to be public, which lets any account install it", () => {
+    expect(appManifest("https://aven.example.com", "Aven").public).toBe(false);
+    expect(appManifest("https://aven.example.com", "Aven", true).public).toBe(true);
+  });
 });
 
 describe("newAppUrl", () => {

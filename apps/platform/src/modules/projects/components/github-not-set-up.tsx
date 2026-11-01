@@ -16,7 +16,8 @@ export function GithubNotSetUp() {
       <div className="flex flex-col items-start gap-3">
         <p className="text-sm text-muted-foreground">
           GitHub is not set up yet. Create the GitHub App that lets Aven import repositories and
-          open pull requests; GitHub asks you to confirm it.
+          open pull requests; GitHub asks you to confirm it. To install it on other organizations,
+          create it in Settings &gt; Platform, where you can allow that.
         </p>
         <Button type="button" disabled={working} onClick={() => void create()}>
           <Github /> Create GitHub App

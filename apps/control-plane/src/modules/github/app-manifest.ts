@@ -14,8 +14,10 @@ export type GithubUrls = ReturnType<typeof githubUrlsFromEnv>;
  * The app GitHub is asked to create (decision 0074): the permissions the agent needs to clone, push
  * and open pull requests as the person and to read CI (0041, 0044), no webhook, and the user
  * authorization during installation that 0013 relies on. `origin` is where people open Aven.
+ * A private app (the default) can be installed only by the account or organization that owns it;
+ * a public one by any, which a team with several organizations needs.
  */
-export function appManifest(origin: string, name: string) {
+export function appManifest(origin: string, name: string, isPublic = false) {
   const base = origin.replace(/\/$/, "");
   return {
     name,
@@ -23,7 +25,7 @@ export function appManifest(origin: string, name: string) {
     redirect_url: `${base}/api/github/app/callback`,
     callback_urls: [`${base}/api/github/callback`],
     request_oauth_on_install: true,
-    public: false,
+    public: isPublic,
     default_permissions: {
       contents: "write",
       pull_requests: "write",

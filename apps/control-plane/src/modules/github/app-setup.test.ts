@@ -61,6 +61,12 @@ describe("the manifest", () => {
     expect(postUrl).toStartWith("https://github.test/organizations/acme/settings/apps/new");
   });
 
+  test("is private unless the owner asks for it to be installable by anyone", () => {
+    expect(setup().service.manifest(owner, {}).manifest.public).toBe(false);
+    expect(setup().service.manifest(owner, { public: false }).manifest.public).toBe(false);
+    expect(setup().service.manifest(owner, { public: true }).manifest.public).toBe(true);
+  });
+
   test("is refused to anyone else, and once an app is set up", () => {
     expect(() => setup().service.manifest(stranger, {})).toThrow(ForbiddenError);
     expect(() => setup(true).service.manifest(owner, {})).toThrow(ConflictError);

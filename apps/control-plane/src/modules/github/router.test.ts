@@ -132,7 +132,18 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       { call: "manifest", arg: { name: "Acme Aven", organization: "acme" } },
     ]);
     expect((await get("/github/app/manifest?organization=not%20valid!")).status).toBe(422);
+    expect((await get("/github/app/manifest?public=maybe")).status).toBe(422);
     expect((await get("/github/app/manifest", "")).status).toBe(401);
+  });
+
+  test("passes on that the app is to be public, as a boolean", async () => {
+    setupCalls.length = 0;
+    expect((await get("/github/app/manifest?public=true")).status).toBe(200);
+    expect((await get("/github/app/manifest?public=false")).status).toBe(200);
+    expect(setupCalls).toEqual([
+      { call: "manifest", arg: { public: true } },
+      { call: "manifest", arg: { public: false } },
+    ]);
   });
 
   test("answers what the setup refuses: not an owner is 403, already set up is 409", async () => {

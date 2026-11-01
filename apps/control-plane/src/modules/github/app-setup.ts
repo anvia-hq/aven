@@ -43,14 +43,14 @@ export function createGithubAppSetup({
     canSetUp: (email: string) => isOwner(email) && !client.configured,
 
     /** What the browser posts to GitHub to have the app created. */
-    manifest(person: Person, options: { name?: string; organization?: string }) {
+    manifest(person: Person, options: { name?: string; organization?: string; public?: boolean }) {
       requireOwner(person);
       const base = origin();
       // GitHub wants a name nobody else has taken, so the default carries this server's host.
       const name = options.name ?? `Aven (${new URL(base).hostname})`.slice(0, 34);
       return {
         postUrl: newAppUrl(urls, createSetupState(person.id), options.organization),
-        manifest: appManifest(base, name),
+        manifest: appManifest(base, name, options.public ?? false),
       };
     },
 
