@@ -3,6 +3,7 @@ import type { ModelConfig, Provider } from "@aven/agents/model";
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
+import { gatewayContextWindow } from "./gateway-context";
 import { modelCatalog } from "./model-catalog";
 import { effortsFor } from "./model-list";
 import { providersService } from "./service";
@@ -85,7 +86,11 @@ async function assertRunnable(kind: ProviderKind, modelId: string) {
 // The window of the model the run will use, the provider's default when none is named.
 async function contextWindowOf(config: ModelConfig) {
   const modelId = config.modelId ?? defaultModelId(config.provider);
-  return modelId ? modelCatalog.contextWindow(config.provider, modelId) : null;
+  if (!modelId) return null;
+  // The catalog knows no model of a server the person runs; the server itself may (LiteLLM does).
+  if (config.provider === "openai-compatible" && config.baseUrl)
+    return gatewayContextWindow(config.baseUrl, config.apiKey, modelId);
+  return modelCatalog.contextWindow(config.provider, modelId);
 }
 
 async function applyEffort(config: ModelConfig, reasoningEffort: string) {
