@@ -16,7 +16,9 @@ It installs what is missing (git and Docker, after asking), then the `aven` comm
 server and a runner on this machine, and opens Aven in your browser. Create your account, add an AI
 provider in Settings and start a thread. On Windows, use WSL2.
 
-Everything lives in `~/.aven` (the server's `.env` with its secrets, the runner's settings and log).
+Everything lives in `~/.aven`: the server's `.env` with its secrets, the runner's settings and log,
+and the runner's workspaces in `~/.aven/runtime`. A checkout used for development keeps its own state
+in the project's git-ignored `.aven/` instead (see Development), so the two never mix.
 
 ## Connect GitHub
 
@@ -104,8 +106,9 @@ Start with `aven doctor`: it checks Docker, git, the server, the runner and its 
 | A thread cannot start a sandbox          | `docker info` must work for the user who installed the runner, and the runner's log says which image or command failed.                                                                                                 |
 
 Where things are: `~/.aven/server/.env` (settings and secrets), `~/.aven/runner.env` (the runner),
-`~/.aven/logs/runner.log`, and the database in the Docker volume `aven_postgres`. `AVEN_HOME`
-moves `~/.aven`.
+`~/.aven/logs/runner.log`, the runner's workspaces in `~/.aven/runtime` (`AVEN_RUNTIME_HOME`), and the
+database in the Docker volume `aven_postgres`. `AVEN_HOME` moves the settings, server files and logs
+but not `AVEN_RUNTIME_HOME`, which has to be set as well to move the runner's workspaces.
 
 ## The `aven` command
 
@@ -129,7 +132,7 @@ Bun workspace monorepo; read [AGENTS.md](AGENTS.md) first, and `docs/` for rules
 ```sh
 bun install
 createdb aven
-cp .env.example .env     # then fill it in
+cp .env.example .env     # then fill it in, with AVEN_RUNTIME_HOME=<this checkout>/.aven/runtime
 bun run dev
 ```
 
