@@ -16,22 +16,49 @@ const repo = (name: string) => ({
   permissions: { push: true },
 });
 
-const pullRequests = new Map<string, { number: number; html_url: string }>();
+type Pull = {
+  number: number;
+  html_url: string;
+  title: string;
+  state: string;
+  merged_at: string | null;
+  head: { ref: string; repo: { full_name: string } };
+};
+// Newest last, by repository.
+const pullRequests = new Map<string, Pull[]>();
 
 Bun.serve({
   port,
-  fetch(request) {
+  async fetch(request) {
     const { pathname } = new URL(request.url);
     // Pull requests: none is open until one is created (a spec does it, standing in for the agent's
-    // `gh pr create`, decision 0044), then that one is.
+    // `gh pr create`, decision 0044), with the branch it was opened from (decision 0069). They are
+    // listed newest first, with whatever the query asks for ignored.
     if (/^\/repos\/acme\/[\w.-]+\/pulls$/.test(pathname)) {
-      const opened = pullRequests.get(pathname);
+      const list = pullRequests.get(pathname) ?? [];
       if (request.method === "POST") {
-        const made = { number: 7, html_url: `https://github.com/acme/pull/7` };
-        pullRequests.set(pathname, made);
+        const { head = "", title = "A pull request" } = (await request
+          .json()
+          .catch(() => ({}))) as {
+          head?: string;
+          title?: string;
+        };
+        // Numbered from 7 for each thread (the branches that share a prefix), since specs that run
+        // at the same time share the repository and each expects to see its own first.
+        const thread = (branch: string) => branch.split("-")[0];
+        const number = 7 + list.filter((pull) => thread(pull.head.ref) === thread(head)).length;
+        const made: Pull = {
+          number,
+          html_url: `https://github.com/acme/pull/${number}`,
+          title,
+          state: "open",
+          merged_at: null,
+          head: { ref: head, repo: { full_name: pathname.split("/").slice(2, 4).join("/") } },
+        };
+        pullRequests.set(pathname, [...list, made]);
         return Response.json(made, { status: 201 });
       }
-      return Response.json(opened ? [opened] : []);
+      return Response.json([...list].reverse());
     }
     if (pathname === "/health") return new Response("ok");
     // The page where a person lets the app act as them: they agree at once and come back.

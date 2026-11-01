@@ -7,16 +7,17 @@ import { useModelSelection } from "./use-model-selection";
 import type { Thread } from "../types";
 
 // Shipping a thread sends its agent the ship prompt (decision 0044): the work goes on in the thread,
-// where it can be watched, and the pull request shows up once the agent has opened it.
+// where it can be watched, and the pull request shows up once the agent has opened it. Without a
+// mode, the thread's newest pull request decides between updating it and opening a new one (0069).
 export function useShipThread(thread: Thread) {
   const [shipping, setShipping] = useState(false);
   // The model the thread's composer shows, so shipping runs on it and not on the default provider.
   const { selection } = useModelSelection(thread.id);
 
-  async function ship() {
+  async function ship(mode?: "new") {
     setShipping(true);
     const started = await attempt("Could not ship the thread", () =>
-      postJson<{ ok: true }>(`/threads/${thread.id}/ship`, selection),
+      postJson<{ ok: true }>(`/threads/${thread.id}/ship`, { ...selection, mode }),
     );
     if (started) {
       toast.add({
