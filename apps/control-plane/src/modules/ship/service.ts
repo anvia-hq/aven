@@ -9,8 +9,8 @@ import { githubUserTokenService } from "../github/user-tokens";
 import type { ModelSelection } from "../providers/resolve-model";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
-import { threadsService } from "../threads/service";
-import { SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
+import { threadsService, type ThreadPullRequest } from "../threads/service";
+import { SHIP_PROMPT_FILE, shipPrompt, type ShipMode } from "./prompt";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {
@@ -29,6 +29,8 @@ type ShipDeps = {
     githubInstallationId: string;
     repoFullName: string;
     defaultBranch: string;
+    /** The thread's pull requests, newest first. */
+    pullRequests: ThreadPullRequest[];
   }>;
   /** What the runner has for `.aven/ship.md`; null when the thread has no workspace yet. */
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
@@ -40,6 +42,17 @@ type ShipDeps = {
     body: { prompt: string } & ModelSelection,
   ) => Promise<void>;
 };
+
+/** What a Ship does, from what the person asked for and the thread's pull requests (decision 0069). */
+export function shipMode(
+  requested: "update" | "new" | undefined,
+  pullRequests: Pick<ThreadPullRequest, "state">[],
+): ShipMode {
+  const [latest] = pullRequests;
+  // The first pull request is the thread's own branch, whatever was asked.
+  if (!latest) return "first";
+  return requested ?? (latest.state === "open" ? "update" : "new");
+}
 
 // Ships a thread by sending its agent a prompt (decision 0044): the repository's `.aven/ship.md`,
 // or a default. The agent commits, rebases, checks, pushes and opens the pull request with `gh`,
@@ -60,7 +73,7 @@ export function createShipService(
       const project = await projectsService.get(organizationId, thread.projectId);
       // A thread's project row is guaranteed by its foreign key.
       if (!project) throw new Error("The thread's project is missing");
-      return project;
+      return { ...project, pullRequests: thread.pullRequests };
     });
   const readShipFile =
     deps.readShipFile ??
@@ -77,7 +90,7 @@ export function createShipService(
       organizationId: string,
       userId: string,
       threadId: string,
-      selection: ModelSelection = {},
+      { mode, ...selection }: ModelSelection & { mode?: "update" | "new" } = {},
     ) {
       const project = await load(organizationId, threadId);
       const connection = await userTokens.use(userId);
@@ -88,6 +101,8 @@ export function createShipService(
       const prompt = shipPrompt(await readShipFile(organizationId, threadId), {
         branch: threadBranch(threadId),
         base: project.defaultBranch,
+        mode: shipMode(mode, project.pullRequests),
+        pullRequests: project.pullRequests,
       });
       // Wrapped, so the thread can show it as a card and not as a long message.
       await send(organizationId, userId, threadId, {

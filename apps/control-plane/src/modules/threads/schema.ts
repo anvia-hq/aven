@@ -25,8 +25,12 @@ const modelSelection = {
   reasoningEffort: z.string().trim().min(1).max(20).optional(),
 };
 
-// Shipping runs on the model the thread's composer has, which the client names the same way.
-export const shipBody = z.object(modelSelection).optional();
+// Shipping runs on the model the thread's composer has, which the client names the same way. `mode`
+// says whether to update the thread's open pull request or open a separate one (decision 0069);
+// without it, the newest pull request decides.
+export const shipBody = z
+  .object({ ...modelSelection, mode: z.enum(["update", "new"]).optional() })
+  .optional();
 
 // A file sent with a message, its bytes in base64; sizes are checked once decoded (decision 0034).
 const attachment = z.object({

@@ -4,14 +4,28 @@ import { shipRequestOf } from "@aven/protocol/ship-request";
 
 import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "../github/client";
 import type { RuntimeHub } from "../runtimes/hub";
-import { createShipService, GithubNotConnectedError } from "./service";
+import { createShipService, GithubNotConnectedError, shipMode } from "./service";
 
 const threadId = "abcdef12-0000-4000-8000-000000000000";
 const project = {
   githubInstallationId: "inst-1",
   repoFullName: "acme/app",
   defaultBranch: "develop",
+  pullRequests: [] as {
+    number: number;
+    url: string;
+    branch: string;
+    title: string;
+    state: "open" | "closed" | "merged";
+  }[],
 };
+const pull = (number: number, state: "open" | "closed" | "merged") => ({
+  number,
+  url: `https://github.com/acme/app/pull/${number}`,
+  branch: "aven/abcdef12",
+  title: `Pull ${number}`,
+  state,
+});
 
 // A ship with what it asks of faked: who is connected, what GitHub allows, the runner's file.
 function setup(
@@ -20,6 +34,7 @@ function setup(
     approved?: boolean;
     canPush?: boolean;
     file?: () => Promise<FileContent | null>;
+    pullRequests?: (typeof project)["pullRequests"];
   } = {},
 ) {
   const { connected = true, approved = true, canPush = true } = options;
@@ -33,7 +48,7 @@ function setup(
   }[] = [];
   const checked: string[] = [];
   const service = createShipService({} as RuntimeHub, {
-    load: async () => project,
+    load: async () => ({ ...project, pullRequests: options.pullRequests ?? [] }),
     userTokens: {
       use: async () =>
         connected ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } } : null,
@@ -126,5 +141,48 @@ describe("shipping a thread", () => {
     await expect(service.ship("org-1", "user-1", threadId)).rejects.toThrow("not a text file");
 
     expect(sent).toEqual([]);
+  });
+
+  test("the first ship is the thread's own branch, whatever mode is asked", async () => {
+    const { service, sent } = setup();
+
+    await service.ship("org-1", "user-1", threadId, { mode: "new" });
+
+    expect(sent[0]!.prompt).not.toContain("git switch -c");
+    expect(sent[0]!.prompt).toContain("gh pr create --draft");
+  });
+
+  test("a thread with an open pull request updates it, unless the person asks for a new one", async () => {
+    const { service, sent } = setup({ pullRequests: [pull(7, "open")] });
+
+    await service.ship("org-1", "user-1", threadId);
+    await service.ship("org-1", "user-1", threadId, { mode: "new", providerId: "p", modelId: "m" });
+
+    expect(sent[0]!.prompt).toContain("updated by the push: do not open another");
+    expect(sent[1]!.prompt).toContain("git switch -c aven/abcdef12-<short-slug> origin/develop");
+    // The mode is for the prompt; the rest is the model the thread is on.
+    expect(sent[1]).toMatchObject({ providerId: "p", modelId: "m" });
+    expect(sent[1]).not.toHaveProperty("mode");
+  });
+
+  test("a thread whose latest pull request is merged opens a new one", async () => {
+    const { service, sent } = setup({ pullRequests: [pull(7, "merged")] });
+
+    await service.ship("org-1", "user-1", threadId);
+
+    expect(sent[0]!.prompt).toContain("git switch -c aven/abcdef12-<short-slug> origin/develop");
+    expect(sent[0]!.prompt).toContain("- #7 merged");
+  });
+});
+
+describe("what a ship does with the pull requests", () => {
+  test("none yet is the first; otherwise the person's word, else the newest pull request's state", () => {
+    expect(shipMode(undefined, [])).toBe("first");
+    expect(shipMode("update", [])).toBe("first");
+    expect(shipMode(undefined, [{ state: "open" }, { state: "merged" }])).toBe("update");
+    expect(shipMode(undefined, [{ state: "merged" }, { state: "open" }])).toBe("new");
+    expect(shipMode(undefined, [{ state: "closed" }])).toBe("new");
+    expect(shipMode("new", [{ state: "open" }])).toBe("new");
+    expect(shipMode("update", [{ state: "merged" }])).toBe("update");
   });
 });

@@ -83,11 +83,16 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       await db.delete(organizations).where(eq(organizations.id, id));
   });
 
-  const ship = (id: string, token: string | undefined) =>
-    fetch(`${base}/threads/${id}/ship`, {
+  const ship = (id: string, token: string | undefined, body?: object) => {
+    const headers = new Headers();
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    if (body) headers.set("content-type", "application/json");
+    return fetch(`${base}/threads/${id}/ship`, {
       method: "POST",
-      headers: token ? { authorization: `Bearer ${token}` } : {},
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
     });
+  };
 
   test("answers 202 and has the agent sent the ship prompt, as the person", async () => {
     sent.length = 0;
@@ -120,6 +125,39 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
 
     expect((await ship(thread.id, undefined)).status).toBe(401);
     expect((await ship(thread.id, outsider.token)).status).toBe(404);
+    expect(sent).toEqual([]);
+  });
+
+  test("a thread with a pull request is shipped as a new one when the body says so", async () => {
+    sent.length = 0;
+    const shipped = await threadsService.create(owner.organizationId, owner.userId, {
+      projectId: project.id,
+    });
+    await threadsService.savePullRequests(shipped.id, [
+      {
+        number: 4,
+        url: "https://github.com/acme/app/pull/4",
+        branch: `aven/${shipped.id.slice(0, 8)}`,
+        title: "First",
+        state: "open",
+      },
+    ]);
+
+    expect((await ship(shipped.id, owner.token)).status).toBe(202);
+    expect((await ship(shipped.id, owner.token, { mode: "new" })).status).toBe(202);
+
+    expect(sent[0]!.prompt).toContain("updated by the push: do not open another");
+    expect(sent[1]!.prompt).toContain(`git switch -c aven/${shipped.id.slice(0, 8)}-<short-slug>`);
+    expect(sent[1]!.prompt).toContain("- #4 open");
+  });
+
+  test("a mode that is neither update nor new is refused and nothing is sent", async () => {
+    sent.length = 0;
+
+    const response = await ship(thread.id, owner.token, { mode: "force" });
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.status).toBeLessThan(500);
     expect(sent).toEqual([]);
   });
 });
