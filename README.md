@@ -1,10 +1,62 @@
 # Aven
 
-Aven runs AI coding agents on your own machines. A control plane (API, web app, database) hands each
-thread to a **runner**, a computer with Docker that gives the agent a sandbox with a desktop, a
-terminal and your repository.
+**Cloud agents that run on your own machines, with your own API keys.**
 
-## Install
+Aven is a self-hosted platform for AI coding agents. You describe a task in a thread; an agent
+picks up your GitHub repository in a sandbox of its own, with a real desktop, a browser, a terminal
+and the toolchains it needs, and works until the job is done. When it is, it opens the pull request
+as you. The server, the machines the agents work on and the model keys are yours; the only outside
+service is the model provider you choose, which sees what the agent sends it.
+
+## Why Aven
+
+- **Your machines, your data.** Install the server on a laptop, a build box or a VM. Your code is
+  cloned onto the machines you choose, and agents run in Docker sandboxes there, not on a vendor's
+  infrastructure.
+- **Bring your own model.** Add your own OpenAI, Anthropic, Azure OpenAI or any OpenAI-compatible
+  endpoint (a gateway such as LiteLLM, a local model server) and pick the model and reasoning
+  effort per message. Keys are stored encrypted on your server and are never shown again; the
+  machines running agents never hold them, they call the model through your server.
+- **A computer for every thread.** Each thread has its own sandbox: a Linux desktop with Chrome,
+  a shell, your repository on its own branch, Node, Bun, Go, Rust and Python. Watch the desktop live,
+  take it over, open a terminal in it, browse the files and read the diff of what changed.
+- **From task to pull request.** Press Ship and the agent commits, pushes and opens a draft pull
+  request, acting as you on GitHub, so what it pushes and opens is yours. A repository can describe
+  how to set itself up (`.aven/setup`) and how to ship (`.aven/ship.md`).
+- **Agents that keep going.** Close the tab, lose the connection or restart a runner: the work
+  carries on, and you pick it up where it is. Agents run commands in the background, ask you when
+  they need a decision or a secret, hand parts of a task to subagents and work on large goals
+  unattended.
+- **As many machines as you like.** One server, any number of runners: add a laptop, a Mac mini or
+  a cloud VM with one command and give a project the computer it should run on.
+- **For a team.** Organizations and members, invite links, workspace, project and personal
+  environment variables with write-only secrets and a history of who changed what, and skills (folders of
+  instructions and scripts) the agent can use.
+- **Bots that work for you.** Beyond coding threads, each person has a main bot with a computer of
+  its own: it can make other bots, message them, run tasks on a schedule and work on a goal in the
+  background.
+
+## How it works
+
+```
+   you ── browser ──► ┌────────────────────────┐
+                      │ Aven server            │ ──► your model providers
+                      │ web app · API · Postgres│     (OpenAI, Anthropic, Azure, ...)
+                      └───────────▲────────────┘
+                                  │ runners connect out
+                  ┌───────────────┴───────────────┐
+          ┌───────┴───────┐               ┌───────┴───────┐
+          │ runner        │               │ runner        │   a laptop, a build
+          │ Docker + git  │               │ Docker + git  │   machine, a VM ...
+          │ ▢ ▢ ▢ sandboxes               │ ▢ ▢ sandboxes │
+          └───────────────┘               └───────────────┘
+```
+
+The **server** holds accounts, projects, threads and the encrypted keys. A **runner** is any computer
+with Docker and git that connects out to the server (so it needs no open port) and runs a sandbox
+for each thread. `aven` installs and updates both.
+
+## Get started
 
 macOS or Linux, with nothing installed beforehand:
 
@@ -13,14 +65,27 @@ curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bas
 ```
 
 It installs what is missing (git and Docker, after asking), then the `aven` command, then the
-server and a runner on this machine, and opens Aven in your browser. Create your account, add an AI
-provider in Settings and start a thread. On Windows, use WSL2.
+server and a runner on this machine, and opens Aven in your browser. On Windows, use WSL2.
+
+1. **Create your account.** Use the email you gave the installer: that makes you the platform owner.
+2. **Add a model provider** in Settings > Providers, with your own API key.
+3. **Connect GitHub** (below): once for the server, then once per person.
+4. **Import a repository** as a project, start a thread and describe the task.
+
+Update later with `aven update`; everything below is for running it day to day.
+
+## Running Aven
 
 Everything lives in `~/.aven`: the server's `.env` with its secrets, the runner's settings and log,
 and the runner's workspaces in `~/.aven/runtime`. A checkout used for development keeps its own state
 in the project's git-ignored `.aven/` instead (see Development), so the two never mix.
 
-## Connect GitHub
+Good to know: agents act without asking for approval for each step, inside their sandbox. A sandbox
+holds only its thread's workspace, but it can reach the network, and any member of an organization can
+run commands on the organization's runners. Invite people you trust, and keep sign-up closed unless
+you want it open.
+
+### Connect GitHub
 
 Projects are GitHub repositories. In **Settings > Platform** (as the owner whose email you gave the
 installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
@@ -42,9 +107,8 @@ Things to know:
   the install, because the app asks for write access to code and pull requests.
 - If you would rather make the app yourself, set the `GITHUB_APP_*` variables in
   `~/.aven/server/.env` (see [`.env.example`](.env.example)); an app set there is used instead.
-- This flow has been tested against a stand-in for GitHub, not yet against github.com.
 
-## Your own domain, with HTTPS
+### Your own domain, with HTTPS
 
 For a server that other machines or people reach, point a DNS name at it, open ports 80 and 443 and
 install with the name; Caddy gets and renews the certificate:
@@ -55,7 +119,7 @@ curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bas
 
 Runners on other machines then connect over `wss://`, so their tokens never cross the network in the clear.
 
-## More runners
+### More runners
 
 One server can have any number of runners: a laptop, a build machine, a cloud VM. In **Settings >
 Runtimes** create a runner, copy its token and run this on the machine:
@@ -65,7 +129,7 @@ curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bas
   --runner --url https://aven.example.com/api --token avrt_...
 ```
 
-## Update
+### Update
 
 Run the install command again, or:
 
@@ -80,7 +144,7 @@ time, the same way; Settings > Runtimes marks a runner that is behind with "Upda
 `aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
 backup before updating (below) if you may want to go back.
 
-## Backup and restore
+### Backup and restore
 
 Everything lives in one Postgres database. Back it up with:
 
@@ -94,7 +158,7 @@ way. Keep `~/.aven/server/.env` with it: the encryption key in it is what makes 
 keys, variables and GitHub App readable. `aven stop` and `aven update` keep the database;
 `aven uninstall --purge` deletes it.
 
-## Troubleshooting
+### Troubleshooting
 
 Start with `aven doctor`: it checks Docker, git, the server, the runner and its sandbox image.
 
@@ -114,7 +178,7 @@ Where things are: `~/.aven/server/.env` (settings and secrets), `~/.aven/runner.
 database in the Docker volume `aven_postgres`. `AVEN_HOME` moves the settings, server files and logs
 but not `AVEN_RUNTIME_HOME`, which has to be set as well to move the runner's workspaces.
 
-## The `aven` command
+### The `aven` command
 
 ```
 aven install [--domain D] [--port N] [--owner-email E]     server + runner on this machine
