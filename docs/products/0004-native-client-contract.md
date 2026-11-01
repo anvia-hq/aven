@@ -29,7 +29,7 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 `GET /threads/:id/events` is `text/event-stream`. Every message is `data: <json>` with a `type`, plus a keep-alive `event: ping` every 5 seconds. Always attach before or right after sending; a snapshot comes first, so reconnecting is safe at any time.
 
 ```
-snapshot    { messages: Message[], running: bool, usage?: Usage }   replaces all local state
+snapshot    { messages: Message[], running: bool, usage?: Usage, runningMs?: number }   replaces all local state; runningMs is how long the run in progress has gone on
 run_start   { prompt, attachments?: Attachment[], mentions?: Mention[] }
 text        { delta }
 tool_start  { tool: Tool }

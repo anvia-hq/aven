@@ -22,3 +22,12 @@ export const fileSize = (bytes: number) => {
 // 331300 -> "331.3k", 1000000 -> "1M".
 export const compactNumber = (value: number) =>
   new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+
+// 12000 -> "12s", 272000 -> "4m 32s", 3900000 -> "1h 5m". Whole seconds, never negative.
+export const elapsed = (ms: number) => {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+};

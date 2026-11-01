@@ -10,12 +10,21 @@ type Props = {
   messages: ChatMessage[];
   /** The agent is writing the last message. */
   running?: boolean;
+  /** When the run in progress started (`Date.now()`), for the time shown beside the indicator. */
+  startedAt?: number | null;
   error?: string | null;
   /** Stays beside the conversation while it scrolls, so the scrollbar is at the panel's edge. */
   aside?: ReactNode;
 };
 
-export function ThreadMessages({ threadId, messages, running = false, error, aside }: Props) {
+export function ThreadMessages({
+  threadId,
+  messages,
+  running = false,
+  startedAt = null,
+  error,
+  aside,
+}: Props) {
   const scrollRef = useScrollToBottom(messages.length);
 
   return (
@@ -35,7 +44,7 @@ export function ThreadMessages({ threadId, messages, running = false, error, asi
                 streaming={running && index === messages.length - 1}
               />
             ))}
-            {running && <WorkingIndicator />}
+            {running && <WorkingIndicator startedAt={startedAt} />}
             {error && (
               <p
                 role="alert"

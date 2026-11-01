@@ -164,6 +164,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       "done",
     ]);
     expect(client.events[0]).toMatchObject({ type: "snapshot", running: false, messages: [] });
+    expect(client.events[0]).not.toHaveProperty("runningMs");
 
     const history = await manager.history(thread);
     expect(history.map((message) => message.role)).toEqual(["user", "assistant"]);
@@ -267,6 +268,9 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(snapshot).toMatchObject({ type: "snapshot", running: true });
     if (snapshot.type !== "snapshot") throw new Error("expected a snapshot");
     expect(snapshot.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+    // It says how long the run had gone on when this client came, so its clock does not start at 0.
+    expect(snapshot.runningMs).toBeGreaterThanOrEqual(100);
+    expect(snapshot.runningMs).toBeLessThan(3000);
     expect(late.events.slice(1).map((event) => event.type)).toEqual([
       "tool_end",
       "text",

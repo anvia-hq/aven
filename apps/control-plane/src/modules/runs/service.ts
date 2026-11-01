@@ -25,6 +25,8 @@ type ActiveRun = {
   /** What the thread has used: its history plus this run, kept current like `messages`. */
   usage: ThreadUsage;
   cancelled: boolean;
+  /** When the run was claimed (`Date.now()`), so a client that attaches late can say how long it has gone on. */
+  startedAt: number;
   /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
 };
@@ -159,6 +161,7 @@ export class RunManager {
       messages: [],
       usage: usageFromHistory([]),
       cancelled: false,
+      startedAt: Date.now(),
       ready: Promise.resolve(),
     };
     channel.run = run;
@@ -261,7 +264,12 @@ export class RunManager {
         await run.ready;
         if (channel.run !== run) continue;
         queue.length = 0;
-        return { messages: run.messages, running: true, usage: run.usage };
+        return {
+          messages: run.messages,
+          running: true,
+          usage: run.usage,
+          runningMs: Date.now() - run.startedAt,
+        };
       }
       const history = await this.#store.load({ scope: this.#scope(channel.thread) });
       if (channel.run) continue;

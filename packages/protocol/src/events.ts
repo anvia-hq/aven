@@ -151,7 +151,14 @@ export type ChatMessage = {
 
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
-  | { type: "snapshot"; messages: ChatMessage[]; running: boolean; usage?: ThreadUsage }
+  | {
+      type: "snapshot";
+      messages: ChatMessage[];
+      running: boolean;
+      usage?: ThreadUsage;
+      /** How long the run in progress has gone on, in milliseconds, for a client that attaches part way through it. */
+      runningMs?: number;
+    }
   | {
       type: "run_start";
       prompt: string;

@@ -76,6 +76,12 @@
   --sidebar-ring: oklch(0.5 0.01 250);
 }
 
+/* The dots of the working indicator run from pale blue to rose (modules/threads/components/working-indicator.tsx). */
+:root {
+  --working-from: oklch(0.82 0.08 235);
+  --working-to: oklch(0.72 0.16 8);
+}
+
 /* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
 :root {
   --avatar-face: oklch(0.2 0.01 250);
@@ -121,6 +127,19 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* A dot of the working indicator swells and brightens as the wave passes it. */
+@keyframes working-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.6);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* The newest text of a streaming answer fades in (see components/markdown.tsx). */

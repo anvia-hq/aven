@@ -25,8 +25,19 @@ export const Route = createFileRoute("/_authed/_shell/threads/$threadId")({
 
 function ThreadPage() {
   const { threadId } = Route.useParams();
-  const { thread, loaded, messages, running, usage, error, question, send, answer, cancel } =
-    useThread(threadId);
+  const {
+    thread,
+    loaded,
+    messages,
+    running,
+    startedAt,
+    usage,
+    error,
+    question,
+    send,
+    answer,
+    cancel,
+  } = useThread(threadId);
   // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels();
@@ -69,6 +80,7 @@ function ThreadPage() {
                   threadId={thread.id}
                   messages={messages}
                   running={running}
+                  startedAt={startedAt}
                   error={error}
                   aside={overview.open && <OverviewColumn thread={thread} usage={usage} />}
                 />

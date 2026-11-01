@@ -290,6 +290,8 @@ test.describe("threads", () => {
         body: `retry: 600000\n\ndata: ${JSON.stringify({
           type: "snapshot",
           running: true,
+          // The run had gone on for 4m 32s when this page attached: the time counts from there.
+          runningMs: 272_000,
           messages: [{ id: "m-0", role: "user", parts: [{ type: "text", text: "long task" }] }],
         })}\n\n`,
       }),
@@ -305,6 +307,7 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await expect(page.getByRole("status").filter({ hasText: "Working…" })).toBeVisible();
+    await expect(page.getByText(/^4m \d{1,2}s$/)).toBeVisible();
     await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
     await page.getByRole("textbox", { name: "Prompt" }).press("Enter");
     await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);

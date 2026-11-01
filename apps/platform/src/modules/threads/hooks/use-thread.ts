@@ -38,12 +38,15 @@ export function useThread(threadId: string) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [running, setRunning] = useState(false);
+  // When the run in progress started, by this browser's clock; null when none is.
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [usage, setUsage] = useState<ThreadUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMessages([]);
     setRunning(false);
+    setStartedAt(null);
     setUsage(null);
     setError(null);
 
@@ -56,6 +59,7 @@ export function useThread(threadId: string) {
       switch (event.type) {
         case "snapshot":
           setUsage(event.usage ?? null);
+          setStartedAt(event.running ? Date.now() - (event.runningMs ?? 0) : null);
           break;
         case "usage":
           setUsage((current) => applyUsage(current, event));
@@ -63,13 +67,16 @@ export function useThread(threadId: string) {
         case "run_start":
         case "run_resume":
           setError(null);
+          setStartedAt(Date.now());
           setThreadRunning(threadId, true);
           break;
         case "error":
           setError(event.message);
+          setStartedAt(null);
           setThreadRunning(threadId, false);
           break;
         case "done":
+          setStartedAt(null);
           setThreadRunning(threadId, false);
           // What the server does once a run has ended, such as finding the pull request the agent
           // opened, lands a moment after `done`: look now, and again shortly.
@@ -119,5 +126,17 @@ export function useThread(threadId: string) {
   // The question the agent stopped on, until it is answered.
   const question = running ? undefined : pendingQuestion(messages);
 
-  return { thread, loaded, messages, running, usage, error, question, send, answer, cancel };
+  return {
+    thread,
+    loaded,
+    messages,
+    running,
+    startedAt,
+    usage,
+    error,
+    question,
+    send,
+    answer,
+    cancel,
+  };
 }
