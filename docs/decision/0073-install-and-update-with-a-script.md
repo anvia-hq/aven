@@ -19,6 +19,7 @@ Running Aven meant cloning the repository, `bun install`, `createdb`, writing ab
 
 - Server state is Postgres and nothing else (the control plane only writes temporary files), so a backup is a dump of one database and `docker compose down` never loses anything but `-v`.
 - A runner on a public control plane connects over `wss://`, which is why the Caddy domain mode is part of the first version and not an extra.
+- GHCR makes a package private on its first push. After the first release, set `aven-server`, `aven-web` and `aven-sandbox` to public once (Package settings > Danger zone); the `org.opencontainers.image.source` label in each Dockerfile links them to the repository. Pushing a tag then needs no further steps (`.github/workflows/release.yml`).
 - The sandbox image is pulled once per runner machine and is several gigabytes.
 - Built in steps, each its own commit: the images and compose file, CI that publishes them, the `aven` CLI and runner service with a local token bootstrap, `install.sh` and the "Add runner" command, the runner version badge, then the GitHub App manifest flow, which removes the last hand-made setup (an installation cannot import a repository until a GitHub App exists).
 - Not done: Windows (WSL2 later), and auto-update of runners.

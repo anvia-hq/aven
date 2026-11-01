@@ -23,6 +23,7 @@ WORKDIR /app/apps/platform
 RUN bunx vite build
 
 FROM caddy:2-alpine
+LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
 COPY apps/platform/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/platform/dist /srv
 EXPOSE 80 443

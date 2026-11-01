@@ -3,6 +3,7 @@
 # The built-in runner needs Docker on the host, so this image runs with AVEN_LOCAL_RUNNER=off and
 # runners connect to it instead (decision 0073).
 FROM oven/bun:1.4.4
+LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
 WORKDIR /app
 
 # Workspace manifests and patches first so the dependency layer is cached. Every workspace has to be

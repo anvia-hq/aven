@@ -11,6 +11,9 @@
 # small script that starts Xfce. Nothing graphical runs until the desktop is first used.
 FROM lscr.io/linuxserver/webtop:debian-xfce@sha256:2de7b2cb2f9e55fde54e07a83ffeb4f09cac846f1219896dd3d44de7d0aa9731
 
+# Links the GHCR package to this repository.
+LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
+
 USER root
 ARG TARGETARCH
 ARG ANVIA_SANDBOX_PACKAGE=@anvia/sandbox@1.3.2
