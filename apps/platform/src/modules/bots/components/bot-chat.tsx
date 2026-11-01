@@ -5,6 +5,7 @@ import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { chatItems } from "../activity";
+import { isOpen } from "../questions";
 import { useBotChat } from "../hooks/use-bot-chat";
 import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
@@ -22,8 +23,6 @@ export function BotChat({ bot }: { bot: Bot }) {
   const { bots } = useBots();
   const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
-  // A question is open until anything follows it: the person's answer, or whatever else they say.
-  const open = (index: number) => index === items.length - 1 && !typing;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -53,7 +52,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                   align={isPersons(message) ? "end" : "start"}
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
-                  {message.questions && open(index) ? (
+                  {isOpen(messages, message) && message.questions ? (
                     <BotQuestionForm
                       botName={bot.name}
                       questions={message.questions}

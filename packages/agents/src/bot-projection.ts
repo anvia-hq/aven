@@ -7,7 +7,7 @@ import {
   type BotQuestion,
 } from "@aven/protocol/bots";
 
-import { ASK_QUESTION_TOOL_NAME, askQuestionSchema } from "./tools/ask-question";
+import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
 
 const textOf = (content: Extract<Message, { role: "user" }>["content"]) =>
@@ -85,7 +85,7 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
               direction: "to",
             });
           } else {
-            const { questions } = asked.data;
+            const questions = toQuestions(asked.data.questions);
             add("bot", questions.map((question) => question.text).join("\n"), undefined, questions);
           }
         }

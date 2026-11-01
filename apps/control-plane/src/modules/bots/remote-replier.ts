@@ -1,6 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import {
+  BOT_MESSAGE_MAX,
   BOT_MESSAGES_PER_REPLY,
   MAIN_BOT_HANDLE,
   parseBotPrompt,
@@ -33,15 +34,19 @@ export type BotKeeper = {
   greet(userId: string, botId: string, hops: number): Promise<void>;
 };
 
-// What a bot that is not the main one tells the main bot when it needs the person to decide.
+// What a bot that is not the main one tells the main bot when it needs the person to decide: one
+// line for each thing the bot wrote, so its names and questions cannot pass for lines of ours.
 function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
+  const line = (text: string) => text.replace(/\s+/g, " ").trim();
   const asked = questions
     .map((question) => {
-      const choices = question.choices?.map((choice) => choice.label).join(", ");
-      return `- id "${question.id}": ${question.text}${choices ? ` (choices: ${choices})` : ""}`;
+      const choices = question.choices?.map((choice) => line(choice.label)).join(", ");
+      return `- id "${line(question.id)}": ${line(question.text)}${choices ? ` (choices: ${choices})` : ""}`;
     })
     .join("\n");
-  return `${bot.name} (${bot.handle}) needs a decision from the person to go on:\n${asked}\nAsk the person with ask_question, offering the same choices, and when they answer, send it to ${bot.handle} with send_message.`;
+  // What to do comes before the questions, so that a message cut to fit loses questions, not that.
+  const text = `${line(bot.name)} (${bot.handle}) needs a decision from the person to go on. Ask the person with ask_question, offering the same choices, and when they answer, send it to ${bot.handle} with send_message. The questions:\n${asked}`;
+  return text.slice(0, BOT_MESSAGE_MAX);
 }
 
 // The bot's computer is on a runner, so its agent runs there (decision 0059): it is sent each
@@ -84,6 +89,7 @@ export class RemoteBotReplier implements BotReplier {
     const personsWord = !note && from === undefined;
     const mainBotsWord = !note && from === MAIN_BOT_HANDLE;
     let written = 0;
+    let asked = false;
     // As itself, whichever bot the runner might name, and only so many to a reply.
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -119,6 +125,9 @@ export class RemoteBotReplier implements BotReplier {
         questions,
       }: Omit<BotQuestionParams, "replyId">): Promise<BotQuestioned> => {
         if (note) throw new Error("Nobody is there to answer: this was not the person's message");
+        // One question a reply: the person answers the first, and the bot goes on from there.
+        if (asked) throw new Error("You have already asked. Stop now and wait for the answer.");
+        asked = true;
         if (bot.isMain || from === undefined) {
           ask(questions);
           return {};

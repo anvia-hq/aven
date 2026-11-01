@@ -35,8 +35,8 @@ export function BotQuestionForm({
     const values = Object.fromEntries(
       questions.map((question) => [question.id, valueOf(drafts[question.id])]),
     );
-    await onSubmit(answerText(questions, values));
-    setSending(false);
+    // Taken, the answer spends the card; refused, it can be sent again.
+    if (!(await onSubmit(answerText(questions, values)))) setSending(false);
   }
 
   if (!prompt) return null;

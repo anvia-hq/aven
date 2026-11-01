@@ -338,8 +338,8 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
             id: "scope",
             text: "Which first?",
             choices: [
-              { label: "A", value: "a" },
-              { label: "B", value: "b" },
+              { label: "A", value: "A" },
+              { label: "B", value: "B" },
             ],
           },
         ],
@@ -354,7 +354,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect((await ask(ws, received, "bot.question", { ...question, questions: [] })).ok).toBe(
         false,
       );
-      const one = { id: "x", text: "Which?", choices: [{ label: "A", value: "a" }] };
+      const one = { id: "x", text: "Which?", choices: [{ label: "A", value: "A" }] };
       expect((await ask(ws, received, "bot.question", { ...question, questions: [one] })).ok).toBe(
         false,
       );

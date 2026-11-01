@@ -1,5 +1,5 @@
 import type { Message } from "@anvia/core";
-import { botQuestionsSchema } from "@aven/agents/tools/ask-question";
+import { botQuestionsSchema, toQuestions } from "@aven/agents/tools/ask-question";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -233,7 +233,10 @@ const botCreateParams = z.object({
 });
 
 // A bot asks the person to decide, with the questions the tool takes.
-const botQuestionParams = z.object({ replyId, questions: botQuestionsSchema });
+const botQuestionParams = z.object({
+  replyId,
+  questions: botQuestionsSchema.transform(toQuestions),
+});
 
 // A bot writes to another of the person's bots, named by its handle.
 const botSendParams = z.object({
