@@ -142,6 +142,29 @@
   }
 }
 
+/* The word of the working indicator blurs in as it arrives and out as it leaves. */
+@keyframes word-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes word-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
 /* The newest text of a streaming answer fades in (see components/markdown.tsx). */
 @keyframes stream-fade-in {
   from {
