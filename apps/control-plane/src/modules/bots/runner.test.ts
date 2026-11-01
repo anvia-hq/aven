@@ -16,6 +16,7 @@ const model: ModelConfig = { provider: "openai" };
 const bot: Bot = {
   id: "b1",
   name: "Pip",
+  handle: "main",
   instruction: "",
   description: "",
   avatar: "",

@@ -107,6 +107,31 @@ run("botsService (postgres)", async () => {
     }
   });
 
+  test("a bot has a handle of its own that stays when it is renamed: main for the main bot, a slug of the name for the rest, numbered when taken", async () => {
+    const erin = `u-erin-${suffix}`;
+    await db.insert(users).values({ id: erin, name: "Erin", email: `${erin}@aven.test` });
+    try {
+      const [main] = await botsService.list(erin);
+      expect(main?.handle).toBe("main");
+      const first = await botsService.create(erin, { name: "Data Analyst!", instruction: "x" });
+      const second = await botsService.create(erin, { name: "data analyst", instruction: "x" });
+      const reserved = await botsService.create(erin, { name: "Main", instruction: "x" });
+      expect([first.handle, second.handle, reserved.handle]).toEqual([
+        "data-analyst",
+        "data-analyst-2",
+        "main-bot",
+      ]);
+
+      await botsService.update(erin, first.id, { name: "Scout" });
+      expect((await botsService.get(erin, first.id))?.handle).toBe("data-analyst");
+      // Another person's bots do not count.
+      const other = await botsService.create(alice, { name: "Data Analyst", instruction: "x" });
+      expect(other.handle).toBe("data-analyst");
+    } finally {
+      await db.delete(users).where(eq(users.id, erin));
+    }
+  });
+
   test("bots made at once still stop at the limit", async () => {
     const dave = `u-dave-${suffix}`;
     await db.insert(users).values({ id: dave, name: "Dave", email: `${dave}@aven.test` });

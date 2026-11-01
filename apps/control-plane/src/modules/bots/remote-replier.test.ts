@@ -12,6 +12,7 @@ import type { NewBot } from "./service";
 const bot: Bot = {
   id: "b1",
   name: "Pip",
+  handle: "main",
   instruction: "Talk like a pirate.",
   description: "Sails the seas.",
   avatar: "",

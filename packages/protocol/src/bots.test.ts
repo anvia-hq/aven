@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { botNote, botPrompt, parseBotPrompt, personPrompt } from "./bots";
+import {
+  botHandleOf,
+  botNote,
+  botPrompt,
+  freeBotHandle,
+  parseBotPrompt,
+  personPrompt,
+} from "./bots";
 
 describe("a message one bot sends another (decision 0063)", () => {
   test("is the text with its sender in front, and reads back as both", () => {
@@ -43,5 +50,22 @@ describe("what the person types (decision 0063)", () => {
       expect(parsed.note).toBeUndefined();
       expect(parsed.text.replace("\u200B", "")).toBe(typed);
     }
+  });
+});
+
+describe("a bot's handle (decision 0065)", () => {
+  test("is a slug of its name, never empty, and never one the app keeps", () => {
+    expect(botHandleOf("Data Analyst!")).toBe("data-analyst");
+    expect(botHandleOf("Café Ünïcode")).toBe("cafe-unicode");
+    expect(botHandleOf("日本語")).toBe("bot");
+    expect(botHandleOf("a".repeat(50))).toBe("a".repeat(30));
+    expect(botHandleOf("Main")).toBe("main-bot");
+    expect(botHandleOf("User")).toBe("user-bot");
+    expect(botHandleOf("System")).toBe("system-bot");
+  });
+
+  test("is numbered when another has it", () => {
+    expect(freeBotHandle("scout", new Set())).toBe("scout");
+    expect(freeBotHandle("scout", new Set(["scout", "scout-2"]))).toBe("scout-3");
   });
 });

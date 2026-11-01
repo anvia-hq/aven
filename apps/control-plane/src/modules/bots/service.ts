@@ -1,7 +1,13 @@
 import { db } from "@aven/db/client";
 import { bots, type BotRow } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
-import { BOT_LIMIT, type Bot } from "@aven/protocol/bots";
+import {
+  BOT_LIMIT,
+  botHandleOf,
+  freeBotHandle,
+  MAIN_BOT_HANDLE,
+  type Bot,
+} from "@aven/protocol/bots";
 import type { BotCreateParams } from "@aven/protocol/runtime-wire";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
@@ -20,6 +26,7 @@ const MAIN_BOT = {
 const view = (row: BotRow): Bot => ({
   id: row.id,
   name: row.name,
+  handle: row.handle,
   instruction: row.instruction,
   description: row.description,
   avatar: row.avatar,
@@ -47,7 +54,7 @@ export const botsService = {
   async list(userId: string) {
     await db
       .insert(bots)
-      .values({ userId, isMain: true, ...MAIN_BOT })
+      .values({ userId, isMain: true, handle: MAIN_BOT_HANDLE, ...MAIN_BOT })
       .onConflictDoNothing();
     const rows = await db
       .select()
@@ -67,9 +74,14 @@ export const botsService = {
       if ((owned?.total ?? 0) >= BOT_LIMIT) {
         throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
       }
+      const handles = await tx
+        .select({ handle: bots.handle })
+        .from(bots)
+        .where(eq(bots.userId, userId));
+      const handle = freeBotHandle(botHandleOf(name), new Set(handles.map((each) => each.handle)));
       const [row] = await tx
         .insert(bots)
-        .values({ userId, name, instruction, description })
+        .values({ userId, name, handle, instruction, description })
         .returning();
       return view(row!);
     });

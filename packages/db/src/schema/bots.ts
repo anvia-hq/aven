@@ -23,6 +23,11 @@ export const bots = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    /**
+     * How bots name one another (decision 0065): a slug of the name it was made with, kept when it is
+     * renamed. `main` for the main bot; no other bot has it, nor `user`.
+     */
+    handle: text("handle").notNull(),
     /** What the person told the bot to be like. */
     instruction: text("instruction").notNull(),
     /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
@@ -49,6 +54,7 @@ export const bots = pgTable(
   },
   (table) => [
     index("bots_user_idx").on(table.userId),
+    uniqueIndex("bots_user_handle_idx").on(table.userId, table.handle),
     // At most one main bot per user.
     uniqueIndex("bots_user_main_idx")
       .on(table.userId)

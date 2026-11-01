@@ -12,9 +12,37 @@ export const BOT_LIMIT = 20;
 export const BOT_MESSAGE_MAX = 4000;
 export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;
 
+/** The handle of the person's main bot, and what the person is called when a bot writes to them (decision 0065). */
+export const MAIN_BOT_HANDLE = "main";
+export const USER_HANDLE = "user";
+// What no other bot may be called: the app's own notes, the person and the main bot.
+const RESERVED_HANDLES: readonly string[] = [MAIN_BOT_HANDLE, USER_HANDLE, "system"];
+
+/** The handle a bot of this name starts with: lowercase words joined by dashes, 30 characters at most. */
+export function botHandleOf(name: string) {
+  const slug = name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, 30)
+    .replace(/^-+|-+$/g, "");
+  if (!slug) return "bot";
+  return RESERVED_HANDLES.includes(slug) ? `${slug}-bot` : slug;
+}
+
+/** `handle` if no handle of `taken` is it, else `handle-2`, `handle-3` and so on. */
+export function freeBotHandle(handle: string, taken: ReadonlySet<string>) {
+  let free = handle;
+  for (let suffix = 2; taken.has(free); suffix++) free = `${handle}-${suffix}`;
+  return free;
+}
+
 export type Bot = {
   id: string;
   name: string;
+  /** How bots name one another: set when the bot is made and kept when it is renamed (decision 0065). */
+  handle: string;
   /** What the person told the bot to be like; the bot's own rules for messaging come on top of it. */
   instruction: string;
   /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
