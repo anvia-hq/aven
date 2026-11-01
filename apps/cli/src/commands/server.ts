@@ -77,6 +77,20 @@ export async function serverStart() {
   await waitUntilHealthy(dir);
 }
 
+/**
+ * Starts what is stopped and applies changes to `.env` or the compose file, then restarts the server
+ * and the web entry point: `up -d` leaves a container whose configuration did not change running,
+ * so the server would keep what it read at its start (the GitHub App, for one) after a change made
+ * in the database.
+ */
+export async function serverRestart() {
+  const dir = serverDir();
+  await readServerEnv(dir);
+  await runCompose(dir, ["up", "-d"]);
+  await runCompose(dir, ["restart", "server", "web"]);
+  await waitUntilHealthy(dir);
+}
+
 /** Removes the containers and keeps the database's volume. */
 export async function serverStop() {
   await runCompose(serverDir(), ["down"]);

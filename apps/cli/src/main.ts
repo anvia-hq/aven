@@ -2,6 +2,7 @@ import { parseArgs, type Args } from "./args";
 import {
   serverInstall,
   serverLogs,
+  serverRestart,
   serverStart,
   serverStatus,
   serverStop,
@@ -41,7 +42,7 @@ Server:
               Install and start the server (Postgres, API and web) in ~/.aven/server
   start       Start the server
   stop        Stop it; the database is kept
-  restart     Start again, applying changes to .env
+  restart     Restart the server, applying changes to .env
   status      Show what runs and whether it answers
   logs [service] [--follow]
 
@@ -87,7 +88,8 @@ async function main(argv: string[]) {
       return;
     case "server":
       if (sub === "install") return serverInstall(args);
-      if (sub === undefined || sub === "start" || sub === "restart") return serverStart();
+      if (sub === undefined || sub === "start") return serverStart();
+      if (sub === "restart") return serverRestart();
       if (sub === "stop") return serverStop();
       if (sub === "status") return serverStatus();
       if (sub === "logs") return serverLogs(args.positionals[2], follows(args));
@@ -111,8 +113,9 @@ async function main(argv: string[]) {
     case "update":
       return update(args);
     case "start":
-    case "restart":
       return serverStart();
+    case "restart":
+      return serverRestart();
     case "stop":
       return serverStop();
     case "status":
