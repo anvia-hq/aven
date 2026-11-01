@@ -1,4 +1,4 @@
-import { Archive, Cloudy, Plus } from "@mynaui/icons-react";
+import { Archive, Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 
 import { Button } from "@/components/button";
@@ -8,6 +8,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/sidebar";
+import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
 import { useArchiveThread } from "../hooks/use-archive-thread";
@@ -18,8 +20,13 @@ export function SidebarThreads() {
   const navigate = useNavigate();
   const threads = useThreads().threads.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
+  const { projects } = useProjects();
   const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  function projectName(thread: Thread) {
+    return projects.find((project) => project.id === thread.projectId)?.name ?? "";
+  }
 
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
@@ -46,11 +53,14 @@ export function SidebarThreads() {
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
             >
-              <Cloudy
-                className={thread.running ? "animate-pulse" : "text-muted-foreground"}
-                aria-label={hostLabel(thread)}
+              <ProjectTile
+                projectId={thread.projectId}
+                name={projectName(thread)}
+                className={thread.running ? "animate-pulse" : undefined}
               />
-              <span className="flex-1 truncate">{thread.title}</span>
+              <span className="flex-1 truncate" title={hostLabel(thread)}>
+                {thread.title}
+              </span>
             </SidebarMenuButton>
             <SidebarMenuAction
               showOnHover
