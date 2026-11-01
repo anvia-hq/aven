@@ -1,6 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type { BotMemoryParams } from "@aven/protocol/runtime-wire";
 import { BotReplies, type CreateBotReplyAgent } from "@aven/runtime-client/bot-replies";
+import { noProcesses } from "@aven/runtime-client/thread-processes";
 
 import { answerBotMemory } from "../memory-answer";
 import type { BotReplier } from "../runner";
@@ -22,7 +23,11 @@ export function loopbackReplier(options: {
         const replies = new BotReplies({
           // No computer: the bot only talks.
           sandbox: {
-            acquire: async () => ({ tools: [], hasRunningProcesses: async () => false }),
+            acquire: async () => ({
+              tools: [],
+              hasRunningProcesses: async () => false,
+              processes: noProcesses,
+            }),
             desktop: () => undefined,
             workspace: async () => undefined,
             release: async () => undefined,

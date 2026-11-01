@@ -14,6 +14,7 @@ import { ArtifactStore } from "../artifacts";
 import { SkillStore } from "../skills";
 import { UploadStore } from "../uploads";
 import type { ThreadSandbox, ThreadWorkspaces } from "../sandbox";
+import { threadProcesses } from "../thread-processes";
 import { hasRunningProcesses, sandboxTools } from "../thread-tools";
 
 const encoder = new TextEncoder();
@@ -292,6 +293,7 @@ export function directoryWorkspaces(
       return {
         tools: sandboxTools(current, { id: thread.id, artifacts }),
         hasRunningProcesses: () => hasRunningProcesses(current),
+        processes: threadProcesses(current, () => true),
       };
     },
     artifacts,

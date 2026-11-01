@@ -34,9 +34,11 @@ import { identitySignInCommand } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { runCommand } from "./run-command";
+import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import type { SnapshotStore } from "./snapshots";
 import { startedOnUse } from "./started-on-use";
+import { threadProcesses, type ThreadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 
@@ -87,6 +89,8 @@ export type ThreadSandbox = {
   tools: readonly AnyTool[];
   /** Whether a process the agent started there, such as a dev server, is still running. */
   hasRunningProcesses(): Promise<boolean>;
+  /** The processes in the container, for a person to see and stop (decision 0071); never starts it. */
+  processes: ThreadProcesses;
   /**
    * Starts the container now if it is not running, and resolves once it is up. A thread's is
    * started by `acquire`; one acquired without a repository is started by its first tool, or by
@@ -302,6 +306,8 @@ export class Sandboxes implements ThreadWorkspaces {
   #starting = new Map<string, Promise<void>>();
   // The project's variables the thread's current run was given, in memory only (decision 0045).
   #projectEnv = new Map<string, Readonly<Record<string, string>>>();
+  // What hides the secrets among them from what a person is shown of the thread's processes.
+  #redactors = new Map<string, ReturnType<typeof secretRedactor>>();
 
   private constructor(
     config: SandboxConfig,
@@ -379,6 +385,11 @@ export class Sandboxes implements ThreadWorkspaces {
       // A container that is gone has nothing running, and asking it would wait for a daemon.
       hasRunningProcesses: async () =>
         this.#hub.isConnected(thread.id) && (await hasRunningProcesses(runtime)),
+      processes: threadProcesses(
+        runtime,
+        () => this.#hub.isConnected(thread.id),
+        () => this.#redactors.get(thread.id),
+      ),
       start,
     };
   }
@@ -435,6 +446,7 @@ export class Sandboxes implements ThreadWorkspaces {
   async #teardown(threadId: string) {
     this.#running.delete(threadId);
     this.#projectEnv.delete(threadId);
+    this.#redactors.delete(threadId);
     this.#dropTokens(threadId);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
@@ -501,6 +513,9 @@ export class Sandboxes implements ThreadWorkspaces {
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
     if (env?.length) this.#projectEnv.set(threadId, envOf(env));
     else this.#projectEnv.delete(threadId);
+    const redact = secretRedactor(env);
+    if (redact) this.#redactors.set(threadId, redact);
+    else this.#redactors.delete(threadId);
   }
 
   signInGithub(threadId: string, github: RunGithub | undefined) {

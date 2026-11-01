@@ -7,6 +7,7 @@ import {
   type DiffScope,
   type FilesCallParams,
   type FilesSearchParams,
+  type ProcessesCallParams,
 } from "@aven/protocol/runtime-wire";
 
 // The params of the control plane's calls, checked: the control plane is trusted, but a call of the
@@ -39,6 +40,13 @@ export function artifactsReadParams(params: unknown): ArtifactsReadParams {
   const { threadId, name } = asRecord(params);
   if (typeof threadId !== "string" || typeof name !== "string") throw invalid();
   return { threadId, name };
+}
+
+export function processesCallParams(params: unknown): ProcessesCallParams {
+  const { threadId, processId } = asRecord(params);
+  if (typeof threadId !== "string") throw invalid();
+  if (processId !== undefined && typeof processId !== "string") throw invalid();
+  return { threadId, processId };
 }
 
 /** Anything but a string `holder`, a number `leaseMs`, `force: true` or `bot: true` is left out. */

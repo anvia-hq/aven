@@ -18,6 +18,7 @@ import type { CreateBotReplyAgent } from "./bot-replies";
 import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { noProcesses } from "./thread-processes";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { fakeDesktop } from "./testing/fake-desktop";
 import { goalSessionMarker } from "./goal-report";
@@ -83,7 +84,7 @@ function slowSandbox() {
   const sandbox: ThreadWorkspaces = {
     async acquire(): Promise<ThreadSandbox> {
       await gate.promise;
-      return { tools: [], hasRunningProcesses: async () => busy.now };
+      return { tools: [], hasRunningProcesses: async () => busy.now, processes: noProcesses };
     },
     desktop: () => undefined,
     workspace: async () => undefined,
@@ -131,6 +132,55 @@ function connect(
   cleanups.push(() => runtime.stop(), plane.stop);
   return { plane, runtime };
 }
+
+describe("startRuntime processes", () => {
+  test("lists, reads and stops the processes of a thread's sandbox, and never starts one", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const fake = fakeDesktop();
+    const { plane, runtime } = connect({ sandbox: { ...workspaces, desktop: () => fake.desktop } });
+    await runtime.ready;
+    const ask = async (id: string, method: string, params: object) => {
+      plane.send({ type: "call", id, method, params } as never);
+      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      return plane.received.find((m) => m.type === "reply" && m.id === id);
+    };
+
+    // No sandbox is up: nothing is running, and asking did not start one.
+    expect(await ask("a", "processes.list", { threadId: "t1" })).toMatchObject({
+      ok: true,
+      result: { processes: [] },
+    });
+    expect(workspaces.sandboxes.size).toBe(0);
+    expect(await ask("b", "processes.stop", { threadId: "t1", processId: "x" })).toMatchObject({
+      ok: false,
+    });
+
+    // A person wakes the sandbox; the agent left a server running.
+    await ask("w", "desktop.wake", { threadId: "t1" });
+    const started = await workspaces.sandboxes
+      .get("t1")!
+      .startProcess({ command: "sh", args: ["-c", "echo up; sleep 30"] });
+    await Bun.sleep(300);
+
+    expect(await ask("c", "processes.list", { threadId: "t1" })).toMatchObject({
+      result: { processes: [{ id: started.id, command: "echo up; sleep 30", status: "running" }] },
+    });
+    expect(
+      await ask("d", "processes.logs", { threadId: "t1", processId: started.id }),
+    ).toMatchObject({ result: { stdout: "up\n", stderr: "", truncated: false } });
+    expect(
+      await ask("e", "processes.stop", { threadId: "t1", processId: started.id }),
+    ).toMatchObject({ result: { processes: [{ id: started.id, status: "stopped" }] } });
+    expect(await ask("f", "processes.stop", { threadId: "t1", processId: "nope" })).toMatchObject({
+      ok: false,
+    });
+    expect(await ask("g", "processes.list", { threadId: 7 })).toMatchObject({
+      ok: false,
+      error: "Invalid parameters",
+    });
+  });
+});
 
 describe("startRuntime desktops", () => {
   const viewerId = crypto.randomUUID();
@@ -288,7 +338,7 @@ describe("startRuntime", () => {
     cleanups.push(fixture.cleanup);
     const sandbox: ThreadWorkspaces = {
       async acquire(): Promise<ThreadSandbox> {
-        return { tools: [], hasRunningProcesses: async () => false };
+        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
       desktop: () => undefined,
       workspace: async () => fixture.root,
@@ -349,7 +399,7 @@ describe("startRuntime", () => {
     const saved: { thread: unknown; access: unknown }[] = [];
     const sandbox: ThreadWorkspaces = {
       async acquire(): Promise<ThreadSandbox> {
-        return { tools: [], hasRunningProcesses: async () => false };
+        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
       desktop: () => undefined,
       workspace: async () => undefined,
@@ -398,7 +448,7 @@ describe("startRuntime", () => {
       const identities: { threadId: string; identity: unknown; controlPlane: string }[] = [];
       const sandbox: ThreadWorkspaces = {
         async acquire(): Promise<ThreadSandbox> {
-          return { tools: [], hasRunningProcesses: async () => false };
+          return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
         },
         desktop: () => undefined,
         workspace: async () => undefined,
@@ -493,7 +543,7 @@ describe("startRuntime", () => {
       const given: { threadId: string; env: unknown }[] = [];
       const sandbox: ThreadWorkspaces = {
         async acquire(): Promise<ThreadSandbox> {
-          return { tools: [], hasRunningProcesses: async () => false };
+          return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
         },
         desktop: () => undefined,
         workspace: async () => undefined,
@@ -554,7 +604,11 @@ describe("startRuntime", () => {
       const { plane, runtime } = connect({
         sandbox: {
           ...sandbox,
-          acquire: async () => ({ tools: [exec], hasRunningProcesses: async () => false }),
+          acquire: async () => ({
+            tools: [exec],
+            hasRunningProcesses: async () => false,
+            processes: noProcesses,
+          }),
         },
         createAgent: ({ id, tools }) => ({
           agent: new Agent({
@@ -618,7 +672,11 @@ describe("startRuntime", () => {
     const { plane, runtime } = connect({
       sandbox: {
         ...sandbox,
-        acquire: async () => ({ tools: [], hasRunningProcesses: async () => false }),
+        acquire: async () => ({
+          tools: [],
+          hasRunningProcesses: async () => false,
+          processes: noProcesses,
+        }),
       },
       createAgent: ({ id }) => ({
         agent: new Agent({
@@ -660,7 +718,7 @@ describe("startRuntime", () => {
     const sandbox: ThreadWorkspaces = {
       async acquire(_thread, repo): Promise<ThreadSandbox> {
         given = await repo?.();
-        return { tools: [], hasRunningProcesses: async () => false };
+        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
       desktop: () => undefined,
       workspace: async () => undefined,
@@ -809,6 +867,7 @@ describe("startRuntime", () => {
           await asking.promise;
           return false;
         },
+        processes: noProcesses,
       }),
     };
     let runs = 0;
@@ -1546,7 +1605,11 @@ describe("startRuntime runs", () => {
       });
       const sandbox: ThreadWorkspaces = {
         ...base,
-        acquire: async () => ({ tools: [exec], hasRunningProcesses: async () => false }),
+        acquire: async () => ({
+          tools: [exec],
+          hasRunningProcesses: async () => false,
+          processes: noProcesses,
+        }),
       };
       const hold = Promise.withResolvers<void>();
       const secondSession = Promise.withResolvers<void>();

@@ -14,6 +14,7 @@ import {
   type CreateBotReplyAgent,
 } from "./bot-replies";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { noProcesses } from "./thread-processes";
 
 const tool = (name: string): AnyTool =>
   createTool({ name, description: name, inputSchema: z.object({}), execute: async () => "ok" });
@@ -76,6 +77,7 @@ const sandboxWith = (
     return {
       tools: [exec(run), tool("show_image")],
       hasRunningProcesses: async () => false,
+      processes: noProcesses,
     };
   },
   desktop: () => undefined,

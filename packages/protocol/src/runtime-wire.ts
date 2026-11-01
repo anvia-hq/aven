@@ -118,12 +118,36 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
 export const ARTIFACT_NAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
 
+/**
+ * What the control plane asks of a runner about the processes the agent left running in a thread's
+ * sandbox (decision 0071): `processes.list` takes `{ threadId }`, `processes.stop` and
+ * `processes.logs` take `{ threadId, processId }`. None of them starts a sandbox that is not up.
+ */
+export type ProcessesCallMethod = "processes.list" | "processes.stop" | "processes.logs";
+
+/** A process the agent started in a thread's sandbox, with `start_process` or a command run in the background. */
+export type ProcessView = {
+  id: string;
+  /** What was run, as the agent wrote it: a `sh -c` command shows its script. */
+  command: string;
+  cwd?: string;
+  status: "running" | "exited" | "stopped";
+  exitCode?: number;
+  /** ISO times. */
+  startedAt: string;
+  endedAt?: string;
+};
+
+/** What a process printed, as the latest of each stream; `truncated` when older output was dropped. */
+export type ProcessLogs = { stdout: string; stderr: string; truncated: boolean };
+
 /** Everything the control plane can `call` a runner for. */
 export type RunnerCallMethod =
   | DesktopCallMethod
   | DiffCallMethod
   | FilesCallMethod
-  | ArtifactsCallMethod;
+  | ArtifactsCallMethod
+  | ProcessesCallMethod;
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {
@@ -146,6 +170,8 @@ export type FilesSearchParams = { threadId: string; query: string };
 export const FILE_SEARCH_LIMIT = 50;
 
 export type ArtifactsReadParams = { threadId: string; name: string };
+
+export type ProcessesCallParams = { threadId: string; processId?: string };
 
 /**
  * A file sent with a message, its bytes in base64 (decision 0034). The runner copies it into the
@@ -467,4 +493,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 32;
+export const WIRE_VERSION = 33;

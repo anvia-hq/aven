@@ -20,6 +20,7 @@ import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
 import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
+import { processesRouter } from "./modules/processes/router";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { preferencesRouter } from "./modules/preferences/router";
@@ -46,6 +47,7 @@ const app = new Elysia()
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))
   .use(filesRouter(runtimeHub))
+  .use(processesRouter(runtimeHub))
   .use(githubRouter())
   .use(platformRouter)
   .use(preferencesRouter)

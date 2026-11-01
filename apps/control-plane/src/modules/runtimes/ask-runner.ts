@@ -4,6 +4,7 @@ import type {
   DiffGetParams,
   FilesCallParams,
   FilesSearchParams,
+  ProcessesCallParams,
   RunnerCallMethod,
 } from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
@@ -36,7 +37,8 @@ type CallParams =
   | DesktopCallParams
   | DiffGetParams
   | FilesCallParams
-  | FilesSearchParams;
+  | FilesSearchParams
+  | ProcessesCallParams;
 
 /**
  * How the runner that holds a computer is found: `scope` is whose it is, an organization for a

@@ -8,6 +8,7 @@ import {
   type ControlPlaneToRuntime,
   type CallMethod,
   type FilesCallMethod,
+  type ProcessesCallMethod,
   type RunnerCallMethod,
   type RuntimeCalls,
   type RuntimeToControlPlane,
@@ -20,6 +21,7 @@ import {
   diffGetParams,
   filesCallParams,
   filesSearchParams,
+  processesCallParams,
 } from "./call-params";
 import {
   BotReplies,
@@ -305,6 +307,17 @@ export function startRuntime(options: RuntimeOptions) {
     return (await options.sandbox.artifacts?.read(threadId, name)) ?? null;
   }
 
+  // The processes in a thread's sandbox. A sandbox that is not up has none, and these calls never
+  // start one (decision 0071); a stop or a read of the logs of a process that is not there is an error.
+  async function processesOf(method: ProcessesCallMethod, params: unknown) {
+    const { threadId, processId } = processesCallParams(params);
+    const box = boxes.get(threadId);
+    if (method === "processes.list") return { processes: (await box?.processes.list()) ?? [] };
+    if (!box || !processId) throw new Error("No such process");
+    if (method === "processes.stop") return { processes: await box.processes.stop(processId) };
+    return box.processes.logs(processId);
+  }
+
   // Starts a thread's sandbox without a run, for a person who wants its desktop (decision 0039); the
   // idle clock frees it again if nothing uses it. A thread that never ran has no workspace to
   // start it on, and the clone is made by a run. A bot's computer has no repository: it is started
@@ -335,6 +348,8 @@ export function startRuntime(options: RuntimeOptions) {
     if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
     if (method === "files.search") return searchOf(params);
+    if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
+      return processesOf(method, params);
     return viewers.call(method, params);
   }
 
