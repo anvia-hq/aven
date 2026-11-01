@@ -22,6 +22,8 @@ export type GithubStatus = {
   configured: boolean;
   /** Where to send the browser to install the app on a GitHub account; null when not configured. */
   installUrl: string | null;
+  /** The person is a platform owner and there is no app yet: they can have it created from here. */
+  canSetUp: boolean;
 };
 
 /** The person's own GitHub account, connected so that what they ship is theirs on GitHub. */

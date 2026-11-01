@@ -18,6 +18,13 @@ provider in Settings and start a thread. On Windows, use WSL2.
 
 Everything lives in `~/.aven` (the server's `.env` with its secrets, the runner's settings and log).
 
+## Connect GitHub
+
+Projects are GitHub repositories. In **Settings > Platform** (as the owner whose email you gave the
+installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
+and to install it on your account or organization, and Aven keeps the credentials itself. Nothing
+to copy into `.env`.
+
 ## Your own domain, with HTTPS
 
 For a server that other machines or people reach, point a DNS name at it, open ports 80 and 443 and

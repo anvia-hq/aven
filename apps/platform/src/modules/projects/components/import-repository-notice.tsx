@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/button";
 
 import type { ImportStage } from "../types";
+import { GithubNotSetUp } from "./github-not-set-up";
 
 type Props = {
   stage: Exclude<ImportStage, { kind: "ready" }>;
@@ -16,12 +17,7 @@ export function ImportRepositoryNotice({ stage, installUrl }: Props) {
     case "failed":
       return <p className="text-sm text-destructive">{stage.message}</p>;
     case "not-configured":
-      return (
-        <p className="text-sm text-muted-foreground">
-          GitHub is not set up on this control plane. Set the <code>GITHUB_APP_*</code> variables,
-          as described in <code>.env.example</code>.
-        </p>
-      );
+      return <GithubNotSetUp />;
     case "connect":
       return (
         <div className="flex flex-col items-start gap-3">
