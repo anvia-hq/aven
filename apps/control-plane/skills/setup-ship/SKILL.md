@@ -64,6 +64,7 @@ Rules:
 - **Commands, not wishes.** "Run the checks" is weak; `bun run typecheck && bun test` is what the agent can run.
 - **Say what to do when a step fails.** Stop and tell the user, or fix and retry, or skip: decide for each.
 - **Name the base branch.** The prompt ends with a line naming the default branch; if pull requests go elsewhere, say so with `--base`.
+- **Aven adds the rest.** After the file it appends where the thread is, its pull requests so far and, for a ship that is a new pull request, how to branch off the default branch (a branch of the thread starts with its own name, `aven/<id>-<slug>`); do not repeat that, and write the file for the first pull request.
 - **Nothing the agent cannot do.** It acts as the user with `gh` and `git`, and has a desktop browser in its sandbox but no access to other systems.
 - **No secrets.** The file is committed.
 - Under 10,000 characters, and shorter is better: a long prompt is followed less carefully.

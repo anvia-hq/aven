@@ -1,6 +1,6 @@
 # The agent acts as the person on GitHub, and shipping is an agent run
 
-Status: accepted. Supersedes 0042 (the agent fetches through the runner) once `gh` is signed in, and the fixed pipeline of 0040 and 0041 as the way to ship; the connection of a person's GitHub account in 0041 stands and is what this builds on. Follows Amp, whose orbs have `gh` "preinstalled and signed in" and push "as you".
+Status: accepted; 0069 changes its one-pull-request-per-thread parts. Supersedes 0042 (the agent fetches through the runner) once `gh` is signed in, and the fixed pipeline of 0040 and 0041 as the way to ship; the connection of a person's GitHub account in 0041 stands and is what this builds on. Follows Amp, whose orbs have `gh` "preinstalled and signed in" and push "as you".
 
 ## Context
 
