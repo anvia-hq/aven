@@ -21,16 +21,23 @@ describe("tileStyle", () => {
     expect(tileStyle("project-1")).toEqual(tileStyle("project-1"));
   });
 
-  test("draws a diagonal gradient between two colors", () => {
-    expect(tileStyle("project-1").backgroundImage).toMatch(
-      /^linear-gradient\(135deg, #[0-9a-f]{6}, #[0-9a-f]{6}\)$/,
-    );
+  test("blends a base color with three accents under a light from above", () => {
+    const style = tileStyle("project-1");
+    expect(style.backgroundColor).toMatch(/^#[0-9a-f]{6}$/);
+    const layers = style.backgroundImage.split(/, (?=linear|radial)/);
+    expect(layers.map((layer) => layer.split("(")[0])).toEqual([
+      "linear-gradient",
+      "radial-gradient",
+      "radial-gradient",
+      "radial-gradient",
+    ]);
   });
 
-  test("gives projects different colors, not one for all", () => {
+  test("gives projects different looks, not one for all", () => {
     const seen = new Set(
-      Array.from({ length: 40 }, (_, index) => tileStyle(`id-${index}`).backgroundImage),
+      Array.from({ length: 200 }, (_, index) => tileStyle(`id-${index}`).backgroundImage),
     );
-    expect(seen.size).toBeGreaterThan(5);
+    // Ten palettes turned four ways: forty looks, most of which 200 ids will have met.
+    expect(seen.size).toBeGreaterThan(25);
   });
 });
