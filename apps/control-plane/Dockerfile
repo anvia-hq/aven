@@ -10,6 +10,7 @@ WORKDIR /app
 # here: a frozen lockfile does not install when one of its workspaces is missing.
 COPY package.json bun.lock ./
 COPY patches patches
+COPY apps/cli/package.json apps/cli/
 COPY apps/control-plane/package.json apps/control-plane/
 COPY apps/platform/package.json apps/platform/
 COPY apps/runtime/package.json apps/runtime/

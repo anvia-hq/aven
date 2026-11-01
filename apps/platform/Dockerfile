@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY package.json bun.lock ./
 COPY patches patches
+COPY apps/cli/package.json apps/cli/
 COPY apps/control-plane/package.json apps/control-plane/
 COPY apps/platform/package.json apps/platform/
 COPY apps/runtime/package.json apps/runtime/
