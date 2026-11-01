@@ -7,7 +7,7 @@ Guidance for AI agents and contributors working in this repo.
 Bun workspace monorepo (TypeScript, ESM).
 
 ```
-apps/              Applications (control-plane, platform, runtime)
+apps/              Applications (control-plane, platform, runtime, cli)
 clients/           Native clients (macos: SwiftPM, no TypeScript)
 packages/          Shared internal packages (db, agents, protocol)
 docs/              Project knowledge (see docs/README.md)
@@ -64,6 +64,10 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 ## Self-hosting (deploy/)
 
 `deploy/docker-compose.yml` runs Postgres, `server` (`apps/control-plane/Dockerfile`, migrations on start, `AVEN_LOCAL_RUNNER=host`: the built-in runner is a process on the machine that connects with `AVEN_LOCAL_RUNNER_TOKEN`, decision 0073) and `web` (`apps/platform/Dockerfile`: the built platform behind Caddy, which proxies `/api/*` to the server with the prefix stripped and is the one published port). `deploy/docker-compose.build.yml` builds the images from the checkout (`docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`); `deploy/env.example` is the install's `.env`, apart from the development `.env.example`. Both Dockerfiles build from the repository root and copy every workspace's `package.json` (a frozen lockfile needs them all). Runners are separate machines that connect out; install, update and the release pipeline are described in `docs/decision/0073-install-and-update-with-a-script.md`.
+
+## apps/cli
+
+The `aven` command (decision 0073), one Bun binary (`bun run --cwd apps/cli build`, `dist/aven`; the release sets its version with `--define AVEN_VERSION`). `aven server install|start|stop|restart|status|logs` runs the compose file in `~/.aven/server` (`AVEN_HOME` moves `~/.aven`): the compose file and env template of `deploy/` are embedded in the binary, so it writes those of its own version, makes a new `.env` with random secrets (`env-file.ts`, `server-files.ts`) and never touches an existing one. `aven runner install --url <address> --token <token>` makes the machine a runner: it checks Docker and git, pulls the sandbox image, writes `~/.aven/runner.env` and installs a launchd agent or systemd user unit (`service-files.ts` makes the files, `service-manager.ts` drives them) that runs `aven runner run`, which is `runRunner` of `packages/runtime-client/src/run-runner.ts`, also the entry of `apps/runtime`. For a server in compose, the token is its `AVEN_LOCAL_RUNNER_TOKEN` and the runner connects as the built-in one. Try a build against local images with `AVEN_SERVER_IMAGE=aven-server AVEN_WEB_IMAGE=aven-web aven server install --release dev`.
 
 ## Ports
 
