@@ -12,7 +12,7 @@ A thread's branch was fixed at `aven/<id prefix>` when its workspace was cloned.
 - **A thread's branches start with its prefix.** The first is still `aven/<id prefix>`; any further one is `aven/<id prefix>-<short-slug>`. That is how Aven finds the pull requests of a thread without the agent telling it: after every run it reads the repository's newest hundred pull requests and keeps those whose head is in the repository itself (not a fork) and is the prefix or starts with `<prefix>-`, adding new ones and bringing the title and state of known ones up to date. A pull request that falls out of the newest hundred keeps the state it last had.
 - **Ship takes a mode.** `POST /threads/:id/ship` takes `mode`: `update` pushes the branch that is checked out and updates its open pull request; `new` opens a separate pull request for the work that does not belong to an earlier one, on a new branch from the default branch. Without a mode, the newest pull request decides: `update` while it is open, `new` otherwise (none yet, merged or closed).
 - **The prompt says what exists.** Whichever prompt is sent, the repository's own `.aven/ship.md` or the default, is followed by the thread's pull requests with the state Aven last saw, the mode, and the branch naming rule. The state may be stale, so the agent is told to check with `gh` before relying on it.
-- **The web client** offers "New PR" beside "Update PR" and lists the thread's pull requests.
+- **The web client** says Update PR while the newest pull request is open and New PR once it is merged or closed, and a menu beside the button offers "Ship as a new PR" (while one is open) and links to every pull request of the thread.
 
 ## Consequences
 

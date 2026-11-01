@@ -31,5 +31,3 @@ export const threadPullRequests = pgTable(
     index("thread_pull_requests_thread_idx").on(table.threadId),
   ],
 );
-
-export type ThreadPullRequestRow = typeof threadPullRequests.$inferSelect;
