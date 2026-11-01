@@ -1,6 +1,11 @@
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
-import type { Bot } from "@aven/protocol/bots";
+import {
+  BOT_MESSAGES_PER_REPLY,
+  MAIN_BOT_HANDLE,
+  parseBotPrompt,
+  type Bot,
+} from "@aven/protocol/bots";
 import type { BotPeer, BotSendParams, BotSent, BotUpdateParams } from "@aven/protocol/runtime-wire";
 
 import type { RunGateway } from "../runtimes/gateway";
@@ -18,7 +23,7 @@ export type BotKeeper = {
   /** `from` writes to another of the person's bots by its handle; `hops` messages between bots led to it (decision 0065). */
   deliver(userId: string, from: Bot, hops: number, handle: string, text: string): Promise<BotSent>;
   /** A bot just made says hello to its person, unasked (decision 0063). */
-  greet(userId: string, botId: string): Promise<void>;
+  greet(userId: string, botId: string, hops: number): Promise<void>;
 };
 
 // The bot's computer is on a runner, so its agent runs there (decision 0059): it is sent each
@@ -54,6 +59,13 @@ export class RemoteBotReplier implements BotReplier {
     // Throws when the model cannot be used (no key); the runner gets a token, not the key.
     const runModel = this.gateway.issue(replyId, model);
     const ended = Promise.withResolvers<void>();
+    // Who this reply answers: only the person's own message, or the main bot passing it on, may
+    // change the bot, and only the person's own may make one. What a note or another bot says is
+    // not their word, whatever the model makes of it (decision 0065).
+    const { from, note } = parseBotPrompt(prompt);
+    const personsWord = !note && from === undefined;
+    const mainBotsWord = !note && from === MAIN_BOT_HANDLE;
+    let written = 0;
     const sink = {
       say,
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
@@ -61,19 +73,33 @@ export class RemoteBotReplier implements BotReplier {
       memory: answerBotMemory(this.store, { sessionId: bot.id, userId }),
       create: async ({ name, instruction, description }: NewBot) => {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");
+        if (!personsWord)
+          throw new Error("Make a bot only when the person asks you to, in their own message");
         const made = await this.bots.create(userId, { name, instruction, description });
         // Not waited for: the new bot's hello is its own reply, in its own chat, and a person with
         // no model to answer with is told that when they speak to it, not now.
-        this.bots.greet(userId, made.id).catch((error: unknown) => {
+        this.bots.greet(userId, made.id, hops).catch((error: unknown) => {
           console.warn(`Bot ${made.id} could not greet its person:`, error);
         });
         return { id: made.id, name: made.name, handle: made.handle };
       },
       // The sender is the reply's bot, whichever bot the runner might name.
-      send: ({ to, text }: Omit<BotSendParams, "replyId">) =>
-        this.bots.deliver(userId, bot, hops, to, text),
+      send: async ({ to, text }: Omit<BotSendParams, "replyId">) => {
+        if (written >= BOT_MESSAGES_PER_REPLY) {
+          throw new Error(
+            `You have written to bots ${BOT_MESSAGES_PER_REPLY} times in this reply. Tell the person instead.`,
+          );
+        }
+        written += 1;
+        return this.bots.deliver(userId, bot, hops, to, text);
+      },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
+        if (!personsWord && !mainBotsWord) {
+          throw new Error(
+            "Change yourself only when the person asks you to, or the main bot passes it on",
+          );
+        }
         const changed = await this.bots.update(userId, bot.id, { name, description, instruction });
         if (!changed) throw new Error("This bot no longer exists");
         return { name: changed.name, description: changed.description };

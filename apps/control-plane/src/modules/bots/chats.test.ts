@@ -214,13 +214,13 @@ run("createBotChats (postgres)", async () => {
     });
     const botChats = createBotChats(runner);
 
-    await botChats.greet(alice, scout.id);
+    await botChats.greet(alice, scout.id, 0);
     await Bun.sleep(20);
 
     expect(await chatOf(runner, scout.id, alice)).toEqual([
       { id: "m-0", role: "bot", text: "Hi, I am Hello" },
     ]);
-    await expect(botChats.greet(bob, scout.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(botChats.greet(bob, scout.id, 0)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test("a bot cannot write to itself, to a bot that is not its person's, or to one that is not there", async () => {
@@ -238,6 +238,48 @@ run("createBotChats (postgres)", async () => {
     await expect(botChats.deliver(alice, main!, 0, "ghost", "hi")).rejects.toBeInstanceOf(
       UnprocessableError,
     );
+  });
+
+  test("a bot with a lot to answer refuses more, and the sender's chat has only what was sent", async () => {
+    const [main] = await botsService.list(alice);
+    const busy = await botsService.create(alice, { name: "Busy", instruction: "x" });
+    // Its first reply never ends, so what comes after waits behind it.
+    const runner = runnerWith({
+      store: keeping(),
+      createAgent: ({ bot, send, memory }) =>
+        createBotAgent({
+          model: scriptedModel([[toolCall("send_message", { text: "late" })], [text("")]]),
+          id: bot.id,
+          name: bot.name,
+          handle: bot.handle,
+          peers: [],
+          instruction: bot.instruction,
+          send,
+          memory,
+        }),
+      pause: () => new Promise<void>(() => undefined),
+    });
+    const botChats = createBotChats(runner);
+    const watching = runner.events(main!.id, alice, new AbortController().signal);
+    await watching.next();
+    const noted: string[] = [];
+    void (async () => {
+      for await (const event of watching) {
+        if (event?.type === "message") noted.push(event.message.text);
+      }
+    })();
+
+    const attempts = await Promise.allSettled(
+      Array.from({ length: 8 }, (_, i) =>
+        botChats.deliver(alice, main!, 0, busy.handle, `task ${i}`),
+      ),
+    );
+    await Bun.sleep(10);
+
+    const refused = attempts.filter((attempt) => attempt.status === "rejected");
+    expect(refused.length).toBeGreaterThan(0);
+    expect(refused[0]).toMatchObject({ reason: { message: expect.stringContaining("a lot") } });
+    expect(noted).toHaveLength(attempts.length - refused.length);
   });
 
   test("messages between bots in a long chain are cut off, so two bots cannot answer each other for ever", async () => {

@@ -124,6 +124,9 @@ export function parseBotPrompt(prompt: string): { from?: string; note?: boolean;
  */
 export const BOT_MAX_HOPS = 8;
 
+/** How many messages to other bots one reply may write, so one bot cannot fill the others' queues (decision 0065). */
+export const BOT_MESSAGES_PER_REPLY = 10;
+
 /** What a client hears about a bot's chat (decision 0058): not a `RunEvent`, which would join several messages into one. */
 export type BotEvent =
   /** The whole chat, sent when a client connects. `typing` is whether the bot is at work on a reply. */

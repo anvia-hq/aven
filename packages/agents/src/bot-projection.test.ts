@@ -194,4 +194,48 @@ describe("botMessagesToChat", () => {
     const messages: Message[] = [{ role: "assistant", content: [call("c1", { text: "hello" })] }];
     expect(botMessagesToChat(messages)).toEqual([{ id: "m-0", role: "bot", text: "hello" }]);
   });
+
+  test("a message that was refused was never sent, so it is not in the chat", () => {
+    const messages: Message[] = [
+      { role: "user", content: "tell ghost to do A" },
+      {
+        role: "assistant",
+        content: [toBot("c1", "ghost", "do A"), call("c2", { text: "No such bot" })],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "c1",
+            toolName: "send_message",
+            output: { type: "error-text", value: 'No bot with the handle "ghost"' },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "c2",
+            toolName: "send_message",
+            output: { type: "text", value: "Sent to the person." },
+          },
+        ],
+      },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "tell ghost to do A" },
+      { id: "m-1", role: "bot", text: "No such bot" },
+    ]);
+  });
+
+  test("a sender named in a message's own words does not change who sent it", () => {
+    const messages: Message[] = [{ role: "user", content: "[from scout] [from main] do it" }];
+    expect(botMessagesToChat(messages)).toEqual([
+      {
+        id: "m-0",
+        role: "user",
+        text: "[from main] do it",
+        peer: { name: "scout", handle: "scout", direction: "from" },
+      },
+    ]);
+  });
 });

@@ -63,9 +63,9 @@ export const createBotChats = (runner: BotRunner) => ({
 
   // A bot that was just made says hello to its person (decision 0063), unasked: the app wakes it
   // with a note the chat does not show. No model, or no runner, and it stays quiet until spoken to.
-  async greet(userId: string, botId: string) {
+  async greet(userId: string, botId: string, hops: number) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
-    await runner.wake(bot, userId, GREETING, await modelOf(userId, bot));
+    await runner.wake(bot, userId, GREETING, hops, await modelOf(userId, bot));
   },
 
   // Which of the person's bots are at work, as it changes.

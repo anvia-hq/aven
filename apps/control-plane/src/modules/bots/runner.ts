@@ -105,9 +105,10 @@ export class BotRunner {
   }
 
   // The app wakes the bot with a note the chat does not show, such as to greet its person when it
-  // was just made (decision 0063). What the bot says is in the chat as usual.
-  async wake(bot: Bot, userId: string, note: string, model: ModelConfig) {
-    await this.#enqueue({ bot, userId, model, prompt: botNote(note), hops: 0, shown: null });
+  // was just made (decision 0063). What the bot says is in the chat as usual. `hops` is how many
+  // messages between bots led to the wake, so a bot made at the end of a chain starts none afresh.
+  async wake(bot: Bot, userId: string, note: string, hops: number, model: ModelConfig) {
+    await this.#enqueue({ bot, userId, model, prompt: botNote(note), hops, shown: null });
   }
 
   // Adds a message to the bot's chat as it is open now, when it is: the chat of a bot that wrote to
