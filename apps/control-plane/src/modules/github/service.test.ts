@@ -9,7 +9,7 @@ beforeAll(() => {
 describe("install state", () => {
   test("is accepted for the organization and user it was made for", () => {
     const state = createState("org-1", "user-1");
-    expect(readState(state, "org-1", "user-1")).toEqual({ next: null });
+    expect(readState(state, "org-1", "user-1")).toEqual({ next: null, installationId: null });
   });
 
   test("is refused for another organization or user", () => {
@@ -27,16 +27,32 @@ describe("install state", () => {
   });
 });
 
+describe("the installation a state names", () => {
+  test("comes back with the state, and only for the user it was made for", () => {
+    const state = createState("org-1", "user-1", Date.now(), undefined, 42);
+    expect(readState(state, "org-1", "user-1")).toEqual({ next: null, installationId: 42 });
+    expect(readState(state, "org-1", "user-2")).toBeNull();
+  });
+
+  test("is none for a state made without one", () => {
+    const state = createState("org-1", "user-1", Date.now(), "/x");
+    expect(readState(state, "org-1", "user-1")).toEqual({ next: "/x", installationId: null });
+  });
+});
+
 describe("where the state sends the browser back to", () => {
   test("is the path it was made with", () => {
     const state = createState("org-1", "user-1", Date.now(), "/threads/abc?panel=diff");
-    expect(readState(state, "org-1", "user-1")).toEqual({ next: "/threads/abc?panel=diff" });
+    expect(readState(state, "org-1", "user-1")).toEqual({
+      next: "/threads/abc?panel=diff",
+      installationId: null,
+    });
   });
 
   test("is never another site, even in a state we signed", () => {
     for (const next of ["https://evil.test/x", "//evil.test/x", "/\\evil.test", "evil"]) {
       const state = createState("org-1", "user-1", Date.now(), next);
-      expect(readState(state, "org-1", "user-1")).toEqual({ next: null });
+      expect(readState(state, "org-1", "user-1")).toEqual({ next: null, installationId: null });
     }
   });
 });

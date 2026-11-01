@@ -35,33 +35,38 @@ export function createState(
   userId: string,
   now = Date.now(),
   next?: string,
+  installationId?: number,
 ) {
   const claims: unknown[] = [organizationId, userId, now];
-  if (next !== undefined) claims.push(next);
+  if (next !== undefined || installationId !== undefined) claims.push(next ?? null);
+  if (installationId !== undefined) claims.push(installationId);
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-/** What a `state` of ours carries when it was made for this organization and user, still fresh: where to go back to. Null otherwise. */
+/** What a `state` of ours carries when it was made for this organization and user, still fresh: where to go back to and the installation to attach, if it says. Null otherwise. */
 export function readState(
   state: string,
   organizationId: string,
   userId: string,
   now = Date.now(),
-): { next: string | null } | null {
+): { next: string | null; installationId: number | null } | null {
   const [payload, signature] = state.split(".");
   if (!payload || !signature) return null;
   const expected = Buffer.from(sign(payload));
   const given = Buffer.from(signature);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   try {
-    const [org, user, issuedAt, next] = JSON.parse(
+    const [org, user, issuedAt, next, installationId] = JSON.parse(
       Buffer.from(payload, "base64url").toString(),
     ) as unknown[];
     const fresh =
       typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
     if (org !== organizationId || user !== userId || !fresh) return null;
-    return { next: typeof next === "string" && isLocalPath(next) ? next : null };
+    return {
+      next: typeof next === "string" && isLocalPath(next) ? next : null,
+      installationId: typeof installationId === "number" ? installationId : null,
+    };
   } catch {
     return null;
   }
@@ -115,6 +120,15 @@ export function createGithubService(
       return `https://github.com/apps/${client.slug}/installations/new?state=${state}`;
     },
 
+    // An installation GitHub reported without our state, because the app was installed from its own
+    // page: the person authorizes again, with a state of ours that names the installation, so the
+    // attaching is checked against their own GitHub account like any other.
+    claimUrl(organizationId: string, userId: string, installationId: number) {
+      return client.authorizeUrl(
+        createState(organizationId, userId, Date.now(), undefined, installationId),
+      );
+    },
+
     // Where to send the browser so the person lets the app act as their GitHub account, and then
     // back to `next` (decision 0041).
     connectUrl(organizationId: string, userId: string, next?: string) {
@@ -136,13 +150,14 @@ export function createGithubService(
       }
       const grant = input.code ? await client.exchangeCode(input.code) : null;
       if (!grant) throw new InstallationNotAllowedError("GitHub did not confirm your account");
-      if (input.installationId !== undefined) {
-        if (!(await client.userCanUse(grant.accessToken, input.installationId))) {
+      const installationId = input.installationId ?? state.installationId ?? undefined;
+      if (installationId !== undefined) {
+        if (!(await client.userCanUse(grant.accessToken, installationId))) {
           throw new InstallationNotAllowedError(
             "GitHub did not confirm access to that installation",
           );
         }
-        const found = await client.installation(input.installationId);
+        const found = await client.installation(installationId);
         await db
           .insert(githubInstallations)
           .values({

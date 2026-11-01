@@ -9,7 +9,7 @@ import {
   installationParams,
   manifestQuery,
 } from "./schema";
-import { githubService } from "./service";
+import { githubService, InstallationNotAllowedError } from "./service";
 import { githubUserTokenService } from "./user-tokens";
 
 export const githubRouter = (
@@ -77,6 +77,15 @@ export const githubRouter = (
     .get(
       "/callback",
       async ({ query, organizationId, user, redirect }) => {
+        // GitHub sends no state when the app was installed from its own page, not from our link.
+        // Its code cannot be trusted then (a forged link could carry anyone's), so the person
+        // authorizes again through a state of ours that names the installation.
+        if (query.state === undefined) {
+          if (query.installation_id === undefined) {
+            throw new InstallationNotAllowedError("The GitHub connection link is invalid");
+          }
+          return redirect(service.claimUrl(organizationId, user.id, query.installation_id));
+        }
         const { next } = await service.connect(organizationId, user.id, {
           installationId: query.installation_id,
           state: query.state,

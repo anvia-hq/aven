@@ -34,6 +34,8 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       exchanged.push(code);
       return code === "good" ? grant : null;
     },
+    userCanUse: async (_token: string, installationId: number) => installationId !== 999,
+    installation: async (installationId: number) => ({ installationId, accountLogin: "acme" }),
   } as unknown as GithubClient;
   const service = createGithubService(client, {
     connect: async (userId, given) => {
@@ -182,7 +184,10 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
 
     expect(response.status).toBe(302);
     const state = new URL(response.headers.get("location")!).searchParams.get("state")!;
-    expect(readState(state, owner.organizationId, owner.userId)).toEqual({ next: "/threads/abc" });
+    expect(readState(state, owner.organizationId, owner.userId)).toEqual({
+      next: "/threads/abc",
+      installationId: null,
+    });
   });
 
   test("will not remember a place on another site", async () => {
@@ -210,6 +215,56 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect((await get(`/github/callback?code=good&state=${another}`)).status).toBe(422);
     expect((await get(`/github/callback?code=bad&state=${mine}`)).status).toBe(422);
     expect((await get(`/github/callback?state=${mine}`)).status).toBe(422);
+    expect(kept).toEqual([]);
+  });
+  test("sends an install GitHub reports without our state back through GitHub, to be confirmed", async () => {
+    reset();
+    const response = await get(
+      "/github/callback?code=untrusted&installation_id=123&setup_action=install",
+    );
+
+    expect(response.status).toBe(302);
+    const state = new URL(response.headers.get("location")!).searchParams.get("state")!;
+    expect(readState(state, owner.organizationId, owner.userId)).toEqual({
+      next: null,
+      installationId: 123,
+    });
+    // The code of a link nobody signed is never used, and nothing is attached yet.
+    expect(exchanged).toEqual([]);
+    expect(kept).toEqual([]);
+    expect(await (await get("/github/installations")).json()).toEqual([]);
+  });
+
+  test("has nothing to confirm in a callback with neither state nor installation", async () => {
+    reset();
+    expect((await get("/github/callback?code=good")).status).toBe(422);
+    expect(exchanged).toEqual([]);
+  });
+
+  test("attaches the installation a confirmed state names, when GitHub says the person may use it", async () => {
+    reset();
+    const state = createState(owner.organizationId, owner.userId, Date.now(), undefined, 123);
+
+    const response = await get(`/github/callback?code=good&state=${state}`);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/projects?github=connected");
+    const installations = (await (await get("/github/installations")).json()) as {
+      installationId: number;
+      accountLogin: string;
+    }[];
+    expect(installations).toMatchObject([{ installationId: 123, accountLogin: "acme" }]);
+    expect(kept).toEqual([{ userId: owner.userId, grant }]);
+  });
+
+  test("attaches nothing the person cannot use, even through a state of ours", async () => {
+    reset();
+    const state = createState(owner.organizationId, owner.userId, Date.now(), undefined, 999);
+
+    expect((await get(`/github/callback?code=good&state=${state}`)).status).toBe(422);
+    expect(await (await get("/github/installations")).json()).toMatchObject([
+      { installationId: 123 },
+    ]);
     expect(kept).toEqual([]);
   });
 });

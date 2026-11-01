@@ -9,7 +9,8 @@ export const installationParams = z.object({ id: z.uuid() });
 export const callbackQuery = z.object({
   /** Present after an install; a person who only connects their account comes back without one. */
   installation_id: z.coerce.number().int().positive().optional(),
-  state: z.string().min(1),
+  /** Ours, when the trip started here; GitHub sends none when the app was installed from its own page. */
+  state: z.string().min(1).optional(),
   /** Present when the app asks for user authorization during installation. */
   code: z.string().min(1).optional(),
 });
