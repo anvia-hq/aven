@@ -1,6 +1,7 @@
 # Self-hosted Aven: Postgres, the control plane and the web entry point (decision 0073).
 # Runners are not here: a runner is a computer with Docker that connects out to this server, and
-# `aven` installs it beside the server or on any other machine.
+# `aven` installs it beside the server or on any other machine. The server itself never starts
+# sandboxes (AVEN_LOCAL_RUNNER is host or off in .env, never on).
 #
 #   cp env.example .env   # then fill it in; the installer does this for you
 #   docker compose up -d
@@ -31,8 +32,6 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://aven:${POSTGRES_PASSWORD}@postgres:5432/aven
-      # Sandboxes are containers on a runner's own Docker, never on this server.
-      AVEN_LOCAL_RUNNER: "off"
 
   web:
     image: ${AVEN_WEB_IMAGE:-ghcr.io/anvia-hq/aven-web}:${AVEN_VERSION:-latest}

@@ -1,7 +1,7 @@
 # The control plane: the API, the runner hub and the migrations. Build from the repository root:
 #   docker build -f apps/control-plane/Dockerfile -t aven-server .
-# The built-in runner needs Docker on the host, so this image runs with AVEN_LOCAL_RUNNER=off and
-# runners connect to it instead (decision 0073).
+# The built-in runner needs Docker, which a container does not have, so this image starts with
+# AVEN_LOCAL_RUNNER=off; compose sets host, and runners connect to the server (decision 0073).
 FROM oven/bun:1.4.4
 LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
 WORKDIR /app

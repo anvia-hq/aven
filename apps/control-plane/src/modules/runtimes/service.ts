@@ -11,8 +11,22 @@ const TOKEN_PREFIX = "avrt_";
 /** The control plane's own runner, the same row for every organization. */
 export const LOCAL_RUNTIME_ID = "00000000-0000-4000-8000-000000000001";
 
-// What the in-process runner presents to connect; it exists only in this process's memory.
-const localToken = `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
+/**
+ * What the built-in runner presents to connect. Without `AVEN_LOCAL_RUNNER_TOKEN` it is made here
+ * and exists only in this process's memory, which is all the in-process runner needs. A server
+ * whose built-in runner is a separate process on the same machine (`AVEN_LOCAL_RUNNER=host`,
+ * decision 0073) sets one, so that process can present it.
+ */
+export function localRunnerToken(configured: string | undefined) {
+  if (!configured) return `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
+  if (!configured.startsWith(TOKEN_PREFIX) || configured.length < 32)
+    throw new Error(
+      `AVEN_LOCAL_RUNNER_TOKEN must start with ${TOKEN_PREFIX} and be at least 32 characters long`,
+    );
+  return configured;
+}
+
+const localToken = localRunnerToken(process.env.AVEN_LOCAL_RUNNER_TOKEN);
 
 // An organization's own runners, and the built-in one.
 const visibleTo = (organizationId: string) =>
