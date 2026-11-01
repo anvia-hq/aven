@@ -145,6 +145,17 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
 
 const base64url = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 
+const repoPath = (fullName: string) => {
+  const [owner, name] = fullName.split("/").map(encodeURIComponent);
+  return `/repos/${owner}/${name}`;
+};
+
+// A repository the token cannot see is not an error to the caller, only absent.
+const nullWhenNotFound = (error: unknown) => {
+  if (error instanceof GithubApiError && error.status === 404) return null;
+  throw error;
+};
+
 // Talks to GitHub as the app (a signed JWT) or as one installation (a short-lived token). The
 // tokens for listing and cloning are read-only (decision 0013); writing is done as the person, with
 // their own user access token (decision 0041). `fetch` is injectable so tests never hit GitHub.
@@ -250,7 +261,7 @@ export class GithubClient {
    * permission is not approved) just has none.
    */
   async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
-    const [owner, name] = fullName.split("/") as [string, string];
+    const [, name] = fullName.split("/") as [string, string];
     let token: string;
     try {
       const issued = await this.#api<{ token: string }>(
@@ -275,8 +286,7 @@ export class GithubClient {
       direction: "desc",
       per_page: String(PAGE_SIZE),
     });
-    const path = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls`;
-    const pulls = await this.#api<PullPayload[]>(`${path}?${query}`, token);
+    const pulls = await this.#api<PullPayload[]>(`${repoPath(fullName)}/pulls?${query}`, token);
     return pulls
       .filter(
         (pull) =>
@@ -303,14 +313,10 @@ export class GithubClient {
 
   /** Whether the person's token may push to the repository; false when it cannot even see it. */
   async canPush(userToken: string, fullName: string) {
-    const [owner, name] = fullName.split("/").map(encodeURIComponent);
     const found = await this.#api<{ permissions?: { push?: boolean } }>(
-      `/repos/${owner}/${name}`,
+      repoPath(fullName),
       userToken,
-    ).catch((error: unknown) => {
-      if (error instanceof GithubApiError && error.status === 404) return null;
-      throw error;
-    });
+    ).catch(nullWhenNotFound);
     return found?.permissions?.push === true;
   }
 
@@ -329,13 +335,7 @@ export class GithubClient {
   /** One repository, if the installation can see it. */
   async repo(installationId: number, fullName: string) {
     const { token } = await this.installationToken(installationId);
-    const [owner, name] = fullName.split("/").map(encodeURIComponent);
-    const payload = await this.#api<RepoPayload>(`/repos/${owner}/${name}`, token).catch(
-      (error: unknown) => {
-        if (error instanceof GithubApiError && error.status === 404) return null;
-        throw error;
-      },
-    );
+    const payload = await this.#api<RepoPayload>(repoPath(fullName), token).catch(nullWhenNotFound);
     return payload ? toRepo(payload) : null;
   }
 
