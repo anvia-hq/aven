@@ -21,6 +21,8 @@ import { diffRouter } from "./modules/diff/router";
 import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { processesRouter } from "./modules/processes/router";
+import { useStoredGithubApp } from "./modules/github/app-store";
+import { github } from "./modules/github/client";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { preferencesRouter } from "./modules/preferences/router";
@@ -35,6 +37,9 @@ import { threadsRouter } from "./modules/threads/router";
 import { projectVariablesRouter } from "./modules/variables/project-router";
 import { variablesRouter } from "./modules/variables/router";
 import { workloadIdentityRouter } from "./modules/workload-identity/router";
+
+// The GitHub App a platform owner created from the platform, unless the environment names one.
+await useStoredGithubApp(github);
 
 const app = new Elysia()
   .use(errorsRouter)

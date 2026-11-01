@@ -1,13 +1,21 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { callbackQuery, connectQuery, installationParams } from "./schema";
+import { githubAppSetup } from "./app-setup";
+import {
+  appCallbackQuery,
+  callbackQuery,
+  connectQuery,
+  installationParams,
+  manifestQuery,
+} from "./schema";
 import { githubService } from "./service";
 import { githubUserTokenService } from "./user-tokens";
 
 export const githubRouter = (
   service = githubService,
   userTokens: Pick<typeof githubUserTokenService, "status"> = githubUserTokenService,
+  appSetup: Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete"> = githubAppSetup,
 ) =>
   new Elysia({ prefix: "/github" })
     .use(authRouter)
@@ -18,6 +26,8 @@ export const githubRouter = (
         return {
           configured,
           installUrl: configured ? service.installUrl(organizationId, user.id) : null,
+          // A platform owner can have the app created from the platform (decision 0074).
+          canSetUp: appSetup.canSetUp(user.email),
         };
       },
       { auth: true, org: true },
@@ -37,6 +47,21 @@ export const githubRouter = (
       ({ query, organizationId, user, redirect }) =>
         redirect(service.connectUrl(organizationId, user.id, query.next)),
       { auth: true, org: true, query: connectQuery },
+    )
+    // What the platform posts to GitHub to have the app created, for a platform owner (decision 0074).
+    .get("/app/manifest", ({ query, user }) => appSetup.manifest(user, query), {
+      auth: true,
+      query: manifestQuery,
+    })
+    // GitHub made the app and sends the browser back here with its code: keep the app, then on to
+    // installing it on the person's account.
+    .get(
+      "/app/callback",
+      async ({ query, user, organizationId, redirect }) => {
+        await appSetup.complete(user, query);
+        return redirect(service.installUrl(organizationId, user.id));
+      },
+      { auth: true, org: true, query: appCallbackQuery },
     )
     .get("/installations", ({ organizationId }) => service.list(organizationId), {
       auth: true,

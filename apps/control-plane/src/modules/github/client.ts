@@ -171,6 +171,12 @@ export class GithubClient {
     return this.config !== null;
   }
 
+  /** Replaces the app the client acts as (decision 0074). Installation tokens of the old one are forgotten. */
+  configure(config: GithubConfig | null) {
+    this.config = config;
+    this.#tokens.clear();
+  }
+
   get slug() {
     return this.#config().slug;
   }

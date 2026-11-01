@@ -6,8 +6,9 @@ import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { errorsRouter } from "../../errors";
+import { ConflictError, errorsRouter, ForbiddenError } from "../../errors";
 import { auth, authService } from "../auth/service";
+import type { githubAppSetup } from "./app-setup";
 import type { GithubClient, GithubUserGrant } from "./client";
 import { githubRouter } from "./router";
 import { createGithubService, createState, readState } from "./service";
@@ -27,6 +28,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
   let connectedLogin: string | null = null;
 
   const client = {
+    slug: "aven-test",
     authorizeUrl: (state: string) => `https://github.test/authorize?state=${state}`,
     exchangeCode: async (code: string) => {
       exchanged.push(code);
@@ -39,12 +41,31 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       return { id: 42, login: "ada", name: null };
     },
   });
+  const setupCalls: { call: string; arg: unknown }[] = [];
+  let setupRefused: Error | null = null;
+  const appSetup = {
+    canSetUp: (email: string) => email.startsWith("owner"),
+    manifest: (_person: unknown, options: unknown) => {
+      if (setupRefused) throw setupRefused;
+      setupCalls.push({ call: "manifest", arg: options });
+      return {
+        postUrl: "https://github.test/settings/apps/new?state=s",
+        manifest: { name: "Aven" },
+      };
+    },
+    complete: async (_person: unknown, input: unknown) => {
+      if (setupRefused) throw setupRefused;
+      setupCalls.push({ call: "complete", arg: input });
+    },
+  } as unknown as Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete">;
   const server = new Elysia()
     .use(errorsRouter)
     .use(
-      githubRouter(service, {
-        status: async () => (connectedLogin ? { login: connectedLogin } : null),
-      }),
+      githubRouter(
+        service,
+        { status: async () => (connectedLogin ? { login: connectedLogin } : null) },
+        appSetup,
+      ),
     )
     .listen({ port: 0 });
   const base = `http://localhost:${server.server?.port}`;
@@ -94,6 +115,47 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     kept.length = 0;
     connectedLogin = null;
   };
+
+  test("tells a platform owner they can set the app up", async () => {
+    const body = (await (await get("/github")).json()) as { canSetUp: boolean };
+    expect(body.canSetUp).toBe(true);
+  });
+
+  test("gives the manifest, passing the name and organization asked for", async () => {
+    setupCalls.length = 0;
+    const response = await get("/github/app/manifest?name=Acme%20Aven&organization=acme");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      postUrl: expect.stringContaining("github.test"),
+    });
+    expect(setupCalls).toEqual([
+      { call: "manifest", arg: { name: "Acme Aven", organization: "acme" } },
+    ]);
+    expect((await get("/github/app/manifest?organization=not%20valid!")).status).toBe(422);
+    expect((await get("/github/app/manifest", "")).status).toBe(401);
+  });
+
+  test("answers what the setup refuses: not an owner is 403, already set up is 409", async () => {
+    try {
+      setupRefused = new ForbiddenError("Platform owners only");
+      expect((await get("/github/app/manifest")).status).toBe(403);
+      setupRefused = new ConflictError("GitHub is already set up");
+      expect((await get("/github/app/callback?code=c&state=s")).status).toBe(409);
+    } finally {
+      setupRefused = null;
+    }
+  });
+
+  test("keeps the app on the callback, then sends the person on to install it", async () => {
+    setupCalls.length = 0;
+    const response = await get("/github/app/callback?code=c0de&state=abc");
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toStartWith(
+      "https://github.com/apps/aven-test/installations/new?state=",
+    );
+    expect(setupCalls).toEqual([{ call: "complete", arg: { code: "c0de", state: "abc" } }]);
+    expect((await get("/github/app/callback?state=abc")).status).toBe(422);
+  });
 
   test("says whether the person has connected their account", async () => {
     reset();

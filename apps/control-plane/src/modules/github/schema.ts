@@ -14,6 +14,24 @@ export const callbackQuery = z.object({
   code: z.string().min(1).optional(),
 });
 
+export const manifestQuery = z.object({
+  /** The app's name on GitHub, which has to be unique there (at most 34 characters). */
+  name: z.string().trim().min(1).max(34).optional(),
+  /** The GitHub organization that is to own the app, instead of the person. */
+  organization: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/, "not a GitHub organization name")
+    .max(39)
+    .optional(),
+});
+
+export const appCallbackQuery = z.object({
+  /** The code GitHub gives for the app it created; it works once. */
+  code: z.string().min(1),
+  state: z.string().min(1),
+});
+
 export const connectQuery = z.object({
   /** A path on this site to come back to once GitHub has been connected. */
   next: z.string().refine(isLocalPath, "next must be a path on this site").optional(),
