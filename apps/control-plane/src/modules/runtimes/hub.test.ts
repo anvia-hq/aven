@@ -651,6 +651,48 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       headers: { authorization: `Bearer ${token}` },
     });
 
+  test("the release a runtime says it is shows in the list, marked when it is behind the server", async () => {
+    const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "versioned",
+    });
+    const ws = await open(full.server?.port, token, "/runtimes/connect", null);
+    ws.send(JSON.stringify({ type: "hello", version: WIRE_VERSION, runs: [], build: "0.2.0" }));
+    await until(() => hub.isOnline(runtime.id));
+    expect(hub.buildOf(runtime.id)).toBe("0.2.0");
+
+    const listed = async () => {
+      const response = await asPerson("GET", "/runtimes", owner.token);
+      const rows = (await response.json()) as {
+        id: string;
+        build: string | null;
+        outdated: boolean;
+      }[];
+      return rows.find((row) => row.id === runtime.id);
+    };
+    const before = process.env.AVEN_VERSION;
+    try {
+      process.env.AVEN_VERSION = "0.3.0";
+      expect(await listed()).toMatchObject({ build: "0.2.0", outdated: true });
+      process.env.AVEN_VERSION = "0.2.0";
+      expect(await listed()).toMatchObject({ build: "0.2.0", outdated: false });
+      // A server that does not know its own release marks nobody.
+      process.env.AVEN_VERSION = "latest";
+      expect(await listed()).toMatchObject({ outdated: false });
+    } finally {
+      if (before === undefined) delete process.env.AVEN_VERSION;
+      else process.env.AVEN_VERSION = before;
+    }
+  });
+
+  test("a runtime that does not say which release it is has none", async () => {
+    const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "unversioned",
+    });
+    await open(full.server?.port, token, "/runtimes/connect");
+    await until(() => hub.isOnline(runtime.id));
+    expect(hub.buildOf(runtime.id)).toBeUndefined();
+  });
+
   test("revoking cuts a connected runtime off and fails its live runs", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "x",

@@ -152,7 +152,12 @@ const runEvent = z.discriminatedUnion("type", [
 ]);
 
 const frame = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("hello"), version: z.number(), runs: z.array(runId).default([]) }),
+  z.object({
+    type: z.literal("hello"),
+    version: z.number(),
+    runs: z.array(runId).default([]),
+    build: z.string().max(64).optional(),
+  }),
   z.object({ type: z.literal("run.event"), runId, seq, event: runEvent }),
   z.object({
     type: z.literal("run.end"),

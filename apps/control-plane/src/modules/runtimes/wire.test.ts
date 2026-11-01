@@ -134,6 +134,27 @@ describe("calls from a runtime", () => {
   });
 });
 
+describe("hello", () => {
+  test("may say which release the runner is", () => {
+    expect(
+      parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33, runs: [], build: "0.3.0" })),
+    ).toEqual({ type: "hello", version: 33, runs: [], build: "0.3.0" });
+    // An older runner leaves it out.
+    expect(parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33 }))).toEqual({
+      type: "hello",
+      version: 33,
+      runs: [],
+    });
+  });
+
+  test("is refused with a build that is not a short string", () => {
+    expect(
+      parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33, build: "x".repeat(65) })),
+    ).toBeNull();
+    expect(parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33, build: 3 }))).toBeNull();
+  });
+});
+
 describe("a bot's reply from a runtime", () => {
   const say = (replyId: unknown, text: unknown) =>
     JSON.stringify({ type: "bot.say", replyId, text });

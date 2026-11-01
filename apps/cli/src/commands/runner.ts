@@ -90,7 +90,7 @@ export async function runnerRun() {
     throw new Error(
       `No runner is set up. Run: aven runner install --url <address> --token <token> (settings are read from ${runnerEnvFile()})`,
     );
-  await runRunner({ base, token });
+  await runRunner({ base, token, build: version === "dev" ? undefined : version });
   // The runner keeps the process alive with its connection.
 }
 

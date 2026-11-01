@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
+import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
@@ -16,7 +17,17 @@ export const runtimesRouter = (hub: RuntimeHub) =>
       "/",
       async ({ organizationId }) => {
         const rows = await runtimesService.list(organizationId);
-        return rows.map((runtime) => ({ ...runtime, online: hub.isOnline(runtime.id) }));
+        const server = serverBuild();
+        return rows.map((runtime) => {
+          const build = hub.buildOf(runtime.id) ?? null;
+          return {
+            ...runtime,
+            online: hub.isOnline(runtime.id),
+            // The release the runner says it is, and whether it is behind this server's.
+            build,
+            outdated: isBehind(build ?? undefined, server),
+          };
+        });
       },
       { auth: true, org: true },
     )

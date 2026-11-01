@@ -13,7 +13,16 @@ export const runtimeConnectUrl = (base: string) =>
  * until it is stopped or refused, then exits the process. `apps/runtime` and `aven runner run` both
  * start it. The sandbox settings come from the environment (`sandboxConfigFromEnv`).
  */
-export async function runRunner({ base, token }: { base: string; token: string }) {
+export async function runRunner({
+  base,
+  token,
+  build,
+}: {
+  base: string;
+  token: string;
+  /** The release of the `aven` running it, if it is one. */
+  build?: string;
+}) {
   // Stopping works whichever comes first: a signal while still connecting, or a refusal.
   let runtime: ReturnType<typeof startRuntime> | undefined;
   let stopping: Promise<void> | undefined;
@@ -41,6 +50,7 @@ export async function runRunner({ base, token }: { base: string; token: string }
   runtime = startRuntime({
     url: runtimeConnectUrl(base),
     token,
+    build,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
     onRefused: (reason) => {

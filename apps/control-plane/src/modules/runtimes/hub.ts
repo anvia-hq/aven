@@ -74,6 +74,8 @@ export class RuntimeConnection {
   #closed = false;
   /** Set once the runtime has said hello with a wire version we speak. */
   #ready = false;
+  /** The release the runtime says it is, if it says. */
+  #build: string | undefined;
 
   constructor(
     readonly runtimeId: string,
@@ -92,6 +94,10 @@ export class RuntimeConnection {
 
   get closed() {
     return this.#closed;
+  }
+
+  get build() {
+    return this.#build;
   }
 
   post(message: ControlPlaneToRuntime) {
@@ -166,7 +172,7 @@ export class RuntimeConnection {
   async receive(raw: string) {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
-    if (message.type === "hello") return this.#hello(message.version, message.runs);
+    if (message.type === "hello") return this.#hello(message.version, message.runs, message.build);
     // Nothing else is accepted from a runtime that has not introduced itself.
     if (!this.#ready) return;
     await this.#dispatch(message);
@@ -178,9 +184,10 @@ export class RuntimeConnection {
     this.#viewers.receive(frame);
   }
 
-  #hello(version: number, runs: string[]) {
+  #hello(version: number, runs: string[], build: string | undefined) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
+      this.#build = build;
       void runtimesService.touch(this.runtimeId);
       this.hub.reclaim(this, runs);
       return;
@@ -395,6 +402,11 @@ export class RuntimeHub {
 
   isOnline(runtimeId: string) {
     return this.get(runtimeId) !== undefined;
+  }
+
+  /** The release an online runtime says it is, if it says. */
+  buildOf(runtimeId: string) {
+    return this.get(runtimeId)?.build;
   }
 
   closeAll() {

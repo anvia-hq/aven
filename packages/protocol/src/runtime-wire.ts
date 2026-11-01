@@ -289,8 +289,12 @@ export type ControlPlaneToRuntime =
   | Reply;
 
 export type RuntimeToControlPlane =
-  /** `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged included. */
-  | { type: "hello"; version: number; runs: string[] }
+  /**
+   * `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged
+   * included. `build` is the release of the `aven` the runner is, so Settings can say when it is
+   * behind the server (decision 0073); a runner that is not a release leaves it out.
+   */
+  | { type: "hello"; version: number; runs: string[]; build?: string }
   /** Every event and the end of a run are numbered from 1, so a reconnect can say where it stopped. */
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error"; `continuation` what resumes a run that is "interaction" (it waits for the user's answer). */

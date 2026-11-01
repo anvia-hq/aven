@@ -57,6 +57,8 @@ export type RuntimeOptions = {
   url: string;
   /** The registration token shown once when the runtime was created. */
   token: string;
+  /** The release of the `aven` this runner is, told to the control plane in `hello`. */
+  build?: string;
   createAgent?: CreateRuntimeAgent;
   /** Builds the agent of a bot's reply (decision 0059). Replaced in tests. */
   createBotAgent?: CreateBotReplyAgent;
@@ -266,7 +268,7 @@ export function startRuntime(options: RuntimeOptions) {
       backoff = RECONNECT_MIN_MS;
       // The control plane asks for each of these runs again, or says to forget it.
       outbox.detachAll();
-      send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids() });
+      send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids(), build: options.build });
       resend();
       connected.resolve();
     };
