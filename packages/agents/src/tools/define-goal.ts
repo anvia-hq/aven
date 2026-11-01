@@ -36,7 +36,7 @@ export function createDefineGoalTool(onDefine: (goal: GoalRequest) => void) {
     name: DEFINE_GOAL_TOOL_NAME,
     description: `Hand a large task to a long-running goal: Aven keeps working on it across many sessions, with fresh context each time, and checks the verify commands itself before it calls the goal done.
 
-Use it for work that needs many edit-and-verify cycles (a feature, a migration, a refactor across many files), not for a quick change you can finish now.
+Use it for work that needs many edit-and-verify cycles (a feature, a migration, a refactor across many files) or a long look around before you can start (setting an environment up), and when you are running low on turns for the message. Not for a quick change you can finish now.
 After calling it, end your turn with one short sentence saying what you started. Do not keep working: the goal takes over, you will not be able to ask the user questions while it runs, and you are asked to report on it when it ends.`,
     inputSchema: goalRequestSchema,
     execute: (goal) => {

@@ -2,7 +2,8 @@ import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { environmentInstructions } from "./environment";
-import { INSTRUCTIONS } from "./instruction";
+import { codingInstructions } from "./instruction";
+import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { skillsInstructions, type SkillListing } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
@@ -25,9 +26,6 @@ type CodingAgentOptions = ModelSource & {
   envNames?: readonly string[];
 };
 
-/** How many model calls the agent may make for one message (decision 0076); each one may run tools. */
-export const CODING_MAX_TURNS = 200;
-
 // Assembles the model and tools. Hosts own the run loop: start runs with `agent.stream()`.
 export function createCodingAgent(options: CodingAgentOptions) {
   const tools = [...options.tools];
@@ -35,18 +33,19 @@ export function createCodingAgent(options: CodingAgentOptions) {
 
   if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());
 
+  const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
   const agentModel = resolveAgentModel(options);
   const agent = new Agent({
     ...agentModel,
     id: options.id ?? "coding",
     instructions: [
-      options.instructions ?? INSTRUCTIONS,
+      options.instructions ?? codingInstructions(maxTurns),
       skillsInstructions(options.skills ?? []),
       environmentInstructions(options.envNames ?? []),
     ]
       .filter(Boolean)
       .join("\n\n"),
-    maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
+    maxTurns,
     tools,
   });
 

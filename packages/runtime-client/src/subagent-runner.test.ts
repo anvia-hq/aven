@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createTool, type AnyTool, type AssistantContentPart } from "@anvia/core";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import { CODING_MAX_TURNS } from "@aven/agents/coding-agent";
+import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";

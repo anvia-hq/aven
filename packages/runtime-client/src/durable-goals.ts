@@ -7,7 +7,7 @@ import {
   type DurableTaskHandle,
   type GoalResult,
 } from "@anvia/durable";
-import { CODING_MAX_TURNS } from "@aven/agents/coding-agent";
+import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { asRecord } from "@aven/agents/values";
 
