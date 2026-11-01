@@ -5,6 +5,7 @@ import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 
 import { useProviders } from "../hooks/use-providers";
+import { useRefetchModels } from "../hooks/use-refetch-models";
 import type { Provider } from "../types";
 
 type Props = {
@@ -15,14 +16,23 @@ type Props = {
   edit?: ReactNode;
 };
 
-// A saved provider on its line of the list: whether it is the default, then making it the
-// default, editing and removing it.
+// A saved provider on its line of the list: whether it is the default, then fetching its models
+// again, making it the default, editing and removing it.
 export function ProviderActions({ provider, children, edit }: Props) {
   const { makeDefault, remove } = useProviders();
+  const { refetch, fetching } = useRefetchModels();
   return (
     <>
       {provider.isDefault && <Badge variant="secondary">Default</Badge>}
       {children}
+      <Button
+        variant="ghost"
+        size="xs"
+        disabled={fetching === provider.id}
+        onClick={() => void refetch(provider)}
+      >
+        {fetching === provider.id ? "Fetching…" : "Refetch models"}
+      </Button>
       {!provider.isDefault && (
         <Button variant="ghost" size="xs" onClick={() => makeDefault(provider)}>
           Make default
