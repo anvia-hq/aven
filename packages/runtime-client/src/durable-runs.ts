@@ -1,4 +1,4 @@
-import type { Agent, AgentPrompt } from "@anvia/core";
+import type { Agent, AgentPrompt, Message } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import {
   DurableConflictError,
@@ -307,6 +307,29 @@ export class DurableRuns {
     if (end.type === "interaction") this.#sent.set(durableId, from + end.messages.length);
     else this.#sent.delete(durableId);
     return from;
+  }
+
+  /**
+   * What a run that failed or was cancelled had done, to file like a finished run's messages, so a
+   * reload of the thread still shows it. A turn limit leaves the whole conversation in the run's
+   * record, the history from before it first; any other stop leaves the prompt the run was sent,
+   * which still beats an empty thread. A run that is not over (interrupted, to be picked up again)
+   * has nothing to file yet.
+   */
+  async unfinishedMessages(durableId: string): Promise<Message[]> {
+    try {
+      const { run } = await (await this.#runtime.getRun(durableId)).snapshot({ operations: false });
+      if (run.status !== "failed" && run.status !== "cancelled") return [];
+      if (run.exhaustion) return run.exhaustion.messages.slice(run.history.length);
+      // The journal keeps a prompt as the message it became.
+      const { messages, prompt } = run.input;
+      if (messages) return [...messages];
+      if (prompt === undefined) return [];
+      return [typeof prompt === "string" ? { role: "user", content: prompt } : prompt];
+    } catch {
+      // The journal is closing or has lost the run: the error that ended it is still reported.
+      return [];
+    }
   }
 
   /** Stops a run of the journal that no process is following. */

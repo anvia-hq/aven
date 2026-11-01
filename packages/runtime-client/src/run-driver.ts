@@ -334,6 +334,13 @@ export function createRunDriver(context: DriverContext) {
       // A run that stopped on a question and was answered files its second part after the first.
       save({ turn: journaled.transcriptTurn(followed.durableId, end) });
       await scope.file(end.messages);
+    } else {
+      // A run that failed or was cancelled still files what it did: without it the thread is empty
+      // after a reload, and the person loses a long run to a turn limit. The error is reported
+      // either way, so a transcript that cannot be filed does not replace it.
+      await scope
+        .file(await journaled.unfinishedMessages(followed.durableId))
+        .catch(() => undefined);
     }
     // Handed a goal: the rest of the run is the goal and the report on it.
     if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
