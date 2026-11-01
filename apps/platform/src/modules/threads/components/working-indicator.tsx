@@ -13,11 +13,11 @@ const DOTS = Array.from({ length: 9 }, (_, index) => {
 
 function Dots() {
   return (
-    <span className="grid grid-cols-3 gap-[3px]" aria-hidden>
+    <span className="grid grid-cols-3 gap-[2px]" aria-hidden>
       {DOTS.map(({ index, step }) => (
         <span
           key={index}
-          className="size-1 rounded-full motion-safe:animate-[working-dot_1.2s_ease-in-out_infinite]"
+          className="size-[3px] rounded-full motion-safe:animate-[working-dot_1.2s_ease-in-out_infinite]"
           style={{
             backgroundColor: `color-mix(in oklch, var(--working-from), var(--working-to) ${(step / STEPS) * 100}%)`,
             animationDelay: `${step * 130}ms`,
