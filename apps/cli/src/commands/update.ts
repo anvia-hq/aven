@@ -27,7 +27,8 @@ export async function update(args: Args) {
   if (code !== 0) process.exit(code);
 }
 
-async function finish() {
+/** Brings what is installed here to this binary's own release. */
+export async function finish() {
   const server = await serverUpgrade(version);
   const runner = await runnerUpgrade(version);
   if (!server && !runner)

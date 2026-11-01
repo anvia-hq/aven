@@ -7,14 +7,27 @@ import { parseEnv } from "../env-file";
 import { serverDir } from "../home";
 import { runnerInstall } from "./runner";
 import { serverInstall } from "./server";
+import { finish } from "./update";
 
 /**
  * Installs Aven on this machine. By default that is the server and a runner beside it, which is
  * everything one person needs; `--runner --url <address> --token <token>` makes the machine only a
- * runner of a server that is somewhere else; `--no-runner` installs only the server.
+ * runner of a server that is somewhere else; `--no-runner` installs only the server. On a machine
+ * that has a server already it updates it instead.
  */
 export async function install(args: Args) {
   if (args.flags.runner) return runnerInstall(args);
+
+  // Running the installer again is how a machine is updated: what is there keeps its settings and
+  // secrets and moves to this binary's release.
+  const installed = await readFile(join(serverDir(), ".env")).then(
+    () => true,
+    () => false,
+  );
+  if (installed) {
+    console.log("Aven is already installed here; bringing it up to date.");
+    return finish();
+  }
 
   if (stringFlag(args, "owner-email") === undefined && process.stdin.isTTY) {
     const answer = prompt(
