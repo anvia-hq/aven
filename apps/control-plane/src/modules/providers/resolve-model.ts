@@ -3,7 +3,7 @@ import type { ModelConfig, Provider } from "@aven/agents/model";
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
-import { gatewayContextWindow } from "./gateway-context";
+import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { effortsFor } from "./model-list";
 import { providersService } from "./service";
@@ -89,12 +89,15 @@ async function contextWindowOf(config: ModelConfig) {
   if (!modelId) return null;
   // The catalog knows no model of a server the person runs; the server itself may (LiteLLM does).
   if (config.provider === "openai-compatible" && config.baseUrl)
-    return gatewayContextWindow(config.baseUrl, config.apiKey, modelId);
+    return (await gatewayModel(config.baseUrl, config.apiKey, modelId)).contextWindow;
   return modelCatalog.contextWindow(config.provider, modelId);
 }
 
 async function applyEffort(config: ModelConfig, reasoningEffort: string) {
-  const { controls, effortLevels } = await effortsFor(config.provider, config.modelId);
+  const { controls, effortLevels } = await effortsFor(
+    { kind: config.provider, baseUrl: config.baseUrl, apiKey: config.apiKey },
+    config.modelId,
+  );
   if (!controls?.options.includes(reasoningEffort)) {
     throw new InvalidSelectionError(
       `This model does not support the "${reasoningEffort}" reasoning effort`,

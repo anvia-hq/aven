@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createGatewayContext } from "./gateway-context";
+import { createGatewayInfo } from "./gateway-info";
 
 const info = (...models: { name: string; info: Record<string, unknown> }[]) => ({
   data: models.map(({ name, info }) => ({ model_name: name, model_info: info })),
@@ -15,6 +15,8 @@ function gateway(body: unknown, status = 200) {
   return { fetch, calls };
 }
 
+const NOTHING = { contextWindow: null, effortLevels: null };
+
 describe("a gateway's context window", () => {
   test("reads max_input_tokens of the model from /model/info, with the provider's key", async () => {
     const { fetch, calls } = gateway(
@@ -24,9 +26,9 @@ describe("a gateway's context window", () => {
       ),
     );
 
-    const window = await createGatewayContext({ fetch })("https://gw.test/v1/", "sk-1", "muse");
+    const model = await createGatewayInfo({ fetch })("https://gw.test/v1/", "sk-1", "muse");
 
-    expect(window).toBe(128000);
+    expect(model.contextWindow).toBe(128000);
     expect(calls).toEqual([{ url: "https://gw.test/v1/model/info", authorization: "Bearer sk-1" }]);
   });
 
@@ -37,37 +39,93 @@ describe("a gateway's context window", () => {
         { name: "writer", info: { max_tokens: 4096, max_output_tokens: 4096 } },
       ),
     );
-    const context = createGatewayContext({ fetch });
+    const model = createGatewayInfo({ fetch });
 
-    expect(await context("https://gw.test/v1", undefined, "muse")).toBe(32000);
-    expect(await context("https://gw.test/v1", undefined, "missing")).toBeNull();
-    expect(await context("https://gw.test/v1", undefined, "writer")).toBeNull();
+    expect((await model("https://gw.test/v1", undefined, "muse")).contextWindow).toBe(32000);
+    expect(await model("https://gw.test/v1", undefined, "missing")).toEqual(NOTHING);
+    expect((await model("https://gw.test/v1", undefined, "writer")).contextWindow).toBeNull();
   });
 
-  test("is no window when the gateway refuses, fails or answers with something else", async () => {
+  test("says nothing when the gateway refuses, fails or answers with something else", async () => {
     const refused = gateway({ error: "no" }, 401);
     const odd = gateway({ data: "nope" });
     const down = async () => {
       throw new Error("connection refused");
     };
 
-    expect(await createGatewayContext(refused)("https://gw.test/v1", "k", "muse")).toBeNull();
-    expect(await createGatewayContext(odd)("https://gw.test/v1", "k", "muse")).toBeNull();
-    expect(
-      await createGatewayContext({ fetch: down })("https://gw.test/v1", "k", "muse"),
-    ).toBeNull();
+    expect(await createGatewayInfo(refused)("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
+    expect(await createGatewayInfo(odd)("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
+    expect(await createGatewayInfo({ fetch: down })("https://gw.test/v1", "k", "muse")).toEqual(
+      NOTHING,
+    );
   });
 
-  test("asks once an hour for a model it found", async () => {
+  test("asks once an hour, once for all the models of a gateway", async () => {
     let time = 0;
-    const { fetch, calls } = gateway(info({ name: "muse", info: { max_input_tokens: 8000 } }));
-    const context = createGatewayContext({ fetch, now: () => time });
+    const { fetch, calls } = gateway(
+      info(
+        { name: "muse", info: { max_input_tokens: 8000 } },
+        { name: "spark", info: { max_input_tokens: 4000 } },
+      ),
+    );
+    const model = createGatewayInfo({ fetch, now: () => time });
 
-    await context("https://gw.test/v1", "k", "muse");
-    await context("https://gw.test/v1", "k", "muse");
+    await model("https://gw.test/v1", "k", "muse");
+    await model("https://gw.test/v1", "k", "spark");
+    await model("https://gw.test/v1", "k", "muse");
+    expect(calls).toHaveLength(1);
+
     time = 61 * 60 * 1000;
-    await context("https://gw.test/v1", "k", "muse");
-
+    await model("https://gw.test/v1", "k", "muse");
     expect(calls).toHaveLength(2);
+  });
+
+  test("does not hand one key's answer to another", async () => {
+    const { fetch, calls } = gateway(info({ name: "muse", info: { max_input_tokens: 8000 } }));
+    const model = createGatewayInfo({ fetch });
+
+    await model("https://gw.test/v1", "key-a", "muse");
+    await model("https://gw.test/v1", "key-b", "muse");
+
+    expect(calls.map((call) => call.authorization)).toEqual(["Bearer key-a", "Bearer key-b"]);
+  });
+});
+
+describe("a gateway's reasoning effort levels", () => {
+  const levels = ["minimal", "low", "medium", "high", "xhigh", "max"];
+
+  test("are the ones it lists for a model that supports an effort", async () => {
+    const { fetch } = gateway(
+      info({
+        name: "muse",
+        info: { supports_reasoning_effort: true, reasoning_effort_levels: levels },
+      }),
+    );
+
+    expect(
+      (await createGatewayInfo({ fetch })("https://gw.test/v1", "k", "muse")).effortLevels,
+    ).toEqual(levels);
+  });
+
+  test("are none when the model does not support an effort, or lists no levels", async () => {
+    const { fetch } = gateway(
+      info(
+        { name: "plain", info: { supports_reasoning: true } },
+        {
+          name: "off",
+          info: { supports_reasoning_effort: false, reasoning_effort_levels: levels },
+        },
+        { name: "empty", info: { supports_reasoning_effort: true, reasoning_effort_levels: [] } },
+        {
+          name: "odd",
+          info: { supports_reasoning_effort: true, reasoning_effort_levels: [1, ""] },
+        },
+      ),
+    );
+    const model = createGatewayInfo({ fetch });
+
+    for (const name of ["plain", "off", "empty", "odd"]) {
+      expect((await model("https://gw.test/v1", "k", name)).effortLevels).toBeNull();
+    }
   });
 });

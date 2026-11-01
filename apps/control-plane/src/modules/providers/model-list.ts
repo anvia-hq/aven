@@ -1,6 +1,7 @@
 import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
 
 import { UnprocessableError } from "../../errors";
+import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint } from "./schema";
 
@@ -75,22 +76,33 @@ export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetc
   return modelCatalog.chatModels(source.kind, ids);
 }
 
-// A model's effort levels: the SDK's own list, or for a model newer than the SDK the one models.dev
-// lists (`effortLevels`, which the model must then be built with for the SDK to accept it).
-export async function effortsFor(kind: ProviderKind, modelId: string | undefined) {
-  const sdk = reasoningControlsFor({ provider: kind, modelId });
+// The levels a model of a server the person runs says it accepts: a gateway lists them itself,
+// models.dev knows nothing of such a server.
+async function listedEfforts(source: ModelSource, modelId: string) {
+  if (source.kind === "openai-compatible") {
+    if (!source.baseUrl) return null;
+    return (await gatewayModel(source.baseUrl, source.apiKey, modelId)).effortLevels;
+  }
+  return modelCatalog.efforts(source.kind, modelId);
+}
+
+// A model's effort levels: the SDK's own list, or for a model newer than the SDK, or served by a
+// gateway, the ones models.dev or the gateway lists (`effortLevels`, which the model must then be
+// built with for the SDK to accept it).
+export async function effortsFor(source: ModelSource, modelId: string | undefined) {
+  const sdk = reasoningControlsFor({ provider: source.kind, modelId });
   if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
-  const effortLevels = (await modelCatalog.efforts(kind, modelId)) ?? undefined;
+  const effortLevels = (await listedEfforts(source, modelId)) ?? undefined;
   return {
-    controls: reasoningControlsFor({ provider: kind, modelId, effortLevels }),
+    controls: reasoningControlsFor({ provider: source.kind, modelId, effortLevels }),
     effortLevels,
   };
 }
 
 // The effort levels of each listed model that has any; models without the control are left out.
-export async function effortsByModel(kind: ProviderKind, ids: string[]) {
+export async function effortsByModel(source: ModelSource, ids: string[]) {
   const entries = await Promise.all(
-    ids.map(async (id) => [id, (await effortsFor(kind, id)).controls] as const),
+    ids.map(async (id) => [id, (await effortsFor(source, id)).controls] as const),
   );
   return Object.fromEntries(
     entries.filter((entry): entry is readonly [string, ReasoningControls] => entry[1] !== null),

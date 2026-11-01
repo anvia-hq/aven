@@ -66,6 +66,20 @@ describe("reasoningControlsFor", () => {
     ]);
   });
 
+  test("a server gets the control only from the levels it listed itself", () => {
+    const config = { provider: "openai-compatible", modelId: "muse" } as const;
+    expect(reasoningControlsFor(config)).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: [] })).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: ["low", "max"] })?.options).toEqual([
+      "low",
+      "max",
+    ]);
+    // Without a model there is nothing to build.
+    expect(
+      reasoningControlsFor({ provider: "openai-compatible", effortLevels: ["low"] }),
+    ).toBeNull();
+  });
+
   test("is null for models and servers without the control", () => {
     expect(reasoningControlsFor({ provider: "openai", modelId: "gpt-4o" })).toBeNull();
     expect(
@@ -134,6 +148,43 @@ describe("anthropic request", () => {
       tools: [],
     });
     expect(agent.controls).toEqual({ reasoningEffort: "low" });
+  });
+});
+
+describe("openai-compatible request", () => {
+  const bodies: Record<string, unknown>[] = [];
+  const server = Bun.serve({
+    port: 0,
+    async fetch(req) {
+      bodies.push((await req.json()) as Record<string, unknown>);
+      return Response.json({ error: { message: "stop" } }, { status: 400 });
+    },
+  });
+  afterAll(() => server.stop(true));
+
+  const ask = async (extra: { effortLevels?: string[]; reasoningEffort?: string }) => {
+    const before = bodies.length;
+    const { agent } = createCodingAgent({
+      provider: "openai-compatible",
+      baseUrl: `http://localhost:${server.port}/v1`,
+      modelId: "muse",
+      apiKey: "k",
+      tools: [],
+      ...extra,
+    });
+    await agent.generate({ prompt: "hi" }).catch(() => undefined);
+    return bodies[before];
+  };
+
+  test("an effort the server listed is sent as reasoning_effort", async () => {
+    const body = await ask({ effortLevels: ["low", "high", "max"], reasoningEffort: "max" });
+    expect(body?.reasoning_effort).toBe("max");
+  });
+
+  test("a server that listed no levels is sent no reasoning_effort", async () => {
+    const body = await ask({});
+    expect(body).toBeDefined();
+    expect(body && "reasoning_effort" in body).toBe(false);
   });
 });
 

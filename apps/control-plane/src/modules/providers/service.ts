@@ -6,7 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";
 import { readKey } from "./crypto";
-import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
+import { effortsByModel, listAgentModels, ModelListError, type ModelSource } from "./model-list";
 import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
 
 class InvalidProviderError extends UnprocessableError {}
@@ -155,8 +155,9 @@ export const providersService = {
   async listModels(userId: string, id: string) {
     const [row] = await db.select().from(providers).where(ownProvider(userId, id));
     if (!row) return null;
-    const models = await modelsOf(row);
-    return { models, efforts: await effortsByModel(row.kind, models) };
+    const source = sourceOf(row);
+    const models = await modelsOf(row, source);
+    return { models, efforts: await effortsByModel(source, models) };
   },
 
   // The provider a run uses: the one chosen, which must be the user's own, or else their default.
@@ -174,10 +175,16 @@ export const providersService = {
   },
 };
 
+// Where a saved provider's models are asked for, with its own stored key.
+const sourceOf = (row: ProviderRow): ModelSource => ({
+  kind: row.kind,
+  baseUrl: row.baseUrl ?? undefined,
+  apiKey: readKey(row),
+});
+
 // The models a saved provider offers: its listing. For Azure, the deployments of the resource, with
 // the one it was set up with first; that one stays on offer if the listing fails.
-async function modelsOf(row: ProviderRow) {
-  const source = { kind: row.kind, baseUrl: row.baseUrl ?? undefined, apiKey: readKey(row) };
+async function modelsOf(row: ProviderRow, source: ModelSource) {
   if (row.kind !== "azure") return listAgentModels(source);
   const listed = await listAgentModels(source).catch((error) => {
     if (error instanceof ModelListError) return [];

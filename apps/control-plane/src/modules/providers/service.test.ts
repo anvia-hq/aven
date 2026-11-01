@@ -229,9 +229,9 @@ run("providersService (postgres)", async () => {
   });
 
   test("model efforts come from the SDK and leave out models without the control", async () => {
-    expect(await effortsByModel("openai", ["gpt-4o", "o3"])).toEqual({
+    expect(await effortsByModel({ kind: "openai" }, ["gpt-4o", "o3"])).toEqual({
       o3: { options: ["low", "medium", "high"], defaultValue: "medium" },
     });
-    expect(await effortsByModel("openai-compatible", ["llama3"])).toEqual({});
+    expect(await effortsByModel({ kind: "openai-compatible" }, ["llama3"])).toEqual({});
   });
 });

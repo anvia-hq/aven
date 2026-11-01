@@ -69,6 +69,8 @@ export function createModel(config: ModelConfig) {
     }).completionModel({
       modelId: config.modelId,
       api: "chat",
+      // Only the levels the server itself lists (a gateway's `/model/info`): others may be rejected.
+      controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });
   }
@@ -122,13 +124,18 @@ export function providerOptionsFor(provider: Provider) {
 export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
 
 // The reasoning effort levels a model accepts, read from the SDK's own per-model controls, or null
-// when it has none (older Anthropic and OpenAI models, and every OpenAI-compatible server, which
-// must not be sent a `reasoning_effort` they may reject). Builds the model offline with a
-// placeholder key, so nothing leaves the process.
+// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server unless the
+// host passes the levels the server itself lists, since it may reject a `reasoning_effort` it does
+// not know). Builds the model offline with a placeholder key, so nothing leaves the process.
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
 ): ReasoningControls | null {
-  if (config.provider === "openai-compatible") return null;
+  if (
+    config.provider === "openai-compatible" &&
+    (!config.effortLevels?.length || !config.modelId)
+  ) {
+    return null;
+  }
   if (config.provider === "azure" && !config.modelId) return null;
   const controls: CompletionModelControls | undefined = createModel({
     ...config,
