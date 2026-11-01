@@ -1,4 +1,5 @@
-import { Check, Code, DangerCircle, Search, Spinner } from "@mynaui/icons-react";
+import { Check, Code, DangerCircle, Search } from "@mynaui/icons-react";
+import { cn } from "cn";
 
 import { Badge } from "@/components/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
@@ -27,16 +28,20 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
         className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 truncate font-medium">{description}</span>
+        <span className={cn("min-w-0 truncate font-medium", status === "running" && "shimmer")}>
+          {description}
+        </span>
         <Badge variant="secondary">{type}</Badge>
-        <span className="min-w-0 flex-1 truncate text-right font-mono text-xs text-muted-foreground">
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-right font-mono text-xs text-muted-foreground",
+            status === "running" && "shimmer",
+          )}
+        >
           {status === "running" && latest
             ? latest.target
             : tools.length > 0 && toolCount(tools.length)}
         </span>
-        {status === "running" && (
-          <Spinner className="size-4 shrink-0 animate-spin text-muted-foreground" />
-        )}
         {status === "done" && <Check className="size-4 shrink-0 text-muted-foreground" />}
         {status === "error" && (
           <DangerCircle className="size-4 shrink-0 text-destructive" aria-label="Failed" />

@@ -1,4 +1,4 @@
-import { Spinner } from "@mynaui/icons-react";
+import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
@@ -82,8 +82,9 @@ export function ToolGroup({ tools }: { tools: ToolPart[] }) {
   return (
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
       <CollapsibleTrigger className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-muted-foreground hover:bg-muted/50">
-        <span className="min-w-0 flex-1 truncate font-medium">{summarize(tools)}</span>
-        {running && <Spinner className="size-4 animate-spin" />}
+        <span className={cn("min-w-0 flex-1 truncate font-medium", running && "shimmer")}>
+          {summarize(tools)}
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-1 flex flex-col border-l pl-3">

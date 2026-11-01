@@ -6,9 +6,10 @@ import {
   Image as ImageIcon,
   Save,
   Search,
-  Spinner,
   Terminal,
 } from "@mynaui/icons-react";
+
+import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 import { DiffStat } from "@/modules/diff/components/diff-stat";
@@ -63,15 +64,21 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="text-muted-foreground">{tool.status === "running" ? running : done}</span>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs">{tool.target}</span>
+        <span className={cn("text-muted-foreground", tool.status === "running" && "shimmer")}>
+          {tool.status === "running" ? running : done}
+        </span>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate font-mono text-xs",
+            tool.status === "running" && "shimmer",
+          )}
+        >
+          {tool.target}
+        </span>
         {tool.diff && (
           <span className="font-mono text-xs">
             <DiffStat additions={additions} deletions={deletions} />
           </span>
-        )}
-        {tool.status === "running" && (
-          <Spinner className="size-4 animate-spin text-muted-foreground" />
         )}
         {tool.status === "error" && (
           <DangerCircle className="size-4 text-destructive" aria-label="Failed" />
