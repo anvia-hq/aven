@@ -1,5 +1,6 @@
 import { Archive, Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useMemo } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/sidebar";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
+import { tilePalettes } from "@/modules/projects/tile";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
@@ -19,11 +21,20 @@ import type { Thread } from "../types";
 
 // The thread's project as a tile, pulsing while the thread runs. Until the project is known the
 // tile's place is kept, so a row does not show a question mark and then change.
-function SidebarProjectTile({ thread, project }: { thread: Thread; project?: Project }) {
+function SidebarProjectTile({
+  thread,
+  project,
+  palette,
+}: {
+  thread: Thread;
+  project?: Project;
+  palette?: number;
+}) {
   if (!project) return <span className="size-4 shrink-0" aria-hidden />;
   return (
     <ProjectTile
       projectId={project.id}
+      palette={palette}
       name={project.name}
       className={thread.running ? "animate-pulse" : undefined}
     />
@@ -35,6 +46,16 @@ export function SidebarThreads() {
   const threads = useThreads().threads.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
   const { projects } = useProjects();
+  // Oldest first, so a project keeps its palette as newer ones arrive.
+  const palettes = useMemo(
+    () =>
+      tilePalettes(
+        [...projects]
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+          .map((project) => project.id),
+      ),
+    [projects],
+  );
   const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
@@ -66,6 +87,7 @@ export function SidebarThreads() {
               <SidebarProjectTile
                 thread={thread}
                 project={projects.find((candidate) => candidate.id === thread.projectId)}
+                palette={palettes.get(thread.projectId)}
               />
               <span className="flex-1 truncate" title={hostLabel(thread)}>
                 {thread.title}

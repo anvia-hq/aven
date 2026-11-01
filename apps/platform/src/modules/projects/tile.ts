@@ -1,6 +1,7 @@
 // The look of a project's tile: a soft mesh of colors picked by the project's id, so a project is
-// always the same and neighbors tend to differ. Like a bot's colors (decision 0062) these are
-// palette data kept with the project, not theme colors.
+// always the same, and among a person's projects no palette is used again before all ten are in
+// use (`tilePalettes`). Like a bot's colors (decision 0062) these are palette data kept with the
+// project, not theme colors.
 
 /** A base color and three accents that bleed into it from the corners. */
 type Palette = readonly [base: string, a: string, b: string, c: string];
@@ -33,16 +34,41 @@ function hash(text: string) {
   return value;
 }
 
+/**
+ * The palette of each project, given them oldest first. A project starts from the palette its id
+ * hashes to and takes the next one nobody has used, so the first ten projects all differ instead
+ * of two meeting by chance (one in ten for any two). Adding a project changes no other; removing
+ * one can move the ones made after it.
+ */
+export function tilePalettes(projectIds: readonly string[]) {
+  const uses = palettes.map(() => 0);
+  const chosen = new Map<string, number>();
+  for (const id of projectIds) {
+    const start = hash(id) % palettes.length;
+    let best = start;
+    for (let step = 1; step < palettes.length; step++) {
+      const candidate = (start + step) % palettes.length;
+      if (uses[candidate]! < uses[best]!) best = candidate;
+    }
+    uses[best]! += 1;
+    chosen.set(id, best);
+  }
+  return chosen;
+}
+
 /** The first letter or digit of a project's name, in capitals; `?` for a name with neither. */
 export function projectInitial(name: string) {
   const match = /[\p{L}\p{N}]/u.exec(name);
   return match ? match[0].toLocaleUpperCase() : "?";
 }
 
-/** The mesh, gloss and light edge of a project's tile; the same project always gets the same. */
-export function tileStyle(projectId: string) {
+/**
+ * The mesh, gloss and light edge of a project's tile; the same project always gets the same.
+ * `palette` is the one `tilePalettes` gave it, else the one its id hashes to.
+ */
+export function tileStyle(projectId: string, palette?: number) {
   const value = hash(projectId);
-  const [base, a, b, c] = palettes[value % palettes.length]!;
+  const [base, a, b, c] = palettes[palette ?? value % palettes.length]!;
   const [at, bt, ct] = layouts[Math.floor(value / palettes.length) % layouts.length]!;
   return {
     backgroundColor: base,
