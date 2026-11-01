@@ -28,5 +28,22 @@ test("the numbers follow the budget the agent is given", () => {
   const text = codingInstructions(40);
   expect(text).toContain("You have 40 turns");
   expect(text).toContain("more than about 10 turns");
-  expect(text).not.toContain("200");
+  expect(text).not.toContain("200 turns");
+});
+
+test("a goal's own session is not told to use define_goal, which it does not have", () => {
+  // Only the section on the budget: the rest of the instructions name ask_user and more.
+  const section = codingInstructions(200, false)
+    .split("<long_tasks>")[1]!
+    .split("</long_tasks>")[0]!;
+  expect(section).toContain("You have 200 turns for each session");
+  expect(section).toContain("past about 120 turns");
+  expect(section).not.toContain("define_goal");
+  expect(section).not.toContain("ask_user");
+});
+
+test("an agent that can hand a task to a goal is told how", () => {
+  const text = codingInstructions(200, true);
+  expect(text).toContain("for each message of the user");
+  expect(text).toContain("hand it to define_goal");
 });

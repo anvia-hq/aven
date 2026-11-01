@@ -39,7 +39,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
     ...agentModel,
     id: options.id ?? "coding",
     instructions: [
-      options.instructions ?? codingInstructions(maxTurns),
+      // A run with a person to answer to (`questions`) is the one that has `define_goal`.
+      options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
       skillsInstructions(options.skills ?? []),
       environmentInstructions(options.envNames ?? []),
     ]

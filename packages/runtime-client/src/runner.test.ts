@@ -1007,6 +1007,56 @@ describe("startRuntime runs", () => {
     ]);
   });
 
+  test("a run that reaches its turn limit after an earlier run files only its own messages", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const lookup = createTool({
+      name: "lookup",
+      description: "Looks something up",
+      inputSchema: z.object({ key: z.string() }),
+      execute: ({ key }) => `value of ${key}`,
+    });
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          maxTurns: 2,
+          tools: [lookup],
+          model: scriptedModel(
+            id === "run-run-1"
+              ? [[text("first reply")]]
+              : [
+                  [text("one"), toolCall("lookup", { key: "a" }, "call-1")],
+                  [text("two"), toolCall("lookup", { key: "b" }, "call-2")],
+                  [text("three"), toolCall("lookup", { key: "c" }, "call-3")],
+                ],
+          ),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => ended(plane).length === 1);
+    plane.send({ ...runStart, runId: "run-2", prompt: "again" });
+    await until(() => ended(plane).length === 2);
+
+    const [first, second] = appended(plane);
+    expect(first?.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+    // What the thread already has is not filed again: the second run's messages start at its prompt.
+    expect(second?.messages[0]).toMatchObject({ role: "user", content: "again" });
+    expect(second?.messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+      "tool",
+      "assistant",
+      "tool",
+    ]);
+  });
+
   test("a run that is cancelled still hands home the prompt it was sent", async () => {
     const { sandbox, up } = slowSandbox();
     up();

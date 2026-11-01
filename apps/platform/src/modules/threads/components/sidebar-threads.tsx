@@ -10,11 +10,25 @@ import {
 } from "@/components/sidebar";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
+import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
+
+// The thread's project as a tile, pulsing while the thread runs. Until the project is known the
+// tile's place is kept, so a row does not show a question mark and then change.
+function SidebarProjectTile({ thread, project }: { thread: Thread; project?: Project }) {
+  if (!project) return <span className="size-4 shrink-0" aria-hidden />;
+  return (
+    <ProjectTile
+      projectId={project.id}
+      name={project.name}
+      className={thread.running ? "animate-pulse" : undefined}
+    />
+  );
+}
 
 export function SidebarThreads() {
   const navigate = useNavigate();
@@ -23,10 +37,6 @@ export function SidebarThreads() {
   const { projects } = useProjects();
   const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-
-  function projectName(thread: Thread) {
-    return projects.find((project) => project.id === thread.projectId)?.name ?? "";
-  }
 
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
@@ -53,10 +63,9 @@ export function SidebarThreads() {
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
             >
-              <ProjectTile
-                projectId={thread.projectId}
-                name={projectName(thread)}
-                className={thread.running ? "animate-pulse" : undefined}
+              <SidebarProjectTile
+                thread={thread}
+                project={projects.find((candidate) => candidate.id === thread.projectId)}
               />
               <span className="flex-1 truncate" title={hostLabel(thread)}>
                 {thread.title}

@@ -89,6 +89,7 @@ export function useThread(threadId: string) {
       // The browser retries on its own; only a stream it has given up on leaves the run unknown.
       if (source.readyState !== EventSource.CLOSED) return;
       setRunning(false);
+      setStartedAt(null);
       setError("Lost the connection to the server");
     };
     return () => source.close();
