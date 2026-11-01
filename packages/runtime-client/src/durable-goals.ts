@@ -7,6 +7,7 @@ import {
   type DurableTaskHandle,
   type GoalResult,
 } from "@anvia/durable";
+import { CODING_MAX_TURNS } from "@aven/agents/coding-agent";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { asRecord } from "@aven/agents/values";
 
@@ -18,7 +19,7 @@ import { goalSessionMarker } from "./goal-report";
 // A goal's limits, as the agent may raise or lower the sessions. A session is one agent run, which
 // the agent's own step limit bounds, so the turns follow from the sessions.
 const DEFAULT_GOAL_SESSIONS = 20;
-const TURNS_PER_SESSION = 60;
+const TURNS_PER_SESSION = CODING_MAX_TURNS;
 const NO_PROGRESS_SESSIONS = 3;
 
 /** How a goal ended. `paused` is a stop short of done: blocked, out of sessions, or going nowhere. */

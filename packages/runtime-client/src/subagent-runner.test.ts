@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createTool, type AnyTool, type AssistantContentPart } from "@anvia/core";
 import { createCodingAgent } from "@aven/agents/coding-agent";
+import { CODING_MAX_TURNS } from "@aven/agents/coding-agent";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
@@ -207,7 +208,7 @@ describe("the agent of a subagent", () => {
   test("an agent without a role is the coding agent", () => {
     const agent = make();
     expect(agent.instructions).toContain("You are a coding agent");
-    expect(agent.defaultMaxTurns).not.toBe(SUBAGENT_MAX_TURNS);
+    expect(agent.defaultMaxTurns).toBe(CODING_MAX_TURNS);
     expect(agent.tools.map((tool) => tool.name)).toContain("ask_user");
   });
 });

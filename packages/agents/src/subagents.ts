@@ -16,7 +16,7 @@ export const SUBAGENT_TYPES = ["explore", "general"] as const;
 export type SubagentType = (typeof SUBAGENT_TYPES)[number];
 
 /** How many steps a subagent may take before it has to answer. */
-export const SUBAGENT_MAX_TURNS = 30;
+export const SUBAGENT_MAX_TURNS = 200;
 
 /** How many subagents one `spawn_agent` call may run at once. */
 export const MAX_PARALLEL_SUBAGENTS = 6;

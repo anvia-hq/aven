@@ -25,6 +25,9 @@ type CodingAgentOptions = ModelSource & {
   envNames?: readonly string[];
 };
 
+/** How many model calls the agent may make for one message (decision 0076); each one may run tools. */
+export const CODING_MAX_TURNS = 200;
+
 // Assembles the model and tools. Hosts own the run loop: start runs with `agent.stream()`.
 export function createCodingAgent(options: CodingAgentOptions) {
   const tools = [...options.tools];
@@ -43,7 +46,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     ]
       .filter(Boolean)
       .join("\n\n"),
-    maxTurns: options.maxTurns ?? 50,
+    maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
     tools,
   });
 
