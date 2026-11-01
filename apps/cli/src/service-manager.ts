@@ -7,6 +7,7 @@ import { launchdPlist, systemdUnit, type ServiceDefinition } from "./service-fil
 
 /** A background service of the person's own: a launchd agent on macOS, a systemd user unit on Linux. */
 export type ServiceManager = {
+  /** Writes the service's files and starts it on them, or starts it again if it was running. */
   install(def: ServiceDefinition): Promise<void>;
   uninstall(): Promise<void>;
   start(): Promise<void>;
@@ -67,7 +68,9 @@ function systemd(unit: string): ServiceManager {
       await mkdir(dirname(def.logFile), { recursive: true });
       await writeFile(file, systemdUnit(def));
       await mustRun(ctl("daemon-reload"));
-      await mustRun(ctl("enable", "--now", unit));
+      await mustRun(ctl("enable", unit));
+      // Restarted, so a service that was already running moves to the new files.
+      await mustRun(ctl("restart", unit));
       // Without lingering the service stops when the person logs out. It may need a password or not exist; the service still works while logged in.
       await exec(["loginctl", "enable-linger", process.env.USER ?? ""]);
     },

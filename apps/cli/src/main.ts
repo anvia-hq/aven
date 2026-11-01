@@ -18,6 +18,7 @@ import {
 } from "./commands/runner";
 import { doctor } from "./commands/doctor";
 import { install } from "./commands/install";
+import { uninstall } from "./commands/uninstall";
 import { update } from "./commands/update";
 import { version } from "./version";
 
@@ -31,6 +32,9 @@ Everything:
   install --runner --url <address> --token <token>
               Install only a runner, for a server somewhere else
   doctor      Check Docker, git, the server and the runner
+  uninstall [--purge --yes]
+              Remove the runner service and the server; --purge also deletes the
+              database and ~/.aven
 
 Server:
   server install [--domain D] [--port N] [--origin URL] [--release X]
@@ -102,6 +106,8 @@ async function main(argv: string[]) {
       return install(args);
     case "doctor":
       return doctor();
+    case "uninstall":
+      return uninstall(args);
     case "update":
       return update(args);
     case "start":

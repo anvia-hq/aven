@@ -8,6 +8,7 @@ import { logsDir, runnerEnvFile } from "../home";
 import { parseEnv } from "../env-file";
 import { loadRunnerEnv, writeRunnerEnv } from "../runner-config";
 import { selfCommand } from "../self";
+import type { ServiceDefinition } from "../service-files";
 import { serviceManager } from "../service-manager";
 import { version } from "../version";
 
@@ -17,6 +18,23 @@ const logFile = () => join(logsDir(), "runner.log");
 
 const IMAGE_REPOSITORY = "ghcr.io/anvia-hq/aven-sandbox";
 const imageFor = (release: string) => `${IMAGE_REPOSITORY}:${release}`;
+
+// What the service runs and with what. A service gets almost no environment of its own: it needs
+// the person's PATH to find docker and git.
+function serviceDefinition(): ServiceDefinition {
+  const env: Record<string, string> = {
+    HOME: process.env.HOME ?? "",
+    PATH: process.env.PATH ?? "",
+  };
+  for (const key of ["AVEN_HOME", "DOCKER_HOST", "DOCKER_CONFIG"])
+    if (process.env[key]) env[key] = process.env[key]!;
+  return {
+    label: names.launchdLabel,
+    command: [...selfCommand(), "runner", "run"],
+    env,
+    logFile: logFile(),
+  };
+}
 
 /** Installs this machine as a runner of a control plane and starts it as a service. */
 export async function runnerInstall(args: Args) {
@@ -49,19 +67,7 @@ export async function runnerInstall(args: Args) {
   }
 
   await writeRunnerEnv(runnerEnvFile(), { url: base, token, image });
-  const env: Record<string, string> = {
-    HOME: process.env.HOME ?? "",
-    PATH: process.env.PATH ?? "",
-  };
-  // A service gets almost no environment of its own. It needs the person's PATH to find docker and git.
-  for (const key of ["AVEN_HOME", "DOCKER_HOST", "DOCKER_CONFIG"])
-    if (process.env[key]) env[key] = process.env[key]!;
-  await manager().install({
-    label: names.launchdLabel,
-    command: [...selfCommand(), "runner", "run"],
-    env,
-    logFile: logFile(),
-  });
+  await manager().install(serviceDefinition());
   console.log(`The runner is installed as a service. Its log: ${logFile()}`);
   console.log(await outcome());
 }
@@ -146,6 +152,8 @@ export async function runnerUpgrade(release: string) {
       image,
     });
   }
-  await manager().restart();
+  // The service is written again, not only restarted: it may have been removed, or `aven` may have
+  // moved, and installing starts it on the new files either way.
+  await manager().install(serviceDefinition());
   return true;
 }
