@@ -23,7 +23,20 @@ Everything lives in `~/.aven` (the server's `.env` with its secrets, the runner'
 Projects are GitHub repositories. In **Settings > Platform** (as the owner whose email you gave the
 installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
 and to install it on your account or organization, and Aven keeps the credentials itself. Nothing
-to copy into `.env`.
+to copy into `.env`. Then each person presses **Connect GitHub** once, so that what the agent
+pushes and the pull requests it opens are theirs.
+
+Things to know:
+
+- GitHub app names are unique across GitHub. Aven suggests `Aven (<your host>)`, which is the same
+  for every install on `localhost`, so you will probably have to pick another name on GitHub's
+  confirmation page. Give the **Organization** field a name if a GitHub organization should own the
+  app rather than you.
+- The app is private: only the account or organization that owns it can install it. A team should
+  create it under its organization.
+- If you would rather make the app yourself, set the `GITHUB_APP_*` variables in
+  `~/.aven/server/.env` (see [`.env.example`](.env.example)); an app set there is used instead.
+- This flow has been tested against a stand-in for GitHub, not yet against github.com.
 
 ## Your own domain, with HTTPS
 
@@ -54,9 +67,45 @@ Run the install command again, or:
 aven update
 ```
 
-It moves the `aven` command, the server and the runner on that machine to the latest release. A
-server's runners are updated one machine at a time, the same way. Pin a release with
-`aven update --release 0.3.0`.
+It moves the `aven` command, the server and the runner on that machine to the latest release (never
+a prerelease): settings and secrets are kept, new settings are added, the new images are pulled and
+the database is migrated when the server starts. A server's runners are updated one machine at a
+time, the same way; Settings > Runtimes marks a runner that is behind with "Update available".
+`aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
+backup before updating (below) if you may want to go back.
+
+## Backup and restore
+
+Everything lives in one Postgres database. Back it up with:
+
+```sh
+docker compose --project-directory ~/.aven/server -f ~/.aven/server/docker-compose.yml \
+  exec -T postgres pg_dump -U aven aven > aven-backup.sql
+```
+
+and restore into an empty database with `psql -U aven -d <database> < aven-backup.sql` run the same
+way. Keep `~/.aven/server/.env` with it: the encryption key in it is what makes the stored provider
+keys, variables and GitHub App readable. `aven stop` and `aven update` keep the database;
+`aven uninstall --purge` deletes it.
+
+## Troubleshooting
+
+Start with `aven doctor`: it checks Docker, git, the server, the runner and its sandbox image.
+
+| What you see                             | What to do                                                                                                                                                                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Docker is installed but not running`    | Start Docker Desktop or OrbStack (macOS), or `sudo systemctl start docker` (Linux), then run the command again.                                                                                                         |
+| `Port 3000 is in use` (or 3030, 80, 443) | Pick another with `--port`, `--api-port` or `--https-port`.                                                                                                                                                             |
+| The server does not answer               | `aven server logs`. The first start can take a minute; `aven restart` after editing `.env`.                                                                                                                             |
+| A runner shows Offline in Settings       | `aven runner status`, then `aven runner logs --follow` on that machine. `aven runner start` if it is stopped.                                                                                                           |
+| `The control plane refused this runtime` | The token was revoked or rotated, or the runner is older than the server (`Unsupported runtime version`): add a runtime again in Settings > Runtimes and run its command, or run `aven update` on the runner's machine. |
+| `Cannot reach the control plane`         | The `--url` is wrong or blocked. It is the server's address followed by `/api`.                                                                                                                                         |
+| `Could not pull ...aven-sandbox...`      | The image is large (several GB) and the packages must be public on GHCR; check your network, then run `aven runner install` again.                                                                                      |
+| A thread cannot start a sandbox          | `docker info` must work for the user who installed the runner, and the runner's log says which image or command failed.                                                                                                 |
+
+Where things are: `~/.aven/server/.env` (settings and secrets), `~/.aven/runner.env` (the runner),
+`~/.aven/logs/runner.log`, and the database in the Docker volume `aven_postgres`. `AVEN_HOME`
+moves `~/.aven`.
 
 ## The `aven` command
 
@@ -84,4 +133,6 @@ cp .env.example .env     # then fill it in
 bun run dev
 ```
 
-Install and release design: [docs/decision/0073](docs/decision/0073-install-and-update-with-a-script.md).
+Install and release design: [docs/decision/0073](docs/decision/0073-install-and-update-with-a-script.md)
+and [0074](docs/decision/0074-the-github-app-is-created-from-the-platform.md). How to make a release
+and what a change must keep true for `aven update`: [docs/rules/0005-releasing.md](docs/rules/0005-releasing.md).
