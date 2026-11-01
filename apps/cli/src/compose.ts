@@ -1,0 +1,43 @@
+import { join } from "node:path";
+
+/** The command that runs `docker compose` for the server in `dir`, whatever the current directory is. */
+export const composeCommand = (dir: string, args: string[]) => [
+  "docker",
+  "compose",
+  "--project-directory",
+  dir,
+  "-f",
+  join(dir, "docker-compose.yml"),
+  ...args,
+];
+
+/** Runs a command with the terminal as its input and output; resolves with its exit code. */
+export async function run(command: string[], env?: Record<string, string>) {
+  const child = Bun.spawn(command, {
+    stdio: ["inherit", "inherit", "inherit"],
+    env: { ...process.env, ...env },
+  });
+  return child.exited;
+}
+
+/** Runs a command and returns what it printed, or undefined if it failed or is not installed. */
+export async function capture(command: string[]) {
+  try {
+    const child = Bun.spawn(command, { stdout: "pipe", stderr: "ignore" });
+    const [out, code] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+    return code === 0 ? out.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** What is wrong with Docker on this machine, or undefined when `docker compose` can be used. */
+export async function dockerProblem() {
+  if ((await capture(["docker", "--version"])) === undefined)
+    return "Docker is not installed. Install Docker Desktop, OrbStack or Docker Engine, then try again.";
+  if ((await capture(["docker", "compose", "version"])) === undefined)
+    return "Docker is installed without the compose plugin. Install Docker Compose v2.";
+  if ((await capture(["docker", "info"])) === undefined)
+    return "Docker is installed but not running. Start it, then try again.";
+  return undefined;
+}
