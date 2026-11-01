@@ -15,6 +15,9 @@
     "apps/cli": {
       "name": "@aven/cli",
       "version": "0.0.0",
+      "dependencies": {
+        "@aven/runtime-client": "workspace:*",
+      },
     },
     "apps/control-plane": {
       "name": "@aven/control-plane",

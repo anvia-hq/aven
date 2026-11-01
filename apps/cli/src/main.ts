@@ -6,6 +6,16 @@ import {
   serverStatus,
   serverStop,
 } from "./commands/server";
+import {
+  runnerInstall,
+  runnerLogs,
+  runnerRestart,
+  runnerRun,
+  runnerStart,
+  runnerStatus,
+  runnerStop,
+  runnerUninstall,
+} from "./commands/runner";
 import { version } from "./version";
 
 const usage = `aven ${version}
@@ -21,6 +31,13 @@ Server:
   status      Show what runs and whether it answers
   logs [service] [--follow]
 
+Runner (this machine hosts sandboxes for a server):
+  runner install --url <address> --token <token> [--image X]
+              Install this machine as a runner and start it as a service
+  runner start | stop | restart | status | uninstall
+  runner logs [--follow]
+  runner run  Run in the foreground (what the service runs)
+
 Other:
   version     Print the version
   help        Print this help
@@ -29,7 +46,7 @@ Other:
 const follows = (args: Args) => Boolean(args.flags.follow || args.flags.f);
 
 async function main(argv: string[]) {
-  const args = parseArgs(argv, ["port", "origin", "release"]);
+  const args = parseArgs(argv, ["port", "origin", "release", "url", "token", "image"]);
   const [command, sub] = args.positionals;
 
   switch (command) {
@@ -48,6 +65,16 @@ async function main(argv: string[]) {
       if (sub === "status") return serverStatus();
       if (sub === "logs") return serverLogs(args.positionals[2], follows(args));
       throw new Error(`Unknown command "server ${sub}".\n\n${usage}`);
+    case "runner":
+      if (sub === "install") return runnerInstall(args);
+      if (sub === "run") return runnerRun();
+      if (sub === "start") return runnerStart();
+      if (sub === "stop") return runnerStop();
+      if (sub === "restart") return runnerRestart();
+      if (sub === "status" || sub === undefined) return runnerStatus();
+      if (sub === "logs") return runnerLogs(follows(args));
+      if (sub === "uninstall") return runnerUninstall();
+      throw new Error(`Unknown command "runner ${sub}".\n\n${usage}`);
     case "start":
     case "restart":
       return serverStart();

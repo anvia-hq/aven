@@ -41,3 +41,18 @@ export async function dockerProblem() {
     return "Docker is installed but not running. Start it, then try again.";
   return undefined;
 }
+
+/** Runs a command and returns its exit code and everything it printed, for commands whose failure is an answer. */
+export async function exec(command: string[]) {
+  try {
+    const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
+    const [out, err, code] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    return { code, out: `${out}${err}`.trim() };
+  } catch (error) {
+    return { code: 127, out: error instanceof Error ? error.message : String(error) };
+  }
+}
