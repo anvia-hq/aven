@@ -65,3 +65,13 @@ describe("addMissingKeys", () => {
     );
   });
 });
+
+test("a new server env names the owner when there is one", () => {
+  const template = "PLATFORM_OWNER_EMAILS=\n";
+  const base = { origin: "http://x", port: 1, version: "1" };
+  expect(
+    parseEnv(newServerEnv(template, { ...base, ownerEmail: "me@example.com" }))
+      .PLATFORM_OWNER_EMAILS,
+  ).toBe("me@example.com");
+  expect(parseEnv(newServerEnv(template, base)).PLATFORM_OWNER_EMAILS).toBe("");
+});

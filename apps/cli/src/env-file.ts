@@ -60,15 +60,19 @@ export type ServerEnvOptions = {
   port: number;
   /** The release the images are pulled at. */
   version: string;
+  /** The person who becomes the platform owner (and can close sign-ups), if known. */
+  ownerEmail?: string;
 };
 
 /** A new install's `.env`: the template with the secrets made and the address filled in. */
 export function newServerEnv(template: string, options: ServerEnvOptions) {
-  return setEnv(template, {
+  const values: Record<string, string> = {
     AVEN_VERSION: options.version,
     AVEN_PORT: String(options.port),
     BETTER_AUTH_URL: options.origin,
     TRUSTED_ORIGINS: options.origin,
     ...newSecrets(),
-  });
+  };
+  if (options.ownerEmail) values.PLATFORM_OWNER_EMAILS = options.ownerEmail;
+  return setEnv(template, values);
 }

@@ -46,7 +46,12 @@ export async function serverInstall(args: Args) {
 
   const release = stringFlag(args, "release") ?? (version === "dev" ? "latest" : version);
   const origin = stringFlag(args, "origin") ?? `http://localhost:${port}`;
-  await writeServerFiles(dir, { compose, envTemplate }, { origin, port, version: release });
+  const ownerEmail = stringFlag(args, "owner-email");
+  await writeServerFiles(
+    dir,
+    { compose, envTemplate },
+    { origin, port, version: release, ownerEmail },
+  );
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);
   const env = await readServerEnv(dir);

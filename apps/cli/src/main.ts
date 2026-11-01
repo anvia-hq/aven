@@ -16,12 +16,21 @@ import {
   runnerStop,
   runnerUninstall,
 } from "./commands/runner";
+import { doctor } from "./commands/doctor";
+import { install } from "./commands/install";
 import { update } from "./commands/update";
 import { version } from "./version";
 
 const usage = `aven ${version}
 
 Usage: aven <command>
+
+Everything:
+  install [--port N] [--origin URL] [--owner-email E] [--no-runner] [--no-open]
+              Install the server and a runner on this machine and open it
+  install --runner --url <address> --token <token>
+              Install only a runner, for a server somewhere else
+  doctor      Check Docker, git, the server and the runner
 
 Server:
   server install [--port N] [--origin URL] [--release X]
@@ -49,7 +58,15 @@ Other:
 const follows = (args: Args) => Boolean(args.flags.follow || args.flags.f);
 
 async function main(argv: string[]) {
-  const args = parseArgs(argv, ["port", "origin", "release", "url", "token", "image"]);
+  const args = parseArgs(argv, [
+    "port",
+    "origin",
+    "release",
+    "url",
+    "token",
+    "image",
+    "owner-email",
+  ]);
   const [command, sub] = args.positionals;
 
   switch (command) {
@@ -78,6 +95,10 @@ async function main(argv: string[]) {
       if (sub === "logs") return runnerLogs(follows(args));
       if (sub === "uninstall") return runnerUninstall();
       throw new Error(`Unknown command "runner ${sub}".\n\n${usage}`);
+    case "install":
+      return install(args);
+    case "doctor":
+      return doctor();
     case "update":
       return update(args);
     case "start":
