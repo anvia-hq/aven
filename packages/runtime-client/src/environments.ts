@@ -14,6 +14,9 @@ import { clearDirectory, cloneRepository, type Git } from "./git-clone";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { SnapshotStore } from "./snapshots";
 
+/** The thread a workspace or an environment is for. */
+export type ThreadRef = { id: string; organizationId?: string };
+
 export type EnvironmentsConfig = {
   /** The sandbox image setups start from and threads without a snapshot run. */
   image: string;
@@ -47,7 +50,7 @@ export class Environments {
 
   // Puts the repository in `root`, which holds no clone: from its snapshot where snapshots apply,
   // else a plain clone.
-  async fill(thread: { id: string; organizationId?: string }, root: string, access: RepoAccess) {
+  async fill(thread: ThreadRef, root: string, access: RepoAccess) {
     const environment = await this.#environmentOf(thread, access);
     if (!environment) {
       await cloneRepository(root, thread.id, access, this.#config.git);
@@ -57,7 +60,7 @@ export class Environments {
   }
 
   // Runs the repository's `.aven/setup` again in `root` and keeps what it makes as the snapshot.
-  async save(thread: { id: string; organizationId?: string }, root: string, access: RepoAccess) {
+  async save(thread: ThreadRef, root: string, access: RepoAccess) {
     const environment = await this.#environmentOf(thread, access);
     if (!environment)
       throw new Error("Environments cannot be saved here: the sandbox image is not known");

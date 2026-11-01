@@ -27,7 +27,7 @@ import {
   type ContainerBase,
   type DockerRun,
 } from "./environment-setup";
-import { Environments } from "./environments";
+import { Environments, type ThreadRef } from "./environments";
 import { git, isCloned, type Git } from "./git-clone";
 import { signInCommand } from "./github-signin";
 import { identitySignInCommand } from "./identity-signin";
@@ -217,10 +217,7 @@ export interface ThreadWorkspaces {
    * that is kept between acquires, and the container is started by the first tool that needs it:
    * a bot's computer has no repository and mostly stays off (decision 0059).
    */
-  acquire(
-    thread: { id: string; organizationId?: string },
-    repo?: () => Promise<RepoAccess>,
-  ): Promise<ThreadSandbox>;
+  acquire(thread: ThreadRef, repo?: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
   /**
@@ -266,10 +263,7 @@ export interface ThreadWorkspaces {
    * snapshot new threads start from (decision 0043). Throws, with the end of the script's output,
    * when there is no script or it fails. Without it, an agent cannot save an environment.
    */
-  saveEnvironment?(
-    thread: { id: string; organizationId?: string },
-    access: RepoAccess,
-  ): Promise<{ image: string }>;
+  saveEnvironment?(thread: ThreadRef, access: RepoAccess): Promise<{ image: string }>;
   /** The images agents showed (decision 0033); without it, none can be read back. */
   readonly artifacts?: ArtifactStore;
   /** The files users attach (decision 0034); without it, a message with files cannot run. */
@@ -363,10 +357,7 @@ export class Sandboxes implements ThreadWorkspaces {
     return sandboxes;
   }
 
-  async acquire(
-    thread: { id: string; organizationId?: string },
-    repo?: () => Promise<RepoAccess>,
-  ): Promise<ThreadSandbox> {
+  async acquire(thread: ThreadRef, repo?: () => Promise<RepoAccess>): Promise<ThreadSandbox> {
     const root = await this.#workspace(thread, repo);
     const start = () => this.#ensure(thread.id, root);
     // A thread's container is up before its run begins; a bot's when something first needs it.
@@ -467,7 +458,7 @@ export class Sandboxes implements ThreadWorkspaces {
   // The thread's workspace: the repository cloned on first use (or restored from its snapshot) and
   // kept for its later runs. Real path, so the file tools' confinement and the bind mount agree on
   // what the directory is.
-  #workspace(thread: { id: string; organizationId?: string }, repo?: () => Promise<RepoAccess>) {
+  #workspace(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
     const known = this.#roots.get(thread.id);
     if (known) return known;
     const preparing = this.#prepare(thread, repo);
@@ -477,10 +468,7 @@ export class Sandboxes implements ThreadWorkspaces {
     return preparing;
   }
 
-  async #prepare(
-    thread: { id: string; organizationId?: string },
-    repo?: () => Promise<RepoAccess>,
-  ) {
+  async #prepare(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
     if (!repo) return this.#emptyWorkspace(thread.id);
     const root = await this.#fillWorkspace(thread, repo);
     // A package manager's store left in the workspace is never a change; for a workspace that
@@ -498,10 +486,7 @@ export class Sandboxes implements ThreadWorkspaces {
     return realpath(dir);
   }
 
-  async #fillWorkspace(
-    thread: { id: string; organizationId?: string },
-    repo: () => Promise<RepoAccess>,
-  ) {
+  async #fillWorkspace(thread: ThreadRef, repo: () => Promise<RepoAccess>) {
     const dir = this.#workspaceDir(thread.id);
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
@@ -549,7 +534,7 @@ export class Sandboxes implements ThreadWorkspaces {
     }
   }
 
-  async saveEnvironment(thread: { id: string; organizationId?: string }, access: RepoAccess) {
+  async saveEnvironment(thread: ThreadRef, access: RepoAccess) {
     const root = await this.workspace(thread.id);
     if (!root) throw new Error("The thread has no workspace yet");
     return this.#environments.save(thread, root, access);
