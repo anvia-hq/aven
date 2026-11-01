@@ -7,6 +7,7 @@ import {
   withOwnReasoning,
   withResponsesToolCallIds,
 } from "./own-reasoning";
+import { withUniqueToolCallIds } from "./unique-tool-call-ids";
 
 /** Where an agent's model comes from: a provider's config to build it from, or a model already built. */
 export type ModelSource = ModelConfig | { model: CompletionModel };
@@ -56,7 +57,7 @@ function resolveModel(source: ModelSource) {
   if ("model" in source)
     return { model: source.model, providerOptions: undefined, controls: undefined };
   return {
-    model: withHistoryItOwns(createModel(source), source),
+    model: withUniqueToolCallIds(withHistoryItOwns(createModel(source), source)),
     providerOptions: providerOptionsFor(source.provider),
     controls: source.reasoningEffort ? { reasoningEffort: source.reasoningEffort } : undefined,
   };
