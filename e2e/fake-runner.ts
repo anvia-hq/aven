@@ -272,6 +272,36 @@ const WORKSPACE_FILES: Record<string, string> = {
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
 
+// With FAKE_PROCESSES the pretend sandbox has a server running and a test that failed (decision
+// 0071); stopping the server ends it. Without it, nothing runs in the background.
+type PretendProcess = {
+  id: string;
+  command: string;
+  status: "running" | "exited" | "stopped";
+  exitCode?: number;
+  startedAt: string;
+  endedAt?: string;
+};
+const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+const PROCESSES: PretendProcess[] =
+  process.env.FAKE_PROCESSES === "1"
+    ? [
+        { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
+        {
+          id: "p2",
+          command: "bun test",
+          status: "exited",
+          exitCode: 1,
+          startedAt: ago(600_000),
+          endedAt: ago(540_000),
+        },
+      ]
+    : [];
+const PROCESS_LOGS: Record<string, string> = {
+  p1: "ready on http://localhost:3000\n",
+  p2: "1 fail\n",
+};
+
 let held: { holder: string; expiresAt: string } | null = null;
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { holder?: string; leaseMs?: number };
@@ -299,6 +329,18 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         ? { kind: "missing" }
         : { kind: "text", text, size: text.length, truncated: false },
     );
+  }
+  if (call.method === "processes.list") return reply({ processes: PROCESSES });
+  if (call.method === "processes.stop") {
+    const { processId } = call.params as { processId: string };
+    const found = PROCESSES.find((process) => process.id === processId);
+    if (!found) return send({ type: "reply", id: call.id, ok: false, error: "No such process" });
+    Object.assign(found, { status: "stopped", endedAt: new Date().toISOString() });
+    return reply({ processes: PROCESSES });
+  }
+  if (call.method === "processes.logs") {
+    const { processId } = call.params as { processId: string };
+    return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
   }
   if (call.method === "desktop.wake") sandboxRunning = true;
   if (!sandboxRunning) return reply(null);
