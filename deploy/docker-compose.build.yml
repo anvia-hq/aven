@@ -1,0 +1,11 @@
+# Builds the images from this checkout instead of pulling them:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: apps/control-plane/Dockerfile
+  web:
+    build:
+      context: ..
+      dockerfile: apps/platform/Dockerfile

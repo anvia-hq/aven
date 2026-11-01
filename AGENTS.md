@@ -11,6 +11,7 @@ apps/              Applications (control-plane, platform, runtime)
 clients/           Native clients (macos: SwiftPM, no TypeScript)
 packages/          Shared internal packages (db, agents, protocol)
 docs/              Project knowledge (see docs/README.md)
+deploy/            Self-hosting: compose file, env template (decision 0073)
 ```
 
 ## Commands
@@ -59,6 +60,10 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 - Non-feature singletons (auth client, api fetch helper) go in `src/lib/`.
 - Never edit `src/routeTree.gen.ts` (generated).
 - Full rules: `docs/rules/0001-platform-structure.md`.
+
+## Self-hosting (deploy/)
+
+`deploy/docker-compose.yml` runs Postgres, `server` (`apps/control-plane/Dockerfile`, migrations on start, `AVEN_LOCAL_RUNNER=off`) and `web` (`apps/platform/Dockerfile`: the built platform behind Caddy, which proxies `/api/*` to the server with the prefix stripped and is the one published port). `deploy/docker-compose.build.yml` builds the images from the checkout (`docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`); `deploy/env.example` is the install's `.env`, apart from the development `.env.example`. Both Dockerfiles build from the repository root and copy every workspace's `package.json` (a frozen lockfile needs them all). Runners are separate machines that connect out; install, update and the release pipeline are described in `docs/decision/0073-install-and-update-with-a-script.md`.
 
 ## Ports
 

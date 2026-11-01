@@ -1,0 +1,49 @@
+# Self-hosted Aven: Postgres, the control plane and the web entry point (decision 0073).
+# Runners are not here: a runner is a computer with Docker that connects out to this server, and
+# `aven` installs it beside the server or on any other machine.
+#
+#   cp env.example .env   # then fill it in; the installer does this for you
+#   docker compose up -d
+name: aven
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aven
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: aven
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aven -d aven"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    image: ${AVEN_SERVER_IMAGE:-ghcr.io/anvia-hq/aven-server}:${AVEN_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://aven:${POSTGRES_PASSWORD}@postgres:5432/aven
+      # Sandboxes are containers on a runner's own Docker, never on this server.
+      AVEN_LOCAL_RUNNER: "off"
+
+  web:
+    image: ${AVEN_WEB_IMAGE:-ghcr.io/anvia-hq/aven-web}:${AVEN_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      AVEN_SITE_ADDRESS: ${AVEN_SITE_ADDRESS:-:80}
+    ports:
+      - "${AVEN_PORT:-3000}:80"
+
+volumes:
+  postgres:
