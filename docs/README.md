@@ -4,12 +4,13 @@ Project knowledge lives here. Keep it short, current, and in the right folder.
 
 ## Layout
 
-| Folder      | What goes in it                                                        |
-| ----------- | ---------------------------------------------------------------------- |
-| `decision/` | Why we chose X over Y (ADRs): context, options, outcome, consequences. |
-| `products/` | What we are building: features, specs, user flows.                     |
-| `rules/`    | Conventions and constraints contributors (and agents) must follow.     |
-| `bugs/`     | Bugs in third-party **libraries** we depend on, plus workarounds.      |
+| Folder      | What goes in it                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `decision/` | Why we chose X over Y (ADRs): context, options, outcome, consequences.                                                                |
+| `products/` | What we are building: features, specs, user flows.                                                                                    |
+| `rules/`    | Conventions and constraints contributors (and agents) must follow.                                                                    |
+| `bugs/`     | Bugs in third-party **libraries** we depend on, plus workarounds.                                                                     |
+| `guides/`   | How to install, run and fix Aven, for the people who use it. The site's docs are made from these; they have plain names, not numbers. |
 
 `bugs/` is not for our own bugs. Track those in the issue tracker.
 

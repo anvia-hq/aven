@@ -50,7 +50,7 @@ If one is not public, set it to **public** in the package's settings on GitHub (
 
 ## Rolling back
 
-`aven update --release 0.1.5` runs an older release's binary, compose file and images. It does **not** undo migrations. Before updating across a release that has a migration, take a backup (see the README); to go back for real, restore the backup and then pin the old release. There is no downgrade of the database.
+`aven update --release 0.1.5` runs an older release's binary, compose file and images. It does **not** undo migrations. Before updating across a release that has a migration, take a backup (see [Self-hosting](../guides/self-hosting.md#backup-and-restore)); to go back for real, restore the backup and then pin the old release. There is no downgrade of the database.
 
 ## Testing the install and update paths
 

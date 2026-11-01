@@ -2,196 +2,33 @@
 
 **Cloud agents that run on your own machines, with your own API keys.**
 
-Aven is a self-hosted platform for AI coding agents. You describe a task in a thread; an agent
-picks up your GitHub repository in a sandbox of its own, with a real desktop, a browser, a terminal
-and the toolchains it needs, and works until the job is done. When it is, it opens the pull request
-as you. The server, the machines the agents work on and the model keys are yours; the only outside
-service is the model provider you choose, which sees what the agent sends it.
+Aven is a self-hosted platform for AI coding agents. Describe a task in a thread and an agent works
+on your GitHub repository in a sandbox of its own, with a desktop, a browser and a terminal, then
+opens the pull request as you. The server, the machines the agents run on and the model keys are
+yours.
 
-## Why Aven
+- Runs on your laptop, a build machine or a VM, in Docker sandboxes, one per thread.
+- Bring your own OpenAI, Anthropic, Azure OpenAI or OpenAI-compatible key. It stays encrypted on your server.
+- One server, any number of machines: add a runner with one command.
 
-- **Your machines, your data.** Install the server on a laptop, a build box or a VM. Your code is
-  cloned onto the machines you choose, and agents run in Docker sandboxes there, not on a vendor's
-  infrastructure.
-- **Bring your own model.** Add your own OpenAI, Anthropic, Azure OpenAI or any OpenAI-compatible
-  endpoint (a gateway such as LiteLLM, a local model server) and pick the model and reasoning
-  effort per message. Keys are stored encrypted on your server and are never shown again; the
-  machines running agents never hold them, they call the model through your server.
-- **A computer for every thread.** Each thread has its own sandbox: a Linux desktop with Chrome,
-  a shell, your repository on its own branch, Node, Bun, Go, Rust and Python. Watch the desktop live,
-  take it over, open a terminal in it, browse the files and read the diff of what changed.
-- **From task to pull request.** Press Ship and the agent commits, pushes and opens a draft pull
-  request, acting as you on GitHub, so what it pushes and opens is yours. A repository can describe
-  how to set itself up (`.aven/setup`) and how to ship (`.aven/ship.md`).
-- **Agents that keep going.** Close the tab, lose the connection or restart a runner: the work
-  carries on, and you pick it up where it is. Agents run commands in the background, ask you when
-  they need a decision or a secret, hand parts of a task to subagents and work on large goals
-  unattended.
-- **As many machines as you like.** One server, any number of runners: add a laptop, a Mac mini or
-  a cloud VM with one command and give a project the computer it should run on.
-- **For a team.** Organizations and members, invite links, workspace, project and personal
-  environment variables with write-only secrets and a history of who changed what, and skills (folders of
-  instructions and scripts) the agent can use.
-- **Bots that work for you.** Beyond coding threads, each person has a main bot with a computer of
-  its own: it can make other bots, message them, run tasks on a schedule and work on a goal in the
-  background.
+## Install
 
-## How it works
-
-```
-   you ── browser ──► ┌────────────────────────┐
-                      │ Aven server            │ ──► your model providers
-                      │ web app · API · Postgres│     (OpenAI, Anthropic, Azure, ...)
-                      └───────────▲────────────┘
-                                  │ runners connect out
-                  ┌───────────────┴───────────────┐
-          ┌───────┴───────┐               ┌───────┴───────┐
-          │ runner        │               │ runner        │   a laptop, a build
-          │ Docker + git  │               │ Docker + git  │   machine, a VM ...
-          │ ▢ ▢ ▢ sandboxes               │ ▢ ▢ sandboxes │
-          └───────────────┘               └───────────────┘
-```
-
-The **server** holds accounts, projects, threads and the encrypted keys. A **runner** is any computer
-with Docker and git that connects out to the server (so it needs no open port) and runs a sandbox
-for each thread. `aven` installs and updates both.
-
-## Get started
-
-macOS or Linux, with nothing installed beforehand:
+macOS or Linux, with nothing installed beforehand (on Windows, use WSL2):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash
 ```
 
-It installs what is missing (git and Docker, after asking), then the `aven` command, then the
-server and a runner on this machine, and opens Aven in your browser. On Windows, use WSL2.
+It installs what is missing (git and Docker, after asking), the `aven` command, the server and a
+runner on this machine, and opens Aven in your browser. Then add a model provider in Settings, connect
+GitHub and start a thread. Update later with `aven update`.
 
-1. **Create your account.** Use the email you gave the installer: that makes you the platform owner.
-2. **Add a model provider** in Settings > Providers, with your own API key.
-3. **Connect GitHub** (below): once for the server, then once per person.
-4. **Import a repository** as a project, start a thread and describe the task.
+## Docs
 
-Update later with `aven update`; everything below is for running it day to day.
-
-## Running Aven
-
-Everything lives in `~/.aven`: the server's `.env` with its secrets, the runner's settings and log,
-and the runner's workspaces in `~/.aven/runtime`. A checkout used for development keeps its own state
-in the project's git-ignored `.aven/` instead (see Development), so the two never mix.
-
-Good to know: agents act without asking for approval for each step, inside their sandbox. A sandbox
-holds only its thread's workspace, but it can reach the network, and any member of an organization can
-run commands on the organization's runners. Invite people you trust, and keep sign-up closed unless
-you want it open.
-
-### Connect GitHub
-
-Projects are GitHub repositories. In **Settings > Platform** (as the owner whose email you gave the
-installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
-and to install it on your account or organization, and Aven keeps the credentials itself. Nothing
-to copy into `.env`. Then each person presses **Connect GitHub** once, so that what the agent
-pushes and the pull requests it opens are theirs.
-
-Things to know:
-
-- GitHub app names are unique across GitHub. Aven suggests `Aven (<your host>)`, which is the same
-  for every install on `localhost`, so you will probably have to pick another name on GitHub's
-  confirmation page. Give the **Organization** field a name if a GitHub organization should own the
-  app rather than you.
-- By default the app is private: only the account or organization that owns it can install it. To
-  install it on several organizations, turn on **Allow installing on other accounts and
-  organizations** before pressing Create. For an app that already exists, make it public in its
-  settings on GitHub (**Advanced > Make public**). Public only means anyone may install it; nobody can
-  use it without this server's credentials. Either way an organization's owner may have to approve
-  the install, because the app asks for write access to code and pull requests.
-- If you would rather make the app yourself, set the `GITHUB_APP_*` variables in
-  `~/.aven/server/.env` (see [`.env.example`](.env.example)); an app set there is used instead.
-
-### Your own domain, with HTTPS
-
-For a server that other machines or people reach, point a DNS name at it, open ports 80 and 443 and
-install with the name; Caddy gets and renews the certificate:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --domain aven.example.com
-```
-
-Runners on other machines then connect over `wss://`, so their tokens never cross the network in the clear.
-
-### More runners
-
-One server can have any number of runners: a laptop, a build machine, a cloud VM. In **Settings >
-Runtimes** create a runner, copy its token and run this on the machine:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- \
-  --runner --url https://aven.example.com/api --token avrt_...
-```
-
-### Update
-
-Run the install command again, or:
-
-```sh
-aven update
-```
-
-It moves the `aven` command, the server and the runner on that machine to the latest release (never
-a prerelease): settings and secrets are kept, new settings are added, the new images are pulled and
-the database is migrated when the server starts. A server's runners are updated one machine at a
-time, the same way; Settings > Runtimes marks a runner that is behind with "Update available".
-`aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
-backup before updating (below) if you may want to go back.
-
-### Backup and restore
-
-Everything lives in one Postgres database. Back it up with:
-
-```sh
-docker compose --project-directory ~/.aven/server -f ~/.aven/server/docker-compose.yml \
-  exec -T postgres pg_dump -U aven aven > aven-backup.sql
-```
-
-and restore into an empty database with `psql -U aven -d <database> < aven-backup.sql` run the same
-way. Keep `~/.aven/server/.env` with it: the encryption key in it is what makes the stored provider
-keys, variables and GitHub App readable. `aven stop` and `aven update` keep the database;
-`aven uninstall --purge` deletes it.
-
-### Troubleshooting
-
-Start with `aven doctor`: it checks Docker, git, the server, the runner and its sandbox image.
-
-| What you see                             | What to do                                                                                                                                                                                                              |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Docker is installed but not running`    | Start Docker Desktop or OrbStack (macOS), or `sudo systemctl start docker` (Linux), then run the command again.                                                                                                         |
-| `Port 3000 is in use` (or 3030, 80, 443) | Pick another with `--port`, `--api-port` or `--https-port`.                                                                                                                                                             |
-| The server does not answer               | `aven server logs`. The first start can take a minute; `aven restart` after editing `.env`.                                                                                                                             |
-| A runner shows Offline in Settings       | `aven runner status`, then `aven runner logs --follow` on that machine. `aven runner start` if it is stopped.                                                                                                           |
-| `The control plane refused this runtime` | The token was revoked or rotated, or the runner is older than the server (`Unsupported runtime version`): add a runtime again in Settings > Runtimes and run its command, or run `aven update` on the runner's machine. |
-| `Cannot reach the control plane`         | The `--url` is wrong or blocked. It is the server's address followed by `/api`.                                                                                                                                         |
-| `Could not pull ...aven-sandbox...`      | The image is large (several GB) and comes from GHCR; check your network, then run `aven runner install` again.                                                                                                          |
-| A thread cannot start a sandbox          | `docker info` must work for the user who installed the runner, and the runner's log says which image or command failed.                                                                                                 |
-
-Where things are: `~/.aven/server/.env` (settings and secrets), `~/.aven/runner.env` (the runner),
-`~/.aven/logs/runner.log`, the runner's workspaces in `~/.aven/runtime` (`AVEN_RUNTIME_HOME`), and the
-database in the Docker volume `aven_postgres`. `AVEN_HOME` moves the settings, server files and logs
-but not `AVEN_RUNTIME_HOME`, which has to be set as well to move the runner's workspaces.
-
-### The `aven` command
-
-```
-aven install [--domain D] [--port N] [--owner-email E]     server + runner on this machine
-aven install --runner --url <address> --token <token>      only a runner
-aven start | stop | restart | status | logs [--follow]     the server
-aven runner start | stop | restart | status | logs | uninstall
-aven update [--release X]
-aven doctor                                                check Docker, git, the server and the runner
-aven uninstall [--purge --yes]                             remove the services; --purge also deletes the data
-```
-
-`aven stop` keeps the database. Settings are in `~/.aven/server/.env`; edit it and run
-`aven restart`. See [`deploy/env.example`](deploy/env.example) for what each one does.
+- [Self-hosting](docs/guides/self-hosting.md): how it works, your own domain, more runners, updating, backup
+- [Connect GitHub](docs/guides/connect-github.md)
+- [Troubleshooting](docs/guides/troubleshooting.md)
+- [The `aven` command](docs/guides/cli.md)
 
 ## Development
 
@@ -204,6 +41,6 @@ cp .env.example .env     # then fill it in, with AVEN_RUNTIME_HOME=<this checkou
 bun run dev
 ```
 
-Install and release design: [docs/decision/0073](docs/decision/0073-install-and-update-with-a-script.md)
-and [0074](docs/decision/0074-the-github-app-is-created-from-the-platform.md). How to make a release
-and what a change must keep true for `aven update`: [docs/rules/0005-releasing.md](docs/rules/0005-releasing.md).
+How installs and releases work: [docs/decision/0073](docs/decision/0073-install-and-update-with-a-script.md),
+[0074](docs/decision/0074-the-github-app-is-created-from-the-platform.md) and
+[docs/rules/0005-releasing.md](docs/rules/0005-releasing.md).
