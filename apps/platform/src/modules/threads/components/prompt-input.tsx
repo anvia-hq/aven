@@ -4,7 +4,7 @@ import {
   useComposer,
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
-import { ArrowUp, Paperclip, Stop } from "@mynaui/icons-react";
+import { ArrowUp, Paperclip, StopSolid } from "@mynaui/icons-react";
 import {
   useEffect,
   useRef,
@@ -174,7 +174,7 @@ function Composer({
           <ModelMenu model={model} />
           {running ? (
             <Button size="icon-sm" aria-label="Stop" onClick={onStop}>
-              <Stop />
+              <StopSolid />
             </Button>
           ) : (
             <Button
