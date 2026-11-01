@@ -1,9 +1,10 @@
-import { Agent, createQuestionTool } from "@anvia/core";
+import { Agent, createQuestionTool, createTool } from "@anvia/core";
 import { scriptedModel, text, type ScriptStep } from "@aven/agents/testing/scripted-model";
 import type { RunEvent } from "@aven/protocol/events";
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { hostname } from "node:os";
+import { z } from "zod";
 
 import { DurableRuns, type RunInput } from "./durable-runs";
 import { goalSessionMarker } from "./goal-report";
@@ -204,5 +205,58 @@ describe("DurableRuns goals", () => {
       });
       expect((await goal.done).type).toBe("complete");
     }
+  });
+});
+
+describe("DurableRuns tool concurrency", () => {
+  // Three calls in one model turn to a tool that takes a moment, and the most of them at once.
+  async function mostAtOnce(withQuestionTool: boolean) {
+    let running = 0;
+    let most = 0;
+    const slow = createTool({
+      name: "slow",
+      description: "Takes a moment.",
+      inputSchema: z.object({ n: z.number() }),
+      async execute() {
+        running += 1;
+        most = Math.max(most, running);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        running -= 1;
+        return "ok";
+      },
+    });
+    const calls: ScriptStep = [1, 2, 3].map((n) => ({
+      type: "tool-call" as const,
+      toolCallId: `c${n}`,
+      toolName: "slow",
+      input: { n },
+    }));
+    const runs = await opened(journalPath());
+    const started = await runs.start(
+      "run-1",
+      "thread-1",
+      "go",
+      {
+        agent: new Agent({
+          id: "run-1",
+          instructions: "x",
+          tools: withQuestionTool ? [slow, createQuestionTool()] : [slow],
+          model: scriptedModel([calls, [text("done")]]),
+        }),
+      },
+      () => {},
+    );
+    expect(await started.done).toMatchObject({ type: "response" });
+    return most;
+  }
+
+  test("a run with no one to answer calls its tools side by side", async () => {
+    expect(await mostAtOnce(false)).toBe(3);
+  });
+
+  // The limit is Anvia's own, not ours: an agent that can ask a question runs its tools one at a
+  // time. This test says so; when Anvia lifts it, the attended runs speed up and this one changes.
+  test("a run that can ask a question still calls its tools one at a time", async () => {
+    expect(await mostAtOnce(true)).toBe(1);
   });
 });

@@ -33,6 +33,12 @@ import type { Source } from "./run-outbox";
 // version stop as "needs attention" instead of continuing under code that no longer matches.
 const AGENT_VERSION = "2";
 
+// How many of the tool calls in one model turn run at once (decision 0070). Anvia's default is one
+// at a time, and durable has no setting for it: this is read by our patch of `@anvia/durable`
+// (`patches/`). Anvia keeps it at one for an agent that has a question tool, which is a run with
+// a person to answer, so it speeds up the runs without one (goal sessions).
+const TOOL_CONCURRENCY = 4;
+
 // Tools that are safe to repeat when the runner stopped while they ran. Everything else (commands,
 // processes, the desktop) is not repeated: the run is told the outcome is unknown.
 const SAFE_TOOLS = new Set<string>([
@@ -328,6 +334,7 @@ export class DurableRuns {
         agent: input.agent,
         version: AGENT_VERSION,
         stream: true,
+        toolConcurrency: TOOL_CONCURRENCY,
         modelRetry: MODEL_RETRY,
         compaction: input.compaction,
         // Durable refuses a policy for a tool the agent does not have.

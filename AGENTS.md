@@ -36,6 +36,7 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 - **Internal packages** are named `@aven/<name>`, referenced as `"workspace:*"`, and exported from `src/index.ts`. Apps never import from another app. Shared code goes in `packages/`.
 - **No build step** for internal packages; they ship as TS source.
 - **Dependencies:** add them to the workspace that uses them, not the root (root is for tooling only). Ask before adding a heavy or new dependency.
+- **Patched dependencies** live in `patches/` (`bun patch`, listed in the root `package.json`). `@anvia/durable` has one that lets an agent registration carry `toolConcurrency` (decision 0070, `docs/bugs/0005-anvia-durable-has-no-tool-concurrency.md`); it goes when Anvia has the setting upstream.
 - Never commit secrets or `.env` files. Config goes in `.env` (gitignored, loaded automatically by Bun); every variable must also be listed in `.env.example` with a safe placeholder.
 
 ## apps/platform
