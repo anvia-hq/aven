@@ -6,33 +6,21 @@ import {
   WIRE_VERSION,
   CloseCode,
   type ControlPlaneToRuntime,
-  type CallMethod,
-  type FilesCallMethod,
-  type ProcessesCallMethod,
-  type RunnerCallMethod,
-  type RuntimeCalls,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
-import {
-  artifactsReadParams,
-  desktopCallParams,
-  diffGetParams,
-  filesCallParams,
-  filesSearchParams,
-  processesCallParams,
-} from "./call-params";
 import {
   BotReplies,
   defaultCreateBotAgent,
   type BotRepliesContext,
   type CreateBotReplyAgent,
 } from "./bot-replies";
-import { DesktopViewers } from "./desktop-viewers";
+import { createControlPlaneCalls } from "./control-plane-calls";
+import { DesktopViewers, type ViewerLink } from "./desktop-viewers";
+import { IdleRelease } from "./idle-release";
+import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
-import { threadDiff } from "./thread-diff";
-import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver, type CreateRuntimeAgent, type DriverContext } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -122,18 +110,6 @@ export function startRuntime(options: RuntimeOptions) {
   journal.catch(() => undefined);
   // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.
   const boxes = new Map<string, ThreadSandbox>();
-  const idleTimers = new Map<string, Timer>();
-  const releasing = new Map<string, Promise<void>>();
-  // Calls waiting for an answer. One sent over a connection that dropped is sent again on the next.
-  const pending = new Map<
-    string,
-    {
-      method: CallMethod;
-      params: unknown;
-      resolve: (v: unknown) => void;
-      reject: (e: Error) => void;
-    }
-  >();
   let socket: WebSocket | undefined;
   let stopped = false;
   let backoff = RECONNECT_MIN_MS;
@@ -151,41 +127,24 @@ export function startRuntime(options: RuntimeOptions) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(frame);
   };
 
-  // Streams thread desktops to the viewers the control plane opens (decision 0015).
-  const viewers = new DesktopViewers(options.sandbox, {
+  // How the desktops and terminals the control plane opens reach it.
+  const viewerLink: ViewerLink = {
     send: (message) => void send(message),
     sendBinary,
     buffered: () => socket?.bufferedAmount ?? 0,
-  });
+  };
+
+  // Streams thread desktops to the viewers the control plane opens (decision 0015).
+  const viewers = new DesktopViewers(options.sandbox, viewerLink);
 
   // Runs the shells of the terminals the control plane opens (decision 0053).
-  const terminals = new TerminalSessions(options.sandbox, {
-    send: (message) => void send(message),
-    sendBinary,
-    buffered: () => socket?.bufferedAmount ?? 0,
-  });
+  const terminals = new TerminalSessions(options.sandbox, viewerLink);
 
   const sendOrWarn = (message: RuntimeToControlPlane) => {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
 
-  const call = <M extends keyof RuntimeCalls>(method: M, params: RuntimeCalls[M]["params"]) =>
-    new Promise<RuntimeCalls[M]["result"]>((resolve, reject) => {
-      const id = crypto.randomUUID();
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error(`The control plane did not answer ${method} within ${callTimeoutMs} ms`));
-      }, callTimeoutMs);
-      pending.set(id, {
-        method,
-        params,
-        // The control plane's answer is taken to be what the method returns; it is not checked.
-        resolve: (value) => (clearTimeout(timer), resolve(value as RuntimeCalls[M]["result"])),
-        reject: (error) => (clearTimeout(timer), reject(error)),
-      });
-      // Sent now if the link is up, and again whenever it comes back until it is answered.
-      send({ type: "call", id, method, params });
-    });
+  const { call, resend, settle } = createControlPlaneCalls({ send, timeoutMs: callTimeoutMs });
 
   // Tells the control plane something about a run. It is kept either way: if the link is down or
   // the control plane has not asked for the run since it came back, it is sent on request.
@@ -194,51 +153,16 @@ export function startRuntime(options: RuntimeOptions) {
     if (message && outbox.attached(runId)) send(message);
   };
 
-  function scheduleIdleRelease(threadId: string) {
-    clearTimeout(idleTimers.get(threadId));
-    if (stopped) return;
-    idleTimers.set(
-      threadId,
-      setTimeout(() => void releaseIfIdle(threadId), idleReleaseMs),
-    );
-  }
-
-  const hasRun = (threadId: string) =>
-    bots.has(threadId) || [...driver.live.values()].some((run) => run.threadId === threadId);
-
-  // A run or a reply is about to use the sandbox: it must not be released as idle.
-  async function starting(threadId: string) {
-    clearTimeout(idleTimers.get(threadId));
-    await releasing.get(threadId);
-  }
-
-  // A run, or a process the agent left running (a dev server), keeps the sandbox; the check comes
-  // round again after another idle period.
-  async function releaseIfIdle(threadId: string) {
-    idleTimers.delete(threadId);
-    if (stopped || hasRun(threadId)) return;
-    const busy =
-      viewers.watching(threadId) > 0 ||
-      terminals.count(threadId) > 0 ||
-      (await boxes
-        .get(threadId)
-        ?.hasRunningProcesses()
-        .catch(() => false));
-    if (stopped || hasRun(threadId)) return;
-    if (busy) {
-      scheduleIdleRelease(threadId);
-      return;
-    }
-    const release = freeThread(threadId)
-      .catch((error: unknown) => console.error(`Could not release thread ${threadId}:`, error))
-      .finally(() => releasing.delete(threadId));
-    releasing.set(threadId, release);
-  }
-
-  async function freeThread(threadId: string) {
-    boxes.delete(threadId);
-    await options.sandbox.release(threadId);
-  }
+  // Its checks reach the bots and the driver, which are made with it: hence the annotation.
+  const idle: IdleRelease = new IdleRelease({
+    sandbox: options.sandbox,
+    boxes,
+    idleMs: idleReleaseMs,
+    stopped: () => stopped,
+    hasRun: (threadId) =>
+      bots.has(threadId) || [...driver.live.values()].some((run) => run.threadId === threadId),
+    isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
+  });
 
   // Answers for the bots, each on its own computer (decision 0059).
   const bots = new BotReplies({
@@ -247,8 +171,8 @@ export function startRuntime(options: RuntimeOptions) {
     send,
     call,
     boxes,
-    starting,
-    finished: scheduleIdleRelease,
+    starting: (threadId) => idle.starting(threadId),
+    finished: (threadId) => idle.schedule(threadId),
     pause: options.typingPause,
   });
 
@@ -262,8 +186,8 @@ export function startRuntime(options: RuntimeOptions) {
     report,
     boxes,
     controlPlane: origin,
-    starting,
-    finished: scheduleIdleRelease,
+    starting: (threadId) => idle.starting(threadId),
+    finished: (threadId) => idle.schedule(threadId),
     stopped: () => stopped,
   });
 
@@ -276,82 +200,7 @@ export function startRuntime(options: RuntimeOptions) {
     }
   }
 
-  // A thread's changes; null when it has no workspace on this runner yet.
-  async function diffOf(params: unknown) {
-    const { threadId, scope } = diffGetParams(params);
-    const root = await options.sandbox.workspace(threadId);
-    return root ? threadDiff(root, scope) : null;
-  }
-
-  // A folder or a file of a thread's workspace; null when it has no workspace on this runner yet.
-  async function filesOf(method: Exclude<FilesCallMethod, "files.search">, params: unknown) {
-    const { threadId, path } = filesCallParams(params);
-    const root = await options.sandbox.workspace(threadId);
-    if (!root) return null;
-    return method === "files.list"
-      ? { entries: await listDirectory(root, path) }
-      : readWorkspaceFile(root, path);
-  }
-
-  // The files of a thread's workspace that match the composer's `@`; null without a workspace.
-  async function searchOf(params: unknown) {
-    const { threadId, query } = filesSearchParams(params);
-    const root = await options.sandbox.workspace(threadId);
-    return root ? { paths: await searchWorkspace(root, query) } : null;
-  }
-
-  // An image the thread's agent showed; null when this runner does not have it. Read from the
-  // runner's own disk, so it does not need the thread's sandbox to be running (decision 0033).
-  async function artifactOf(params: unknown) {
-    const { threadId, name } = artifactsReadParams(params);
-    return (await options.sandbox.artifacts?.read(threadId, name)) ?? null;
-  }
-
-  // The processes in a thread's sandbox. A sandbox that is not up has none, and these calls never
-  // start one (decision 0071); a stop or a read of the logs of a process that is not there is an error.
-  async function processesOf(method: ProcessesCallMethod, params: unknown) {
-    const { threadId, processId } = processesCallParams(params);
-    const box = boxes.get(threadId);
-    if (method === "processes.list") return { processes: (await box?.processes.list()) ?? [] };
-    if (!box || !processId) throw new Error("No such process");
-    if (method === "processes.stop") return { processes: await box.processes.stop(processId) };
-    return box.processes.logs(processId);
-  }
-
-  // Starts a thread's sandbox without a run, for a person who wants its desktop (decision 0039); the
-  // idle clock frees it again if nothing uses it. A thread that never ran has no workspace to
-  // start it on, and the clone is made by a run. A bot's computer has no repository: it is started
-  // as it is (decision 0059).
-  async function wakeOf(params: unknown) {
-    const { threadId, bot } = desktopCallParams(params);
-    clearTimeout(idleTimers.get(threadId));
-    await releasing.get(threadId);
-    const box = await options.sandbox.acquire(
-      { id: threadId },
-      bot
-        ? undefined
-        : async () => {
-            throw new Error("The thread has no workspace yet");
-          },
-    );
-    boxes.set(threadId, box);
-    // A thread's container is up already; a bot's starts here.
-    await box.start?.();
-    scheduleIdleRelease(threadId);
-    return viewers.call("desktop.status", { threadId });
-  }
-
-  // What the control plane's call asks for: a thread's changes, its files, an image, or its desktop.
-  function callOf(method: RunnerCallMethod, params: unknown) {
-    if (method === "desktop.wake") return wakeOf(params);
-    if (method === "diff.get") return diffOf(params);
-    if (method === "artifacts.read") return artifactOf(params);
-    if (method === "files.list" || method === "files.read") return filesOf(method, params);
-    if (method === "files.search") return searchOf(params);
-    if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
-      return processesOf(method, params);
-    return viewers.call(method, params);
-  }
+  const callOf = createRunnerCalls({ sandbox: options.sandbox, boxes, viewers, idle });
 
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {
@@ -395,14 +244,9 @@ export function startRuntime(options: RuntimeOptions) {
       case "call":
         await answer(message.id, () => callOf(message.method, message.params));
         return;
-      case "reply": {
-        const waiting = pending.get(message.id);
-        if (!waiting) return;
-        pending.delete(message.id);
-        if (message.ok) waiting.resolve(message.result);
-        else waiting.reject(new Error(message.error ?? "The control plane reported an error"));
+      case "reply":
+        settle(message);
         return;
-      }
       default:
         // Every type is handled above; a type this runner does not know yet is ignored.
         message satisfies never;
@@ -423,8 +267,7 @@ export function startRuntime(options: RuntimeOptions) {
       // The control plane asks for each of these runs again, or says to forget it.
       outbox.detachAll();
       send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids() });
-      for (const [id, waiting] of pending)
-        send({ type: "call", id, method: waiting.method, params: waiting.params });
+      resend();
       connected.resolve();
     };
     ws.onmessage = (event) => {
@@ -473,12 +316,12 @@ export function startRuntime(options: RuntimeOptions) {
     async stop() {
       stopped = true;
       clearTimeout(retry);
-      for (const timer of idleTimers.values()) clearTimeout(timer);
+      idle.cancelAll();
       viewers.closeAll();
       terminals.closeAll();
       bots.abortAll("The runner is stopping");
       socket?.close();
-      await Promise.all(releasing.values());
+      await idle.settled();
       await options.sandbox.dispose();
       await journal.then((journaled) => journaled.close()).catch(() => undefined);
       state.close();
