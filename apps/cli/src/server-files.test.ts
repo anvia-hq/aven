@@ -12,7 +12,7 @@ beforeEach(async () => {
 });
 afterEach(() => rm(dir, { recursive: true, force: true }));
 
-const options = { origin: "http://localhost:3000", port: 3000, version: "1.0.0" };
+const options = { origin: "http://localhost:2836", port: 2836, version: "1.0.0" };
 const files = {
   compose: "services: {}\n",
   envTemplate: "AVEN_VERSION=latest\nPOSTGRES_PASSWORD=\n",

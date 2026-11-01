@@ -54,7 +54,7 @@ export function addMissingKeys(existing: string, template: string) {
 }
 
 export type ServerEnvOptions = {
-  /** Where people open Aven, such as http://localhost:3000. No path. */
+  /** Where people open Aven, such as http://localhost:2836. No path. */
   origin: string;
   /** The port the web entry point is published on. */
   port: number;
@@ -86,6 +86,9 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
     values.AVEN_SITE_ADDRESS = options.domain;
     values.AVEN_HTTPS_PORT = String(options.httpsPort ?? 443);
     values.AVEN_HTTPS_BIND = "0.0.0.0";
+  } else if (options.httpsPort) {
+    // Not served over HTTPS, so this port is published on this machine only.
+    values.AVEN_HTTPS_PORT = String(options.httpsPort);
   }
   return setEnv(template, values);
 }

@@ -6,6 +6,7 @@ import { parseEnv } from "../env-file";
 import { waitForHealthy } from "../health";
 import { runnerEnvFile, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
+import { API_PORT } from "../server-plan";
 import { version } from "../version";
 
 type Check = { name: string; ok: boolean; detail: string };
@@ -27,7 +28,7 @@ export async function doctor() {
 
   const serverEnv = await readEnv(join(serverDir(), ".env"));
   if (serverEnv) {
-    const url = `http://localhost:${serverEnv.AVEN_API_PORT || 3030}/health`;
+    const url = `http://localhost:${serverEnv.AVEN_API_PORT || API_PORT}/health`;
     const answers = await waitForHealthy(url, { timeoutMs: 0 });
     add(
       "server",

@@ -5,11 +5,48 @@ import { planServer } from "./server-plan";
 const base = { release: "1.0.0" };
 
 describe("planServer", () => {
-  test("is plain HTTP on 3000, with the API on 3030", () => {
-    const { options, needed } = planServer(base);
-    expect(options).toMatchObject({ origin: "http://localhost:3000", port: 3000, apiPort: 3030 });
+  test("is plain HTTP on 2836, with the API on 2837 and HTTPS on 2838 on this machine", () => {
+    const { options, needed, notes } = planServer(base);
+    expect(options).toMatchObject({
+      origin: "http://localhost:2836",
+      port: 2836,
+      apiPort: 2837,
+      httpsPort: 2838,
+    });
     expect(options.domain).toBeUndefined();
-    expect(needed).toEqual([3000, 3030]);
+    expect(needed).toEqual([2836, 2837, 2838]);
+    expect(notes).toEqual([]);
+  });
+
+  test("takes the next free port for a default that is in use, and says so", () => {
+    const busy = new Set([2836, 2838]);
+    const { options, notes } = planServer(base, (port) => !busy.has(port));
+    expect(options).toMatchObject({
+      origin: "http://localhost:2839",
+      port: 2839,
+      apiPort: 2837,
+      httpsPort: 2840,
+    });
+    expect(notes).toEqual([
+      "Port 2836 is in use, so --port 2839 is used instead.",
+      "Port 2838 is in use, so --https-port 2840 is used instead.",
+    ]);
+  });
+
+  test("never gives two ports the same number", () => {
+    const { options } = planServer(base, (port) => port !== 2836);
+    const ports = [options.port, options.apiPort, options.httpsPort];
+    expect(new Set(ports).size).toBe(3);
+  });
+
+  test("uses a port the flags name as it is, even when it is busy", () => {
+    const { options, notes } = planServer({ ...base, port: "3900" }, (port) => port !== 3900);
+    expect(options.port).toBe(3900);
+    expect(notes.some((note) => note.includes("--port"))).toBe(false);
+  });
+
+  test("says so when the range has no free port left", () => {
+    expect(() => planServer(base, () => false)).toThrow("No free port between 2836 and 2899");
   });
 
   test("a port moves the address with it", () => {
@@ -24,7 +61,7 @@ describe("planServer", () => {
       httpsPort: 443,
       domain: "aven.example.com",
     });
-    expect(needed).toEqual([80, 3030, 443]);
+    expect(needed).toEqual([80, 2837, 443]);
   });
 
   test("a domain on other ports names the HTTPS port in the address", () => {
