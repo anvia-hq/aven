@@ -1,5 +1,7 @@
 import { describeError } from "./errors";
 import { botMemoryStore, memoryStore } from "./memory-store";
+import { createGoalDriver } from "./modules/goals/driver";
+import { goalsService } from "./modules/goals/service";
 import { createBotChats } from "./modules/bots/chats";
 import { RemoteBotReplier } from "./modules/bots/remote-replier";
 import { BotRunner } from "./modules/bots/runner";
@@ -68,6 +70,11 @@ export const botRunner = new BotRunner({
       botChats.deliver(userId, from, hops, handle, text, relays),
     greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
     timezone: (userId) => preferencesService.timezone(userId),
+    goals: {
+      get: (botId) => goalsService.get(botId),
+      start: (userId, botId, input) => goalsService.start(userId, botId, input),
+      update: (botId, action, reason) => goalsService.update(botId, action, reason),
+    },
     schedules: {
       list: (userId) => schedulesService.list(userId),
       create: (userId, selfId, input) => schedulesService.create(userId, selfId, input),
@@ -75,6 +82,8 @@ export const botRunner = new BotRunner({
       remove: (userId, id) => schedulesService.remove(userId, id),
     },
   }),
+  // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
+  settled: (reply) => goalDriver.settled(reply),
 });
 
 export const botChats = createBotChats(botRunner);
@@ -83,5 +92,13 @@ export const botChats = createBotChats(botRunner);
 export const scheduler = createScheduler({
   fire: ({ userId, botId }, note) => botChats.fire(userId, botId, note),
   isBusy: (botId) => botRunner.busy(botId),
+  intervalMs: 30_000,
+});
+
+// Keeps the goals of bots going: a round after a round as replies end, and a tick for a goal
+// nothing is working on (decision 0068).
+export const goalDriver = createGoalDriver({
+  wake: (userId, botId, note) => botChats.fire(userId, botId, note),
+  isIdle: (botId) => botRunner.isIdle(botId),
   intervalMs: 30_000,
 });

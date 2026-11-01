@@ -1,6 +1,8 @@
 import type { MemoryStore } from "@anvia/core";
 import type {
   BotCreated,
+  BotGoaled,
+  BotGoalParams,
   BotCreateParams,
   BotMemoryParams,
   BotQuestioned,
@@ -19,6 +21,7 @@ import type {
 import {
   parseAppendParams,
   parseBotCreateParams,
+  parseBotGoalParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
   parseBotScheduleParams,
@@ -49,6 +52,8 @@ export type CallBotReply = {
   send(params: BotSendParams): Promise<BotSent>;
   /** Looks at, makes, changes or deletes the person's schedules, for the reply's own bot (decision 0067). */
   schedule(params: BotScheduleParams): Promise<BotScheduled>;
+  /** Looks at, starts or changes the reply's own bot's goal (decision 0068). */
+  goal(params: BotGoalParams): Promise<BotGoaled>;
   /** Asks the person to decide, in the reply's own chat or through the main bot (decision 0066). */
   question(params: BotQuestionParams): Promise<BotQuestioned>;
 };
@@ -106,6 +111,11 @@ export async function answerRuntimeCall(
   if (method === "bot.schedule") {
     return answerBotCall(params, parseBotScheduleParams, findBotReply, (reply, call) =>
       reply.schedule(call),
+    );
+  }
+  if (method === "bot.goal") {
+    return answerBotCall(params, parseBotGoalParams, findBotReply, (reply, call) =>
+      reply.goal(call),
     );
   }
   if (method === "bot.question") {

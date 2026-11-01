@@ -11,6 +11,7 @@ import type { RunEvent } from "@aven/protocol/events";
 import {
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotGoalParams,
   parseBotScheduleParams,
   parseBotSendParams,
   parseBotUpdateParams,
@@ -115,6 +116,7 @@ describe("calls from a runtime", () => {
       "bot.send",
       "bot.question",
       "bot.schedule",
+      "bot.goal",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
@@ -242,6 +244,49 @@ describe("a bot writing to another bot", () => {
       { replyId: "", to: "scout", text: "hi" },
     ]) {
       expect(() => parseBotSendParams(bad)).toThrow();
+    }
+  });
+});
+
+describe("a bot's goal", () => {
+  test("each operation is shaped, and a goal has an objective and at most eight checks", () => {
+    expect(parseBotGoalParams({ replyId: "r1", op: "get" })).toEqual({ replyId: "r1", op: "get" });
+    expect(
+      parseBotGoalParams({
+        replyId: "r1",
+        op: "start",
+        objective: " Port it ",
+        checks: [" bun test "],
+        maxRounds: 5,
+      }),
+    ).toEqual({
+      replyId: "r1",
+      op: "start",
+      objective: "Port it",
+      checks: ["bun test"],
+      maxRounds: 5,
+    });
+    expect(
+      parseBotGoalParams({ replyId: "r1", op: "update", action: "blocked", reason: " no key " }),
+    ).toEqual({ replyId: "r1", op: "update", action: "blocked", reason: "no key" });
+  });
+
+  test("what is empty, too many, too long or not an action is refused", () => {
+    const start = { replyId: "r1", op: "start", objective: "o", checks: [] };
+    for (const bad of [
+      { ...start, objective: " " },
+      { ...start, objective: "x".repeat(20_001) },
+      { ...start, checks: Array.from({ length: 9 }, () => "true") },
+      { ...start, checks: [" "] },
+      { ...start, checks: ["x".repeat(4_001)] },
+      { ...start, maxRounds: 0 },
+      { ...start, maxRounds: 101 },
+      { ...start, maxRounds: 1.5 },
+      { replyId: "r1", op: "update", action: "finish" },
+      { replyId: "r1", op: "update", action: "blocked", reason: "x".repeat(2_001) },
+      { replyId: "r1", op: "done" },
+    ]) {
+      expect(() => parseBotGoalParams(bad)).toThrow();
     }
   });
 });

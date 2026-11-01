@@ -5,9 +5,11 @@ import { errorMessage } from "@aven/agents/values";
 import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
+import type { GoalHost } from "@aven/agents/tools/goals";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { SendMessage } from "@aven/agents/tools/send-message";
 import { parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
+import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
@@ -19,6 +21,7 @@ import type {
   RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
 import { remoteBotMemory } from "./remote-bot-memory";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
@@ -37,6 +40,8 @@ export type CreateBotReplyAgent = (input: {
   createBot?: CreateBot;
   /** Asks the person to decide; not given when the reply answers a note, since nobody is there (decision 0066). */
   askQuestion?: AskQuestion;
+  /** The bot's goal, which it works on in rounds the control plane wakes it for (decision 0068). */
+  goals: GoalHost;
   /** The person's schedules, which the bot may look at and, on their word, change (decision 0067). */
   schedules: ScheduleHost;
   /** The bots this one may write to: the reply's own list, to which a bot it makes is added (decision 0065). */
@@ -49,7 +54,19 @@ export type CreateBotReplyAgent = (input: {
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, send, memory, computer, createBot, askQuestion, schedules, peers, updateSelf }) =>
+  ({
+    bot,
+    model,
+    send,
+    memory,
+    computer,
+    createBot,
+    askQuestion,
+    goals,
+    schedules,
+    peers,
+    updateSelf,
+  }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -68,6 +85,7 @@ export const defaultCreateBotAgent =
       computer,
       createBot,
       askQuestion,
+      goals,
       schedules,
       timezone: bot.timezone,
       peers,
@@ -185,6 +203,8 @@ export class BotReplies {
       abort.abort(lost);
       throw lost;
     };
+    const computer = boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME));
+    const exec = computer.find((tool) => tool.name === "exec_command");
     return createAgent({
       bot,
       model,
@@ -194,7 +214,28 @@ export class BotReplies {
         store: remoteBotMemory(replyId, (params) => call("bot.memory", params)),
         savePolicy: "turn",
       },
-      computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
+      computer,
+      goals: {
+        get: async () => (await call("bot.goal", { replyId, op: "get" })) as BotGoalView | null,
+        start: async (input) =>
+          (await call("bot.goal", { replyId, op: "start", ...input })) as BotGoalView,
+        update: async (action, reason) =>
+          (await call("bot.goal", { replyId, op: "update", action, reason })) as BotGoalView | null,
+        // The goal's checks, one after another on the bot's computer; what did not pass is told.
+        check: async (checks, signal) => {
+          const failed: string[] = [];
+          for (const check of checks) {
+            // A cancelled reply stops checking, so no command goes on after it.
+            signal?.throwIfAborted();
+            const [result] = await verifyWith(exec, [check])();
+            if (result && result.exitCode !== 0) {
+              const how = result.exitCode === null ? "timed out" : `exited ${result.exitCode}`;
+              failed.push(`$ ${result.command}\n(${how})\n${result.output}`.trimEnd());
+            }
+          }
+          return failed;
+        },
+      },
       schedules: {
         list: async () =>
           (await call("bot.schedule", { replyId, op: "list" })) as BotScheduleView[],

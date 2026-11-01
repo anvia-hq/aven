@@ -75,6 +75,21 @@ const createSchedule = (id: string) => ({
   },
 });
 
+const startGoal = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "start_goal",
+    arguments: JSON.stringify({ objective: "Write the report", checks: [] }),
+  },
+});
+
+const completeGoal = (id: string) => ({
+  id,
+  type: "function",
+  function: { name: "update_goal", arguments: JSON.stringify({ action: "complete" }) },
+});
+
 const updateSelf = (id: string) => ({
   id,
   type: "function",
@@ -89,6 +104,8 @@ const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
   update_self: "I am Pip now",
   create_schedule: "Scheduled: Morning news",
+  start_goal: "Working on it in the background",
+  update_goal: "Goal finished: the report is written",
 };
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
@@ -172,6 +189,20 @@ Bun.serve({
     // Needing a decision, a bot asks the person with a card (decision 0066) and stops.
     if (/need a decision/i.test(heard)) {
       return reply({ content: null, tool_calls: [askQuestion("call_1")] }, "tool_calls");
+    }
+    // A round of a goal (decision 0068): the bot finishes the goal, and says so.
+    if (heard.startsWith("[note] Goal round")) {
+      if (body.messages.some((message) => calledTool(message, "update_goal"))) {
+        return reply({ content: "ok" }, "stop");
+      }
+      return reply({ content: null, tool_calls: [completeGoal("call_1")] }, "tool_calls");
+    }
+    // Asked for a goal, a bot starts one and says it is on it; the rounds follow by themselves.
+    if (
+      /start a goal/i.test(heard) &&
+      !body.messages.some((message) => calledTool(message, "start_goal"))
+    ) {
+      return reply({ content: null, tool_calls: [startGoal("call_1")] }, "tool_calls");
     }
     // Asked for something on a schedule, a bot sets it (decision 0067) and says so.
     if (

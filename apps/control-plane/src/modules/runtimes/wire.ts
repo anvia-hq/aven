@@ -1,5 +1,12 @@
 import type { Message } from "@anvia/core";
 import { botQuestionsSchema, toQuestions } from "@aven/agents/tools/ask-question";
+import {
+  GOAL_CHECK_MAX,
+  GOAL_CHECKS_MAX,
+  GOAL_MAX_ROUNDS,
+  GOAL_OBJECTIVE_MAX,
+  GOAL_REASON_MAX,
+} from "@aven/protocol/goals";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import {
   BOT_DESCRIPTION_MAX,
@@ -12,6 +19,7 @@ import {
   ARTIFACT_NAME,
   SKILL_DIGEST,
   type BotQuestionParams,
+  type BotGoalParams,
   type BotScheduleParams,
   type BotSendParams,
   type BotCreateParams,
@@ -46,6 +54,7 @@ const callMethods = [
   "bot.send",
   "bot.question",
   "bot.schedule",
+  "bot.goal",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -274,6 +283,24 @@ const botScheduleParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("delete"), id: scheduleId }),
 ]);
 
+// A bot looks at its goal, starts one or changes it. The goal is the reply's own bot's.
+const botGoalParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("get") }),
+  z.object({
+    replyId,
+    op: z.literal("start"),
+    objective: z.string().trim().min(1).max(GOAL_OBJECTIVE_MAX),
+    checks: z.array(z.string().trim().min(1).max(GOAL_CHECK_MAX)).max(GOAL_CHECKS_MAX),
+    maxRounds: z.number().int().min(1).max(GOAL_MAX_ROUNDS).optional(),
+  }),
+  z.object({
+    replyId,
+    op: z.literal("update"),
+    action: z.enum(["complete", "blocked", "pause", "resume", "clear"]),
+    reason: z.string().trim().max(GOAL_REASON_MAX).optional(),
+  }),
+]);
+
 // A bot writes to another of the person's bots, named by its handle.
 const botSendParams = z.object({
   replyId,
@@ -323,6 +350,8 @@ export const parseBotQuestionParams = (params: unknown) =>
   parseParams(botQuestionParams, params) as BotQuestionParams;
 export const parseBotScheduleParams = (params: unknown) =>
   parseParams(botScheduleParams, params) as BotScheduleParams;
+export const parseBotGoalParams = (params: unknown) =>
+  parseParams(botGoalParams, params) as BotGoalParams;
 export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>

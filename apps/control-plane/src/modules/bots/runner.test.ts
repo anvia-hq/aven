@@ -326,6 +326,80 @@ describe("BotRunner", () => {
     expect(typed(client.events)).toEqual(["snapshot"]);
   });
 
+  describe("a reply that settles (decision 0068)", () => {
+    // A runner whose replies are given by `answer`, and that tells what settled and when.
+    function settling(answer: (prompt: string) => Promise<void>) {
+      const settled: { prompt: string; ok: boolean; idle: boolean }[] = [];
+      const runner: BotRunner = new BotRunner({
+        store: fakeStore(),
+        replier: { ready: () => undefined, answer: ({ prompt }) => answer(prompt) },
+        settled: async ({ botId, prompt, ok }) => {
+          settled.push({ prompt, ok, idle: runner.isIdle(botId) });
+        },
+      });
+      return { runner, settled };
+    }
+
+    test("is told, once nothing waits behind it, and the bot is not idle until it has answered", async () => {
+      const { runner, settled } = settling(async () => undefined);
+      await runner.send(bot, USER, "hello", model);
+      await until(() => settled.length === 1);
+
+      expect(settled).toEqual([{ prompt: "hello", ok: true, idle: false }]);
+      await until(() => runner.isIdle(bot.id));
+    });
+
+    test("is told of a failure, and not while another reply waits behind it", async () => {
+      const gate = Promise.withResolvers<void>();
+      const { runner, settled } = settling(async (prompt) => {
+        if (prompt === "first") await gate.promise;
+        if (prompt === "second") throw new Error("the computer dropped");
+      });
+      await runner.send(bot, USER, "first", model);
+      await runner.send(bot, USER, "second", model);
+      gate.resolve();
+      await until(() => settled.length === 1);
+
+      expect(settled).toEqual([{ prompt: "second", ok: false, idle: false }]);
+    });
+
+    test("is not told when the reply ended because the control plane is shutting down", async () => {
+      const { runner, settled } = settling(
+        (_prompt) =>
+          new Promise<void>((_resolve, reject) => {
+            queueMicrotask(() => reject(new Error("the runner stopped")));
+          }),
+      );
+      runner.dispose();
+      await runner.send(bot, USER, "hello", model);
+      await until(() => runner.isIdle(bot.id));
+      expect(settled).toEqual([]);
+    });
+
+    test("a refused follow-up from it does not fail the reply or stop the next", async () => {
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: { ready: () => undefined, answer: async () => undefined },
+        settled: async () => {
+          throw new Error("could not go on");
+        },
+      });
+      const client = await watch(runner);
+      await runner.send(bot, USER, "hello", model);
+      await until(() => runner.isIdle(bot.id));
+      await runner.send(bot, USER, "again", model);
+      await until(() => runner.isIdle(bot.id));
+      client.close();
+      expect(typed(client.events).filter((entry) => !entry.startsWith("user:"))).toEqual([
+        "snapshot",
+        "typing",
+        "stopped",
+        "typing",
+        "stopped",
+      ]);
+    });
+  });
+
   test("shutting down ends a reply without calling it a failure", async () => {
     const runner = runnerWith({
       store: fakeStore(),

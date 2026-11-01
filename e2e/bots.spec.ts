@@ -302,6 +302,35 @@ test.describe("bots", () => {
     );
   });
 
+  // A bot works on a goal in rounds nobody asks for (decision 0068): the person says it once.
+  test("a bot starts a goal when asked and works it on its own until it is done", async ({
+    page,
+  }) => {
+    // The reply that starts it, then a round, each waiting out its typing pauses.
+    test.slow();
+    await registerUser(page, "bot-goal", "Goal Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const message = page.getByRole("textbox", { name: "Message" });
+    await message.fill("start a goal to write the report");
+    await message.press("Enter");
+
+    await expect(bubble(page, "Working on it in the background")).toBeVisible();
+    // Nobody wrote again: the app woke the bot for its round, and it finished.
+    await expect(bubble(page, "Goal finished: the report is written")).toBeVisible();
+    // The round's note is the app's, not part of the chat.
+    await expect(page.getByText("Goal round")).toHaveCount(0);
+  });
+
   // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
   test("a bot renames itself and writes its own description when asked", async ({ page }) => {
     // Three replies, each waiting out its typing pauses.

@@ -225,6 +225,13 @@
       "when": 1793496546015,
       "tag": "0031_fearless_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793497715892,
+      "tag": "0032_friendly_boomerang",
+      "breakpoints": true
     }
   ]
 }

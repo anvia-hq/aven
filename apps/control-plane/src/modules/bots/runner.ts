@@ -52,6 +52,19 @@ export type BotReplier = {
   answer(input: BotReplyInput): Promise<void>;
 };
 
+/**
+ * Told when a reply ends and nothing waits behind it, before the bot is shown as idle: how the goal
+ * of a bot goes on (decision 0068). It queues the next reply with `wake`, so the bot is never idle
+ * in between. It must not throw, and a throw is only logged.
+ */
+export type BotSettled = (reply: {
+  userId: string;
+  botId: string;
+  prompt: string;
+  /** False when the reply failed. */
+  ok: boolean;
+}) => Promise<void>;
+
 type Channel = {
   botId: string;
   userId: string;
@@ -77,11 +90,13 @@ export class BotRunner {
   #watchers = new Map<string, Set<() => void>>();
   #store: MemoryStore;
   #replier: BotReplier;
+  #settled?: BotSettled;
   #shutdown = new AbortController();
 
-  constructor(deps: { store: MemoryStore; replier: BotReplier }) {
+  constructor(deps: { store: MemoryStore; replier: BotReplier; settled?: BotSettled }) {
     this.#store = deps.store;
     this.#replier = deps.replier;
+    this.#settled = deps.settled;
   }
 
   // The person says something to the bot. Returns once the message is in the chat; the reply
@@ -193,6 +208,11 @@ export class BotRunner {
    */
   busy(botId: string) {
     return (this.#channels.get(botId)?.pending ?? 0) >= MAX_PENDING;
+  }
+
+  /** Whether the bot has no reply to give now or waiting. */
+  isIdle(botId: string) {
+    return (this.#channels.get(botId)?.pending ?? 0) === 0;
   }
 
   /** The ids of the person's bots that are at work on a reply now. */
@@ -321,9 +341,23 @@ export class BotRunner {
     }
   }
 
+  // Lets the bot's goal go on once nothing else waits (decision 0068); a shutdown ends it instead.
+  async #afterReply(
+    input: Omit<BotReplyInput, "say" | "ask" | "signal">,
+    channel: Channel,
+    ok: boolean,
+  ) {
+    if (!this.#settled || channel.pending !== 1 || this.#shutdown.signal.aborted) return;
+    const { bot, userId, prompt } = input;
+    await this.#settled({ userId, botId: bot.id, prompt, ok }).catch((error: unknown) => {
+      console.warn(`The goal of bot ${bot.id} could not go on:`, describeError(error));
+    });
+  }
+
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on.
   async #reply(input: Omit<BotReplyInput, "say" | "ask" | "signal">, channel: Channel) {
     const { bot } = input;
+    let ok = false;
     try {
       await this.#replier.answer({
         ...input,
@@ -338,12 +372,14 @@ export class BotRunner {
           ),
         signal: this.#shutdown.signal,
       });
+      ok = true;
     } catch (failure) {
       if (!this.#shutdown.signal.aborted) {
         console.warn(`Bot ${bot.id} could not reply:`, failure);
         this.#emit(channel, { type: "error", message: describeError(failure) });
       }
     } finally {
+      await this.#afterReply(input, channel, ok);
       channel.pending -= 1;
       if (channel.pending === 0) this.#emit(channel, { type: "typing", typing: false });
       this.#release(bot.id, channel);

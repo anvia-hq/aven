@@ -55,11 +55,26 @@ const agentThat =
       ],
     });
 
-const sandboxWith = (acquired: { id: string; repo: unknown }[] = []): ThreadWorkspaces => ({
+// What the bot's computer answers to a command: by default it ran and printed `ok`.
+type Exec = (command: string) => unknown;
+const exec = (
+  run: Exec = () => ({ status: "exited", exitCode: 0, stdout: "ok", stderr: "" }),
+): AnyTool =>
+  createTool({
+    name: "exec_command",
+    description: "run",
+    inputSchema: z.object({ command: z.string(), timeoutMs: z.number().optional() }),
+    execute: async ({ command }) => run(command),
+  });
+
+const sandboxWith = (
+  acquired: { id: string; repo: unknown }[] = [],
+  run?: Exec,
+): ThreadWorkspaces => ({
   async acquire(thread, repo) {
     acquired.push({ id: thread.id, repo });
     return {
-      tools: [tool("exec_command"), tool("show_image")],
+      tools: [exec(run), tool("show_image")],
       hasRunningProcesses: async () => false,
     };
   },
@@ -74,7 +89,7 @@ const memoryAnswer = (params: unknown) => ((params as { op?: string }).op === "l
 
 function harness(
   createAgent: CreateBotReplyAgent,
-  options: { linkUp?: () => boolean; failSend?: boolean } = {},
+  options: { linkUp?: () => boolean; failSend?: boolean; exec?: Exec } = {},
 ) {
   const sent: RuntimeToControlPlane[] = [];
   const calls: unknown[] = [];
@@ -83,7 +98,7 @@ function harness(
   const pauses: number[] = [];
   const boxes = new Map<string, ThreadSandbox>();
   const replies = new BotReplies({
-    sandbox: sandboxWith(acquired),
+    sandbox: sandboxWith(acquired, options.exec),
     createAgent,
     send: (frame) => {
       if (options.linkUp && !options.linkUp()) return false;
@@ -101,6 +116,7 @@ function harness(
         return { handle: "scout", name: "Scout" };
       }
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
+      if (method === "bot.goal") return null;
       return memoryAnswer(params);
     },
     boxes,
@@ -347,6 +363,74 @@ describe("BotReplies", () => {
     expect(view.id).toBe("s1");
   });
 
+  test("a bot's goal is asked of the control plane, for its own reply", async () => {
+    const run = harness((input) => ({
+      generate: async () => {
+        await input.goals.get();
+        await input.goals.start({ objective: "Port it", checks: ["bun test"], maxRounds: 5 });
+        await input.goals.update("blocked", "no key");
+        await input.goals.update("pause");
+        return { type: "response" } as never;
+      },
+    }));
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(run.calls.filter((call) => (call as { method: string }).method === "bot.goal")).toEqual([
+      { method: "bot.goal", params: { replyId: "r1", op: "get" } },
+      {
+        method: "bot.goal",
+        params: {
+          replyId: "r1",
+          op: "start",
+          objective: "Port it",
+          checks: ["bun test"],
+          maxRounds: 5,
+        },
+      },
+      {
+        method: "bot.goal",
+        params: { replyId: "r1", op: "update", action: "blocked", reason: "no key" },
+      },
+      {
+        method: "bot.goal",
+        params: { replyId: "r1", op: "update", action: "pause", reason: undefined },
+      },
+    ]);
+  });
+
+  test("a goal's checks run on the bot's computer in order, and what did not pass is told with its output", async () => {
+    const ran: string[] = [];
+    let failed: string[] = [];
+    const run = harness(
+      (input) => ({
+        generate: async () => {
+          failed = await input.goals.check!(["build", "test", "lint"]);
+          return { type: "response" } as never;
+        },
+      }),
+      {
+        exec: (command) => {
+          ran.push(command);
+          if (command === "test")
+            return { status: "exited", exitCode: 1, stdout: "", stderr: "2 failed" };
+          if (command === "lint") return { status: "timed_out", stdout: "", stderr: "" };
+          return { status: "exited", exitCode: 0, stdout: "fine", stderr: "" };
+        },
+      },
+    );
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(ran).toEqual(["build", "test", "lint"]);
+    expect(failed).toHaveLength(2);
+    expect(failed[0]).toBe("$ test\n(exited 1)\n2 failed");
+    expect(failed[1]).toStartWith("$ lint\n(timed out)");
+    expect(failed[1]).toContain("timed out");
+  });
+
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
     const run = harness(
       agentThat(
@@ -394,6 +478,13 @@ describe("BotReplies", () => {
         },
         model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
         send: async () => "Sent",
+        goals: {
+          get: async () => null,
+          start: async () => {
+            throw new Error("not started");
+          },
+          update: async () => null,
+        },
         schedules: {
           list: async () => [],
           create: async () => {
@@ -435,6 +526,9 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "get_goal",
+        "start_goal",
+        "update_goal",
         "create_schedule",
         "list_schedules",
         "update_schedule",
@@ -450,6 +544,9 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "get_goal",
+        "start_goal",
+        "update_goal",
         "create_schedule",
         "list_schedules",
         "update_schedule",

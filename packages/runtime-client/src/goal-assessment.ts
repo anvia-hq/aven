@@ -21,8 +21,7 @@ const tail = (text: string) =>
 export function verifyWith(exec: AnyTool | undefined, commands: readonly string[]) {
   return async (): Promise<CommandResult[]> => {
     if (commands.length === 0) return [];
-    if (!exec)
-      throw new Error("The thread's sandbox is not running, so the goal cannot be checked");
+    if (!exec) throw new Error("The sandbox is not running, so the goal cannot be checked");
     const results: CommandResult[] = [];
     for (const command of commands) {
       const result = asRecord(await exec.call({ command, timeoutMs: COMMAND_TIMEOUT_MS }));

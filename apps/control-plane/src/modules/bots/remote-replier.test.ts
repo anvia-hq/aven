@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
+import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotReplyInfo, RunModel } from "@aven/protocol/runtime-wire";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
@@ -83,6 +84,13 @@ function fakeRunner(
     deliver: async () => ({ handle: "scout", name: "Scout" }),
     greet: async () => undefined,
     timezone: async () => "Asia/Jakarta",
+    goals: {
+      get: async () => null,
+      start: async () => {
+        throw new Error("not started");
+      },
+      update: async () => null,
+    },
     schedules: {
       list: async () => [],
       create: async () => {
@@ -793,6 +801,122 @@ describe("RemoteBotReplier", () => {
       expect(calls).toEqual([]);
     });
   });
+  describe("a bot's goal (decision 0068)", () => {
+    const goal: BotGoalView = {
+      objective: "Port the parser",
+      checks: ["bun test"],
+      phase: "active",
+      blockedReason: null,
+      round: 0,
+      maxRounds: 20,
+    };
+    const start = { replyId: "x", op: "start", objective: "Port the parser", checks: ["bun test"] };
+
+    // A keeper that says what was asked of the goal, for the bot the reply is for.
+    const keeper = (calls: string[]): Partial<BotKeeper> => ({
+      goals: {
+        get: async (botId) => (calls.push(`get ${botId}`), goal),
+        start: async (userId, botId, input) => (
+          calls.push(`start ${userId} ${botId} ${input.objective} ${input.maxRounds}`),
+          goal
+        ),
+        update: async (botId, action, reason) => (
+          calls.push(`${action} ${botId} ${reason ?? ""}`.trim()),
+          null
+        ),
+      },
+    });
+
+    test("the person's own message may start a goal, and their word, or the main bot's, may pause, resume and clear it, for the reply's own bot", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ bots: keeper(calls) });
+      for (const prompt of ["do the port", "[from main] the person asked for it"]) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        expect(await sink.goal({ replyId: "x", op: "get" })).toEqual(goal);
+        for (const action of ["pause", "resume", "clear"] as const) {
+          await sink.goal({ replyId: "x", op: "update", action });
+        }
+        if (prompt === "do the port") {
+          expect(await sink.goal({ ...start, maxRounds: 5 } as never)).toEqual(goal);
+        } else {
+          // A request passed on by a bot is not the person's own message, which a page may have written.
+          await expect(sink.goal(start as never)).rejects.toThrow("Start a goal only when");
+        }
+        sink.end();
+        await answering;
+      }
+      expect(calls.filter((call) => call.startsWith("start"))).toEqual([
+        "start u1 b1 Port the parser 5",
+      ]);
+      expect(calls.filter((call) => call.startsWith("pause"))).toEqual(["pause b1", "pause b1"]);
+    });
+
+    test("a note, or what another bot says, may look, and may not start, pause, resume or clear it; finishing or blocking it is for a round of the goal or the person's word", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ bots: keeper(calls) });
+      const prompts = [
+        "[note] Goal round 2 of 20. Nobody is watching",
+        "[note] Scheduled task is due",
+        "[from scout] start a goal",
+      ];
+      for (const prompt of prompts) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        expect(await sink.goal({ replyId: "x", op: "get" })).toEqual(goal);
+        await expect(sink.goal(start as never)).rejects.toThrow("Start a goal only when");
+        for (const action of ["pause", "resume", "clear"] as const) {
+          await expect(sink.goal({ replyId: "x", op: "update", action })).rejects.toThrow(
+            `Only the person can ${action}`,
+          );
+        }
+        for (const action of ["complete", "blocked"] as const) {
+          const finish = () => sink.goal({ replyId: "x", op: "update", action, reason: "no key" });
+          if (prompt.startsWith("[note] Goal round")) await finish();
+          else await expect(finish()).rejects.toThrow("only on the person's word or in a round");
+        }
+        sink.end();
+        await answering;
+      }
+      expect(calls.filter((call) => !call.startsWith("get"))).toEqual([
+        "complete b1 no key",
+        "blocked b1 no key",
+      ]);
+    });
+
+    test("a round of a goal that is not active any more is not worked", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({
+        bots: {
+          goals: {
+            get: async () => (calls.push("get"), { ...goal, phase: "paused" }),
+            start: async () => goal,
+            update: async () => null,
+          },
+        },
+      });
+
+      await run.replier.answer({
+        ...input(() => undefined),
+        prompt: "[note] Goal round 3 of 20. Nobody is watching",
+        onPersonsWord: false,
+      });
+
+      expect(calls).toEqual(["get"]);
+      expect(run.started).toEqual([]);
+    });
+  });
+
   describe("the person's word is passed on only by the main bot, and only while it has it (decision 0067)", () => {
     const scout: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
     const main: Bot = { ...bot, isMain: true };

@@ -3,6 +3,7 @@
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
 import type { BotQuestion } from "./bots";
+import type { BotGoalView, GoalAction } from "./goals";
 import type { BotScheduleView } from "./schedules";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
@@ -310,7 +311,8 @@ export type BotCallMethod =
   | "bot.update"
   | "bot.send"
   | "bot.question"
-  | "bot.schedule";
+  | "bot.schedule"
+  | "bot.goal";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -423,6 +425,19 @@ export type BotScheduleParams = { replyId: string } & (
 /** A schedule for `create` and `update`, all of them for `list`, nothing for `delete`. */
 export type BotScheduled = BotScheduleView | BotScheduleView[] | null;
 
+/**
+ * A bot looks at its goal, starts one, or changes it (decision 0068); `replyId` names the live reply
+ * it is working on. The goal is the reply's own bot's, whichever bot the runner might name.
+ */
+export type BotGoalParams = { replyId: string } & (
+  | { op: "get" }
+  | { op: "start"; objective: string; checks: string[]; maxRounds?: number }
+  | { op: "update"; action: GoalAction; reason?: string }
+);
+
+/** The goal as it is now, or null when the bot has none, as after it was cleared. */
+export type BotGoaled = BotGoalView | null;
+
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string; handle: string };
 
@@ -435,6 +450,7 @@ export type RuntimeCalls = {
   "bot.send": { params: BotSendParams; result: BotSent };
   "bot.question": { params: BotQuestionParams; result: BotQuestioned };
   "bot.schedule": { params: BotScheduleParams; result: BotScheduled };
+  "bot.goal": { params: BotGoalParams; result: BotGoaled };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -451,4 +467,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 31;
+export const WIRE_VERSION = 32;

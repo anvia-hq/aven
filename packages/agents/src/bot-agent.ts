@@ -5,6 +5,7 @@ import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-mode
 import { botInstructions } from "./bot-instruction";
 import { createAskQuestionTool, type AskQuestion } from "./tools/ask-question";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
+import { createGoalTools, type GoalHost } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
@@ -38,6 +39,8 @@ type BotAgentOptions = ModelSource & {
    * array and adds a bot it makes to it, so the list is current through the reply (decision 0065).
    */
   peers: readonly BotPeer[];
+  /** The bot's goal, which it may work on in the background and, on the person's word, start or stop (decision 0068). */
+  goals?: GoalHost;
   /** The person's schedules, which the bot may look at and, on their word, change (decision 0067). */
   schedules?: ScheduleHost;
   /** The person's timezone, which the bot's schedules are in unless it says another. */
@@ -66,6 +69,7 @@ export function createBotAgent({
   createBot,
   peers,
   askQuestion,
+  goals,
   schedules,
   timezone,
   description = "",
@@ -84,6 +88,7 @@ export function createBotAgent({
       computer: computer.length > 0,
       createBots: Boolean(createBot),
       questions: Boolean(askQuestion),
+      goals: Boolean(goals),
       schedules: schedules && timezone ? { timezone } : undefined,
       peers,
       self: updateSelf ? { description } : undefined,
@@ -95,6 +100,7 @@ export function createBotAgent({
       createListBotsTool(() => peers),
       ...computer,
       ...asking(askQuestion),
+      ...working(goals),
       ...scheduling(schedules),
       ...makingBots(createBot),
       ...changingSelf(updateSelf),
@@ -102,6 +108,7 @@ export function createBotAgent({
   });
 }
 
+const working = (goals?: GoalHost) => (goals ? createGoalTools(goals) : []);
 const scheduling = (schedules?: ScheduleHost) => (schedules ? createScheduleTools(schedules) : []);
 const asking = (askQuestion?: AskQuestion) =>
   askQuestion ? [createAskQuestionTool(askQuestion)] : [];

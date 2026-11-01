@@ -6,6 +6,7 @@ import {
   botRuntimeId,
   runsService,
   runtimeHub,
+  goalDriver,
   scheduler,
   shipService,
   threadMessages,
@@ -70,16 +71,20 @@ const localRunner = await startLocalRunner(port);
 // The built-in runner's sandboxes are containers; stopping it removes them, including on
 // `bun --watch` restarts.
 const shutdown = async () => {
+  // The bots stop first: replies that end because their runner stopped are then a shutdown, which
+  // leaves a goal as it is for the next start, and not a failed round that blocks it.
+  botRunner.dispose();
   await localRunner?.stop();
   await scheduler.close();
+  await goalDriver.close();
   runsService.dispose();
-  botRunner.dispose();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 scheduler.start();
+goalDriver.start();
 
 console.log(`control-plane listening on ${app.server?.url}`);
 

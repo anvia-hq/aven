@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **32**: a bot's goal, `bot.goal` (get, start, update), a long task the control plane wakes the bot to work on round after round (decision 0068).
 - **31**: a bot's schedules, `bot.schedule` (list, create, update, delete), and the person's `timezone` on `bot.reply` (decision 0067).
 - **30**: a bot can ask the person to decide, `bot.question`, which answers with where the question went, `relayed` set when the main bot is to ask it (decision 0066).
 - **29**: bots write to each other with handles (decision 0065): `bot.reply` carries the bot's `handle` and, for every bot, its `peers` (`handle`, `name`, `description`); a runner can have a message carried to another bot, `bot.send`, which returns at once; `bot.create` answers with the new bot's `handle`; `bot.ask` and its `BotAnswered` are gone.

@@ -7,6 +7,8 @@ import {
   type Bot,
 } from "@aven/protocol/bots";
 import type {
+  BotGoaled,
+  BotGoalParams,
   BotPeer,
   BotQuestioned,
   BotQuestionParams,
@@ -16,6 +18,7 @@ import type {
   BotSent,
   BotUpdateParams,
 } from "@aven/protocol/runtime-wire";
+import { isGoalRoundNote, type BotGoalView, type GoalAction } from "@aven/protocol/goals";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import type { RunGateway } from "../runtimes/gateway";
@@ -23,6 +26,7 @@ import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { answerBotMemory } from "./memory-answer";
 import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
+import type { GoalInput } from "../goals/service";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
 
@@ -48,6 +52,12 @@ export type BotKeeper = {
     create(userId: string, selfId: string, input: ScheduleInput): Promise<BotScheduleView>;
     update(userId: string, id: string, patch: SchedulePatch): Promise<BotScheduleView>;
     remove(userId: string, id: string): Promise<void>;
+  };
+  /** A bot's goal, which is its own and only its own, found by the bot (decision 0068). */
+  goals: {
+    get(botId: string): Promise<BotGoalView | null>;
+    start(userId: string, botId: string, input: GoalInput): Promise<BotGoalView>;
+    update(botId: string, action: GoalAction, reason?: string): Promise<BotGoalView | null>;
   };
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string, hops: number): Promise<void>;
@@ -102,6 +112,9 @@ export class RemoteBotReplier implements BotReplier {
   }: BotReplyInput) {
     // A shutdown that came while the reply waited its turn: there is nothing left to answer.
     signal.throwIfAborted();
+    // A round of a goal that is no longer active, as when the person paused it while the round
+    // waited its turn, is not worked (decision 0068).
+    if (isGoalRoundNote(prompt) && (await this.bots.goals.get(bot.id))?.phase !== "active") return;
     // Every bot is told which bots it may write to. Asked before anything is granted, so a failure
     // here leaves nothing to take back.
     const peers = await this.#peersOf(userId, bot.id);
@@ -196,6 +209,29 @@ export class RemoteBotReplier implements BotReplier {
           timezone,
           bot: target,
         });
+      },
+      // The goal is the reply's own bot's. Starting, pausing, resuming and clearing it are the
+      // person's to say; finishing it or saying it is blocked is for the person's reply or a note,
+      // which a goal's own rounds are, and not for what another bot writes (decision 0068).
+      goal: async (params: BotGoalParams): Promise<BotGoaled> => {
+        if (params.op === "get") return this.bots.goals.get(bot.id);
+        if (params.op === "start") {
+          // A goal runs unattended for many rounds, so only the person's own message starts one, as
+          // it only makes a bot: not a request a bot passed on, which a page it read may have written.
+          if (!makesBotsOnTheirWord) {
+            throw new Error("Start a goal only when the person asks you to, in their own message");
+          }
+          const { objective, checks, maxRounds } = params;
+          return this.bots.goals.start(userId, bot.id, { objective, checks, maxRounds });
+        }
+        const finishing = params.action === "complete" || params.action === "blocked";
+        if (finishing && !onPersonsWord && !isGoalRoundNote(prompt)) {
+          throw new Error("Change the goal only on the person's word or in a round of it");
+        }
+        if (!finishing && !onPersonsWord) {
+          throw new Error(`Only the person can ${params.action} a goal, in a chat turn`);
+        }
+        return this.bots.goals.update(bot.id, params.action, params.reason);
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {

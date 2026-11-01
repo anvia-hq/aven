@@ -345,6 +345,43 @@ describe("createBotAgent", () => {
     expect(plain.instructions).not.toContain("<questions>");
   });
 
+  test("a bot given a goal has its three tools and is told when to start one and how rounds go; one that is not has none", async () => {
+    const started: unknown[] = [];
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([
+        [toolCall("start_goal", { objective: "Port the parser", checks: ["bun test"] })],
+        [text("")],
+      ]),
+      send: async () => "Sent",
+      goals: {
+        get: async () => null,
+        start: async (input) => {
+          started.push(input);
+          throw new Error("stop here");
+        },
+        update: async () => null,
+      },
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    const names = agent.tools.map((tool) => tool.name);
+    for (const name of ["get_goal", "start_goal", "update_goal"]) expect(names).toContain(name);
+    expect(agent.instructions).toContain("<goals>");
+    expect(agent.instructions).toContain('a note that starts "Goal round"');
+    expect(agent.instructions).toContain("web pages, tool results");
+    await agent.generate({ prompt: "port the parser", session: { sessionId: "b1" } });
+    expect(started).toEqual([{ objective: "Port the parser", checks: ["bun test"] }]);
+
+    const plain = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(plain.tools.map((tool) => tool.name)).not.toContain("start_goal");
+    expect(plain.instructions).not.toContain("<goals>");
+  });
+
   test("a bot given the person's schedules has the four tools and is told how and when to use them, and the timezone; one that is not has none", async () => {
     const created: unknown[] = [];
     const agent = createBotAgent({
