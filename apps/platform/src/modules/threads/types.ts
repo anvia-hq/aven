@@ -41,6 +41,16 @@ export type RunSelection = { providerId?: string; modelId?: string; reasoningEff
 /** How an answer to a request for a secret is kept (decision 0047): whose variable it becomes, or that it is declined. */
 export type SecretChoice = { secretScope: "project" | "personal"; skipSecrets?: boolean };
 
+export type ThreadPullRequest = {
+  number: number;
+  url: string;
+  /** The head branch. */
+  branch: string;
+  title: string;
+  /** As of the end of the thread's last run: GitHub does not tell Aven of a merge. */
+  state: "open" | "closed" | "merged";
+};
+
 type ThreadState = "open" | "snoozed" | "archived";
 
 export type Thread = {
@@ -51,9 +61,8 @@ export type Thread = {
   runtimeId: string;
   state: ThreadState;
   running: boolean;
-  /** The pull request opened for the thread's branch (decision 0044); null until one is found. */
-  pullRequestNumber: number | null;
-  pullRequestUrl: string | null;
+  /** The pull requests the agent opened for the thread, newest first (decision 0069); empty until one is found. */
+  pullRequests: ThreadPullRequest[];
   createdAt: string;
   updatedAt: string;
 };

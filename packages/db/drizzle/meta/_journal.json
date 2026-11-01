@@ -232,6 +232,27 @@
       "when": 1793497715892,
       "tag": "0032_friendly_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793499246508,
+      "tag": "0033_curly_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793499246656,
+      "tag": "0034_backfill_thread_pull_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793499256804,
+      "tag": "0035_parched_pandemic",
+      "breakpoints": true
     }
   ]
 }

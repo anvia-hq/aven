@@ -237,21 +237,50 @@ describe("writing to a repository", () => {
     expect(await client.canWrite(9)).toBe(false);
   });
 
-  test("finds the latest pull request of a branch with a token that may only read them", async () => {
+  test("finds the pull requests of a thread's branches with a token that may only read them", async () => {
+    const pull = (number: number, ref: string, extra: Record<string, unknown> = {}) => ({
+      number,
+      html_url: `https://github.com/acme/app/pull/${number}`,
+      title: `Pull ${number}`,
+      state: "open",
+      merged_at: null,
+      head: { ref, repo: { full_name: "acme/app" } },
+      ...extra,
+    });
     const github = fakeGithub({
       "POST /app/installations/7/access_tokens": {
         token: "ghs_read",
         expires_at: "2099-01-01T00:00:00Z",
       },
-      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=1&head=acme%3Aaven%2Fabc12345":
-        [{ number: 4, html_url: "https://github.com/acme/app/pull/4" }],
+      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=100": [
+        pull(9, "aven/abc12345-docs", { state: "closed", merged_at: "2026-01-01T00:00:00Z" }),
+        pull(8, "aven/abc123456789"),
+        pull(7, "aven/other-docs"),
+        pull(6, "aven/abc12345-fork", {
+          head: { ref: "aven/abc12345-fork", repo: { full_name: "me/app" } },
+        }),
+        pull(5, "aven/abc12345-gone", { head: { ref: "aven/abc12345-gone", repo: null } }),
+        pull(4, "aven/abc12345", { state: "closed" }),
+      ],
     });
     const client = new GithubClient(config, github.fetch);
 
-    expect(await client.findPullRequest(7, "acme/app", "aven/abc12345")).toEqual({
-      number: 4,
-      url: "https://github.com/acme/app/pull/4",
-    });
+    expect(await client.findPullRequests(7, "acme/app", "aven/abc12345")).toEqual([
+      {
+        number: 9,
+        url: "https://github.com/acme/app/pull/9",
+        title: "Pull 9",
+        branch: "aven/abc12345-docs",
+        state: "merged",
+      },
+      {
+        number: 4,
+        url: "https://github.com/acme/app/pull/4",
+        title: "Pull 4",
+        branch: "aven/abc12345",
+        state: "closed",
+      },
+    ]);
 
     expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
       repositories: ["app"],
@@ -260,21 +289,20 @@ describe("writing to a repository", () => {
     expect(auth(github.calls[1]!)).toBe("Bearer ghs_read");
   });
 
-  test("a branch with no pull request, or an installation that cannot read them, has none", async () => {
+  test("a thread with no pull request, or an installation that cannot read them, has none", async () => {
     const empty = fakeGithub({
       "POST /app/installations/7/access_tokens": {
         token: "ghs_read",
         expires_at: "2099-01-01T00:00:00Z",
       },
-      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=1&head=acme%3Aaven%2Fnone":
-        [],
+      "GET /repos/acme/app/pulls?state=all&sort=created&direction=desc&per_page=100": [],
     });
     expect(
-      await new GithubClient(config, empty.fetch).findPullRequest(7, "acme/app", "aven/none"),
-    ).toBeNull();
+      await new GithubClient(config, empty.fetch).findPullRequests(7, "acme/app", "aven/none"),
+    ).toEqual([]);
 
     const refused = new GithubClient(config, async () => new Response("no", { status: 422 }));
-    expect(await refused.findPullRequest(7, "acme/app", "aven/x")).toBeNull();
+    expect(await refused.findPullRequests(7, "acme/app", "aven/x")).toEqual([]);
   });
 
   test("a person can push only when GitHub says so for their token; a repository they cannot see is no", async () => {

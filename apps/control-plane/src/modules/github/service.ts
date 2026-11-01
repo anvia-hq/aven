@@ -175,9 +175,13 @@ export function createGithubService(
       return (await client.installationToken(await githubInstallationId(installationRowId))).token;
     },
 
-    // The pull request the agent opened for a branch, if there is one (decision 0044).
-    async findPullRequest(installationRowId: string, fullName: string, head: string) {
-      return client.findPullRequest(await githubInstallationId(installationRowId), fullName, head);
+    // The pull requests the agent opened for a thread's branches, newest first (decisions 0044, 0069).
+    async findPullRequests(installationRowId: string, fullName: string, branchPrefix: string) {
+      return client.findPullRequests(
+        await githubInstallationId(installationRowId),
+        fullName,
+        branchPrefix,
+      );
     },
 
     // Ships need the app approved to write for the installation's account (decision 0041).

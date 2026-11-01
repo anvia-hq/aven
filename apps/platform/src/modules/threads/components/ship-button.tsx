@@ -17,7 +17,9 @@ type Props = {
 export function ShipButton({ thread, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
   const account = useGithubAccount();
-  const shipped = thread.pullRequestUrl !== null;
+  // The newest pull request is the one an update goes to.
+  const [latest] = thread.pullRequests;
+  const shipped = latest !== undefined;
   const label = shipped ? "Update PR" : "Ship";
   // What is shipped is the person's own on GitHub, so their account has to be connected first.
   if (account?.data && !account.data.connected) {
@@ -36,16 +38,16 @@ export function ShipButton({ thread, upToDate }: Props) {
   }
   return (
     <>
-      {thread.pullRequestUrl && (
+      {latest && (
         <Button
           variant="secondary"
           size="sm"
           className="shadow-md"
           nativeButton={false}
           role="link"
-          render={<a href={thread.pullRequestUrl} target="_blank" rel="noreferrer" />}
+          render={<a href={latest.url} target="_blank" rel="noreferrer" />}
         >
-          #{thread.pullRequestNumber}
+          #{latest.number}
           <ExternalLink />
         </Button>
       )}

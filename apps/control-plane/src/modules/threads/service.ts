@@ -1,4 +1,5 @@
 import { db } from "@aven/db/client";
+import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threads } from "@aven/db/schema/threads";
 import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
 
@@ -13,12 +14,33 @@ export class ThreadNotFoundError extends NotFoundError {
   }
 }
 
+export type ThreadPullRequest = {
+  number: number;
+  url: string;
+  branch: string;
+  title: string;
+  state: "open" | "closed" | "merged";
+};
+
 // A thread as clients see it. The continuation of an unanswered question holds conversation state
-// and stays server-side; clients get whether one is waiting.
+// and stays server-side; clients get whether one is waiting, and the thread's pull requests, newest
+// first (decision 0069). Drizzle leaves the table off a column of a one-table query, so the outer
+// `threads.id` is written out: unqualified, it would be the pull request's own `id`.
 const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads);
 const columns = {
   ...publicColumns,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
+  pullRequests: sql<ThreadPullRequest[]>`coalesce((
+    select json_agg(json_build_object(
+      'number', ${threadPullRequests.number},
+      'url', ${threadPullRequests.url},
+      'branch', ${threadPullRequests.branch},
+      'title', ${threadPullRequests.title},
+      'state', ${threadPullRequests.state}
+    ) order by ${threadPullRequests.number} desc)
+    from ${threadPullRequests}
+    where ${threadPullRequests.threadId} = "threads"."id"
+  ), '[]'::json)`,
 };
 
 export const threadsService = {
@@ -92,12 +114,23 @@ export const threadsService = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
-  // The pull request opened for the thread's branch, found after a run (decision 0044).
-  async setPullRequest(id: string, pullRequest: { number: number; url: string }) {
+  // The pull requests found for the thread's branches after a run (decisions 0044 and 0069): new
+  // ones are added and the title and state of known ones are brought up to date.
+  async savePullRequests(id: string, pullRequests: ThreadPullRequest[]) {
+    if (pullRequests.length === 0) return;
     await db
-      .update(threads)
-      .set({ pullRequestNumber: pullRequest.number, pullRequestUrl: pullRequest.url })
-      .where(eq(threads.id, id));
+      .insert(threadPullRequests)
+      .values(pullRequests.map((pullRequest) => ({ threadId: id, ...pullRequest })))
+      .onConflictDoUpdate({
+        target: [threadPullRequests.threadId, threadPullRequests.number],
+        set: {
+          url: sql`excluded.url`,
+          branch: sql`excluded.branch`,
+          title: sql`excluded.title`,
+          state: sql`excluded.state`,
+          updatedAt: new Date(),
+        },
+      });
   },
 
   // Bumps the thread to the top of the list after the agent has worked on it.

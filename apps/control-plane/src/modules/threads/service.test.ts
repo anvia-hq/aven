@@ -58,4 +58,50 @@ run("threadsService (postgres)", async () => {
     expect((await threadsService.get(orgA, thread.id))?.awaitingAnswer).toBe(false);
     expect(await threadsService.continuation(thread.id)).toBeNull();
   });
+
+  test("a thread carries its pull requests, newest first, each only its own", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    const other = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    expect(thread.pullRequests).toEqual([]);
+
+    const first = {
+      number: 3,
+      url: "https://github.com/acme/app/pull/3",
+      branch: "aven/abc",
+      title: "First",
+      state: "open" as const,
+    };
+    const second = { ...first, number: 5, branch: "aven/abc-docs", title: "Second" };
+    await threadsService.savePullRequests(thread.id, [first]);
+    await threadsService.savePullRequests(thread.id, [second]);
+
+    expect((await threadsService.get(orgA, thread.id))?.pullRequests).toEqual([second, first]);
+    expect((await threadsService.get(orgA, other.id))?.pullRequests).toEqual([]);
+    expect(
+      (await threadsService.list(orgA)).find((row) => row.id === thread.id)?.pullRequests,
+    ).toEqual([second, first]);
+    expect(
+      (await threadsService.update(orgA, thread.id, { title: "renamed" }))?.pullRequests,
+    ).toEqual([second, first]);
+  });
+
+  test("saving again brings a known pull request up to date and does not repeat it", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    const pull = {
+      number: 9,
+      url: "https://github.com/acme/app/pull/9",
+      branch: "aven/abc",
+      title: "Before",
+      state: "open" as const,
+    };
+    await threadsService.savePullRequests(thread.id, [pull]);
+    await threadsService.savePullRequests(thread.id, [
+      { ...pull, title: "After", state: "merged" },
+    ]);
+    await threadsService.savePullRequests(thread.id, []);
+
+    expect((await threadsService.get(orgA, thread.id))?.pullRequests).toEqual([
+      { ...pull, title: "After", state: "merged" },
+    ]);
+  });
 });

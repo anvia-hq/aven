@@ -87,9 +87,28 @@ const MAX_PAGES = 5;
 // A token is renewed this long before GitHub would expire it.
 const TOKEN_MARGIN_MS = 5 * 60_000;
 
-export type GithubPullRequest = { number: number; url: string };
+export type GithubPullRequest = {
+  number: number;
+  url: string;
+  title: string;
+  /** The head branch. */
+  branch: string;
+  state: "open" | "closed" | "merged";
+};
 
-type PullPayload = { number: number; html_url: string };
+type PullPayload = {
+  number: number;
+  html_url: string;
+  title: string;
+  state: string;
+  merged_at: string | null;
+  head: { ref: string; repo: { full_name: string } | null };
+};
+
+function pullState(pull: PullPayload): GithubPullRequest["state"] {
+  if (pull.merged_at) return "merged";
+  return pull.state === "open" ? "open" : "closed";
+}
 
 /**
  * A person's GitHub user access token and when it expires, with the token that renews it and when
@@ -223,12 +242,14 @@ export class GithubClient {
   }
 
   /**
-   * The latest pull request, open or not, whose head is `head` in `fullName`, or null: what the
-   * agent opened with `gh` for a thread's branch (decision 0044). Read with a token for that
-   * repository that may only read pull requests, minted for the call; an installation that cannot
-   * give one (the permission is not approved) just has none.
+   * The latest pull requests of `fullName`, open or not, newest first, whose head branch is
+   * `branchPrefix` or starts with it and is in the repository itself, not a fork: what the agent
+   * opened with `gh` for a thread (decisions 0044 and 0069). GitHub cannot filter by a prefix, so
+   * the newest hundred are read and filtered here. Read with a token for that repository that may
+   * only read pull requests, minted for the call; an installation that cannot give one (the
+   * permission is not approved) just has none.
    */
-  async findPullRequest(installationId: number, fullName: string, head: string) {
+  async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
     const [owner, name] = fullName.split("/") as [string, string];
     let token: string;
     try {
@@ -245,21 +266,30 @@ export class GithubClient {
       );
       token = issued.token;
     } catch (error) {
-      if (error instanceof GithubApiError && error.status === 422) return null;
+      if (error instanceof GithubApiError && error.status === 422) return [];
       throw error;
     }
     const query = new URLSearchParams({
       state: "all",
       sort: "created",
       direction: "desc",
-      per_page: "1",
-      head: `${owner}:${head}`,
+      per_page: String(PAGE_SIZE),
     });
     const path = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls`;
-    const [found] = await this.#api<PullPayload[]>(`${path}?${query}`, token);
-    return found
-      ? ({ number: found.number, url: found.html_url } satisfies GithubPullRequest)
-      : null;
+    const pulls = await this.#api<PullPayload[]>(`${path}?${query}`, token);
+    return pulls
+      .filter(
+        (pull) =>
+          (pull.head.ref === branchPrefix || pull.head.ref.startsWith(`${branchPrefix}-`)) &&
+          pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase(),
+      )
+      .map((pull): GithubPullRequest => ({
+        number: pull.number,
+        url: pull.html_url,
+        title: pull.title,
+        branch: pull.head.ref,
+        state: pullState(pull),
+      }));
   }
 
   /** Whether the installation has been approved to write contents and pull requests. */
