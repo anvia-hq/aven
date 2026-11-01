@@ -19,8 +19,8 @@ Running Aven meant cloning the repository, `bun install`, `createdb`, writing ab
 
 - Server state is Postgres and nothing else (the control plane only writes temporary files), so a backup is a dump of one database and `docker compose down` never loses anything but `-v`.
 - A runner on a public control plane connects over `wss://`, which is why the Caddy domain mode is part of the first version and not an extra.
-- GHCR makes a package private on its first push. After the first release, set `aven-server`, `aven-web` and `aven-sandbox` to public once (Package settings > Danger zone); the `org.opencontainers.image.source` label in each Dockerfile links them to the repository. Pushing a tag then needs no further steps (`.github/workflows/release.yml`).
+- GHCR may make a package private on its first push; `v0.1.0`'s were public from the start, and `docs/rules/0005-releasing.md` has the check and what to do if one is not. The `org.opencontainers.image.source` label in each Dockerfile links the packages to the repository. Pushing a tag needs no further steps (`.github/workflows/release.yml`).
 - The sandbox image is pulled once per runner machine and is several gigabytes.
 - Built in steps, each its own commit: the images and compose file, CI that publishes them, the `aven` CLI and runner service with a local token bootstrap, `install.sh` and the "Add runner" command, HTTPS with a domain, the runner version badge, `aven uninstall` (the services go, the database stays unless `--purge --yes`), then the GitHub App manifest flow (decision 0074), which removes the last hand-made setup (an installation cannot import a repository until a GitHub App exists).
-- Before the first release: push a tag, then make the three GHCR packages public once; until then `aven install` cannot pull the images.
+- `v0.1.0` is the first release, published by the workflow and checked by installing from it on a clean directory (the live `install.sh`, the release's binary, the GHCR images).
 - Not done: Windows (WSL2 later), and auto-update of runners.

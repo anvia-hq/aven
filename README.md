@@ -100,7 +100,7 @@ Start with `aven doctor`: it checks Docker, git, the server, the runner and its 
 | A runner shows Offline in Settings       | `aven runner status`, then `aven runner logs --follow` on that machine. `aven runner start` if it is stopped.                                                                                                           |
 | `The control plane refused this runtime` | The token was revoked or rotated, or the runner is older than the server (`Unsupported runtime version`): add a runtime again in Settings > Runtimes and run its command, or run `aven update` on the runner's machine. |
 | `Cannot reach the control plane`         | The `--url` is wrong or blocked. It is the server's address followed by `/api`.                                                                                                                                         |
-| `Could not pull ...aven-sandbox...`      | The image is large (several GB) and the packages must be public on GHCR; check your network, then run `aven runner install` again.                                                                                      |
+| `Could not pull ...aven-sandbox...`      | The image is large (several GB) and comes from GHCR; check your network, then run `aven runner install` again.                                                                                                          |
 | A thread cannot start a sandbox          | `docker info` must work for the user who installed the runner, and the runner's log says which image or command failed.                                                                                                 |
 
 Where things are: `~/.aven/server/.env` (settings and secrets), `~/.aven/runner.env` (the runner),

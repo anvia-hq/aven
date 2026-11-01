@@ -20,7 +20,17 @@ How a release is made, what it contains, and what a change must keep true so tha
    - a GitHub Release with generated notes, with those files attached.
 4. Check it before telling anyone: the Actions run is green, the release lists the four archives and `checksums.txt`, and on a machine (or a throwaway `HOME` and `AVEN_HOME`, see below) that has Aven from the previous release, `aven update` brings it to the new one and `aven doctor` is all `ok`. For a first install, `AVEN_INSTALL_VERSION=0.2.0 curl -fsSL .../install.sh | bash` on a clean machine.
 
-**The very first release** also needs: after the workflow has pushed the three images, set each of `aven-server`, `aven-web` and `aven-sandbox` to **public** in the package's settings on GitHub (GHCR makes a new package private). Until then nobody can pull them. This is needed once; the `org.opencontainers.image.source` label in each Dockerfile links the packages to the repository.
+**The first release of a repository** also needs a check that the three packages can be pulled by anyone, since GHCR may make a new package private. Ask for each without credentials; it answers 200 when public and 401 or 403 when not:
+
+```sh
+for p in aven-server aven-web aven-sandbox; do
+  tok=$(curl -s "https://ghcr.io/token?service=ghcr.io&scope=repository:anvia-hq/$p:pull" | bun -e 'console.log((await Bun.stdin.json()).token ?? "")')
+  curl -s -o /dev/null -w "$p %{http_code}\n" -H "authorization: Bearer $tok" \
+    -H 'accept: application/vnd.oci.image.index.v1+json' "https://ghcr.io/v2/anvia-hq/$p/manifests/0.1.0"
+done
+```
+
+If one is not public, set it to **public** in the package's settings on GitHub (Package settings > Danger zone); nobody can pull it until then. For `v0.1.0` all three were public from the first push, so nothing was needed. The `org.opencontainers.image.source` label in each Dockerfile links the packages to the repository.
 
 ## Versions
 
