@@ -61,7 +61,8 @@ export const botRunner = new BotRunner({
     list: (userId) => botsService.list(userId),
     create: (userId, bot) => botsService.create(userId, bot),
     update: (userId, id, changes) => botsService.update(userId, id, changes),
-    ask: (userId, from, botId, text) => botChats.ask(userId, from, botId, text),
+    deliver: (userId, from, hops, handle, text) =>
+      botChats.deliver(userId, from, hops, handle, text),
     greet: (userId, botId) => botChats.greet(userId, botId),
   }),
 });

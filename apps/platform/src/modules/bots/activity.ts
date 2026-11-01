@@ -22,8 +22,8 @@ export function chatItems(messages: readonly BotChatMessage[]): ChatItem[] {
   return items;
 }
 
-/** The bot a peer is, by id when it is known and by name when it is not. */
-export const peerKey = (peer: BotChatPeer) => peer.id ?? `name:${peer.name}`;
+/** The bot a peer is: its handle, which a message has live and read back alike. */
+export const peerKey = (peer: BotChatPeer) => peer.handle;
 
 /**
  * What a line of messages between bots says: how many, with whom. One message reads as Messaged
@@ -43,15 +43,17 @@ function leadOf(messages: readonly BotChatMessage[]) {
 }
 
 /**
- * The bots a line is with, as the person's bots when they are found there, by id when it is known
- * and by name when not, and one for each: the same bot known by name only (a chat read back from
- * memory) and by id (a message just sent) is not two. A bot that is gone, or renamed since, is
- * drawn from its name.
+ * The bots a line is with, as the person's bots when they are found there by handle, and one for
+ * each. A bot that is gone is drawn from the name the message has.
  */
 export function peerBots(peers: readonly BotChatPeer[], bots: readonly Bot[]) {
   const found = peers.map((peer) => {
-    const bot = bots.find((each) => (peer.id ? each.id === peer.id : each.name === peer.name));
-    return bot ?? { id: peerKey(peer), name: peer.name, avatar: "" };
+    const bot = bots.find((each) => each.handle === peer.handle);
+    return bot ?? { id: `handle:${peer.handle}`, name: peer.name, avatar: "" };
   });
   return [...new Map(found.map((bot) => [bot.id, bot])).values()];
 }
+
+/** What a peer is called: its bot's name now, which it may have changed since the message. */
+export const peerName = (peer: BotChatPeer, bots: readonly Bot[]) =>
+  bots.find((each) => each.handle === peer.handle)?.name ?? peer.name;

@@ -160,39 +160,42 @@ test.describe("bots", () => {
     await page.keyboard.type(" to do A, B and C");
     await page.keyboard.press("Enter");
 
-    // What was sent shows the bot as a chip, and the main bot says what Scout answered.
+    // What was sent shows the bot as a chip, and the main bot says it asked.
     const sent = page
       .locator('[data-slot="bubble-content"]')
       .filter({ hasText: "to do A, B and C" });
     await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
-    // While Aven waits, Scout is at work: its eyes are open in the sidebar, whichever chat is open.
+    await expect(bubble(page, "I asked Scout")).toBeVisible();
+    await expect(message).toHaveText("");
+    // Scout is woken by the message and at work on its answer: its eyes are open in the sidebar,
+    // whichever chat is open, and shut when it has written back.
     await expect(page.locator('a[href^="/bot/"] svg[data-mood]')).toHaveAttribute(
       "data-mood",
       "working",
     );
-    await expect(bubble(page, "Scout answered")).toBeVisible();
-    await expect(message).toHaveText("");
 
-    // Between the bots it is one line that opens, as in the harness: here, what was asked and what
-    // Scout said back, and no bubbles for them.
-    const activity = page.locator('[data-activity="bots"]');
-    await expect(activity).toContainText("3 messages with");
-    // Scout is done, and its eyes are shut again.
+    // The main bot hears from Scout later, in a message of its own, and tells the person.
+    await expect(bubble(page, "Scout answered")).toBeVisible();
     await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]')).toBeVisible();
+
+    // Between the bots it is one line that opens, as in the harness: here, what was written and
+    // what Scout wrote back, and no bubbles for them.
+    const activity = page.locator('[data-activity="bots"]');
+    await expect(activity).toContainText("2 messages with");
     await expect(activity).toContainText("Scout");
     await expect(bubble(page, "A, B and C")).toHaveCount(0);
     await activity.getByRole("button").click();
     await expect(activity).toContainText("Aven → Scout A, B and C");
-    await expect(activity).toContainText("Scout → Aven Hey there!");
+    await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
     // The other bot's own chat has the same exchange, from its side, after the hello it made.
     await page.getByRole("link", { name: /Scout/ }).click();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
-    await expect(activity).toContainText("3 messages with");
+    await expect(activity).toContainText("2 messages with");
     await expect(activity).toContainText("Aven");
     await activity.getByRole("button").click();
     await expect(activity).toContainText("Aven → Scout A, B and C");
-    await expect(activity).toContainText("Scout → Aven You said: [from bot Aven] A, B and C");
+    await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
     // Only the main bot writes to the others, so `@` offers nothing in this chat.
     await page.getByRole("textbox", { name: "Message" }).click();
@@ -207,7 +210,7 @@ test.describe("bots", () => {
     // It is the chat's, so it is there after a reload, read back from what the bot remembers.
     await page.reload();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
-    await expect(activity).toContainText("3 messages with");
+    await expect(activity).toContainText("2 messages with");
     await activity.getByRole("button").click();
     await expect(activity).toContainText("Aven → Scout A, B and C");
   });

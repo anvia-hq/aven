@@ -9,7 +9,7 @@ import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
-  type BotAskParams,
+  type BotSendParams,
   type BotCreateParams,
   type BotMemoryParams,
   type BotUpdateParams,
@@ -39,7 +39,7 @@ const callMethods = [
   "bot.memory",
   "bot.create",
   "bot.update",
-  "bot.ask",
+  "bot.send",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -229,10 +229,13 @@ const botCreateParams = z.object({
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
 });
 
-// A bot writes to another of the person's bots, named by its id.
-const botAskParams = z.object({
+// A bot writes to another of the person's bots, named by its handle.
+const botSendParams = z.object({
   replyId,
-  bot: z.uuid(),
+  to: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]*$/)
+    .max(64),
   text: z.string().trim().min(1).max(BOT_MESSAGE_MAX),
 });
 
@@ -271,8 +274,8 @@ export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
-export const parseBotAskParams = (params: unknown) =>
-  parseParams(botAskParams, params) as BotAskParams;
+export const parseBotSendParams = (params: unknown) =>
+  parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

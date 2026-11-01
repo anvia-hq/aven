@@ -1,10 +1,10 @@
 import type { MemoryStore } from "@anvia/core";
 import type {
-  BotAnswered,
-  BotAskParams,
   BotCreated,
   BotCreateParams,
   BotMemoryParams,
+  BotSendParams,
+  BotSent,
   BotUpdated,
   BotUpdateParams,
   CallMethod,
@@ -14,9 +14,9 @@ import type {
 
 import {
   parseAppendParams,
-  parseBotAskParams,
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotSendParams,
   parseBotUpdateParams,
   parseMemoryParams,
   parseSkillsGetParams,
@@ -39,8 +39,8 @@ export type CallBotReply = {
   create(params: BotCreateParams): Promise<BotCreated>;
   /** Changes the reply's own bot, and no other. */
   update(params: BotUpdateParams): Promise<BotUpdated>;
-  /** Has another of the person's bots answer the reply's bot, when that is the main one (decision 0063). */
-  ask(params: BotAskParams): Promise<BotAnswered>;
+  /** Writes to another of the person's bots as the reply's bot (decision 0065). */
+  send(params: BotSendParams): Promise<BotSent>;
 };
 
 export type RuntimeCallContext = {
@@ -93,8 +93,10 @@ export async function answerRuntimeCall(
       reply.create(call),
     );
   }
-  if (method === "bot.ask") {
-    return answerBotCall(params, parseBotAskParams, findBotReply, (reply, call) => reply.ask(call));
+  if (method === "bot.send") {
+    return answerBotCall(params, parseBotSendParams, findBotReply, (reply, call) =>
+      reply.send(call),
+    );
   }
   if (method === "bot.update") {
     return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>

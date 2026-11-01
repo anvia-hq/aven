@@ -1,9 +1,9 @@
 import type { AgentMemoryOptions, MemoryStore } from "@anvia/core";
 import type { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
-import type { DeliverMessage } from "@aven/agents/tools/send-message";
+import type { SendMessage } from "@aven/agents/tools/send-message";
 import type { ModelConfig } from "@aven/agents/model";
-import type { Bot } from "@aven/protocol/bots";
+import { USER_HANDLE, type Bot } from "@aven/protocol/bots";
 
 import type { BotReplier } from "../runner";
 
@@ -13,7 +13,7 @@ type BotAgent = Pick<ReturnType<typeof createBotAgent>, "generate">;
 export type CreateBotAgent = (input: {
   bot: Bot;
   model: ModelConfig;
-  deliver: DeliverMessage;
+  send: SendMessage;
   memory: AgentMemoryOptions;
 }) => BotAgent;
 
@@ -24,19 +24,32 @@ export function inProcessReplier(options: {
   store: MemoryStore;
   createAgent: CreateBotAgent;
   pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** What a bot writing to another bot does; without it, none can. */
+  sendToBot?: (message: {
+    from: Bot;
+    userId: string;
+    hops: number;
+    to: string;
+    text: string;
+  }) => Promise<string>;
 }): BotReplier {
   const pause = options.pause ?? (async () => undefined);
   return {
     ready: () => undefined,
-    answer: async ({ bot, userId, model, prompt, say, signal }) => {
-      const deliver: DeliverMessage = async (message, { abortSignal }) => {
-        await pause(typingDelay(message), abortSignal);
-        say(message);
+    answer: async ({ bot, userId, model, prompt, hops, say, signal }) => {
+      const send: SendMessage = async ({ to, text }, { abortSignal }) => {
+        if (to !== USER_HANDLE) {
+          if (!options.sendToBot) throw new Error(`No bot with the handle "${to}"`);
+          return options.sendToBot({ from: bot, userId, hops, to, text });
+        }
+        await pause(typingDelay(text), abortSignal);
+        say(text);
+        return "Sent to the person.";
       };
       const agent = options.createAgent({
         bot,
         model,
-        deliver,
+        send,
         memory: { store: options.store, savePolicy: "turn" },
       });
       await agent.generate({

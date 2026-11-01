@@ -3,12 +3,12 @@ import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
-import type { MessageBot } from "@aven/agents/tools/message-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
-import type { DeliverMessage } from "@aven/agents/tools/send-message";
-import { BOT_ASK_TIMEOUT_MS } from "@aven/protocol/bots";
+import type { SendMessage } from "@aven/agents/tools/send-message";
+import { USER_HANDLE } from "@aven/protocol/bots";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
+  BotPeer,
   BotReplyInfo,
   ControlPlaneToRuntime,
   RunModel,
@@ -26,14 +26,14 @@ export type BotReplyMessage = Extract<ControlPlaneToRuntime, { type: "bot.reply"
 export type CreateBotReplyAgent = (input: {
   bot: BotReplyInfo;
   model: RunModel;
-  deliver: DeliverMessage;
+  send: SendMessage;
   memory: AgentMemoryOptions;
   /** What the bot can do on its computer. */
   computer: readonly AnyTool[];
   /** Makes another bot; only for the person's main bot (decision 0060). */
   createBot?: CreateBot;
-  /** Writes to another of the person's bots; only for the main bot (decision 0063). */
-  messageBot?: MessageBot;
+  /** The bots this one may write to: the reply's own list, to which a bot it makes is added (decision 0065). */
+  peers: BotPeer[];
   /** Changes the bot's own name, description or instruction (decision 0061). */
   updateSelf: UpdateSelf;
 }) => Pick<Agent<unknown>, "generate">;
@@ -42,7 +42,7 @@ export type CreateBotReplyAgent = (input: {
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, deliver, memory, computer, createBot, messageBot, updateSelf }) =>
+  ({ bot, model, send, memory, computer, createBot, peers, updateSelf }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -53,14 +53,14 @@ export const defaultCreateBotAgent =
       contextWindow: model.contextWindow,
       id: bot.id,
       name: bot.name,
+      handle: bot.handle,
       instruction: bot.instruction,
       compactAfterTokens: bot.compactAfterTokens,
-      deliver,
+      send,
       memory,
       computer,
       createBot,
-      messageBot,
-      peers: bot.peers,
+      peers,
       description: bot.description,
       updateSelf,
     });
@@ -87,7 +87,6 @@ export type BotRepliesContext = {
   call<M extends keyof RuntimeCalls>(
     method: M,
     params: RuntimeCalls[M]["params"],
-    options?: { timeoutMs?: number },
   ): Promise<RuntimeCalls[M]["result"]>;
   /** The sandboxes of the threads and bots that have one. */
   boxes: Map<string, ThreadSandbox>;
@@ -150,14 +149,21 @@ export class BotReplies {
   }
 
   async #agentFor(replyId: string, bot: BotReplyInfo, model: RunModel, abort: AbortController) {
-    const { sandbox, boxes, starting, call, send, createAgent } = this.#context;
+    const { sandbox, boxes, starting, call, send: post, createAgent } = this.#context;
     await starting(bot.id);
     abort.signal.throwIfAborted();
     const box = await sandbox.acquire({ id: bot.id });
     boxes.set(bot.id, box);
-    const deliver: DeliverMessage = async (text, { abortSignal }) => {
+    // What a bot sends the person is shown as typed; what it sends another bot goes at once, and
+    // the other bot's answer is a message of its own (decision 0065).
+    const peers = [...bot.peers];
+    const send: SendMessage = async ({ to, text }, { abortSignal }) => {
+      if (to !== USER_HANDLE) {
+        const sent = await call("bot.send", { replyId, to, text });
+        return `Sent to ${sent.name} (${sent.handle}).`;
+      }
       await this.#pause(typingDelay(text), abortSignal);
-      if (send({ type: "bot.say", replyId, text })) return;
+      if (post({ type: "bot.say", replyId, text })) return "Sent to the person.";
       // A tool's error goes back to the model, which could try again; the reply is over instead.
       const lost = new Error("The connection to the control plane dropped");
       abort.abort(lost);
@@ -166,21 +172,25 @@ export class BotReplies {
     return createAgent({
       bot,
       model,
-      deliver,
+      send,
+      peers,
       memory: {
         store: remoteBotMemory(replyId, (params) => call("bot.memory", params)),
         savePolicy: "turn",
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
-      // The control plane says whether this bot may, and holds to it whatever is asked here.
-      // The control plane waits for the other bot at most BOT_ASK_TIMEOUT_MS; this waits a little longer.
-      messageBot: bot.peers
-        ? (input) =>
-            call("bot.ask", { ...input, replyId }, { timeoutMs: BOT_ASK_TIMEOUT_MS + 30_000 })
-        : undefined,
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
+      // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots
-        ? (input) => call("bot.create", { ...input, replyId })
+        ? async (input) => {
+            const made = await call("bot.create", { ...input, replyId });
+            peers.push({
+              handle: made.handle,
+              name: made.name,
+              description: input.description ?? "",
+            });
+            return made;
+          }
         : undefined,
     });
   }

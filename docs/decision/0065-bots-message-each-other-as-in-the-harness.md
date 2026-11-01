@@ -1,0 +1,24 @@
+# Bots message each other as in the harness
+
+Status: accepted. Supersedes the parts of 0063 about how bots write to each other (the `message_bot` tool, `bot.ask`, waiting for the answer, only the main bot writing); the rest of 0063 stands: the `@` mention, the line that opens in the chat, the greeting, `[note]`. Builds on 0058 to 0064. The model is the Anvia harness's, which the person asked for as closely as it fits.
+
+## Context
+
+0063 gave the main bot a `message_bot` tool that waited for the other bot's answer inside one reply. The harness does it differently: every bot has a handle, `sendMessage` takes `to` (the user or a handle), a message to a bot is delivered and wakes it, the bot answers by writing back with the same tool, and a counter stops two bots answering each other for ever. The person wanted bots to work like that.
+
+## Decision
+
+- **Every bot has a handle**: `main` for the main bot, a slug of its name for the rest (`data-analyst`), numbered when the person has another (`data-analyst-2`), never `main`, `user` or `system`, and kept when the bot is renamed (`bots.handle`, unique per person; the migrations give the bots there already were one). It is how bots name one another and what a message carries: `[from scout] text` (`botPrompt`).
+- **`send_message` takes `to`**: `user` by default, or a handle. A message to the person is typed and shown as before. A message to a bot is a call to the control plane, `bot.send` (wire version 29), which finds the bot among the person's by its handle, queues the text in its chat as `[from handle] text` and wakes it. The call returns at once with who got it: nothing is waited for. `list_bots` lists the other bots; a bot a reply makes is added to the list for the rest of that reply. Every bot has both, and every bot's instructions list the others with their handles.
+- **The answer is a message of its own.** The bot written to answers with `send_message` to the sender's handle, which wakes the sender in the same way. So the main bot tells the person it asked and stops, and tells them what the bot said when that message comes. `bot.ask`, `message_bot`, the five-minute wait and `BOT_ASK_TIMEOUT_MS` are gone.
+- **No loops**: each reply knows how many messages between bots led to it (`hops`, nought when the person spoke or the app woke the bot); a message written in it is one more, and past `BOT_MAX_HOPS` (8, the harness's) the control plane refuses it and the bot is told to tell the person instead. A bot cannot write to itself, only to the person's own bots, and one with a lot to answer already refuses more (`MAX_PENDING`). The bots' instructions say not to thank a bot or answer a thank-you.
+- **What a bot's message is worth.** The sender's handle is put on by the control plane, from the reply's own bot, whatever the runner says, and what the person types that looks like one is kept from being read as one (`personPrompt`). A message from `main` is the person's request passed on, as in 0063: the bot treats it as the person's own, reports back to `main`, and may change itself on it (0061). A message from any other bot is a colleague's request: the bot helps when it is reasonable, and it is never the person's word to change itself or make a bot. This is why only the main bot's handle is reserved and its instructions say that the person must have asked. A `[note]` still never lends authority.
+- **The chat**: a message between bots carries a `peer` with the other bot's `handle` (and `name`, and `id` when it is known live), `to` or `from`. Messages in a row are one line that opens, as before. `botMessagesToChat` reads `[from handle]` prompts and the `to` of each `send_message` call; the platform finds the bot by its handle, draws its name as it is now and falls back to the name in the message when the bot is gone (`peerBots`, `peerName`).
+- **The `@` mention** in the composer is unchanged and still offers the person's other bots from the main bot's chat; the main bot reads `@Name` against the list of bots in its instructions, which has both names and handles. Any bot may write to any other, but only the person can mention one.
+
+## Consequences
+
+- The person sees a bot write to another and come back later, which is how the harness feels; the main bot is no longer busy while it waits, and a slow bot no longer makes it slow. A bot that never answers leaves the person with "I asked": the main bot is told to say so rather than try again, but nothing wakes it later.
+- Bots can write to each other without the main bot, and the person can read all of it in each bot's chat. A chain is cut at eight messages.
+- A reload shows a message to a bot as `to` with the handle only; the platform fills in the name. A bot deleted since is drawn from the handle.
+- Runners and the control plane must speak version 29.

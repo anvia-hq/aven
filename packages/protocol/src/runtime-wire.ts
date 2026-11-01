@@ -187,6 +187,8 @@ export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
 export type BotReplyInfo = {
   id: string;
   name: string;
+  /** How other bots write to this one (decision 0065). */
+  handle: string;
   instruction: string;
   /** What the bot is for, as it is now; the bot may change it (decision 0061). */
   description: string;
@@ -194,15 +196,12 @@ export type BotReplyInfo = {
   compactAfterTokens?: number;
   /** Whether this bot may make others, a power of the person's main bot (decision 0060). */
   canCreateBots: boolean;
-  /**
-   * The person's other bots, for a bot that may message them, the main one (decision 0063); a bot
-   * that may not has none, which is different from none to message.
-   */
-  peers?: BotPeer[];
+  /** The person's other bots, which this one may write to (decision 0065). */
+  peers: BotPeer[];
 };
 
-/** A bot another bot may message: how to name it in a call, and what it is for. */
-export type BotPeer = { id: string; name: string; description: string };
+/** A bot another bot may write to: how to name it in a call, and what it is for. */
+export type BotPeer = { handle: string; name: string; description: string };
 
 export type ControlPlaneToRuntime =
   | {
@@ -301,7 +300,7 @@ export type SkillsCallMethod = "skills.get";
  * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
  * cannot wipe a chat. Messages are Anvia's.
  */
-export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update" | "bot.ask";
+export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update" | "bot.send";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -365,16 +364,16 @@ export type BotUpdateParams = {
 export type BotUpdated = { name: string; description: string };
 
 /**
- * A bot writes to another of the person's bots and waits for its answer (decision 0063);
- * `replyId` names the live reply it is working on, which must be the main bot's.
+ * A bot writes to another of the person's bots (decision 0065); `replyId` names the live reply it is
+ * working on. The other bot answers later, in a reply of its own, so nothing is waited for.
  */
-export type BotAskParams = { replyId: string; bot: string; text: string };
+export type BotSendParams = { replyId: string; to: string; text: string };
 
-/** The bot that answered and what it sent back, one entry for each message; none when it chose to say nothing. */
-export type BotAnswered = { bot: string; replies: string[] };
+/** The bot the message went to. */
+export type BotSent = { handle: string; name: string };
 
 /** The bot that was made. It uses the person's default model until they pick another. */
-export type BotCreated = { id: string; name: string };
+export type BotCreated = { id: string; name: string; handle: string };
 
 /** The calls a runner makes today, by method: what it sends and what the control plane answers. */
 export type RuntimeCalls = {
@@ -382,7 +381,7 @@ export type RuntimeCalls = {
   "bot.memory": { params: BotMemoryParams; result: unknown };
   "bot.create": { params: BotCreateParams; result: BotCreated };
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
-  "bot.ask": { params: BotAskParams; result: BotAnswered };
+  "bot.send": { params: BotSendParams; result: BotSent };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -399,4 +398,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 28;
+export const WIRE_VERSION = 29;

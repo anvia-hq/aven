@@ -2,10 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
-import { createMessageBotTool, type MessageBot } from "@aven/agents/tools/message-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
-import { BOT_ASK_TIMEOUT_MS } from "@aven/protocol/bots";
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
@@ -24,29 +22,34 @@ const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as co
 const message: BotReplyMessage = {
   type: "bot.reply",
   replyId: "r1",
-  bot: { id: "bot-1", name: "Pip", instruction: "", description: "A pal.", canCreateBots: false },
+  bot: {
+    id: "bot-1",
+    name: "Pip",
+    handle: "pip",
+    instruction: "",
+    description: "A pal.",
+    canCreateBots: false,
+    peers: [],
+  },
   prompt: "hello",
   model,
 };
 
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
-const messagingBots = (messageBot?: MessageBot) =>
-  messageBot ? [createMessageBotTool(messageBot)] : [];
 
 // An agent that sends what a script says to, then stops.
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
-  ({ deliver, computer, memory, createBot, messageBot, updateSelf }) =>
+  ({ send, computer, memory, createBot, updateSelf }) =>
     new Agent({
       id: "bot",
       model: scriptedModel(steps),
       instructions: "x",
       memory,
       tools: [
-        createSendMessageTool(deliver),
+        createSendMessageTool(send),
         ...computer,
         ...makingBots(createBot),
-        ...messagingBots(messageBot),
         createUpdateSelfTool(updateSelf),
       ],
     });
@@ -68,10 +71,12 @@ const sandboxWith = (acquired: { id: string; repo: unknown }[] = []): ThreadWork
 // The control plane's answer to a call about the bot's conversation: nothing said before.
 const memoryAnswer = (params: unknown) => ((params as { op?: string }).op === "load" ? [] : null);
 
-function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boolean } = {}) {
+function harness(
+  createAgent: CreateBotReplyAgent,
+  options: { linkUp?: () => boolean; failSend?: boolean } = {},
+) {
   const sent: RuntimeToControlPlane[] = [];
   const calls: unknown[] = [];
-  const timeouts: (number | undefined)[] = [];
   const acquired: { id: string; repo: unknown }[] = [];
   const finished: string[] = [];
   const pauses: number[] = [];
@@ -84,11 +89,16 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
       sent.push(frame);
       return true;
     },
-    call: async (method, params, options) => {
+    call: async (method, params) => {
       calls.push({ method, params });
-      timeouts.push(options?.timeoutMs);
-      if (method === "bot.create") return { id: "b2", name: (params as { name: string }).name };
-      if (method === "bot.ask") return { bot: "Scout", replies: ["A is done"] };
+      if (method === "bot.create") {
+        const { name } = params as { name: string };
+        return { id: "b2", name, handle: name.toLowerCase() };
+      }
+      if (method === "bot.send") {
+        if (options.failSend) throw new Error('No bot with the handle "ghost"');
+        return { handle: "scout", name: "Scout" };
+      }
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
       return memoryAnswer(params);
     },
@@ -101,7 +111,7 @@ function harness(createAgent: CreateBotReplyAgent, options: { linkUp?: () => boo
   const until = async () => {
     for (let i = 0; i < 100 && !ended(); i++) await Bun.sleep(10);
   };
-  return { replies, sent, calls, timeouts, acquired, finished, pauses, boxes, until };
+  return { replies, sent, calls, acquired, finished, pauses, boxes, until };
 }
 
 describe("BotReplies", () => {
@@ -201,45 +211,80 @@ describe("BotReplies", () => {
     ]);
   });
 
-  test("the main bot writes to another bot by asking the control plane, for its own reply, and waits longer than a call does", async () => {
-    const scout = "11111111-2222-4333-8444-555555555555";
+  test("a bot writes to another by asking the control plane, for its own reply, and what it writes to the person is typed", async () => {
     const run = harness(
       agentThat(
-        [toolCall("message_bot", { bot: scout, text: "do A" })],
-        [toolCall("send_message", { text: "Scout says A is done" })],
+        [
+          toolCall("send_message", { to: "scout", text: "do A" }),
+          toolCall("send_message", { text: "I asked Scout" }),
+        ],
         [text("")],
       ),
     );
-    const peers = [{ id: scout, name: "Scout", description: "" }];
 
-    run.replies.start({ ...message, bot: { ...message.bot, canCreateBots: true, peers } });
+    run.replies.start({
+      ...message,
+      bot: { ...message.bot, peers: [{ handle: "scout", name: "Scout", description: "" }] },
+    });
     await run.until();
 
     expect(run.calls).toContainEqual({
-      method: "bot.ask",
-      params: { bot: scout, text: "do A", replyId: "r1" },
+      method: "bot.send",
+      params: { replyId: "r1", to: "scout", text: "do A" },
     });
-    // The control plane waits five minutes for the other bot; the call waits a little longer.
-    expect(run.timeouts.find((timeout) => timeout !== undefined)).toBeGreaterThan(
-      BOT_ASK_TIMEOUT_MS,
-    );
+    // Only what goes to the person is shown, and only that is typed.
     expect(run.sent).toEqual([
-      { type: "bot.say", replyId: "r1", text: "Scout says A is done" },
+      { type: "bot.say", replyId: "r1", text: "I asked Scout" },
       { type: "bot.end", replyId: "r1" },
     ]);
+    expect(run.pauses).toHaveLength(1);
   });
 
-  test("a bot told of no other bots is not given the tool", async () => {
-    let offered: unknown = "unset";
-    const run = harness((input) => {
-      offered = input.messageBot;
-      return agentThat([text("")])(input);
-    });
+  test("a refusal of the control plane to carry a message to a bot reaches the bot as the tool's error", async () => {
+    const run = harness(
+      ({ send, memory }) => ({
+        generate: async () => {
+          await memory.store.load({ scope: { sessionId: "bot-1" } });
+          const refused = await send({ to: "ghost", text: "hi" }, {}).catch(
+            (error: Error) => error.message,
+          );
+          await send({ to: "user", text: refused }, {});
+          return { type: "response" } as never;
+        },
+      }),
+      { failSend: true },
+    );
 
     run.replies.start(message);
     await run.until();
 
-    expect(offered).toBeUndefined();
+    expect(run.sent).toContainEqual({
+      type: "bot.say",
+      replyId: "r1",
+      text: 'No bot with the handle "ghost"',
+    });
+  });
+
+  test("a bot the main bot makes is on the list of bots it may write to, from then on in the reply", async () => {
+    let peers: readonly unknown[] = [];
+    const run = harness((input) => {
+      peers = input.peers;
+      return agentThat(
+        [
+          toolCall("create_bot", {
+            name: "Scout",
+            instruction: "You research.",
+            description: "Looks.",
+          }),
+        ],
+        [text("")],
+      )(input);
+    });
+
+    run.replies.start({ ...message, bot: { ...message.bot, canCreateBots: true } });
+    await run.until();
+
+    expect(peers).toEqual([{ handle: "scout", name: "Scout", description: "Looks." }]);
   });
 
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
@@ -284,12 +329,12 @@ describe("BotReplies", () => {
         bot: {
           ...message.bot,
           canCreateBots,
-          peers: canCreateBots
-            ? [{ id: "b2", name: "Scout", description: "Looks things up." }]
-            : undefined,
+          handle: canCreateBots ? "main" : "pip",
+          peers: [{ handle: "scout", name: "Scout", description: "Looks things up." }],
         },
         model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
-        deliver: async () => undefined,
+        send: async () => "Sent",
+        peers: [{ handle: "scout", name: "Scout", description: "Looks things up." }],
         memory: {
           store: {
             load: async () => [],
@@ -300,13 +345,18 @@ describe("BotReplies", () => {
         },
         computer: [],
         updateSelf: async () => ({ name: "Pip", description: "" }),
-        createBot: canCreateBots ? async () => ({ id: "b2", name: "Scout" }) : undefined,
-        messageBot: canCreateBots ? async () => ({ bot: "Scout", replies: [] }) : undefined,
+        createBot: canCreateBots
+          ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
+          : undefined,
       }) as unknown as { tools: { name: string }[]; instructions: string };
 
     test("every bot can change itself and knows its own description", () => {
       const agent = build(false);
-      expect(agent.tools.map((each) => each.name)).toEqual(["send_message", "update_self"]);
+      expect(agent.tools.map((each) => each.name)).toEqual([
+        "send_message",
+        "list_bots",
+        "update_self",
+      ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
     });
@@ -315,12 +365,12 @@ describe("BotReplies", () => {
       const agent = build(true);
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
+        "list_bots",
         "create_bot",
-        "message_bot",
         "update_self",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
-      expect(agent.instructions).toContain("- Scout (id: b2): Looks things up.");
+      expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");
     });
   });
 
@@ -338,7 +388,7 @@ describe("BotReplies", () => {
   });
 
   test("its conversation is asked of the control plane, not kept here", async () => {
-    const run = harness(({ memory, deliver }) => ({
+    const run = harness(({ memory, send }) => ({
       generate: async () => {
         await memory.store.load({ scope: { sessionId: "bot-1" } });
         await memory.store.append({
@@ -347,7 +397,7 @@ describe("BotReplies", () => {
           turn: 1,
           messages: [],
         });
-        await deliver("hi", {});
+        await send({ to: "user", text: "hi" }, {});
         return { type: "response" } as never;
       },
     }));

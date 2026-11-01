@@ -63,12 +63,15 @@ export type Bot = {
 };
 
 /**
- * The other bot of a message between two bots (decision 0063). The chat shows these as one line
- * that opens, not as bubbles, as the Anvia harness does.
+ * The other bot of a message between two bots (decisions 0063 and 0065). The chat shows these as
+ * one line that opens, not as bubbles, as the Anvia harness does.
  */
 export type BotChatPeer = {
+  /** What to call it when its bot is not found among the person's, such as one deleted since. */
   name: string;
-  /** Known when the message was sent live, and for a bot this one wrote to; a chat read back has the name only for a bot that wrote to this one. */
+  /** Names the bot among the person's, live and read back alike. */
+  handle: string;
+  /** Known when the message was sent live. */
   id?: string;
   /** `to`: this bot wrote it to the peer. `from`: the peer wrote it to this bot. */
   direction: "to" | "from";
@@ -85,16 +88,14 @@ export type BotChatMessage = {
   peer?: BotChatPeer;
 };
 
-// What a bot is told when someone other than the person wrote to it (decision 0063): the text
-// with its sender in front, which the bot's instructions explain and the chat reads back. A bot
-// that wrote to it is named; the app itself, to wake a bot with a task, is a note, which the chat
-// does not show.
-const FROM_BOT = /^\[from bot ([^\]\n]+)\] ([\s\S]*)$/;
+// What a bot is told when someone other than the person wrote to it (decisions 0063 and 0065): the
+// text with its sender's handle in front, which the bot's instructions explain and the chat reads
+// back. The app itself, to wake a bot with a task, is a note, which the chat does not show.
+const FROM_BOT = /^\[from ([a-z0-9][a-z0-9-]*)\] ([\s\S]*)$/;
 const NOTE = /^\[note\] ([\s\S]*)$/;
 
 /** The prompt a bot is given for a message another bot sent it. */
-export const botPrompt = (from: string, text: string) =>
-  `[from bot ${from.replace(/[\]\n]/g, " ")}] ${text}`;
+export const botPrompt = (fromHandle: string, text: string) => `[from ${fromHandle}] ${text}`;
 
 /** The prompt a bot is given for a note from the app: not the person's, and not shown to them. */
 export const botNote = (text: string) => `[note] ${text}`;
@@ -117,8 +118,11 @@ export function parseBotPrompt(prompt: string): { from?: string; note?: boolean;
   return note ? { note: true, text: note[1]! } : { text: prompt };
 }
 
-/** How long a bot waits for another to answer it (decision 0063), and so how long a call for that may take. */
-export const BOT_ASK_TIMEOUT_MS = 300_000;
+/**
+ * How many messages between bots may follow one another before a bot must tell the person instead,
+ * so two bots cannot answer each other for ever (decision 0065).
+ */
+export const BOT_MAX_HOPS = 8;
 
 /** What a client hears about a bot's chat (decision 0058): not a `RunEvent`, which would join several messages into one. */
 export type BotEvent =

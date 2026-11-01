@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { activitySummary, chatItems, peerBots } from "./activity";
+import { activitySummary, chatItems, peerBots, peerName } from "./activity";
 import type { Bot, BotChatMessage } from "./types";
 
 const said = (id: number, text: string, peer?: BotChatMessage["peer"]): BotChatMessage => ({
@@ -9,8 +9,9 @@ const said = (id: number, text: string, peer?: BotChatMessage["peer"]): BotChatM
   text,
   peer,
 });
-const to = (name: string) => ({ name, direction: "to" as const });
-const from = (name: string) => ({ name, direction: "from" as const });
+const handleOf = (name: string) => name.toLowerCase();
+const to = (name: string) => ({ name, handle: handleOf(name), direction: "to" as const });
+const from = (name: string) => ({ name, handle: handleOf(name), direction: "from" as const });
 
 describe("chatItems", () => {
   test("messages with a person stay messages, in order", () => {
@@ -52,10 +53,10 @@ describe("activitySummary", () => {
     });
   });
 
-  test("an exchange counts its messages and the distinct bots, by id when it is known and by name when not", () => {
+  test("an exchange counts its messages and the distinct bots, by handle, whether or not a message knows the bot's id", () => {
     const summary = activitySummary([
-      said(0, "a", { id: "b1", name: "Scout", direction: "to" }),
-      said(1, "b", { id: "b1", name: "Scout", direction: "from" }),
+      said(0, "a", { id: "b1", name: "Scout", handle: "scout", direction: "to" }),
+      said(1, "b", from("Scout")),
       said(2, "c", to("Ana")),
       said(3, "d", from("Ana")),
     ]);
@@ -65,16 +66,26 @@ describe("activitySummary", () => {
 });
 
 describe("peerBots", () => {
-  const scout = { id: "b1", name: "Scout", avatar: "" } as Bot;
+  const scout = { id: "b1", name: "Scout", handle: "scout", avatar: "" } as Bot;
 
-  test("is one bot when it is known by name in one message and by id in another", () => {
-    const found = peerBots([to("Scout"), { id: "b1", name: "Scout", direction: "from" }], [scout]);
+  test("is one bot when it is known by id in one message and by handle alone in another", () => {
+    const found = peerBots(
+      [to("Scout"), { id: "b1", name: "Scout", handle: "scout", direction: "from" }],
+      [scout],
+    );
     expect(found).toEqual([scout]);
   });
 
-  test("draws a bot that is not among the person's from its name", () => {
+  test("is the bot as the person's list has it, whatever the message called it", () => {
+    const renamed = { ...scout, name: "Researcher" };
+    expect(peerBots([to("Scout")], [renamed])).toEqual([renamed]);
+    expect(peerName(to("Scout"), [renamed])).toBe("Researcher");
+  });
+
+  test("draws a bot that is not among the person's from the name the message has", () => {
     expect(peerBots([to("Gone")], [scout])).toEqual([
-      { id: "name:Gone", name: "Gone", avatar: "" },
+      { id: "handle:gone", name: "Gone", avatar: "" },
     ]);
+    expect(peerName(to("Gone"), [scout])).toBe("Gone");
   });
 });

@@ -52,10 +52,12 @@ export function loopbackReplier(options: {
           bot: {
             id: bot.id,
             name: bot.name,
+            handle: bot.handle,
             instruction: bot.instruction,
             description: bot.description,
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
             canCreateBots: false,
+            peers: [],
           },
           prompt,
           model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },

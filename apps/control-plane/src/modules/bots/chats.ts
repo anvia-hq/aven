@@ -1,7 +1,7 @@
-import { BOT_ASK_TIMEOUT_MS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
-import type { BotAnswered } from "@aven/protocol/runtime-wire";
+import { BOT_MAX_HOPS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
+import type { BotSent } from "@aven/protocol/runtime-wire";
 
-import { orNotFound, UnavailableError, UnprocessableError } from "../../errors";
+import { orNotFound, UnprocessableError } from "../../errors";
 import { environmentModel, resolveModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
@@ -21,43 +21,44 @@ async function modelOf(userId: string, bot: Bot) {
   );
 }
 
-// The answer, or an error that says the bot is still at work when it takes longer than `ms`: its
-// reply goes on and is in its chat when it comes.
-function within<T>(answer: Promise<T>, ms: number, message: string) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(() => reject(new UnavailableError(message)), ms);
-  });
-  return Promise.race([answer, late]).finally(() => clearTimeout(timer));
-}
-
 // What a person says to a bot, and its chat as events. The bot runs on the model it was given, or
 // else the person's default provider, or else the environment's. The runner is given, so `bots`
 // does not depend on how a reply is made.
-export const createBotChats = (runner: BotRunner, options: { askTimeoutMs?: number } = {}) => ({
+export const createBotChats = (runner: BotRunner) => ({
   async send(userId: string, botId: string, text: string) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
     await runner.send(bot, userId, personPrompt(text), await modelOf(userId, bot));
   },
 
-  // A bot writes to another of the person's bots and waits for what it sends back (decision 0063).
-  // The other bot answers as it would the person, in its own chat and with its own memory. The
-  // asking bot's chat gets the message and the answer, as messages between bots.
-  async ask(userId: string, from: Bot, botId: string, text: string): Promise<BotAnswered> {
-    if (botId === from.id) throw new UnprocessableError("A bot cannot message itself");
-    const bot = orNotFound(await botsService.get(userId, botId), "No such bot");
-    const { answered } = await runner.ask(bot, userId, from, text, await modelOf(userId, bot));
-    const peer = { id: bot.id, name: bot.name };
-    runner.note(from.id, "bot", text, { ...peer, direction: "to" });
-    const said = await within(
-      answered,
-      options.askTimeoutMs ?? BOT_ASK_TIMEOUT_MS,
-      `${bot.name} has not answered yet and is still working on it; its answer will be in its chat`,
-    );
-    if (said.error) throw new UnavailableError(`${bot.name} could not answer: ${said.error}`);
-    for (const reply of said.said)
-      runner.note(from.id, "user", reply, { ...peer, direction: "from" });
-    return { bot: bot.name, replies: said.said };
+  // A bot writes to another of the person's bots, named by its handle (decision 0065). The message
+  // is in both chats, as a message between bots, and the other bot answers in a reply of its own,
+  // as it would the person: by writing back, if it has something to say. `hops` is how many
+  // messages between bots led to the reply that wrote this, so a chain of them ends.
+  async deliver(
+    userId: string,
+    from: Bot,
+    hops: number,
+    handle: string,
+    text: string,
+  ): Promise<BotSent> {
+    const target = await botsService.getByHandle(userId, handle);
+    if (!target) {
+      throw new UnprocessableError(`No bot with the handle "${handle}". Use list_bots, or "user".`);
+    }
+    if (target.id === from.id) throw new UnprocessableError("A bot cannot message itself");
+    if (hops + 1 > BOT_MAX_HOPS) {
+      throw new UnprocessableError(
+        "Too many bot-to-bot messages in a row. Message the person instead.",
+      );
+    }
+    await runner.deliver(target, userId, from, text, hops + 1, await modelOf(userId, target));
+    runner.note(from.id, "bot", text, {
+      id: target.id,
+      name: target.name,
+      handle: target.handle,
+      direction: "to",
+    });
+    return { handle: target.handle, name: target.name };
   },
 
   // A bot that was just made says hello to its person (decision 0063), unasked: the app wakes it

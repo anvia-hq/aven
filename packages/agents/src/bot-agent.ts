@@ -4,8 +4,8 @@ import type { BotPeer } from "@aven/protocol/runtime-wire";
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
-import { createMessageBotTool, type MessageBot } from "./tools/message-bot";
-import { createSendMessageTool, type DeliverMessage } from "./tools/send-message";
+import { createListBotsTool } from "./tools/list-bots";
+import { createSendMessageTool, type SendMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
 
 // A bot answers with a few messages, so a handful of turns is plenty.
@@ -18,9 +18,11 @@ type BotAgentOptions = ModelSource & {
   /** The bot's id: its conversation is kept under it. */
   id: string;
   name: string;
+  /** How other bots write to this one (decision 0065). */
+  handle: string;
   instruction: string;
-  /** Shows a message the bot sent. */
-  deliver: DeliverMessage;
+  /** Sends a message the bot wrote, to the person or to another bot. */
+  send: SendMessage;
   /** Where the conversation is kept. */
   memory: AgentMemoryOptions;
   /** The size of the conversation, in tokens, past which it is summarized; by default 70% of the model's window. */
@@ -29,10 +31,11 @@ type BotAgentOptions = ModelSource & {
   computer?: readonly AnyTool[];
   /** Makes another bot, for the person's main bot only (decision 0060); without it the bot cannot. */
   createBot?: CreateBot;
-  /** Writes to another of the person's bots, for the main bot only (decision 0063); without it the bot cannot. */
-  messageBot?: MessageBot;
-  /** The person's other bots, which the instructions list for a bot that can write to them. */
-  peers?: readonly BotPeer[];
+  /**
+   * The person's other bots, which the instructions list and `list_bots` gives. The host owns the
+   * array and adds a bot it makes to it, so the list is current through the reply (decision 0065).
+   */
+  peers: readonly BotPeer[];
   /** What the bot's description is now. */
   description?: string;
   /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
@@ -46,14 +49,14 @@ type BotAgentOptions = ModelSource & {
 export function createBotAgent({
   id,
   name,
+  handle,
   instruction,
-  deliver,
+  send,
   memory,
   compactAfterTokens,
   computer = [],
   createBot,
-  messageBot,
-  peers = [],
+  peers,
   description = "",
   updateSelf,
   ...source
@@ -65,19 +68,20 @@ export function createBotAgent({
     id: `bot-${id}`,
     instructions: botInstructions({
       name,
+      handle,
       instruction,
       computer: computer.length > 0,
       createBots: Boolean(createBot),
-      peers: messageBot ? peers : undefined,
+      peers,
       self: updateSelf ? { description } : undefined,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
     tools: [
-      createSendMessageTool(deliver),
+      createSendMessageTool(send),
+      createListBotsTool(() => peers),
       ...computer,
       ...makingBots(createBot),
-      ...messagingBots(messageBot),
       ...changingSelf(updateSelf),
     ],
   });
@@ -86,5 +90,3 @@ export function createBotAgent({
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
-const messagingBots = (messageBot?: MessageBot) =>
-  messageBot ? [createMessageBotTool(messageBot)] : [];

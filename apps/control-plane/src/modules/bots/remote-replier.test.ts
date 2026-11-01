@@ -80,7 +80,7 @@ function fakeRunner(
     list: async () => [bot],
     create: async () => bot,
     update: async () => bot,
-    ask: async () => ({ bot: "Scout", replies: [] }),
+    deliver: async () => ({ handle: "scout", name: "Scout" }),
     greet: async () => undefined,
     ...options.bots,
   });
@@ -93,6 +93,7 @@ const input = (say: (text: string) => void, signal = new AbortController().signa
   userId: "u1",
   model: { provider: "openai" as const },
   prompt: "ahoy",
+  hops: 0,
   say,
   signal,
 });
@@ -243,7 +244,7 @@ describe("RemoteBotReplier", () => {
   });
 
   describe("a bot that makes bots", () => {
-    const made: Bot = { ...bot, id: "b2", name: "Scout", isMain: false };
+    const made: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
     const wanted = { replyId: "x", name: "Scout", instruction: "You research." };
 
     test("the main bot's new bot is made for its own person, and the runner is told which", async () => {
@@ -256,7 +257,7 @@ describe("RemoteBotReplier", () => {
 
       const result = await run.only().create(wanted);
 
-      expect(result).toEqual({ id: "b2", name: "Scout" });
+      expect(result).toEqual({ id: "b2", name: "Scout", handle: "scout" });
       expect(calls).toEqual([
         {
           userId: "u1",
@@ -286,7 +287,7 @@ describe("RemoteBotReplier", () => {
       await Bun.sleep(0);
 
       // A hello that never ends does not hold up the main bot's tool call.
-      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout" });
+      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout", handle: "scout" });
       expect(greeted).toEqual([{ userId: "u1", botId: "b2" }]);
       run.only().end();
       await answering;
@@ -304,7 +305,7 @@ describe("RemoteBotReplier", () => {
       const answering = run.replier.answer(input(() => undefined));
       await Bun.sleep(0);
 
-      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout" });
+      expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout", handle: "scout" });
       run.only().end();
       await answering;
     });
@@ -373,63 +374,62 @@ describe("RemoteBotReplier", () => {
       ...bot,
       id: "b2",
       name: "Scout",
+      handle: "scout",
       description: "Looks things up.",
       isMain: false,
     };
 
-    test("the main bot is told which bots it may write to, not itself", async () => {
-      const run = fakeRunner({ bots: { list: async () => [bot, scout] } });
-      const answering = run.replier.answer(input(() => undefined));
-      await Bun.sleep(5);
-      await Bun.sleep(0);
+    test("every bot is told which bots it may write to, not itself", async () => {
+      for (const asking of [bot, scout]) {
+        const run = fakeRunner({ bots: { list: async () => [bot, scout] } });
+        const answering = run.replier.answer({ ...input(() => undefined), bot: asking });
+        await Bun.sleep(5);
 
-      expect(run.started[0]!.bot.peers).toEqual([
-        { id: "b2", name: "Scout", description: "Looks things up." },
-      ]);
-      run.only().end();
-      await answering;
+        const others = asking === bot ? scout : bot;
+        expect(run.started[0]!.bot.peers).toEqual([
+          { handle: others.handle, name: others.name, description: others.description },
+        ]);
+        run.only().end();
+        await answering;
+      }
     });
 
-    test("it writes as itself, for its own person, and hears what the other bot sent", async () => {
-      const asked: { userId: string; from: string; botId: string; text: string }[] = [];
+    test("it writes as itself, for its own person, whichever bot the runner might name, and says how long the chain of bots is", async () => {
+      const sent: { userId: string; from: string; hops: number; to: string; text: string }[] = [];
       const run = fakeRunner({
         bots: {
           list: async () => [bot, scout],
-          ask: async (userId, from, botId, text) => (
-            asked.push({ userId, from: from.id, botId, text }),
-            { bot: "Scout", replies: ["A done"] }
+          deliver: async (userId, from, hops, to, text) => (
+            sent.push({ userId, from: from.id, hops, to, text }),
+            { handle: "scout", name: "Scout" }
           ),
         },
       });
-      const answering = run.replier.answer(input(() => undefined));
+      const answering = run.replier.answer({ ...input(() => undefined), bot: scout, hops: 3 });
       await Bun.sleep(5);
-      await Bun.sleep(0);
 
-      const answered = await run.only().ask({ replyId: "x", bot: "b2", text: "do A" });
+      const result = await run.only().send({ replyId: "x", to: "main", text: "A is done" });
 
-      expect(answered).toEqual({ bot: "Scout", replies: ["A done"] });
-      expect(asked).toEqual([{ userId: "u1", from: "b1", botId: "b2", text: "do A" }]);
+      expect(result).toEqual({ handle: "scout", name: "Scout" });
+      expect(sent).toEqual([{ userId: "u1", from: "b2", hops: 3, to: "main", text: "A is done" }]);
       run.only().end();
       await answering;
     });
 
-    test("another bot may not, and is given no one to write to", async () => {
-      const asked: string[] = [];
+    test("a refusal of the control plane to carry the message reaches the runner", async () => {
       const run = fakeRunner({
         bots: {
-          list: async () => [bot, scout],
-          ask: async (userId) => (asked.push(userId), { bot: "Scout", replies: [] }),
+          deliver: async () => {
+            throw new Error('No bot with the handle "ghost"');
+          },
         },
       });
-      const answering = run.replier.answer({ ...input(() => undefined), bot: scout });
+      const answering = run.replier.answer(input(() => undefined));
       await Bun.sleep(5);
-      await Bun.sleep(0);
 
-      expect(run.started[0]!.bot.peers).toBeUndefined();
-      await expect(run.only().ask({ replyId: "x", bot: "b1", text: "hi" })).rejects.toThrow(
-        "Only your main bot",
+      await expect(run.only().send({ replyId: "x", to: "ghost", text: "hi" })).rejects.toThrow(
+        "No bot",
       );
-      expect(asked).toEqual([]);
       run.only().end();
       await answering;
     });

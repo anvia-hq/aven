@@ -8,7 +8,6 @@ import {
   toolCall,
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
-import { createMessageBotTool } from "@aven/agents/tools/message-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
@@ -1651,7 +1650,15 @@ describe("startRuntime answering for a bot", () => {
   const botReply = {
     type: "bot.reply",
     replyId: "reply-1",
-    bot: { id: "bot-1", name: "Pip", instruction: "" },
+    bot: {
+      id: "bot-1",
+      name: "Pip",
+      handle: "pip",
+      instruction: "",
+      description: "",
+      canCreateBots: false,
+      peers: [],
+    },
     prompt: "hello",
     model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
   };
@@ -1659,7 +1666,7 @@ describe("startRuntime answering for a bot", () => {
   // A bot whose model says one thing, then stops.
   const botThat =
     (...texts: string[]): CreateBotReplyAgent =>
-    ({ deliver, memory }) =>
+    ({ send, memory }) =>
       new Agent({
         id: "bot",
         model: scriptedModel([
@@ -1668,62 +1675,52 @@ describe("startRuntime answering for a bot", () => {
         ]),
         instructions: "x",
         memory,
-        tools: [createSendMessageTool(deliver)],
+        tools: [createSendMessageTool(send)],
       });
 
-  // The main bot writes to another bot (decision 0063) and says what it answered.
-  const SCOUT = "11111111-2222-4333-8444-555555555555";
-  const askingBot: CreateBotReplyAgent = ({ deliver, memory, messageBot }) => {
-    const asking = messageBot ? [createMessageBotTool(messageBot)] : [];
-    return new Agent({
+  // A bot writes to another bot (decision 0065), then tells the person.
+  const writingBot: CreateBotReplyAgent = ({ send, memory }) =>
+    new Agent({
       id: "bot",
       model: scriptedModel([
-        [toolCall("message_bot", { bot: SCOUT, text: "do A" })],
-        [toolCall("send_message", { text: "Scout did A" })],
+        [toolCall("send_message", { to: "scout", text: "do A" })],
+        [toolCall("send_message", { text: "I asked Scout" })],
         [text("")],
       ]),
       instructions: "x",
       memory,
-      tools: [createSendMessageTool(deliver), ...asking],
+      tools: [createSendMessageTool(send)],
     });
-  };
 
-  test("a call to another bot waits for its answer past the time any other call is given", async () => {
+  test("a message to another bot is a call to the control plane, and only what the person is sent is shown", async () => {
     const { sandbox, up } = slowSandbox();
     up();
     const { plane, runtime } = connect({
       sandbox,
-      createBotAgent: askingBot,
+      createBotAgent: writingBot,
       typingPause: async () => undefined,
-      callTimeoutMs: 100,
     });
     await runtime.ready;
 
     plane.send({
       ...botReply,
-      bot: {
-        ...botReply.bot,
-        canCreateBots: true,
-        peers: [{ id: SCOUT, name: "Scout", description: "" }],
-      },
+      bot: { ...botReply.bot, peers: [{ handle: "scout", name: "Scout", description: "" }] },
     });
-    const asked = () =>
-      plane.received.find((message) => message.type === "call" && message.method === "bot.ask");
-    await until(() => asked() !== undefined);
-    // Long enough that an ordinary call would have given up on the control plane.
-    await Bun.sleep(300);
-    const ask = asked() as Extract<RuntimeToControlPlane, { type: "call" }>;
-    expect(ask.params).toEqual({ bot: SCOUT, text: "do A", replyId: "reply-1" });
+    const sent = () =>
+      plane.received.find((message) => message.type === "call" && message.method === "bot.send");
+    await until(() => sent() !== undefined);
+    const call = sent() as Extract<RuntimeToControlPlane, { type: "call" }>;
+    expect(call.params).toEqual({ to: "scout", text: "do A", replyId: "reply-1" });
     plane.send({
       type: "reply",
-      id: ask.id,
+      id: call.id,
       ok: true,
-      result: { bot: "Scout", replies: ["A is done"] },
+      result: { handle: "scout", name: "Scout" },
     });
 
     await until(() => plane.received.some((message) => message.type === "bot.end"));
     expect(plane.received.filter((message) => message.type.startsWith("bot."))).toEqual([
-      { type: "bot.say", replyId: "reply-1", text: "Scout did A" },
+      { type: "bot.say", replyId: "reply-1", text: "I asked Scout" },
       { type: "bot.end", replyId: "reply-1" },
     ]);
   });

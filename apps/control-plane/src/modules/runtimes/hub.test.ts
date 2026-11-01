@@ -181,9 +181,11 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const info = {
       id: "bot-1",
       name: "Pip",
+      handle: "pip",
       instruction: "",
       description: "",
       canCreateBots: false,
+      peers: [],
     };
 
     // A runner that is connected, a reply started on it, and what the reply heard.
@@ -207,11 +209,11 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           end: (error) => heard.ended.push(error),
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
-          create: async (params) => (asked.push(params), { id: "bot-2", name: params.name }),
-          ask: async (params) => (
+          create: async (params) => (
             asked.push(params),
-            { bot: "Scout", replies: [`heard ${params.text}`] }
+            { id: "bot-2", name: params.name, handle: params.name.toLowerCase() }
           ),
+          send: async (params) => (asked.push(params), { handle: params.to, name: "Scout" }),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
@@ -274,7 +276,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
       expect(await ask(ws, received, "bot.create", made)).toMatchObject({
         ok: true,
-        result: { id: "bot-2", name: "Scout" },
+        result: { id: "bot-2", name: "Scout", handle: "scout" },
       });
       expect(asked).toEqual([made]);
 
@@ -305,19 +307,24 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       ]);
     });
 
-    test("a bot's message to another bot is asked for the live reply only, and the other bot is a real id", async () => {
-      const { ws, received, asked } = await replying("bot-ask");
-      const other = "11111111-2222-4333-8444-555555555555";
-      const message = { replyId: "reply-1", bot: other, text: "do A" };
+    test("a bot's message to another bot is sent for the live reply only, and the other bot is a handle", async () => {
+      const { ws, received, asked } = await replying("bot-send");
+      const message = { replyId: "reply-1", to: "scout", text: "do A" };
 
       expect(
-        await ask(ws, received, "bot.ask", { ...message, userId: "mallory", from: "someone else" }),
-      ).toMatchObject({ ok: true, result: { bot: "Scout", replies: ["heard do A"] } });
+        await ask(ws, received, "bot.send", {
+          ...message,
+          userId: "mallory",
+          from: "someone else",
+        }),
+      ).toMatchObject({ ok: true, result: { handle: "scout", name: "Scout" } });
       expect(asked).toEqual([message]);
 
-      expect((await ask(ws, received, "bot.ask", { ...message, replyId: "other" })).ok).toBe(false);
-      expect((await ask(ws, received, "bot.ask", { ...message, bot: "Scout" })).ok).toBe(false);
-      expect((await ask(ws, received, "bot.ask", { ...message, text: " " })).ok).toBe(false);
+      expect((await ask(ws, received, "bot.send", { ...message, replyId: "other" })).ok).toBe(
+        false,
+      );
+      expect((await ask(ws, received, "bot.send", { ...message, to: "Scout Bot" })).ok).toBe(false);
+      expect((await ask(ws, received, "bot.send", { ...message, text: " " })).ok).toBe(false);
       expect(asked).toHaveLength(1);
     });
 

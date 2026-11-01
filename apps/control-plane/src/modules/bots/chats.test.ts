@@ -10,7 +10,8 @@ run("createBotChats (postgres)", async () => {
   const { createBotAgent } = await import("@aven/agents/bot-agent");
   const { botMessagesToChat } = await import("@aven/agents/bot-projection");
   const { scriptedModel, text, toolCall } = await import("@aven/agents/testing/scripted-model");
-  const { NotFoundError, UnavailableError, UnprocessableError } = await import("../../errors");
+  const { NotFoundError, UnprocessableError } = await import("../../errors");
+  const { BOT_MAX_HOPS } = await import("@aven/protocol/bots");
   const { botMemoryStore } = await import("../../memory-store");
   const { providers } = await import("@aven/db/schema/providers");
   const { createBotChats } = await import("./chats");
@@ -54,6 +55,7 @@ run("createBotChats (postgres)", async () => {
     store: MemoryStore;
     createAgent?: Parameters<typeof inProcessReplier>[0]["createAgent"];
     pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
+    sendToBot?: Parameters<typeof inProcessReplier>[0]["sendToBot"];
   }) =>
     new BotRunner({
       store: options.store,
@@ -65,19 +67,22 @@ run("createBotChats (postgres)", async () => {
             throw new Error("This runner is only read from");
           }),
         pause: options.pause,
+        sendToBot: options.sendToBot,
       }),
     });
 
   const chats = () => {
     const runner = runnerWith({
       store: keeping(),
-      createAgent: ({ bot, deliver, memory }) =>
+      createAgent: ({ bot, send, memory }) =>
         createBotAgent({
           model: scriptedModel([[toolCall("send_message", { text: "hi Alice" })], [text("")]]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         }),
       pause: async () => undefined,
@@ -100,22 +105,6 @@ run("createBotChats (postgres)", async () => {
     expect(seen).toEqual(["hello", "hi Alice"]);
   });
 
-  // A bot's reply that never ends, to see what asking one does when it takes too long.
-  const slowRunner = () =>
-    runnerWith({
-      store: keeping(),
-      createAgent: ({ bot, deliver, memory }) =>
-        createBotAgent({
-          model: scriptedModel([[toolCall("send_message", { text: "late" })], [text("")]]),
-          id: bot.id,
-          name: bot.name,
-          instruction: bot.instruction,
-          deliver,
-          memory,
-        }),
-      pause: () => new Promise<void>(() => undefined),
-    });
-
   // The messages of a bot's chat as they are now, read from a runner.
   const chatOf = async (runner: InstanceType<typeof BotRunner>, botId: string, userId: string) => {
     const controller = new AbortController();
@@ -132,34 +121,46 @@ run("createBotChats (postgres)", async () => {
     return messages!;
   };
 
-  const sayingOwnName = () =>
-    runnerWith({
+  // Bots that write to each other (decision 0065): the main bot says nothing, and any other writes
+  // back to it, which is what the person's request amounted to.
+  const writingBack = () => {
+    const runner: InstanceType<typeof BotRunner> = runnerWith({
       store: keeping(),
-      createAgent: ({ bot, deliver, memory }) =>
+      createAgent: ({ bot, send, memory }) =>
         createBotAgent({
-          model: scriptedModel([
-            [toolCall("send_message", { text: `${bot.name} did A` })],
-            [text("")],
-          ]),
+          model: scriptedModel(
+            bot.isMain
+              ? [[text("")]]
+              : [[toolCall("send_message", { to: "main", text: `${bot.name} did A` })], [text("")]],
+          ),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         }),
       pause: async () => undefined,
+      sendToBot: async ({ from, userId, hops, to, text: said }) => {
+        const sent = await botChats.deliver(userId, from, hops, to, said);
+        return `Sent to ${sent.name}`;
+      },
     });
+    const botChats = createBotChats(runner);
+    return { runner, botChats };
+  };
 
-  test("one bot of a person writes to another and hears what it sent, and both chats have the exchange between bots", async () => {
+  test("one bot of a person writes to another, the other writes back later, and both chats have the exchange between bots", async () => {
     const [main] = await botsService.list(alice);
     const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
-    const runner = sayingOwnName();
-    // The asking bot is answering, so its chat is open; the exchange is added to it as it happens.
-    const asking = runner.events(main!.id, alice, new AbortController().signal);
-    await asking.next();
+    const { runner, botChats } = writingBack();
+    // The writing bot's chat is open, so the exchange is added to it as it happens.
+    const watching = runner.events(main!.id, alice, new AbortController().signal);
+    await watching.next();
     const heard: string[] = [];
     void (async () => {
-      for await (const event of asking) {
+      for await (const event of watching) {
         if (event?.type === "message" && event.message.peer) {
           heard.push(
             `${event.message.role} ${event.message.peer.direction}: ${event.message.text}`,
@@ -168,24 +169,25 @@ run("createBotChats (postgres)", async () => {
       }
     })();
 
-    const { bot, replies } = await createBotChats(runner).ask(alice, main!, scout.id, "do A");
-    await Bun.sleep(5);
+    const sent = await botChats.deliver(alice, main!, 0, scout.handle, "do A");
+    // Nothing is waited for: the answer is a message of its own, which comes when the bot has it.
+    expect(sent).toEqual({ handle: "scout", name: "Scout" });
+    await Bun.sleep(30);
 
-    expect({ bot, replies }).toEqual({ bot: "Scout", replies: ["Scout did A"] });
     expect(heard).toEqual(["bot to: do A", "user from: Scout did A"]);
-    // Read back from what the bot remembers, which names the other bot and has not its id.
+    // Read back from what the bot remembers, which knows the other bot by its handle.
     expect(await chatOf(runner, scout.id, alice)).toEqual([
       {
         id: "m-0",
         role: "user",
         text: "do A",
-        peer: { name: main!.name, direction: "from" },
+        peer: { name: "main", handle: "main", direction: "from" },
       },
       {
         id: "m-1",
         role: "bot",
         text: "Scout did A",
-        peer: { name: main!.name, direction: "to" },
+        peer: { name: "main", handle: "main", direction: "to" },
       },
     ]);
   });
@@ -194,7 +196,7 @@ run("createBotChats (postgres)", async () => {
     const scout = await botsService.create(alice, { name: "Hello", instruction: "You greet." });
     const runner = runnerWith({
       store: keeping(),
-      createAgent: ({ bot, deliver, memory }) =>
+      createAgent: ({ bot, send, memory }) =>
         createBotAgent({
           model: scriptedModel([
             [toolCall("send_message", { text: `Hi, I am ${bot.name}` })],
@@ -202,8 +204,10 @@ run("createBotChats (postgres)", async () => {
           ]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         }),
       pause: async () => undefined,
@@ -221,29 +225,30 @@ run("createBotChats (postgres)", async () => {
 
   test("a bot cannot write to itself, to a bot that is not its person's, or to one that is not there", async () => {
     const [main] = await botsService.list(alice);
-    const [theirs] = await botsService.list(bob);
-    const botChats = chats();
+    await botsService.list(bob);
+    const theirs = await botsService.create(bob, { name: "Bobby", instruction: "x" });
+    const { botChats } = writingBack();
 
-    await expect(botChats.ask(alice, main!, main!.id, "hi")).rejects.toBeInstanceOf(
+    await expect(botChats.deliver(alice, main!, 0, main!.handle, "hi")).rejects.toBeInstanceOf(
       UnprocessableError,
     );
-    await expect(botChats.ask(alice, main!, theirs!.id, "hi")).rejects.toBeInstanceOf(
-      NotFoundError,
+    await expect(botChats.deliver(alice, main!, 0, theirs.handle, "hi")).rejects.toThrow(
+      `No bot with the handle "bobby"`,
     );
-    await expect(
-      botChats.ask(alice, main!, "00000000-0000-4000-8000-000000000000", "hi"),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(botChats.deliver(alice, main!, 0, "ghost", "hi")).rejects.toBeInstanceOf(
+      UnprocessableError,
+    );
   });
 
-  test("a bot that takes too long is said to be still at work, and its answer goes on to its chat", async () => {
+  test("messages between bots in a long chain are cut off, so two bots cannot answer each other for ever", async () => {
     const [main] = await botsService.list(alice);
-    const scout = await botsService.create(alice, { name: "Slow", instruction: "x" });
-    const botChats = createBotChats(slowRunner(), { askTimeoutMs: 30 });
+    const scout = await botsService.create(alice, { name: "Echo", instruction: "x" });
+    const { botChats } = writingBack();
 
-    const asking = botChats.ask(alice, main!, scout.id, "hurry");
-
-    await expect(asking).rejects.toBeInstanceOf(UnavailableError);
-    await expect(asking).rejects.toThrow("still working on it");
+    await botChats.deliver(alice, main!, BOT_MAX_HOPS - 1, scout.handle, "still fine");
+    await expect(
+      botChats.deliver(alice, main!, BOT_MAX_HOPS, scout.handle, "one too many"),
+    ).rejects.toThrow("Too many bot-to-bot messages");
   });
 
   test("nobody else can talk to it or listen in", async () => {
@@ -260,13 +265,15 @@ run("createBotChats (postgres)", async () => {
     await botMemoryStore.clear({ scope });
     const runner = runnerWith({
       store: botMemoryStore,
-      createAgent: ({ bot, deliver, memory }) =>
+      createAgent: ({ bot, send, memory }) =>
         createBotAgent({
           model: scriptedModel([[toolCall("send_message", { text: "kept" })], [text("")]]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         }),
       pause: async () => undefined,
@@ -303,14 +310,16 @@ run("createBotChats (postgres)", async () => {
     const made: { name: string; instruction: string }[] = [];
     const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
-      createAgent: ({ bot, deliver, memory }) => {
+      createAgent: ({ bot, send, memory }) => {
         made.push({ name: bot.name, instruction: bot.instruction });
         return createBotAgent({
           model: scriptedModel([[text("")]]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         });
       },
@@ -337,14 +346,16 @@ run("createBotChats (postgres)", async () => {
     const used: { provider: string; modelId?: string }[] = [];
     const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
-      createAgent: ({ bot, model, deliver, memory }) => {
+      createAgent: ({ bot, model, send, memory }) => {
         used.push({ provider: model.provider, modelId: model.modelId });
         return createBotAgent({
           model: scriptedModel([[text("")]]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         });
       },
@@ -379,14 +390,16 @@ run("createBotChats (postgres)", async () => {
     const seen: { effort?: string; compactAfterTokens: number | null }[] = [];
     const runner = runnerWith({
       store: { load: async () => [], append: async () => undefined, clear: async () => undefined },
-      createAgent: ({ bot, model, deliver, memory }) => {
+      createAgent: ({ bot, model, send, memory }) => {
         seen.push({ effort: model.reasoningEffort, compactAfterTokens: bot.compactAfterTokens });
         return createBotAgent({
           model: scriptedModel([[text("")]]),
           id: bot.id,
           name: bot.name,
+          handle: bot.handle,
+          peers: [],
           instruction: bot.instruction,
-          deliver,
+          send,
           memory,
         });
       },
@@ -417,13 +430,15 @@ run("createBotChats (postgres)", async () => {
       store: botMemoryStore,
       replier: loopbackReplier({
         store: botMemoryStore,
-        createAgent: ({ bot, deliver, memory }) =>
+        createAgent: ({ bot, send, memory }) =>
           createBotAgent({
             model: scriptedModel(Array.from({ length: 30 }, () => decide)),
             id: bot.id,
             name: bot.name,
+            handle: bot.handle,
+            peers: [],
             instruction: bot.instruction,
-            deliver,
+            send,
             memory,
             compactAfterTokens: bot.compactAfterTokens,
           }),

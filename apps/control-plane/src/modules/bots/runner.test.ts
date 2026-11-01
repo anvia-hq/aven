@@ -47,13 +47,15 @@ function fakeStore(): MemoryStore {
 // The agent of each message in turn plays the next script.
 function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAgent {
   let next = 0;
-  return ({ bot, deliver, memory }) =>
+  return ({ bot, send, memory }) =>
     createBotAgent({
       model: scriptedModel(replies[next++] ?? []),
       id: bot.id,
       name: bot.name,
+      handle: bot.handle,
+      peers: [],
       instruction: bot.instruction,
-      deliver,
+      send,
       memory,
     });
 }
@@ -342,8 +344,8 @@ describe("BotRunner", () => {
     expect(typed(client.events)).toEqual(["snapshot", "user: hello", "typing", "stopped"]);
   });
 
-  describe("messages between bots (decision 0063)", () => {
-    const aven = { id: "main", name: "Aven" };
+  describe("messages between bots (decision 0065)", () => {
+    const aven = { id: "main", name: "Aven", handle: "main" };
     // Each message as the chat shows it: who said it, and to or from which bot if it was a bot.
     const shown = (events: BotEvent[]) =>
       events.flatMap((event) =>
@@ -358,7 +360,7 @@ describe("BotRunner", () => {
           : [],
       );
 
-    test("a bot written to has the message as one between bots, and what it says back is to that bot", async () => {
+    test("a bot written to has the message as one between bots, and what it says is the person's unless it writes back", async () => {
       const store = fakeStore();
       const runner = runnerWith({
         store,
@@ -366,43 +368,26 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
 
-      const { answered } = await runner.ask(bot, USER, aven, "do A and B", model);
-      const said = await answered;
+      await runner.deliver(bot, USER, aven, "do A and B", 1, model);
       await client.done;
 
-      expect(said).toEqual({ said: ["A is done", "B is done"], error: undefined });
       expect(shown(client.events)).toEqual([
         "user from Aven: do A and B",
-        "bot to Aven: A is done",
-        "bot to Aven: B is done",
+        "bot: A is done",
+        "bot: B is done",
       ]);
       expect(client.events.find((event) => event.type === "message")).toMatchObject({
-        message: { peer: { id: "main", name: "Aven", direction: "from" } },
+        message: { peer: { id: "main", name: "Aven", handle: "main", direction: "from" } },
       });
-      // The bot was told who wrote, and the chat read back from what it remembers is the same.
+      // The bot was told who wrote, by handle, and the chat read back from what it remembers is the same.
       const remembered = await store.load({ scope: { sessionId: bot.id, userId: USER } });
-      expect(JSON.stringify(remembered[0])).toContain("[from bot Aven] do A and B");
+      expect(JSON.stringify(remembered[0])).toContain("[from main] do A and B");
       expect(
         botMessagesToChat(remembered).map(
           (message) =>
-            `${message.role} ${message.peer?.direction} ${message.peer?.name}: ${message.text}`,
+            `${message.role}${message.peer ? ` ${message.peer.direction} ${message.peer.handle}` : ""}: ${message.text}`,
         ),
-      ).toEqual(["user from Aven: do A and B", "bot to Aven: A is done", "bot to Aven: B is done"]);
-    });
-
-    test("the answer says why when the bot could not answer", async () => {
-      const runner = runnerWith({
-        store: fakeStore(),
-        createAgent: () => ({
-          generate: async () => {
-            throw new Error("the model is down");
-          },
-        }),
-      });
-
-      const { answered } = await runner.ask(bot, USER, aven, "hello?", model);
-
-      expect(await answered).toEqual({ said: [], error: "the model is down" });
+      ).toEqual(["user from main: do A and B", "bot: A is done", "bot: B is done"]);
     });
 
     test("a message waits behind what the bot is already answering, and is the next reply's", async () => {
@@ -414,16 +399,36 @@ describe("BotRunner", () => {
           await gate.promise;
         },
       });
+      const client = await watch(runner, stopped);
       await runner.send(bot, USER, "hello", model);
-
-      const { answered } = await runner.ask(bot, USER, aven, "and you?", model);
-      let settled = false;
-      void answered.then(() => (settled = true));
+      await runner.deliver(bot, USER, aven, "and you?", 1, model);
       await Bun.sleep(30);
-      expect(settled).toBe(false);
+      expect(shown(client.events)).toEqual(["user: hello", "user from Aven: and you?"]);
 
       gate.resolve();
-      expect(await answered).toEqual({ said: ["two"], error: undefined });
+      await client.done;
+
+      expect(shown(client.events)).toEqual([
+        "user: hello",
+        "user from Aven: and you?",
+        "bot: one",
+        "bot: two",
+      ]);
+    });
+
+    test("a reply knows how many messages between bots led to it: none when the person spoke", async () => {
+      const hops: number[] = [];
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: { ready: () => undefined, answer: async (input) => void hops.push(input.hops) },
+      });
+
+      await runner.send(bot, USER, "hello", model);
+      await runner.deliver(bot, USER, aven, "from a bot", 3, model);
+      await runner.wake(bot, USER, "Say hello.", model);
+      await until(() => hops.length === 3);
+
+      expect(hops).toEqual([0, 3, 0]);
     });
 
     test("a note from the app wakes the bot without showing the note, and what it says is the person's", async () => {
@@ -447,7 +452,7 @@ describe("BotRunner", () => {
 
     test("a message is added to the chat of a bot that is open, and to none that is not", async () => {
       const runner = runnerWith({ store: fakeStore() });
-      const peer = { id: "b2", name: "Scout", direction: "to" } as const;
+      const peer = { id: "b2", name: "Scout", handle: "scout", direction: "to" } as const;
       runner.note(bot.id, "bot", "nobody is watching", peer);
 
       const client = await watch(runner);

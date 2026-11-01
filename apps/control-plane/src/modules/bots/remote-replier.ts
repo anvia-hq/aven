@@ -1,12 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import type { Bot } from "@aven/protocol/bots";
-import type {
-  BotAnswered,
-  BotAskParams,
-  BotPeer,
-  BotUpdateParams,
-} from "@aven/protocol/runtime-wire";
+import type { BotPeer, BotSendParams, BotSent, BotUpdateParams } from "@aven/protocol/runtime-wire";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
@@ -20,8 +15,8 @@ export type BotKeeper = {
   list(userId: string): Promise<Bot[]>;
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
-  /** One of the person's bots answers a message from `from`, another of them, and says what it sent back. */
-  ask(userId: string, from: Bot, botId: string, text: string): Promise<BotAnswered>;
+  /** `from` writes to another of the person's bots by its handle; `hops` messages between bots led to it (decision 0065). */
+  deliver(userId: string, from: Bot, hops: number, handle: string, text: string): Promise<BotSent>;
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string): Promise<void>;
 };
@@ -31,7 +26,8 @@ export type BotKeeper = {
 // bot's conversation, which stays here, through calls. Every bot works on one runner, the
 // control plane's own, which every person has. The person's main bot may also ask for a new bot
 // (decision 0060): it is made here, for the person, and no other bot may. Any bot may change its
-// own name, description and instruction, and no other bot's (decision 0061).
+// own name, description and instruction, and no other bot's (decision 0061), and write to any of
+// the person's other bots, as itself (decision 0065).
 export class RemoteBotReplier implements BotReplier {
   constructor(
     private hub: Pick<RuntimeHub, "get">,
@@ -46,12 +42,12 @@ export class RemoteBotReplier implements BotReplier {
     this.gateway.check(model);
   }
 
-  async answer({ bot, userId, model, prompt, say, signal }: BotReplyInput) {
+  async answer({ bot, userId, model, prompt, hops, say, signal }: BotReplyInput) {
     // A shutdown that came while the reply waited its turn: there is nothing left to answer.
     signal.throwIfAborted();
-    // The main bot is told which bots it may write to; no other bot may write to any. Asked before
-    // anything is granted, so a failure here leaves nothing to take back.
-    const peers = bot.isMain ? await this.#peersOf(userId, bot.id) : undefined;
+    // Every bot is told which bots it may write to. Asked before anything is granted, so a failure
+    // here leaves nothing to take back.
+    const peers = await this.#peersOf(userId, bot.id);
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -71,13 +67,11 @@ export class RemoteBotReplier implements BotReplier {
         this.bots.greet(userId, made.id).catch((error: unknown) => {
           console.warn(`Bot ${made.id} could not greet its person:`, error);
         });
-        return { id: made.id, name: made.name };
+        return { id: made.id, name: made.name, handle: made.handle };
       },
-      // The asker is the reply's bot, whichever bot the runner might name, and only the main one.
-      ask: async ({ bot: botId, text }: Omit<BotAskParams, "replyId">) => {
-        if (!bot.isMain) throw new Error("Only your main bot can message bots");
-        return this.bots.ask(userId, bot, botId, text);
-      },
+      // The sender is the reply's bot, whichever bot the runner might name.
+      send: ({ to, text }: Omit<BotSendParams, "replyId">) =>
+        this.bots.deliver(userId, bot, hops, to, text),
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
         const changed = await this.bots.update(userId, bot.id, { name, description, instruction });
@@ -93,6 +87,7 @@ export class RemoteBotReplier implements BotReplier {
           bot: {
             id: bot.id,
             name: bot.name,
+            handle: bot.handle,
             instruction: bot.instruction,
             description: bot.description,
             compactAfterTokens: bot.compactAfterTokens ?? undefined,
@@ -116,7 +111,7 @@ export class RemoteBotReplier implements BotReplier {
     const bots = await this.bots.list(userId);
     return bots
       .filter((other) => other.id !== selfId)
-      .map(({ id, name, description }) => ({ id, name, description }));
+      .map(({ handle, name, description }) => ({ handle, name, description }));
   }
 
   #connection() {

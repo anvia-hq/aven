@@ -9,9 +9,9 @@ import {
 import type { RunEvent } from "@aven/protocol/events";
 
 import {
-  parseBotAskParams,
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotSendParams,
   parseBotUpdateParams,
   parseRuntimeFrame,
 } from "./wire";
@@ -111,7 +111,7 @@ describe("calls from a runtime", () => {
       "bot.memory",
       "bot.create",
       "bot.update",
-      "bot.ask",
+      "bot.send",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
@@ -224,21 +224,21 @@ describe("a bot changing itself", () => {
 });
 
 describe("a bot writing to another bot", () => {
-  const other = "11111111-2222-4333-8444-555555555555";
-
-  test("names the other bot by its id and says something, within what a message may hold", () => {
-    expect(parseBotAskParams({ replyId: "r1", bot: other, text: " do A " })).toEqual({
+  test("names the other bot by its handle and says something, within what a message may hold", () => {
+    expect(parseBotSendParams({ replyId: "r1", to: "data-analyst", text: " do A " })).toEqual({
       replyId: "r1",
-      bot: other,
+      to: "data-analyst",
       text: "do A",
     });
     for (const bad of [
-      { replyId: "r1", bot: "Scout", text: "hi" },
-      { replyId: "r1", bot: other, text: " " },
-      { replyId: "r1", bot: other, text: "x".repeat(BOT_MESSAGE_MAX + 1) },
-      { replyId: "", bot: other, text: "hi" },
+      { replyId: "r1", to: "Scout", text: "hi" },
+      { replyId: "r1", to: "data analyst", text: "hi" },
+      { replyId: "r1", to: "-scout", text: "hi" },
+      { replyId: "r1", to: "scout", text: " " },
+      { replyId: "r1", to: "scout", text: "x".repeat(BOT_MESSAGE_MAX + 1) },
+      { replyId: "", to: "scout", text: "hi" },
     ]) {
-      expect(() => parseBotAskParams(bad)).toThrow();
+      expect(() => parseBotSendParams(bad)).toThrow();
     }
   });
 });

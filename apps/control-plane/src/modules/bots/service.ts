@@ -92,6 +92,14 @@ export const botsService = {
     return row ? view(row) : null;
   },
 
+  async getByHandle(userId: string, handle: string) {
+    const [row] = await db
+      .select()
+      .from(bots)
+      .where(and(eq(bots.userId, userId), eq(bots.handle, handle)));
+    return row ? view(row) : null;
+  },
+
   async update(userId: string, id: string, body: UpdateBotBody) {
     const [current] = await db.select().from(bots).where(ownBot(userId, id));
     if (!current) return null;
