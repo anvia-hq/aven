@@ -27,25 +27,29 @@ function launchd(label: string): ServiceManager {
   const target = `${domain}/${label}`;
   const plist = join(homedir(), "Library", "LaunchAgents", `${label}.plist`);
   const loaded = async () => (await exec(["launchctl", "print", target])).code === 0;
+  // `bootout` returns before the service is gone, and a `bootstrap` right after it fails with
+  // "Input/output error", so wait until launchd no longer knows the service.
+  const unload = async () => {
+    await exec(["launchctl", "bootout", target]);
+    for (let waited = 0; waited < 10_000 && (await loaded()); waited += 200) await Bun.sleep(200);
+  };
   return {
     async install(def) {
       await mkdir(dirname(plist), { recursive: true });
       await mkdir(dirname(def.logFile), { recursive: true });
       await writeFile(plist, launchdPlist(def));
-      await exec(["launchctl", "bootout", target]);
+      await unload();
       await mustRun(["launchctl", "bootstrap", domain, plist]);
     },
     async uninstall() {
-      await exec(["launchctl", "bootout", target]);
+      await unload();
       await rm(plist, { force: true });
     },
     async start() {
       if (await loaded()) await mustRun(["launchctl", "kickstart", target]);
       else await mustRun(["launchctl", "bootstrap", domain, plist]);
     },
-    async stop() {
-      await exec(["launchctl", "bootout", target]);
-    },
+    stop: unload,
     async restart() {
       if (await loaded()) await mustRun(["launchctl", "kickstart", "-k", target]);
       else await mustRun(["launchctl", "bootstrap", domain, plist]);
