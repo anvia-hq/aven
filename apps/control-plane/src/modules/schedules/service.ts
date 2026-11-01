@@ -12,7 +12,7 @@ import { and, asc, count, eq, sql } from "drizzle-orm";
 import { NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
 import { preferencesService } from "../preferences/service";
-import { checkTimezone, CronError, describeTime, nextRun } from "./cron";
+import { checkTimezone, CronError, describeTime, minimumGapMinutes, nextRun } from "./cron";
 
 export type ScheduleInput = {
   name: string;
@@ -25,22 +25,14 @@ export type ScheduleInput = {
 
 export type SchedulePatch = Partial<ScheduleInput & { enabled: boolean }>;
 
-// The next three times it runs must be a quarter of an hour or more apart, and there must be some.
+// It must run sometime, and no two of its times may be closer than the least, whichever day: the
+// gaps are those of the cron's own times of day, not of the next few runs.
 function checkExpression(cron: string, timezone: string, now: Date) {
   try {
     checkTimezone(timezone);
-    const times: Date[] = [];
-    for (let after = now; times.length < 3;) {
-      const next = nextRun(cron, timezone, after);
-      if (!next) break;
-      times.push(next);
-      after = next;
-    }
-    if (times.length === 0) throw new UnprocessableError("That schedule never runs.");
-    for (let index = 1; index < times.length; index++) {
-      if (times[index]!.getTime() - times[index - 1]!.getTime() < SCHEDULE_MIN_INTERVAL_MS) {
-        throw new UnprocessableError("Schedules can run at most once every 15 minutes.");
-      }
+    if (!nextRun(cron, timezone, now)) throw new UnprocessableError("That schedule never runs.");
+    if (minimumGapMinutes(cron) * 60_000 < SCHEDULE_MIN_INTERVAL_MS) {
+      throw new UnprocessableError("Schedules can run at most once every 15 minutes.");
     }
   } catch (error) {
     if (error instanceof CronError) throw new UnprocessableError(error.message);

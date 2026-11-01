@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { CronError, nextRun, parseCron } from "./cron";
+import { CronError, minimumGapMinutes, nextRun, parseCron } from "./cron";
 
 const at = (text: string) => new Date(text);
 const iso = (date: Date | null) => date?.toISOString();
@@ -82,5 +82,21 @@ describe("parseCron", () => {
 
   test("rejects an unknown timezone", () => {
     expect(() => nextRun("0 7 * * *", "Mars/Base", new Date())).toThrow(CronError);
+  });
+});
+
+describe("minimumGapMinutes", () => {
+  test("is the closest two times of a day can be, whatever day it starts from", () => {
+    expect(minimumGapMinutes("*/15 * * * *")).toBe(15);
+    expect(minimumGapMinutes("*/5 * * * *")).toBe(5);
+    expect(minimumGapMinutes("0,30,40 * * * *")).toBe(10);
+    expect(minimumGapMinutes("0,10,30 7 * * *")).toBe(10);
+    expect(minimumGapMinutes("0 7 * * *")).toBe(24 * 60);
+    expect(minimumGapMinutes("0 7,8 * * *")).toBe(60);
+  });
+
+  test("counts from the end of one day to the start of the next", () => {
+    expect(minimumGapMinutes("55 23 * * *")).toBe(24 * 60);
+    expect(minimumGapMinutes("0,55 0,23 * * *")).toBe(5);
   });
 });

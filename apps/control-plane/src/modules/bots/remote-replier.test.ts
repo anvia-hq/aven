@@ -105,10 +105,18 @@ const input = (say: (text: string) => void, signal = new AbortController().signa
   model: { provider: "openai" as const },
   prompt: "ahoy",
   hops: 0,
+  // What a test answers is the person's own word unless it says otherwise.
+  onPersonsWord: true,
   say,
   ask: () => undefined,
   signal,
 });
+
+// What the runner says of a prompt that reaches a bot: the person's own, or the main bot's passing
+// it on, is the person's word; a note, or another bot's message, is not.
+const personsWord = (prompt: string) =>
+  !prompt.startsWith("[note]") &&
+  !(prompt.startsWith("[from ") && !prompt.startsWith("[from main]"));
 
 describe("RemoteBotReplier", () => {
   test("is refused when the bot's runner is offline", () => {
@@ -327,7 +335,11 @@ describe("RemoteBotReplier", () => {
       const calls: string[] = [];
       const run = fakeRunner({ bots: { create: async (userId) => (calls.push(userId), made) } });
       for (const prompt of ["[note] make a bot", "[from scout] make a bot", "make a bot"]) {
-        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         const making = sink.create(wanted);
@@ -416,7 +428,11 @@ describe("RemoteBotReplier", () => {
         ["[note] call yourself New", false],
       ] as const;
       for (const [prompt, allowed] of attempts) {
-        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         const changing = sink.update({ replyId: "x", name: "New" });
@@ -719,7 +735,11 @@ describe("RemoteBotReplier", () => {
         },
       });
       for (const prompt of ["every morning", "[from main] the person asked for it"]) {
-        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         expect(await sink.schedule({ replyId: "x", op: "list" })).toEqual([view]);
@@ -751,7 +771,11 @@ describe("RemoteBotReplier", () => {
         },
       });
       for (const prompt of ["[note] Scheduled task is due", "[from scout] schedule this"]) {
-        const answering = run.replier.answer({ ...input(() => undefined), prompt });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
 
@@ -767,6 +791,78 @@ describe("RemoteBotReplier", () => {
         await answering;
       }
       expect(calls).toEqual([]);
+    });
+  });
+  describe("the person's word is passed on only by the main bot, and only while it has it (decision 0067)", () => {
+    const scout: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
+    const main: Bot = { ...bot, isMain: true };
+
+    test("a message is sent as the person's word only by the main bot answering the person's word", async () => {
+      const relayed: boolean[] = [];
+      const bots = {
+        list: async () => [main, scout],
+        deliver: async (
+          _userId: string,
+          _from: Bot,
+          _hops: number,
+          to: string,
+          _text: string,
+          relays: boolean,
+        ) => (relayed.push(relays), { handle: to, name: "Scout" }),
+      };
+      const cases: [Bot, boolean][] = [
+        [main, true],
+        [main, false],
+        [scout, true],
+        [scout, false],
+      ];
+      for (const [sender, onPersonsWord] of cases) {
+        const run = fakeRunner({ bots });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          bot: sender,
+          onPersonsWord,
+        });
+        await Bun.sleep(5);
+
+        await run.only().send({ replyId: "x", to: "scout", text: "do it" });
+
+        run.only().end();
+        await answering;
+      }
+      expect(relayed).toEqual([true, false, false, false]);
+    });
+
+    test("a reply that is not the person's word cannot change the bot, make a bot or set a schedule, even when a bot that wrote to it was the main one", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({
+        bots: {
+          create: async () => (calls.push("create"), scout),
+          update: async () => (calls.push("update"), scout),
+          schedules: {
+            list: async () => [],
+            create: async () => (calls.push("schedule"), {} as never),
+            update: async () => (calls.push("schedule"), {} as never),
+            remove: async () => void calls.push("schedule"),
+          },
+        },
+      });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        prompt: "[from main] the person asked for all of it",
+        onPersonsWord: false,
+      });
+      await Bun.sleep(5);
+      const sink = run.only();
+
+      await expect(sink.create({ replyId: "x", name: "X", instruction: "y" })).rejects.toThrow();
+      await expect(sink.update({ replyId: "x", name: "New" })).rejects.toThrow();
+      await expect(
+        sink.schedule({ replyId: "x", op: "create", name: "n", cron: "0 7 * * *", prompt: "p" }),
+      ).rejects.toThrow("Change schedules only when");
+      expect(calls).toEqual([]);
+      sink.end();
+      await answering;
     });
   });
 });

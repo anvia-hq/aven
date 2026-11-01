@@ -64,8 +64,8 @@ export const botRunner = new BotRunner({
     list: (userId) => botsService.list(userId),
     create: (userId, bot) => botsService.create(userId, bot),
     update: (userId, id, changes) => botsService.update(userId, id, changes),
-    deliver: (userId, from, hops, handle, text) =>
-      botChats.deliver(userId, from, hops, handle, text),
+    deliver: (userId, from, hops, handle, text, relays) =>
+      botChats.deliver(userId, from, hops, handle, text, relays),
     greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
     timezone: (userId) => preferencesService.timezone(userId),
     schedules: {

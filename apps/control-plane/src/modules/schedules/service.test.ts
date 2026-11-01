@@ -77,6 +77,9 @@ run("schedulesService (postgres)", async () => {
     await refuses({ cron: "every day" });
     await refuses({ cron: "0 0 31 2 *" });
     await refuses({ cron: "*/5 * * * *" });
+    // Too close at some time of the day, though the next few runs from now are far enough apart.
+    await refuses({ cron: "0,30,40 * * * *" });
+    await refuses({ cron: "0,10,30 7 * * *" });
     await refuses({ timezone: "Mars/Olympus" });
   });
 
@@ -108,6 +111,36 @@ run("schedulesService (postgres)", async () => {
     await expect(schedulesService.remove(bob, made.id)).rejects.toBeInstanceOf(NotFoundError);
     await schedulesService.remove(alice, made.id);
     expect((await schedulesService.list(alice)).map((each) => each.id)).not.toContain(made.id);
+  });
+
+  test("changing what it says, or whose it is, keeps its next time, and changing its clock finds it again", async () => {
+    const [main] = await botsService.list(alice);
+    const scout = await botsService.create(alice, { name: "Pilot", instruction: "x" });
+    const made = await schedulesService.create(alice, main!.id, { ...daily, bot: "@Main" }, NOW);
+    expect(made.bot).toBe("main");
+
+    const moved = await schedulesService.update(
+      alice,
+      made.id,
+      { prompt: "A new task.", bot: scout.handle },
+      new Date(NOW.getTime() + 3_600_000),
+    );
+    expect(moved).toMatchObject({ bot: scout.handle, prompt: "A new task." });
+    expect(moved.nextRun).toBe(made.nextRun);
+
+    const elsewhere = await schedulesService.update(alice, made.id, { timezone: "UTC" }, NOW);
+    expect(elsewhere.nextRun).toStartWith("2026-10-19T07:00:00.000Z");
+  });
+
+  test("a schedule that was paused past its time runs next at its next time, not at once", async () => {
+    const [main] = await botsService.list(alice);
+    const made = await schedulesService.create(alice, main!.id, { ...daily, timezone: "UTC" }, NOW);
+    await schedulesService.update(alice, made.id, { enabled: false }, NOW);
+
+    const later = new Date("2026-10-25T12:00:00Z");
+    const resumed = await schedulesService.update(alice, made.id, { enabled: true }, later);
+
+    expect(resumed.nextRun).toStartWith("2026-10-26T07:00:00.000Z");
   });
 
   test("a person has only so many, even when they are made at once", async () => {

@@ -94,6 +94,24 @@ export function parseCron(expression: string): Cron {
   };
 }
 
+/**
+ * The least minutes between two times of a day the cron runs at, counting from the last of one day
+ * to the first of the next, since the next day may run too. Not the times it runs on a day-by-day
+ * basis, which depend on the days: this is the closest any two can be, so a schedule is held to its
+ * minimum however many of its next times are looked at.
+ */
+export function minimumGapMinutes(expression: string) {
+  const { hour, minute } = parseCron(expression);
+  const times = hour.values
+    .flatMap((h) => minute.values.map((m) => h * 60 + m))
+    .sort((a, b) => a - b);
+  let least = 24 * 60 + times[0]! - times.at(-1)!;
+  for (let index = 1; index < times.length; index++) {
+    least = Math.min(least, times[index]! - times[index - 1]!);
+  }
+  return least;
+}
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 export function checkTimezone(timezone: string) {

@@ -28,6 +28,12 @@ export type BotReplyInput = {
   model: ModelConfig;
   /** What the person, or another bot, said. */
   prompt: string;
+  /**
+   * Whether what this reply answers is the person's word, said by them or passed on by their main
+   * bot while it was theirs: only then may it change the bot, make bots or set schedules, whatever
+   * the prompt says (decisions 0065 and 0067). A note, and what another bot writes, are not.
+   */
+  onPersonsWord: boolean;
   /** How many messages between bots led to this one: none when the person said it (decision 0065). */
   hops: number;
   /** Shows a message the bot sent the person, once it has been "typed". */
@@ -81,19 +87,28 @@ export class BotRunner {
   // The person says something to the bot. Returns once the message is in the chat; the reply
   // comes as events. Throws if the bot cannot answer now, before anything is added.
   async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
-    await this.#enqueue({ bot, userId, model, prompt: text, hops: 0, shown: { text } });
+    await this.#enqueue({
+      bot,
+      userId,
+      model,
+      prompt: text,
+      hops: 0,
+      onPersonsWord: true,
+      shown: { text },
+    });
   }
 
   // Another bot writes to this one (decision 0065). The message waits its turn like the person's
   // and is in the chat as a message between bots; the bot answers it, if it does, by writing back,
   // which is a message in the other's chat in the same way. `hops` counts the messages between bots
-  // that led here.
+  // that led here, and `relaysPersonsWord` whether the sender is passing on the person's word.
   async deliver(
     bot: Bot,
     userId: string,
     from: Pick<Bot, "id" | "name" | "handle">,
     text: string,
     hops: number,
+    relaysPersonsWord: boolean,
     model: ModelConfig,
   ) {
     const peer = { id: from.id, name: from.name, handle: from.handle };
@@ -103,6 +118,7 @@ export class BotRunner {
       model,
       prompt: botPrompt(from.handle, text),
       hops,
+      onPersonsWord: relaysPersonsWord,
       shown: { text, peer: { ...peer, direction: "from" } },
     });
   }
@@ -111,7 +127,15 @@ export class BotRunner {
   // was just made (decision 0063). What the bot says is in the chat as usual. `hops` is how many
   // messages between bots led to the wake, so a bot made at the end of a chain starts none afresh.
   async wake(bot: Bot, userId: string, note: string, hops: number, model: ModelConfig) {
-    await this.#enqueue({ bot, userId, model, prompt: botNote(note), hops, shown: null });
+    await this.#enqueue({
+      bot,
+      userId,
+      model,
+      prompt: botNote(note),
+      hops,
+      onPersonsWord: false,
+      shown: null,
+    });
   }
 
   // Adds a message to the bot's chat as it is open now, when it is: the chat of a bot that wrote to
@@ -163,9 +187,12 @@ export class BotRunner {
     );
   }
 
-  /** Whether the bot has a reply to give now or waiting: a schedule that comes due then is skipped. */
+  /**
+   * Whether the bot has no room for another reply: a schedule that comes due then is skipped. A bot
+   * that is answering, with room behind it, takes the task as the next reply, as it would a message.
+   */
   busy(botId: string) {
-    return (this.#channels.get(botId)?.pending ?? 0) > 0;
+    return (this.#channels.get(botId)?.pending ?? 0) >= MAX_PENDING;
   }
 
   /** The ids of the person's bots that are at work on a reply now. */

@@ -119,4 +119,46 @@ run("createScheduler (postgres)", async () => {
 
     expect(fired.filter((each) => each.note.includes('"paused"'))).toEqual([]);
   });
+  test("two schedules of one bot that are due together both run, one after the other", async () => {
+    const first = await made("first at eight");
+    const second = await made("second at eight");
+    const fired: { botId: string; note: string }[] = [];
+
+    await scheduler({ fired }).tick(new Date(DUE.getTime() + 30_000));
+
+    const notes = fired.map((each) => each.note);
+    expect(notes.some((note) => note.includes('"first at eight"'))).toBe(true);
+    expect(notes.some((note) => note.includes('"second at eight"'))).toBe(true);
+    expect((await statusOf(first.id)).lastStatus).toBe("started");
+    expect((await statusOf(second.id)).lastStatus).toBe("started");
+  });
+
+  test("a schedule that cannot be handled does not hold up the ones behind it", async () => {
+    const broken = await made("broken");
+    const fine = await made("fine");
+    await db
+      .update(botSchedules)
+      .set({ nextRunAt: new Date(DUE.getTime() - 60_000), cron: "not a cron" })
+      .where(eq(botSchedules.id, broken.id));
+    const fired: { botId: string; note: string }[] = [];
+
+    await scheduler({ fired }).tick(new Date(DUE.getTime() + 30_000));
+
+    expect(fired.some((each) => each.note.includes('"fine"'))).toBe(true);
+    expect((await statusOf(fine.id)).lastStatus).toBe("started");
+  });
+
+  test("two ticks at once run a schedule once", async () => {
+    const once = await made("once");
+    const fired: { botId: string; note: string }[] = [];
+    const tick = scheduler({ fired });
+
+    await Promise.all([
+      tick.tick(new Date(DUE.getTime() + 30_000)),
+      tick.tick(new Date(DUE.getTime() + 30_000)),
+    ]);
+
+    expect(fired.filter((each) => each.note.includes('"once"'))).toHaveLength(1);
+    expect((await statusOf(once.id)).lastStatus).toBe("started");
+  });
 });

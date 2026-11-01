@@ -37,4 +37,23 @@ run("preferencesService (postgres)", async () => {
     );
     expect(await preferencesService.timezone(alice)).toBe("Europe/Paris");
   });
+  test("a browser's timezone is kept only when none is chosen, and never replaces a choice", async () => {
+    const bea = `u-pref-b-${crypto.randomUUID().slice(0, 8)}`;
+    await db.insert(users).values({ id: bea, name: "Bea", email: `${bea}@aven.test` });
+    try {
+      expect(await preferencesService.setDefaultTimezone(bea, "Asia/Tokyo")).toEqual({
+        timezone: "Asia/Tokyo",
+      });
+
+      await preferencesService.setTimezone(bea, "Europe/Paris");
+      expect(await preferencesService.setDefaultTimezone(bea, "Asia/Tokyo")).toEqual({
+        timezone: "Europe/Paris",
+      });
+      await expect(
+        preferencesService.setDefaultTimezone(bea, "Mars/Olympus"),
+      ).rejects.toBeInstanceOf(UnprocessableError);
+    } finally {
+      await db.delete(users).where(eq(users.id, bea));
+    }
+  });
 });

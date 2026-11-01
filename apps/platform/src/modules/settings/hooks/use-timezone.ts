@@ -39,20 +39,12 @@ export function useTimezone() {
 }
 
 // A person who has not chosen a timezone is put in this browser's, so that what their bots schedule
-// is on their own clock without their having to say; changing it later is theirs (Settings).
+// is on their own clock without their having to say; changing it later is theirs (Settings). The
+// server keeps it only when none is chosen, so it never takes the place of a choice.
 export function useDefaultTimezone() {
   useEffect(() => {
-    let current = true;
-    void (async () => {
-      try {
-        const preferences = await api<Preferences>("/preferences");
-        if (current && preferences.timezone === null) {
-          await postJson("/preferences/timezone", { timezone: browserTimezone() }, "PUT");
-        }
-      } catch {
-        // Not saved: the server's own timezone is used, and Settings can set it.
-      }
-    })();
-    return () => void (current = false);
+    postJson("/preferences/default-timezone", { timezone: browserTimezone() }).catch(() => {
+      // Not saved: the server's own timezone is used, and Settings can set it.
+    });
   }, []);
 }

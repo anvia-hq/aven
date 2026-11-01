@@ -40,6 +40,7 @@ export const createBotChats = (runner: BotRunner) => ({
     hops: number,
     handle: string,
     text: string,
+    relaysPersonsWord: boolean,
   ): Promise<BotSent> {
     const target = await botsService.getByHandle(userId, handle);
     if (!target) {
@@ -51,7 +52,15 @@ export const createBotChats = (runner: BotRunner) => ({
         "Too many bot-to-bot messages in a row. Message the person instead.",
       );
     }
-    await runner.deliver(target, userId, from, text, hops + 1, await modelOf(userId, target));
+    await runner.deliver(
+      target,
+      userId,
+      from,
+      text,
+      hops + 1,
+      relaysPersonsWord,
+      await modelOf(userId, target),
+    );
     runner.note(from.id, "bot", text, {
       id: target.id,
       name: target.name,

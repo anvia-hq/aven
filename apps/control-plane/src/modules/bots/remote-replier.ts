@@ -3,7 +3,6 @@ import type { ModelConfig } from "@aven/agents/model";
 import {
   BOT_MESSAGE_MAX,
   BOT_MESSAGES_PER_REPLY,
-  MAIN_BOT_HANDLE,
   parseBotPrompt,
   type Bot,
 } from "@aven/protocol/bots";
@@ -33,7 +32,14 @@ export type BotKeeper = {
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
   /** `from` writes to another of the person's bots by its handle; `hops` messages between bots led to it (decision 0065). */
-  deliver(userId: string, from: Bot, hops: number, handle: string, text: string): Promise<BotSent>;
+  deliver(
+    userId: string,
+    from: Bot,
+    hops: number,
+    handle: string,
+    text: string,
+    relaysPersonsWord: boolean,
+  ): Promise<BotSent>;
   /** The person's timezone, which a bot's schedules are in unless it says another (decision 0067). */
   timezone(userId: string): Promise<string>;
   /** The person's schedules, which a bot may look at, make, change and delete (decision 0067). */
@@ -83,7 +89,17 @@ export class RemoteBotReplier implements BotReplier {
     this.gateway.check(model);
   }
 
-  async answer({ bot, userId, model, prompt, hops, say, ask, signal }: BotReplyInput) {
+  async answer({
+    bot,
+    userId,
+    model,
+    prompt,
+    hops,
+    onPersonsWord,
+    say,
+    ask,
+    signal,
+  }: BotReplyInput) {
     // A shutdown that came while the reply waited its turn: there is nothing left to answer.
     signal.throwIfAborted();
     // Every bot is told which bots it may write to. Asked before anything is granted, so a failure
@@ -96,12 +112,12 @@ export class RemoteBotReplier implements BotReplier {
     // Throws when the model cannot be used (no key); the runner gets a token, not the key.
     const runModel = this.gateway.issue(replyId, model);
     const ended = Promise.withResolvers<void>();
-    // Who this reply answers: only the person's own message, or the main bot passing it on, may
-    // change the bot, and only the person's own may make one. What a note or another bot says is
-    // not their word, whatever the model makes of it (decision 0065).
+    // Whether this reply answers the person's word, said by them or passed on by their main bot
+    // while it was theirs, is the runner's to say, not the prompt's: a message from `main` that a
+    // note-woken or fooled main bot wrote is not the person's (decisions 0065 and 0067). Only
+    // their own message, not one a bot passed on, makes a bot.
     const { from, note } = parseBotPrompt(prompt);
-    const personsWord = !note && from === undefined;
-    const mainBotsWord = !note && from === MAIN_BOT_HANDLE;
+    const makesBotsOnTheirWord = onPersonsWord && from === undefined;
     let written = 0;
     let asked = false;
     // As itself, whichever bot the runner might name, and only so many to a reply.
@@ -112,7 +128,8 @@ export class RemoteBotReplier implements BotReplier {
         );
       }
       written += 1;
-      return this.bots.deliver(userId, bot, hops, to, text);
+      // Only the main bot can pass the person's word on, and only while it has it.
+      return this.bots.deliver(userId, bot, hops, to, text, bot.isMain && onPersonsWord);
     };
     const sink = {
       say,
@@ -121,7 +138,7 @@ export class RemoteBotReplier implements BotReplier {
       memory: answerBotMemory(this.store, { sessionId: bot.id, userId }),
       create: async ({ name, instruction, description }: NewBot) => {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");
-        if (!personsWord)
+        if (!makesBotsOnTheirWord)
           throw new Error("Make a bot only when the person asks you to, in their own message");
         const made = await this.bots.create(userId, { name, instruction, description });
         // Not waited for: the new bot's hello is its own reply, in its own chat, and a person with
@@ -157,7 +174,7 @@ export class RemoteBotReplier implements BotReplier {
       // a scheduled run cannot make more schedules (decisions 0065 and 0067).
       schedule: async (params: BotScheduleParams): Promise<BotScheduled> => {
         if (params.op === "list") return this.bots.schedules.list(userId);
-        if (!personsWord && !mainBotsWord) {
+        if (!onPersonsWord) {
           throw new Error(
             "Change schedules only when the person asks you to, or the main bot passes it on",
           );
@@ -182,7 +199,7 @@ export class RemoteBotReplier implements BotReplier {
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
-        if (!personsWord && !mainBotsWord) {
+        if (!onPersonsWord) {
           throw new Error(
             "Change yourself only when the person asks you to, or the main bot passes it on",
           );

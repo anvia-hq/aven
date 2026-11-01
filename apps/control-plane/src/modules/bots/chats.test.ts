@@ -143,7 +143,7 @@ run("createBotChats (postgres)", async () => {
         }),
       pause: async () => undefined,
       sendToBot: async ({ from, userId, hops, to, text: said }) => {
-        const sent = await botChats.deliver(userId, from, hops, to, said);
+        const sent = await botChats.deliver(userId, from, hops, to, said, false);
         return `Sent to ${sent.name}`;
       },
     });
@@ -169,7 +169,7 @@ run("createBotChats (postgres)", async () => {
       }
     })();
 
-    const sent = await botChats.deliver(alice, main!, 0, scout.handle, "do A");
+    const sent = await botChats.deliver(alice, main!, 0, scout.handle, "do A", true);
     // Nothing is waited for: the answer is a message of its own, which comes when the bot has it.
     expect(sent).toEqual({ handle: "scout", name: "Scout" });
     await Bun.sleep(30);
@@ -229,13 +229,13 @@ run("createBotChats (postgres)", async () => {
     const theirs = await botsService.create(bob, { name: "Bobby", instruction: "x" });
     const { botChats } = writingBack();
 
-    await expect(botChats.deliver(alice, main!, 0, main!.handle, "hi")).rejects.toBeInstanceOf(
-      UnprocessableError,
-    );
-    await expect(botChats.deliver(alice, main!, 0, theirs.handle, "hi")).rejects.toThrow(
+    await expect(
+      botChats.deliver(alice, main!, 0, main!.handle, "hi", true),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    await expect(botChats.deliver(alice, main!, 0, theirs.handle, "hi", true)).rejects.toThrow(
       `No bot with the handle "bobby"`,
     );
-    await expect(botChats.deliver(alice, main!, 0, "ghost", "hi")).rejects.toBeInstanceOf(
+    await expect(botChats.deliver(alice, main!, 0, "ghost", "hi", true)).rejects.toBeInstanceOf(
       UnprocessableError,
     );
   });
@@ -271,7 +271,7 @@ run("createBotChats (postgres)", async () => {
 
     const attempts = await Promise.allSettled(
       Array.from({ length: 8 }, (_, i) =>
-        botChats.deliver(alice, main!, 0, busy.handle, `task ${i}`),
+        botChats.deliver(alice, main!, 0, busy.handle, `task ${i}`, true),
       ),
     );
     await Bun.sleep(10);
@@ -287,9 +287,9 @@ run("createBotChats (postgres)", async () => {
     const scout = await botsService.create(alice, { name: "Echo", instruction: "x" });
     const { botChats } = writingBack();
 
-    await botChats.deliver(alice, main!, BOT_MAX_HOPS - 1, scout.handle, "still fine");
+    await botChats.deliver(alice, main!, BOT_MAX_HOPS - 1, scout.handle, "still fine", true);
     await expect(
-      botChats.deliver(alice, main!, BOT_MAX_HOPS, scout.handle, "one too many"),
+      botChats.deliver(alice, main!, BOT_MAX_HOPS, scout.handle, "one too many", true),
     ).rejects.toThrow("Too many bot-to-bot messages");
   });
 

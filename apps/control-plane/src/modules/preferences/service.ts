@@ -18,13 +18,25 @@ export const preferencesService = {
     return { timezone: row?.timezone ?? null, defaultTimezone: systemTimezone() };
   },
 
-  async setTimezone(userId: string, timezone: string) {
+  // The timezone of a person's browser, kept only when they have not chosen one, so that it never
+  // takes the place of a choice made on another device between its look and its save.
+  async setDefaultTimezone(userId: string, timezone: string) {
+    this.check(timezone);
+    await db.insert(userSettings).values({ userId, timezone }).onConflictDoNothing();
+    return { timezone: await this.timezone(userId) };
+  },
+
+  check(timezone: string) {
     try {
       checkTimezone(timezone);
     } catch (error) {
       if (error instanceof CronError) throw new UnprocessableError(error.message);
       throw error;
     }
+  },
+
+  async setTimezone(userId: string, timezone: string) {
+    this.check(timezone);
     await db
       .insert(userSettings)
       .values({ userId, timezone })

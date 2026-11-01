@@ -83,7 +83,12 @@ export function createScheduler(options: {
       )
       .orderBy(asc(botSchedules.nextRunAt))
       .limit(TICK_LIMIT);
-    for (const schedule of due) await handle(schedule, now);
+    // One that cannot be handled is told and left, and does not hold up those behind it.
+    for (const schedule of due) {
+      await handle(schedule, now).catch((error: unknown) => {
+        console.warn(`Schedule ${schedule.id} could not be run:`, describeError(error));
+      });
+    }
   }
 
   // A tick that is still going is not started again on top of itself.

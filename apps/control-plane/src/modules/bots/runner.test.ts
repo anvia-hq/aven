@@ -368,7 +368,7 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
 
-      await runner.deliver(bot, USER, aven, "do A and B", 1, model);
+      await runner.deliver(bot, USER, aven, "do A and B", 1, true, model);
       await client.done;
 
       expect(shown(client.events)).toEqual([
@@ -401,7 +401,7 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
       await runner.send(bot, USER, "hello", model);
-      await runner.deliver(bot, USER, aven, "and you?", 1, model);
+      await runner.deliver(bot, USER, aven, "and you?", 1, true, model);
       await Bun.sleep(30);
       expect(shown(client.events)).toEqual(["user: hello", "user from Aven: and you?"]);
 
@@ -424,7 +424,7 @@ describe("BotRunner", () => {
       });
 
       await runner.send(bot, USER, "hello", model);
-      await runner.deliver(bot, USER, aven, "from a bot", 3, model);
+      await runner.deliver(bot, USER, aven, "from a bot", 3, true, model);
       await runner.wake(bot, USER, "Say hello.", 0, model);
       await until(() => hops.length === 3);
 
@@ -459,6 +459,27 @@ describe("BotRunner", () => {
       ).toMatchObject({
         message: { role: "bot", text: "Which first?", questions },
       });
+    });
+
+    test("a bot is busy for a schedule only when it has no room for another reply, and answering is not that", async () => {
+      const gate = Promise.withResolvers<void>();
+      const runner = runnerWith({
+        store: fakeStore(),
+        createAgent: scripts(
+          ...Array.from({ length: 6 }, () => [[send("one")], [text("")]] as never),
+        ),
+        pause: async () => {
+          await gate.promise;
+        },
+      });
+      expect(runner.busy(bot.id)).toBe(false);
+
+      await runner.send(bot, USER, "first", model);
+      expect(runner.busy(bot.id)).toBe(false);
+
+      for (let i = 0; i < 4; i++) await runner.send(bot, USER, `more ${i}`, model);
+      expect(runner.busy(bot.id)).toBe(true);
+      gate.resolve();
     });
 
     test("a note from the app wakes the bot without showing the note, and what it says is the person's", async () => {
