@@ -442,7 +442,15 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
 
-      await runner.deliver(bot, USER, aven, "do A and B", 1, true, model);
+      await runner.deliver({
+        bot,
+        userId: USER,
+        from: aven,
+        text: "do A and B",
+        hops: 1,
+        relaysPersonsWord: true,
+        model,
+      });
       await client.done;
 
       expect(shown(client.events)).toEqual([
@@ -475,7 +483,15 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
       await runner.send(bot, USER, "hello", model);
-      await runner.deliver(bot, USER, aven, "and you?", 1, true, model);
+      await runner.deliver({
+        bot,
+        userId: USER,
+        from: aven,
+        text: "and you?",
+        hops: 1,
+        relaysPersonsWord: true,
+        model,
+      });
       await Bun.sleep(30);
       expect(shown(client.events)).toEqual(["user: hello", "user from Aven: and you?"]);
 
@@ -498,7 +514,15 @@ describe("BotRunner", () => {
       });
 
       await runner.send(bot, USER, "hello", model);
-      await runner.deliver(bot, USER, aven, "from a bot", 3, true, model);
+      await runner.deliver({
+        bot,
+        userId: USER,
+        from: aven,
+        text: "from a bot",
+        hops: 3,
+        relaysPersonsWord: true,
+        model,
+      });
       await runner.wake(bot, USER, "Say hello.", 0, model);
       await until(() => hops.length === 3);
 

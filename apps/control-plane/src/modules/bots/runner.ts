@@ -65,6 +65,22 @@ export type BotSettled = (reply: {
   ok: boolean;
 }) => Promise<void>;
 
+/** What a reply is asked to do, before the runner adds how it speaks (`say`, `ask`, `signal`). */
+type ReplyRequest = Omit<BotReplyInput, "say" | "ask" | "signal">;
+
+/** Another bot's message to a bot (decision 0065). */
+export type BotDelivery = {
+  bot: Bot;
+  userId: string;
+  from: Pick<Bot, "id" | "name" | "handle">;
+  text: string;
+  /** How many messages between bots led here. */
+  hops: number;
+  /** Whether the sender is passing on the person's word. */
+  relaysPersonsWord: boolean;
+  model: ModelConfig;
+};
+
 type Channel = {
   botId: string;
   userId: string;
@@ -115,17 +131,8 @@ export class BotRunner {
 
   // Another bot writes to this one (decision 0065). The message waits its turn like the person's
   // and is in the chat as a message between bots; the bot answers it, if it does, by writing back,
-  // which is a message in the other's chat in the same way. `hops` counts the messages between bots
-  // that led here, and `relaysPersonsWord` whether the sender is passing on the person's word.
-  async deliver(
-    bot: Bot,
-    userId: string,
-    from: Pick<Bot, "id" | "name" | "handle">,
-    text: string,
-    hops: number,
-    relaysPersonsWord: boolean,
-    model: ModelConfig,
-  ) {
+  // which is a message in the other's chat in the same way.
+  async deliver({ bot, userId, from, text, hops, relaysPersonsWord, model }: BotDelivery) {
     const peer = { id: from.id, name: from.name, handle: from.handle };
     await this.#enqueue({
       bot,
@@ -162,11 +169,7 @@ export class BotRunner {
 
   // Puts one message in the chat, if it is to be shown, and the reply it asks for in line, behind
   // those already there. Resolves once it is in line.
-  async #enqueue(
-    input: Omit<BotReplyInput, "say" | "ask" | "signal"> & {
-      shown: { text: string; peer?: BotChatPeer } | null;
-    },
-  ) {
+  async #enqueue(input: ReplyRequest & { shown: { text: string; peer?: BotChatPeer } | null }) {
     const { shown, ...reply } = input;
     this.#replier.ready(reply.model);
     const channel = await this.#open(reply.bot.id, reply.userId);
@@ -342,11 +345,7 @@ export class BotRunner {
   }
 
   // Lets the bot's goal go on once nothing else waits (decision 0068); a shutdown ends it instead.
-  async #afterReply(
-    input: Omit<BotReplyInput, "say" | "ask" | "signal">,
-    channel: Channel,
-    ok: boolean,
-  ) {
+  async #afterReply(input: ReplyRequest, channel: Channel, ok: boolean) {
     if (!this.#settled || channel.pending !== 1 || this.#shutdown.signal.aborted) return;
     const { bot, userId, prompt } = input;
     await this.#settled({ userId, botId: bot.id, prompt, ok }).catch((error: unknown) => {
@@ -355,7 +354,7 @@ export class BotRunner {
   }
 
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on.
-  async #reply(input: Omit<BotReplyInput, "say" | "ask" | "signal">, channel: Channel) {
+  async #reply(input: ReplyRequest, channel: Channel) {
     const { bot } = input;
     let ok = false;
     try {

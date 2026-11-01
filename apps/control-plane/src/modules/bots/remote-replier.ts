@@ -23,6 +23,7 @@ import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import type { BotLetter } from "./chats";
 import { answerBotMemory } from "./memory-answer";
 import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
@@ -36,14 +37,7 @@ export type BotKeeper = {
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
   /** `from` writes to another of the person's bots by its handle; `hops` messages between bots led to it (decision 0065). */
-  deliver(
-    userId: string,
-    from: Bot,
-    hops: number,
-    handle: string,
-    text: string,
-    relaysPersonsWord: boolean,
-  ): Promise<BotSent>;
+  deliver(letter: BotLetter): Promise<BotSent>;
   /** The person's timezone, which a bot's schedules are in unless it says another (decision 0067). */
   timezone(userId: string): Promise<string>;
   /** The person's schedules, which a bot may look at, make, change and delete (decision 0067). */
@@ -142,7 +136,14 @@ export class RemoteBotReplier implements BotReplier {
       }
       written += 1;
       // Only the main bot can pass the person's word on, and only while it has it.
-      return this.bots.deliver(userId, bot, hops, to, text, bot.isMain && onPersonsWord);
+      return this.bots.deliver({
+        userId,
+        from: bot,
+        hops,
+        handle: to,
+        text,
+        relaysPersonsWord: bot.isMain && onPersonsWord,
+      });
     };
     const sink = {
       say,

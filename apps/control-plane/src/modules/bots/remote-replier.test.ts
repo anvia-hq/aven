@@ -7,6 +7,7 @@ import type { BotReplyInfo, RunModel } from "@aven/protocol/runtime-wire";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
+import type { BotLetter } from "./chats";
 import { RemoteBotReplier, type BotKeeper } from "./remote-replier";
 import type { NewBot } from "./service";
 
@@ -493,7 +494,7 @@ describe("RemoteBotReplier", () => {
       const run = fakeRunner({
         bots: {
           list: async () => [bot, scout],
-          deliver: async (userId, from, hops, to, text) => (
+          deliver: async ({ userId, from, hops, handle: to, text }) => (
             sent.push({ userId, from: from.id, hops, to, text }),
             { handle: "scout", name: "Scout" }
           ),
@@ -513,7 +514,7 @@ describe("RemoteBotReplier", () => {
     test("one reply may write only so many messages to bots", async () => {
       const sent: string[] = [];
       const run = fakeRunner({
-        bots: { deliver: async (_u, _f, _h, to) => (sent.push(to), { handle: to, name: to }) },
+        bots: { deliver: async ({ handle }) => (sent.push(handle), { handle, name: handle }) },
       });
       const answering = run.replier.answer(input(() => undefined));
       await Bun.sleep(5);
@@ -586,7 +587,7 @@ describe("RemoteBotReplier", () => {
       const run = fakeRunner({
         bots: {
           list: async () => [main, scout],
-          deliver: async (_userId, from, _hops, to, text) => (
+          deliver: async ({ from, handle: to, text }) => (
             sent.push({ from: from.id, to, text }),
             { handle: to, name: "Aven" }
           ),
@@ -635,7 +636,7 @@ describe("RemoteBotReplier", () => {
       const run = fakeRunner({
         bots: {
           list: async () => [main, scout],
-          deliver: async (_u, _f, _h, to, text) => (sent.push(text), { handle: to, name: "Aven" }),
+          deliver: async ({ handle, text }) => (sent.push(text), { handle, name: "Aven" }),
         },
       });
       const answering = run.replier.answer({
@@ -925,14 +926,10 @@ describe("RemoteBotReplier", () => {
       const relayed: boolean[] = [];
       const bots = {
         list: async () => [main, scout],
-        deliver: async (
-          _userId: string,
-          _from: Bot,
-          _hops: number,
-          to: string,
-          _text: string,
-          relays: boolean,
-        ) => (relayed.push(relays), { handle: to, name: "Scout" }),
+        deliver: async ({ handle, relaysPersonsWord }: BotLetter) => (
+          relayed.push(relaysPersonsWord),
+          { handle, name: "Scout" }
+        ),
       };
       const cases: [Bot, boolean][] = [
         [main, true],

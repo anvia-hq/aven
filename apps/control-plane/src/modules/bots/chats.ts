@@ -21,6 +21,17 @@ async function modelOf(userId: string, bot: Bot) {
   );
 }
 
+/** A bot's message to another of the person's bots, named by its handle. */
+export type BotLetter = {
+  userId: string;
+  from: Bot;
+  /** How many messages between bots led to the reply that wrote this. */
+  hops: number;
+  handle: string;
+  text: string;
+  relaysPersonsWord: boolean;
+};
+
 // What a person says to a bot, and its chat as events. The bot runs on the model it was given, or
 // else the person's default provider, or else the environment's. The runner is given, so `bots`
 // does not depend on how a reply is made.
@@ -34,14 +45,14 @@ export const createBotChats = (runner: BotRunner) => ({
   // is in both chats, as a message between bots, and the other bot answers in a reply of its own,
   // as it would the person: by writing back, if it has something to say. `hops` is how many
   // messages between bots led to the reply that wrote this, so a chain of them ends.
-  async deliver(
-    userId: string,
-    from: Bot,
-    hops: number,
-    handle: string,
-    text: string,
-    relaysPersonsWord: boolean,
-  ): Promise<BotSent> {
+  async deliver({
+    userId,
+    from,
+    hops,
+    handle,
+    text,
+    relaysPersonsWord,
+  }: BotLetter): Promise<BotSent> {
     const target = await botsService.getByHandle(userId, handle);
     if (!target) {
       throw new UnprocessableError(`No bot with the handle "${handle}". Use list_bots, or "user".`);
@@ -52,15 +63,15 @@ export const createBotChats = (runner: BotRunner) => ({
         "Too many bot-to-bot messages in a row. Message the person instead.",
       );
     }
-    await runner.deliver(
-      target,
+    await runner.deliver({
+      bot: target,
       userId,
       from,
       text,
-      hops + 1,
+      hops: hops + 1,
       relaysPersonsWord,
-      await modelOf(userId, target),
-    );
+      model: await modelOf(userId, target),
+    });
     runner.note(from.id, "bot", text, {
       id: target.id,
       name: target.name,
