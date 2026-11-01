@@ -80,6 +80,33 @@ describe("a gateway's context window", () => {
     expect(calls).toHaveLength(2);
   });
 
+  test("does not remember a failure: the next ask tries the gateway again", async () => {
+    let up = false;
+    const fetch = async () =>
+      up
+        ? Response.json(info({ name: "muse", info: { max_input_tokens: 8000 } }))
+        : new Response("down", { status: 503 });
+    const model = createGatewayInfo({ fetch });
+
+    expect(await model("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
+    up = true;
+    expect((await model("https://gw.test/v1", "k", "muse")).contextWindow).toBe(8000);
+  });
+
+  test("models asked for at the same moment share one request", async () => {
+    const { fetch, calls } = gateway(
+      info(
+        { name: "muse", info: { max_input_tokens: 8000 } },
+        { name: "spark", info: { max_input_tokens: 4000 } },
+      ),
+    );
+    const model = createGatewayInfo({ fetch });
+
+    await Promise.all(["muse", "spark", "muse"].map((id) => model("https://gw.test/v1", "k", id)));
+
+    expect(calls).toHaveLength(1);
+  });
+
   test("does not hand one key's answer to another", async () => {
     const { fetch, calls } = gateway(info({ name: "muse", info: { max_input_tokens: 8000 } }));
     const model = createGatewayInfo({ fetch });
