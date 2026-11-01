@@ -1,7 +1,7 @@
 # Connect GitHub
 
-Projects are GitHub repositories. In **Settings > Platform** (as the owner whose email you gave the
-installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
+Projects are GitHub repositories. In **Settings > Platform** (as the platform owner: the first account
+made on this server, or an email you gave the installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
 and to install it on your account or organization, and Aven keeps the credentials itself. Nothing
 to copy into `.env`. Then each person presses **Connect GitHub** once, so that what the agent
 pushes and the pull requests it opens are theirs.

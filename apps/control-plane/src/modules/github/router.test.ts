@@ -46,7 +46,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
   const setupCalls: { call: string; arg: unknown }[] = [];
   let setupRefused: Error | null = null;
   const appSetup = {
-    canSetUp: (email: string) => email.startsWith("owner"),
+    canSetUp: async (person: { email: string }) => person.email.startsWith("owner"),
     manifest: (_person: unknown, options: unknown) => {
       if (setupRefused) throw setupRefused;
       setupCalls.push({ call: "manifest", arg: options });

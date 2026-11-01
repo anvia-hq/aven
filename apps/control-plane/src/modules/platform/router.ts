@@ -12,13 +12,13 @@ export const platformRouter = new Elysia({ prefix: "/platform" })
     const session = await authService.getSession(request.headers);
     return {
       registrationEnabled: await platformService.isRegistrationEnabled(),
-      isOwner: session ? platformService.isOwner(session.user.email) : false,
+      isOwner: session ? await platformService.isOwner(session.user) : false,
     };
   })
   .patch(
     "/settings",
     async ({ body, user }) => {
-      if (!platformService.isOwner(user.email)) return status(403, "Platform owners only");
+      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
       await platformService.setRegistrationEnabled(body.registrationEnabled);
       return { registrationEnabled: body.registrationEnabled };
     },

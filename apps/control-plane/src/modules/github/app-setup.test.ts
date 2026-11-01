@@ -39,21 +39,21 @@ function setup(configured = false) {
       converted.push(code);
       return created;
     },
-    isOwner: (email) => email === owner.email,
+    isOwner: async (person) => person.email === owner.email,
   });
   return { service, client, saved, configuredWith, converted };
 }
 
 describe("the manifest", () => {
-  test("is for a platform owner, named after the host, with a state of theirs", () => {
-    const { postUrl, manifest } = setup().service.manifest(owner, {});
+  test("is for a platform owner, named after the host, with a state of theirs", async () => {
+    const { postUrl, manifest } = await setup().service.manifest(owner, {});
     expect(manifest.name).toBe("Aven (aven.example.com)");
     expect(manifest.redirect_url).toBe("https://aven.example.com/api/github/app/callback");
     expect(postUrl).toStartWith("https://github.test/settings/apps/new?state=");
   });
 
-  test("takes a name and an organization", () => {
-    const { postUrl, manifest } = setup().service.manifest(owner, {
+  test("takes a name and an organization", async () => {
+    const { postUrl, manifest } = await setup().service.manifest(owner, {
       name: "Acme Aven",
       organization: "acme",
     });
@@ -61,23 +61,23 @@ describe("the manifest", () => {
     expect(postUrl).toStartWith("https://github.test/organizations/acme/settings/apps/new");
   });
 
-  test("is private unless the owner asks for it to be installable by anyone", () => {
-    expect(setup().service.manifest(owner, {}).manifest.public).toBe(false);
-    expect(setup().service.manifest(owner, { public: false }).manifest.public).toBe(false);
-    expect(setup().service.manifest(owner, { public: true }).manifest.public).toBe(true);
+  test("is private unless the owner asks for it to be installable by anyone", async () => {
+    expect((await setup().service.manifest(owner, {})).manifest.public).toBe(false);
+    expect((await setup().service.manifest(owner, { public: false })).manifest.public).toBe(false);
+    expect((await setup().service.manifest(owner, { public: true })).manifest.public).toBe(true);
   });
 
-  test("is refused to anyone else, and once an app is set up", () => {
-    expect(() => setup().service.manifest(stranger, {})).toThrow(ForbiddenError);
-    expect(() => setup(true).service.manifest(owner, {})).toThrow(ConflictError);
+  test("is refused to anyone else, and once an app is set up", async () => {
+    await expect(setup().service.manifest(stranger, {})).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(setup(true).service.manifest(owner, {})).rejects.toBeInstanceOf(ConflictError);
   });
 });
 
 describe("canSetUp", () => {
-  test("is true only for an owner while there is no app", () => {
-    expect(setup().service.canSetUp(owner.email)).toBe(true);
-    expect(setup().service.canSetUp(stranger.email)).toBe(false);
-    expect(setup(true).service.canSetUp(owner.email)).toBe(false);
+  test("is true only for an owner while there is no app", async () => {
+    expect(await setup().service.canSetUp(owner)).toBe(true);
+    expect(await setup().service.canSetUp(stranger)).toBe(false);
+    expect(await setup(true).service.canSetUp(owner)).toBe(false);
   });
 });
 

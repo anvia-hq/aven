@@ -31,20 +31,25 @@ export function createGithubAppSetup({
   origin?: () => string;
   save?: (config: GithubConfig) => Promise<void>;
   convert?: (code: string, urls: GithubUrls) => Promise<GithubConfig>;
-  isOwner?: (email: string) => boolean;
+  isOwner?: (person: Person) => Promise<boolean>;
 } = {}) {
-  const requireOwner = (person: Person) => {
-    if (!isOwner(person.email)) throw new ForbiddenError("Platform owners only");
+  const requireOwner = async (person: Person) => {
+    if (!(await isOwner(person))) throw new ForbiddenError("Platform owners only");
     if (client.configured) throw new ConflictError("GitHub is already set up");
   };
 
   return {
     /** Whether the person is offered the button: an owner, and no app yet. */
-    canSetUp: (email: string) => isOwner(email) && !client.configured,
+    async canSetUp(person: Person) {
+      return !client.configured && (await isOwner(person));
+    },
 
     /** What the browser posts to GitHub to have the app created. */
-    manifest(person: Person, options: { name?: string; organization?: string; public?: boolean }) {
-      requireOwner(person);
+    async manifest(
+      person: Person,
+      options: { name?: string; organization?: string; public?: boolean },
+    ) {
+      await requireOwner(person);
       const base = origin();
       // GitHub wants a name nobody else has taken, so the default carries this server's host.
       const name = options.name ?? `Aven (${new URL(base).hostname})`.slice(0, 34);
@@ -56,7 +61,7 @@ export function createGithubAppSetup({
 
     /** GitHub made the app and sent the browser back with its code: keep the app and start using it. */
     async complete(person: Person, input: { code: string; state: string }) {
-      requireOwner(person);
+      await requireOwner(person);
       if (!readSetupState(input.state, person.id))
         throw new UnprocessableError("This setup link is not valid or has expired. Start again.");
       const config = await convert(input.code, urls);

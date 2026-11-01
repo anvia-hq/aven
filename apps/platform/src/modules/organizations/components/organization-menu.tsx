@@ -2,7 +2,6 @@ import { Check, Cog } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
-import { Button } from "@/components/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/dropdown-menu";
 import { initials } from "@/lib/format";
 
@@ -28,16 +27,13 @@ export function OrganizationMenu() {
           </span>
         </div>
       </div>
-      <div className="px-2 pb-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => navigate({ to: "/settings/members" })}
-        >
-          <Cog /> Settings
-        </Button>
-      </div>
+      {/* An item, not a button, so the menu closes when it is chosen, also on a settings page. */}
+      <DropdownMenuItem
+        className="mx-2 mb-2 h-8 justify-center border border-border bg-background px-2.5 font-medium focus:bg-muted"
+        onClick={() => navigate({ to: "/settings/members" })}
+      >
+        <Cog /> Settings
+      </DropdownMenuItem>
       {organizations.length > 1 && (
         <>
           <DropdownMenuSeparator />

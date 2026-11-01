@@ -54,12 +54,15 @@ test.describe("settings", () => {
     await expect(page).toHaveURL(/\/settings\/profile$/);
     await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
 
-    // Settings is its own screen; the user menu is in the app, one link back.
-    await page.getByRole("link", { name: "Back to Aven" }).click();
+    // Settings is in the app's shell: the rail and the user menu are still there, and the logo goes back.
+    await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
-    // The organization section of the menu has its own Settings button.
-    await page.getByRole("menu").getByRole("button", { name: "Settings" }).click();
+    // The organization section of the menu has its own Settings item.
+    await page.getByRole("menu").getByRole("menuitem", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/members$/);
+
+    await page.getByRole("link", { name: "Aven", exact: true }).click();
+    await expect(page).toHaveURL(/\/threads$/);
   });
 
   test("the profile name saves and the dark mode switch changes the theme", async ({ page }) => {
@@ -158,7 +161,7 @@ test.describe("sidebar and search", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/settings\/members$/);
 
-    // Settings has no sidebar, so no Search button; the shortcut works everywhere.
+    // The shortcut works on every page, settings included.
     await page.keyboard.press("ControlOrMeta+k");
     await page.keyboard.type("docs-site");
     await page.getByRole("option", { name: "docs-site", exact: true }).click();

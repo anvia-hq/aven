@@ -287,7 +287,7 @@ test.describe("project environment variables", () => {
   test("a scope with no changes says so", async ({ page }) => {
     await registerUser(page, "emptyhist", "History User");
     await page.goto("/settings/environment-variables");
-    await page.getByRole("button", { name: "History" }).click();
+    await page.getByRole("button", { name: "History", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "History" })).toContainText(
       "Nothing has been changed yet.",
     );

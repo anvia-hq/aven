@@ -21,13 +21,13 @@ export const githubRouter = (
     .use(authRouter)
     .get(
       "/",
-      ({ organizationId, user }) => {
+      async ({ organizationId, user }) => {
         const { configured } = service.status();
         return {
           configured,
           installUrl: configured ? service.installUrl(organizationId, user.id) : null,
           // A platform owner can have the app created from the platform (decision 0074).
-          canSetUp: appSetup.canSetUp(user.email),
+          canSetUp: await appSetup.canSetUp(user),
         };
       },
       { auth: true, org: true },

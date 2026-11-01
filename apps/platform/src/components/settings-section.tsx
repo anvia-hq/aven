@@ -9,7 +9,7 @@ type PageProps = {
 
 export function SettingsPage({ title, description, actions, children }: PageProps) {
   return (
-    <div className="flex flex-col">
+    <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-8 md:py-14">
       <header className="flex items-start justify-between gap-4 pb-6">
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
