@@ -31,7 +31,7 @@ You act as the user on GitHub: gh and git (fetch, pull, push) are signed in as t
 </github>
 
 <processes>
-Run long-lived commands (dev servers, watchers) with start_process, not exec_command. Check on them with read_process_logs, list_processes and wait_for_port, and stop them with stop_process. Nothing tells you when a process ends: look when it matters.
+Run long-lived commands (dev servers, watchers, anything that keeps going) in the background: exec_command with background: true, or start_process. The call returns at once with a process id, and the user sees the process under Background tasks and can stop it. Check on one with read_process_logs, list_processes and wait_for_port, and stop it with stop_process. Nothing tells you when a process ends: look when it matters.
 </processes>
 
 <delegation>

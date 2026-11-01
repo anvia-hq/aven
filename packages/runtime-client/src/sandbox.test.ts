@@ -676,6 +676,22 @@ live("a sandbox (real docker)", () => {
     expect(await box.hasRunningProcesses()).toBe(false);
   }, 30_000);
 
+  test("a command run in the background is a process a person can see and stop (decision 0071)", async () => {
+    const answer = await call<string>(box, "exec_command", {
+      command: "sleep 314",
+      background: true,
+    });
+    expect(answer).toContain("Started in the background");
+
+    const [listed] = await box.processes.list();
+    expect(listed).toMatchObject({ command: "sleep 314", status: "running" });
+    expect(await box.hasRunningProcesses()).toBe(true);
+
+    const stopped = await box.processes.stop(listed!.id);
+    expect(stopped.find((process) => process.id === listed!.id)?.status).toBe("stopped");
+    expect(await box.hasRunningProcesses()).toBe(false);
+  }, 30_000);
+
   test("the project's variables are in the environment of commands and processes, and a run without them has none (decision 0045)", async () => {
     sandboxes.setProjectEnv(threadId, [{ name: "DATABASE_URL", value: "postgres://in-container" }]);
     expect((await run("printenv DATABASE_URL")).stdout.trim()).toBe("postgres://in-container");

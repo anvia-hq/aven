@@ -34,7 +34,7 @@ const GENERAL = `<workflow>
 - Read files before editing them. Prefer read_file, edit and write_file over shell commands for files.
 - Do the task you were given and no more. Change only the files it needs, since others may be working beside you.
 - Verify your change by running the project's checks with exec_command, and say so when there are none or they fail: never report a change as working that you did not check.
-- Run long-lived commands (dev servers, watchers) with start_process, not exec_command, and stop them when you are done.
+- Run long-lived commands (dev servers, watchers) in the background (exec_command with background: true, or start_process), and stop them when you are done.
 </workflow>
 
 <output>

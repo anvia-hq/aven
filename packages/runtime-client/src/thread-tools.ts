@@ -5,6 +5,7 @@ import { createEditTool } from "@aven/agents/tools/edit";
 import { createShowImageTool } from "@aven/agents/tools/show-image";
 
 import type { ArtifactStore } from "./artifacts";
+import { withBackground } from "./background-command";
 
 // How long a foreground command may run unless the agent asks for less; the sandbox caps it at 5.
 const EXEC_DEFAULT_TIMEOUT_MS = 2 * 60_000;
@@ -14,19 +15,24 @@ const EXEC_DEFAULT_TIMEOUT_MS = 2 * 60_000;
 const READ_FILE_MAX_LINES = 10_000;
 
 // What an agent can do in a thread's sandbox: everything @anvia/sandbox offers on files, commands
-// and processes, plus `edit` (the sandbox has no in-place edit) built on its file calls, and
+// and processes (a command can be run in the background), plus `edit` (the sandbox has no in-place edit) built on its file calls, and
 // `show_image`, which keeps what it shows in `artifacts` (decision 0033).
 export function sandboxTools(
   sandbox: SandboxRuntime,
   thread: { id: string; artifacts: ArtifactStore },
 ): readonly AnyTool[] {
+  const own = createSandboxTools({
+    sandbox,
+    tools: SANDBOX_TOOL_NAMES,
+    exec: { defaultTimeoutMs: EXEC_DEFAULT_TIMEOUT_MS },
+    readFile: { maxLineCount: READ_FILE_MAX_LINES },
+  });
+  const start = own.find((tool) => tool.name === "start_process");
   return [
-    ...createSandboxTools({
-      sandbox,
-      tools: SANDBOX_TOOL_NAMES,
-      exec: { defaultTimeoutMs: EXEC_DEFAULT_TIMEOUT_MS },
-      readFile: { maxLineCount: READ_FILE_MAX_LINES },
-    }),
+    // `exec_command` can run a command in the background, as `start_process` does (decision 0071).
+    ...own.map((tool) =>
+      tool.name === "exec_command" && start ? withBackground(tool, start) : tool,
+    ),
     createEditTool(sandbox),
     createShowImageTool({
       readFile: (options) => sandbox.readFile(options),
