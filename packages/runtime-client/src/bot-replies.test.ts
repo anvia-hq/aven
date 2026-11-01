@@ -431,6 +431,35 @@ describe("BotReplies", () => {
     expect(failed[1]).toContain("timed out");
   });
 
+  test("a cancelled reply stops running a goal's checks", async () => {
+    const ran: string[] = [];
+    const controller = new AbortController();
+    let outcome: unknown;
+    const run = harness(
+      (input) => ({
+        generate: async () => {
+          outcome = await input.goals.check!(["build", "test"], controller.signal).catch(
+            (error: unknown) => error,
+          );
+          return { type: "response" } as never;
+        },
+      }),
+      {
+        exec: (command) => {
+          ran.push(command);
+          controller.abort(new Error("cancelled"));
+          return { status: "exited", exitCode: 0, stdout: "", stderr: "" };
+        },
+      },
+    );
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(ran).toEqual(["build"]);
+    expect(outcome).toBeInstanceOf(Error);
+  });
+
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
     const run = harness(
       agentThat(
