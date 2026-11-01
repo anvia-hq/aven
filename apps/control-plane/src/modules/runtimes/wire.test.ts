@@ -112,6 +112,7 @@ describe("calls from a runtime", () => {
       "bot.create",
       "bot.update",
       "bot.send",
+      "bot.question",
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }

@@ -215,6 +215,41 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Aven → Scout A, B and C");
   });
 
+  // A bot asks the person to decide with a card, and their answer is their next message (decision 0066).
+  test("a bot asks the person to decide, and hears the answer", async ({ page }) => {
+    await registerUser(page, "bot-question", "Question Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const message = page.getByRole("textbox", { name: "Message" });
+    await message.fill("I need a decision from you");
+    await message.press("Enter");
+
+    // The question is a card, not a bubble, with its choices.
+    const card = page.getByRole("form", { name: "Answer Aven" });
+    await expect(card.getByText("Which should I start with?").first()).toBeVisible();
+    await card.getByRole("radio", { name: "Analyst" }).check();
+    await card.getByRole("button", { name: "Send answer" }).click();
+
+    // The answer is the person's next message; the card is spent and is a bubble now.
+    await expect(bubble(page, "Analyst").first()).toBeVisible();
+    await expect(bubble(page, "You said: Analyst")).toBeVisible();
+    await expect(card).toHaveCount(0);
+
+    // It is there after a reload, read back from what the bot remembers, and still not a card.
+    await page.reload();
+    await expect(bubble(page, "Which should I start with?")).toBeVisible();
+    await expect(page.getByRole("form", { name: "Answer Aven" })).toHaveCount(0);
+  });
+
   // A bot changes itself when asked (decision 0061): the main bot and one it made alike.
   test("a bot renames itself and writes its own description when asked", async ({ page }) => {
     // Three replies, each waiting out its typing pauses.

@@ -19,11 +19,11 @@ type Props = {
 };
 
 // What the user has so far for one question: a picked choice, or their own words, which win.
-type Draft = { choice: string; custom: string };
+export type Draft = { choice: string; custom: string };
 
-const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
+export const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
 
-function Question({
+export function Question({
   prompt,
   draft,
   onChange,

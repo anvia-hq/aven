@@ -3,6 +3,7 @@ import {
   type AssistantContentPart,
   type CompletionRequest,
   type CompletionResponse,
+  type JsonValue,
 } from "@anvia/core";
 import type { StreamingCompletionModel } from "@anvia/core/completion";
 
@@ -56,6 +57,6 @@ export const text = (value: string): AssistantContentPart => ({ type: "text", te
 
 export const toolCall = (
   toolName: string,
-  input: Record<string, string | number | boolean>,
+  input: Record<string, JsonValue>,
   toolCallId = `call_${toolName}_${Math.random().toString(36).slice(2, 8)}`,
 ): AssistantContentPart => ({ type: "tool-call", toolCallId, toolName, input });

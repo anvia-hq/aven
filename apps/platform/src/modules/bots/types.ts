@@ -1,5 +1,5 @@
 // What a bot and its chat are is the wire protocol, shared with the control plane.
-export type { Bot, BotChatMessage, BotChatPeer, BotEvent } from "@aven/protocol/bots";
+export type { Bot, BotChatMessage, BotChatPeer, BotEvent, BotQuestion } from "@aven/protocol/bots";
 
 /** What can be changed about a bot; what is left out stays. */
 export type BotPatch = {

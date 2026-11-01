@@ -287,6 +287,25 @@ describe("BotReplies", () => {
     expect(peers).toEqual([{ handle: "scout", name: "Scout", description: "Looks." }]);
   });
 
+  test("a bot asks the person through the control plane, unless a note woke it, when nobody is there", async () => {
+    const asked: unknown[] = [];
+    const run = harness((input) => {
+      asked.push(input.askQuestion);
+      return agentThat([text("")])(input);
+    });
+    run.replies.start(message);
+    await run.until();
+    expect(typeof asked[0]).toBe("function");
+
+    const noted = harness((input) => {
+      asked.push(input.askQuestion);
+      return agentThat([text("")])(input);
+    });
+    noted.replies.start({ ...message, prompt: "[note] Say hello." });
+    await noted.until();
+    expect(asked[1]).toBeUndefined();
+  });
+
   test("any bot changes itself by asking the control plane, for its own reply", async () => {
     const run = harness(
       agentThat(
@@ -324,7 +343,7 @@ describe("BotReplies", () => {
 
   // Through the real builder, not the test's own: what the agent is made with is what it can do.
   describe("the agent the runner builds", () => {
-    const build = (canCreateBots: boolean) =>
+    const build = (canCreateBots: boolean, asking = false) =>
       defaultCreateBotAgent("http://control-plane")({
         bot: {
           ...message.bot,
@@ -344,11 +363,21 @@ describe("BotReplies", () => {
           savePolicy: "turn",
         },
         computer: [],
+        askQuestion: asking ? async () => ({}) : undefined,
         updateSelf: async () => ({ name: "Pip", description: "" }),
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
           : undefined,
       }) as unknown as { tools: { name: string }[]; instructions: string };
+
+    test("a bot that is given a way to ask the person has the tool and is told when to use it, and one that is not has neither", () => {
+      const ask = build(false, true);
+      expect(ask.tools.map((each) => each.name)).toContain("ask_question");
+      expect(ask.instructions).toContain("<questions>");
+      const none = build(false);
+      expect(none.tools.map((each) => each.name)).not.toContain("ask_question");
+      expect(none.instructions).not.toContain("<questions>");
+    });
 
     test("every bot can change itself and knows its own description", () => {
       const agent = build(false);

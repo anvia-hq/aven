@@ -431,6 +431,36 @@ describe("BotRunner", () => {
       expect(hops).toEqual([0, 3, 0]);
     });
 
+    test("a question the bot asks is a card in its chat, with the question as its words", async () => {
+      const questions = [
+        {
+          id: "scope",
+          text: "Which first?",
+          choices: [
+            { label: "Scout", value: "Scout" },
+            { label: "Analyst", value: "Analyst" },
+          ],
+        },
+      ];
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: {
+          ready: () => undefined,
+          answer: async ({ ask }) => ask(questions),
+        },
+      });
+      const client = await watch(runner, stopped);
+
+      await runner.send(bot, USER, "help me choose", model);
+      await client.done;
+
+      expect(
+        client.events.find((event) => event.type === "message" && event.message.questions),
+      ).toMatchObject({
+        message: { role: "bot", text: "Which first?", questions },
+      });
+    });
+
     test("a note from the app wakes the bot without showing the note, and what it says is the person's", async () => {
       const store = fakeStore();
       const runner = runnerWith({

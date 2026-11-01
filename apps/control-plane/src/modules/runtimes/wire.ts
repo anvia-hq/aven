@@ -1,4 +1,5 @@
 import type { Message } from "@anvia/core";
+import { botQuestionsSchema } from "@aven/agents/tools/ask-question";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -9,6 +10,7 @@ import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
+  type BotQuestionParams,
   type BotSendParams,
   type BotCreateParams,
   type BotMemoryParams,
@@ -40,6 +42,7 @@ const callMethods = [
   "bot.create",
   "bot.update",
   "bot.send",
+  "bot.question",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -229,6 +232,9 @@ const botCreateParams = z.object({
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
 });
 
+// A bot asks the person to decide, with the questions the tool takes.
+const botQuestionParams = z.object({ replyId, questions: botQuestionsSchema });
+
 // A bot writes to another of the person's bots, named by its handle.
 const botSendParams = z.object({
   replyId,
@@ -274,6 +280,8 @@ export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
+export const parseBotQuestionParams = (params: unknown) =>
+  parseParams(botQuestionParams, params) as BotQuestionParams;
 export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>

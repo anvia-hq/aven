@@ -2,6 +2,7 @@
 // WebSocket that the runtime opens. Either side can send a one-way message, or a `call` that the
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
+import type { BotQuestion } from "./bots";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
 export type RunThreadInfo = {
@@ -300,7 +301,12 @@ export type SkillsCallMethod = "skills.get";
  * the operations an Anvia memory store has, for the bot of a live reply, less `clear`: a runner
  * cannot wipe a chat. Messages are Anvia's.
  */
-export type BotCallMethod = "bot.memory" | "bot.create" | "bot.update" | "bot.send";
+export type BotCallMethod =
+  | "bot.memory"
+  | "bot.create"
+  | "bot.update"
+  | "bot.send"
+  | "bot.question";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -372,6 +378,16 @@ export type BotSendParams = { replyId: string; to: string; text: string };
 /** The bot the message went to. */
 export type BotSent = { handle: string; name: string };
 
+/**
+ * A bot asks the person to decide (decision 0066); `replyId` names the live reply it is working on.
+ * The question is shown to the person in this bot's chat, or, for a bot answering another bot,
+ * sent to the main bot to ask.
+ */
+export type BotQuestionParams = { replyId: string; questions: BotQuestion[] };
+
+/** Where the question went: nothing is set when it is on the person's screen, else the bot that will ask. */
+export type BotQuestioned = { relayed?: { handle: string; name: string; text: string } };
+
 /** The bot that was made. It uses the person's default model until they pick another. */
 export type BotCreated = { id: string; name: string; handle: string };
 
@@ -382,6 +398,7 @@ export type RuntimeCalls = {
   "bot.create": { params: BotCreateParams; result: BotCreated };
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
   "bot.send": { params: BotSendParams; result: BotSent };
+  "bot.question": { params: BotQuestionParams; result: BotQuestioned };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -398,4 +415,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 29;
+export const WIRE_VERSION = 30;

@@ -2,10 +2,11 @@ import type { Agent, AgentMemoryOptions, AnyTool } from "@anvia/core";
 import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
+import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { SendMessage } from "@aven/agents/tools/send-message";
-import { USER_HANDLE } from "@aven/protocol/bots";
+import { parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
   BotPeer,
@@ -32,6 +33,8 @@ export type CreateBotReplyAgent = (input: {
   computer: readonly AnyTool[];
   /** Makes another bot; only for the person's main bot (decision 0060). */
   createBot?: CreateBot;
+  /** Asks the person to decide; not given when the reply answers a note, since nobody is there (decision 0066). */
+  askQuestion?: AskQuestion;
   /** The bots this one may write to: the reply's own list, to which a bot it makes is added (decision 0065). */
   peers: BotPeer[];
   /** Changes the bot's own name, description or instruction (decision 0061). */
@@ -42,7 +45,7 @@ export type CreateBotReplyAgent = (input: {
 // reply's token, so this process holds no provider key.
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
-  ({ bot, model, send, memory, computer, createBot, peers, updateSelf }) =>
+  ({ bot, model, send, memory, computer, createBot, askQuestion, peers, updateSelf }) =>
     createBotAgent({
       provider: model.provider,
       modelId: model.modelId,
@@ -60,6 +63,7 @@ export const defaultCreateBotAgent =
       memory,
       computer,
       createBot,
+      askQuestion,
       peers,
       description: bot.description,
       updateSelf,
@@ -137,7 +141,7 @@ export class BotReplies {
     const { send } = this.#context;
     const { signal } = abort;
     try {
-      const agent = await this.#agentFor(replyId, bot, model, abort);
+      const agent = await this.#agentFor(replyId, bot, prompt, model, abort);
       await agent.generate({ prompt, session: { sessionId: bot.id }, abortSignal: signal });
       send({ type: "bot.end", replyId });
     } catch (error) {
@@ -148,7 +152,13 @@ export class BotReplies {
     }
   }
 
-  async #agentFor(replyId: string, bot: BotReplyInfo, model: RunModel, abort: AbortController) {
+  async #agentFor(
+    replyId: string,
+    bot: BotReplyInfo,
+    prompt: string,
+    model: RunModel,
+    abort: AbortController,
+  ) {
     const { sandbox, boxes, starting, call, send: post, createAgent } = this.#context;
     await starting(bot.id);
     abort.signal.throwIfAborted();
@@ -179,6 +189,10 @@ export class BotReplies {
         savePolicy: "turn",
       },
       computer: boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME)),
+      // A note wakes the bot with no one to answer; the control plane holds to that as well.
+      askQuestion: parseBotPrompt(prompt).note
+        ? undefined
+        : (questions) => call("bot.question", { replyId, questions }),
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

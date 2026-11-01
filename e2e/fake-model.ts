@@ -42,6 +42,26 @@ const createBot = (id: string) => ({
   },
 });
 
+const askQuestion = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "ask_question",
+    arguments: JSON.stringify({
+      questions: [
+        {
+          id: "scope",
+          text: "Which should I start with?",
+          choices: [
+            { label: "Scout", value: "Scout" },
+            { label: "Analyst", value: "Analyst" },
+          ],
+        },
+      ],
+    }),
+  },
+});
+
 const updateSelf = (id: string) => ({
   id,
   type: "function",
@@ -134,6 +154,10 @@ Bun.serve({
         { content: null, tool_calls: [sendMessage("call_1", "Scout answered")] },
         "tool_calls",
       );
+    }
+    // Needing a decision, a bot asks the person with a card (decision 0066) and stops.
+    if (/need a decision/i.test(heard)) {
+      return reply({ content: null, tool_calls: [askQuestion("call_1")] }, "tool_calls");
     }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {

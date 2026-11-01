@@ -95,6 +95,7 @@ const input = (say: (text: string) => void, signal = new AbortController().signa
   prompt: "ahoy",
   hops: 0,
   say,
+  ask: () => undefined,
   signal,
 });
 
@@ -507,6 +508,89 @@ describe("RemoteBotReplier", () => {
       await expect(run.only().send({ replyId: "x", to: "ghost", text: "hi" })).rejects.toThrow(
         "No bot",
       );
+      run.only().end();
+      await answering;
+    });
+  });
+  describe("a bot that asks the person to decide (decision 0066)", () => {
+    const questions = [
+      {
+        id: "scope",
+        text: "Which first?",
+        choices: [
+          { label: "Scout", value: "Scout" },
+          { label: "Analyst", value: "Analyst" },
+        ],
+      },
+    ];
+    const main: Bot = { ...bot, isMain: true };
+    const scout: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
+
+    test("the person is asked in the bot's own chat when they spoke to it, and the main bot's when a bot did", async () => {
+      for (const prompt of ["help me choose", "[from scout] the person must choose"]) {
+        const shown: unknown[] = [];
+        const run = fakeRunner({ bots: { list: async () => [main, scout] } });
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          bot: main,
+          prompt,
+          ask: (asked) => void shown.push(asked),
+        });
+        await Bun.sleep(5);
+
+        expect(await run.only().question({ replyId: "x", questions })).toEqual({});
+        expect(shown).toEqual([questions]);
+        run.only().end();
+        await answering;
+      }
+    });
+
+    test("a bot that is not the main one, answering another bot, has the main bot ask: the person is not asked in its chat", async () => {
+      const shown: unknown[] = [];
+      const sent: { from: string; to: string; text: string }[] = [];
+      const run = fakeRunner({
+        bots: {
+          list: async () => [main, scout],
+          deliver: async (_userId, from, _hops, to, text) => (
+            sent.push({ from: from.id, to, text }),
+            { handle: to, name: "Aven" }
+          ),
+        },
+      });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        bot: scout,
+        prompt: "[from main] look into it",
+        ask: (asked) => void shown.push(asked),
+      });
+      await Bun.sleep(5);
+
+      const result = await run.only().question({ replyId: "x", questions });
+
+      expect(shown).toEqual([]);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({ from: "b2", to: "main" });
+      expect(sent[0]!.text).toContain("Scout (scout) needs a decision from the person");
+      expect(sent[0]!.text).toContain('id "scope": Which first? (choices: Scout, Analyst)');
+      expect(result).toEqual({ relayed: { handle: "main", name: "Aven", text: sent[0]!.text } });
+      run.only().end();
+      await answering;
+    });
+
+    test("nobody is there to answer a note, so it is refused, and the bot is told", async () => {
+      const shown: unknown[] = [];
+      const run = fakeRunner();
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        prompt: "[note] You were just created.",
+        ask: (asked) => void shown.push(asked),
+      });
+      await Bun.sleep(5);
+
+      await expect(run.only().question({ replyId: "x", questions })).rejects.toThrow(
+        "Nobody is there",
+      );
+      expect(shown).toEqual([]);
       run.only().end();
       await answering;
     });

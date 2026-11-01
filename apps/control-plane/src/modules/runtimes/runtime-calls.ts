@@ -3,6 +3,8 @@ import type {
   BotCreated,
   BotCreateParams,
   BotMemoryParams,
+  BotQuestioned,
+  BotQuestionParams,
   BotSendParams,
   BotSent,
   BotUpdated,
@@ -16,6 +18,7 @@ import {
   parseAppendParams,
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotQuestionParams,
   parseBotSendParams,
   parseBotUpdateParams,
   parseMemoryParams,
@@ -41,6 +44,8 @@ export type CallBotReply = {
   update(params: BotUpdateParams): Promise<BotUpdated>;
   /** Writes to another of the person's bots as the reply's bot (decision 0065). */
   send(params: BotSendParams): Promise<BotSent>;
+  /** Asks the person to decide, in the reply's own chat or through the main bot (decision 0066). */
+  question(params: BotQuestionParams): Promise<BotQuestioned>;
 };
 
 export type RuntimeCallContext = {
@@ -91,6 +96,11 @@ export async function answerRuntimeCall(
   if (method === "bot.create") {
     return answerBotCall(params, parseBotCreateParams, findBotReply, (reply, call) =>
       reply.create(call),
+    );
+  }
+  if (method === "bot.question") {
+    return answerBotCall(params, parseBotQuestionParams, findBotReply, (reply, call) =>
+      reply.question(call),
     );
   }
   if (method === "bot.send") {

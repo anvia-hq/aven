@@ -1,3 +1,5 @@
+import type { QuestionPrompt } from "./events";
+
 // A bot (decision 0058): a named agent a person talks to in a chat of its own. Types and limits
 // shared by the control plane and the platform.
 
@@ -77,6 +79,13 @@ export type BotChatPeer = {
   direction: "to" | "from";
 };
 
+/** One question a bot asks the person (decision 0066): the thread agent's own shape. */
+export type BotQuestion = QuestionPrompt;
+
+/** The most questions one `ask_question` may hold, and the most choices one question may have. */
+export const BOT_QUESTIONS_MAX = 4;
+export const BOT_CHOICES_MAX = 5;
+
 /**
  * One message of a bot's chat: the person's, or one the bot sent. A message with a `peer` is one
  * between this bot and another bot, not the person's: what the other asked, what this bot said back.
@@ -86,6 +95,8 @@ export type BotChatMessage = {
   role: "user" | "bot";
   text: string;
   peer?: BotChatPeer;
+  /** The bot is asking the person these; `text` is what they say, in words. The person's answer is their next message. */
+  questions?: BotQuestion[];
 };
 
 // What a bot is told when someone other than the person wrote to it (decisions 0063 and 0065): the

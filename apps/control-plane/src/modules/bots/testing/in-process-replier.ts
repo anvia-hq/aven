@@ -1,6 +1,7 @@
 import type { AgentMemoryOptions, MemoryStore } from "@anvia/core";
 import type { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
+import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { SendMessage } from "@aven/agents/tools/send-message";
 import type { ModelConfig } from "@aven/agents/model";
 import { USER_HANDLE, type Bot } from "@aven/protocol/bots";
@@ -14,6 +15,8 @@ export type CreateBotAgent = (input: {
   bot: Bot;
   model: ModelConfig;
   send: SendMessage;
+  /** Asks the person to decide, as the chat shows it. */
+  askQuestion: AskQuestion;
   memory: AgentMemoryOptions;
 }) => BotAgent;
 
@@ -36,7 +39,7 @@ export function inProcessReplier(options: {
   const pause = options.pause ?? (async () => undefined);
   return {
     ready: () => undefined,
-    answer: async ({ bot, userId, model, prompt, hops, say, signal }) => {
+    answer: async ({ bot, userId, model, prompt, hops, say, ask, signal }) => {
       const send: SendMessage = async ({ to, text }, { abortSignal }) => {
         if (to !== USER_HANDLE) {
           if (!options.sendToBot) throw new Error(`No bot with the handle "${to}"`);
@@ -50,6 +53,7 @@ export function inProcessReplier(options: {
         bot,
         model,
         send,
+        askQuestion: async (questions) => (ask(questions), {}),
         memory: { store: options.store, savePolicy: "turn" },
       });
       await agent.generate({

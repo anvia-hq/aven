@@ -11,6 +11,7 @@ import {
   type BotChatMessage,
   type BotChatPeer,
   type BotEvent,
+  type BotQuestion,
 } from "@aven/protocol/bots";
 
 import { ConflictError, describeError, UnavailableError } from "../../errors";
@@ -31,6 +32,8 @@ export type BotReplyInput = {
   hops: number;
   /** Shows a message the bot sent the person, once it has been "typed". */
   say(text: string): void;
+  /** Shows the person a question the bot asks, as a card (decision 0066). */
+  ask(questions: BotQuestion[]): void;
   /** Stops the reply: a shutdown. */
   signal: AbortSignal;
 };
@@ -121,7 +124,7 @@ export class BotRunner {
   // Puts one message in the chat, if it is to be shown, and the reply it asks for in line, behind
   // those already there. Resolves once it is in line.
   async #enqueue(
-    input: Omit<BotReplyInput, "say" | "signal"> & {
+    input: Omit<BotReplyInput, "say" | "ask" | "signal"> & {
       shown: { text: string; peer?: BotChatPeer } | null;
     },
   ) {
@@ -263,9 +266,16 @@ export class BotRunner {
     if (channel.subscribers.size === 0 && channel.pending === 0) this.#channels.delete(botId);
   }
 
-  #say(channel: Channel, role: BotChatMessage["role"], text: string, peer?: BotChatPeer) {
+  #say(
+    channel: Channel,
+    role: BotChatMessage["role"],
+    text: string,
+    peer?: BotChatPeer,
+    questions?: BotQuestion[],
+  ) {
     const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
     if (peer) message.peer = peer;
+    if (questions) message.questions = questions;
     this.#emit(channel, { type: "message", message });
   }
 
@@ -280,12 +290,20 @@ export class BotRunner {
   }
 
   // One reply. It never throws: a failure is told to the clients, and the next reply goes on.
-  async #reply(input: Omit<BotReplyInput, "say" | "signal">, channel: Channel) {
+  async #reply(input: Omit<BotReplyInput, "say" | "ask" | "signal">, channel: Channel) {
     const { bot } = input;
     try {
       await this.#replier.answer({
         ...input,
         say: (text) => this.#say(channel, "bot", text),
+        ask: (questions) =>
+          this.#say(
+            channel,
+            "bot",
+            questions.map((question) => question.text).join("\n"),
+            undefined,
+            questions,
+          ),
         signal: this.#shutdown.signal,
       });
     } catch (failure) {

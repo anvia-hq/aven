@@ -305,6 +305,46 @@ describe("createBotAgent", () => {
     );
   });
 
+  test("a bot given a way to ask the person has the tool and is told to stop after asking; one that is not has neither", async () => {
+    const asked: unknown[] = [];
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([
+        [
+          toolCall("ask_question", {
+            questions: [
+              {
+                id: "scope",
+                text: "Which first?",
+                choices: [
+                  { label: "A", value: "a" },
+                  { label: "B", value: "b" },
+                ],
+              },
+            ],
+          }),
+        ],
+        [text("")],
+      ]),
+      send: async () => "Sent",
+      askQuestion: async (questions) => (asked.push(questions), {}),
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(agent.tools.map((tool) => tool.name)).toContain("ask_question");
+    expect(agent.instructions).toContain("<questions>");
+    await agent.generate({ prompt: "help me choose", session: { sessionId: "b1" } });
+    expect(asked).toHaveLength(1);
+
+    const plain = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(plain.tools.map((tool) => tool.name)).not.toContain("ask_question");
+    expect(plain.instructions).not.toContain("<questions>");
+  });
+
   test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {
     const changes: unknown[] = [];
     const agent = createBotAgent({

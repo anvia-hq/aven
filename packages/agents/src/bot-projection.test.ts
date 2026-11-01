@@ -238,4 +238,65 @@ describe("botMessagesToChat", () => {
       },
     ]);
   });
+
+  describe("a question the bot asked (decision 0066)", () => {
+    const questions = [
+      {
+        id: "scope",
+        text: "Which first?",
+        choices: [
+          { label: "Scout", value: "Scout" },
+          { label: "Analyst", value: "Analyst" },
+        ],
+      },
+    ];
+    const asking = (id: string): Message => ({
+      role: "assistant",
+      content: [
+        { type: "tool-call", toolCallId: id, toolName: "ask_question", input: { questions } },
+      ],
+    });
+    const answered = (id: string, output: unknown): Message => ({
+      role: "tool",
+      content: [{ type: "tool-result", toolCallId: id, toolName: "ask_question", output } as never],
+    });
+
+    test("is a card in the chat, with its questions, and the person's answer is their next message", () => {
+      const messages = [
+        { role: "user", content: "help me choose" } as Message,
+        asking("q1"),
+        answered("q1", { type: "json", value: { shown: true } }),
+        { role: "user", content: "Scout" } as Message,
+      ];
+
+      expect(botMessagesToChat(messages)).toEqual([
+        { id: "m-0", role: "user", text: "help me choose" },
+        { id: "m-1", role: "bot", text: "Which first?", questions },
+        { id: "m-2", role: "user", text: "Scout" },
+      ]);
+    });
+
+    test("is a message to the main bot when the main bot asks the person, and no card", () => {
+      const text = "Scout (scout) needs a decision from the person to go on";
+      const messages = [
+        asking("q1"),
+        answered("q1", {
+          type: "json",
+          value: { relayed: { handle: "main", name: "Aven", text } },
+        }),
+      ];
+
+      expect(botMessagesToChat(messages)).toEqual([
+        { id: "m-0", role: "bot", text, peer: { name: "main", handle: "main", direction: "to" } },
+      ]);
+    });
+
+    test("is nothing when it was refused", () => {
+      const messages = [
+        asking("q1"),
+        answered("q1", { type: "error-text", value: "Nobody is there" }),
+      ];
+      expect(botMessagesToChat(messages)).toEqual([]);
+    });
+  });
 });

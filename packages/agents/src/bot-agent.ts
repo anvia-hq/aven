@@ -3,6 +3,7 @@ import type { BotPeer } from "@aven/protocol/runtime-wire";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
+import { createAskQuestionTool, type AskQuestion } from "./tools/ask-question";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
 import { createListBotsTool } from "./tools/list-bots";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
@@ -38,6 +39,8 @@ type BotAgentOptions = ModelSource & {
   peers: readonly BotPeer[];
   /** What the bot's description is now. */
   description?: string;
+  /** Asks the person to decide (decision 0066); without it the bot cannot, as when nobody is there to answer. */
+  askQuestion?: AskQuestion;
   /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
   updateSelf?: UpdateSelf;
 };
@@ -57,6 +60,7 @@ export function createBotAgent({
   computer = [],
   createBot,
   peers,
+  askQuestion,
   description = "",
   updateSelf,
   ...source
@@ -72,6 +76,7 @@ export function createBotAgent({
       instruction,
       computer: computer.length > 0,
       createBots: Boolean(createBot),
+      questions: Boolean(askQuestion),
       peers,
       self: updateSelf ? { description } : undefined,
     }),
@@ -81,12 +86,15 @@ export function createBotAgent({
       createSendMessageTool(send),
       createListBotsTool(() => peers),
       ...computer,
+      ...asking(askQuestion),
       ...makingBots(createBot),
       ...changingSelf(updateSelf),
     ],
   });
 }
 
+const asking = (askQuestion?: AskQuestion) =>
+  askQuestion ? [createAskQuestionTool(askQuestion)] : [];
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];

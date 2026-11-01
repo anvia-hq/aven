@@ -6,7 +6,14 @@ import {
   parseBotPrompt,
   type Bot,
 } from "@aven/protocol/bots";
-import type { BotPeer, BotSendParams, BotSent, BotUpdateParams } from "@aven/protocol/runtime-wire";
+import type {
+  BotPeer,
+  BotQuestioned,
+  BotQuestionParams,
+  BotSendParams,
+  BotSent,
+  BotUpdateParams,
+} from "@aven/protocol/runtime-wire";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
@@ -25,6 +32,17 @@ export type BotKeeper = {
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string, hops: number): Promise<void>;
 };
+
+// What a bot that is not the main one tells the main bot when it needs the person to decide.
+function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
+  const asked = questions
+    .map((question) => {
+      const choices = question.choices?.map((choice) => choice.label).join(", ");
+      return `- id "${question.id}": ${question.text}${choices ? ` (choices: ${choices})` : ""}`;
+    })
+    .join("\n");
+  return `${bot.name} (${bot.handle}) needs a decision from the person to go on:\n${asked}\nAsk the person with ask_question, offering the same choices, and when they answer, send it to ${bot.handle} with send_message.`;
+}
 
 // The bot's computer is on a runner, so its agent runs there (decision 0059): it is sent each
 // message with a token for its model, says what the bot sends back, and reads and adds to the
@@ -47,7 +65,7 @@ export class RemoteBotReplier implements BotReplier {
     this.gateway.check(model);
   }
 
-  async answer({ bot, userId, model, prompt, hops, say, signal }: BotReplyInput) {
+  async answer({ bot, userId, model, prompt, hops, say, ask, signal }: BotReplyInput) {
     // A shutdown that came while the reply waited its turn: there is nothing left to answer.
     signal.throwIfAborted();
     // Every bot is told which bots it may write to. Asked before anything is granted, so a failure
@@ -66,6 +84,16 @@ export class RemoteBotReplier implements BotReplier {
     const personsWord = !note && from === undefined;
     const mainBotsWord = !note && from === MAIN_BOT_HANDLE;
     let written = 0;
+    // As itself, whichever bot the runner might name, and only so many to a reply.
+    const sendToBot = async (to: string, text: string) => {
+      if (written >= BOT_MESSAGES_PER_REPLY) {
+        throw new Error(
+          `You have written to bots ${BOT_MESSAGES_PER_REPLY} times in this reply. Tell the person instead.`,
+        );
+      }
+      written += 1;
+      return this.bots.deliver(userId, bot, hops, to, text);
+    };
     const sink = {
       say,
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
@@ -84,14 +112,22 @@ export class RemoteBotReplier implements BotReplier {
         return { id: made.id, name: made.name, handle: made.handle };
       },
       // The sender is the reply's bot, whichever bot the runner might name.
-      send: async ({ to, text }: Omit<BotSendParams, "replyId">) => {
-        if (written >= BOT_MESSAGES_PER_REPLY) {
-          throw new Error(
-            `You have written to bots ${BOT_MESSAGES_PER_REPLY} times in this reply. Tell the person instead.`,
-          );
+      send: ({ to, text }: Omit<BotSendParams, "replyId">) => sendToBot(to, text),
+      // The person decides in this bot's chat, or, when a bot that is not the main one answers
+      // another bot, the main bot asks them: it is the person's point of contact (decision 0066).
+      question: async ({
+        questions,
+      }: Omit<BotQuestionParams, "replyId">): Promise<BotQuestioned> => {
+        if (note) throw new Error("Nobody is there to answer: this was not the person's message");
+        if (bot.isMain || from === undefined) {
+          ask(questions);
+          return {};
         }
-        written += 1;
-        return this.bots.deliver(userId, bot, hops, to, text);
+        const main = (await this.bots.list(userId)).find((other) => other.isMain);
+        if (!main) throw new Error("There is no main bot to ask the person");
+        const text = relayedQuestion(bot, questions);
+        const sent = await sendToBot(main.handle, text);
+        return { relayed: { handle: sent.handle, name: sent.name, text } };
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {

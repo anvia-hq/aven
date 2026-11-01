@@ -12,6 +12,7 @@ import { BotComposer } from "./bot-composer";
 import { BotActivity } from "./bot-activity";
 import { BotAvatar } from "./bot-avatar";
 import { BotChatBubble, isPersons } from "./bot-chat-bubble";
+import { BotQuestionForm } from "./bot-question-form";
 
 // A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
 // from the bot arrive one after another, each as the bot sends it, close together; a change of
@@ -21,6 +22,8 @@ export function BotChat({ bot }: { bot: Bot }) {
   const { bots } = useBots();
   const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
+  // A question is open until anything follows it: the person's answer, or whatever else they say.
+  const open = (index: number) => index === items.length - 1 && !typing;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -50,7 +53,15 @@ export function BotChat({ bot }: { bot: Bot }) {
                   align={isPersons(message) ? "end" : "start"}
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
-                  <BotChatBubble message={message} bots={bots} />
+                  {message.questions && open(index) ? (
+                    <BotQuestionForm
+                      botName={bot.name}
+                      questions={message.questions}
+                      onSubmit={send}
+                    />
+                  ) : (
+                    <BotChatBubble message={message} bots={bots} />
+                  )}
                 </Message>
               );
             })}

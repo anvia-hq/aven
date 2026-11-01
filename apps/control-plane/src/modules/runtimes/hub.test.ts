@@ -214,6 +214,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
             { id: "bot-2", name: params.name, handle: params.name.toLowerCase() }
           ),
           send: async (params) => (asked.push(params), { handle: params.to, name: "Scout" }),
+          question: async (params) => (asked.push(params), {}),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
@@ -325,6 +326,38 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       );
       expect((await ask(ws, received, "bot.send", { ...message, to: "Scout Bot" })).ok).toBe(false);
       expect((await ask(ws, received, "bot.send", { ...message, text: " " })).ok).toBe(false);
+      expect(asked).toHaveLength(1);
+    });
+
+    test("a bot's question is asked for the live reply only, with choices of two to five", async () => {
+      const { ws, received, asked } = await replying("bot-question");
+      const question = {
+        replyId: "reply-1",
+        questions: [
+          {
+            id: "scope",
+            text: "Which first?",
+            choices: [
+              { label: "A", value: "a" },
+              { label: "B", value: "b" },
+            ],
+          },
+        ],
+      };
+
+      expect(await ask(ws, received, "bot.question", question)).toMatchObject({ ok: true });
+      expect(asked).toEqual([question]);
+
+      expect((await ask(ws, received, "bot.question", { ...question, replyId: "other" })).ok).toBe(
+        false,
+      );
+      expect((await ask(ws, received, "bot.question", { ...question, questions: [] })).ok).toBe(
+        false,
+      );
+      const one = { id: "x", text: "Which?", choices: [{ label: "A", value: "a" }] };
+      expect((await ask(ws, received, "bot.question", { ...question, questions: [one] })).ok).toBe(
+        false,
+      );
       expect(asked).toHaveLength(1);
     });
 
