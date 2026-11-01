@@ -27,7 +27,7 @@ export async function doctor() {
 
   const serverEnv = await readEnv(join(serverDir(), ".env"));
   if (serverEnv) {
-    const url = `http://localhost:${serverEnv.AVEN_PORT || 3000}/api/health`;
+    const url = `http://localhost:${serverEnv.AVEN_API_PORT || 3030}/health`;
     const answers = await waitForHealthy(url, { timeoutMs: 0 });
     add(
       "server",

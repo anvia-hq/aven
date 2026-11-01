@@ -42,7 +42,7 @@ export async function install(args: Args) {
     console.log("\nSetting up this machine as the server's runner...");
     // The runner is on the same machine, so it uses the local address, whatever address people open.
     const runnerArgs: Args = { positionals: [], flags: { ...args.flags } };
-    runnerArgs.flags.url = `http://localhost:${env.AVEN_PORT}/api`;
+    runnerArgs.flags.url = `http://localhost:${env.AVEN_API_PORT}`;
     runnerArgs.flags.token = env.AVEN_LOCAL_RUNNER_TOKEN;
     await runnerInstall(runnerArgs);
   }

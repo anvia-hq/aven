@@ -32,6 +32,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://aven:${POSTGRES_PASSWORD}@postgres:5432/aven
+    # The API on this machine only: the runner beside the server and `aven` use it, whatever the
+    # web entry point answers to.
+    ports:
+      - "127.0.0.1:${AVEN_API_PORT:-3030}:8000"
 
   web:
     image: ${AVEN_WEB_IMAGE:-ghcr.io/anvia-hq/aven-web}:${AVEN_VERSION:-latest}
@@ -41,8 +45,14 @@ services:
         condition: service_healthy
     environment:
       AVEN_SITE_ADDRESS: ${AVEN_SITE_ADDRESS:-:80}
+    # HTTP, and HTTPS when AVEN_SITE_ADDRESS is a domain (Caddy then needs the standard 80 and 443
+    # for its certificate). Without a domain nothing listens on 443, so that port stays on loopback.
     ports:
       - "${AVEN_PORT:-3000}:80"
+      - "${AVEN_HTTPS_BIND:-127.0.0.1}:${AVEN_HTTPS_PORT:-3443}:443"
+    volumes:
+      - caddy_data:/data
 
 volumes:
   postgres:
+  caddy_data:

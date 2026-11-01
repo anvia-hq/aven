@@ -26,14 +26,14 @@ const usage = `aven ${version}
 Usage: aven <command>
 
 Everything:
-  install [--port N] [--origin URL] [--owner-email E] [--no-runner] [--no-open]
+  install [--domain D] [--port N] [--owner-email E] [--no-runner] [--no-open]
               Install the server and a runner on this machine and open it
   install --runner --url <address> --token <token>
               Install only a runner, for a server somewhere else
   doctor      Check Docker, git, the server and the runner
 
 Server:
-  server install [--port N] [--origin URL] [--release X]
+  server install [--domain D] [--port N] [--origin URL] [--release X]
               Install and start the server (Postgres, API and web) in ~/.aven/server
   start       Start the server
   stop        Stop it; the database is kept
@@ -60,6 +60,9 @@ const follows = (args: Args) => Boolean(args.flags.follow || args.flags.f);
 async function main(argv: string[]) {
   const args = parseArgs(argv, [
     "port",
+    "https-port",
+    "api-port",
+    "domain",
     "origin",
     "release",
     "url",

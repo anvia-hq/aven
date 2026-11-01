@@ -8,10 +8,11 @@ import { composeCommand, dockerProblem, run } from "../compose";
 import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
+import { planServer } from "../server-plan";
 import { writeServerFiles } from "../server-files";
 import { version } from "../version";
 
-const DEFAULT_PORT = 3000;
+const DEFAULT_API_PORT = 3030;
 
 async function readServerEnv(dir: string) {
   const text = await readFile(join(dir, ".env"), "utf8").catch(() => undefined);
@@ -20,8 +21,9 @@ async function readServerEnv(dir: string) {
   return parseEnv(text);
 }
 
+// The API's own port on this machine, which answers whatever the web entry point is set to.
 const healthUrl = (env: Record<string, string>) =>
-  `http://localhost:${env.AVEN_PORT || DEFAULT_PORT}/api/health`;
+  `http://localhost:${env.AVEN_API_PORT || DEFAULT_API_PORT}/health`;
 
 async function runCompose(dir: string, args: string[]) {
   const code = await run(composeCommand(dir, args));
@@ -38,20 +40,23 @@ export async function serverInstall(args: Args) {
     () => true,
     () => false,
   );
-  const port = Number(stringFlag(args, "port") ?? DEFAULT_PORT);
-  if (!Number.isInteger(port) || port <= 0) throw new Error("--port must be a port number");
-  // A server that is already installed holds its port itself.
-  if (!installed && !portIsFree(port))
-    throw new Error(`Port ${port} is in use. Pick another with --port.`);
+  const { options, needed } = planServer({
+    port: stringFlag(args, "port"),
+    httpsPort: stringFlag(args, "https-port"),
+    apiPort: stringFlag(args, "api-port"),
+    domain: stringFlag(args, "domain"),
+    origin: stringFlag(args, "origin"),
+    release: stringFlag(args, "release") ?? (version === "dev" ? "latest" : version),
+    ownerEmail: stringFlag(args, "owner-email"),
+  });
+  // A server that is already installed holds its ports itself.
+  const taken = installed ? undefined : needed.find((port) => !portIsFree(port));
+  if (taken !== undefined)
+    throw new Error(
+      `Port ${taken} is in use. Pick another with --port, --https-port or --api-port.`,
+    );
 
-  const release = stringFlag(args, "release") ?? (version === "dev" ? "latest" : version);
-  const origin = stringFlag(args, "origin") ?? `http://localhost:${port}`;
-  const ownerEmail = stringFlag(args, "owner-email");
-  await writeServerFiles(
-    dir,
-    { compose, envTemplate },
-    { origin, port, version: release, ownerEmail },
-  );
+  await writeServerFiles(dir, { compose, envTemplate }, options);
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);
   const env = await readServerEnv(dir);

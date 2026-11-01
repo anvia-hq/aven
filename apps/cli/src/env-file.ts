@@ -62,6 +62,12 @@ export type ServerEnvOptions = {
   version: string;
   /** The person who becomes the platform owner (and can close sign-ups), if known. */
   ownerEmail?: string;
+  /** A domain to serve over HTTPS, for which Caddy gets a certificate. */
+  domain?: string;
+  /** The HTTPS port; the standard one for a domain. */
+  httpsPort?: number;
+  /** The API's port on this machine. */
+  apiPort?: number;
 };
 
 /** A new install's `.env`: the template with the secrets made and the address filled in. */
@@ -74,5 +80,12 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
     ...newSecrets(),
   };
   if (options.ownerEmail) values.PLATFORM_OWNER_EMAILS = options.ownerEmail;
+  if (options.apiPort) values.AVEN_API_PORT = String(options.apiPort);
+  if (options.domain) {
+    // Caddy answers to the domain, and needs the world to reach it on both standard ports.
+    values.AVEN_SITE_ADDRESS = options.domain;
+    values.AVEN_HTTPS_PORT = String(options.httpsPort ?? 443);
+    values.AVEN_HTTPS_BIND = "0.0.0.0";
+  }
   return setEnv(template, values);
 }

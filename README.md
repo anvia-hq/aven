@@ -18,6 +18,17 @@ provider in Settings and start a thread. On Windows, use WSL2.
 
 Everything lives in `~/.aven` (the server's `.env` with its secrets, the runner's settings and log).
 
+## Your own domain, with HTTPS
+
+For a server that other machines or people reach, point a DNS name at it, open ports 80 and 443 and
+install with the name; Caddy gets and renews the certificate:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --domain aven.example.com
+```
+
+Runners on other machines then connect over `wss://`, so their tokens never cross the network in the clear.
+
 ## More runners
 
 One server can have any number of runners: a laptop, a build machine, a cloud VM. In **Settings >
@@ -43,7 +54,7 @@ server's runners are updated one machine at a time, the same way. Pin a release 
 ## The `aven` command
 
 ```
-aven install [--port N] [--origin URL] [--owner-email E]   server + runner on this machine
+aven install [--domain D] [--port N] [--owner-email E]     server + runner on this machine
 aven install --runner --url <address> --token <token>      only a runner
 aven start | stop | restart | status | logs [--follow]     the server
 aven runner start | stop | restart | status | logs | uninstall
