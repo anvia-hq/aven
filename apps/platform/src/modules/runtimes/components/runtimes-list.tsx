@@ -1,6 +1,7 @@
 import { Trash } from "@mynaui/icons-react";
 import { cn } from "cn";
 
+import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { SettingsEmpty, SettingsList, SettingsRow } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
@@ -34,6 +35,12 @@ export function RuntimesList() {
             description={
               <span className="flex flex-wrap items-center gap-x-2">
                 <span>{runtime.online ? "Online" : "Offline"}</span>
+                {runtime.build && <span className="font-mono">v{runtime.build}</span>}
+                {runtime.outdated && (
+                  <Badge variant="outline" title="Run `aven update` on that machine">
+                    Update available
+                  </Badge>
+                )}
                 <span className="font-mono">
                   {runtime.ownerId === null ? "Built in" : `token …${runtime.tokenHint}`}
                 </span>
