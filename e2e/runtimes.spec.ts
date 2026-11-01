@@ -29,9 +29,9 @@ test.describe("runtimes", () => {
     await page.getByRole("button", { name: "Add runtime" }).last().click();
 
     const command = await page.getByLabel("Runtime command").innerText();
-    expect(command).toMatch(/AVEN_RUNTIME_TOKEN=avrt_/);
-    const url = /AVEN_URL=(\S+)/.exec(command)?.[1];
-    const token = /AVEN_RUNTIME_TOKEN=(\S+)/.exec(command)?.[1];
+    expect(command).toMatch(/install\.sh \| bash -s -- --runner --url \S+ --token avrt_/);
+    const url = /--url (\S+)/.exec(command)?.[1];
+    const token = /--token (\S+)/.exec(command)?.[1];
     await page.getByRole("button", { name: "Done" }).click();
 
     const row = page
@@ -40,7 +40,7 @@ test.describe("runtimes", () => {
       .filter({ hasText: "e2e-laptop" });
     await expect(row).toContainText("Offline");
 
-    // The command as shown, through the platform's /api proxy, WebSocket included.
+    // The address and token the command shows, through the platform's /api proxy, WebSocket included.
     runtime = spawn("bun", ["apps/runtime/src/main.ts"], {
       env: { ...process.env, AVEN_URL: url, AVEN_RUNTIME_TOKEN: token },
       stdio: "ignore",
@@ -55,7 +55,7 @@ test.describe("runtimes", () => {
     await page.getByRole("button", { name: "Rotate token for e2e-laptop" }).click();
     await page.getByRole("button", { name: "Rotate token", exact: true }).click();
     const rotatedCommand = await page.getByLabel("Runtime command").innerText();
-    const rotatedToken = /AVEN_RUNTIME_TOKEN=(\S+)/.exec(rotatedCommand)?.[1];
+    const rotatedToken = /--token (\S+)/.exec(rotatedCommand)?.[1];
     expect(rotatedToken).not.toBe(token);
     expect(await refused).toBe(1);
     await page.getByRole("button", { name: "Done" }).click();

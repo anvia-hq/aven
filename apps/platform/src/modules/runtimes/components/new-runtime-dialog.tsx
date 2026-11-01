@@ -51,8 +51,9 @@ export function NewRuntimeDialog() {
             <DialogHeader>
               <DialogTitle>Start {created.runtime.name}</DialogTitle>
               <DialogDescription>
-                Run this on the machine you want to use. The token is shown once; if you lose it,
-                revoke the runtime and add a new one.
+                Run this on the machine you want to use (macOS or Linux). It installs what is
+                missing and keeps the runner running as a service. The token is shown once; if you
+                lose it, revoke the runtime and add a new one.
               </DialogDescription>
             </DialogHeader>
             <RuntimeCommand token={created.token} />

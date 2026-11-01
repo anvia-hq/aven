@@ -6,11 +6,14 @@ type Props = {
   token: string;
 };
 
-// The command that starts a runtime with its token. Where a runtime on another machine reaches
+const INSTALL_SCRIPT = "https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh";
+
+// The command that makes a machine a runner with this token (decision 0073): the installer gets
+// what is missing and starts the runner as a service. Where a runtime on another machine reaches
 // this control plane is this app's address, whose /api path is proxied to it.
 export function RuntimeCommand({ token }: Props) {
   const { copied, copy } = useClipboard();
-  const command = `AVEN_URL=${window.location.origin}/api AVEN_RUNTIME_TOKEN=${token} bun run --cwd apps/runtime start`;
+  const command = `curl -fsSL ${INSTALL_SCRIPT} | bash -s -- --runner --url ${window.location.origin}/api --token ${token}`;
 
   return (
     <div className="flex flex-col gap-3">
