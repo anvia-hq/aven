@@ -524,7 +524,7 @@ test.describe("bots", () => {
     expect(color).toMatch(/^#[0-9a-f]{6}$/i);
     // Something other than what the id drew, so every change below is one that can be seen.
     const shape = family === "hexagon" ? "square" : "hexagon";
-    const paint = color?.toLowerCase() === "#ff7a00" ? "#10a6ff" : "#ff7a00";
+    const paint = color?.toLowerCase() === "#ff6a00" ? "#00b2ff" : "#ff6a00";
 
     // The same bot looks the same on the next visit, without anything having been saved.
     await page.reload();
