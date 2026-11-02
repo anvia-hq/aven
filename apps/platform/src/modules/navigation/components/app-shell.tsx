@@ -54,9 +54,9 @@ export function AppShell({ user, sidebar }: Props) {
         <Link
           to="/threads"
           aria-label="Aven"
-          className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+          className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground"
         >
-          <AvenMark className="w-5" />
+          <AvenMark className="w-4" />
         </Link>
         <div className="mt-3">
           <BotRailLink />
