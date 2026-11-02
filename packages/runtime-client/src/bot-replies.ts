@@ -7,10 +7,13 @@ import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { CreateBot } from "@aven/agents/tools/create-bot";
 import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { GoalHost } from "@aven/agents/tools/goals";
+import type { McpNote } from "@aven/agents/mcp";
+import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { SendMessage } from "@aven/agents/tools/send-message";
 import { parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
+import type { BotMcpView } from "@aven/protocol/mcp";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
@@ -28,6 +31,7 @@ import type { SkillListing } from "@aven/agents/skills";
 import { keepAttachments } from "./attachments";
 import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
+import { connectMcpServers, type ConnectedMcp } from "./mcp-servers";
 import { remoteBotMemory } from "./remote-bot-memory";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
@@ -55,6 +59,10 @@ export type CreateBotReplyAgent = (input: {
   updateSelf: UpdateSelf;
   /** The skills in the bot's `/skills` for this reply (decision 0081). */
   skills: readonly SkillListing[];
+  /** The tools of the person's MCP servers this reply connected, and what the bot is told of them (decision 0085). */
+  mcp?: { tools: readonly AnyTool[]; note: McpNote };
+  /** Keeps the person's MCP servers, on their word (decision 0085). */
+  mcpServers: McpServersHost;
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -74,6 +82,8 @@ export const defaultCreateBotAgent =
     peers,
     updateSelf,
     skills,
+    mcp,
+    mcpServers,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -100,6 +110,8 @@ export const defaultCreateBotAgent =
       description: bot.description,
       updateSelf,
       skills,
+      mcp,
+      mcpServers,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -171,22 +183,38 @@ export class BotReplies {
 
   // One reply, which never throws: how it ended is told to the control plane.
   async #answer(
-    { replyId, bot, prompt, model, attachments, skills }: BotReplyMessage,
+    { replyId, bot, prompt, model, attachments, skills, mcp: servers }: BotReplyMessage,
     abort: AbortController,
   ) {
     const { send } = this.#context;
     const { signal } = abort;
+    let mcp: ConnectedMcp | undefined;
     try {
-      const agent = await this.#agentFor(replyId, bot, prompt, model, skills ?? [], abort);
+      mcp = await this.#connectMcp(replyId, servers);
+      const agent = await this.#agentFor(replyId, bot, prompt, model, skills ?? [], mcp, abort);
       const asked = await this.#promptOf(bot.id, prompt, attachments);
       await agent.generate({ prompt: asked, session: { sessionId: bot.id }, abortSignal: signal });
       send({ type: "bot.end", replyId });
     } catch (error) {
       send({ type: "bot.end", replyId, error: errorMessage(signal.reason ?? error) });
     } finally {
+      await mcp?.close();
       this.#live.delete(replyId);
       this.#context.finished(bot.id);
     }
+  }
+
+  // Connects the person's MCP servers for bots and tells the control plane how each went, for Settings
+  // (decision 0085). A server that is down is left out, and does not fail the reply.
+  async #connectMcp(replyId: string, servers: BotReplyMessage["mcp"]) {
+    if (!servers?.length) return undefined;
+    const connected = await connectMcpServers(servers);
+    this.#context
+      .call("bot.mcp", { replyId, op: "report", results: connected.results })
+      .catch((error: unknown) => {
+        console.warn(`Reply ${replyId} could not report on its MCP servers:`, errorMessage(error));
+      });
+    return connected;
   }
 
   // What the bot is asked: the text alone, or, with files the person sent (decision 0080), the text,
@@ -220,6 +248,7 @@ export class BotReplies {
     prompt: string,
     model: RunModel,
     skills: readonly RunSkill[],
+    mcp: ConnectedMcp | undefined,
     abort: AbortController,
   ) {
     const { sandbox, boxes, starting, call, send: post, createAgent } = this.#context;
@@ -291,6 +320,16 @@ export class BotReplies {
         : (questions) => call("bot.question", { replyId, questions }),
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       skills: skillListing,
+      // The servers' tools are kept small as the computer's are, since the chat keeps what they return.
+      mcp: mcp && { tools: boundedTools(mcp.tools), note: mcp.note },
+      mcpServers: {
+        list: async () => (await call("bot.mcp", { replyId, op: "list" })) as BotMcpView[],
+        add: async (input) =>
+          (await call("bot.mcp", { replyId, op: "add", ...input })) as BotMcpView,
+        update: async (id, patch) =>
+          (await call("bot.mcp", { replyId, op: "update", id, ...patch })) as BotMcpView,
+        remove: async (id) => void (await call("bot.mcp", { replyId, op: "remove", id })),
+      },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots
         ? async (input) => {

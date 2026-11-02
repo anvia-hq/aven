@@ -6,9 +6,7 @@ import { mcpSlug } from "@aven/protocol/mcp";
 import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
 
 export type ConnectedMcp = {
-  /** For an agent that does not run through durable, as a bot's does: its `mcpServers`. */
-  servers: McpServer[];
-  /** The same tools as plain local tools, for an agent that does run through durable, which takes no `mcpServers`. */
+  /** The servers' tools as plain local tools: durable takes no `mcpServers`, and a bot's tools are kept small the same way. */
   tools: AnyTool[];
   /** How each server connected, for the control plane to keep: the reason one did not. The run goes on without it. */
   results: McpConnectResult[];
@@ -79,7 +77,6 @@ export async function connectMcpServers(
   );
 
   return {
-    servers,
     tools: servers.flatMap((server) => server.tools.map(asLocalTool)),
     results,
     note: {

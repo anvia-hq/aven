@@ -3,6 +3,7 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
+import type { McpNote } from "@aven/agents/mcp";
 import type { SkillListing } from "@aven/agents/skills";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
@@ -712,6 +713,7 @@ describe("BotReplies", () => {
       asking = false,
       skills: readonly SkillListing[] = [],
       computer: readonly AnyTool[] = [],
+      mcp?: { tools: readonly AnyTool[]; note: McpNote },
     ) =>
       defaultCreateBotAgent("http://control-plane")({
         bot: {
@@ -752,6 +754,17 @@ describe("BotReplies", () => {
         askQuestion: asking ? async () => ({}) : undefined,
         updateSelf: async () => ({ name: "Pip", description: "" }),
         skills,
+        mcp,
+        mcpServers: {
+          list: async () => [],
+          add: async () => {
+            throw new Error("not added");
+          },
+          update: async () => {
+            throw new Error("not changed");
+          },
+          remove: async () => undefined,
+        },
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
           : undefined,
@@ -797,9 +810,27 @@ describe("BotReplies", () => {
         "update_schedule",
         "delete_schedule",
         "update_self",
+        "list_mcp_servers",
+        "add_mcp_server",
+        "update_mcp_server",
+        "remove_mcp_server",
       ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
+    });
+
+    test("a bot is given the tools of the person's MCP servers and told what they are, and how to keep them (decision 0085)", () => {
+      const note: McpNote = { servers: [{ name: "Team Notes", tools: 1 }], failed: [] };
+      const agent = build(false, false, [], [], { tools: [tool("team_notes_search")], note });
+      expect(agent.tools.map((each) => each.name)).toContain("team_notes_search");
+      expect(agent.instructions).toContain("Connected: Team Notes (1 tool)");
+      // Looking after the servers is its own section, which every bot with the host has.
+      expect(agent.instructions).toContain("<mcp-servers>");
+      expect(agent.instructions).toContain("Change them only when the person's own message");
+
+      const none = build(false);
+      expect(none.tools.map((each) => each.name)).not.toContain("team_notes_search");
+      expect(none.instructions).not.toContain("<mcp_servers>");
     });
 
     test("the main bot can make bots too", () => {
@@ -816,6 +847,10 @@ describe("BotReplies", () => {
         "delete_schedule",
         "create_bot",
         "update_self",
+        "list_mcp_servers",
+        "add_mcp_server",
+        "update_mcp_server",
+        "remove_mcp_server",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
       expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");

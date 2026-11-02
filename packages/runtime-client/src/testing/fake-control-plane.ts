@@ -1,7 +1,13 @@
 import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 
 // A control plane that records what the runtime sends and lets the test send frames back.
-export function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) {
+export type FakeControlPlaneOptions = {
+  storesTranscripts?: boolean;
+  /** Answers a call the fake does not know: a result, or nothing to leave it unanswered. */
+  answer?: (message: Extract<RuntimeToControlPlane, { type: "call" }>) => unknown;
+};
+
+export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
   // Whether the transcript the runner sends home is taken; a test can change it as it goes.
   const transcripts = { stored: options.storesTranscripts !== false };
   const received: RuntimeToControlPlane[] = [];
@@ -27,6 +33,12 @@ export function fakeControlPlane(options: { storesTranscripts?: boolean } = {}) 
         // The transcript the runner sends home is taken, unless a test says otherwise.
         if (message.type === "call" && message.method === "memory.append" && transcripts.stored)
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
+        if (message.type === "call" && options.answer) {
+          const result = options.answer(message);
+          if (result !== undefined) {
+            ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
+          }
+        }
         // A bot's conversation: nothing said before, and whatever is added is taken.
         if (message.type === "call" && message.method === "bot.memory") {
           const result = (message.params as { op: string }).op === "load" ? [] : null;

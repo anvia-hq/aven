@@ -3,11 +3,13 @@ import type { BotPeer } from "@aven/protocol/runtime-wire";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
+import { type McpNote } from "./mcp";
 import type { SkillListing } from "./skills";
 import { createAskQuestionTool, type AskQuestion } from "./tools/ask-question";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
 import { createGoalTools, type GoalHost } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
+import { createMcpServerTools, type McpServersHost } from "./tools/mcp-servers";
 import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
@@ -54,6 +56,10 @@ type BotAgentOptions = ModelSource & {
   updateSelf?: UpdateSelf;
   /** The skills the host put in the computer's `/skills`, which the bot reads there (decision 0081). */
   skills?: readonly SkillListing[];
+  /** The person's MCP servers' tools, which the reply connected, and what the bot is told of them (decision 0085). */
+  mcp?: { tools: readonly AnyTool[]; note: McpNote };
+  /** Keeps the person's MCP servers (decision 0085); without it the bot can use them but not change them. */
+  mcpServers?: McpServersHost;
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -78,6 +84,8 @@ export function createBotAgent({
   description = "",
   updateSelf,
   skills,
+  mcp,
+  mcpServers,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -97,6 +105,8 @@ export function createBotAgent({
       peers,
       self: updateSelf ? { description } : undefined,
       skills,
+      mcp: mcp?.note,
+      mcpServers: Boolean(mcpServers),
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
@@ -109,6 +119,8 @@ export function createBotAgent({
       ...scheduling(schedules),
       ...makingBots(createBot),
       ...changingSelf(updateSelf),
+      ...usingMcp(mcp),
+      ...keepingMcpServers(mcpServers),
     ],
   });
 }
@@ -120,3 +132,5 @@ const asking = (askQuestion?: AskQuestion) =>
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
+const usingMcp = (mcp?: { tools: readonly AnyTool[] }) => (mcp ? mcp.tools : []);
+const keepingMcpServers = (host?: McpServersHost) => (host ? createMcpServerTools(host) : []);

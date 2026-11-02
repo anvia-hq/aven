@@ -50,7 +50,6 @@ describe("connectMcpServers", () => {
     expect(connected.results).toEqual([{ id: "11111111-1111-4111-8111-111111111111" }]);
     expect(connected.note).toEqual({ servers: [{ name: "Team Notes", tools: 1 }], failed: [] });
     expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
-    expect(connected.servers.map((server) => server.name)).toEqual(["Team Notes"]);
     expect(mcpPrefix("Team Notes")).toBe("team_notes_");
   });
 

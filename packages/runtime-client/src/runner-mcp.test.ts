@@ -1,15 +1,18 @@
-import { Agent, createQuestionTool } from "@anvia/core";
+import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
 import type { McpNote } from "@aven/agents/mcp";
+import { createMcpServerTools } from "@aven/agents/tools/mcp-servers";
+import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import * as z from "zod/v4";
 
+import type { CreateBotReplyAgent } from "./bot-replies";
 import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-import { fakeControlPlane } from "./testing/fake-control-plane";
+import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-control-plane";
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
 
@@ -37,14 +40,22 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
 });
 
-function connect(createAgent: CreateRuntimeAgent) {
-  const plane = fakeControlPlane();
+function connect(
+  createAgent: CreateRuntimeAgent,
+  extra: {
+    createBotAgent?: CreateBotReplyAgent;
+    answer?: FakeControlPlaneOptions["answer"];
+  } = {},
+) {
+  const plane = fakeControlPlane({ answer: extra.answer });
   const runtime = startRuntime({
     url: plane.url,
     token: "t",
     journalPath: journalPath(),
     sandbox,
     createAgent,
+    createBotAgent: extra.createBotAgent,
+    typingPause: async () => undefined,
   });
   cleanups.push(() => runtime.stop(), plane.stop);
   return { plane, runtime };
@@ -181,5 +192,191 @@ describe("a run with the person's MCP servers", () => {
       { authorization: "Bearer secret-token", note: "after the question" },
     ]);
     expect(reports(plane).map((report) => report.runId)).toEqual(["run-1", "run-2"]);
+  });
+});
+
+// A bot's reply (decision 0085): the same servers for bots, connected by the runner, and the person's
+// own say over them through the control plane.
+describe("a bot's reply with the person's MCP servers", () => {
+  const calls: string[] = [];
+  const handler = createMcpHandler(({ requestInfo }) => {
+    const server = new McpServer({ name: "notes", version: "1.0.0" });
+    server.registerTool(
+      "add-note",
+      { description: "Save a note", inputSchema: z.object({ text: z.string() }) },
+      async ({ text: note }) => {
+        calls.push(`${requestInfo?.headers.get("authorization")} ${note}`);
+        return { content: [{ type: "text", text: `Saved: ${note}` }] };
+      },
+    );
+    return server;
+  });
+  const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
+  afterAll(() => http.stop(true));
+
+  const serverId = "11111111-1111-4111-8111-111111111111";
+  const botReply = {
+    type: "bot.reply",
+    replyId: "reply-1",
+    bot: {
+      id: "bot-1",
+      name: "Pip",
+      handle: "pip",
+      instruction: "",
+      description: "",
+      canCreateBots: false,
+      peers: [],
+      timezone: "UTC",
+    },
+    prompt: "hello",
+    model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
+    mcp: [
+      {
+        id: serverId,
+        name: "Team Notes",
+        url: `http://localhost:${http.port}/`,
+        headers: { authorization: "Bearer bot-token" },
+        allowLocal: true,
+      },
+    ],
+  };
+  const botCalls = (plane: ReturnType<typeof fakeControlPlane>) =>
+    plane.received.flatMap((message) =>
+      message.type === "call" && message.method === "bot.mcp"
+        ? [message.params as { op: string } & Record<string, unknown>]
+        : [],
+    );
+  const agent =
+    (steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
+    ({ send, memory, mcp, mcpServers }) => {
+      const tools: AnyTool[] = [createSendMessageTool(send)];
+      if (mcp) tools.push(...mcp.tools);
+      tools.push(...createMcpServerTools(mcpServers));
+      return new Agent({
+        id: "bot",
+        instructions: "x",
+        memory,
+        model: scriptedModel(steps),
+        tools,
+      });
+    };
+  const done = (plane: ReturnType<typeof fakeControlPlane>) =>
+    plane.received.some((message) => message.type === "bot.end");
+
+  test("the bot calls a server's tool, and the control plane is told how the servers connected", async () => {
+    const { plane, runtime } = connect(
+      () => ({ agent: new Agent({ id: "x", instructions: "x", model: scriptedModel([]) }) }),
+      {
+        createBotAgent: agent([
+          [toolCall("team_notes_add-note", { text: "buy milk" })],
+          [toolCall("send_message", { text: "Saved it" })],
+          [text("")],
+        ]),
+        answer: (message) => (message.method === "bot.mcp" ? null : undefined),
+      },
+    );
+    await runtime.ready;
+    plane.send(botReply);
+
+    await until(() => done(plane));
+    expect(plane.received.find((message) => message.type === "bot.end")).toEqual({
+      type: "bot.end",
+      replyId: "reply-1",
+    });
+    expect(calls.at(-1)).toBe("Bearer bot-token buy milk");
+    expect(botCalls(plane)).toContainEqual({
+      replyId: "reply-1",
+      op: "report",
+      results: [{ id: serverId }],
+    });
+    // The token is the person's: it is in nothing the runner sends home.
+    expect(JSON.stringify(plane.received)).not.toContain("bot-token");
+  });
+
+  test("a bot looks after the servers through calls to the control plane, not itself", async () => {
+    const view = {
+      id: serverId,
+      name: "Docs",
+      url: "https://docs.example.com/mcp",
+      target: "all",
+      enabled: true,
+      headerNames: ["Authorization"],
+      lastError: null,
+    };
+    const { plane, runtime } = connect(
+      () => ({ agent: new Agent({ id: "x", instructions: "x", model: scriptedModel([]) }) }),
+      {
+        createBotAgent: agent([
+          [
+            toolCall("add_mcp_server", {
+              name: "Docs",
+              url: "https://docs.example.com/mcp",
+              headers: [{ name: "Authorization", value: "Bearer given-by-person" }],
+            }),
+          ],
+          [toolCall("update_mcp_server", { id: serverId, enabled: false })],
+          [toolCall("remove_mcp_server", { id: serverId })],
+          [toolCall("send_message", { text: "Done" })],
+          [text("")],
+        ]),
+        answer: (message) => {
+          if (message.method !== "bot.mcp") return undefined;
+          const { op } = message.params as { op: string };
+          return op === "remove" || op === "report" ? null : view;
+        },
+      },
+    );
+    await runtime.ready;
+    plane.send({ ...botReply, mcp: undefined });
+
+    await until(() => done(plane));
+    expect(botCalls(plane)).toEqual([
+      {
+        replyId: "reply-1",
+        op: "add",
+        name: "Docs",
+        url: "https://docs.example.com/mcp",
+        headers: [{ name: "Authorization", value: "Bearer given-by-person" }],
+      },
+      { replyId: "reply-1", op: "update", id: serverId, enabled: false },
+      { replyId: "reply-1", op: "remove", id: serverId },
+    ]);
+  });
+
+  test("a server that is down is reported, and the bot still answers", async () => {
+    const told: (McpNote | undefined)[] = [];
+    const { plane, runtime } = connect(
+      () => ({ agent: new Agent({ id: "x", instructions: "x", model: scriptedModel([]) }) }),
+      {
+        createBotAgent: ({ send, memory, mcp }) => {
+          told.push(mcp?.note);
+          return new Agent({
+            id: "bot",
+            instructions: "x",
+            memory,
+            model: scriptedModel([[toolCall("send_message", { text: "Hi" })], [text("")]]),
+            tools: [createSendMessageTool(send)],
+          });
+        },
+        answer: (message) => (message.method === "bot.mcp" ? null : undefined),
+      },
+    );
+    await runtime.ready;
+    plane.send({
+      ...botReply,
+      mcp: botReply.mcp.map((server) => ({ ...server, url: "http://localhost:1/" })),
+    });
+
+    await until(() => done(plane));
+    expect(plane.received.find((message) => message.type === "bot.end")).toEqual({
+      type: "bot.end",
+      replyId: "reply-1",
+    });
+    expect(told[0]?.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
+    expect(botCalls(plane)).toContainEqual({
+      replyId: "reply-1",
+      op: "report",
+      results: [{ id: serverId, error: expect.any(String) }],
+    });
   });
 });
