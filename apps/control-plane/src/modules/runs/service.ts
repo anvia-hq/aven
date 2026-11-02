@@ -94,6 +94,7 @@ export class RunManager {
       github,
       env,
       identity,
+      compact,
     }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
@@ -102,6 +103,7 @@ export class RunManager {
     const handle = this.#runtime.start({
       thread,
       prompt,
+      compact,
       attachments,
       mentions,
       skills,

@@ -38,6 +38,9 @@ export const shipBody = z
   .object({ ...modelSelection, mode: z.enum(["update", "new"]).optional() })
   .optional();
 
+// Compacting runs on the model the thread's composer has, named the same way (decision 0097).
+export const compactBody = z.object(modelSelection).optional();
+
 // A path inside the workspace, as the composer's `@` found it: relative, with no `..` or empty part.
 const workspacePath = z
   .string()
@@ -103,3 +106,4 @@ export type CreateThreadBody = z.infer<typeof createThreadBody>;
 export type UpdateThreadBody = z.infer<typeof updateThreadBody>;
 export type SendMessageBody = z.infer<typeof sendMessageBody>;
 export type AnswerQuestionBody = z.infer<typeof answerQuestionBody>;
+export type CompactBody = z.infer<typeof compactBody>;

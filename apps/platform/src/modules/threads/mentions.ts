@@ -5,8 +5,16 @@ import type { MessageMention } from "./types";
 /** A file or a skill a message mentions, without where its token is. */
 export type Mentionable = Pick<MessageMention, "type" | "name">;
 
+/**
+ * `/` also offers commands, which a skill's name cannot be (a name has no slash): picking one puts
+ * its text in the composer as a chip, and sending a message that is only that chip runs the command
+ * instead of sending it (decision 0097).
+ */
+export const COMPACT_COMMAND = "/compact";
+
 /** What a mention token is drawn from: its kind and name, kept on the composer's entity. */
 export function mentionOf(triggerId: string, id: string): Mentionable | undefined {
+  if (id === COMPACT_COMMAND) return undefined;
   return triggerId === "file" || triggerId === "skill" ? { type: triggerId, name: id } : undefined;
 }
 

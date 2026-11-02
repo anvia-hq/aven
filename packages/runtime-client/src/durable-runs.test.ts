@@ -1,4 +1,10 @@
 import { Agent, createQuestionTool, createTool } from "@anvia/core";
+import {
+  COMPACT_PROMPT,
+  COMPACTED,
+  NOTHING_TO_COMPACT,
+  createCompactionAgent,
+} from "@aven/agents/compaction-agent";
 import { scriptedModel, text, type ScriptStep } from "@aven/agents/testing/scripted-model";
 import type { RunEvent } from "@aven/protocol/events";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -258,5 +264,82 @@ describe("DurableRuns tool concurrency", () => {
   // time. This test says so; when Anvia lifts it, the attended runs speed up and this one changes.
   test("a run that can ask a question still calls its tools one at a time", async () => {
     expect(await mostAtOnce(true)).toBe(1);
+  });
+});
+
+describe("a run that only compacts (decision 0097)", () => {
+  // The conversation so far: two turns, which the compaction run summarizes.
+  const talk = async (runs: DurableRuns, sessionId: string) => {
+    for (const [index, word] of ["alpha", "beta"].entries()) {
+      const run = await runs.start(
+        `talk-${index}`,
+        sessionId,
+        word,
+        input(`talk-${index}`, [text(`heard ${word}`)]),
+        () => {},
+      );
+      await run.done;
+    }
+  };
+
+  const compact = async (runs: DurableRuns, sessionId: string, summary: string) => {
+    const events: RunEvent[] = [];
+    const run = await runs.start(
+      "compact-1",
+      sessionId,
+      COMPACT_PROMPT,
+      {
+        ...createCompactionAgent({ id: "compact-1", model: scriptedModel([[text(summary)]]) }),
+      },
+      (event) => events.push(event),
+    );
+    const end = await run.done;
+    return { end, events };
+  };
+
+  test("summarizes what came before and says so", async () => {
+    const runs = await opened(journalPath());
+    await talk(runs, "thread-c");
+    const { end, events } = await compact(runs, "thread-c", "They greeted: alpha, beta.");
+    expect(end.type).toBe("response");
+    const reply = end.type === "response" ? JSON.stringify(end.messages.at(-1)) : "";
+    expect(reply).toContain(COMPACTED);
+    expect(events.some((event) => event.type === "usage")).toBe(true);
+  });
+
+  test("a thread with nothing before the prompt has nothing to compact", async () => {
+    const runs = await opened(journalPath());
+    const { end } = await compact(runs, "thread-empty", "unused");
+    const reply = end.type === "response" ? JSON.stringify(end.messages.at(-1)) : "";
+    expect(reply).toContain(NOTHING_TO_COMPACT);
+  });
+
+  test("the next message sees the summary in place of the turns it covers", async () => {
+    const runs = await opened(journalPath());
+    await talk(runs, "thread-d");
+    await compact(runs, "thread-d", "They greeted: alpha, beta.");
+    const seen: string[] = [];
+    // Durable applies the summary to a run that has a compaction policy of its own, as every run
+    // of a model with a known window has: here one that is far from being reached.
+    const next = await runs.start(
+      "after-1",
+      "thread-d",
+      "gamma",
+      {
+        ...input("after-1", (request) => {
+          seen.push(JSON.stringify(request.chatHistory));
+          return [text("ok")];
+        }),
+        compaction: {
+          trigger: { afterTokens: 1_000_000 },
+          compactor: createCompactionAgent({ id: "unused", model: scriptedModel([]) }).compaction
+            .compactor,
+        },
+      },
+      () => {},
+    );
+    await next.done;
+    expect(seen[0]).toContain("They greeted: alpha, beta.");
+    expect(seen[0]).not.toContain("heard alpha");
   });
 });

@@ -38,7 +38,11 @@ run("a thread's access (real postgres)", async () => {
     cancel: () => false,
     async *events() {},
   } as unknown as RunManager;
-  const messages = { send: async () => {}, answer: async () => {} } as unknown as ThreadMessages;
+  const messages = {
+    send: async () => {},
+    answer: async () => {},
+    compact: async () => {},
+  } as unknown as ThreadMessages;
   const server = new Elysia()
     .use(errorsRouter)
     .use(threadsRouter(runs, messages))
@@ -100,6 +104,7 @@ run("a thread's access (real postgres)", async () => {
   const acting: [string, string, object?][] = [
     ["PATCH", `/threads/${id}`, { title: "hijack" }],
     ["POST", `/threads/${id}/messages`, { prompt: "hello" }],
+    ["POST", `/threads/${id}/compact`],
     ["POST", `/threads/${id}/answer`, { answers: [{ questionId: "q", value: "a" }] }],
     ["POST", `/threads/${id}/cancel`],
     ["GET", `/threads/${id}/ship`],

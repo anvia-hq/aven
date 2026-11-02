@@ -256,6 +256,8 @@ export type ControlPlaneToRuntime =
       runId: string;
       thread: RunThreadInfo;
       prompt: string;
+      /** The run only summarizes the thread's history, with no sandbox and no tools: the person asked to compact it (decision 0097). */
+      compact?: boolean;
       attachments?: RunAttachment[];
       mentions?: MessageMention[];
       skills?: RunSkill[];
@@ -672,4 +674,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 37;
+export const WIRE_VERSION = 38;

@@ -15,6 +15,7 @@ export function OverviewColumn({
   usage,
   synced,
   owned,
+  onCompact,
 }: {
   thread: Thread;
   usage: ThreadUsage | null;
@@ -22,6 +23,8 @@ export function OverviewColumn({
   synced: boolean;
   /** The person made the thread; its processes are not for anyone else to see (decision 0084). */
   owned: boolean;
+  /** Summarizes the conversation (decision 0097). */
+  onCompact?: { run: () => void; busy: boolean; disabled: boolean };
 }) {
   return (
     <aside
@@ -30,7 +33,11 @@ export function OverviewColumn({
     >
       <EnvironmentCard thread={thread} />
       {owned && <BackgroundTasksCard threadId={thread.id} running={thread.running} />}
-      <ContextCard context={usage?.context} loading={!synced} />
+      <ContextCard
+        context={usage?.context}
+        loading={!synced}
+        onCompact={owned ? onCompact : undefined}
+      />
       <UsageCard totals={usage?.totals} loading={!synced} />
     </aside>
   );

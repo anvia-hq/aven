@@ -17,6 +17,8 @@ export type RunRecord = {
   /** "start" runs a prompt; "answer" delivers the answers to a question the thread parked. */
   kind: "start" | "answer";
   prompt?: string;
+  /** The run only summarizes the thread's history, with no sandbox and no tools (decision 0097). */
+  compact?: boolean;
   /** The files sent with the prompt, once copied into the sandbox's /uploads (decision 0034). */
   attachments?: KeptAttachment[];
   /** The files and skills the prompt mentions (decision 0036). */

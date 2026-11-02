@@ -76,6 +76,7 @@ export class RemoteRuntime implements Runtime {
   start({
     thread,
     prompt,
+    compact,
     attachments,
     mentions,
     skills,
@@ -90,6 +91,7 @@ export class RemoteRuntime implements Runtime {
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
       prompt,
+      compact: compact || undefined,
       attachments: attachments?.length ? attachments : undefined,
       mentions: mentions?.length ? mentions : undefined,
       skills: skills?.length ? skills : undefined,

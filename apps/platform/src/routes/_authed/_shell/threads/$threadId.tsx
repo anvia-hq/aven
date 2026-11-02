@@ -17,6 +17,7 @@ import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
+import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
@@ -41,6 +42,9 @@ function ThreadPage() {
     answer,
     cancel,
   } = useThread(threadId);
+  const { compacting, compact } = useCompactThread(threadId);
+  // Compacting is a run of its own: not while the agent works or waits on its question.
+  const canCompact = owned && !running && !question;
   // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels();
@@ -88,7 +92,17 @@ function ThreadPage() {
                   error={error}
                   aside={
                     overview.open && (
-                      <OverviewColumn thread={thread} usage={usage} synced={synced} owned={owned} />
+                      <OverviewColumn
+                        thread={thread}
+                        usage={usage}
+                        synced={synced}
+                        owned={owned}
+                        onCompact={{
+                          run: () => void compact(),
+                          busy: compacting,
+                          disabled: !canCompact,
+                        }}
+                      />
                     )
                   }
                 />
@@ -115,6 +129,7 @@ function ThreadPage() {
                           threadId={thread.id}
                           running={running}
                           onStop={cancel}
+                          onCompact={compact}
                           placeholder="Reply to the agent…"
                           onSubmit={send}
                         />

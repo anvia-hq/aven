@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
 import { useSkills } from "@/modules/skills/hooks/use-skills";
 
-import type { Mentionable } from "../mentions";
+import { COMPACT_COMMAND, type Mentionable } from "../mentions";
 
 // Where a repository keeps its own skills (decision 0035).
 const REPO_SKILLS = ".aven/skills";
@@ -32,8 +32,16 @@ const wait = (ms: number, signal: AbortSignal) =>
 
 type SkillOption = { name: string; detail: string };
 
+// The `/compact` command of a thread's composer (decision 0097).
+const compactItem: ComposerTriggerItem = {
+  id: COMPACT_COMMAND,
+  label: "compact",
+  text: COMPACT_COMMAND,
+  detail: "Summarize the conversation so far to free up context",
+};
+
 // The composer's `@` and `/` (decision 0036). `@` finds files of the thread's workspace, so it
-// is there only in a thread; `/` offers the skills a run would have: the repository's own (in a
+// is there only in a thread; `/` offers the `/compact` command (in a thread) and the skills a run would have: the repository's own (in a
 // thread), the user's enabled ones and the built-in ones, the first of these winning on a name.
 // The triggers stay the same object while the composer lives: a new one would remake its editor.
 export function useMentions(threadId: string | undefined) {
@@ -73,10 +81,12 @@ export function useMentions(threadId: string | undefined) {
           if (!byName.has(skill.name)) byName.set(skill.name, skill);
         }
         const wanted = query.toLowerCase();
-        return [...byName.values()]
+        const skillItems = [...byName.values()]
           .filter(({ name }) => name.includes(wanted))
           .slice(0, MAX_SKILLS)
           .map(({ name, detail }) => itemOf({ type: "skill", name }, detail));
+        // Commands come first, and only in a thread, which has a history to compact.
+        return threadId && "compact".includes(wanted) ? [compactItem, ...skillItems] : skillItems;
       },
     };
     if (!threadId) return [skillTrigger];

@@ -173,7 +173,12 @@ ws.onmessage = ({ data }) => {
     send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
   } else if (message.type === "run.start" && !ASKING) {
     // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
-    event({ type: "started", prompt: message.prompt, mentions: message.mentions });
+    event({
+      type: "started",
+      prompt: message.prompt,
+      mentions: message.mentions,
+      compact: message.compact,
+    });
     const finish = () => {
       const { runId } = message;
       send({

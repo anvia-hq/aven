@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **38**: `run.start` can say `compact`: the run only summarizes the thread's history, in no sandbox and with no tools (decision 0097). A runner that has not updated is refused until `aven update`.
 - **37**: a bot looks at the person's projects and threads and, on their word, starts a thread, sends a message to one of their own and archives one, `bot.thread` (decision 0088). A runner that has not updated is refused until `aven update`.
 - **36**: `run.start`, `run.resume` and `bot.reply` carry the person's enabled MCP servers (`mcp`, with their headers in the clear, for the runner to keep in memory), which a runner connects for the run or reply; the runner says how each connected with `mcp.report` (a run) or `bot.mcp` `report` (a bot), and a bot looks at and changes the person's servers with `bot.mcp` (decision 0085) and the person's model providers with `bot.provider`, with no key in any of it (decision 0086). A runner that has not updated is refused until `aven update`.
 - **35**: `bot.reply` can carry the person's skills, `skills`, which the runner puts in the bot's `/skills`, and fetches an archive for with `bot.skill` (decision 0081).

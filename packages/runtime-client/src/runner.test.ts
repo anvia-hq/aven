@@ -8,6 +8,7 @@ import {
   toolCall,
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
+import { COMPACT_PROMPT, COMPACTED, createCompactionAgent } from "@aven/agents/compaction-agent";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
@@ -947,6 +948,45 @@ describe("startRuntime runs", () => {
       "tool",
       "assistant",
     ]);
+  });
+
+  test("a run that only compacts summarizes the history without starting the thread's sandbox (decision 0097)", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    let acquired = 0;
+    const sandbox: ThreadWorkspaces = {
+      ...workspaces,
+      acquire: (...args) => {
+        acquired++;
+        return workspaces.acquire(...args);
+      },
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, compact }) =>
+        compact
+          ? createCompactionAgent({ id, model: scriptedModel([[text("They said hello.")]]) })
+          : {
+              agent: new Agent({
+                id,
+                model: scriptedModel([[text("hello back")]]),
+                instructions: "x",
+              }),
+            },
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => ended(plane).length === 1);
+    expect(acquired).toBe(1);
+
+    plane.send({ ...runStart, runId: "run-2", prompt: COMPACT_PROMPT, compact: true });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
+    // The sandbox is the first run's alone: compacting did not ask for one.
+    expect(acquired).toBe(1);
+    const [, filed] = appended(plane);
+    expect(filed?.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+    expect(JSON.stringify(filed?.messages.at(-1))).toContain(COMPACTED);
   });
 
   test("a run that reaches its turn limit still hands home what it did, with the error", async () => {

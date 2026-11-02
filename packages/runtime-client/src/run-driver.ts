@@ -49,6 +49,8 @@ export type CreateRuntimeAgent = (input: {
   model?: RunModel;
   /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
   role?: SubagentType;
+  /** The agent of a run that only summarizes the thread's history: it has no tools (decision 0097). */
+  compact?: boolean;
 }) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
 export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
@@ -206,6 +208,46 @@ export function createRunDriver(context: DriverContext) {
     return store.install(thread.id, skills, fetch, await context.sandbox.workspace(thread.id));
   }
 
+  // What a run that only compacts works with: the journal, and nothing of the thread's sandbox,
+  // which it neither starts nor needs (decision 0097).
+  async function compactionScope(
+    initial: RunRecord,
+    state: { record: RunRecord },
+    run: Live,
+  ): Promise<RunScope> {
+    const { runId, thread, model } = initial;
+    const save = (changes: Partial<RunRecord>) => {
+      state.record = { ...state.record, ...changes };
+      if (!context.stopped()) records.save(state.record);
+    };
+    const forward: Emit = (event: RunEvent, source) =>
+      report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source);
+    return {
+      runId,
+      thread,
+      run,
+      journaled: await context.journal,
+      current: () => undefined,
+      get record() {
+        return state.record;
+      },
+      save,
+      build: (id) => ({
+        ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
+        contextWindow: model?.contextWindow,
+      }),
+      forward,
+      async file(messages) {
+        if (messages.length === 0) return;
+        await context.call("memory.append", { runId, turn: state.record.turn, messages });
+        save({ turn: state.record.turn + messages.length });
+      },
+      stopIfCancelled() {
+        if (run.cancelReason) throw new Error(run.cancelReason);
+      },
+    };
+  }
+
   // Gets the run what it works with: the thread's sandbox and the journal. Everything a phase of the
   // run does goes through the scope this returns.
   async function acquire(
@@ -216,6 +258,7 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<RunScope> {
     const { env } = message ?? {};
     const { runId, thread, model } = initial;
+    if (initial.compact) return compactionScope(initial, state, run);
     // Read-only access to the thread's repository, asked for each time it is needed.
     const repoAccess = () => context.call("repo.access", { runId });
     await context.starting(thread.id);
@@ -475,6 +518,7 @@ export function createRunDriver(context: DriverContext) {
         model: message.model,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
+        compact: message.type === "run.start" ? message.compact : undefined,
         mentions: message.type === "run.start" ? message.mentions : undefined,
         skills: message.skills,
         agentId: `run-${message.runId}`,

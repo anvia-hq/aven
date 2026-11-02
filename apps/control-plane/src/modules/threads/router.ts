@@ -5,6 +5,7 @@ import { threadAccess } from "./access";
 import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
+  compactBody,
   createThreadBody,
   sendMessageBody,
   threadParams,
@@ -61,6 +62,14 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
         return status(202, { ok: true });
       },
       { thread: "own", params: threadParams, body: sendMessageBody },
+    )
+    .post(
+      "/:id/compact",
+      async ({ params, body, organizationId, user }) => {
+        await messages.compact(organizationId, user.id, params.id, body);
+        return status(202, { ok: true });
+      },
+      { thread: "own", params: threadParams, body: compactBody },
     )
     .post(
       "/:id/answer",

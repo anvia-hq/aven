@@ -86,6 +86,16 @@ describe("a run's message to its runtime", () => {
     expect(posted[2]).not.toHaveProperty("mcp", expect.anything());
   });
 
+  test("says a run only compacts, and says nothing for a run that does not (decision 0097)", () => {
+    const { posted, remote } = runtime();
+
+    remote.start({ thread, prompt: "/compact", compact: true });
+    remote.start({ thread, prompt: "hi" });
+
+    expect(posted[0]).toMatchObject({ type: "run.start", compact: true });
+    expect(posted[1]).not.toHaveProperty("compact", expect.anything());
+  });
+
   test("carries the project's environment variables, and none when it has none", () => {
     const { posted, remote } = runtime();
     const env = [{ name: "DATABASE_URL", value: "postgres://x" }];

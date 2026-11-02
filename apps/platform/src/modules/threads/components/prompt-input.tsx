@@ -15,10 +15,10 @@ import { useComposerChat } from "../hooks/use-composer-chat";
 import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
-import { mentionOf } from "../mentions";
+import { COMPACT_COMMAND, mentionOf } from "../mentions";
 import type { OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
-import { MentionChip } from "./mention-chip";
+import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
@@ -30,6 +30,8 @@ type Props = {
   /** The agent is working: nothing can be sent, and Send gives way to Stop. */
   running?: boolean;
   onStop?: () => void;
+  /** What `/compact` does, in a thread: summarize its history (decision 0097). */
+  onCompact?: (selection: RunSelection) => boolean | Promise<boolean>;
   autoFocus?: boolean;
   /** The thread this composer replies in, whose own model choice it uses; none for a new thread. */
   threadId?: string;
@@ -38,6 +40,7 @@ type Props = {
 };
 
 const renderEntity = ({ triggerId, id }: ComposerInputEntity) => {
+  if (id === COMPACT_COMMAND) return <CommandChip name="compact" />;
   const mention = mentionOf(triggerId, id);
   return mention ? <MentionChip {...mention} /> : null;
 };
@@ -66,6 +69,7 @@ function Composer({
   placeholder = "Ask anything about the codebase…",
   running = false,
   onStop,
+  onCompact,
   autoFocus,
   threadId,
   tools,
@@ -81,6 +85,7 @@ function Composer({
     selection: model.selection,
     running,
     onSubmit,
+    onCompact,
   });
 
   useEffect(() => {

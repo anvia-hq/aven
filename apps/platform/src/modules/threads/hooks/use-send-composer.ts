@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { toast } from "@/components/toast";
 
-import { mentionOf } from "../mentions";
+import { COMPACT_COMMAND, mentionOf } from "../mentions";
 import type { MessageMention, OutgoingMessage, RunSelection } from "../types";
 import type { useAttachments } from "./use-attachments";
 
@@ -22,6 +22,12 @@ function outgoing({ input, entities }: Draft) {
   return { prompt: input.trim(), mentions };
 }
 
+// Whether the composer holds nothing but the `/compact` command, picked from the `/` menu.
+function isCompactCommand({ input, entities }: Draft) {
+  const [only] = entities;
+  return entities.length === 1 && only?.id === COMPACT_COMMAND && input.trim() === only.text;
+}
+
 type Options = {
   composer: ReturnType<typeof useComposer>;
   attachments: ReturnType<typeof useAttachments>;
@@ -30,16 +36,37 @@ type Options = {
   running: boolean;
   // Resolves to whether the message was taken; the text and files are only cleared when it was.
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
+  /** Runs the `/compact` command with the model the composer shows, when the composer holds only it. */
+  onCompact?: (selection: RunSelection) => boolean | Promise<boolean>;
 };
 
 // Sending what the composer holds: its text, mentions and files, with the model picked for it.
-export function useSendComposer({ composer, attachments, selection, running, onSubmit }: Options) {
+export function useSendComposer({
+  composer,
+  attachments,
+  selection,
+  running,
+  onSubmit,
+  onCompact,
+}: Options) {
   const [sending, setSending] = useState(false);
   const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
   const canSend = hasContent && !running && !sending;
 
   async function submit() {
     if (!canSend) return;
+    if (onCompact && attachments.files.length === 0 && isCompactCommand(composer)) {
+      setSending(true);
+      try {
+        if (await onCompact(selection)) {
+          composer.setInput("");
+          composer.setEntities([]);
+        }
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
     const { prompt, mentions } = outgoing(composer);
     if (mentions.length > MENTION_LIMIT) {
       toast.add({

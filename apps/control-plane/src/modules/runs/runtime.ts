@@ -21,12 +21,14 @@ export type RunThread = {
 /** What can come with a run's prompt. */
 export type RunExtras = Pick<
   StartRunInput,
-  "attachments" | "mentions" | "skills" | "mcp" | "github" | "env" | "identity"
+  "attachments" | "mentions" | "skills" | "mcp" | "github" | "env" | "identity" | "compact"
 >;
 
 export type StartRunInput = {
   thread: RunThread;
   prompt: string;
+  /** Only summarize the thread's history: no sandbox, no tools (decision 0097). */
+  compact?: boolean;
   /** The files sent with the prompt, for the runner to copy into the sandbox (decision 0034). */
   attachments?: RunAttachment[];
   /** The files and skills the prompt mentions (decision 0036). */

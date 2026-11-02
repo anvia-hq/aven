@@ -1,3 +1,5 @@
+import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
+
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubUserTokenService } from "../github/user-tokens";
@@ -10,7 +12,7 @@ import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
 import type { RunIdentity } from "../workload-identity/grants";
 import { keepSecretAnswers } from "./secret-answers";
-import type { AnswerQuestionBody, SendMessageBody } from "./schema";
+import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 
 // Who a run is, for the identity tokens it can mint (decision 0049).
@@ -83,6 +85,22 @@ export const createThreadMessages = (runs: RunManager) => ({
     const sender = await senderExtras(userId);
     const scoped = await threadExtras(organizationId, thread, userId);
     await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
+  },
+
+  // Summarizes the thread's history, as a run of its own that needs no sandbox and no tools
+  // (decision 0097). The person's prompt is `/compact`, which the thread shows, and the agent's
+  // reply says whether anything was summarized.
+  async compact(
+    organizationId: string,
+    userId: string,
+    threadId: string,
+    selection: CompactBody = {},
+  ) {
+    const thread = await threadsService.owned({ organizationId, userId }, threadId);
+    await requireLiveProject(organizationId, thread.projectId);
+    if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+    const model = await resolveModel(userId, selection);
+    await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
   },
 
   async answer(
