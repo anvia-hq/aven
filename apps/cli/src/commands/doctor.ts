@@ -3,18 +3,22 @@ import { join } from "node:path";
 
 import { capture, dockerProblem, exec } from "../compose";
 import { parseEnv } from "../env-file";
+import { describeExposure, describeSignups } from "../exposure";
 import { waitForHealthy } from "../health";
 import { runnerEnvFile, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
 import { API_PORT } from "../server-plan";
 import { version } from "../version";
 
-type Check = { name: string; ok: boolean; detail: string };
+// A warning is worth reading but not a failure: a server open on a network is a choice.
+type Check = { name: string; ok: boolean; detail: string; warn?: boolean };
 
 /** Looks at everything Aven needs on this machine and says what is wrong. Exits non-zero when something is. */
 export async function doctor() {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
+  const warnUnless = (name: string, ok: boolean, detail: string) =>
+    checks.push({ name, ok, detail, warn: true });
 
   add("aven", true, version);
   const docker = await dockerProblem();
@@ -37,6 +41,13 @@ export async function doctor() {
         ? `answers at ${serverEnv.BETTER_AUTH_URL}`
         : `does not answer at ${url}. See: aven server logs`,
     );
+    const exposure = describeExposure(serverEnv);
+    warnUnless("exposure", exposure.ok, exposure.detail);
+    const registrationEnabled = answers ? await registrationIsOpen(serverEnv) : undefined;
+    if (registrationEnabled !== undefined) {
+      const signups = describeSignups(exposure, serverEnv, registrationEnabled);
+      warnUnless("sign-ups", signups.ok, signups.detail);
+    }
   }
 
   const runnerEnv = await readEnv(runnerEnvFile());
@@ -57,9 +68,25 @@ export async function doctor() {
   if (!serverEnv && !runnerEnv)
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");
 
-  for (const { name, ok, detail } of checks)
-    console.log(`${ok ? "ok  " : "FAIL"} ${name.padEnd(14)} ${detail}`);
-  if (checks.some((check) => !check.ok)) process.exit(1);
+  for (const { name, ok, detail, warn } of checks)
+    console.log(`${ok ? "ok  " : warn ? "warn" : "FAIL"} ${name.padEnd(14)} ${detail}`);
+  if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
+}
+
+// What the server itself says about sign-ups, as the register page asks; undefined when it does not say.
+async function registrationIsOpen(env: Record<string, string>) {
+  try {
+    const response = await fetch(
+      `http://localhost:${env.AVEN_API_PORT || API_PORT}/platform/config`,
+      {
+        signal: AbortSignal.timeout(3000),
+      },
+    );
+    const body = (await response.json()) as { registrationEnabled?: unknown };
+    return typeof body.registrationEnabled === "boolean" ? body.registrationEnabled : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function readEnv(file: string) {
