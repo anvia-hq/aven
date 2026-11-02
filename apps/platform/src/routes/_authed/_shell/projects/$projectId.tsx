@@ -28,7 +28,8 @@ function ProjectPage() {
   const { path = "" } = Route.useSearch();
   const navigate = useNavigate();
   const { project, loaded } = useProject(projectId);
-  const threads = useThreads().threads.filter((thread) => thread.projectId === projectId);
+  // Their own and the ones the workspace shares to read (decision 0084), newest first.
+  const threads = useThreads().all.filter((thread) => thread.projectId === projectId);
 
   if (!project) {
     if (!loaded) return null;

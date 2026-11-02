@@ -42,7 +42,10 @@ function SidebarProjectTile({
 
 export function SidebarThreads() {
   const navigate = useNavigate();
-  const threads = useThreads().threads.filter((thread) => thread.state === "open");
+  const { threads: own, shared: others } = useThreads();
+  const threads = own.filter((thread) => thread.state === "open");
+  // What the workspace shares to read (decision 0084), which its creator can still archive.
+  const shared = others.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
@@ -97,6 +100,32 @@ export function SidebarThreads() {
           <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>
         )}
       </SidebarMenu>
+      {shared.length > 0 && (
+        <>
+          <div className="px-4 pt-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Shared with workspace
+          </div>
+          <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
+            {shared.map((thread) => (
+              <SidebarMenuItem key={thread.id}>
+                <SidebarMenuButton
+                  render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
+                  isActive={pathname === `/threads/${thread.id}`}
+                >
+                  <SidebarProjectTile
+                    thread={thread}
+                    project={projects.find((candidate) => candidate.id === thread.projectId)}
+                    palette={palettes.get(thread.projectId)}
+                  />
+                  <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
+                    {thread.title}
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </>
+      )}
     </>
   );
 }

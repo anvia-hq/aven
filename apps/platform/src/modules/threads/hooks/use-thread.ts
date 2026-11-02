@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { api, attempt, postJson } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
 import type {
@@ -33,8 +34,11 @@ function parseEvent(data: string): RunEvent | null {
 // gets a snapshot of the transcript, then applies events as they arrive. Reloading or leaving the
 // page never stops the agent, and reattaching shows the run still in progress.
 export function useThread(threadId: string) {
-  const { threads, loaded, setRunning: setThreadRunning, refresh } = useThreads();
-  const thread = threads.find((candidate) => candidate.id === threadId);
+  const { all, loaded, setRunning: setThreadRunning, refresh } = useThreads();
+  const { data: session, isPending } = authClient.useSession();
+  const thread = all.find((candidate) => candidate.id === threadId);
+  // Only its creator drives a thread; anyone else it was shared with reads it (decision 0084).
+  const owned = thread !== undefined && thread.createdBy === session?.user.id;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [running, setRunning] = useState(false);
@@ -134,7 +138,9 @@ export function useThread(threadId: string) {
 
   return {
     thread,
-    loaded,
+    owned,
+    // Whose it is is known once the session is.
+    loaded: loaded && !isPending,
     messages,
     running,
     startedAt,

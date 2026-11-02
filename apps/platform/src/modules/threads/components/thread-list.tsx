@@ -2,6 +2,7 @@ import { Folder } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/badge";
+import { authClient } from "@/lib/auth-client";
 import { timeAgo } from "@/lib/format";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
@@ -9,6 +10,7 @@ import type { Thread } from "../types";
 
 export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: string }) {
   const { projects } = useProjects();
+  const { data: session } = authClient.useSession();
 
   return (
     <ul className="flex flex-col gap-0.5">
@@ -20,6 +22,12 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
             className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
           >
             <span className="min-w-0 flex-1 truncate text-sm">{thread.title}</span>
+            {/* Someone else's, which the workspace shares to read (decision 0084). */}
+            {thread.createdBy !== session?.user.id && (
+              <span className="shrink-0 truncate text-xs text-muted-foreground">
+                {thread.createdByName}
+              </span>
+            )}
             {thread.state !== "open" && (
               <Badge variant="secondary" className="capitalize">
                 {thread.state}

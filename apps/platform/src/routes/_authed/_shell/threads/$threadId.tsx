@@ -12,6 +12,7 @@ import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
+import { SharedNotice } from "@/modules/threads/components/shared-notice";
 import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
@@ -27,6 +28,7 @@ function ThreadPage() {
   const { threadId } = Route.useParams();
   const {
     thread,
+    owned,
     loaded,
     messages,
     running,
@@ -44,7 +46,8 @@ function ThreadPage() {
   const panels = useThreadPanels();
   const { overview, desktop, diff, files, terminal } = panels;
   // Files, Changes, Desktop and Terminal share one column, so the conversation keeps the same width whichever is open.
-  const sideOpen = diff.open || desktop.open || files.open || terminal.open;
+  // The Desktop and the Terminal are the thread's creator's alone (decision 0084).
+  const sideOpen = diff.open || files.open || (owned && (desktop.open || terminal.open));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   // What the pull request does not have yet (everything, before there is one): the badge shows it,
   // and Update PR has nothing to send without it. Asked for here, before the thread has loaded.
@@ -74,7 +77,7 @@ function ThreadPage() {
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div className="@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-r-xl md:border-y md:border-r md:border-sidebar-border">
-              <ThreadHeader thread={thread} panels={panels} />
+              <ThreadHeader thread={thread} panels={panels} owned={owned} />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div className="relative min-h-0 flex-1">
                 <ThreadMessages
@@ -85,7 +88,7 @@ function ThreadPage() {
                   error={error}
                   aside={
                     overview.open && (
-                      <OverviewColumn thread={thread} usage={usage} synced={synced} />
+                      <OverviewColumn thread={thread} usage={usage} synced={synced} owned={owned} />
                     )
                   }
                 />
@@ -97,23 +100,25 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
-                    <ShipBar thread={thread} unshipped={unshipped} />
-                    {question ? (
-                      <AnswerForm
-                        key={question.id}
-                        tool={question}
-                        threadId={thread.id}
-                        onSubmit={answer}
-                      />
-                    ) : (
-                      <PromptInput
-                        threadId={thread.id}
-                        running={running}
-                        onStop={cancel}
-                        placeholder="Reply to the agent…"
-                        onSubmit={send}
-                      />
-                    )}
+                    {owned && <ShipBar thread={thread} unshipped={unshipped} />}
+                    {!owned && <SharedNotice thread={thread} />}
+                    {owned &&
+                      (question ? (
+                        <AnswerForm
+                          key={question.id}
+                          tool={question}
+                          threadId={thread.id}
+                          onSubmit={answer}
+                        />
+                      ) : (
+                        <PromptInput
+                          threadId={thread.id}
+                          running={running}
+                          onStop={cancel}
+                          placeholder="Reply to the agent…"
+                          onSubmit={send}
+                        />
+                      ))}
                   </div>
                 </div>
               </div>
@@ -127,6 +132,7 @@ function ThreadPage() {
                   threadId={thread.id}
                   running={running}
                   panels={panels}
+                  owned={owned}
                   handleClassName={GAP_HANDLE}
                 />
               </ResizablePanel>

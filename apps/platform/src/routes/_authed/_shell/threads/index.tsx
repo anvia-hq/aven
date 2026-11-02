@@ -22,9 +22,10 @@ export const Route = createFileRoute("/_authed/_shell/threads/")({
 function NewThread() {
   const startThread = useStartThread();
   const { projects, loaded } = useProjects();
-  const recent = useThreads()
-    .threads.filter((thread) => thread.state === "open")
-    .slice(0, 3);
+  const { threads, shared } = useThreads();
+  const recent = threads.filter((thread) => thread.state === "open").slice(0, 3);
+  // What the rest of the workspace shares to read (decision 0084).
+  const sharedRecent = shared.filter((thread) => thread.state === "open").slice(0, 3);
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
   // The person's own choice, else the project the address asks for if it is one of theirs.
@@ -70,6 +71,14 @@ function NewThread() {
           <h3 className="px-3 text-xs font-medium text-muted-foreground">Recent</h3>
           <ThreadList threads={recent} empty="No threads yet." />
         </section>
+        {sharedRecent.length > 0 && (
+          <section aria-label="Shared with workspace" className="flex flex-col gap-1">
+            <h3 className="px-3 text-xs font-medium text-muted-foreground">
+              Shared with workspace
+            </h3>
+            <ThreadList threads={sharedRecent} />
+          </section>
+        )}
       </main>
     </div>
   );

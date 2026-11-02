@@ -1,6 +1,7 @@
 import { useAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 
+import { authClient } from "@/lib/auth-client";
 import { createListStore } from "@/lib/list-store";
 
 import { threadsAtom } from "../atoms/threads-atom";
@@ -16,10 +17,14 @@ const threadsStore = createListStore<Thread>({
 // read refetches for whoever is now active.
 export const resetThreads = threadsStore.reset;
 
-// All threads, most recently updated first. Loads on first use; call `refresh` after changes, or
-// `setRunning` when only a thread's running flag moved.
+// The threads the person can see, most recently updated first: their own as `threads`, and as
+// `shared` the ones other people of the workspace shared to read (decision 0084), which the
+// server sends and nobody else's. `all` is both, for finding a thread by its address. Loads on
+// first use; call `refresh` after changes, or `setRunning` when only a thread's running flag moved.
 export function useThreads() {
   const [threads, setThreads] = useAtom(threadsAtom);
+  const { data: session } = authClient.useSession();
+  const me = session?.user.id;
 
   useEffect(() => {
     if (threads === null) void threadsStore.refresh();
@@ -35,8 +40,11 @@ export function useThreads() {
     [setThreads],
   );
 
+  const all = threads ?? [];
   return {
-    threads: threads ?? [],
+    threads: all.filter((thread) => thread.createdBy === me),
+    shared: all.filter((thread) => thread.createdBy !== me),
+    all,
     loaded: threads !== null,
     refresh: threadsStore.refresh,
     setRunning,

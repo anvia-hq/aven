@@ -53,10 +53,17 @@ export type ThreadPullRequest = {
 
 type ThreadState = "open" | "snoozed" | "archived";
 
+/** Who may see a thread: only its creator, or every member of the workspace, to read (decision 0084). */
+export type ThreadVisibility = "private" | "workspace";
+
 export type Thread = {
   id: string;
   projectId: string;
   title: string;
+  /** The person who made it: the only one who can drive it. */
+  createdBy: string;
+  createdByName: string;
+  visibility: ThreadVisibility;
   /** The runner that hosts the thread's sandbox, copied from its project when the thread was made. */
   runtimeId: string;
   state: ThreadState;
