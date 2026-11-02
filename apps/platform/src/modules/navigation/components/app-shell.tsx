@@ -61,9 +61,6 @@ export function AppShell({ user, sidebar }: Props) {
         <div className="mt-3">
           <BotRailLink />
         </div>
-        <div className="mt-auto mb-1">
-          <ThemeSelector />
-        </div>
       </aside>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
           border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
@@ -106,16 +103,19 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Settings"
-              className="justify-start group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:p-0"
-              onClick={() => navigate({ to: "/settings/profile" })}
-            >
-              <Cog />
-              <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-            </Button>
+            <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Settings"
+                className="min-w-0 flex-1 justify-start group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:p-0"
+                onClick={() => navigate({ to: "/settings/profile" })}
+              >
+                <Cog />
+                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+              </Button>
+              <ThemeSelector />
+            </div>
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
