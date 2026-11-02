@@ -37,13 +37,15 @@ export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
   } catch (error) {
     throw new UnprocessableError(describeError(error));
   }
+  // Declining stores nothing, so it is always allowed: a request for a name that cannot be stored
+  // (a reserved one) must not leave the person with no way to answer it.
+  if (input.skip) {
+    return input.answers.map(({ questionId }) => ({ questionId, value: "not provided" }));
+  }
   for (const { id } of interaction.questions) {
     if (!variableName.safeParse(id).success) {
       throw new UnprocessableError(`${id} cannot be a variable name`);
     }
-  }
-  if (input.skip) {
-    return input.answers.map(({ questionId }) => ({ questionId, value: "not provided" }));
   }
 
   const scope: Scope =

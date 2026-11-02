@@ -6,7 +6,8 @@ const DESCRIPTION = `Ask the user for a secret you need (an API key, a token, a 
 Use this tool, and never ask_user or a message, whenever you need a secret you do not have. Check first that it is not already set: the project's environment variables are listed in your instructions.
 
 How to ask:
-- Give each question an \`id\` that is the name of the environment variable to set, in UPPER_SNAKE_CASE, such as STRIPE_API_KEY. It becomes that variable.
+- Give each question an \`id\` that is the name of the environment variable to set, in UPPER_SNAKE_CASE, such as STRIPE_API_KEY. It becomes that variable. A name that starts with GH_, GITHUB_, GIT_, AVEN_ or LD_, and PATH, HOME, USER, SHELL and PWD, are reserved and cannot be stored, so do not ask for them.
+- Never ask for a GitHub token to push or open a pull request: \`gh\` and \`git\` are signed in as the person who connected their GitHub account to Aven. If they are not signed in, say so and tell the person to connect GitHub in Aven, then carry on with what you can do.
 - Write \`text\` as a short, complete request that says what the value is for and, if you know it, where to find it. Do not include choices; leave allowCustom off.
 - Ask for everything you need in one call, no more than 4.
 

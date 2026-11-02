@@ -126,6 +126,22 @@ run("keepSecretAnswers (postgres)", async () => {
     expect(await named(inProject)).toEqual(before);
   });
 
+  test("a request for a name that cannot be stored can still be declined, and only declined", async () => {
+    const before = await named(inProject);
+    const asked = continuation("request_secret", ["GITHUB_TOKEN"]);
+    const answers = [{ questionId: "GITHUB_TOKEN", value: "ghp_never_stored" }];
+
+    // Giving it is refused, as the name is reserved (the sign-in is Aven's to make)...
+    await expect(keepSecretAnswers(input({ continuation: asked, answers }))).rejects.toThrow(
+      "GITHUB_TOKEN cannot be a variable name",
+    );
+    // ...and declining it gets the agent its answer, with nothing stored.
+    expect(await keepSecretAnswers(input({ continuation: asked, answers, skip: true }))).toEqual([
+      { questionId: "GITHUB_TOKEN", value: "not provided" },
+    ]);
+    expect(await named(inProject)).toEqual(before);
+  });
+
   test("any other question's answers are returned as they are, and nothing is stored", async () => {
     const before = await named(inProject);
     const answers = [{ questionId: "color", value: "blue" }];

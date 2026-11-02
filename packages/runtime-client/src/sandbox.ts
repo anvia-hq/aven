@@ -18,6 +18,7 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { ArtifactStore } from "./artifacts";
+import { homeRepairArgs } from "./container-home";
 import {
   RESUME_SCRIPT,
   containerBaseArgs,
@@ -515,6 +516,7 @@ export class Sandboxes implements ThreadWorkspaces {
     const token = randomBytes(24).toString("base64url");
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
+    const user = hostUser();
     const args = dockerRunArgs({
       name,
       threadId,
@@ -529,7 +531,7 @@ export class Sandboxes implements ThreadWorkspaces {
       ...this.#containers,
       platform: this.#config.platform,
       runtime: this.#config.runtime,
-      user: hostUser(),
+      user,
     });
     const started = await this.#run(args);
     if (started.code !== 0) {
@@ -537,8 +539,22 @@ export class Sandboxes implements ThreadWorkspaces {
       throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
     }
     this.#running.add(threadId);
+    if (user) await this.#repairHome(name, user);
     await this.#awaitDaemon(threadId);
     await this.#resume(name, root);
+  }
+
+  // A thread keeps the image it started from, which an environment saved before decision 0095 made
+  // with a home the host user cannot use: repaired in the container, which costs nothing on an image
+  // that has the fix. A failure is logged and the agent goes on.
+  async #repairHome(name: string, user: string) {
+    const repaired = await this.#run(homeRepairArgs(name, user));
+    if (repaired.code !== 0) {
+      console.warn(
+        `Could not repair the home of ${name} (exit ${repaired.code}):`,
+        repaired.stderr.trim(),
+      );
+    }
   }
 
   // Runs the repository's `.aven/resume`, if it has one, now that the container is up. The run

@@ -3,6 +3,7 @@ import { chmod, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { homeRepairArgs } from "./container-home";
 import { git } from "./git-clone";
 import { dockerRunArgs, runnerLabel, Sandboxes, type ThreadSandbox } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
@@ -1010,6 +1011,59 @@ live("the sandbox image for a user it has never heard of (real docker)", () => {
       "git=probe",
       "gh",
     ]);
+  }, 120_000);
+
+  test("is repaired in a container made from an image that has not got the fix", async () => {
+    // A container started as the host user, with the entrypoint left out, as the old image had no
+    // entry for the uid, and its home and trees made the way that image had them.
+    const name = `aven-repair-${crypto.randomUUID().slice(0, 8)}`;
+    const docker = async (args: string[]) => {
+      const child = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
+      const [stdout, stderr] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ]);
+      return { code: await child.exited, stdout: stdout.trim(), stderr };
+    };
+    try {
+      await docker([
+        "run",
+        "-d",
+        "--name",
+        name,
+        "--user",
+        "4242:4242",
+        "--entrypoint",
+        "sleep",
+        image!,
+        "600",
+      ]);
+      await docker([
+        "exec",
+        "-u",
+        "0",
+        name,
+        "sh",
+        "-c",
+        "chmod 0700 /home/node && chmod 0644 /etc/passwd /etc/group && chmod -R go-w /opt/venv /usr/local/cargo /usr/local/rustup",
+      ]);
+      const probe =
+        "touch $HOME/.p && touch /opt/venv/.p && mkdir -p /usr/local/cargo/registry && echo $(id -un)";
+      expect((await docker(["exec", name, "sh", "-c", probe])).code).not.toBe(0);
+
+      const repaired = await docker(homeRepairArgs(name, "4242:4242"));
+      expect(repaired.code).toBe(0);
+
+      const after = await docker(["exec", name, "sh", "-c", probe]);
+      expect(after.stdout).toBe("aven");
+      // A second run, on an image that now has the fix, changes nothing and does not fail.
+      expect((await docker(homeRepairArgs(name, "4242:4242"))).code).toBe(0);
+      expect(
+        (await docker(["exec", name, "sh", "-c", "grep -c '^aven:' /etc/passwd"])).stdout,
+      ).toBe("1");
+    } finally {
+      await docker(["rm", "-f", name]);
+    }
   }, 120_000);
 
   test("is still the image's own user when nobody names another", async () => {
