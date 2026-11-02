@@ -17,6 +17,7 @@ import { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import type { RunManager } from "../runs/service";
 import { shipRouter } from "../ship/router";
+import { terminalRouter } from "../terminal/router";
 import { createShipService } from "../ship/service";
 import type { ThreadMessages } from "./messages";
 import { threadsRouter } from "./router";
@@ -46,6 +47,7 @@ run("a thread's access (real postgres)", async () => {
     .use(artifactsRouter(hub))
     .use(processesRouter(hub))
     .use(desktopRouter(hub))
+    .use(terminalRouter(hub))
     .use(shipRouter(createShipService(hub, { send: async () => {} })))
     .listen({ port: 0 });
   const base = `http://localhost:${server.server?.port}`;
@@ -147,5 +149,41 @@ run("a thread's access (real postgres)", async () => {
   test("unsharing takes it away again", async () => {
     await call("PATCH", `/threads/${id}`, owner.token, { visibility: "private" });
     expect((await call("GET", `/threads/${id}`, mate.token)).status).toBe(404);
+  });
+
+  // Whether a socket is let through the upgrade: it opens, or the request is refused first.
+  const upgrades = (path: string, token: string) =>
+    new Promise<boolean>((resolve) => {
+      const socket = new WebSocket(`${base.replace("http", "ws")}${path}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      socket.onopen = () => {
+        socket.close();
+        resolve(true);
+      };
+      socket.onerror = () => resolve(false);
+    });
+  const sockets = [
+    `/threads/${id}/desktop/stream`,
+    `/threads/${id}/terminal/stream?cols=80&rows=24`,
+  ];
+
+  test("a teammate cannot open the Desktop or the Terminal of a thread, shared or not", async () => {
+    for (const visibility of ["private", "workspace"] as const) {
+      await call("PATCH", `/threads/${id}`, owner.token, { visibility });
+      for (const path of sockets) {
+        expect([visibility, path, await upgrades(path, mate.token)]).toEqual([
+          visibility,
+          path,
+          false,
+        ]);
+        expect([visibility, path, await upgrades(path, owner.token)]).toEqual([
+          visibility,
+          path,
+          true,
+        ]);
+      }
+    }
+    await call("PATCH", `/threads/${id}`, owner.token, { visibility: "private" });
   });
 });
