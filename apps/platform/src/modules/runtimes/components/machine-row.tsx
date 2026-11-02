@@ -4,7 +4,7 @@ import { cn } from "cn";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
-import { machineMetrics, type MachineMetric } from "../machine-metrics";
+import { isStale, machineMetrics, type MachineMetric } from "../machine-metrics";
 import type { Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
 
@@ -17,6 +17,12 @@ function missing(runtime: Runtime) {
     return {
       short: "Offline",
       reason: runtime.lastSeenAt ? `Offline, seen ${timeAgo(runtime.lastSeenAt, true)}` : "Offline",
+    };
+  }
+  if (runtime.stats) {
+    return {
+      short: "Waiting…",
+      reason: `No load reported since ${timeAgo(runtime.stats.reportedAt, true)}: the runner is connected but has stopped saying.`,
     };
   }
   if (runtime.outdated) {
@@ -53,7 +59,9 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
 // One runner as a single row: whether it is online, its name, and CPU, memory and disk as three
 // small meters; the detail behind them is on hover, and a click goes to the runtimes (decision 0091).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
-  const metrics = runtime.stats ? machineMetrics(runtime.stats) : [];
+  // Numbers from a runner that stopped reporting are not shown as its load now.
+  const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
+  const metrics = stats ? machineMetrics(stats) : [];
   const gap = missing(runtime);
 
   return (
@@ -75,7 +83,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
             )}
           />
           <span className="min-w-0 flex-1 truncate">{runtime.name}</span>
-          {runtime.stats ? (
+          {stats ? (
             metrics.map((metric) => <Metric key={metric.key} metric={metric} runtime={runtime} />)
           ) : (
             <span className="shrink-0 text-muted-foreground">{gap.short}</span>
@@ -84,7 +92,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
         <TooltipContent side="right" className="items-start">
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">{runtime.name}</span>
-            {runtime.stats ? (
+            {stats ? (
               <>
                 {metrics.map((metric) => (
                   <span key={metric.key}>
@@ -92,7 +100,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
                     {metric.detail}
                   </span>
                 ))}
-                <span>{sandboxesLine(runtime.stats.sandboxes)}</span>
+                <span>{sandboxesLine(stats.sandboxes)}</span>
               </>
             ) : (
               <span>{gap.reason}</span>

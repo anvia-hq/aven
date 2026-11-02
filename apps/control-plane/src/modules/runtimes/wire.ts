@@ -173,15 +173,23 @@ const bytes = z
   .int()
   .nonnegative()
   .max(2 ** 50);
-const hostStats = z.object({
-  cores: z.number().int().min(1).max(4096),
-  cpuPercent: z.number().min(0).max(100).nullable(),
-  memoryUsedBytes: bytes,
-  memoryTotalBytes: bytes,
-  diskUsedBytes: bytes,
-  diskTotalBytes: bytes,
-  sandboxes: z.number().int().nonnegative().max(100_000),
-});
+const hostStats = z
+  .object({
+    cores: z.number().int().min(1).max(4096),
+    cpuPercent: z.number().min(0).max(100).nullable(),
+    memoryUsedBytes: bytes,
+    memoryTotalBytes: bytes,
+    diskUsedBytes: bytes,
+    diskTotalBytes: bytes,
+    sandboxes: z.number().int().nonnegative().max(100_000),
+  })
+  // More used than there is would only be drawn as a figure past full.
+  .refine(
+    (stats) =>
+      stats.memoryUsedBytes <= stats.memoryTotalBytes &&
+      stats.diskUsedBytes <= stats.diskTotalBytes,
+    "used is more than the total",
+  );
 
 const frame = z.discriminatedUnion("type", [
   z.object({

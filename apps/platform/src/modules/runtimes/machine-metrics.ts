@@ -14,6 +14,13 @@ export type MachineMetric = {
   detail: string;
 };
 
+/** A runner reports every 15 seconds; numbers older than this are a runner that stopped, not a quiet machine. */
+export const STATS_STALE_MS = 60_000;
+
+/** Whether the numbers are too old to show as the machine's load now. */
+export const isStale = (stats: RuntimeStats, now = Date.now()) =>
+  now - Date.parse(stats.reportedAt) > STATS_STALE_MS;
+
 /** A meter this full is a warning, drawn in the destructive colour. */
 export const METER_HIGH = 90;
 

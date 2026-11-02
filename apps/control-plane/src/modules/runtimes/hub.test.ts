@@ -782,8 +782,13 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       stats: { cpuPercent: 37, sandboxes: 2, memoryTotalBytes: 16, reportedAt: expect.any(String) },
     });
 
-    // A frame that is not stats changes nothing, and once the runtime is gone so are its numbers.
+    // A frame that is not stats changes nothing...
     ws.send(JSON.stringify({ type: "host.stats", stats: { cores: 0 } }));
+    ws.send(JSON.stringify({ type: "hello", version: WIRE_VERSION, runs: [] }));
+    await Bun.sleep(100);
+    expect(hub.statsOf(runtime.id)).toMatchObject({ cpuPercent: 37, sandboxes: 2 });
+
+    // ...and once the runtime is gone so are its numbers.
     ws.close();
     await until(() => !hub.isOnline(runtime.id));
     expect(hub.statsOf(runtime.id)).toBeUndefined();

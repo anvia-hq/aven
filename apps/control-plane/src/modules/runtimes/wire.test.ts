@@ -456,6 +456,9 @@ describe("host stats", () => {
     expect(parseRuntimeFrame(frame({ cores: 0 }))).toBeNull();
     expect(parseRuntimeFrame(frame({ sandboxes: 1.5 }))).toBeNull();
     expect(parseRuntimeFrame(frame({ diskUsedBytes: "lots" }))).toBeNull();
+    // More used than there is.
+    expect(parseRuntimeFrame(frame({ memoryUsedBytes: 17_000_000_000 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ diskUsedBytes: 99_000_000_000 }))).toBeNull();
     expect(parseRuntimeFrame(JSON.stringify({ type: "host.stats" }))).toBeNull();
   });
 });

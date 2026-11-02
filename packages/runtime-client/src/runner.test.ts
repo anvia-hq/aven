@@ -153,6 +153,21 @@ describe("startRuntime host stats", () => {
       stats: { sandboxes: 2, cores: expect.any(Number), diskTotalBytes: expect.any(Number) },
     });
   });
+
+  test("stops telling once the runner stops, not leaving its timer behind", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const { plane, runtime } = connect({ sandbox: workspaces, statsIntervalMs: 30 });
+    await runtime.ready;
+    const stats = () => plane.received.filter((m) => m.type === "host.stats");
+    await until(() => stats().length >= 2);
+
+    await runtime.stop();
+    const sent = stats().length;
+    await Bun.sleep(200);
+
+    expect(stats().length).toBe(sent);
+  });
 });
 
 describe("startRuntime desktops", () => {

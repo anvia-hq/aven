@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { machineMetrics } from "./machine-metrics";
+import { isStale, machineMetrics, STATS_STALE_MS } from "./machine-metrics";
 
 const stats = {
   cores: 4,
@@ -35,5 +35,14 @@ describe("machineMetrics", () => {
 
   test("say nothing of a disk with no size", () => {
     expect(machineMetrics({ ...stats, diskTotalBytes: 0 })[2]?.percent).toBeNull();
+  });
+});
+
+describe("isStale", () => {
+  test("is a report older than a minute, since a runner that is up reports every 15 seconds", () => {
+    const at = Date.parse(stats.reportedAt);
+    expect(isStale(stats, at + 15_000)).toBe(false);
+    expect(isStale(stats, at + STATS_STALE_MS)).toBe(false);
+    expect(isStale(stats, at + STATS_STALE_MS + 1)).toBe(true);
   });
 });

@@ -33,6 +33,8 @@ describe("storageSize", () => {
     expect(storageSize(5 * 1024 ** 2)).toBe("5.0 MB");
     expect(storageSize(5.5 * 1024 ** 3)).toBe("5.5 GB");
     expect(storageSize(1024 ** 4)).toBe("1.0 TB");
+    // Just under a terabyte rounds up to one, rather than reading "1024.0 GB".
+    expect(storageSize(1024 ** 4 - 1024 ** 2)).toBe("1.0 TB");
   });
 });
 
@@ -40,6 +42,6 @@ describe("storageUsage", () => {
   test("says used and total once, in the total's unit", () => {
     expect(storageUsage(6.4 * 1024 ** 3, 15.6 * 1024 ** 3)).toBe("6.4 of 15.6 GB");
     expect(storageUsage(1.5 * 1024 ** 4, 2 * 1024 ** 4)).toBe("1.5 of 2.0 TB");
-    expect(storageUsage(200, 1000)).toBe("200 of 1000 B");
+    expect(storageUsage(200, 1000)).toBe("200 B of 1000 B");
   });
 });

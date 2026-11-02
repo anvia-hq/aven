@@ -19,20 +19,27 @@ export const fileSize = (bytes: number) => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
+// A size in gigabytes or terabytes, whichever reads in fewer digits: 1024 GB is "1.0 TB", not
+// "1024.0 GB". Smaller than a gigabyte there is none, and `null` says to use `fileSize`.
+const storageUnit = (bytes: number) => {
+  const GB = 1024 ** 3;
+  if (bytes < GB) return null;
+  if ((bytes / GB).toFixed(1) === "1024.0" || bytes >= 1024 * GB)
+    return { label: "TB", scale: 1024 * GB };
+  return { label: "GB", scale: GB };
+};
+
 // For a disk or memory: 5_400_000_000 -> "5.0 GB", 2_199_023_255_552 -> "2.0 TB", smaller ones as fileSize.
 export const storageSize = (bytes: number) => {
-  const GB = 1024 ** 3;
-  if (bytes < GB) return fileSize(bytes);
-  if (bytes < 1024 * GB) return `${(bytes / GB).toFixed(1)} GB`;
-  return `${(bytes / 1024 / GB).toFixed(1)} TB`;
+  const unit = storageUnit(bytes);
+  return unit ? `${(bytes / unit.scale).toFixed(1)} ${unit.label}` : fileSize(bytes);
 };
 
 // How much of a disk or memory is used, in the total's unit: 6.4 GB of 15.6 GB -> "6.4 of 15.6 GB".
 export const storageUsage = (used: number, total: number) => {
-  const unit = storageSize(total).split(" ")[1]!;
-  const scale = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit]!;
-  const own = (bytes: number) => (unit === "B" ? `${bytes}` : (bytes / scale).toFixed(1));
-  return `${own(used)} of ${own(total)} ${unit}`;
+  const unit = storageUnit(total);
+  if (!unit) return `${fileSize(used)} of ${fileSize(total)}`;
+  return `${(used / unit.scale).toFixed(1)} of ${(total / unit.scale).toFixed(1)} ${unit.label}`;
 };
 
 // 331300 -> "331.3k", 1000000 -> "1M".
