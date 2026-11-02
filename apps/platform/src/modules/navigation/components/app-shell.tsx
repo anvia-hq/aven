@@ -74,8 +74,10 @@ export function AppShell({ user, sidebar }: Props) {
       <div
         className={cn(
           "flex min-w-0 flex-1 md:my-2 md:mr-2",
+          // The panel is as tall as the screen and its page scrolls inside it, so the panel keeps its
+          // edges and the sidebar's, whatever the page holds.
           !drawsOwnCards &&
-            "md:overflow-clip md:rounded-xl md:border-y md:border-r md:border-sidebar-border md:bg-background",
+            "md:h-[calc(100svh-1rem)] md:overflow-clip md:rounded-xl md:border-y md:border-r md:border-sidebar-border md:bg-background",
         )}
       >
         <Sidebar
@@ -124,7 +126,9 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
-        <SidebarInset className={cn(drawsOwnCards && "md:bg-transparent")}>
+        <SidebarInset
+          className={cn(drawsOwnCards ? "md:bg-transparent" : "md:min-h-0 md:overflow-y-auto")}
+        >
           <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">
             <SidebarTrigger />
             <span className="text-sm font-medium">Aven</span>

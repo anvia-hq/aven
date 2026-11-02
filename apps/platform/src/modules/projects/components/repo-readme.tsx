@@ -1,6 +1,7 @@
 import { BookOpen } from "@mynaui/icons-react";
 
 import { Markdown } from "@/components/markdown";
+import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 
 import { useProjectReadme } from "../hooks/use-project-readme";
@@ -17,11 +18,15 @@ export function RepoReadme({ project }: { project: Project }) {
   if (!loading && (!readme || problem !== undefined)) return null;
 
   return (
-    <section aria-label="README" className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex h-11 items-center gap-2 border-b px-4 text-sm font-medium">
-        <BookOpen className="size-4 text-muted-foreground" />
-        {readme?.name ?? "README"}
-      </div>
+    <SectionCard
+      label="README"
+      title={
+        <>
+          <BookOpen className="size-4 text-muted-foreground" />
+          {readme?.name ?? "README"}
+        </>
+      }
+    >
       <div className="p-6">
         {loading && (
           <div className="flex flex-col gap-2" aria-busy>
@@ -62,6 +67,6 @@ export function RepoReadme({ project }: { project: Project }) {
           </p>
         )}
       </div>
-    </section>
+    </SectionCard>
   );
 }

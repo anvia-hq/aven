@@ -25,19 +25,21 @@ test.describe("projects", () => {
     await expect(page.getByRole("heading", { name: "Project not found" })).toHaveCount(0);
   });
 
-  test("starts a thread from the project page", async ({ page }) => {
+  test("a project's page lists the threads started in it", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await addRunner(page);
     await connectGithub(page);
     await importRepository(page, "shiny-app");
-    await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
 
+    // Started in the project, as its page's Start thread button asks for.
+    const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    await page.goto(`/threads?project=${project!.id}`);
     await page.getByRole("textbox", { name: "Prompt" }).fill("Explain the project layout");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();
 
-    await page.goBack();
+    await page.goto("/projects");
+    await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "Explain the project layout",
     );

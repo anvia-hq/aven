@@ -1,7 +1,10 @@
 import { Trash } from "@mynaui/icons-react";
 
 import { Badge } from "@/components/badge";
+import { cn } from "cn";
+
 import { Button } from "@/components/button";
+import { SectionCard } from "@/components/section-card";
 
 import { useCanChangeVariables } from "../hooks/use-can-change-variables";
 import { useVariables } from "../hooks/use-variables";
@@ -52,41 +55,58 @@ type Props = {
   title: string;
   /** What to say when there are none. */
   empty: string;
+  /** Drawn as a card with a header bar, as on a project's page, instead of a plain section. */
+  framed?: boolean;
 };
 
 // One scope's environment variables: a project's, the workspace's or the person's own (decision
 // 0046). Changing them is offered only to who may.
-export function VariablesSection({ scope, title, empty }: Props) {
+export function VariablesSection({ scope, title, empty, framed = false }: Props) {
   const { variables, loaded } = useVariables(scope);
   const canChange = useCanChangeVariables(scope);
 
   if (!loaded) return null;
 
+  const actions = (
+    <>
+      <VariableHistoryDialog scope={scope} />
+      {canChange && variables.length < MAX_VARIABLES && (
+        <VariableDialog scope={scope} label="Add" />
+      )}
+    </>
+  );
+  const list =
+    variables.length === 0 ? (
+      <p className={cn("text-sm text-muted-foreground", framed && "p-4")}>{empty}</p>
+    ) : (
+      <ul
+        className={cn("flex flex-col", framed ? "px-4 [&>li:last-child]:border-b-0" : "border-t")}
+      >
+        {variables.map((variable) => (
+          <VariableRow
+            key={variable.name}
+            scope={scope}
+            variable={variable}
+            canChange={canChange}
+          />
+        ))}
+      </ul>
+    );
+
+  if (framed) {
+    return (
+      <SectionCard title={title} actions={actions}>
+        {list}
+      </SectionCard>
+    );
+  }
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm text-muted-foreground">{title}</h2>
-        <div className="flex items-center gap-1">
-          <VariableHistoryDialog scope={scope} />
-          {canChange && variables.length < MAX_VARIABLES && (
-            <VariableDialog scope={scope} label="Add" />
-          )}
-        </div>
+        <div className="flex items-center gap-1">{actions}</div>
       </div>
-      {variables.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{empty}</p>
-      ) : (
-        <ul className="flex flex-col border-t">
-          {variables.map((variable) => (
-            <VariableRow
-              key={variable.name}
-              scope={scope}
-              variable={variable}
-              canChange={canChange}
-            />
-          ))}
-        </ul>
-      )}
+      {list}
     </section>
   );
 }

@@ -82,6 +82,35 @@ test.describe("the project page", () => {
     await expect(page.getByRole("region", { name: "README" })).toBeVisible();
   });
 
+  test("Start thread opens the new-thread page with this project chosen", async ({ page }) => {
+    await registerUser(page, "repo", "Repo Person");
+    await projectOf(page, "shiny-app");
+    // A second project, so that the choice cannot be the only one there is.
+    const [installation] = await (await page.request.get("/api/github/installations")).json();
+    const [runtime] = await (await page.request.get("/api/runtimes")).json();
+    const docs = await page.request.post("/api/projects", {
+      data: {
+        installationId: installation.id,
+        repository: "acme/docs-site",
+        runtimeId: runtime.id,
+      },
+    });
+    const { id } = (await docs.json()) as { id: string };
+
+    await page.goto(`/projects/${id}`);
+    await page.getByRole("button", { name: "Start thread" }).click();
+    await expect(page).toHaveURL(new RegExp(`/threads\\?project=${id}$`));
+    await expect(page.getByRole("combobox", { name: "Project" })).toContainText("docs-site");
+
+    await page.getByRole("textbox", { name: "Prompt" }).fill("Look at the docs");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await page.goto(`/projects/${id}`);
+    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
+      "Look at the docs",
+    );
+  });
+
   test("a repository with no README has no README section, and a path that is not a folder says so", async ({
     page,
   }) => {

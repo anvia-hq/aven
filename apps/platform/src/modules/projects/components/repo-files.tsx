@@ -1,6 +1,7 @@
 import { ChevronRight, ExternalLink, File, Folder } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
+import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 
 import { useProjectFolder } from "../hooks/use-project-folder";
@@ -80,10 +81,7 @@ export function RepoFiles({ project, path }: Props) {
   const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
 
   return (
-    <section aria-label="Files" className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex h-11 items-center border-b px-4">
-        <Trail project={project} path={path} />
-      </div>
+    <SectionCard title={<Trail project={project} path={path} />} label="Files">
       {loading && (
         <div className="flex flex-col gap-2 p-4" aria-busy>
           {Array.from({ length: 5 }, (_, index) => (
@@ -118,6 +116,6 @@ export function RepoFiles({ project, path }: Props) {
           )}
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

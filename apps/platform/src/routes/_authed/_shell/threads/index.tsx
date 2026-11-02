@@ -11,6 +11,11 @@ import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
+  // The project to start in, which a project's page asks for; none is the person's own choice.
+  validateSearch: (search: Record<string, unknown>): { project?: string } => ({
+    project:
+      typeof search.project === "string" && search.project !== "" ? search.project : undefined,
+  }),
   component: NewThread,
 });
 
@@ -20,7 +25,7 @@ function NewThread() {
   const recent = useThreads()
     .threads.filter((thread) => thread.state === "open")
     .slice(0, 3);
-  const [projectId, setProjectId] = useState<string | undefined>(undefined);
+  const [projectId, setProjectId] = useState<string | undefined>(Route.useSearch().project);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
     startThread(projectId, message, selection);
