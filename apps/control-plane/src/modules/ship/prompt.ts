@@ -5,6 +5,9 @@ import { UnprocessableError } from "../../errors";
 /** Where a repository keeps its own way of shipping (decision 0044). */
 export const SHIP_PROMPT_FILE = ".aven/ship.md";
 
+/** Where `/setup-env` writes the repository's environment script (decision 0043). */
+export const SETUP_FILE = ".aven/setup";
+
 /** A custom prompt may be this long, as in Amp. */
 export const MAX_SHIP_PROMPT_CHARS = 10_000;
 

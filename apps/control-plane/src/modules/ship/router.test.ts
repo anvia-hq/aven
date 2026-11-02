@@ -21,6 +21,8 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
 
   const sent: { userId: string; threadId: string; prompt: string }[] = [];
   let connected = true;
+  // The files the thread's workspace has.
+  let workspaceFiles: string[] = [];
   const service = createShipService({} as RuntimeHub, {
     userTokens: {
       use: async () =>
@@ -28,6 +30,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     },
     github: { requireWritable: async () => undefined, requirePush: async () => undefined },
     readShipFile: async () => null,
+    hasFile: async (_org, _thread, path) => workspaceFiles.includes(path),
     send: async (_org, userId, threadId, body) => {
       sent.push({ userId, threadId, prompt: body.prompt });
     },
@@ -106,6 +109,31 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     expect(sent[0]).toMatchObject({ userId: owner.userId, threadId: thread.id });
     expect(sent[0]!.prompt).toContain(`This thread's branch is aven/${thread.id.slice(0, 8)}`);
     expect(sent[0]!.prompt).toContain("default branch is main");
+  });
+
+  test("says whether the repository is set up to ship, to the thread's own organization", async () => {
+    const readiness = (token: string | undefined) => {
+      const headers = new Headers();
+      if (token) headers.set("authorization", `Bearer ${token}`);
+      return fetch(`${base}/threads/${thread.id}/ship`, { headers });
+    };
+
+    workspaceFiles = [".aven/setup"];
+    expect(await (await readiness(owner.token)).json()).toEqual({
+      ready: false,
+      setup: true,
+      ship: false,
+    });
+    workspaceFiles = [".aven/setup", ".aven/ship.md"];
+    expect(await (await readiness(owner.token)).json()).toEqual({
+      ready: true,
+      setup: true,
+      ship: true,
+    });
+
+    expect((await readiness(undefined)).status).toBe(401);
+    expect((await readiness(outsider.token)).status).toBe(404);
+    workspaceFiles = [];
   });
 
   test("a person who has not connected GitHub gets a 409 that says so", async () => {

@@ -271,6 +271,13 @@ const WORKSPACE_FILES: Record<string, string> = {
   "README.md": "# Notes\n",
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
+// With FAKE_AVEN_FILES (`setup`, `ship`, or both) the pretend repository has what /setup-env and
+// /setup-ship write, which Ship waits for (decision 0083).
+const AVEN_FILES = (process.env.FAKE_AVEN_FILES ?? "").split(",");
+if (AVEN_FILES.includes("setup")) WORKSPACE_FILES[".aven/setup"] = "#!/bin/sh\nbun install\n";
+if (AVEN_FILES.includes("ship")) {
+  WORKSPACE_FILES[".aven/ship.md"] = "Commit, push, then open it with gh pr create --draft.\n";
+}
 
 // With FAKE_PROCESSES the pretend sandbox has a server running and a test that failed (decision
 // 0071); stopping the server ends it. Without it, nothing runs in the background.

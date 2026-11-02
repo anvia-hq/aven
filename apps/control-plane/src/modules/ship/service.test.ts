@@ -34,6 +34,8 @@ function setup(
     approved?: boolean;
     canPush?: boolean;
     file?: () => Promise<FileContent | null>;
+    /** The files the thread's workspace has, for `readiness`. */
+    has?: string[];
     pullRequests?: (typeof project)["pullRequests"];
   } = {},
 ) {
@@ -64,12 +66,59 @@ function setup(
       },
     },
     readShipFile: options.file ?? (async () => null),
+    hasFile: async (_org, _thread, path) => (options.has ?? []).includes(path),
     send: async (organizationId, userId, id, body) => {
       sent.push({ organizationId, userId, threadId: id, ...body });
     },
   });
   return { service, sent, checked };
 }
+
+describe("whether a thread's repository is set up to ship (decision 0083)", () => {
+  test("is ready only with both the environment script and the way of shipping", async () => {
+    const both = setup({ has: [".aven/setup", ".aven/ship.md"] });
+    expect(await both.service.readiness("org-1", threadId)).toEqual({
+      ready: true,
+      setup: true,
+      ship: true,
+    });
+
+    const environment = setup({ has: [".aven/setup"] });
+    expect(await environment.service.readiness("org-1", threadId)).toEqual({
+      ready: false,
+      setup: true,
+      ship: false,
+    });
+
+    const shipping = setup({ has: [".aven/ship.md"] });
+    expect(await shipping.service.readiness("org-1", threadId)).toEqual({
+      ready: false,
+      setup: false,
+      ship: true,
+    });
+
+    const neither = setup();
+    expect(await neither.service.readiness("org-1", threadId)).toEqual({
+      ready: false,
+      setup: false,
+      ship: false,
+    });
+  });
+
+  test("is asked of a thread of the organization only", async () => {
+    const asked: string[] = [];
+    const service = createShipService({} as RuntimeHub, {
+      load: async () => {
+        throw new Error("Thread not found");
+      },
+      hasFile: async (_org, _thread, path) => (asked.push(path), true),
+      send: async () => undefined,
+    });
+
+    await expect(service.readiness("org-2", threadId)).rejects.toThrow("Thread not found");
+    expect(asked).toEqual([]);
+  });
+});
 
 describe("shipping a thread", () => {
   test("sends the thread's agent the ship prompt, as the person who pressed the button", async () => {

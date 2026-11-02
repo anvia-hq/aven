@@ -2,8 +2,10 @@ import { ExternalLink, Github, Rocket } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { ButtonGroup } from "@/components/button-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
+import { useShipReadiness, type ShipGate } from "../hooks/use-ship-readiness";
 import { useShipThread } from "../hooks/use-ship-thread";
 import type { Thread, ThreadPullRequest } from "../types";
 import { ShipMenu } from "./ship-menu";
@@ -20,12 +22,13 @@ type Props = {
 export function ShipButton({ thread, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
   const account = useGithubAccount();
+  const gate = useShipReadiness(thread.id, thread.running);
   // The newest pull request is the one an update goes to.
   const [latest] = thread.pullRequests;
   const shipped = latest !== undefined;
   const canUpdate = latest?.state === "open";
   const label = shipLabel(latest);
-  const blocked = thread.running || shipping || (shipped && upToDate);
+  const blocked = thread.running || shipping || (shipped && upToDate) || gate.kind !== "ready";
   // What is shipped is the person's own on GitHub, so their account has to be connected first.
   if (account?.data && !account.data.connected) {
     const next = encodeURIComponent(`/threads/${thread.id}`);
@@ -41,6 +44,30 @@ export function ShipButton({ thread, upToDate }: Props) {
       </Button>
     );
   }
+  const group = (
+    <ButtonGroup>
+      <Button
+        variant={shipped ? "outline" : "default"}
+        size="sm"
+        className="shadow-md"
+        disabled={blocked}
+        title={shipped && upToDate ? "Nothing new since the last push" : undefined}
+        onClick={() => void ship()}
+      >
+        <Rocket />
+        {shipping ? "Shipping…" : label}
+      </Button>
+      {(canUpdate || thread.pullRequests.length > 1) && (
+        <ShipMenu
+          pullRequests={thread.pullRequests}
+          canUpdate={canUpdate}
+          disabled={blocked}
+          onNew={() => void ship("new")}
+        />
+      )}
+    </ButtonGroup>
+  );
+  const explanation = gateMessage(gate);
   return (
     <>
       {latest && (
@@ -56,29 +83,31 @@ export function ShipButton({ thread, upToDate }: Props) {
           <ExternalLink />
         </Button>
       )}
-      <ButtonGroup>
-        <Button
-          variant={shipped ? "outline" : "default"}
-          size="sm"
-          className="shadow-md"
-          disabled={blocked}
-          title={shipped && upToDate ? "Nothing new since the last push" : undefined}
-          onClick={() => void ship()}
-        >
-          <Rocket />
-          {shipping ? "Shipping…" : label}
-        </Button>
-        {(canUpdate || thread.pullRequests.length > 1) && (
-          <ShipMenu
-            pullRequests={thread.pullRequests}
-            canUpdate={canUpdate}
-            disabled={blocked}
-            onNew={() => void ship("new")}
-          />
-        )}
-      </ButtonGroup>
+      {explanation ? (
+        // A disabled button says nothing on hover, so the tooltip hangs on what holds it.
+        <Tooltip>
+          <TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
+            {group}
+          </TooltipTrigger>
+          <TooltipContent>{explanation}</TooltipContent>
+        </Tooltip>
+      ) : (
+        group
+      )}
     </>
   );
+}
+
+// Why Ship is not there yet, when it is not because of the thread: the repository has to be set up
+// to ship first (decision 0083).
+function gateMessage(gate: ShipGate) {
+  if (gate.kind === "missing") {
+    return `Ship is available once the repository is set up: run ${gate.commands.join(" and ")} in this thread first.`;
+  }
+  if (gate.kind === "unknown") {
+    return "Could not check whether the repository is set up to ship. Is its runner online?";
+  }
+  return undefined;
 }
 
 // Update while the newest pull request is open; otherwise the work goes into a new one.

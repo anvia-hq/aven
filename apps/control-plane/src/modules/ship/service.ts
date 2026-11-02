@@ -10,7 +10,7 @@ import type { ModelSelection } from "../providers/resolve-model";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadsService, type ThreadPullRequest } from "../threads/service";
-import { SHIP_PROMPT_FILE, shipPrompt, type ShipMode } from "./prompt";
+import { SETUP_FILE, SHIP_PROMPT_FILE, shipPrompt, type ShipMode } from "./prompt";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {
@@ -34,6 +34,8 @@ type ShipDeps = {
   }>;
   /** What the runner has for `.aven/ship.md`; null when the thread has no workspace yet. */
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
+  /** Whether the thread's workspace has this file; false when it has no workspace yet. */
+  hasFile: (organizationId: string, threadId: string, path: string) => Promise<boolean>;
   /** Sends the agent a message, as a person would. */
   send: (
     organizationId: string,
@@ -81,9 +83,27 @@ export function createShipService(
       const file = await files.read(organizationId, threadId, SHIP_PROMPT_FILE);
       return file.available ? file : null;
     });
+  const hasFile =
+    deps.hasFile ??
+    (async (organizationId: string, threadId: string, path: string) => {
+      const file = await files.read(organizationId, threadId, path);
+      return file.available && file.kind !== "missing";
+    });
   const { send } = deps;
 
   return {
+    // Whether the repository is set up to ship (decision 0083): `/setup-env` has written its
+    // environment script and `/setup-ship` how it ships. Read from the thread's own workspace, so
+    // the thread that wrote them can ship them before they are merged.
+    async readiness(organizationId: string, threadId: string) {
+      await load(organizationId, threadId);
+      const [setup, ship] = await Promise.all([
+        hasFile(organizationId, threadId, SETUP_FILE),
+        hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
+      ]);
+      return { ready: setup && ship, setup, ship };
+    },
+
     // `selection` is the model the thread is on; without it the person's default provider runs, which
     // may be another provider than the thread's earlier runs used.
     async ship(
