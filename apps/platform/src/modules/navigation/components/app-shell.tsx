@@ -80,6 +80,11 @@ export function AppShell({ user, sidebar }: Props) {
           collapsible="icon"
           className={cn(
             "text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
+            // Without the panel behind it, the sidebar's border would be drawn over the lighter
+            // frame and show more than it does on a panel: give it the panel's surface to sit on,
+            // and its top and bottom edges the frame's color, which the panel's two borders make
+            // of them there.
+            drawsOwnCards && "md:border-y-frame md:bg-background",
           )}
         >
           <SidebarHeader>
