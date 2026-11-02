@@ -16,6 +16,8 @@ import type {
   BotScheduleParams,
   BotSendParams,
   BotSent,
+  BotMcped,
+  BotMcpParams,
   BotSkillParams,
   BotUpdateParams,
   RunSkill,
@@ -30,6 +32,7 @@ import { answerBotMemory } from "./memory-answer";
 import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
+import type { BotMcp } from "../mcp/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
 
@@ -95,6 +98,7 @@ export class RemoteBotReplier implements BotReplier {
     private runtimeId: string,
     private bots: BotKeeper,
     private skills: BotSkills,
+    private mcp: BotMcp,
   ) {}
 
   ready(model: ModelConfig) {
@@ -124,6 +128,9 @@ export class RemoteBotReplier implements BotReplier {
     const peers = await this.#peersOf(userId, bot.id);
     const timezone = await this.bots.timezone(userId);
     const skills = await this.skills.forRun(userId);
+    // The person's MCP servers for bots, which the runner connects for this reply (decision 0085).
+    const mcpServers = await this.mcp.forRun(userId);
+    const givenMcp = new Set(mcpServers.map((server) => server.id));
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -253,6 +260,32 @@ export class RemoteBotReplier implements BotReplier {
         if (!archive) throw new Error("This reply has no such skill");
         return { data: archive.toBase64() };
       },
+      // The person's MCP servers are theirs: any bot may look and say how the ones it was given
+      // connected, and only their own message, not a request another bot passed on or a note, may
+      // add, change or remove one (decision 0085).
+      mcp: async (params: BotMcpParams): Promise<BotMcped> => {
+        if (params.op === "list") return this.mcp.list(userId);
+        if (params.op === "report") {
+          // Only the servers this reply was given, whatever ids the runner names.
+          await this.mcp.record(params.results.filter((result) => givenMcp.has(result.id)));
+          return null;
+        }
+        if (!makesBotsOnTheirWord) {
+          throw new Error(
+            "Change MCP servers only when the person asks you to, in their own message",
+          );
+        }
+        if (params.op === "remove") {
+          await this.mcp.remove(userId, params.id);
+          return null;
+        }
+        if (params.op === "update") {
+          const { id, name, url, headers, target, enabled } = params;
+          return this.mcp.update(userId, id, { name, url, headers, target, enabled });
+        }
+        const { name, url, headers, target } = params;
+        return this.mcp.add(userId, { name, url, headers, target });
+      },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
         if (!onPersonsWord) {
@@ -285,6 +318,7 @@ export class RemoteBotReplier implements BotReplier {
           model: runModel,
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
+          mcp: mcpServers.length ? mcpServers : undefined,
         },
         sink,
       );

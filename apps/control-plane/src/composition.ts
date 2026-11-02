@@ -16,6 +16,7 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createShipService } from "./modules/ship/service";
+import { botMcp } from "./modules/mcp/bot-access";
 import { mcpService } from "./modules/mcp/service";
 import { skillsService } from "./modules/skills/service";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -89,6 +90,7 @@ export const botRunner = new BotRunner({
       },
     },
     skillsService,
+    botMcp,
   ),
   // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
   settled: (reply) => goalDriver.settled(reply),

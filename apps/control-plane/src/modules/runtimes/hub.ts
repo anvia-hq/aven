@@ -8,6 +8,7 @@ import type {
   ControlPlaneToRuntime,
   RepoAccess,
   RunAttachment,
+  RunMcpServer,
   RunSkill,
   RunModel,
   RunnerCallMethod,
@@ -137,6 +138,7 @@ export class RuntimeConnection {
       model: RunModel;
       attachments?: RunAttachment[];
       skills?: RunSkill[];
+      mcp?: RunMcpServer[];
     },
     sink: BotReplySink,
   ) {

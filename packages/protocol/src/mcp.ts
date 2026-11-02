@@ -5,6 +5,21 @@
 export const MCP_TARGETS = ["all", "bots", "threads"] as const;
 export type McpTarget = (typeof MCP_TARGETS)[number];
 
+/**
+ * An MCP server as a bot reads it: what it is and how it is going, never a header's value, and not
+ * whether it may be on the runner's own network, which only the person sets.
+ */
+export type BotMcpView = {
+  id: string;
+  name: string;
+  url: string;
+  target: McpTarget;
+  enabled: boolean;
+  headerNames: string[];
+  /** Why the last run that tried could not connect; null once one did. */
+  lastError: string | null;
+};
+
 /** At most this many servers a person, and headers and characters in each. */
 export const MCP_LIMIT = 20;
 export const MCP_MAX_HEADERS = 10;

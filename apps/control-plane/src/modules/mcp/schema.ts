@@ -12,7 +12,7 @@ import { z } from "zod";
 
 export const mcpParams = z.object({ id: z.uuid() });
 
-const name = z
+export const mcpName = z
   .string()
   .trim()
   .min(1)
@@ -21,7 +21,7 @@ const name = z
 
 // A server is reached over the network by the runner: http or https, and no credentials in the
 // address, which would be shown and logged where a header's value never is.
-const url = z
+export const mcpUrl = z
   .string()
   .trim()
   .max(MCP_MAX_URL)
@@ -38,7 +38,7 @@ const url = z
     }
   }, "Use an http or https address with no user name or password in it");
 
-const headerName = z
+export const mcpHeaderName = z
   .string()
   .trim()
   .min(1)
@@ -50,7 +50,7 @@ const headerName = z
   );
 
 // A line break in a value would end the header and start another.
-const headerValue = z
+export const mcpHeaderValue = z
   .string()
   .min(1)
   .max(MCP_MAX_HEADER_VALUE)
@@ -60,10 +60,10 @@ const distinct = (headers: { name: string }[]) =>
   new Set(headers.map((header) => header.name.toLowerCase())).size === headers.length;
 
 export const createMcpBody = z.object({
-  name,
-  url,
+  name: mcpName,
+  url: mcpUrl,
   headers: z
-    .array(z.object({ name: headerName, value: headerValue }))
+    .array(z.object({ name: mcpHeaderName, value: mcpHeaderValue }))
     .max(MCP_MAX_HEADERS)
     .refine(distinct, "A header is given once")
     .default([]),
@@ -76,10 +76,10 @@ export const createMcpBody = z.object({
 // one not listed is removed. Values are never read back, so this is how one is left alone.
 export const updateMcpBody = z
   .object({
-    name,
-    url,
+    name: mcpName,
+    url: mcpUrl,
     headers: z
-      .array(z.object({ name: headerName, value: headerValue.nullable() }))
+      .array(z.object({ name: mcpHeaderName, value: mcpHeaderValue.nullable() }))
       .max(MCP_MAX_HEADERS)
       .refine(distinct, "A header is given once"),
     target: z.enum(MCP_TARGETS),

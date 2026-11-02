@@ -7,7 +7,7 @@ import {
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
 } from "@aven/protocol/goals";
-import { MCP_LIMIT } from "@aven/protocol/mcp";
+import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import {
   BOT_DESCRIPTION_MAX,
@@ -24,6 +24,7 @@ import {
   type BotScheduleParams,
   type BotSendParams,
   type BotCreateParams,
+  type BotMcpParams,
   type BotMemoryParams,
   type BotSkillParams,
   type BotUpdateParams,
@@ -32,6 +33,8 @@ import {
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
+
+import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "../mcp/schema";
 
 // A runtime is not trusted, so every frame it sends is checked before anything acts on it.
 // `@aven/protocol` has the types and no runtime imports; the checking lives here.
@@ -59,6 +62,7 @@ const callMethods = [
   "bot.schedule",
   "bot.goal",
   "bot.skill",
+  "bot.mcp",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -348,6 +352,46 @@ const mcpReportParams = memoryParams.extend({
     .max(MCP_LIMIT),
 });
 
+// A bot's look at the person's MCP servers, or its change to one (decision 0085): what it may say is
+// what the person's own form takes, less what a bot may not set.
+const botMcpHeaders = z
+  .array(z.object({ name: mcpHeaderName, value: mcpHeaderValue }))
+  .max(MCP_MAX_HEADERS)
+  .refine(
+    (headers) =>
+      new Set(headers.map((header) => header.name.toLowerCase())).size === headers.length,
+    "A header is given once",
+  );
+const botMcpParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("list") }),
+  z.object({
+    replyId,
+    op: z.literal("add"),
+    name: mcpName,
+    url: mcpUrl,
+    headers: botMcpHeaders.optional(),
+    target: z.enum(MCP_TARGETS).optional(),
+  }),
+  z.object({
+    replyId,
+    op: z.literal("update"),
+    id: z.uuid(),
+    name: mcpName.optional(),
+    url: mcpUrl.optional(),
+    headers: botMcpHeaders.optional(),
+    target: z.enum(MCP_TARGETS).optional(),
+    enabled: z.boolean().optional(),
+  }),
+  z.object({ replyId, op: z.literal("remove"), id: z.uuid() }),
+  z.object({
+    replyId,
+    op: z.literal("report"),
+    results: z
+      .array(z.object({ id: z.uuid(), error: z.string().trim().max(500).optional() }))
+      .max(MCP_LIMIT),
+  }),
+]);
+
 // A skill of a bot's reply, by its digest.
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
 
@@ -375,6 +419,8 @@ export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
+export const parseBotMcpParams = (params: unknown) =>
+  parseParams(botMcpParams, params) as BotMcpParams;
 export const parseBotSkillParams = (params: unknown) =>
   parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

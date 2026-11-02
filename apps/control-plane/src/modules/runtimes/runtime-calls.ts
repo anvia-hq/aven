@@ -4,6 +4,8 @@ import type {
   BotGoaled,
   BotGoalParams,
   BotCreateParams,
+  BotMcped,
+  BotMcpParams,
   BotMemoryParams,
   BotQuestioned,
   BotQuestionParams,
@@ -24,6 +26,7 @@ import {
   parseAppendParams,
   parseBotCreateParams,
   parseBotGoalParams,
+  parseBotMcpParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
   parseBotScheduleParams,
@@ -64,6 +67,8 @@ export type CallBotReply = {
   question(params: BotQuestionParams): Promise<BotQuestioned>;
   /** A skill's archive, in base64, when the reply was given it (decision 0081). */
   skill(params: BotSkillParams): Promise<{ data: string }>;
+  /** Looks at, adds, changes or removes the person's MCP servers, or reports how the reply's connected (decision 0085). */
+  mcp(params: BotMcpParams): Promise<BotMcped>;
 };
 
 export type RuntimeCallContext = {
@@ -142,6 +147,9 @@ export async function answerRuntimeCall(
     return answerBotCall(params, parseBotSkillParams, findBotReply, (reply, call) =>
       reply.skill(call),
     );
+  }
+  if (method === "bot.mcp") {
+    return answerBotCall(params, parseBotMcpParams, findBotReply, (reply, call) => reply.mcp(call));
   }
   if (method === "bot.update") {
     return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>

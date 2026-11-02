@@ -4,6 +4,7 @@
 
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
+import type { BotMcpView, McpTarget } from "./mcp";
 import type { BotScheduleView } from "./schedules";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
@@ -293,6 +294,8 @@ export type ControlPlaneToRuntime =
       attachments?: RunAttachment[];
       /** The person's skills and the built-in ones, which the runner puts in the bot's `/skills` (decision 0081). */
       skills?: RunSkill[];
+      /** The person's enabled MCP servers for bots (decision 0085), which the runner connects for this reply. */
+      mcp?: RunMcpServer[];
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
@@ -369,7 +372,8 @@ export type BotCallMethod =
   | "bot.question"
   | "bot.schedule"
   | "bot.goal"
-  | "bot.skill";
+  | "bot.skill"
+  | "bot.mcp";
 
 /**
  * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
@@ -399,6 +403,37 @@ type SkillsGetParams = { runId: string; digest: string };
 export type McpConnectResult = { id: string; error?: string };
 
 type McpReportParams = { runId: string; results: McpConnectResult[] };
+
+/**
+ * A bot looks at the person's MCP servers, adds, changes or removes one, or says how the ones its
+ * reply was given connected (decision 0085); `replyId` names the live reply it is working on. A bot
+ * may not set a server's local-network switch, nor read a header's value, nor keep a saved header
+ * when it changes a server's address.
+ */
+export type BotMcpParams = { replyId: string } & (
+  | { op: "list" }
+  | {
+      op: "add";
+      name: string;
+      url: string;
+      headers?: { name: string; value: string }[];
+      target?: McpTarget;
+    }
+  | {
+      op: "update";
+      id: string;
+      name?: string;
+      url?: string;
+      headers?: { name: string; value: string }[];
+      target?: McpTarget;
+      enabled?: boolean;
+    }
+  | { op: "remove"; id: string }
+  | { op: "report"; results: McpConnectResult[] }
+);
+
+/** A server for `add` and `update`, all of them for `list`, nothing for `remove` and `report`. */
+export type BotMcped = BotMcpView | BotMcpView[] | null;
 
 /** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
 export type BotSkillParams = { replyId: string; digest: string };
@@ -528,6 +563,7 @@ export type RuntimeCalls = {
   "bot.schedule": { params: BotScheduleParams; result: BotScheduled };
   "bot.goal": { params: BotGoalParams; result: BotGoaled };
   "bot.skill": { params: BotSkillParams; result: SkillArchive };
+  "bot.mcp": { params: BotMcpParams; result: BotMcped };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
