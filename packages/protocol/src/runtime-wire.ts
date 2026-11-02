@@ -186,6 +186,19 @@ export type RunAttachment = MessageAttachment & { data: string };
 export type RunSkill = { name: string; description: string; digest: string };
 
 /**
+ * A remote MCP server a run may use (decision 0085): where it is and what to say to it. The headers
+ * are the person's secrets, in the clear: the runner keeps them in memory only, for the run.
+ */
+export type RunMcpServer = {
+  id: string;
+  name: string;
+  url: string;
+  headers: Record<string, string>;
+  /** Whether the server may be on the runner's own machine or network, which is refused otherwise. */
+  allowLocal: boolean;
+};
+
+/**
  * The GitHub account a run acts as (decision 0044): the sender's own token and who they are. The
  * runner signs `gh` and `git` in with it inside the thread's sandbox and keeps it in memory, never
  * in its journal.

@@ -31,6 +31,7 @@ import { providersRouter } from "./modules/providers/router";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
 import { schedulesRouter } from "./modules/schedules/router";
+import { mcpRouter } from "./modules/mcp/router";
 import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
@@ -61,6 +62,7 @@ const app = new Elysia()
   .use(runtimesRouter(runtimeHub))
   .use(schedulesRouter)
   .use(skillsRouter)
+  .use(mcpRouter)
   .use(terminalRouter(runtimeHub))
   .use(threadsRouter(runsService, threadMessages))
   .use(variablesRouter)

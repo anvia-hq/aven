@@ -1,16 +1,11 @@
 import type { AnyTool } from "@anvia/core";
 import { McpClient, type McpServer } from "@anvia/mcp";
 import { errorMessage } from "@aven/agents/values";
+import { mcpSlug } from "@aven/protocol/mcp";
+import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 
 /** A remote MCP server a run was given: where it is and what to say to it (decision 0085). */
-export type McpServerConfig = {
-  /** What the person calls it; its tools are named after it. */
-  name: string;
-  url: string;
-  headers: Record<string, string>;
-  /** Whether a server on this machine or its network is let through, which is refused by default. */
-  allowLocal: boolean;
-};
+export type McpServerConfig = Omit<RunMcpServer, "id">;
 
 export type ConnectedMcp = {
   /** For an agent that does not run through durable, as a bot's does: its `mcpServers`. */
@@ -29,7 +24,7 @@ export const MCP_CONNECT_TIMEOUT_MS = 15_000;
 const DISCOVERY_LIMITS = { maxTools: 100, maxBytes: 512 * 1024 };
 
 /** A tool name a model accepts: letters, digits, underscore and dash. */
-export const mcpPrefix = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_`;
+export const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
 
 // Anvia's adapted tool is a plain object that says where it came from in `mcp`, which an agent's
 // `tools` refuses and durable cannot checkpoint a server for. Without that mark it is a local tool
