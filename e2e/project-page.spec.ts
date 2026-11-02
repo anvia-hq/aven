@@ -182,6 +182,58 @@ test.describe("the project page", () => {
     expect((await made.json()).runtimeId).toBe(secondId);
   });
 
+  test("deleting a project hides it, archives its threads and lets the repository be imported again", async ({
+    page,
+  }) => {
+    await registerUser(page, "deleter", "Deleter Person");
+    const project = await projectOf(page, "shiny-app");
+    const made = await page.request.post("/api/threads", { data: { projectId: project.id } });
+    const thread = (await made.json()) as { id: string };
+    const variable = await page.request.put(`/api/projects/${project.id}/variables/API_URL`, {
+      data: { value: "https://example.test", secret: false },
+    });
+    expect(variable.ok()).toBe(true);
+    await page.goto(`/projects/${project.id}`);
+
+    // Nothing goes before the person says so.
+    await page.getByRole("button", { name: "Delete project" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("Delete shiny-app?");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    expect((await page.request.get(`/api/projects/${project.id}`)).status()).toBe(200);
+
+    await page.getByRole("button", { name: "Delete project" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Delete project" }).click();
+
+    await expect(page).toHaveURL(/\/projects$/);
+    await expect(page.getByText("Project deleted")).toBeVisible();
+    // Gone from the API and the list; its thread is kept, archived.
+    expect((await page.request.get(`/api/projects/${project.id}`)).status()).toBe(404);
+    const listed = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    expect(listed.map((entry) => entry.id)).not.toContain(project.id);
+    const kept = await (await page.request.get(`/api/threads/${thread.id}`)).json();
+    expect(kept.state).toBe("archived");
+    // Nobody can send to it any more.
+    const sent = await page.request.post(`/api/threads/${thread.id}/messages`, {
+      data: { prompt: "hello" },
+    });
+    expect(sent.status()).toBe(409);
+
+    // The repository comes back as a project of its own.
+    const [installation] = await (await page.request.get("/api/github/installations")).json();
+    const [runtime] = await (await page.request.get("/api/runtimes")).json();
+    const again = await page.request.post("/api/projects", {
+      data: {
+        installationId: installation.id,
+        repository: "acme/shiny-app",
+        runtimeId: runtime.id,
+      },
+    });
+    expect(again.ok()).toBe(true);
+    expect(((await again.json()) as { id: string }).id).not.toBe(project.id);
+  });
+
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
     page,
   }) => {

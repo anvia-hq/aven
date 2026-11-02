@@ -2,6 +2,7 @@ import { SectionCard } from "@/components/section-card";
 import { timeAgo } from "@/lib/format";
 
 import type { Project } from "../types";
+import { ProjectDelete } from "./project-delete";
 import { ProjectRunner } from "./project-runner";
 
 const row = "flex items-center justify-between gap-4 px-4 py-2.5 text-sm";
@@ -26,6 +27,7 @@ export function ProjectAbout({ project }: { project: Project }) {
           <dd>{timeAgo(project.createdAt, true)}</dd>
         </div>
       </dl>
+      <ProjectDelete project={project} />
     </SectionCard>
   );
 }

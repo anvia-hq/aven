@@ -1,14 +1,16 @@
 import { afterAll, describe, expect, spyOn, test } from "bun:test";
 
 import { db } from "@aven/db/client";
+import { environmentVariables } from "@aven/db/schema/environment-variables";
 import { members } from "@aven/db/schema/members";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { ForbiddenError, NotFoundError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
+import { createThreadMessages } from "../threads/messages";
 import {
   projectsService,
   RepositoryAlreadyImportedError,
@@ -27,7 +29,11 @@ run("projectsService (postgres)", async () => {
   const { installation } = await seedProject(orgA, userId, runnerA.id, "seed");
 
   // GitHub knows two repositories; any other is not visible to the installation.
-  const known: Record<string, string> = { "acme/web": "main", "acme/api": "develop" };
+  const known: Record<string, string> = {
+    "acme/web": "main",
+    "acme/api": "develop",
+    "acme/web-again": "main",
+  };
   const repo = spyOn(githubService, "repo").mockImplementation(async (_org, _id, fullName) => {
     const defaultBranch = known[fullName];
     return defaultBranch
@@ -237,6 +243,112 @@ run("projectsService (postgres)", async () => {
     await expect(
       projectsService.update(orgB, userId, project.id, { runtimeId: runnerB.id }),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  // A person of the workspace in a role, as a member.
+  const personIn = async (organizationId: string, role: string) => {
+    const id = `u-${role.replace(/\W/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
+    await db.insert(users).values({ id, name: role, email: `${id}@aven.test` });
+    await db.insert(members).values({ id: `m-${id}`, organizationId, userId: id, role });
+    return id;
+  };
+
+  test("deleting a project hides it and keeps its threads, archived, and wipes its variables (decision 0094)", async () => {
+    const { project } = await seedProject(orgA, userId, runnerA.id, "doomed");
+    const [open, archived] = await db
+      .insert(threads)
+      .values(
+        ["open", "archived"].map((state) => ({
+          organizationId: orgA,
+          projectId: project.id,
+          createdBy: userId,
+          runtimeId: runnerA.id,
+          title: state,
+          state: state as "open" | "archived",
+        })),
+      )
+      .returning();
+    await db.insert(environmentVariables).values({
+      organizationId: orgA,
+      projectId: project.id,
+      name: "SECRET_KEY",
+      valueEncrypted: "iv.tag.data",
+      secret: true,
+    });
+    const cancelled: string[] = [];
+
+    await projectsService.remove(orgA, userId, project.id, (id) => cancelled.push(id));
+
+    // Hidden everywhere a project is looked up.
+    expect(await projectsService.get(orgA, project.id)).toBeNull();
+    expect((await projectsService.list(orgA)).map((row) => row.id)).not.toContain(project.id);
+    expect((await projectsService.listForPerson(userId)).map((row) => row.id)).not.toContain(
+      project.id,
+    );
+    await expect(
+      projectsService.update(orgA, userId, project.id, { runtimeId: runnerA.id }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(projectsService.folder(orgA, project.id, "")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    // Its threads are still there, all archived, and every one had its run stopped.
+    const kept = await db.select().from(threads).where(eq(threads.projectId, project.id));
+    expect(kept.map((thread) => [thread.title, thread.state]).sort()).toEqual([
+      ["archived", "archived"],
+      ["open", "archived"],
+    ]);
+    expect(cancelled.sort()).toEqual([open!.id, archived!.id].sort());
+    // The variables, which may be secrets, are gone.
+    expect(
+      await db
+        .select()
+        .from(environmentVariables)
+        .where(eq(environmentVariables.projectId, project.id)),
+    ).toEqual([]);
+    // Nobody drives a thread of a deleted project, and its repository is no longer cloned for it.
+    await expect(
+      createThreadMessages({ start: async () => {} } as never).send(orgA, userId, open!.id, {
+        prompt: "hello",
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    await expect(projectsService.repoAccess(open!.id)).rejects.toThrow("project was deleted");
+  });
+
+  test("a deleted project lets its repository be imported again, as a project of its own", async () => {
+    const first = await projectsService.import(orgA, userId, importInput("acme/web-again"));
+    // Imported twice, a repository is refused, until the first is deleted.
+    await expect(
+      projectsService.import(orgA, userId, importInput("acme/web-again")),
+    ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+    await projectsService.remove(orgA, userId, first.id, () => {});
+
+    const again = await projectsService.import(orgA, userId, importInput("acme/web-again"));
+
+    expect(again.id).not.toBe(first.id);
+    expect(
+      (await projectsService.list(orgA)).filter((row) => row.repoFullName === "acme/web-again"),
+    ).toHaveLength(1);
+  });
+
+  test("only whoever imported the project, an owner or an admin deletes it, and another workspace cannot", async () => {
+    const { project } = await seedProject(orgA, userId, runnerA.id, "protected");
+    const plain = await personIn(orgA, "member");
+    const cancel = () => {};
+
+    await expect(projectsService.remove(orgA, plain, project.id, cancel)).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    await expect(projectsService.remove(orgB, userId, project.id, cancel)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    expect(await projectsService.get(orgA, project.id)).not.toBeNull();
+
+    await projectsService.remove(orgA, await personIn(orgA, "admin"), project.id, cancel);
+    expect(await projectsService.get(orgA, project.id)).toBeNull();
+    // Deleting it twice is not found, not an error of the second person's.
+    await expect(projectsService.remove(orgA, userId, project.id, cancel)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 
   test("a folder and the README are read for the project's own organization only (decision 0082)", async () => {

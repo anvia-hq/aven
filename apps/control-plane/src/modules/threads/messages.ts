@@ -4,6 +4,7 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { mcpService } from "../mcp/service";
+import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
@@ -54,6 +55,13 @@ async function threadExtras(
   return { env, identity };
 }
 
+// A thread of a deleted project is kept, archived, but nobody drives it any more (decision 0094).
+async function requireLiveProject(organizationId: string, projectId: string) {
+  if (!(await projectsService.get(organizationId, projectId))) {
+    throw new ConflictError("This thread's project was deleted");
+  }
+}
+
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
 // run on the model the sender chose, or else their default provider (null falls back to the
 // environment's shared one), with the sender's skills, acting as their GitHub account, and with the project's
@@ -66,6 +74,7 @@ export const createThreadMessages = (runs: RunManager) => ({
     { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
   ) {
     const thread = await threadsService.owned({ organizationId, userId }, threadId);
+    await requireLiveProject(organizationId, thread.projectId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
@@ -83,6 +92,7 @@ export const createThreadMessages = (runs: RunManager) => ({
     { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
   ) {
     const thread = await threadsService.owned({ organizationId, userId }, threadId);
+    await requireLiveProject(organizationId, thread.projectId);
     const continuation = await threadsService.continuation(thread.id);
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
     const model = await resolveModel(userId, selection);

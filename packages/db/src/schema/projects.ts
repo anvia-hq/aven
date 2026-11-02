@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { githubInstallations } from "./github-installations";
@@ -30,6 +31,11 @@ export const projects = pgTable(
     cloneUrl: text("clone_url").notNull(),
     defaultBranch: text("default_branch").notNull(),
     name: text("name").notNull(),
+    /**
+     * When the project was deleted. A deleted project is only hidden: its threads stay, archived,
+     * for what counts them, and its repository can be imported again (decision 0094).
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -39,7 +45,10 @@ export const projects = pgTable(
   (table) => [
     index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
     index("projects_runtime_idx").on(table.runtimeId),
-    uniqueIndex("projects_org_repo_idx").on(table.organizationId, table.repoFullName),
+    // One live project a repository in a workspace; a deleted one does not hold the repository.
+    uniqueIndex("projects_org_repo_idx")
+      .on(table.organizationId, table.repoFullName)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

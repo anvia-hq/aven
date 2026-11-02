@@ -1,8 +1,9 @@
 import { db } from "@aven/db/client";
+import { environmentVariables } from "@aven/db/schema/environment-variables";
 import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
@@ -20,7 +21,7 @@ export const projectsService = {
     db
       .select()
       .from(projects)
-      .where(eq(projects.organizationId, organizationId))
+      .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt)))
       .orderBy(desc(projects.updatedAt)),
 
   // Every lookup is scoped to the organization: another organization's project is simply not found.
@@ -28,7 +29,13 @@ export const projectsService = {
     const [project] = await db
       .select()
       .from(projects)
-      .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id)));
+      .where(
+        and(
+          eq(projects.organizationId, organizationId),
+          eq(projects.id, id),
+          isNull(projects.deletedAt),
+        ),
+      );
     return project ?? null;
   },
 
@@ -39,9 +46,15 @@ export const projectsService = {
       .select()
       .from(projects)
       .where(
-        inArray(
-          projects.organizationId,
-          db.select({ id: members.organizationId }).from(members).where(eq(members.userId, userId)),
+        and(
+          inArray(
+            projects.organizationId,
+            db
+              .select({ id: members.organizationId })
+              .from(members)
+              .where(eq(members.userId, userId)),
+          ),
+          isNull(projects.deletedAt),
         ),
       )
       .orderBy(desc(projects.updatedAt)),
@@ -98,6 +111,32 @@ export const projectsService = {
       .where(eq(projects.id, project.id))
       .returning();
     return updated!;
+  },
+
+  // Deletes a project (decision 0094): it is hidden, not removed. Its threads are archived, so they
+  // leave the lists and stay for what counts them; its variables, which may be secrets, are wiped;
+  // and the repository can be imported again. A run in any of its threads is stopped once that is
+  // done (`cancelRun` is the run manager's). Threads and files on the runner are left as archiving
+  // leaves them.
+  async remove(
+    organizationId: string,
+    userId: string,
+    id: string,
+    cancelRun: (threadId: string) => unknown,
+  ) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    await projectsService.requireManager(organizationId, userId, project);
+    const threadIds = await db.transaction(async (tx) => {
+      await tx.update(projects).set({ deletedAt: new Date() }).where(eq(projects.id, project.id));
+      await tx.delete(environmentVariables).where(eq(environmentVariables.projectId, project.id));
+      const archived = await tx
+        .update(threads)
+        .set({ state: "archived" })
+        .where(eq(threads.projectId, project.id))
+        .returning({ id: threads.id });
+      return archived.map((thread) => thread.id);
+    });
+    for (const threadId of threadIds) cancelRun(threadId);
   },
 
   // A folder of the project's repository, as GitHub has it on the default branch, and its README
@@ -161,11 +200,14 @@ export const projectsService = {
         cloneUrl: projects.cloneUrl,
         defaultBranch: projects.defaultBranch,
         githubInstallationId: projects.githubInstallationId,
+        deletedAt: projects.deletedAt,
       })
       .from(threads)
       .innerJoin(projects, eq(projects.id, threads.projectId))
       .where(eq(threads.id, threadId));
     if (!row) throw new Error("Unknown thread");
+    // A deleted project's repository is no longer cloned for its threads (decision 0094).
+    if (row.deletedAt) throw new Error("The thread's project was deleted");
     return {
       cloneUrl: row.cloneUrl,
       defaultBranch: row.defaultBranch,

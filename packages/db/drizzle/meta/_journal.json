@@ -267,6 +267,13 @@
       "when": 1793594845322,
       "tag": "0037_workable_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793613511731,
+      "tag": "0038_pink_genesis",
+      "breakpoints": true
     }
   ]
 }

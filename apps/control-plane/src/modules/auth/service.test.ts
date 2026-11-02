@@ -14,7 +14,7 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 // response hands back and presents it as a bearer token (decision 0008).
 run("bearer sessions for native clients (real postgres)", () => {
   const email = `native-${crypto.randomUUID().slice(0, 8)}@aven.test`;
-  const app = new Elysia().use(projectsRouter);
+  const app = new Elysia().use(projectsRouter({ cancel: () => false }));
 
   afterAll(async () => {
     await db.delete(users).where(eq(users.email, email));

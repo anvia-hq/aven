@@ -12,59 +12,69 @@ import {
 } from "./schema";
 import { projectsService } from "./service";
 
-export const projectsRouter = new Elysia({ prefix: "/projects" })
-  .use(authRouter)
-  .get("/", ({ organizationId }) => projectsService.list(organizationId), {
-    auth: true,
-    org: true,
-  })
-  .post(
-    "/",
-    ({ body, organizationId, user }) => projectsService.import(organizationId, user.id, body),
-    { auth: true, org: true, body: importProjectBody },
-  )
-  .get(
-    "/:id",
-    async ({ params, organizationId }) =>
-      orNotFound(await projectsService.get(organizationId, params.id), "Project not found"),
-    { auth: true, org: true, params: projectParams },
-  )
-  .patch(
-    "/:id",
-    ({ params, body, organizationId, user }) =>
-      projectsService.update(organizationId, user.id, params.id, body),
-    { auth: true, org: true, params: projectParams, body: updateProjectBody },
-  )
-  .get(
-    "/:id/files",
-    ({ params, query, organizationId }) =>
-      projectsService.folder(organizationId, params.id, query.path),
-    { auth: true, org: true, params: projectParams, query: folderQuery },
-  )
-  .get(
-    "/:id/readme",
-    ({ params, organizationId }) => projectsService.readme(organizationId, params.id),
-    {
+// Deleting a project stops the runs its threads have, which only the run manager can.
+export const projectsRouter = (runs: { cancel(threadId: string): boolean }) =>
+  new Elysia({ prefix: "/projects" })
+    .use(authRouter)
+    .get("/", ({ organizationId }) => projectsService.list(organizationId), {
       auth: true,
       org: true,
-      params: projectParams,
-    },
-  )
-  .get(
-    "/:id/commits",
-    ({ params, query, organizationId }) =>
-      projectsService.commits(organizationId, params.id, query.page),
-    { auth: true, org: true, params: projectParams, query: commitsQuery },
-  )
-  .get(
-    "/:id/pulls",
-    ({ params, query, organizationId }) =>
-      projectsService.tracked(organizationId, params.id, "pull", query.state, query.page),
-    { auth: true, org: true, params: projectParams, query: trackedQuery },
-  )
-  .get(
-    "/:id/issues",
-    ({ params, query, organizationId }) =>
-      projectsService.tracked(organizationId, params.id, "issue", query.state, query.page),
-    { auth: true, org: true, params: projectParams, query: trackedQuery },
-  );
+    })
+    .post(
+      "/",
+      ({ body, organizationId, user }) => projectsService.import(organizationId, user.id, body),
+      { auth: true, org: true, body: importProjectBody },
+    )
+    .get(
+      "/:id",
+      async ({ params, organizationId }) =>
+        orNotFound(await projectsService.get(organizationId, params.id), "Project not found"),
+      { auth: true, org: true, params: projectParams },
+    )
+    .patch(
+      "/:id",
+      ({ params, body, organizationId, user }) =>
+        projectsService.update(organizationId, user.id, params.id, body),
+      { auth: true, org: true, params: projectParams, body: updateProjectBody },
+    )
+    .delete(
+      "/:id",
+      async ({ params, organizationId, user }) => {
+        await projectsService.remove(organizationId, user.id, params.id, (id) => runs.cancel(id));
+        return { deleted: true };
+      },
+      { auth: true, org: true, params: projectParams },
+    )
+    .get(
+      "/:id/files",
+      ({ params, query, organizationId }) =>
+        projectsService.folder(organizationId, params.id, query.path),
+      { auth: true, org: true, params: projectParams, query: folderQuery },
+    )
+    .get(
+      "/:id/readme",
+      ({ params, organizationId }) => projectsService.readme(organizationId, params.id),
+      {
+        auth: true,
+        org: true,
+        params: projectParams,
+      },
+    )
+    .get(
+      "/:id/commits",
+      ({ params, query, organizationId }) =>
+        projectsService.commits(organizationId, params.id, query.page),
+      { auth: true, org: true, params: projectParams, query: commitsQuery },
+    )
+    .get(
+      "/:id/pulls",
+      ({ params, query, organizationId }) =>
+        projectsService.tracked(organizationId, params.id, "pull", query.state, query.page),
+      { auth: true, org: true, params: projectParams, query: trackedQuery },
+    )
+    .get(
+      "/:id/issues",
+      ({ params, query, organizationId }) =>
+        projectsService.tracked(organizationId, params.id, "issue", query.state, query.page),
+      { auth: true, org: true, params: projectParams, query: trackedQuery },
+    );
