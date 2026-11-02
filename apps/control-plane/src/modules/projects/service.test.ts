@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, spyOn, test } from "bun:test";
 
+import { NotFoundError } from "../../errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import {
@@ -74,6 +75,48 @@ run("projectsService (postgres)", async () => {
     expect(await projectsService.get(orgB, project.id)).toBeNull();
     expect((await projectsService.list(orgB)).map((row) => row.id)).not.toContain(project.id);
     expect(await githubService.get(orgB, installation.id)).toBeNull();
+  });
+
+  test("a folder and the README are read for the project's own organization only (decision 0082)", async () => {
+    const folder = spyOn(githubService, "folder").mockImplementation(async () => [
+      { name: "src", path: "src", type: "directory" },
+    ]);
+    const readme = spyOn(githubService, "readme").mockImplementation(async () => ({
+      name: "README.md",
+      path: "README.md",
+      text: "# Web",
+      truncated: false,
+    }));
+    try {
+      const project = (await projectsService.list(orgA))[0]!;
+
+      expect(await projectsService.folder(orgA, project.id, "src")).toEqual({
+        entries: [{ name: "src", path: "src", type: "directory" }],
+      });
+      expect(folder).toHaveBeenCalledWith(
+        project.githubInstallationId,
+        project.repoFullName,
+        "src",
+      );
+      expect((await projectsService.readme(orgA, project.id)).readme?.text).toBe("# Web");
+
+      // Another organization's project is not found, and GitHub is not asked.
+      folder.mockClear();
+      await expect(projectsService.folder(orgB, project.id, "")).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      await expect(projectsService.readme(orgB, project.id)).rejects.toBeInstanceOf(NotFoundError);
+      expect(folder).not.toHaveBeenCalled();
+
+      // A path that is not a folder, or a repository the installation lost, is not found either.
+      folder.mockImplementation(async () => null);
+      await expect(projectsService.folder(orgA, project.id, "app.ts")).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    } finally {
+      folder.mockRestore();
+      readme.mockRestore();
+    }
   });
 
   test("the runner must belong to the organization and not be revoked", async () => {

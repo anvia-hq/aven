@@ -3,7 +3,7 @@ import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
 import { and, desc, eq } from "drizzle-orm";
 
-import { ConflictError, UnprocessableError } from "../../errors";
+import { ConflictError, orNotFound, UnprocessableError } from "../../errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import type { ImportProjectBody } from "./schema";
@@ -55,6 +55,26 @@ export const projectsService = {
       .returning();
     if (!project) throw new RepositoryAlreadyImportedError("This repository is already imported");
     return project;
+  },
+
+  // A folder of the project's repository, as GitHub has it on the default branch, and its README
+  // (decision 0082): read with the installation's token, so it needs no runner and no clone. A
+  // repository the installation no longer sees, or a path that is not a folder, is not found.
+  async folder(organizationId: string, id: string, path: string) {
+    const project = orNotFound(await this.get(organizationId, id), "Project not found");
+    const entries = await githubService.folder(
+      project.githubInstallationId,
+      project.repoFullName,
+      path,
+    );
+    return { entries: orNotFound(entries, "Folder not found") };
+  },
+
+  async readme(organizationId: string, id: string) {
+    const project = orNotFound(await this.get(organizationId, id), "Project not found");
+    return {
+      readme: await githubService.readme(project.githubInstallationId, project.repoFullName),
+    };
   },
 
   // What a runtime needs to clone the repository of a thread's project: the clone URL, the branch

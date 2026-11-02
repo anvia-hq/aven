@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
-import { importProjectBody, projectParams } from "./schema";
+import { folderQuery, importProjectBody, projectParams } from "./schema";
 import { projectsService } from "./service";
 
 export const projectsRouter = new Elysia({ prefix: "/projects" })
@@ -21,4 +21,19 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
     async ({ params, organizationId }) =>
       orNotFound(await projectsService.get(organizationId, params.id), "Project not found"),
     { auth: true, org: true, params: projectParams },
+  )
+  .get(
+    "/:id/files",
+    ({ params, query, organizationId }) =>
+      projectsService.folder(organizationId, params.id, query.path),
+    { auth: true, org: true, params: projectParams, query: folderQuery },
+  )
+  .get(
+    "/:id/readme",
+    ({ params, organizationId }) => projectsService.readme(organizationId, params.id),
+    {
+      auth: true,
+      org: true,
+      params: projectParams,
+    },
   );

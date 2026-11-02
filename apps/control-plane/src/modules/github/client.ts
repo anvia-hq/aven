@@ -143,6 +143,19 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
   description: repo.description,
 });
 
+/** One entry of a folder of a repository, as the project page lists it (decision 0082). */
+export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
+
+/** A repository's README as text, cut to `README_MAX_CHARS`. */
+export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };
+
+export const README_MAX_CHARS = 200_000;
+
+// A path inside a repository, put into a GitHub API path one segment at a time: dot-only segments
+// are refused by the callers' schema, so the path cannot climb out of `/contents/`.
+const contentsPath = (path: string) =>
+  path === "" ? "" : `/${path.split("/").map(encodeURIComponent).join("/")}`;
+
 const base64url = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 
 const repoPath = (fullName: string) => {
@@ -343,6 +356,50 @@ export class GithubClient {
     const { token } = await this.installationToken(installationId);
     const payload = await this.#api<RepoPayload>(repoPath(fullName), token).catch(nullWhenNotFound);
     return payload ? toRepo(payload) : null;
+  }
+
+  /**
+   * The entries of a folder of the repository's default branch, folders first, or null when the
+   * installation cannot see the repository or the path is not a folder there (decision 0082).
+   */
+  async folder(installationId: number, fullName: string, path: string) {
+    const { token } = await this.installationToken(installationId);
+    const listed = await this.#api<{ name: string; path: string; type: string }[] | object>(
+      `${repoPath(fullName)}/contents${contentsPath(path)}`,
+      token,
+    ).catch(nullWhenNotFound);
+    // A file answers with one object, not a list.
+    if (!Array.isArray(listed)) return null;
+    const entries = listed.map(({ name, path: entryPath, type }): GithubTreeEntry => ({
+      name,
+      path: entryPath,
+      type: type === "dir" ? "directory" : "file",
+    }));
+    return entries.sort(
+      (a, b) =>
+        Number(b.type === "directory") - Number(a.type === "directory") ||
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+  }
+
+  /** The README of the repository's default branch as text, or null when it has none or cannot be seen. */
+  async readme(installationId: number, fullName: string): Promise<GithubReadme | null> {
+    const { token } = await this.installationToken(installationId);
+    const found = await this.#api<{
+      name: string;
+      path: string;
+      content?: string;
+      encoding?: string;
+    }>(`${repoPath(fullName)}/readme`, token).catch(nullWhenNotFound);
+    // A file past what GitHub inlines comes with no content.
+    if (!found?.content || found.encoding !== "base64") return null;
+    const text = Buffer.from(found.content, "base64").toString("utf8");
+    return {
+      name: found.name,
+      path: found.path,
+      text: text.slice(0, README_MAX_CHARS),
+      truncated: text.length > README_MAX_CHARS,
+    };
   }
 
   // Whether GitHub lists `installationId` among the installations the person's token can use: they

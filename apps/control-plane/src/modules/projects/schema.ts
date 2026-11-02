@@ -18,4 +18,17 @@ export const importProjectBody = z.object({
   name: z.string().trim().min(1).max(200).optional(),
 });
 
+// A folder of the repository, from its top (empty). The path goes into a GitHub API path, so no
+// empty or dot-only segment, which would climb out of it.
+export const folderQuery = z.object({
+  path: z
+    .string()
+    .max(1024)
+    .refine(
+      (path) => path === "" || path.split("/").every((part) => part !== "" && !/^\.+$/.test(part)),
+    )
+    .refine((path) => !path.includes("\0"))
+    .default(""),
+});
+
 export type ImportProjectBody = z.infer<typeof importProjectBody>;

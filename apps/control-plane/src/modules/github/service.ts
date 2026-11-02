@@ -190,6 +190,16 @@ export function createGithubService(
       return (await client.installationToken(await githubInstallationId(installationRowId))).token;
     },
 
+    // A folder of a project's repository and its README, read with the installation's read-only
+    // token, for the project page (decision 0082).
+    async folder(installationRowId: string, fullName: string, path: string) {
+      return client.folder(await githubInstallationId(installationRowId), fullName, path);
+    },
+
+    async readme(installationRowId: string, fullName: string) {
+      return client.readme(await githubInstallationId(installationRowId), fullName);
+    },
+
     // The pull requests the agent opened for a thread's branches, newest first (decisions 0044, 0069).
     async findPullRequests(installationRowId: string, fullName: string, branchPrefix: string) {
       return client.findPullRequests(

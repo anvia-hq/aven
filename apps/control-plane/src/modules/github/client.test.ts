@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createVerify, generateKeyPairSync } from "node:crypto";
 
-import { GithubClient, GithubNotConfiguredError, githubConfigFromEnv } from "./client";
+import {
+  GithubClient,
+  GithubNotConfiguredError,
+  githubConfigFromEnv,
+  README_MAX_CHARS,
+} from "./client";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const config = {
@@ -127,6 +132,103 @@ describe("GithubClient", () => {
       },
     });
     expect(await new GithubClient(config, github.fetch).repo(7, "acme/secret")).toBeNull();
+  });
+
+  describe("a repository's folders and README (decision 0082)", () => {
+    const token = {
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_one",
+        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+      },
+    };
+
+    test("a folder lists its folders first, then its files, each in order of name", async () => {
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/web/contents": [
+          { name: "README.md", path: "README.md", type: "file" },
+          { name: "src", path: "src", type: "dir" },
+          { name: "app.ts", path: "app.ts", type: "file" },
+          { name: "Docs", path: "Docs", type: "dir" },
+          { name: "vendor", path: "vendor", type: "submodule" },
+        ],
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.folder(7, "acme/web", "")).toEqual([
+        { name: "Docs", path: "Docs", type: "directory" },
+        { name: "src", path: "src", type: "directory" },
+        { name: "app.ts", path: "app.ts", type: "file" },
+        { name: "README.md", path: "README.md", type: "file" },
+        { name: "vendor", path: "vendor", type: "file" },
+      ]);
+      // With the installation's token, and the default branch because no ref is asked for.
+      expect(auth(github.calls.at(-1)!)).toBe("Bearer ghs_one");
+      expect(github.calls.at(-1)!.url).toBe("https://api.github.com/repos/acme/web/contents");
+    });
+
+    test("a path is put in the URL one segment at a time", async () => {
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/web/contents/my%20docs/a%3Fb": [],
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.folder(7, "acme/web", "my docs/a?b")).toEqual([]);
+    });
+
+    test("a file, or a path or repository that is not there, is not a folder", async () => {
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/web/contents/app.ts": { name: "app.ts", path: "app.ts", type: "file" },
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.folder(7, "acme/web", "app.ts")).toBeNull();
+      expect(await client.folder(7, "acme/web", "missing")).toBeNull();
+      expect(await client.folder(7, "acme/gone", "")).toBeNull();
+    });
+
+    test("a README is read as text, and cut when it is very long", async () => {
+      const long = "x".repeat(README_MAX_CHARS + 5);
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/web/readme": {
+          name: "README.md",
+          path: "README.md",
+          encoding: "base64",
+          content: Buffer.from("# Web\n\nHello ✓").toString("base64"),
+        },
+        "GET /repos/acme/long/readme": {
+          name: "README.md",
+          path: "README.md",
+          encoding: "base64",
+          content: Buffer.from(long).toString("base64"),
+        },
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.readme(7, "acme/web")).toEqual({
+        name: "README.md",
+        path: "README.md",
+        text: "# Web\n\nHello ✓",
+        truncated: false,
+      });
+      const cut = await client.readme(7, "acme/long");
+      expect(cut?.text).toHaveLength(README_MAX_CHARS);
+      expect(cut?.truncated).toBe(true);
+    });
+
+    test("a repository with no README, or one GitHub does not inline, has none", async () => {
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/big/readme": { name: "README.md", path: "README.md", encoding: "none" },
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.readme(7, "acme/none")).toBeNull();
+      expect(await client.readme(7, "acme/big")).toBeNull();
+    });
   });
 
   test("a user may use an installation only if GitHub lists it among theirs", async () => {
