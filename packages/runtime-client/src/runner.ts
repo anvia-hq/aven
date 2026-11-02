@@ -91,11 +91,22 @@ const RECONNECT_MAX_MS = 30_000;
 const DEFAULT_CALL_TIMEOUT_MS = 60_000;
 const DEFAULT_IDLE_RELEASE_MS = 15 * 60_000;
 
+/**
+ * Where the control plane's HTTP API is, from the URL the runner connects to: the same address with
+ * an http scheme and without `/runtimes/connect`. A control plane behind a prefix (the web entry
+ * serves it at `/api`) keeps it: the gateway at `/runtimes/gateway` is under it too, and without it
+ * the request reaches the web app, which answers 405.
+ */
+export function controlPlaneBase(connectUrl: string) {
+  const url = new URL(connectUrl.replace(/^ws/, "http"));
+  return `${url.origin}${url.pathname.replace(/\/runtimes\/connect\/?$/, "").replace(/\/+$/, "")}`;
+}
+
 // Connects out to the control plane and runs whatever it is told to, until stopped. Reconnects
 // with backoff; runs in flight when the link drops are abandoned (the control plane ends them).
 export function startRuntime(options: RuntimeOptions) {
-  // The control plane's own origin, for its model gateway: the WebSocket URL with an http scheme.
-  const origin = new URL(options.url.replace(/^ws/, "http")).origin;
+  // The control plane's own address, for its model gateway: the WebSocket URL's, with an http scheme.
+  const origin = controlPlaneBase(options.url);
   const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;

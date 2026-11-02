@@ -22,7 +22,8 @@ const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export function reachableFromContainer(controlPlane: string, host: string) {
   const url = new URL(controlPlane);
   if (LOOPBACK.has(url.hostname)) url.hostname = host;
-  return url.origin;
+  // Any path prefix stays: behind the web entry the API is at `/api`.
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
 /** The command that signs the container in to mint identity tokens with `identity`, or out when there is none. */

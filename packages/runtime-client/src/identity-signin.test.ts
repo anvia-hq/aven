@@ -43,6 +43,10 @@ describe("reaching the control plane from a container", () => {
       "http://host.docker.internal:8000",
     );
     expect(reachableFromContainer("https://aven.example", host)).toBe("https://aven.example");
+    // The API behind a prefix keeps it.
+    expect(reachableFromContainer("https://aven.example/api", host)).toBe(
+      "https://aven.example/api",
+    );
   });
 });
 
