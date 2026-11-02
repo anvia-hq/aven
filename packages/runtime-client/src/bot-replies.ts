@@ -1,4 +1,5 @@
-import type { Agent, AgentMemoryOptions, AnyTool } from "@anvia/core";
+import type { Agent, AgentMemoryOptions, AgentPrompt, AnyTool } from "@anvia/core";
+import { sentPrompt } from "@aven/agents/attachments";
 import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
@@ -21,6 +22,7 @@ import type {
   RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 
+import { keepAttachments } from "./attachments";
 import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
 import { remoteBotMemory } from "./remote-bot-memory";
@@ -161,12 +163,16 @@ export class BotReplies {
   }
 
   // One reply, which never throws: how it ended is told to the control plane.
-  async #answer({ replyId, bot, prompt, model }: BotReplyMessage, abort: AbortController) {
+  async #answer(
+    { replyId, bot, prompt, model, attachments }: BotReplyMessage,
+    abort: AbortController,
+  ) {
     const { send } = this.#context;
     const { signal } = abort;
     try {
       const agent = await this.#agentFor(replyId, bot, prompt, model, abort);
-      await agent.generate({ prompt, session: { sessionId: bot.id }, abortSignal: signal });
+      const asked = await this.#promptOf(bot.id, prompt, attachments);
+      await agent.generate({ prompt: asked, session: { sessionId: bot.id }, abortSignal: signal });
       send({ type: "bot.end", replyId });
     } catch (error) {
       send({ type: "bot.end", replyId, error: errorMessage(signal.reason ?? error) });
@@ -174,6 +180,21 @@ export class BotReplies {
       this.#live.delete(replyId);
       this.#context.finished(bot.id);
     }
+  }
+
+  // What the bot is asked: the text alone, or, with files the person sent (decision 0080), the text,
+  // where they are in the bot's /uploads and the images themselves, as a thread's agent is asked.
+  async #promptOf(
+    botId: string,
+    prompt: string,
+    attachments: BotReplyMessage["attachments"],
+  ): Promise<AgentPrompt> {
+    if (!attachments?.length) return prompt;
+    const kept = await keepAttachments(this.#context.sandbox, botId, attachments);
+    const images = new Map(
+      attachments.flatMap(({ image, data }) => (image ? [[image, data] as const] : [])),
+    );
+    return sentPrompt(prompt, { attachments: kept, images });
   }
 
   async #agentFor(

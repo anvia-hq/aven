@@ -1,10 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
-import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import type { RunAttachment, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import {
@@ -13,8 +16,10 @@ import {
   type BotReplyMessage,
   type CreateBotReplyAgent,
 } from "./bot-replies";
+import { ArtifactStore } from "./artifacts";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { noProcesses } from "./thread-processes";
+import { UploadStore } from "./uploads";
 
 const tool = (name: string): AnyTool =>
   createTool({ name, description: name, inputSchema: z.object({}), execute: async () => "ok" });
@@ -71,7 +76,9 @@ const exec = (
 const sandboxWith = (
   acquired: { id: string; repo: unknown }[] = [],
   run?: Exec,
+  stores: Pick<ThreadWorkspaces, "uploads" | "artifacts"> = {},
 ): ThreadWorkspaces => ({
+  ...stores,
   async acquire(thread, repo) {
     acquired.push({ id: thread.id, repo });
     return {
@@ -91,7 +98,12 @@ const memoryAnswer = (params: unknown) => ((params as { op?: string }).op === "l
 
 function harness(
   createAgent: CreateBotReplyAgent,
-  options: { linkUp?: () => boolean; failSend?: boolean; exec?: Exec } = {},
+  options: {
+    linkUp?: () => boolean;
+    failSend?: boolean;
+    exec?: Exec;
+    stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts">;
+  } = {},
 ) {
   const sent: RuntimeToControlPlane[] = [];
   const calls: unknown[] = [];
@@ -100,7 +112,7 @@ function harness(
   const pauses: number[] = [];
   const boxes = new Map<string, ThreadSandbox>();
   const replies = new BotReplies({
-    sandbox: sandboxWith(acquired, options.exec),
+    sandbox: sandboxWith(acquired, options.exec, options.stores),
     createAgent,
     send: (frame) => {
       if (options.linkUp && !options.linkUp()) return false;
@@ -134,6 +146,105 @@ function harness(
 }
 
 describe("BotReplies", () => {
+  describe("files the person sent (decision 0080)", () => {
+    const root = mkdtemp(join(tmpdir(), "aven-bot-files-"));
+    afterAll(async () => rm(await root, { recursive: true, force: true }));
+    const stores = async () => {
+      const dir = await root;
+      return {
+        uploads: new UploadStore(join(dir, `uploads-${crypto.randomUUID()}`)),
+        artifacts: new ArtifactStore(join(dir, `artifacts-${crypto.randomUUID()}`)),
+      };
+    };
+
+    const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 7, 7]);
+    const photo: RunAttachment = {
+      name: "my cat.png",
+      mediaType: "image/png",
+      size: PNG.length,
+      image: "0f0e0d0c-0b0a-4908-8706-050403020100.png",
+      data: PNG.toBase64(),
+    };
+    const report: RunAttachment = {
+      name: "report.pdf",
+      mediaType: "application/pdf",
+      size: 4,
+      data: new TextEncoder().encode("%PDF").toBase64(),
+    };
+
+    // What was added to the bot's conversation for the first message of the reply.
+    const appended = (calls: unknown[]) =>
+      calls
+        .filter((call) => (call as { method: string }).method === "bot.memory")
+        .map((call) => (call as { params: { op: string; messages?: unknown[] } }).params)
+        .filter((params) => params.op === "append")
+        .flatMap((params) => params.messages ?? []) as {
+        role: string;
+        content: { type: string; text?: string; mediaType?: string }[];
+        metadata?: { prompt?: string; attachments?: unknown[] };
+      }[];
+
+    test("are copied to the bot's own /uploads, an image is kept to be shown, and the bot is told where they are and shown the image", async () => {
+      const kept = await stores();
+      const run = harness(agentThat([toolCall("send_message", { text: "nice cat" })], [text("")]), {
+        stores: kept,
+      });
+
+      run.replies.start({ ...message, prompt: "what is this?", attachments: [photo, report] });
+      await run.until();
+
+      const dir = await kept.uploads.dir("bot-1");
+      expect(new Uint8Array(await readFile(join(dir, "my_cat.png")))).toEqual(PNG);
+      expect(await readFile(join(dir, "report.pdf"), "utf8")).toBe("%PDF");
+      expect((await kept.artifacts.read("bot-1", photo.image!))?.mediaType).toBe("image/png");
+
+      const [asked] = appended(run.calls);
+      expect(asked?.role).toBe("user");
+      const note = asked?.content.find((part) => part.text?.includes("/uploads/my_cat.png"));
+      expect(note?.text).toContain("/uploads/report.pdf");
+      expect(note?.text).toContain("shown to you below");
+      expect(asked?.content.some((part) => part.type === "image")).toBe(true);
+      // The transcript keeps the message as it was sent.
+      expect(asked?.metadata).toEqual({
+        prompt: "what is this?",
+        attachments: [
+          { name: "my cat.png", mediaType: "image/png", size: PNG.length, image: photo.image },
+          { name: "report.pdf", mediaType: "application/pdf", size: 4 },
+        ],
+      });
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+
+    test("a message of only files is a message, with an empty text", async () => {
+      const kept = await stores();
+      const run = harness(agentThat([toolCall("send_message", { text: "got it" })], [text("")]), {
+        stores: kept,
+      });
+      run.replies.start({ ...message, prompt: "", attachments: [report] });
+      await run.until();
+      const [asked] = appended(run.calls);
+      expect(asked?.metadata?.prompt).toBe("");
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+
+    test("a runner that cannot keep files fails the reply, and says so", async () => {
+      const run = harness(agentThat([toolCall("send_message", { text: "never" })], [text("")]));
+      run.replies.start({ ...message, attachments: [report] });
+      await run.until();
+      expect(run.sent).toEqual([
+        { type: "bot.end", replyId: "r1", error: "This runner cannot take attached files" },
+      ]);
+    });
+
+    test("a message with no files is asked as plain text, as it was", async () => {
+      const run = harness(agentThat([toolCall("send_message", { text: "hi" })], [text("")]));
+      run.replies.start(message);
+      await run.until();
+      const [asked] = appended(run.calls);
+      expect(asked?.metadata).toBeUndefined();
+    });
+  });
+
   test("the bot's messages go back in order, each after its typing pause, then the reply ends", async () => {
     const run = harness(
       agentThat(
