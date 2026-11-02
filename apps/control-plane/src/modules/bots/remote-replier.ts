@@ -6,6 +6,7 @@ import {
   parseBotPrompt,
   type Bot,
 } from "@aven/protocol/bots";
+import { providerKeyQuestion } from "@aven/protocol/providers";
 import type {
   BotGoaled,
   BotGoalParams,
@@ -35,8 +36,6 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
-import { providerKeyQuestion } from "@aven/protocol/providers";
-
 import type { BotProviders } from "../providers/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";

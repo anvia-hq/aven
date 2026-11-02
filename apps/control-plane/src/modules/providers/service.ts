@@ -1,9 +1,8 @@
 import { db } from "@aven/db/client";
 import { providers, type ProviderRow } from "@aven/db/schema/providers";
 import type { ModelConfig } from "@aven/agents/model";
-import { and, asc, eq } from "drizzle-orm";
-
 import { providerNeedsKey } from "@aven/protocol/providers";
+import { and, asc, eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";

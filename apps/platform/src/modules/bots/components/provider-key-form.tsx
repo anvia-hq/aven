@@ -7,7 +7,7 @@ import { Form } from "@/components/form";
 import { Input } from "@/components/input";
 import { Label } from "@/components/label";
 import { useProviders } from "@/modules/providers/hooks/use-providers";
-import { PROVIDER_LABELS } from "@/modules/providers/types";
+import { PROVIDER_LABELS, type Provider } from "@/modules/providers/types";
 
 // A bot's request for a provider's API key (decision 0086), as a card in the chat: a masked field
 // that saves the key to the provider itself, so it reaches neither the chat nor the bot. What it
@@ -27,6 +27,8 @@ export function ProviderKeyForm({
   const { providers, loaded, refresh, update } = useProviders();
   const [key, setKey] = useState("");
   const [sending, setSending] = useState(false);
+  // The key is saved but the bot has not heard yet (the message did not go): only that is left to do.
+  const [saved, setSaved] = useState(false);
   const provider = providers.find((each) => each.id === ask.providerId);
 
   // The provider may be one the bot has just made: this card is the first the person hears of it.
@@ -35,14 +37,18 @@ export function ProviderKeyForm({
   }, [refresh]);
 
   async function submit() {
-    if (!provider || sending || !key.trim()) return;
+    if (!provider || sending || (!saved && !key.trim())) return;
     setSending(true);
     // The key goes to the person's own provider, and only the fact that it is saved to the bot.
-    const saved = await update(provider, { apiKey: key.trim() });
-    if (saved) {
+    if (!saved) {
+      if (!(await update(provider, { apiKey: key.trim() }))) {
+        setSending(false);
+        return;
+      }
       setKey("");
-      if (await onSaved(`I saved the API key for ${provider.name}.`)) return;
+      setSaved(true);
     }
+    if (await onSaved(`I saved the API key for ${provider.name}.`)) return;
     setSending(false);
   }
 
@@ -58,29 +64,13 @@ export function ProviderKeyForm({
       </div>
 
       {provider ? (
-        <div className="flex flex-col gap-2">
-          <Label
-            htmlFor={`provider-key-${provider.id}`}
-            className="text-base leading-6 font-medium"
-          >
-            API key for {provider.name}
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            {PROVIDER_LABELS[provider.kind]}
-            {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
-            {provider.hasKey ? " · replaces the saved key" : ""}
-          </p>
-          <Input
-            id={`provider-key-${provider.id}`}
-            type="password"
-            autoComplete="off"
-            aria-label={`API key for ${provider.name}`}
-            placeholder="Paste it here"
-            value={key}
-            onChange={(event) => setKey(event.target.value)}
-            className="h-9 font-mono"
-          />
-        </div>
+        <KeyField
+          provider={provider}
+          botName={botName}
+          saved={saved}
+          value={key}
+          onChange={setKey}
+        />
       ) : (
         <p className="text-sm text-muted-foreground">
           {loaded ? "That provider no longer exists." : "Loading the provider…"}
@@ -88,11 +78,57 @@ export function ProviderKeyForm({
       )}
 
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={!provider || !key.trim() || sending}>
+        <Button type="submit" size="sm" disabled={!provider || (!saved && !key.trim()) || sending}>
           <ArrowUp />
-          Save key
+          {saved ? `Tell ${botName}` : "Save key"}
         </Button>
       </div>
     </Form>
+  );
+}
+
+// The masked field, with what the person is giving a key to; once the key is saved, only a line that
+// says the bot has not been told.
+function KeyField({
+  provider,
+  botName,
+  saved,
+  value,
+  onChange,
+}: {
+  provider: Provider;
+  botName: string;
+  saved: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (saved) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        The key for {provider.name} is saved. {botName} has not been told yet.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={`provider-key-${provider.id}`} className="text-base leading-6 font-medium">
+        API key for {provider.name}
+      </Label>
+      <p className="text-xs text-muted-foreground">
+        {PROVIDER_LABELS[provider.kind]}
+        {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
+        {provider.hasKey ? " · replaces the saved key" : ""}
+      </p>
+      <Input
+        id={`provider-key-${provider.id}`}
+        type="password"
+        autoComplete="off"
+        aria-label={`API key for ${provider.name}`}
+        placeholder="Paste it here"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 font-mono"
+      />
+    </div>
   );
 }
