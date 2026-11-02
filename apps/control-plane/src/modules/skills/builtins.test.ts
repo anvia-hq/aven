@@ -14,6 +14,14 @@ import {
   REMOVE_PROVIDER_TOOL_NAME,
   UPDATE_PROVIDER_TOOL_NAME,
 } from "@aven/agents/tools/providers";
+import {
+  ARCHIVE_THREAD_TOOL_NAME,
+  CONTINUE_THREAD_TOOL_NAME,
+  GET_THREAD_TOOL_NAME,
+  LIST_PROJECTS_TOOL_NAME,
+  LIST_THREADS_TOOL_NAME,
+  START_THREAD_TOOL_NAME,
+} from "@aven/agents/tools/threads";
 import { join } from "node:path";
 
 import { BUILTIN_SKILLS_DIR } from "./builtins";
@@ -66,6 +74,20 @@ describe("the built-in skills", () => {
       REMOVE_MCP_SERVER_TOOL_NAME,
     ]) {
       expect(mcp).toContain(`\`${tool}\``);
+    }
+  });
+
+  test("the bots skill names the tools a bot has for threads (decision 0088)", async () => {
+    const bots = await text("configure-bots");
+    for (const tool of [
+      LIST_PROJECTS_TOOL_NAME,
+      LIST_THREADS_TOOL_NAME,
+      GET_THREAD_TOOL_NAME,
+      START_THREAD_TOOL_NAME,
+      CONTINUE_THREAD_TOOL_NAME,
+      ARCHIVE_THREAD_TOOL_NAME,
+    ]) {
+      expect(bots).toContain(`\`${tool}\``);
     }
   });
 

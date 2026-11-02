@@ -257,6 +257,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           skill: async (params) => (asked.push(params), { data: "QUJD" }),
           mcp: async (params) => (asked.push(params), null),
           provider: async (params) => (asked.push(params), null),
+          thread: async (params) => (asked.push(params), []),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }

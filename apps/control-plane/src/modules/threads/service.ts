@@ -1,8 +1,9 @@
 import { db } from "@aven/db/client";
+import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
-import { and, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
@@ -56,6 +57,14 @@ const seenBy = ({ organizationId, userId }: Viewer) =>
     or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
   );
 
+// The workspaces a person belongs to: what a bot, which has no workspace of its own, may reach for
+// its person (decision 0088). A thread of a workspace they have left is not theirs to reach.
+const inPersonsWorkspaces = (userId: string) =>
+  inArray(
+    threads.organizationId,
+    db.select({ id: members.organizationId }).from(members).where(eq(members.userId, userId)),
+  );
+
 export const threadsService = {
   list: (viewer: Viewer) =>
     db.select(columns).from(threads).where(seenBy(viewer)).orderBy(desc(threads.updatedAt)),
@@ -84,6 +93,46 @@ export const threadsService = {
           eq(threads.id, id),
         ),
       );
+    if (!thread) throw new ThreadNotFoundError();
+    return thread;
+  },
+
+  // The threads a person may see in every workspace they belong to, newest first: their own, and
+  // the ones those workspaces share (decision 0084), for a bot acting as them (decision 0088).
+  listForPerson: (userId: string, limit: number) =>
+    db
+      .select(columns)
+      .from(threads)
+      .where(
+        and(
+          inPersonsWorkspaces(userId),
+          or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+        ),
+      )
+      .orderBy(desc(threads.updatedAt))
+      .limit(limit),
+
+  // `readable` and `owned` for a bot, which has the thread's id and not its workspace.
+  async readableForPerson(userId: string, id: string) {
+    const [thread] = await db
+      .select(columns)
+      .from(threads)
+      .where(
+        and(
+          eq(threads.id, id),
+          inPersonsWorkspaces(userId),
+          or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+        ),
+      );
+    if (!thread) throw new ThreadNotFoundError();
+    return thread;
+  },
+
+  async ownedForPerson(userId: string, id: string) {
+    const [thread] = await db
+      .select(columns)
+      .from(threads)
+      .where(and(eq(threads.id, id), eq(threads.createdBy, userId), inPersonsWorkspaces(userId)));
     if (!thread) throw new ThreadNotFoundError();
     return thread;
   },

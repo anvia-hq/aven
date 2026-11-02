@@ -132,6 +132,12 @@ const askProviderKey = (id: string, providerId: string) => ({
   function: { name: "ask_provider_key", arguments: JSON.stringify({ id: providerId }) },
 });
 
+const toolCall = (id: string, name: string, args: object = {}) => ({
+  id,
+  type: "function",
+  function: { name, arguments: JSON.stringify(args) },
+});
+
 // What the bot says once the tool it called has answered.
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
@@ -140,7 +146,12 @@ const SAID_AFTER: Record<string, string> = {
   start_goal: "Working on it in the background",
   update_goal: "Goal finished: the report is written",
   add_mcp_server: "Docs is connected",
+  start_thread: "Started the thread",
+  archive_thread: "Archived the thread",
 };
+
+// The thread a bot starts and then archives (decision 0088).
+const THREAD_PROMPT = "Fix the e2e build";
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
 
@@ -180,6 +191,27 @@ Bun.serve({
             { content: null, tool_calls: [askProviderKey("call_2", providerId)] },
             "tool_calls",
           );
+        }
+      }
+      // It has looked at the projects: it starts a thread in the first, with the prompt it was given
+      // (decision 0088). After looking at the threads it archives the one it started.
+      if (calledTool(call, "list_projects")) {
+        const projectId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
+        if (projectId) {
+          const start = toolCall("call_2", "start_thread", {
+            projectId,
+            prompt: THREAD_PROMPT,
+          });
+          return reply({ content: null, tool_calls: [start] }, "tool_calls");
+        }
+      }
+      if (calledTool(call, "list_threads")) {
+        const threadId = new RegExp(`"id":"([0-9a-f-]{36})","title":"${THREAD_PROMPT}"`).exec(
+          textOf(last.content),
+        )?.[1];
+        if (threadId) {
+          const archive = toolCall("call_2", "archive_thread", { id: threadId });
+          return reply({ content: null, tool_calls: [archive] }, "tool_calls");
         }
       }
       const said = Object.entries(SAID_AFTER).find(([tool]) => calledTool(call, tool))?.[1];
@@ -276,6 +308,25 @@ Bun.serve({
       !body.messages.some((message) => calledTool(message, "add_provider"))
     ) {
       return reply({ content: null, tool_calls: [addProvider("call_1")] }, "tool_calls");
+    }
+    // Asked to start a thread, or to archive it, a bot first looks (decision 0088).
+    if (
+      /start a thread/i.test(heard) &&
+      !body.messages.some((m) => calledTool(m, "list_projects"))
+    ) {
+      return reply(
+        { content: null, tool_calls: [toolCall("call_1", "list_projects")] },
+        "tool_calls",
+      );
+    }
+    if (
+      /archive the thread/i.test(heard) &&
+      !body.messages.some((m) => calledTool(m, "list_threads"))
+    ) {
+      return reply(
+        { content: null, tool_calls: [toolCall("call_1", "list_threads")] },
+        "tool_calls",
+      );
     }
     // Told that the key is saved, it says the provider is ready.
     if (/saved the api key/i.test(heard)) {

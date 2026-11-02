@@ -20,6 +20,7 @@ import { botMcp } from "./modules/mcp/bot-access";
 import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
 import { skillsService } from "./modules/skills/service";
+import { createBotThreads } from "./modules/threads/bot-access";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { threadsService } from "./modules/threads/service";
@@ -55,6 +56,10 @@ export const runsService = new RunManager({
 });
 
 export const threadMessages = createThreadMessages(runsService);
+
+// What a bot may do with the person's threads (decision 0088): the same runs and messages the
+// platform's routes use, so a thread a bot starts is an ordinary one.
+const botThreads = createBotThreads({ runs: runsService, messages: threadMessages });
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.send });
 
@@ -93,6 +98,7 @@ export const botRunner = new BotRunner({
     skillsService,
     botMcp,
     botProviders,
+    botThreads,
   ),
   // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
   settled: (reply) => goalDriver.settled(reply),

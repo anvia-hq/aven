@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import type { ChildProcess } from "node:child_process";
+
+import { registerUser, threadOnFakeRunner } from "./helpers";
 
 // A 1 x 1 PNG, the smallest picture a message can show.
 const PIXEL =
@@ -177,6 +179,70 @@ test.describe("bots", () => {
     await expect(page.getByRole("region", { name: "Azure OpenAI" })).toContainText(
       "https://work.openai.azure.com · gpt-5 · …1234",
     );
+  });
+
+  // A bot works the person's threads on their word (decision 0088): the thread it starts is an
+  // ordinary one of theirs, started as them on their project's runner with the prompt the bot
+  // wrote, and archiving it takes it out of their list.
+  test.describe("a bot's threads", () => {
+    let runner: ChildProcess | undefined;
+    test.afterEach(() => {
+      runner?.kill();
+      runner = undefined;
+    });
+
+    test("a bot starts a thread in a project when asked, and archives it when asked", async ({
+      page,
+    }) => {
+      await registerUser(page, "bot-thread", "Thread Person");
+      const provider = await page.request.post("/api/providers", {
+        data: {
+          kind: "openai-compatible",
+          name: "Fake",
+          baseUrl: "http://localhost:8102/v1",
+          modelId: "fake-model",
+        },
+      });
+      expect(provider.ok()).toBe(true);
+      const { child, events } = await threadOnFakeRunner(page, { FAKE_RUN_ENDS: "1" });
+      runner = child;
+
+      await page.goto("/bot");
+      const message = page.getByRole("textbox", { name: "Message" });
+      await message.fill("start a thread to fix the e2e build");
+      await message.press("Enter");
+      await expect(bubble(page, "Started the thread")).toBeVisible();
+
+      // The project's runner was given the bot's prompt, as a message of the person's own.
+      await expect
+        .poll(() => events.filter((event) => event.type === "started").map((e) => e.prompt))
+        .toContain("Fix the e2e build");
+
+      // It is a thread of the person's, in their list, and opens like any other.
+      await page.goto("/threads");
+      const recent = page.getByRole("region", { name: "Recent threads" });
+      await expect(recent).toContainText("Fix the e2e build");
+      await recent.getByText("Fix the e2e build").click();
+      await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+      await expect(page.getByRole("heading", { name: "Fix the e2e build" })).toBeVisible();
+
+      await page.goto("/bot");
+      await message.fill("archive the thread Fix the e2e build");
+      await message.press("Enter");
+      await expect(bubble(page, "Archived the thread")).toBeVisible();
+
+      await page.goto("/threads");
+      await expect(page.getByRole("region", { name: "Recent threads" })).not.toContainText(
+        "Fix the e2e build",
+      );
+      const threads = (await (await page.request.get("/api/threads")).json()) as {
+        title: string;
+        state: string;
+      }[];
+      expect(threads.find((thread) => thread.title === "Fix the e2e build")?.state).toBe(
+        "archived",
+      );
+    });
   });
 
   // Files go to a bot as they go to a thread's agent (decision 0080): a file lands in the bot's

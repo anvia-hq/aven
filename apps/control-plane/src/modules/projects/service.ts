@@ -1,7 +1,8 @@
 import { db } from "@aven/db/client";
+import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { ConflictError, orNotFound, UnprocessableError } from "../../errors";
 import { githubService } from "../github/service";
@@ -28,6 +29,20 @@ export const projectsService = {
       .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id)));
     return project ?? null;
   },
+
+  // The projects of every workspace a person belongs to. A bot acts for its person and has no
+  // workspace of its own, so it finds a project by its id, which names the workspace (decision 0088).
+  listForPerson: (userId: string) =>
+    db
+      .select()
+      .from(projects)
+      .where(
+        inArray(
+          projects.organizationId,
+          db.select({ id: members.organizationId }).from(members).where(eq(members.userId, userId)),
+        ),
+      )
+      .orderBy(desc(projects.updatedAt)),
 
   // A project is an imported repository and the runner its threads' sandboxes run on (decision
   // 0013). The installation must be the organization's and able to see the repository, and the

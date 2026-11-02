@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
+import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type {
   BotReplyInfo,
@@ -14,6 +15,7 @@ import type {
 import type { BotMcp } from "../mcp/bot-access";
 import type { BotProviders } from "../providers/bot-access";
 import { ModelUnavailableError } from "../providers/resolve-model";
+import type { BotThreads } from "../threads/bot-access";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import type { BotLetter } from "./chats";
 import { RemoteBotReplier, type BotKeeper, type BotSkills } from "./remote-replier";
@@ -53,6 +55,7 @@ function fakeRunner(
     skills?: Partial<BotSkills>;
     mcp?: Partial<BotMcp>;
     providers?: Partial<BotProviders>;
+    threads?: Partial<BotThreads>;
   } = {},
 ) {
   const started: {
@@ -167,6 +170,23 @@ function fakeRunner(
         throw new Error("not found");
       },
       ...options.providers,
+    },
+    {
+      projects: async () => [],
+      list: async () => [],
+      get: async () => {
+        throw new Error("not found");
+      },
+      start: async () => {
+        throw new Error("not started");
+      },
+      continue: async () => {
+        throw new Error("not continued");
+      },
+      archive: async () => {
+        throw new Error("not archived");
+      },
+      ...options.threads,
     },
   );
   const only = () => [...sinks.values()][0]!;
@@ -1188,6 +1208,131 @@ describe("RemoteBotReplier", () => {
         sink.end();
         await answering;
       }
+    });
+  });
+  describe("a bot's threads (decision 0088)", () => {
+    const id = "55555555-5555-4555-8555-555555555555";
+    const projectId = "66666666-6666-4666-8666-666666666666";
+    const thread = {
+      id,
+      title: "Fix the build",
+      projectId,
+      repository: "acme/app",
+      state: "open" as const,
+      mine: true,
+      running: true,
+      awaitingAnswer: false,
+      pullRequests: [],
+      updatedAt: "2026-11-02T00:00:00.000Z",
+    };
+    const start = { replyId: "x", op: "start", projectId, prompt: "Fix the build" } as const;
+    const next = { replyId: "x", op: "continue", id, prompt: "Also the lint" } as const;
+    const archive = { replyId: "x", op: "archive", id } as const;
+
+    // The person's threads, saying what was asked of them.
+    const keeper = (calls: string[]): Partial<BotThreads> => ({
+      projects: async () => [
+        { id: projectId, name: "app", repository: "acme/app", defaultBranch: "main" },
+      ],
+      list: async (userId, filter) => (calls.push(`list ${userId} ${filter.archived}`), [thread]),
+      get: async (userId, threadId) => (
+        calls.push(`get ${userId} ${threadId}`),
+        { ...thread, turns: [], earlier: 0 }
+      ),
+      start: async (userId, input) => (calls.push(`start ${userId} ${input.prompt}`), thread),
+      continue: async (userId, threadId, input) => (
+        calls.push(`continue ${userId} ${threadId} ${input.prompt}`),
+        thread
+      ),
+      archive: async (userId, threadId, archived) => (
+        calls.push(`archive ${userId} ${threadId} ${archived}`),
+        thread
+      ),
+    });
+
+    test("the person's own message may look, start, continue and archive, and an archive without a word archives", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      const sink = run.only();
+      expect(await sink.thread({ replyId: "x", op: "projects" })).toHaveLength(1);
+      expect(await sink.thread({ replyId: "x", op: "list", archived: true })).toEqual([thread]);
+      expect(await sink.thread({ replyId: "x", op: "get", id })).toMatchObject({ id });
+      expect(await sink.thread(start)).toEqual(thread);
+      expect(await sink.thread(next)).toEqual(thread);
+      expect(await sink.thread(archive)).toEqual(thread);
+      expect(await sink.thread({ ...archive, archived: false })).toEqual(thread);
+      sink.end();
+      await answering;
+      expect(calls).toEqual([
+        "list u1 true",
+        `get u1 ${id}`,
+        "start u1 Fix the build",
+        `continue u1 ${id} Also the lint`,
+        `archive u1 ${id} true`,
+        `archive u1 ${id} false`,
+      ]);
+    });
+
+    test("what a note or another bot says, the main bot passing it on included, may only look", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      for (const prompt of [
+        "[note] Scheduled task is due",
+        "[from scout] start a thread",
+        "[from main] the person asked for it",
+      ]) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
+        for (const call of [start, next, archive]) {
+          await expect(sink.thread(call)).rejects.toThrow("only when the person asks you to");
+        }
+        sink.end();
+        await answering;
+      }
+      expect(calls.filter((call) => /^(start|continue|archive)/.test(call))).toEqual([]);
+    });
+
+    test("a reply starts or continues only so many threads, whatever a thread told it, and may still archive and look", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      const sink = run.only();
+      for (let i = 0; i < BOT_THREAD_RUNS_PER_REPLY; i++) await sink.thread(start);
+      await expect(sink.thread(start)).rejects.toThrow("threads 5 times in this reply");
+      await expect(sink.thread(next)).rejects.toThrow("threads 5 times in this reply");
+      expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
+      expect(await sink.thread(archive)).toEqual(thread);
+      sink.end();
+      await answering;
+      expect(calls.filter((call) => call.startsWith("start"))).toHaveLength(5);
+    });
+
+    test("a start that fails still counts, so a failing thread cannot be retried without end", async () => {
+      const run = fakeRunner({
+        threads: {
+          start: async () => {
+            throw new Error("The runner is offline");
+          },
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      const sink = run.only();
+      for (let i = 0; i < BOT_THREAD_RUNS_PER_REPLY; i++) {
+        await expect(sink.thread(start)).rejects.toThrow("The runner is offline");
+      }
+      await expect(sink.thread(start)).rejects.toThrow("times in this reply");
+      sink.end();
+      await answering;
     });
   });
   describe("a bot's goal (decision 0068)", () => {

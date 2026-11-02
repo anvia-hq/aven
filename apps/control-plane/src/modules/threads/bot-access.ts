@@ -1,0 +1,181 @@
+import { pendingQuestion } from "@aven/protocol/events";
+import {
+  BOT_THREADS_LISTED,
+  threadTitleFrom,
+  threadTurns,
+  type BotProjectView,
+  type BotThreadDetail,
+  type BotThreadView,
+} from "@aven/protocol/threads";
+
+import { UnprocessableError } from "../../errors";
+import { projectsService } from "../projects/service";
+import type { RunManager } from "../runs/service";
+import type { ThreadMessages } from "./messages";
+import { threadsService } from "./service";
+
+/** The model a message may choose, as a person's composer does; without one their default runs. */
+export type ThreadModelChoice = { providerId?: string; modelId?: string; reasoningEffort?: string };
+
+/** What a bot's reply does with the person's threads (decision 0088). */
+export type BotThreads = {
+  projects(userId: string): Promise<BotProjectView[]>;
+  list(
+    userId: string,
+    filter: { projectId?: string; archived?: boolean },
+  ): Promise<BotThreadView[]>;
+  get(userId: string, id: string): Promise<BotThreadDetail>;
+  /** Makes a thread in the project and sends it the prompt, which starts the agent; returns at once. */
+  start(
+    userId: string,
+    input: { projectId: string; prompt: string; title?: string } & ThreadModelChoice,
+  ): Promise<BotThreadView>;
+  /** Sends a message to one of the person's own threads, as they would. */
+  continue(
+    userId: string,
+    id: string,
+    input: { prompt: string } & ThreadModelChoice,
+  ): Promise<BotThreadView>;
+  archive(userId: string, id: string, archived: boolean): Promise<BotThreadView>;
+};
+
+type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
+
+const NO_PROJECT = "There is no project with that id. Use list_projects.";
+const QUESTION_MAX = 1000;
+
+// The threads of a person, which a bot acts on as the person and finds by id: the workspace comes
+// from the thread or project, and it must be one the person belongs to. A bot reads what the person
+// reads, and drives only what the person made: a thread shared with the workspace is read-only, as
+// it is in the platform (decision 0084). Whether it may start, continue or archive anything is the
+// replier's to say, as for providers and MCP servers.
+export function createBotThreads({
+  runs,
+  messages,
+}: {
+  runs: Pick<RunManager, "isRunning" | "history">;
+  messages: Pick<ThreadMessages, "send">;
+}): BotThreads {
+  const repositories = async (userId: string) =>
+    new Map(
+      (await projectsService.listForPerson(userId)).map((project) => [
+        project.id,
+        project.repoFullName,
+      ]),
+    );
+
+  const viewOf = (userId: string, thread: ThreadRow, repository: string): BotThreadView => {
+    const mine = thread.createdBy === userId;
+    return {
+      id: thread.id,
+      title: thread.title,
+      projectId: thread.projectId,
+      repository,
+      state: thread.state,
+      mine,
+      createdBy: mine ? undefined : thread.createdByName,
+      running: runs.isRunning(thread.id),
+      awaitingAnswer: thread.awaitingAnswer,
+      pullRequests: thread.pullRequests.map(({ number, url, title, state }) => ({
+        number,
+        url,
+        title,
+        state,
+      })),
+      updatedAt: thread.updatedAt.toISOString(),
+    };
+  };
+
+  const view = async (userId: string, thread: ThreadRow) =>
+    viewOf(userId, thread, (await repositories(userId)).get(thread.projectId) ?? "");
+
+  return {
+    async projects(userId) {
+      return (await projectsService.listForPerson(userId)).map((project) => ({
+        id: project.id,
+        name: project.name,
+        repository: project.repoFullName,
+        defaultBranch: project.defaultBranch,
+      }));
+    },
+
+    async list(userId, { projectId, archived = false }) {
+      // Asked for more than shown, since the filters apply after: a person has many threads, most of
+      // them old.
+      const found = await threadsService.listForPerson(userId, 500);
+      const repository = await repositories(userId);
+      return found
+        .filter((thread) => (thread.state === "archived") === archived)
+        .filter((thread) => projectId === undefined || thread.projectId === projectId)
+        .slice(0, BOT_THREADS_LISTED)
+        .map((thread) => viewOf(userId, thread, repository.get(thread.projectId) ?? ""));
+    },
+
+    async get(userId, id) {
+      const thread = await threadsService.readableForPerson(userId, id);
+      const history = await runs.history(thread);
+      const { turns, earlier } = threadTurns(history);
+      const asking = thread.awaitingAnswer ? pendingQuestion(history)?.questions : undefined;
+      return {
+        ...(await view(userId, thread)),
+        turns,
+        earlier,
+        question: asking
+          ?.map((question) => question.text)
+          .join("\n")
+          .slice(0, QUESTION_MAX),
+      };
+    },
+
+    async start(userId, { projectId, prompt, title, ...selection }) {
+      const project = (await projectsService.listForPerson(userId)).find(
+        (found) => found.id === projectId,
+      );
+      if (!project) throw new UnprocessableError(NO_PROJECT);
+      const thread = await threadsService.create(project.organizationId, userId, {
+        projectId,
+        title: title ?? threadTitleFrom(prompt),
+      });
+      try {
+        await messages.send(project.organizationId, userId, thread.id, { prompt, ...selection });
+      } catch (error) {
+        // A thread that never ran, as when the model has no key or the runner is off, would only
+        // sit in the person's list: put it away, and say why.
+        await threadsService
+          .update({ organizationId: project.organizationId, userId }, thread.id, {
+            state: "archived",
+          })
+          .catch(() => undefined);
+        throw error;
+      }
+      return viewOf(userId, thread, project.repoFullName);
+    },
+
+    async continue(userId, id, { prompt, ...selection }) {
+      const thread = await threadsService.ownedForPerson(userId, id);
+      if (thread.awaitingAnswer) {
+        throw new UnprocessableError(
+          "The agent in this thread asked the person a question and waits for the answer. Tell the person to answer it in the thread: a message from you cannot.",
+        );
+      }
+      if (runs.isRunning(id)) {
+        throw new UnprocessableError(
+          "A run is still going on in this thread. Look at it with get_thread and continue when it is done.",
+        );
+      }
+      await messages.send(thread.organizationId, userId, id, { prompt, ...selection });
+      return view(userId, thread);
+    },
+
+    async archive(userId, id, archived) {
+      const thread = await threadsService.ownedForPerson(userId, id);
+      const changed = await threadsService.update(
+        { organizationId: thread.organizationId, userId },
+        id,
+        { state: archived ? "archived" : "open" },
+      );
+      if (!changed) throw new UnprocessableError("This thread no longer exists");
+      return view(userId, changed);
+    },
+  };
+}

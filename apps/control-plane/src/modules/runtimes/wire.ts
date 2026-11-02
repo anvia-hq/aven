@@ -9,6 +9,7 @@ import {
 } from "@aven/protocol/goals";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
+import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -26,6 +27,7 @@ import {
   type BotCreateParams,
   type BotMcpParams,
   type BotProviderParams,
+  type BotThreadParams,
   type BotMemoryParams,
   type BotSkillParams,
   type BotUpdateParams,
@@ -67,6 +69,7 @@ const callMethods = [
   "bot.skill",
   "bot.mcp",
   "bot.provider",
+  "bot.thread",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -423,6 +426,46 @@ const botProviderParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("askKey"), id: z.uuid() }),
 ]);
 
+// A bot's look at the person's threads, or what it does to one (decision 0088): shaped here, the
+// prompt held to what a person's own message may be, and the rest to the threads' own rules.
+const threadPrompt = z.string().trim().min(1).max(BOT_THREAD_PROMPT_MAX);
+const threadModel = {
+  providerId: z.uuid().optional(),
+  modelId: z.string().trim().min(1).max(200).optional(),
+  reasoningEffort: z.string().trim().min(1).max(20).optional(),
+};
+const botThreadParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("projects") }),
+  z.object({
+    replyId,
+    op: z.literal("list"),
+    projectId: z.uuid().optional(),
+    archived: z.boolean().optional(),
+  }),
+  z.object({ replyId, op: z.literal("get"), id: z.uuid() }),
+  z.object({
+    replyId,
+    op: z.literal("start"),
+    projectId: z.uuid(),
+    prompt: threadPrompt,
+    title: z.string().trim().min(1).max(200).optional(),
+    ...threadModel,
+  }),
+  z.object({
+    replyId,
+    op: z.literal("continue"),
+    id: z.uuid(),
+    prompt: threadPrompt,
+    ...threadModel,
+  }),
+  z.object({
+    replyId,
+    op: z.literal("archive"),
+    id: z.uuid(),
+    archived: z.boolean().optional(),
+  }),
+]);
+
 // A skill of a bot's reply, by its digest.
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
 
@@ -454,6 +497,8 @@ export const parseBotMcpParams = (params: unknown) =>
   parseParams(botMcpParams, params) as BotMcpParams;
 export const parseBotProviderParams = (params: unknown) =>
   parseParams(botProviderParams, params) as BotProviderParams;
+export const parseBotThreadParams = (params: unknown) =>
+  parseParams(botThreadParams, params) as BotThreadParams;
 export const parseBotSkillParams = (params: unknown) =>
   parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

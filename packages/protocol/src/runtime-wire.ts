@@ -7,6 +7,7 @@ import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
 import type { BotProviderView, ProviderKeyAsk } from "./providers";
 import type { BotScheduleView } from "./schedules";
+import type { BotProjectView, BotThreadDetail, BotThreadView } from "./threads";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
 export type RunThreadInfo = {
@@ -375,7 +376,8 @@ export type BotCallMethod =
   | "bot.goal"
   | "bot.skill"
   | "bot.mcp"
-  | "bot.provider";
+  | "bot.provider"
+  | "bot.thread";
 
 /**
  * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
@@ -474,6 +476,27 @@ export type BotProvided =
   | { models: string[] }
   | ProviderKeyAsk
   | null;
+
+/** The model a message to a thread may choose, as a person's composer does; without it their default runs. */
+type ThreadModelChoice = { providerId?: string; modelId?: string; reasoningEffort?: string };
+
+/**
+ * A bot looks at the person's threads and works them as the person (decision 0088); `replyId` names
+ * the live reply it is working on. Any bot may look (`projects`, `list`, `get`). Starting a thread
+ * in a project, sending a message to one of the person's own, and archiving one take the person's
+ * own message, and a reply may start or continue only so many.
+ */
+export type BotThreadParams = { replyId: string } & (
+  | { op: "projects" }
+  | { op: "list"; projectId?: string; archived?: boolean }
+  | { op: "get"; id: string }
+  | ({ op: "start"; projectId: string; prompt: string; title?: string } & ThreadModelChoice)
+  | ({ op: "continue"; id: string; prompt: string } & ThreadModelChoice)
+  | { op: "archive"; id: string; archived?: boolean }
+);
+
+/** The projects for `projects`, threads for `list`, a thread with its latest turns for `get`, the thread acted on for the rest. */
+export type BotThreaded = BotProjectView[] | BotThreadView[] | BotThreadDetail | BotThreadView;
 
 /** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
 export type BotSkillParams = { replyId: string; digest: string };
@@ -605,6 +628,7 @@ export type RuntimeCalls = {
   "bot.skill": { params: BotSkillParams; result: SkillArchive };
   "bot.mcp": { params: BotMcpParams; result: BotMcped };
   "bot.provider": { params: BotProviderParams; result: BotProvided };
+  "bot.thread": { params: BotThreadParams; result: BotThreaded };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -622,4 +646,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 36;
+export const WIRE_VERSION = 37;

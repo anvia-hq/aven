@@ -11,12 +11,14 @@ import type { McpNote } from "@aven/agents/mcp";
 import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
 import type { ProvidersHost } from "@aven/agents/tools/providers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
+import type { ThreadsHost } from "@aven/agents/tools/threads";
 import type { SendMessage } from "@aven/agents/tools/send-message";
 import { MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotMcpView } from "@aven/protocol/mcp";
 import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import type { BotScheduleView } from "@aven/protocol/schedules";
+import type { BotProjectView, BotThreadDetail, BotThreadView } from "@aven/protocol/threads";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
   BotPeer,
@@ -67,6 +69,8 @@ export type CreateBotReplyAgent = (input: {
   mcpServers: McpServersHost;
   /** Keeps the person's model providers, on their word, and asks for a key when someone is there to type it (decision 0086). */
   providers: ProvidersHost;
+  /** Looks at the person's threads and, on their word, works them (decision 0088). */
+  threads: ThreadsHost;
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -89,6 +93,7 @@ export const defaultCreateBotAgent =
     mcp,
     mcpServers,
     providers,
+    threads,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -118,6 +123,7 @@ export const defaultCreateBotAgent =
       mcp,
       mcpServers,
       providers,
+      threads,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -357,6 +363,21 @@ export class BotReplies {
           ? async (id) =>
               (await call("bot.provider", { replyId, op: "askKey", id })) as ProviderKeyAsk
           : undefined,
+      },
+      // What each call may do is the control plane's to say, and it holds to it whatever is asked here.
+      threads: {
+        projects: async () =>
+          (await call("bot.thread", { replyId, op: "projects" })) as BotProjectView[],
+        list: async (filter) =>
+          (await call("bot.thread", { replyId, op: "list", ...filter })) as BotThreadView[],
+        get: async (id) =>
+          (await call("bot.thread", { replyId, op: "get", id })) as BotThreadDetail,
+        start: async (input) =>
+          (await call("bot.thread", { replyId, op: "start", ...input })) as BotThreadView,
+        continue: async (id, input) =>
+          (await call("bot.thread", { replyId, op: "continue", id, ...input })) as BotThreadView,
+        archive: async (id, archived) =>
+          (await call("bot.thread", { replyId, op: "archive", id, archived })) as BotThreadView,
       },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

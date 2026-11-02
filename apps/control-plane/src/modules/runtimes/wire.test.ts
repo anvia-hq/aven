@@ -14,6 +14,7 @@ import {
   parseBotGoalParams,
   parseBotScheduleParams,
   parseBotSendParams,
+  parseBotThreadParams,
   parseBotUpdateParams,
   parseRuntimeFrame,
 } from "./wire";
@@ -363,6 +364,67 @@ describe("a bot's schedules", () => {
       { replyId: "", op: "list" },
     ]) {
       expect(() => parseBotScheduleParams(bad)).toThrow();
+    }
+  });
+});
+
+describe("a bot's threads", () => {
+  const id = "11111111-2222-4333-8444-555555555555";
+  const projectId = "66666666-7777-4888-8999-000000000000";
+  const base = { replyId: "r1" };
+
+  test("each operation is shaped, and a thread is started in a project with a prompt", () => {
+    expect(parseBotThreadParams({ ...base, op: "projects" })).toEqual({ ...base, op: "projects" });
+    expect(parseBotThreadParams({ ...base, op: "list", projectId, archived: true })).toEqual({
+      ...base,
+      op: "list",
+      projectId,
+      archived: true,
+    });
+    expect(parseBotThreadParams({ ...base, op: "get", id })).toEqual({ ...base, op: "get", id });
+    expect(
+      parseBotThreadParams({
+        ...base,
+        op: "start",
+        projectId,
+        prompt: "  Fix it ",
+        title: "Fix",
+        modelId: "gpt-5",
+      }),
+    ).toEqual({
+      ...base,
+      op: "start",
+      projectId,
+      prompt: "Fix it",
+      title: "Fix",
+      modelId: "gpt-5",
+    });
+    expect(parseBotThreadParams({ ...base, op: "continue", id, prompt: "More" })).toEqual({
+      ...base,
+      op: "continue",
+      id,
+      prompt: "More",
+    });
+    expect(parseBotThreadParams({ ...base, op: "archive", id })).toEqual({
+      ...base,
+      op: "archive",
+      id,
+    });
+  });
+
+  test("what is missing, empty, too long or not an id is refused, and so is an operation there is not", () => {
+    for (const bad of [
+      { ...base, op: "start", prompt: "Fix it" },
+      { ...base, op: "start", projectId: "main", prompt: "Fix it" },
+      { ...base, op: "start", projectId, prompt: "   " },
+      { ...base, op: "start", projectId, prompt: "x".repeat(20_001) },
+      { ...base, op: "continue", id: "latest", prompt: "More" },
+      { ...base, op: "get" },
+      { ...base, op: "archive", id, archived: "yes" },
+      { ...base, op: "delete", id },
+      { op: "projects" },
+    ]) {
+      expect(() => parseBotThreadParams(bad)).toThrow("Invalid parameters");
     }
   });
 });

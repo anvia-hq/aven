@@ -8,6 +8,8 @@ import type {
   BotMcpParams,
   BotProvided,
   BotProviderParams,
+  BotThreaded,
+  BotThreadParams,
   BotMemoryParams,
   BotQuestioned,
   BotQuestionParams,
@@ -30,6 +32,7 @@ import {
   parseBotGoalParams,
   parseBotMcpParams,
   parseBotProviderParams,
+  parseBotThreadParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
   parseBotScheduleParams,
@@ -74,6 +77,8 @@ export type CallBotReply = {
   mcp(params: BotMcpParams): Promise<BotMcped>;
   /** Looks at, adds, changes or removes the person's model providers, lists a provider's models, or asks the person for a key (decision 0086). */
   provider(params: BotProviderParams): Promise<BotProvided>;
+  /** Looks at the person's projects and threads, and on their word starts, continues or archives a thread (decision 0088). */
+  thread(params: BotThreadParams): Promise<BotThreaded>;
 };
 
 export type RuntimeCallContext = {
@@ -159,6 +164,11 @@ export async function answerRuntimeCall(
   if (method === "bot.provider") {
     return answerBotCall(params, parseBotProviderParams, findBotReply, (reply, call) =>
       reply.provider(call),
+    );
+  }
+  if (method === "bot.thread") {
+    return answerBotCall(params, parseBotThreadParams, findBotReply, (reply, call) =>
+      reply.thread(call),
     );
   }
   if (method === "bot.update") {

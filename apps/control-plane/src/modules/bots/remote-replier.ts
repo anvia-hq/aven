@@ -7,6 +7,7 @@ import {
   type Bot,
 } from "@aven/protocol/bots";
 import { providerKeyQuestion } from "@aven/protocol/providers";
+import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 import type {
   BotGoaled,
   BotGoalParams,
@@ -21,6 +22,8 @@ import type {
   BotMcpParams,
   BotProvided,
   BotProviderParams,
+  BotThreaded,
+  BotThreadParams,
   BotSkillParams,
   BotUpdateParams,
   RunSkill,
@@ -37,6 +40,7 @@ import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
 import type { BotProviders } from "../providers/bot-access";
+import type { BotThreads } from "../threads/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
 
@@ -104,6 +108,7 @@ export class RemoteBotReplier implements BotReplier {
     private skills: BotSkills,
     private mcp: BotMcp,
     private providers: BotProviders,
+    private threads: BotThreads,
   ) {}
 
   ready(model: ModelConfig) {
@@ -150,6 +155,7 @@ export class RemoteBotReplier implements BotReplier {
     const makesBotsOnTheirWord = onPersonsWord && from === undefined;
     let written = 0;
     let asked = false;
+    let threadRuns = 0;
     // As itself, whichever bot the runner might name, and only so many to a reply.
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -322,6 +328,43 @@ export class RemoteBotReplier implements BotReplier {
         }
         const { kind, name, baseUrl, modelId, isDefault } = params;
         return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
+      },
+      // The person's threads are theirs: any bot may look, and only their own message may start one,
+      // send a message to one or archive one, as a person's message in a thread starts an agent as
+      // them. What a thread's agent wrote, a page or another bot said is not their word, and only so
+      // many threads are started or continued in a reply, so a thread cannot talk a bot into more
+      // (decision 0088).
+      thread: async (params: BotThreadParams): Promise<BotThreaded> => {
+        if (params.op === "projects") return this.threads.projects(userId);
+        if (params.op === "list") {
+          return this.threads.list(userId, {
+            projectId: params.projectId,
+            archived: params.archived,
+          });
+        }
+        if (params.op === "get") return this.threads.get(userId, params.id);
+        if (!makesBotsOnTheirWord) {
+          throw new Error(
+            "Start, continue or archive threads only when the person asks you to, in their own message",
+          );
+        }
+        if (params.op === "archive") {
+          return this.threads.archive(userId, params.id, params.archived ?? true);
+        }
+        if (threadRuns >= BOT_THREAD_RUNS_PER_REPLY) {
+          throw new Error(
+            `You have started or continued threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
+          );
+        }
+        threadRuns += 1;
+        const { prompt, providerId, modelId, reasoningEffort } = params;
+        const choice = { prompt, providerId, modelId, reasoningEffort };
+        if (params.op === "continue") return this.threads.continue(userId, params.id, choice);
+        return this.threads.start(userId, {
+          ...choice,
+          projectId: params.projectId,
+          title: params.title,
+        });
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
