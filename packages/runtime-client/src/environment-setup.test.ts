@@ -136,18 +136,33 @@ describe("running a repository's setup", () => {
       "/workspace",
     ]);
     // What the script wrote in the home and the toolchains is writable by the host user as well.
+    // Only the entries that are not already: touching them all would copy the toolchains into the
+    // snapshot.
     expect(fake.calls.find((call) => call.args.includes("chmod"))!.args).toEqual([
       "exec",
       "-u",
       "0",
       "aven-setup-k1",
-      "chmod",
-      "-R",
-      "a+rwX",
+      "find",
       "/home/node",
       "/opt/venv",
       "/usr/local/rustup",
       "/usr/local/cargo",
+      "(",
+      "-type",
+      "f",
+      "-o",
+      "-type",
+      "d",
+      ")",
+      "!",
+      "-perm",
+      "-o=rw",
+      "-exec",
+      "chmod",
+      "a+rwX",
+      "{}",
+      "+",
     ]);
     // Before the commit, so the snapshot's workspace copy is the host user's too.
     const lastExec = fake.verbs().lastIndexOf("exec");

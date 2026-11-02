@@ -974,12 +974,12 @@ live("the sandbox image for a user it has never heard of (real docker)", () => {
   const runAs = async (user: string | undefined, script: string) => {
     const asUser = user ? ["--user", user] : [];
     const args = ["docker", "run", "--rm", ...asUser, image!, "sh", "-c", script];
-    const process = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
+    const container = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
     const [stdout, stderr] = await Promise.all([
-      new Response(process.stdout).text(),
-      new Response(process.stderr).text(),
+      new Response(container.stdout).text(),
+      new Response(container.stderr).text(),
     ]);
-    return { code: await process.exited, stdout, stderr };
+    return { code: await container.exited, stdout, stderr };
   };
 
   test("has a name, a home, a Python and a Rust environment, and git settings it can write", async () => {

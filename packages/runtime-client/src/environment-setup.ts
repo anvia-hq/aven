@@ -175,15 +175,30 @@ export async function setupEnvironment(input: SetupInput) {
       ]);
       if (owned.code !== 0)
         throw new Error(`Could not hand the workspace back: ${owned.stderr.trim()}`);
+      // Only what is not writable already: `chmod -R` over the toolchains touches every file, and
+      // each one touched is copied into the container's layer and so into the snapshot (900 MB).
       const opened = await docker([
         "exec",
         "-u",
         "0",
         name,
-        "chmod",
-        "-R",
-        "a+rwX",
+        "find",
         ...SANDBOX_USER_TREES,
+        "(",
+        "-type",
+        "f",
+        "-o",
+        "-type",
+        "d",
+        ")",
+        "!",
+        "-perm",
+        "-o=rw",
+        "-exec",
+        "chmod",
+        "a+rwX",
+        "{}",
+        "+",
       ]);
       if (opened.code !== 0)
         throw new Error(`Could not open the environment to the host user: ${opened.stderr.trim()}`);
