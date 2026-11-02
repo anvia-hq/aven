@@ -75,7 +75,7 @@ export function tileStyle(projectId: string, palette?: number) {
       `radial-gradient(110% 110% at ${bt}, ${b} 0%, transparent 56%)`,
       `radial-gradient(130% 130% at ${ct}, ${c} 0%, transparent 62%)`,
     ].join(", "),
-    color: "#ffffff",
+    color: "#000000",
     boxShadow:
       "inset 0 1px 0 rgb(255 255 255 / 0.4), inset 0 -1px 1px rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.25)",
   };

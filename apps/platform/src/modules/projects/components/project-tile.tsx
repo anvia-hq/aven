@@ -20,7 +20,7 @@ export function ProjectTile({ projectId, palette, name, className }: Props) {
       aria-hidden
       style={tileStyle(projectId, palette)}
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] text-[9px] leading-none font-semibold select-none",
+        "inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] text-[9px] leading-none font-bold select-none",
         className,
       )}
     >
