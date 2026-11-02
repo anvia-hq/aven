@@ -8,12 +8,13 @@ import { chatItems } from "../activity";
 import { isOpen } from "../questions";
 import { useBotChat } from "../hooks/use-bot-chat";
 import { useBots } from "../hooks/use-bots";
-import type { Bot } from "../types";
+import type { Bot, BotChatMessage } from "../types";
 import { BotComposer } from "./bot-composer";
 import { BotActivity } from "./bot-activity";
 import { BotAvatar } from "./bot-avatar";
 import { BotChatBubble, isPersons } from "./bot-chat-bubble";
 import { BotQuestionForm } from "./bot-question-form";
+import { ProviderKeyForm } from "./provider-key-form";
 
 // A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
 // from the bot arrive one after another, each as the bot sends it, close together; a change of
@@ -53,11 +54,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
                   {isOpen(messages, message) && message.questions ? (
-                    <BotQuestionForm
-                      botName={bot.name}
-                      questions={message.questions}
-                      onSubmit={send}
-                    />
+                    <BotAsks botName={bot.name} questions={message.questions} send={send} />
                   ) : (
                     <BotChatBubble botId={bot.id} message={message} bots={bots} />
                   )}
@@ -88,6 +85,21 @@ export function BotChat({ bot }: { bot: Bot }) {
       </div>
     </div>
   );
+}
+
+// What an open message asks: a masked field for a provider's key (decision 0086), or questions to answer.
+function BotAsks({
+  botName,
+  questions,
+  send,
+}: {
+  botName: string;
+  questions: NonNullable<BotChatMessage["questions"]>;
+  send: (text: string) => Promise<boolean>;
+}) {
+  const providerKey = questions[0]?.providerKey;
+  if (providerKey) return <ProviderKeyForm botName={botName} ask={providerKey} onSaved={send} />;
+  return <BotQuestionForm botName={botName} questions={questions} onSubmit={send} />;
 }
 
 // The bot at work, as in the Anvia harness: its avatar with open eyes, and a line saying so.

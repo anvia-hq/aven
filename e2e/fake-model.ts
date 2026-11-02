@@ -112,6 +112,26 @@ const addMcpServer = (id: string) => ({
   },
 });
 
+const addProvider = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "add_provider",
+    arguments: JSON.stringify({
+      kind: "azure",
+      name: "Work Azure",
+      baseUrl: "https://work.openai.azure.com",
+      modelId: "gpt-5",
+    }),
+  },
+});
+
+const askProviderKey = (id: string, providerId: string) => ({
+  id,
+  type: "function",
+  function: { name: "ask_provider_key", arguments: JSON.stringify({ id: providerId }) },
+});
+
 // What the bot says once the tool it called has answered.
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
@@ -151,6 +171,17 @@ Bun.serve({
     if (last?.role === "tool") {
       // After a bot is made it is said; after anything else the model stops.
       const call = body.messages.findLast((message) => message.role === "assistant");
+      // A provider it has just added has no key: the bot shows the person the form for it
+      // (decision 0086) and stops, as the form asks.
+      if (calledTool(call, "add_provider")) {
+        const providerId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
+        if (providerId) {
+          return reply(
+            { content: null, tool_calls: [askProviderKey("call_2", providerId)] },
+            "tool_calls",
+          );
+        }
+      }
       const said = Object.entries(SAID_AFTER).find(([tool]) => calledTool(call, tool))?.[1];
       if (!said) return reply({ content: "ok" }, "stop");
       return reply({ content: null, tool_calls: [sendMessage("call_2", said)] }, "tool_calls");
@@ -238,6 +269,20 @@ Bun.serve({
       !body.messages.some((message) => calledTool(message, "add_mcp_server"))
     ) {
       return reply({ content: null, tool_calls: [addMcpServer("call_1")] }, "tool_calls");
+    }
+    // Asked for a provider, a bot adds one with no key (decision 0086); its form comes next.
+    if (
+      /add .*provider/i.test(heard) &&
+      !body.messages.some((message) => calledTool(message, "add_provider"))
+    ) {
+      return reply({ content: null, tool_calls: [addProvider("call_1")] }, "tool_calls");
+    }
+    // Told that the key is saved, it says the provider is ready.
+    if (/saved the api key/i.test(heard)) {
+      return reply(
+        { content: null, tool_calls: [sendMessage("call_1", "Work Azure is ready")] },
+        "tool_calls",
+      );
     }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {

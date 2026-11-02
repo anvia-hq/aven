@@ -1,4 +1,4 @@
-import { useAtom } from "jotai";
+import { getDefaultStore, useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@/components/toast";
@@ -17,6 +17,12 @@ const mcpStore = createListStore<McpServer>({
 // MCP servers belong to the signed-in user, so drop them on sign-out; the next user refetches.
 export function resetMcpServers() {
   mcpStore.reset();
+}
+
+// A bot may have added, changed or removed servers while the list was open (decision 0085): load it
+// again if it was ever loaded. One never loaded reads fresh on first use.
+export function refreshMcpServers() {
+  if (getDefaultStore().get(mcpServersAtom) !== null) void mcpStore.refresh();
 }
 
 // The user's MCP servers. Loads on first use; mutations refetch.

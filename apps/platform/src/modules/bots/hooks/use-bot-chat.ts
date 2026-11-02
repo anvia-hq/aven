@@ -3,6 +3,8 @@ import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 import { attempt, postJson } from "@/lib/api";
+import { refreshMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
+import { refreshProviders } from "@/modules/providers/hooks/use-providers";
 import type { AttachmentUpload } from "@/modules/threads/types";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
@@ -55,10 +57,13 @@ export function useBotChat(botId: string) {
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
       if (event.type === "error") setError(event.message);
       if (event.type === "typing" && event.typing) setError(null);
-      // A reply that ends may have made a bot or changed one (decisions 0060 and 0061), and a chat
-      // that opens is the first look at what changed while another was open.
+      // A reply that ends may have made a bot or changed one (decisions 0060 and 0061), or changed
+      // the person's MCP servers or providers (decisions 0085 and 0086), and a chat that opens is
+      // the first look at what changed while another was open.
       if (event.type === "snapshot" || (event.type === "typing" && !event.typing)) {
         void refreshBots();
+        refreshMcpServers();
+        refreshProviders();
       }
     };
     source.onerror = () => {

@@ -116,6 +116,69 @@ test.describe("bots", () => {
     );
   });
 
+  // A bot keeps the person's providers on their word, and never touches a key (decision 0086): it
+  // adds the provider, and the person types the key into a masked card that saves it to the provider.
+  test("a bot adds a provider and the person gives its key in a masked card, never in the chat", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-provider", "Provider Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await page
+      .getByRole("textbox", { name: "Message" })
+      .fill("add my azure provider Work Azure at https://work.openai.azure.com");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+
+    // It has no key yet, and is not the default: the person's own provider still is.
+    const key = page.getByLabel("API key for Work Azure", { exact: true });
+    await expect(key).toBeVisible();
+    await expect(key).toHaveAttribute("type", "password");
+    await expect(page.getByText("Azure OpenAI · https://work.openai.azure.com")).toBeVisible();
+    const before = (await (await page.request.get("/api/providers")).json()) as {
+      name: string;
+      hasKey: boolean;
+      isDefault: boolean;
+    }[];
+    expect(before.find((one) => one.name === "Work Azure")).toMatchObject({
+      hasKey: false,
+      isDefault: false,
+    });
+
+    await key.fill("sk-azure-e2e-secret-1234");
+    await page.getByRole("button", { name: "Save key" }).click();
+    await expect(bubble(page, "Work Azure is ready")).toBeVisible();
+
+    // The key is saved to the provider, and in nothing the person or the bot said.
+    const after = (await (await page.request.get("/api/providers")).json()) as {
+      name: string;
+      hasKey: boolean;
+      keyHint: string;
+    }[];
+    expect(after.find((one) => one.name === "Work Azure")).toMatchObject({
+      hasKey: true,
+      keyHint: "1234",
+    });
+    await expect(page.getByText("sk-azure-e2e-secret")).toHaveCount(0);
+    await page.reload();
+    await expect(bubble(page, "Work Azure is ready")).toBeVisible();
+    await expect(page.getByText("sk-azure-e2e-secret")).toHaveCount(0);
+
+    // Settings shows it, with the end of its key and nothing more.
+    await page.goto("/settings/providers");
+    await expect(page.getByRole("region", { name: "Azure OpenAI" })).toContainText(
+      "https://work.openai.azure.com · gpt-5 · …1234",
+    );
+  });
+
   // Files go to a bot as they go to a thread's agent (decision 0080): a file lands in the bot's
   // /uploads and it is told where, an image is shown to the model too, and all of it is in the chat
   // after a reload.

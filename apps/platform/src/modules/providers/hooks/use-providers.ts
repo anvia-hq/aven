@@ -22,6 +22,12 @@ export function resetProviders() {
   getDefaultStore().set(providerModelsAtom, {});
 }
 
+// A bot may have added, changed or removed providers while the list was open (decision 0086): load it
+// again if it was ever loaded. One never loaded reads fresh on first use.
+export function refreshProviders() {
+  if (getDefaultStore().get(providersAtom) !== null) void providersStore.refresh();
+}
+
 // The user's providers. Loads on first use; mutations refetch so defaults stay consistent.
 export function useProviders() {
   const [providers] = useAtom(providersAtom);
@@ -94,6 +100,7 @@ export function useProviders() {
   return {
     providers: providers ?? [],
     loaded: providers !== null,
+    refresh,
     create,
     listModels,
     listSavedModels,
