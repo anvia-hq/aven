@@ -39,7 +39,12 @@ export function AppShell({ user, sidebar }: Props) {
 
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // The page on screen, not the one being navigated to: `location` changes as soon as a link is
+  // clicked, a frame before the new page replaces the old, and the frame would be drawn for a page
+  // that is not there yet.
+  const pathname = useRouterState({
+    select: (state) => (state.resolvedLocation ?? state.location).pathname,
+  });
   // A thread, and the bot, draw their own card for the conversation, so their side panels can be
   // cards of their own on the frame beside it, level with it.
   const drawsOwnCards = /^\/(threads\/[^/]+|bot)(\/|$)/.test(pathname);
