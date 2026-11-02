@@ -176,3 +176,47 @@ describe("applyEvent with subagents", () => {
     expect(applyEvent(before, read("late"))).toEqual(before);
   });
 });
+
+describe("applyEvent with a steering message", () => {
+  // The person spoke while the agent worked and the agent took it (decision 0098): their message
+  // comes next and what the agent writes afterwards is a message of its own, as a reload shows it.
+  // Kept out of the shared fixtures, which the Swift client also runs.
+  test("a message the agent took is the person's next, followed by a fresh reply", () => {
+    const events: RunEvent[] = [
+      { type: "run_start", prompt: "build it" },
+      { type: "text", delta: "Working" },
+      {
+        type: "steer",
+        id: "s1",
+        prompt: "use /deploy",
+        mentions: [{ type: "skill", name: "deploy", from: 4, to: 11 }],
+      },
+      { type: "text", delta: "Switching" },
+    ];
+    const messages = events.reduce(applyEvent, [] as ChatMessage[]);
+    expect(messages.map(({ id, role }) => [id, role])).toEqual([
+      ["m-0", "user"],
+      ["m-1", "assistant"],
+      ["m-2", "user"],
+      ["m-3", "assistant"],
+    ]);
+    expect(messages[1]?.parts).toEqual([{ type: "text", text: "Working" }]);
+    expect(messages[2]).toMatchObject({
+      parts: [{ type: "text", text: "use /deploy" }],
+      mentions: [{ type: "skill", name: "deploy", from: 4, to: 11 }],
+    });
+    expect(messages[3]?.parts).toEqual([{ type: "text", text: "Switching" }]);
+  });
+
+  test("queued, applied-by-a-runner and rejected messages change nothing in the transcript", () => {
+    const before = [{ type: "run_start", prompt: "go" }] satisfies RunEvent[];
+    const base = before.reduce(applyEvent, [] as ChatMessage[]);
+    for (const event of [
+      { type: "steer_queued", id: "s1", prompt: "wait" },
+      { type: "steer_applied", id: "s1" },
+      { type: "steer_rejected", id: "s1", reason: "no" },
+    ] satisfies RunEvent[]) {
+      expect(applyEvent(base, event)).toBe(base);
+    }
+  });
+});

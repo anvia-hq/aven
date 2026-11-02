@@ -1,4 +1,5 @@
 import { asRecord } from "@aven/agents/values";
+import type { MessageMention } from "@aven/protocol/events";
 import {
   DIFF_SCOPES,
   type ArtifactsReadParams,
@@ -62,4 +63,20 @@ export function desktopCallParams(
     force: force === true,
     bot: bot === true,
   };
+}
+
+/** What `run.steer` carries: the run, the message's id, its words and the mentions in them. */
+export type SteerParams = {
+  runId: string;
+  steerId: string;
+  prompt: string;
+  mentions?: MessageMention[];
+};
+
+export function steerParams(params: unknown): SteerParams {
+  const { runId, steerId, prompt, mentions } = asRecord(params);
+  if (typeof runId !== "string" || typeof steerId !== "string" || typeof prompt !== "string")
+    throw invalid();
+  if (mentions !== undefined && !Array.isArray(mentions)) throw invalid();
+  return { runId, steerId, prompt, mentions: mentions as MessageMention[] | undefined };
 }

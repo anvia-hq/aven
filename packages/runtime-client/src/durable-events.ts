@@ -85,6 +85,11 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         if (!call || !output) return { events: [] };
         return { events: [projectToolEnd(call.id, output, call.name)] };
       }
+      // The agent took a message the person sent while it worked (decision 0098).
+      case "steering_applied":
+        return typeof data.id === "string"
+          ? { events: [{ type: "steer_applied", id: data.id }] }
+          : { events: [] };
       case "status":
         return { events: [], end: endOf(data) };
       default:

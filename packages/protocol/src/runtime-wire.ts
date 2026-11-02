@@ -144,13 +144,31 @@ export type ProcessView = {
 /** What a process printed, as the latest of each stream; `truncated` when older output was dropped. */
 export type ProcessLogs = { stdout: string; stderr: string; truncated: boolean };
 
+/**
+ * What the control plane asks a runner to do with a run that is going: `run.steer` takes `{ runId,
+ * steerId, prompt, mentions? }`, the person's message to the agent, which the runner has the agent
+ * take at its next safe step (decision 0098), and answers with a `SteerResult`.
+ */
+type RunCallMethod = "run.steer";
+
+/**
+ * How a runner took a steering message: `queued` (it will be applied, and `steer_applied` says
+ * when), `closed` (the agent is finishing and takes no more: the message is for a run of its own) or
+ * `refused` with the reason to show the person (compacting, a goal in the background).
+ */
+export type SteerResult =
+  | { status: "queued" }
+  | { status: "closed" }
+  | { status: "refused"; reason: string };
+
 /** Everything the control plane can `call` a runner for. */
 export type RunnerCallMethod =
   | DesktopCallMethod
   | DiffCallMethod
   | FilesCallMethod
   | ArtifactsCallMethod
-  | ProcessesCallMethod;
+  | ProcessesCallMethod
+  | RunCallMethod;
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {
@@ -674,4 +692,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 38;
+export const WIRE_VERSION = 39;

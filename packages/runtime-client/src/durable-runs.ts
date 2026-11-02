@@ -220,6 +220,22 @@ export class DurableRuns {
     }
   }
 
+  /**
+   * Hands a run that is going a message from the person, for the agent to take at its next safe
+   * step (decision 0098); `requestId` makes a retry the same message. False when the run has
+   * finished or is finishing and takes no more.
+   */
+  async steer(durableId: string, prompt: AgentPrompt, requestId: string) {
+    const run = await this.#runtime.getRun(durableId);
+    try {
+      await run.steer({ prompt }, { requestId });
+      return true;
+    } catch (error) {
+      if (error instanceof DurableConflictError) return false;
+      throw error;
+    }
+  }
+
   // Continues the run a thread parked on its question, with the agent it was registered with. After
   // a restart there is none, so `restore` builds it again under the same id.
   async answer(

@@ -2,6 +2,7 @@ import type {
   FilesCallMethod,
   ProcessesCallMethod,
   RunnerCallMethod,
+  SteerResult,
 } from "@aven/protocol/runtime-wire";
 
 import {
@@ -11,6 +12,8 @@ import {
   filesCallParams,
   filesSearchParams,
   processesCallParams,
+  steerParams,
+  type SteerParams,
 } from "./call-params";
 import type { DesktopViewers } from "./desktop-viewers";
 import type { IdleRelease } from "./idle-release";
@@ -23,11 +26,13 @@ export type RunnerCallsContext = {
   boxes: Map<string, ThreadSandbox>;
   viewers: Pick<DesktopViewers, "call">;
   idle: Pick<IdleRelease, "schedule" | "starting">;
+  /** What the person said to a run that is going (decision 0098). */
+  steer(params: SteerParams): Promise<SteerResult>;
 };
 
 // What the control plane asks a runner about a thread: its changes, its files, an image the agent
 // showed, its processes, or its desktop. Returns what answers one call of the control plane's.
-export function createRunnerCalls({ sandbox, boxes, viewers, idle }: RunnerCallsContext) {
+export function createRunnerCalls({ sandbox, boxes, viewers, idle, steer }: RunnerCallsContext) {
   // A thread's changes; null when it has no workspace on this runner yet.
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
@@ -93,6 +98,7 @@ export function createRunnerCalls({ sandbox, boxes, viewers, idle }: RunnerCalls
   }
 
   return function callOf(method: RunnerCallMethod, params: unknown) {
+    if (method === "run.steer") return steer(steerParams(params));
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);

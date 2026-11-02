@@ -392,3 +392,72 @@ describe("a run that only compacts (decision 0097)", () => {
     expect(seen[0]).not.toContain("heard alpha");
   });
 });
+
+describe("steering a run that is going (decision 0098)", () => {
+  // A run whose first step is a tool that waits, so the person speaks while it works.
+  const slowRun = () => {
+    const gate = Promise.withResolvers<void>();
+    const seen: string[] = [];
+    const slow = createTool({
+      name: "slow",
+      description: "Takes a while",
+      inputSchema: z.object({}),
+      execute: async () => {
+        await gate.promise;
+        return "done";
+      },
+    });
+    const agent = new Agent({
+      id: "steered",
+      instructions: "x",
+      tools: [slow],
+      model: scriptedModel([
+        [{ type: "tool-call", toolCallId: "c1", toolName: "slow", input: {} }],
+        (request) => {
+          seen.push(JSON.stringify(request.chatHistory));
+          return [text("changed course")];
+        },
+      ]),
+    });
+    return { agent, gate, seen };
+  };
+
+  test("a message sent during a tool is taken at the next step, and the run says so", async () => {
+    const runs = await opened(journalPath());
+    const { agent, gate, seen } = slowRun();
+    const events: RunEvent[] = [];
+    const run = await runs.start("steer-1", "thread-s", "build it", { agent }, (e) =>
+      events.push(e),
+    );
+    // The tool is running once the call is announced.
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "tool_start"); i++)
+      await Bun.sleep(10);
+
+    expect(await runs.steer(run.durableId, "use the other API", "steer-a")).toBe(true);
+    gate.resolve();
+    const end = await run.done;
+
+    expect(end.type).toBe("response");
+    expect(events.filter((e) => e.type === "steer_applied")).toEqual([
+      { type: "steer_applied", id: "steer-a" },
+    ]);
+    // The model's next request has the message after the tool's result, and the transcript keeps it.
+    expect(seen[0]).toContain("use the other API");
+    expect(seen[0]!.indexOf("done")).toBeLessThan(seen[0]!.indexOf("use the other API"));
+    const roles = end.type === "response" ? end.messages.map((message) => message.role) : [];
+    expect(roles).toEqual(["user", "assistant", "tool", "user", "assistant"]);
+  });
+
+  test("a run that has ended takes no more", async () => {
+    const runs = await opened(journalPath());
+    const run = await runs.start(
+      "steer-2",
+      "thread-t",
+      "hi",
+      input("steer-2", [text("ok")]),
+      () => {},
+    );
+    await run.done;
+    expect(await runs.steer(run.durableId, "too late", "steer-b")).toBe(false);
+  });
+});

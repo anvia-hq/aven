@@ -235,7 +235,13 @@ export function startRuntime(options: RuntimeOptions) {
     }
   }
 
-  const callOf = createRunnerCalls({ sandbox: options.sandbox, boxes, viewers, idle });
+  const callOf = createRunnerCalls({
+    sandbox: options.sandbox,
+    boxes,
+    viewers,
+    idle,
+    steer: (params) => driver.steer(params),
+  });
 
   async function handle(message: ControlPlaneToRuntime) {
     switch (message.type) {

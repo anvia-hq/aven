@@ -149,6 +149,12 @@ export type ChatMessage = {
   mentions?: MessageMention[];
 };
 
+/**
+ * A message the person sent while the agent was working, which the agent has not taken yet: it is
+ * applied at the agent's next safe step, never in the middle of a model call or a tool (decision 0098).
+ */
+export type QueuedSteer = { id: string; prompt: string; mentions?: MessageMention[] };
+
 export type RunEvent =
   /** Full transcript, sent when a client connects. Replaces whatever it had. */
   | {
@@ -158,6 +164,8 @@ export type RunEvent =
       usage?: ThreadUsage;
       /** How long the run in progress has gone on, in milliseconds, for a client that attaches part way through it. */
       runningMs?: number;
+      /** What the person said during the run that the agent has not taken yet, oldest first. */
+      steers?: QueuedSteer[];
     }
   | {
       type: "run_start";
@@ -167,6 +175,17 @@ export type RunEvent =
     }
   /** The user answered the agent's question and its run continues in the same assistant message. */
   | { type: "run_resume" }
+  /** The person said something while the agent works; the runner has it and will apply it at the next safe step (decision 0098). */
+  | ({ type: "steer_queued" } & QueuedSteer)
+  /** The agent took a queued message: it is the person's next message and the agent's output goes after it. */
+  | ({ type: "steer" } & QueuedSteer)
+  /**
+   * A runner says the agent took the queued message `id`. The control plane, which has its words,
+   * turns it into `steer` before any client sees it.
+   */
+  | { type: "steer_applied"; id: string }
+  /** A queued message was not delivered; `reason` is shown to the person, and none means it is sent another way. */
+  | { type: "steer_rejected"; id: string; reason?: string }
   | { type: "text"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
   | {
@@ -274,6 +293,19 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts: [{ type: "text", text: event.prompt }],
       };
       if (event.attachments?.length) user.attachments = event.attachments;
+      if (event.mentions?.length) user.mentions = event.mentions;
+      return [
+        ...messages,
+        user,
+        { id: messageId(messages.length + 1), role: "assistant", parts: [] },
+      ];
+    }
+    case "steer": {
+      const user: ChatMessage = {
+        id: messageId(messages.length),
+        role: "user",
+        parts: [{ type: "text", text: event.prompt }],
+      };
       if (event.mentions?.length) user.mentions = event.mentions;
       return [
         ...messages,

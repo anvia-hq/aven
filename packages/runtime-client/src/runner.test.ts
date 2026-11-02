@@ -989,6 +989,157 @@ describe("startRuntime runs", () => {
     expect(JSON.stringify(filed?.messages.at(-1))).toContain(COMPACTED);
   });
 
+  describe("a message sent while the run goes on (decision 0098)", () => {
+    const steer = async (
+      plane: ReturnType<typeof fakeControlPlane>,
+      id: string,
+      params: Record<string, unknown>,
+    ) => {
+      plane.send({ type: "call", id, method: "run.steer", params } as never);
+      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      return plane.received.find((m) => m.type === "reply" && m.id === id);
+    };
+    const slowTool = (gate: Promise<void>) =>
+      createTool({
+        name: "slow",
+        description: "Takes a while",
+        inputSchema: z.object({}),
+        execute: async () => {
+          await gate;
+          return "done";
+        },
+      });
+    const events = (plane: ReturnType<typeof fakeControlPlane>) =>
+      plane.received.flatMap((m) => (m.type === "run.event" ? [m.event] : []));
+
+    test("is taken at the agent's next step, reported, and filed in the transcript", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      const gate = Promise.withResolvers<void>();
+      const seen: string[] = [];
+      const { plane, runtime } = connect({
+        sandbox,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            tools: [slowTool(gate.promise)],
+            model: scriptedModel([
+              [toolCall("slow", {}, "c1")],
+              (request) => {
+                seen.push(JSON.stringify(request.chatHistory));
+                return [text("changed course")];
+              },
+            ]),
+          }),
+        }),
+      });
+      await runtime.ready;
+      plane.send(runStart);
+      await until(() => events(plane).some((event) => event.type === "tool_start"));
+
+      const mentions = [{ type: "skill", name: "deploy", from: 4, to: 11 }];
+      expect(
+        await steer(plane, "s1", {
+          runId: "run-1",
+          steerId: "steer-1",
+          prompt: "use /deploy",
+          mentions,
+        }),
+      ).toMatchObject({ ok: true, result: { status: "queued" } });
+      gate.resolve();
+      await until(() => ended(plane).length === 1);
+
+      expect(events(plane).filter((event) => event.type === "steer_applied")).toEqual([
+        { type: "steer_applied", id: "steer-1" },
+      ]);
+      expect(seen[0]).toContain("use /deploy");
+      // Its place in what is filed is where the agent took it, with its mentions kept.
+      const [filed] = appended(plane);
+      expect(filed?.messages.map((message) => message.role)).toEqual([
+        "user",
+        "assistant",
+        "tool",
+        "user",
+        "assistant",
+      ]);
+      expect(JSON.stringify(filed?.messages[3])).toContain('"mentions"');
+    });
+
+    test("sent while the sandbox is still starting waits for the run to be in the journal", async () => {
+      const { sandbox, up } = slowSandbox();
+      const seen: string[] = [];
+      const { plane, runtime } = connect({
+        sandbox,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            model: scriptedModel([
+              (request) => {
+                seen.push(JSON.stringify(request.chatHistory));
+                return [text("ok")];
+              },
+            ]),
+          }),
+        }),
+      });
+      await runtime.ready;
+      plane.send(runStart);
+      await Bun.sleep(50);
+
+      expect(
+        await steer(plane, "s1", { runId: "run-1", steerId: "steer-1", prompt: "also this" }),
+      ).toMatchObject({ result: { status: "queued" } });
+      up();
+      await until(() => ended(plane).length === 1);
+      // Applied before the first model call: the agent's first request already has it.
+      expect(seen[0]).toContain("also this");
+      expect(events(plane).some((event) => event.type === "steer_applied")).toBe(true);
+    });
+
+    test("is refused for a run that only compacts, and closed for one that has ended", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      const gate = Promise.withResolvers<void>();
+      const { plane, runtime } = connect({
+        sandbox,
+        createAgent: ({ id, compact }) =>
+          compact
+            ? {
+                agent: new Agent({
+                  id,
+                  instructions: "x",
+                  model: scriptedModel([
+                    async () => {
+                      await gate.promise;
+                      return [text("ok")];
+                    },
+                  ]),
+                }),
+              }
+            : agentThat([text("ok")])({ id } as never),
+      });
+      await runtime.ready;
+      plane.send({ ...runStart, prompt: COMPACT_PROMPT, compact: true });
+      await Bun.sleep(50);
+      expect(
+        await steer(plane, "s1", { runId: "run-1", steerId: "a", prompt: "hello?" }),
+      ).toMatchObject({ result: { status: "refused" } });
+      gate.resolve();
+      await until(() => ended(plane).length === 1);
+
+      expect(
+        await steer(plane, "s2", { runId: "run-1", steerId: "b", prompt: "late" }),
+      ).toMatchObject({ result: { status: "closed" } });
+      expect(
+        await steer(plane, "s3", { runId: "unknown", steerId: "c", prompt: "x" }),
+      ).toMatchObject({
+        result: { status: "closed" },
+      });
+    });
+  });
+
   test("a run that reaches its turn limit still hands home what it did, with the error", async () => {
     const { sandbox, up } = slowSandbox();
     up();

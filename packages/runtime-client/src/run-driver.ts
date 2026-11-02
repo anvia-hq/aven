@@ -1,9 +1,10 @@
-import type { Agent, AnyTool, Message } from "@anvia/core";
+import type { Agent, AgentPrompt, AnyTool, Message } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import type { DurableAgentRegistration } from "@anvia/durable";
+import { sentPrompt } from "@aven/agents/attachments";
 import type { McpNote } from "@aven/agents/mcp";
 import type { SkillListing } from "@aven/agents/skills";
 import type { SubagentType } from "@aven/agents/subagents";
@@ -15,9 +16,11 @@ import type {
   RunThreadInfo,
   RuntimeCalls,
   RuntimeToControlPlane,
+  SteerResult,
 } from "@aven/protocol/runtime-wire";
 
 import { keepAttachments, promptOf } from "./attachments";
+import type { SteerParams } from "./call-params";
 import type { GoalEnd } from "./durable-goals";
 import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
 import type { DurableEnd } from "./durable-events";
@@ -62,6 +65,8 @@ type Live = {
   followed?: Pick<FollowedRun, "cancel">;
   /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
+  /** What the person said before the run was in the journal, handed to it once it is (decision 0098). */
+  steers: { steerId: string; message: AgentPrompt }[];
   /** The person's MCP servers as this run connected them, until it ends or parks (decision 0085). */
   mcp?: ConnectedMcp;
 };
@@ -175,7 +180,7 @@ export function createRunDriver(context: DriverContext) {
       state.record = { ...state.record, ...changes };
       if (!context.stopped()) records.save(state.record);
     };
-    const run: Live = { threadId: thread.id, save };
+    const run: Live = { threadId: thread.id, save, steers: [] };
     live.set(runId, run);
     try {
       if (message?.type === "run.start" && message.attachments?.length) {
@@ -400,6 +405,7 @@ export function createRunDriver(context: DriverContext) {
     }
     save({ durableId: followed.durableId });
     run.followed = followed;
+    await handOverSteers(run, journaled, followed.durableId);
     if (run.cancelReason) void followed.cancel();
     const end = await followed.done;
     if (end.type !== "error") {
@@ -418,6 +424,17 @@ export function createRunDriver(context: DriverContext) {
     if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
     else save({ goal: undefined });
     return end;
+  }
+
+  // What the person said while the run was starting goes to the agent now that it is in the journal.
+  // A message the journal no longer takes (the run ended first) is lost, which the control plane
+  // tells the person when the run ends and it was never applied.
+  async function handOverSteers(run: Live, journaled: DurableRuns, durableId: string) {
+    for (const { steerId, message } of run.steers.splice(0)) {
+      await journaled.steer(durableId, message, steerId).catch((error: unknown) => {
+        console.warn(`Could not hand a message to run ${durableId}:`, errorMessage(error));
+      });
+    }
   }
 
   // The goal the turn handed over: sessions until the verify commands pass or it stops short.
@@ -531,6 +548,34 @@ export function createRunDriver(context: DriverContext) {
       // Nothing to take up: it is going, or it is over and only waiting to be acknowledged.
       if (!record || record.done || live.has(runId)) return;
       return execute(record);
+    },
+
+    /**
+     * A message the person sent while the run goes on, for the agent to take at its next safe step
+     * (decision 0098). Only the agent's own turn takes one: a compaction has no one to read it and a
+     * goal works unattended.
+     */
+    async steer({ runId, steerId, prompt, mentions }: SteerParams): Promise<SteerResult> {
+      const run = live.get(runId);
+      const record = records.get(runId);
+      if (!run || !record || record.done) return { status: "closed" };
+      if (record.compact) {
+        return { status: "refused", reason: "The conversation is being compacted" };
+      }
+      if (record.phase !== "chat") {
+        return {
+          status: "refused",
+          reason: "The agent is working on a goal in the background: stop it to talk to the agent",
+        };
+      }
+      const message = sentPrompt(prompt, { mentions, skills: record.skillListing });
+      // Not in the journal yet (the sandbox is still starting): kept for when it is.
+      if (!record.durableId) {
+        run.steers.push({ steerId, message });
+        return { status: "queued" };
+      }
+      const taken = await (await context.journal).steer(record.durableId, message, steerId);
+      return { status: taken ? "queued" : "closed" };
     },
 
     async cancel(runId: string, reason: string) {
