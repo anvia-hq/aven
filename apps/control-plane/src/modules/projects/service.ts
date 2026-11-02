@@ -100,6 +100,7 @@ export const projectsService = {
       project.githubInstallationId,
       project.repoFullName,
       page,
+      project.defaultBranch,
     );
     return { ...orNotFound(found, "Repository not found"), page };
   },

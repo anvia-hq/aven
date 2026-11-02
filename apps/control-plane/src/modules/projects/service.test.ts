@@ -98,7 +98,12 @@ run("projectsService (postgres)", async () => {
         hasMore: true,
         page: 2,
       });
-      expect(commits).toHaveBeenCalledWith(project.githubInstallationId, project.repoFullName, 2);
+      expect(commits).toHaveBeenCalledWith(
+        project.githubInstallationId,
+        project.repoFullName,
+        2,
+        project.defaultBranch,
+      );
 
       // Another organization's project is not found, and GitHub is not asked.
       commits.mockClear();

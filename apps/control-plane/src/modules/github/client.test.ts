@@ -247,11 +247,24 @@ describe("GithubClient", () => {
     });
     // A GitHub that answers the commits listing with `answer` and the branch listing with
     // `branches`, and the token as the app asks.
-    const github = (answer: () => Response, branches: () => Response = () => Response.json([])) => {
+    const github = (
+      answer: () => Response,
+      branches: () => Response = () => Response.json([]),
+      // One branch by name; by default found in the listing.
+      branch?: (name: string) => Response,
+    ) => {
       const calls: string[] = [];
       const fetch = async (url: string) => {
         calls.push(url);
         if (url.includes("/access_tokens")) return token.clone();
+        const one = url.match(/\/branches\/([^?]+)$/)?.[1];
+        if (one && branch) return branch(one);
+        if (one) {
+          const listing = branches();
+          if (!listing.ok) return listing;
+          const found = ((await listing.json()) as { name: string }[]).find((b) => b.name === one);
+          return found ? Response.json(found) : new Response("none", { status: 404 });
+        }
         return url.includes("/branches") ? branches() : answer();
       };
       return { calls, client: new GithubClient(config, fetch) };
@@ -279,7 +292,7 @@ describe("GithubClient", () => {
         ]),
       );
 
-      const page = await client.commits(7, "acme/web", 2);
+      const page = await client.commits(7, "acme/web", 2, "main");
 
       expect(
         page?.commits.map(({ sha, message, author }) => [sha, message.length, author]),
@@ -318,7 +331,7 @@ describe("GithubClient", () => {
           ]),
       );
 
-      const page = await client.commits(7, "acme/web", 1);
+      const page = await client.commits(7, "acme/web", 1, "main");
 
       expect(page?.commits.map(({ sha, parents, refs }) => [sha, parents, refs])).toEqual([
         ["m1", ["b2", "f3"], ["main", "release"]],
@@ -328,13 +341,28 @@ describe("GithubClient", () => {
       expect(calls.some((url) => url.endsWith("/repos/acme/web/branches?per_page=100"))).toBe(true);
     });
 
+    test("the default branch is shown even when it is past the branches GitHub lists first", async () => {
+      // GitHub lists branches by name, 100 to a page: `main` can be on a later page, so it is also
+      // asked for by its own name.
+      const { calls, client } = github(
+        () => Response.json([commit("a1", "Fix", { parents: [] })]),
+        () => Response.json([{ name: "zzz", commit: { sha: "a1" } }]),
+        (name) => Response.json({ name, commit: { sha: "a1" } }),
+      );
+
+      const page = await client.commits(7, "acme/web", 1, "main");
+
+      expect(page?.commits[0]?.refs).toEqual(["zzz", "main"]);
+      expect(calls.some((url) => url.endsWith("/repos/acme/web/branches/main"))).toBe(true);
+    });
+
     test("branch names that cannot be had leave the page as it is, with none", async () => {
       const { client } = github(
         () => Response.json([commit("a1", "Fix", { parents: [{ sha: "a0" }] })]),
         () => new Response("boom", { status: 500 }),
       );
 
-      expect((await client.commits(7, "acme/web", 1))?.commits[0]).toMatchObject({
+      expect((await client.commits(7, "acme/web", 1, "main"))?.commits[0]).toMatchObject({
         sha: "a1",
         parents: ["a0"],
         refs: [],
@@ -350,7 +378,7 @@ describe("GithubClient", () => {
             },
           }),
       );
-      expect((await more.client.commits(7, "acme/web", 2))?.hasMore).toBe(true);
+      expect((await more.client.commits(7, "acme/web", 2, "main"))?.hasMore).toBe(true);
 
       const last = github(
         () =>
@@ -358,21 +386,36 @@ describe("GithubClient", () => {
             headers: { link: '<https://api.github.com/x?page=1>; rel="prev"' },
           }),
       );
-      expect((await last.client.commits(7, "acme/web", 3))?.hasMore).toBe(false);
+      expect((await last.client.commits(7, "acme/web", 3, "main"))?.hasMore).toBe(false);
       expect(
-        (await github(() => Response.json([])).client.commits(7, "acme/web", 1))?.hasMore,
+        (await github(() => Response.json([])).client.commits(7, "acme/web", 1, "main"))?.hasMore,
       ).toBe(false);
     });
 
     test("a repository with no commit is an empty page, and one that is not seen is null", async () => {
       expect(
-        await github(() => new Response("empty", { status: 409 })).client.commits(7, "acme/new", 1),
+        await github(() => new Response("empty", { status: 409 })).client.commits(
+          7,
+          "acme/new",
+          1,
+          "main",
+        ),
       ).toEqual({ commits: [], hasMore: false });
       expect(
-        await github(() => new Response("gone", { status: 404 })).client.commits(7, "acme/gone", 1),
+        await github(() => new Response("gone", { status: 404 })).client.commits(
+          7,
+          "acme/gone",
+          1,
+          "main",
+        ),
       ).toBeNull();
       await expect(
-        github(() => new Response("boom", { status: 500 })).client.commits(7, "acme/web", 1),
+        github(() => new Response("boom", { status: 500 })).client.commits(
+          7,
+          "acme/web",
+          1,
+          "main",
+        ),
       ).rejects.toThrow("GitHub answered 500");
     });
   });

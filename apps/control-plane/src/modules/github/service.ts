@@ -201,8 +201,18 @@ export function createGithubService(
     },
 
     // One page of a project's commits, with the same token (the project page's history).
-    async commits(installationRowId: string, fullName: string, page: number) {
-      return client.commits(await githubInstallationId(installationRowId), fullName, page);
+    async commits(
+      installationRowId: string,
+      fullName: string,
+      page: number,
+      defaultBranch: string,
+    ) {
+      return client.commits(
+        await githubInstallationId(installationRowId),
+        fullName,
+        page,
+        defaultBranch,
+      );
     },
 
     // The pull requests the agent opened for a thread's branches, newest first (decisions 0044, 0069).

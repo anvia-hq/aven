@@ -178,6 +178,8 @@ type CommitPayload = {
   parents: { sha: string }[];
 };
 
+type Branch = { name: string; commit: { sha: string } };
+
 // How many branches are asked for, to say which commits are where one ends: GitHub's page maximum.
 const BRANCHES_LISTED = 100;
 
@@ -446,11 +448,12 @@ export class GithubClient {
     installationId: number,
     fullName: string,
     page: number,
+    defaultBranch: string,
   ): Promise<GithubCommitPage | null> {
     const { token } = await this.installationToken(installationId);
     const path = `${repoPath(fullName)}/commits?per_page=${COMMITS_PER_PAGE}&page=${page}`;
     // Asked together; the branch names only decorate the page, so they are not worth failing it for.
-    const heads = this.#branchHeads(token, fullName);
+    const heads = this.#branchHeads(token, fullName, defaultBranch);
     let response: Response;
     try {
       response = await this.#get(path, token);
@@ -477,12 +480,22 @@ export class GithubClient {
   }
 
   // The branches by the commit each ends on, with the branches that end on the same one in a list.
-  async #branchHeads(token: string, fullName: string) {
+  // GitHub lists them by name and a repository may have more than a page of them, so the default
+  // branch, which the page must show, is asked for by itself too.
+  async #branchHeads(token: string, fullName: string, defaultBranch: string) {
+    const [listed, main] = await Promise.all([
+      this.#api<Branch[]>(
+        `${repoPath(fullName)}/branches?per_page=${BRANCHES_LISTED}`,
+        token,
+      ).catch(() => []),
+      this.#api<Branch>(
+        `${repoPath(fullName)}/branches/${encodeURIComponent(defaultBranch)}`,
+        token,
+      ).catch(() => null),
+    ]);
+    const branches =
+      main && !listed.some(({ name }) => name === main.name) ? [...listed, main] : listed;
     const heads = new Map<string, string[]>();
-    const branches = await this.#api<{ name: string; commit: { sha: string } }[]>(
-      `${repoPath(fullName)}/branches?per_page=${BRANCHES_LISTED}`,
-      token,
-    ).catch(() => []);
     for (const { name, commit } of branches) {
       const same = heads.get(commit.sha);
       if (same) same.push(name);
