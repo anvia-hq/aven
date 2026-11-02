@@ -211,6 +211,13 @@ Bun.serve({
     ) {
       return reply({ content: null, tool_calls: [createSchedule("call_1")] }, "tool_calls");
     }
+    // Asked about its skills, a bot names the first its instructions list (decision 0081).
+    if (/your skills/i.test(heard)) {
+      const everything = body.messages.map((message) => textOf(message.content)).join("\n");
+      const skill = /Available skills:\n- ([a-z0-9-]+):/.exec(everything)?.[1];
+      const said = skill ? `I have the ${skill} skill` : "I have no skills";
+      return reply({ content: null, tool_calls: [sendMessage("call_1", said)] }, "tool_calls");
+    }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {
       return reply({ content: null, tool_calls: [updateSelf("call_1")] }, "tool_calls");

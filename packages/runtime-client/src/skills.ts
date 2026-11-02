@@ -41,12 +41,12 @@ async function repositorySkills(threadId: string, workspace: string) {
   const root = await realpath(workspace);
   const { skills, problems } = await readSkillFolders(join(root, REPO_SKILLS_DIR));
   for (const { folder, problem } of problems)
-    console.warn(`Repository skill "${folder}" is left out of thread ${threadId}: ${problem}`);
+    console.warn(`Repository skill "${folder}" is left out for ${threadId}: ${problem}`);
   const listed: SkillListing[] = [];
   for (const skill of skills) {
     if (!(await isInside(root, join(skill.directory, "SKILL.md")))) {
       console.warn(
-        `Repository skill "${skill.name}" is left out of thread ${threadId}: it leaves the workspace`,
+        `Repository skill "${skill.name}" is left out for ${threadId}: it leaves the workspace`,
       );
       continue;
     }
@@ -109,9 +109,7 @@ export class SkillStore {
           path: `${SKILLS_DIR}/${read.skill.name}/SKILL.md`,
         });
       } catch (error) {
-        console.warn(
-          `Skill "${wanted.name}" is left out of thread ${threadId}: ${errorMessage(error)}`,
-        );
+        console.warn(`Skill "${wanted.name}" is left out for ${threadId}: ${errorMessage(error)}`);
       }
     }
 

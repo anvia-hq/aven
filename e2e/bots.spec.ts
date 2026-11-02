@@ -61,6 +61,27 @@ test.describe("bots", () => {
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
   });
 
+  // A bot has the person's skills as a thread's agent has (decision 0081): the built-in ones reach
+  // it through the runner, and its instructions list them.
+  test("a bot is told which skills it has", async ({ page }) => {
+    await registerUser(page, "bot-skills", "Skills Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await page.getByRole("textbox", { name: "Message" }).fill("what are your skills?");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    // The first built-in skill by name, which only the runner's copy of the person's skills lists.
+    await expect(bubble(page, "I have the setup-env skill")).toBeVisible();
+  });
+
   // Files go to a bot as they go to a thread's agent (decision 0080): a file lands in the bot's
   // /uploads and it is told where, an image is shown to the model too, and all of it is in the chat
   // after a reload.
