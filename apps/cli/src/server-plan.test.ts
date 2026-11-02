@@ -85,3 +85,38 @@ describe("planServer", () => {
     expect(() => planServer({ ...base, domain: "a b/c" })).toThrow("--domain must be a host name");
   });
 });
+
+describe("who can connect (the bind address)", () => {
+  test("a new install is for this machine only", () => {
+    const { options, notes } = planServer(base);
+    expect(options.bind).toBe("127.0.0.1");
+    expect(notes).toEqual([]);
+  });
+
+  test("a domain is open to the world, which the certificate needs, with no warning", () => {
+    const { options, notes } = planServer({ ...base, domain: "aven.example.com" });
+    expect(options.bind).toBe("0.0.0.0");
+    expect(notes).toEqual([]);
+  });
+
+  test("--bind opens plain HTTP to a network, and says it is not encrypted", () => {
+    const everyone = planServer({ ...base, bind: "0.0.0.0" });
+    expect(everyone.options.bind).toBe("0.0.0.0");
+    expect(everyone.notes.join(" ")).toContain("not encrypted");
+    expect(everyone.notes.join(" ")).toContain("every network");
+
+    const tailnet = planServer({ ...base, bind: "100.64.0.7" });
+    expect(tailnet.options.bind).toBe("100.64.0.7");
+    expect(tailnet.notes.join(" ")).toContain("100.64.0.7");
+  });
+
+  test("an explicit loopback address, and any bind with a domain, warn of nothing", () => {
+    expect(planServer({ ...base, bind: "127.0.0.1" }).notes).toEqual([]);
+    expect(planServer({ ...base, domain: "aven.example.com", bind: "0.0.0.0" }).notes).toEqual([]);
+  });
+
+  test("refuses what is not an IPv4 address", () => {
+    for (const bind of ["localhost", "::1", "999.1.1.1", "", "0.0.0.0/0"])
+      expect(() => planServer({ ...base, bind })).toThrow("--bind must be an IPv4 address");
+  });
+});

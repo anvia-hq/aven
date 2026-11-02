@@ -75,3 +75,31 @@ test("a new server env names the owner when there is one", () => {
   ).toBe("me@example.com");
   expect(parseEnv(newServerEnv(template, base)).PLATFORM_OWNER_EMAILS).toBe("");
 });
+
+describe("the address the web port is published on", () => {
+  const template = "AVEN_BIND=127.0.0.1\nAVEN_PORT=2836\n";
+
+  test("a new install gets the bind it was planned with", () => {
+    const base = { origin: "http://x", port: 1, version: "1" };
+    expect(parseEnv(newServerEnv(template, { ...base, bind: "0.0.0.0" })).AVEN_BIND).toBe(
+      "0.0.0.0",
+    );
+    expect(parseEnv(newServerEnv(template, { ...base, bind: "127.0.0.1" })).AVEN_BIND).toBe(
+      "127.0.0.1",
+    );
+  });
+
+  test("an install from before the setting keeps behaving as it did: every address", () => {
+    // The template says loopback, for a new install; an old one must not be moved by an update.
+    const updated = addMissingKeys("AVEN_PORT=3000\n", template);
+    expect(parseEnv(updated).AVEN_BIND).toBe("");
+    expect(parseEnv(updated).AVEN_PORT).toBe("3000");
+  });
+
+  test("a value somebody set is kept", () => {
+    expect(parseEnv(addMissingKeys("AVEN_BIND=100.64.0.7\n", template)).AVEN_BIND).toBe(
+      "100.64.0.7",
+    );
+    expect(parseEnv(addMissingKeys("AVEN_BIND=\n", template)).AVEN_BIND).toBe("");
+  });
+});

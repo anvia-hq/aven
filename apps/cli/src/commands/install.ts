@@ -50,6 +50,11 @@ export async function install(args: Args) {
   console.log(
     `\nAven is ready: ${env.BETTER_AUTH_URL}\nCreate your account there, add an AI provider in Settings, and start a thread.`,
   );
+  if (env.AVEN_BIND === "127.0.0.1")
+    console.log(
+      `Only this machine can open it. To let others in, set AVEN_BIND in ${join(serverDir(), ".env")} and run: aven restart\n` +
+        "For a server on the internet install with --domain, which serves HTTPS.",
+    );
   if (!args.flags["no-open"]) await openBrowser(env.BETTER_AUTH_URL ?? "");
 }
 

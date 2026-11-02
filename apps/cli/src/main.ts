@@ -28,7 +28,7 @@ const usage = `aven ${version}
 Usage: aven <command>
 
 Everything:
-  install [--domain D] [--port N] [--owner-email E] [--no-runner] [--no-open]
+  install [--domain D] [--port N] [--bind ADDRESS] [--owner-email E] [--no-runner] [--no-open]
               Install the server and a runner on this machine and open it
   install --runner --url <address> --token <token>
               Install only a runner, for a server somewhere else
@@ -38,7 +38,7 @@ Everything:
               database and ~/.aven
 
 Server:
-  server install [--domain D] [--port N] [--origin URL] [--release X]
+  server install [--domain D] [--port N] [--bind ADDRESS] [--origin URL] [--release X]
               Install and start the server (Postgres, API and web) in ~/.aven/server
   start       Start the server
   stop        Stop it; the database is kept
@@ -74,6 +74,7 @@ async function main(argv: string[]) {
     "token",
     "image",
     "owner-email",
+    "bind",
   ]);
   const [command, sub] = args.positionals;
 

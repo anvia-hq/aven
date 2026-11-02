@@ -47,8 +47,10 @@ services:
       AVEN_SITE_ADDRESS: ${AVEN_SITE_ADDRESS:-:80}
     # HTTP, and HTTPS when AVEN_SITE_ADDRESS is a domain (Caddy then needs the standard 80 and 443
     # for its certificate). Without a domain nothing listens on 443, so that port stays on loopback.
+    # AVEN_BIND is the address the HTTP port is published on: 127.0.0.1 is this machine only. Left
+    # empty (or absent, as in a `.env` from before it existed) it is every address, as it was.
     ports:
-      - "${AVEN_PORT:-2836}:80"
+      - "${AVEN_BIND:+${AVEN_BIND}:}${AVEN_PORT:-2836}:80"
       - "${AVEN_HTTPS_BIND:-127.0.0.1}:${AVEN_HTTPS_PORT:-2838}:443"
     volumes:
       - caddy_data:/data

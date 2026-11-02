@@ -47,6 +47,7 @@ export async function serverInstall(args: Args) {
       origin: stringFlag(args, "origin"),
       release: stringFlag(args, "release") ?? (version === "dev" ? "latest" : version),
       ownerEmail: stringFlag(args, "owner-email"),
+      bind: stringFlag(args, "bind"),
     },
     // A server that is already installed holds its ports itself.
     installed ? () => true : portIsFree,

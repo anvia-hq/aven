@@ -1,3 +1,5 @@
+import { isIPv4 } from "node:net";
+
 import type { ServerEnvOptions } from "./env-file";
 
 export type ServerPlanInput = {
@@ -8,6 +10,8 @@ export type ServerPlanInput = {
   origin?: string;
   release: string;
   ownerEmail?: string;
+  /** The address the web port is published on. */
+  bind?: string;
 };
 
 // Where a new install listens by default: not the ports other development servers already use
@@ -40,7 +44,9 @@ function firstFree(from: number, chosen: number[], isFree: (port: number) => boo
 
 /**
  * What a new server is installed with, from the flags: plain HTTP on port 2836, or, with a domain,
- * HTTPS on the standard ports (Caddy needs both for its certificate) at https://<domain>. A port
+ * HTTPS on the standard ports (Caddy needs both for its certificate) at https://<domain>. Who can
+ * connect is the bind address: this machine only, unless there is a domain (which the world has to
+ * reach) or `--bind` says otherwise, and `notes` warns when plain HTTP is offered to a network. A port
  * the flags do not name is the default or, when something listens there, the next free one of the
  * range (`notes` says which moved). Also the ports that have to be free on this machine.
  */
@@ -49,8 +55,17 @@ export function planServer(input: ServerPlanInput, isFree: (port: number) => boo
   if (domain !== undefined && !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(domain))
     throw new Error("--domain must be a host name such as aven.example.com");
 
+  if (input.bind !== undefined && !isIPv4(input.bind))
+    throw new Error("--bind must be an IPv4 address, such as 127.0.0.1 or 0.0.0.0");
+  const bind = input.bind ?? (domain ? "0.0.0.0" : "127.0.0.1");
+
   const chosen: number[] = [];
   const notes: string[] = [];
+  if (!domain && !bind.startsWith("127."))
+    notes.push(
+      `Plain HTTP will be open to ${bind === "0.0.0.0" ? "every network this machine is on" : bind}: ` +
+        "sign-ins are not encrypted on the way. Use --domain for HTTPS, or a VPN or a proxy that serves HTTPS.",
+    );
   // A port named by a flag is used as it is (and has to be free); one that is not is looked for.
   const choose = (value: string | undefined, fallback: number, flag: string, search: boolean) => {
     const port =
@@ -73,6 +88,7 @@ export function planServer(input: ServerPlanInput, isFree: (port: number) => boo
     ownerEmail: input.ownerEmail,
     apiPort,
     httpsPort,
+    bind,
   };
   const needed = [port, apiPort, httpsPort];
   if (domain) {

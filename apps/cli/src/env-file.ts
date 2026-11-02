@@ -40,16 +40,22 @@ export function newSecrets() {
   };
 }
 
+// A setting that did not exist when an install was made had a behavior then, and the install keeps
+// it: the template's value is for a new install, this is for an old one. `AVEN_BIND` empty is every
+// address, as the web port was always published.
+const SETTINGS_BEFORE: Record<string, string> = { AVEN_BIND: "" };
+
 /**
- * An existing `.env` with what a newer template has added: a key it lacks gets the template's value,
- * or a new secret when it is one the installer makes. What is there is never changed.
+ * An existing `.env` with what a newer template has added: a key it lacks gets the value the install
+ * behaved with before the key existed, else the template's, or a new secret when it is one the
+ * installer makes. What is there is never changed.
  */
 export function addMissingKeys(existing: string, template: string) {
   const have = parseEnv(existing);
   const secrets: Record<string, string> = newSecrets();
   const missing: Record<string, string> = {};
   for (const [key, value] of Object.entries(parseEnv(template)))
-    if (!(key in have)) missing[key] = secrets[key] ?? value;
+    if (!(key in have)) missing[key] = secrets[key] ?? SETTINGS_BEFORE[key] ?? value;
   return setEnv(existing, missing);
 }
 
@@ -68,6 +74,8 @@ export type ServerEnvOptions = {
   httpsPort?: number;
   /** The API's port on this machine. */
   apiPort?: number;
+  /** The address the web port is published on: 127.0.0.1 is this machine only. */
+  bind?: string;
 };
 
 /** A new install's `.env`: the template with the secrets made and the address filled in. */
@@ -79,6 +87,7 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
     TRUSTED_ORIGINS: options.origin,
     ...newSecrets(),
   };
+  if (options.bind !== undefined) values.AVEN_BIND = options.bind;
   if (options.ownerEmail) values.PLATFORM_OWNER_EMAILS = options.ownerEmail;
   if (options.apiPort) values.AVEN_API_PORT = String(options.apiPort);
   if (options.domain) {
