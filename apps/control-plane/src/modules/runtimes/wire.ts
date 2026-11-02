@@ -24,6 +24,7 @@ import {
   type BotSendParams,
   type BotCreateParams,
   type BotMemoryParams,
+  type BotSkillParams,
   type BotUpdateParams,
   type CallMethod,
   type RunOutcome,
@@ -55,6 +56,7 @@ const callMethods = [
   "bot.question",
   "bot.schedule",
   "bot.goal",
+  "bot.skill",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -337,6 +339,9 @@ const appendParams = memoryParams.extend({
 
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
+// A skill of a bot's reply, by its digest.
+const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
+
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
   if (!parsed.success) {
@@ -361,6 +366,8 @@ export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
 export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
+export const parseBotSkillParams = (params: unknown) =>
+  parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

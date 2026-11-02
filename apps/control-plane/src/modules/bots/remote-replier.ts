@@ -16,7 +16,9 @@ import type {
   BotScheduleParams,
   BotSendParams,
   BotSent,
+  BotSkillParams,
   BotUpdateParams,
+  RunSkill,
 } from "@aven/protocol/runtime-wire";
 import { isGoalRoundNote, type BotGoalView, type GoalAction } from "@aven/protocol/goals";
 import type { BotScheduleView } from "@aven/protocol/schedules";
@@ -57,6 +59,12 @@ export type BotKeeper = {
   greet(userId: string, botId: string, hops: number): Promise<void>;
 };
 
+/** The skills a bot's reply has: the person's enabled ones and the built-in ones, and their archives (decision 0081). */
+export type BotSkills = {
+  forRun(userId: string): Promise<RunSkill[]>;
+  archive(digest: string): Promise<Uint8Array | undefined>;
+};
+
 // What a bot that is not the main one tells the main bot when it needs the person to decide: one
 // line for each thing the bot wrote, so its names and questions cannot pass for lines of ours.
 function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
@@ -86,6 +94,7 @@ export class RemoteBotReplier implements BotReplier {
     private store: MemoryStore,
     private runtimeId: string,
     private bots: BotKeeper,
+    private skills: BotSkills,
   ) {}
 
   ready(model: ModelConfig) {
@@ -114,6 +123,7 @@ export class RemoteBotReplier implements BotReplier {
     // here leaves nothing to take back.
     const peers = await this.#peersOf(userId, bot.id);
     const timezone = await this.bots.timezone(userId);
+    const skills = await this.skills.forRun(userId);
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -235,6 +245,14 @@ export class RemoteBotReplier implements BotReplier {
         }
         return this.bots.goals.update(bot.id, params.action, params.reason);
       },
+      // Only a skill this reply was given, whatever digest the runner asks for, as a run's own.
+      skill: async ({ digest }: Omit<BotSkillParams, "replyId">) => {
+        const archive = skills.some((skill) => skill.digest === digest)
+          ? await this.skills.archive(digest)
+          : undefined;
+        if (!archive) throw new Error("This reply has no such skill");
+        return { data: archive.toBase64() };
+      },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
         if (!onPersonsWord) {
@@ -266,6 +284,7 @@ export class RemoteBotReplier implements BotReplier {
           prompt,
           model: runModel,
           attachments: attachments?.length ? attachments : undefined,
+          skills: skills.length ? skills : undefined,
         },
         sink,
       );

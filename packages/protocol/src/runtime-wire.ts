@@ -275,6 +275,8 @@ export type ControlPlaneToRuntime =
       model: RunModel;
       /** The files the person sent with the message, which the runner copies to the bot's computer (decision 0080). */
       attachments?: RunAttachment[];
+      /** The person's skills and the built-in ones, which the runner puts in the bot's `/skills` (decision 0081). */
+      skills?: RunSkill[];
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
@@ -350,7 +352,8 @@ export type BotCallMethod =
   | "bot.send"
   | "bot.question"
   | "bot.schedule"
-  | "bot.goal";
+  | "bot.goal"
+  | "bot.skill";
 
 export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
 
@@ -364,6 +367,9 @@ export type RepoAccess = {
 type RepoAccessParams = { runId: string };
 
 type SkillsGetParams = { runId: string; digest: string };
+
+/** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
+export type BotSkillParams = { replyId: string; digest: string };
 
 /** A skill's folder as a `.tar.gz`, in base64. */
 type SkillArchive = { data: string };
@@ -489,6 +495,7 @@ export type RuntimeCalls = {
   "bot.question": { params: BotQuestionParams; result: BotQuestioned };
   "bot.schedule": { params: BotScheduleParams; result: BotScheduled };
   "bot.goal": { params: BotGoalParams; result: BotGoaled };
+  "bot.skill": { params: BotSkillParams; result: SkillArchive };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -505,4 +512,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 34;
+export const WIRE_VERSION = 35;

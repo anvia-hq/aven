@@ -1,8 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Agent, createTool, type AnyTool } from "@anvia/core";
+import type { SkillListing } from "@aven/agents/skills";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
@@ -19,6 +20,7 @@ import {
 import { ArtifactStore } from "./artifacts";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { noProcesses } from "./thread-processes";
+import { SkillStore } from "./skills";
 import { UploadStore } from "./uploads";
 
 const tool = (name: string): AnyTool =>
@@ -76,7 +78,7 @@ const exec = (
 const sandboxWith = (
   acquired: { id: string; repo: unknown }[] = [],
   run?: Exec,
-  stores: Pick<ThreadWorkspaces, "uploads" | "artifacts"> = {},
+  stores: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills"> = {},
 ): ThreadWorkspaces => ({
   ...stores,
   async acquire(thread, repo) {
@@ -102,7 +104,9 @@ function harness(
     linkUp?: () => boolean;
     failSend?: boolean;
     exec?: Exec;
-    stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts">;
+    stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills">;
+    /** What `bot.skill` answers with, by digest; a skill not here cannot be had. */
+    archives?: Map<string, Uint8Array>;
   } = {},
 ) {
   const sent: RuntimeToControlPlane[] = [];
@@ -131,6 +135,11 @@ function harness(
       }
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
       if (method === "bot.goal") return null;
+      if (method === "bot.skill") {
+        const archive = options.archives?.get((params as { digest: string }).digest);
+        if (!archive) throw new Error("This reply has no such skill");
+        return { data: archive.toBase64() };
+      }
       return memoryAnswer(params);
     },
     boxes,
@@ -146,6 +155,94 @@ function harness(
 }
 
 describe("BotReplies", () => {
+  describe("the person's skills (decision 0081)", () => {
+    const root = mkdtemp(join(tmpdir(), "aven-bot-skills-"));
+    afterAll(async () => rm(await root, { recursive: true, force: true }));
+    const skillMd = (name: string, description: string) =>
+      `---\nname: ${name}\ndescription: ${description}\n---\nSteps.`;
+    const archive = (name: string, description: string) =>
+      new Bun.Archive({ "SKILL.md": skillMd(name, description) }, { compress: "gzip" }).bytes();
+    const stores = async () => ({
+      skills: new SkillStore(join(await root, `skills-${crypto.randomUUID()}`)),
+    });
+
+    const notes = { name: "notes", description: "Personal notes.", digest: "1".repeat(64) };
+    const lint = { name: "lint", description: "Built-in lint.", digest: "2".repeat(64) };
+
+    // What the agent was made with, and whether the reply ended well.
+    const answered = async (
+      skills: BotReplyMessage["skills"],
+      archives: Map<string, Uint8Array>,
+      held: Promise<{ skills: SkillStore | undefined }> = stores(),
+    ) => {
+      const store = await held;
+      let listing: unknown;
+      const run = harness(
+        (input) => {
+          listing = input.skills;
+          return agentThat([text("")])(input);
+        },
+        { stores: store, archives },
+      );
+      run.replies.start({ ...message, skills });
+      await run.until();
+      return { run, listing, store };
+    };
+
+    test("are put in the bot's /skills and listed for its agent, each fetched for this reply", async () => {
+      const archives = new Map([
+        [notes.digest, await archive("notes", notes.description)],
+        [lint.digest, await archive("lint", lint.description)],
+      ]);
+      const { run, listing, store } = await answered([notes, lint], archives);
+
+      expect(listing).toEqual([
+        { name: "lint", description: "Built-in lint.", path: "/skills/lint/SKILL.md" },
+        { name: "notes", description: "Personal notes.", path: "/skills/notes/SKILL.md" },
+      ]);
+      // Under the bot's id, the folder its container mounts read-only at /skills.
+      const dir = await store.skills!.dir("bot-1");
+      expect(await readFile(join(dir, "notes", "SKILL.md"), "utf8")).toContain("Personal notes.");
+      expect(
+        run.calls.filter((call) => (call as { method: string }).method === "bot.skill"),
+      ).toEqual([
+        { method: "bot.skill", params: { replyId: "r1", digest: notes.digest } },
+        { method: "bot.skill", params: { replyId: "r1", digest: lint.digest } },
+      ]);
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+
+    test("a skill that cannot be had is left out and the reply goes on", async () => {
+      const archives = new Map([[lint.digest, await archive("lint", lint.description)]]);
+      const { run, listing } = await answered([notes, lint], archives);
+
+      expect(listing).toEqual([
+        { name: "lint", description: "Built-in lint.", path: "/skills/lint/SKILL.md" },
+      ]);
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+
+    test("a reply with none empties the folder, and a runner with no store for them lists none", async () => {
+      const held = stores();
+      const archives = new Map([[notes.digest, await archive("notes", notes.description)]]);
+      const first = await answered([notes], archives, held);
+      const dir = await first.store.skills!.dir("bot-1");
+      expect(await readdir(dir)).toEqual(["notes"]);
+
+      const second = await answered(undefined, archives, held);
+      expect(second.listing).toEqual([]);
+      expect(await readdir(dir)).toEqual([]);
+
+      const bare = await answered(
+        [notes],
+        archives,
+        Promise.resolve({ skills: undefined as SkillStore | undefined }),
+      );
+      expect(bare.listing).toEqual([]);
+      expect(bare.run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+  });
+
   describe("files the person sent (decision 0080)", () => {
     const root = mkdtemp(join(tmpdir(), "aven-bot-files-"));
     afterAll(async () => rm(await root, { recursive: true, force: true }));
@@ -610,7 +707,12 @@ describe("BotReplies", () => {
 
   // Through the real builder, not the test's own: what the agent is made with is what it can do.
   describe("the agent the runner builds", () => {
-    const build = (canCreateBots: boolean, asking = false) =>
+    const build = (
+      canCreateBots: boolean,
+      asking = false,
+      skills: readonly SkillListing[] = [],
+      computer: readonly AnyTool[] = [],
+    ) =>
       defaultCreateBotAgent("http://control-plane")({
         bot: {
           ...message.bot,
@@ -646,9 +748,10 @@ describe("BotReplies", () => {
           },
           savePolicy: "turn",
         },
-        computer: [],
+        computer,
         askQuestion: asking ? async () => ({}) : undefined,
         updateSelf: async () => ({ name: "Pip", description: "" }),
+        skills,
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
           : undefined,
@@ -661,6 +764,24 @@ describe("BotReplies", () => {
       const none = build(false);
       expect(none.tools.map((each) => each.name)).not.toContain("ask_question");
       expect(none.instructions).not.toContain("<questions>");
+    });
+
+    test("a bot with a computer is told its skills, and where to read them (decision 0081)", () => {
+      const notes = {
+        name: "notes",
+        description: "Personal notes.",
+        path: "/skills/notes/SKILL.md",
+      };
+      const withComputer = build(false, false, [notes], [tool("exec_command")]);
+      expect(withComputer.instructions).toContain("<skills>");
+      expect(withComputer.instructions).toContain(
+        "- notes: Personal notes. (/skills/notes/SKILL.md)",
+      );
+      // None to tell, or no computer to read them on: no section.
+      expect(build(false, false, [], [tool("exec_command")]).instructions).not.toContain(
+        "<skills>",
+      );
+      expect(build(false, false, [notes]).instructions).not.toContain("<skills>");
     });
 
     test("every bot can change itself and knows its own description", () => {

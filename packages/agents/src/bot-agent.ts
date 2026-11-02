@@ -3,6 +3,7 @@ import type { BotPeer } from "@aven/protocol/runtime-wire";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
+import type { SkillListing } from "./skills";
 import { createAskQuestionTool, type AskQuestion } from "./tools/ask-question";
 import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
 import { createGoalTools, type GoalHost } from "./tools/goals";
@@ -51,6 +52,8 @@ type BotAgentOptions = ModelSource & {
   askQuestion?: AskQuestion;
   /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
   updateSelf?: UpdateSelf;
+  /** The skills the host put in the computer's `/skills`, which the bot reads there (decision 0081). */
+  skills?: readonly SkillListing[];
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -74,6 +77,7 @@ export function createBotAgent({
   timezone,
   description = "",
   updateSelf,
+  skills,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -92,6 +96,7 @@ export function createBotAgent({
       schedules: schedules && timezone ? { timezone } : undefined,
       peers,
       self: updateSelf ? { description } : undefined,
+      skills,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,

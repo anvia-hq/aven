@@ -7,6 +7,7 @@ import type {
   ControlPlaneToRuntime,
   RepoAccess,
   RunAttachment,
+  RunSkill,
   RunModel,
   RunnerCallMethod,
   RunOutcome,
@@ -125,6 +126,7 @@ export class RuntimeConnection {
       prompt: string;
       model: RunModel;
       attachments?: RunAttachment[];
+      skills?: RunSkill[];
     },
     sink: BotReplySink,
   ) {

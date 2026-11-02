@@ -3,12 +3,12 @@ import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
-import type { BotReplyInfo, RunAttachment, RunModel } from "@aven/protocol/runtime-wire";
+import type { BotReplyInfo, RunAttachment, RunModel, RunSkill } from "@aven/protocol/runtime-wire";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import type { BotLetter } from "./chats";
-import { RemoteBotReplier, type BotKeeper } from "./remote-replier";
+import { RemoteBotReplier, type BotKeeper, type BotSkills } from "./remote-replier";
 import type { NewBot } from "./service";
 
 const bot: Bot = {
@@ -42,6 +42,7 @@ function fakeRunner(
     keyless?: boolean;
     store?: MemoryStore;
     bots?: Partial<BotKeeper>;
+    skills?: Partial<BotSkills>;
   } = {},
 ) {
   const started: {
@@ -50,6 +51,7 @@ function fakeRunner(
     prompt: string;
     model: RunModel;
     attachments?: RunAttachment[];
+    skills?: RunSkill[];
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
@@ -61,6 +63,7 @@ function fakeRunner(
         prompt: string;
         model: RunModel;
         attachments?: RunAttachment[];
+        skills?: RunSkill[];
       },
       sink: BotReplySink,
     ) {
@@ -89,32 +92,43 @@ function fakeRunner(
     issue: (replyId: string) => (grants.issued.push(replyId), runModel),
     revoke: (replyId: string) => void grants.revoked.push(replyId),
   };
-  const replier = new RemoteBotReplier(hub, gateway, options.store ?? store, "runner-1", {
-    list: async () => [bot],
-    create: async () => bot,
-    update: async () => bot,
-    deliver: async () => ({ handle: "scout", name: "Scout" }),
-    greet: async () => undefined,
-    timezone: async () => "Asia/Jakarta",
-    goals: {
-      get: async () => null,
-      start: async () => {
-        throw new Error("not started");
+  const replier = new RemoteBotReplier(
+    hub,
+    gateway,
+    options.store ?? store,
+    "runner-1",
+    {
+      list: async () => [bot],
+      create: async () => bot,
+      update: async () => bot,
+      deliver: async () => ({ handle: "scout", name: "Scout" }),
+      greet: async () => undefined,
+      timezone: async () => "Asia/Jakarta",
+      goals: {
+        get: async () => null,
+        start: async () => {
+          throw new Error("not started");
+        },
+        update: async () => null,
       },
-      update: async () => null,
+      schedules: {
+        list: async () => [],
+        create: async () => {
+          throw new Error("not made");
+        },
+        update: async () => {
+          throw new Error("not changed");
+        },
+        remove: async () => undefined,
+      },
+      ...options.bots,
     },
-    schedules: {
-      list: async () => [],
-      create: async () => {
-        throw new Error("not made");
-      },
-      update: async () => {
-        throw new Error("not changed");
-      },
-      remove: async () => undefined,
+    {
+      forRun: async () => [],
+      archive: async () => undefined,
+      ...options.skills,
     },
-    ...options.bots,
-  });
+  );
   const only = () => [...sinks.values()][0]!;
   return { replier, started, cancelled, grants, asked, only, sinks: () => sinks.values() };
 }
@@ -232,6 +246,66 @@ describe("RemoteBotReplier", () => {
     expect(run.started[1]?.attachments).toBeUndefined();
     [...run.sinks()][1]!.end();
     await without;
+  });
+
+  describe("the person's skills (decision 0081)", () => {
+    const notes: RunSkill = { name: "notes", description: "Notes.", digest: "a".repeat(64) };
+    const other = "b".repeat(64);
+    const archive = new TextEncoder().encode("tar");
+
+    test("are sent with the reply, for the person it answers, and none when they have none", async () => {
+      const asked: string[] = [];
+      const run = fakeRunner({
+        skills: { forRun: async (userId) => (asked.push(userId), [notes]) },
+      });
+      const first = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      expect(asked).toEqual(["u1"]);
+      expect(run.started[0]?.skills).toEqual([notes]);
+      run.only().end();
+      await first;
+
+      const bare = fakeRunner();
+      const second = bare.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      expect(bare.started[0]?.skills).toBeUndefined();
+      bare.only().end();
+      await second;
+    });
+
+    test("the runner gets the archive of a skill the reply was given, and of no other", async () => {
+      const asked: string[] = [];
+      const run = fakeRunner({
+        skills: {
+          forRun: async () => [notes],
+          archive: async (digest) => (asked.push(digest), archive),
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      expect(await run.only().skill({ replyId: "r", digest: notes.digest })).toEqual({
+        data: archive.toBase64(),
+      });
+      // Another person's skill, or any digest the runner makes up, is not given out.
+      await expect(run.only().skill({ replyId: "r", digest: other })).rejects.toThrow(
+        "no such skill",
+      );
+      expect(asked).toEqual([notes.digest]);
+      run.only().end();
+      await answering;
+    });
+
+    test("a skill whose archive is gone is refused, not sent empty", async () => {
+      const run = fakeRunner({ skills: { forRun: async () => [notes] } });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      await expect(run.only().skill({ replyId: "r", digest: notes.digest })).rejects.toThrow(
+        "no such skill",
+      );
+      run.only().end();
+      await answering;
+    });
   });
 
   test("what the bot says is shown, and the reply ends when the runner says it has", async () => {

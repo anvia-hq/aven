@@ -18,9 +18,12 @@ import type {
   BotReplyInfo,
   ControlPlaneToRuntime,
   RunModel,
+  RunSkill,
   RuntimeCalls,
   RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
+
+import type { SkillListing } from "@aven/agents/skills";
 
 import { keepAttachments } from "./attachments";
 import { verifyWith } from "./goal-assessment";
@@ -50,6 +53,8 @@ export type CreateBotReplyAgent = (input: {
   peers: BotPeer[];
   /** Changes the bot's own name, description or instruction (decision 0061). */
   updateSelf: UpdateSelf;
+  /** The skills in the bot's `/skills` for this reply (decision 0081). */
+  skills: readonly SkillListing[];
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -68,6 +73,7 @@ export const defaultCreateBotAgent =
     schedules,
     peers,
     updateSelf,
+    skills,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -93,6 +99,7 @@ export const defaultCreateBotAgent =
       peers,
       description: bot.description,
       updateSelf,
+      skills,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -164,13 +171,13 @@ export class BotReplies {
 
   // One reply, which never throws: how it ended is told to the control plane.
   async #answer(
-    { replyId, bot, prompt, model, attachments }: BotReplyMessage,
+    { replyId, bot, prompt, model, attachments, skills }: BotReplyMessage,
     abort: AbortController,
   ) {
     const { send } = this.#context;
     const { signal } = abort;
     try {
-      const agent = await this.#agentFor(replyId, bot, prompt, model, abort);
+      const agent = await this.#agentFor(replyId, bot, prompt, model, skills ?? [], abort);
       const asked = await this.#promptOf(bot.id, prompt, attachments);
       await agent.generate({ prompt: asked, session: { sessionId: bot.id }, abortSignal: signal });
       send({ type: "bot.end", replyId });
@@ -197,11 +204,22 @@ export class BotReplies {
     return sentPrompt(prompt, { attachments: kept, images });
   }
 
+  // Puts the reply's skills in the bot's /skills, as a thread's run does (decision 0081); a runner
+  // with no store for them, or a skill that cannot be had, leaves them out and the reply goes on.
+  async #installSkills(replyId: string, botId: string, skills: readonly RunSkill[]) {
+    const store = this.#context.sandbox.skills;
+    if (!store) return [];
+    const fetch = async (digest: string) =>
+      Uint8Array.fromBase64((await this.#context.call("bot.skill", { replyId, digest })).data);
+    return store.install(botId, skills, fetch);
+  }
+
   async #agentFor(
     replyId: string,
     bot: BotReplyInfo,
     prompt: string,
     model: RunModel,
+    skills: readonly RunSkill[],
     abort: AbortController,
   ) {
     const { sandbox, boxes, starting, call, send: post, createAgent } = this.#context;
@@ -209,6 +227,7 @@ export class BotReplies {
     abort.signal.throwIfAborted();
     const box = await sandbox.acquire({ id: bot.id });
     boxes.set(bot.id, box);
+    const skillListing = await this.#installSkills(replyId, bot.id, skills);
     // What a bot sends the person is shown as typed; what it sends another bot goes at once, and
     // the other bot's answer is a message of its own (decision 0065).
     const peers = [...bot.peers];
@@ -271,6 +290,7 @@ export class BotReplies {
         ? undefined
         : (questions) => call("bot.question", { replyId, questions }),
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
+      skills: skillListing,
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots
         ? async (input) => {

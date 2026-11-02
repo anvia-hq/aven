@@ -218,6 +218,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           question: async (params) => (asked.push(params), {}),
           schedule: async (params) => (asked.push(params), params.op === "list" ? [] : null),
           goal: async (params) => (asked.push(params), null),
+          skill: async (params) => (asked.push(params), { data: "QUJD" }),
           update: async (params) => (
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
@@ -309,6 +310,22 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         { replyId: "reply-1", name: "Scout", instruction: "You research." },
         { replyId: "reply-1", name: "Pip" },
       ]);
+    });
+
+    test("a skill's archive is asked for by a digest, for the live reply only (decision 0081)", async () => {
+      const { ws, received, asked } = await replying("bot-skill");
+      const digest = "a".repeat(64);
+
+      expect(
+        await ask(ws, received, "bot.skill", { replyId: "reply-1", digest, userId: "mallory" }),
+      ).toMatchObject({ ok: true, result: { data: "QUJD" } });
+      expect(asked).toEqual([{ replyId: "reply-1", digest }]);
+
+      expect((await ask(ws, received, "bot.skill", { replyId: "other", digest })).ok).toBe(false);
+      expect((await ask(ws, received, "bot.skill", { replyId: "reply-1", digest: "x" })).ok).toBe(
+        false,
+      );
+      expect(asked).toHaveLength(1);
     });
 
     test("a bot's message to another bot is sent for the live reply only, and the other bot is a handle", async () => {

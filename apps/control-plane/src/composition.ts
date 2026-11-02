@@ -62,25 +62,32 @@ export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 // which is made from the replier: the replier reaches them when it is asked, not when it is made.
 export const botRunner = new BotRunner({
   store: botMemoryStore,
-  replier: new RemoteBotReplier(runtimeHub, runGateway, botMemoryStore, botRuntimeId, {
-    list: (userId) => botsService.list(userId),
-    create: (userId, bot) => botsService.create(userId, bot),
-    update: (userId, id, changes) => botsService.update(userId, id, changes),
-    deliver: (letter) => botChats.deliver(letter),
-    greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
-    timezone: (userId) => preferencesService.timezone(userId),
-    goals: {
-      get: (botId) => goalsService.get(botId),
-      start: (userId, botId, input) => goalsService.start(userId, botId, input),
-      update: (botId, action, reason) => goalsService.update(botId, action, reason),
+  replier: new RemoteBotReplier(
+    runtimeHub,
+    runGateway,
+    botMemoryStore,
+    botRuntimeId,
+    {
+      list: (userId) => botsService.list(userId),
+      create: (userId, bot) => botsService.create(userId, bot),
+      update: (userId, id, changes) => botsService.update(userId, id, changes),
+      deliver: (letter) => botChats.deliver(letter),
+      greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
+      timezone: (userId) => preferencesService.timezone(userId),
+      goals: {
+        get: (botId) => goalsService.get(botId),
+        start: (userId, botId, input) => goalsService.start(userId, botId, input),
+        update: (botId, action, reason) => goalsService.update(botId, action, reason),
+      },
+      schedules: {
+        list: (userId) => schedulesService.list(userId),
+        create: (userId, selfId, input) => schedulesService.create(userId, selfId, input),
+        update: (userId, id, patch) => schedulesService.update(userId, id, patch),
+        remove: (userId, id) => schedulesService.remove(userId, id),
+      },
     },
-    schedules: {
-      list: (userId) => schedulesService.list(userId),
-      create: (userId, selfId, input) => schedulesService.create(userId, selfId, input),
-      update: (userId, id, patch) => schedulesService.update(userId, id, patch),
-      remove: (userId, id) => schedulesService.remove(userId, id),
-    },
-  }),
+    skillsService,
+  ),
   // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
   settled: (reply) => goalDriver.settled(reply),
 });

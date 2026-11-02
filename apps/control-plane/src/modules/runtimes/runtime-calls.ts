@@ -11,6 +11,7 @@ import type {
   BotScheduleParams,
   BotSendParams,
   BotSent,
+  BotSkillParams,
   BotUpdated,
   BotUpdateParams,
   CallMethod,
@@ -26,6 +27,7 @@ import {
   parseBotQuestionParams,
   parseBotScheduleParams,
   parseBotSendParams,
+  parseBotSkillParams,
   parseBotUpdateParams,
   parseMemoryParams,
   parseSkillsGetParams,
@@ -56,6 +58,8 @@ export type CallBotReply = {
   goal(params: BotGoalParams): Promise<BotGoaled>;
   /** Asks the person to decide, in the reply's own chat or through the main bot (decision 0066). */
   question(params: BotQuestionParams): Promise<BotQuestioned>;
+  /** A skill's archive, in base64, when the reply was given it (decision 0081). */
+  skill(params: BotSkillParams): Promise<{ data: string }>;
 };
 
 export type RuntimeCallContext = {
@@ -126,6 +130,11 @@ export async function answerRuntimeCall(
   if (method === "bot.send") {
     return answerBotCall(params, parseBotSendParams, findBotReply, (reply, call) =>
       reply.send(call),
+    );
+  }
+  if (method === "bot.skill") {
+    return answerBotCall(params, parseBotSkillParams, findBotReply, (reply, call) =>
+      reply.skill(call),
     );
   }
   if (method === "bot.update") {
