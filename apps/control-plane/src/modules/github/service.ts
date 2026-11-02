@@ -9,6 +9,8 @@ import {
   GithubNoPushAccessError,
   GithubWriteNotGrantedError,
   type GithubClient,
+  type GithubTrackedKind,
+  type GithubTrackedState,
 } from "./client";
 import { isLocalPath } from "./schema";
 import { githubUserTokenService } from "./user-tokens";
@@ -212,6 +214,23 @@ export function createGithubService(
         fullName,
         page,
         defaultBranch,
+      );
+    },
+
+    // One page of a project's pull requests or issues, with the same token (decision 0092).
+    async tracked(
+      installationRowId: string,
+      fullName: string,
+      kind: GithubTrackedKind,
+      state: GithubTrackedState,
+      page: number,
+    ) {
+      return client.tracked(
+        await githubInstallationId(installationRowId),
+        fullName,
+        kind,
+        state,
+        page,
       );
     },
 

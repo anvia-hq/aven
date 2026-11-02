@@ -10,6 +10,7 @@ import { ProjectTitle } from "@/modules/projects/components/project-title";
 import { RepoCommits } from "@/modules/projects/components/repo-commits";
 import { RepoFiles } from "@/modules/projects/components/repo-files";
 import { RepoReadme } from "@/modules/projects/components/repo-readme";
+import { RepoTracked } from "@/modules/projects/components/repo-tracked";
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
@@ -75,6 +76,7 @@ function ProjectPage() {
               empty="None yet. Add what the project needs to run, such as a database URL or an API key."
             />
             <InheritedVariables framed projectId={project.id} />
+            <RepoTracked key={`tracked-${project.id}`} projectId={project.id} />
             <RepoCommits key={project.id} project={project} />
           </div>
         </div>

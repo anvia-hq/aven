@@ -27,6 +27,13 @@ type Pull = {
 // Newest last, by repository.
 const pullRequests = new Map<string, Pull[]>();
 
+// What the fake's search finds: pull requests or issues, open or closed, the latest changed first.
+function searchTitles(pulls: boolean, open: boolean) {
+  if (pulls && open) return Array.from({ length: 12 }, (_, i) => `Open pull request ${12 - i}`);
+  if (pulls) return ["Merged pull request", "Closed pull request"];
+  return open ? ["Open issue two", "Open issue one"] : ["Closed issue"];
+}
+
 Bun.serve({
   port,
   async fetch(request) {
@@ -86,7 +93,13 @@ Bun.serve({
       return Response.json({
         id: Number(pathname.split("/").pop()),
         account: { login: "acme" },
-        permissions: { contents: "write", pull_requests: "write", metadata: "read" },
+        // Issues are listed only when the app may read them (decision 0092).
+        permissions: {
+          contents: "write",
+          pull_requests: "write",
+          issues: "read",
+          metadata: "read",
+        },
       });
     }
     if (pathname.endsWith("/access_tokens")) {
@@ -153,6 +166,34 @@ Bun.serve({
           page === 1
             ? { link: '<https://api.github.com/repositories/1/commits?page=2>; rel="next"' }
             : {},
+      });
+    }
+    // Pull requests and issues on the project page (decision 0092), by GitHub's search: twelve open
+    // pull requests (the newest a draft, ten to a page), two closed ones (one merged), two open
+    // issues and one closed.
+    if (pathname === "/search/issues") {
+      const params = new URL(request.url).searchParams;
+      const query = params.get("q") ?? "";
+      const page = Number(params.get("page") ?? "1");
+      const pulls = query.includes("is:pr");
+      const open = query.includes("is:open");
+      const titles = searchTitles(pulls, open);
+      const items = titles.map((title, index) => ({
+        number: 100 - index,
+        title,
+        html_url: `https://github.com/acme/web/${pulls ? "pull" : "issues"}/${100 - index}`,
+        state: open ? "open" : "closed",
+        draft: pulls && open && index === 0,
+        comments: index === 0 ? 3 : 0,
+        updated_at: new Date(Date.now() - index * 3_600_000).toISOString(),
+        user: { login: "ada" },
+        pull_request: pulls
+          ? { merged_at: !open && index === 0 ? "2026-10-30T10:00:00Z" : null }
+          : undefined,
+      }));
+      return Response.json({
+        total_count: items.length,
+        items: items.slice((page - 1) * 10, page * 10),
       });
     }
     const branches = pathname.match(/^\/repos\/acme\/([\w.-]+)\/branches$/)?.[1];

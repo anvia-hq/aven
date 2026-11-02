@@ -41,6 +41,15 @@ export class GithubWriteNotGrantedError extends ConflictError {
   }
 }
 
+/** The app has not been approved to read issues for the installation's account (decision 0092). */
+export class GithubIssuesNotGrantedError extends ConflictError {
+  constructor(accountLogin: string) {
+    super(
+      `The Aven app has not been approved to read issues on ${accountLogin} on GitHub. Approve its new permissions there to list them here.`,
+    );
+  }
+}
+
 /** The person cannot push to the repository, so they cannot ship to it (decision 0041). */
 export class GithubNoPushAccessError extends ConflictError {
   constructor(fullName: string) {
@@ -170,6 +179,47 @@ export type GithubCommitPage = { commits: GithubCommit[]; hasMore: boolean };
 
 export const COMMITS_PER_PAGE = 10;
 const COMMIT_MESSAGE_MAX = 200;
+
+/** Pull requests and issues of a repository, as the project page lists them (decision 0092). */
+export type GithubTrackedKind = "pull" | "issue";
+export type GithubTrackedState = "open" | "closed";
+
+export type GithubTrackedItem = {
+  number: number;
+  title: string;
+  url: string;
+  /** The author's GitHub login, none for a user GitHub no longer has. */
+  author: string | null;
+  /** A pull request is `draft` while open as one and `merged` when closed by merging; an issue is open or closed. */
+  status: "open" | "draft" | "merged" | "closed";
+  comments: number;
+  updatedAt: string;
+};
+
+/** One page of them, how many there are in all, and whether GitHub has a later page. */
+export type GithubTrackedPage = { items: GithubTrackedItem[]; total: number; hasMore: boolean };
+
+export const TRACKED_PER_PAGE = 10;
+// GitHub's search answers the first thousand matches only.
+const SEARCH_MAX_RESULTS = 1000;
+
+type TrackedPayload = {
+  number: number;
+  title: string;
+  html_url: string;
+  state: string;
+  draft?: boolean;
+  comments: number;
+  updated_at: string;
+  user: { login: string } | null;
+  pull_request?: { merged_at: string | null };
+};
+
+function trackedStatus(item: TrackedPayload): GithubTrackedItem["status"] {
+  if (item.pull_request?.merged_at) return "merged";
+  if (item.state !== "open") return "closed";
+  return item.draft ? "draft" : "open";
+}
 
 type CommitPayload = {
   sha: string;
@@ -477,6 +527,64 @@ export class GithubClient {
       })),
       hasMore: /rel="next"/.test(response.headers.get("link") ?? ""),
     };
+  }
+
+  /**
+   * One page of a repository's pull requests or issues, the latest changed first, or null when the
+   * installation cannot see the repository. It is GitHub's search, so the page and the total are
+   * exact for pull requests and issues apart (the listing endpoint mixes them). Issues need the
+   * app's `issues` permission, which an app made before decision 0092 lacks, and search answers
+   * nothing, not an error, without it: so the installation's permissions are asked first.
+   */
+  async tracked(
+    installationId: number,
+    fullName: string,
+    kind: GithubTrackedKind,
+    state: GithubTrackedState,
+    page: number,
+  ): Promise<GithubTrackedPage | null> {
+    const { token } = await this.installationToken(installationId);
+    if (kind === "issue") await this.#requireIssues(installationId);
+    const query = new URLSearchParams({
+      q: `repo:${fullName} is:${kind === "pull" ? "pr" : "issue"} is:${state}`,
+      sort: "updated",
+      order: "desc",
+      per_page: String(TRACKED_PER_PAGE),
+      page: String(page),
+    });
+    let found: { total_count: number; items: TrackedPayload[] };
+    try {
+      found = await this.#api(`/search/issues?${query}`, token);
+    } catch (error) {
+      // Search answers 422 for a repository the token cannot see, or for a page past the thousandth match.
+      if (error instanceof GithubApiError && error.status === 422) {
+        return page > 1 ? { items: [], total: 0, hasMore: false } : null;
+      }
+      throw error;
+    }
+    return {
+      items: found.items.map((item) => ({
+        number: item.number,
+        title: item.title,
+        url: item.html_url,
+        author: item.user?.login ?? null,
+        status: trackedStatus(item),
+        comments: item.comments,
+        updatedAt: item.updated_at,
+      })),
+      total: found.total_count,
+      hasMore: page * TRACKED_PER_PAGE < Math.min(found.total_count, SEARCH_MAX_RESULTS),
+    };
+  }
+
+  async #requireIssues(installationId: number) {
+    const found = await this.#api<{
+      permissions?: Record<string, string>;
+      account?: { login: string };
+    }>(`/app/installations/${installationId}`, this.#appJwt());
+    if (!found.permissions?.issues) {
+      throw new GithubIssuesNotGrantedError(found.account?.login ?? "the account");
+    }
   }
 
   // The branches by the commit each ends on, with the branches that end on the same one in a list.

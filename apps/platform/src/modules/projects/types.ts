@@ -62,3 +62,21 @@ export type RepoCommit = {
 
 /** One page of a project's commit history, and whether there is an older one. */
 export type RepoCommitPage = { commits: RepoCommit[]; hasMore: boolean };
+
+export type TrackedKind = "pull" | "issue";
+export type TrackedState = "open" | "closed";
+
+/** A pull request or an issue of a project's repository (`GET /projects/:id/pulls` and `/issues`; decision 0092). */
+export type TrackedItem = {
+  number: number;
+  title: string;
+  url: string;
+  author: string | null;
+  /** A pull request may be a draft or merged; an issue is open or closed. */
+  status: "open" | "draft" | "merged" | "closed";
+  comments: number;
+  updatedAt: string;
+};
+
+/** One page of them, how many there are in all and whether there is a later page. */
+export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };

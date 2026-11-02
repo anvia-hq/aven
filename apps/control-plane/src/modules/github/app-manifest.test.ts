@@ -20,6 +20,7 @@ describe("appManifest", () => {
     expect(manifest.default_permissions).toMatchObject({
       contents: "write",
       pull_requests: "write",
+      issues: "read",
       metadata: "read",
     });
     expect(manifest.default_events).toEqual([]);

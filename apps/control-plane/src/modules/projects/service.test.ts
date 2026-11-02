@@ -122,6 +122,55 @@ run("projectsService (postgres)", async () => {
     }
   });
 
+  test("pull requests and issues are read for the project's own organization only (decision 0092)", async () => {
+    const item = {
+      number: 3,
+      title: "Add a thing",
+      url: "https://github.com/acme/web/pull/3",
+      author: "ada",
+      status: "draft" as const,
+      comments: 0,
+      updatedAt: "2026-11-01T10:00:00Z",
+    };
+    const tracked = spyOn(githubService, "tracked").mockImplementation(async () => ({
+      items: [item],
+      total: 11,
+      hasMore: true,
+    }));
+    try {
+      const project = (await projectsService.list(orgA))[0]!;
+
+      expect(await projectsService.tracked(orgA, project.id, "pull", "closed", 2)).toEqual({
+        items: [item],
+        total: 11,
+        hasMore: true,
+        page: 2,
+      });
+      expect(tracked).toHaveBeenCalledWith(
+        project.githubInstallationId,
+        project.repoFullName,
+        "pull",
+        "closed",
+        2,
+      );
+
+      // Another organization's project is not found, and GitHub is not asked.
+      tracked.mockClear();
+      await expect(
+        projectsService.tracked(orgB, project.id, "issue", "open", 1),
+      ).rejects.toBeInstanceOf(NotFoundError);
+      expect(tracked).not.toHaveBeenCalled();
+
+      // A repository the installation lost is not found either.
+      tracked.mockImplementation(async () => null);
+      await expect(
+        projectsService.tracked(orgA, project.id, "issue", "open", 1),
+      ).rejects.toBeInstanceOf(NotFoundError);
+    } finally {
+      tracked.mockRestore();
+    }
+  });
+
   test("a folder and the README are read for the project's own organization only (decision 0082)", async () => {
     const folder = spyOn(githubService, "folder").mockImplementation(async () => [
       { name: "src", path: "src", type: "directory" },

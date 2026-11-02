@@ -2,7 +2,13 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
-import { commitsQuery, folderQuery, importProjectBody, projectParams } from "./schema";
+import {
+  commitsQuery,
+  folderQuery,
+  importProjectBody,
+  projectParams,
+  trackedQuery,
+} from "./schema";
 import { projectsService } from "./service";
 
 export const projectsRouter = new Elysia({ prefix: "/projects" })
@@ -42,4 +48,16 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
     ({ params, query, organizationId }) =>
       projectsService.commits(organizationId, params.id, query.page),
     { auth: true, org: true, params: projectParams, query: commitsQuery },
+  )
+  .get(
+    "/:id/pulls",
+    ({ params, query, organizationId }) =>
+      projectsService.tracked(organizationId, params.id, "pull", query.state, query.page),
+    { auth: true, org: true, params: projectParams, query: trackedQuery },
+  )
+  .get(
+    "/:id/issues",
+    ({ params, query, organizationId }) =>
+      projectsService.tracked(organizationId, params.id, "issue", query.state, query.page),
+    { auth: true, org: true, params: projectParams, query: trackedQuery },
   );

@@ -3,6 +3,7 @@ import { createVerify, generateKeyPairSync } from "node:crypto";
 
 import {
   GithubClient,
+  GithubIssuesNotGrantedError,
   GithubNotConfiguredError,
   githubConfigFromEnv,
   README_MAX_CHARS,
@@ -417,6 +418,143 @@ describe("GithubClient", () => {
           "main",
         ),
       ).rejects.toThrow("GitHub answered 500");
+    });
+  });
+
+  describe("a repository's pull requests and issues (decision 0092)", () => {
+    const item = (number: number, extra: object = {}) => ({
+      number,
+      title: `Item ${number}`,
+      html_url: `https://github.com/acme/web/pull/${number}`,
+      state: "open",
+      comments: 2,
+      updated_at: "2026-11-01T10:00:00Z",
+      user: { login: "ada" },
+      ...extra,
+    });
+    // A GitHub that gives a token, says what the installation may do and answers the search with
+    // `answer(query)`.
+    const github = (
+      answer: (query: URLSearchParams) => Response,
+      permissions: Record<string, string> = { pull_requests: "write", issues: "read" },
+    ) => {
+      const calls: string[] = [];
+      const fetch = async (url: string, init?: RequestInit) => {
+        calls.push(url);
+        if (url.includes("/access_tokens")) {
+          return Response.json({
+            token: "ghs_one",
+            expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+          });
+        }
+        if (url.endsWith("/app/installations/7")) {
+          return Response.json({ permissions, account: { login: "acme" } });
+        }
+        void init;
+        return answer(new URL(url).searchParams);
+      };
+      return { calls, client: new GithubClient(config, fetch) };
+    };
+
+    test("a pull request is draft, open, merged or closed, with who made it and when it changed", async () => {
+      const { calls, client } = github(() =>
+        Response.json({
+          total_count: 4,
+          items: [
+            item(4, { draft: true }),
+            item(3),
+            item(2, { state: "closed", pull_request: { merged_at: "2026-10-30T10:00:00Z" } }),
+            item(1, { state: "closed", pull_request: { merged_at: null }, user: null }),
+          ],
+        }),
+      );
+
+      const page = await client.tracked(7, "acme/web", "pull", "open", 1);
+
+      expect(page?.items.map(({ number, status, author }) => [number, status, author])).toEqual([
+        [4, "draft", "ada"],
+        [3, "open", "ada"],
+        [2, "merged", "ada"],
+        [1, "closed", null],
+      ]);
+      expect(page?.items[1]).toEqual({
+        number: 3,
+        title: "Item 3",
+        url: "https://github.com/acme/web/pull/3",
+        author: "ada",
+        status: "open",
+        comments: 2,
+        updatedAt: "2026-11-01T10:00:00Z",
+      });
+      // The search is for this repository's pull requests that are open, the latest changed first.
+      const search = new URL(calls.at(-1)!).searchParams;
+      expect(search.get("q")).toBe("repo:acme/web is:pr is:open");
+      expect(search.get("sort")).toBe("updated");
+      expect(search.get("per_page")).toBe("10");
+      // Pull requests need nothing but the pull requests permission: no look at the permissions.
+      expect(calls.some((url) => url.endsWith("/app/installations/7"))).toBe(false);
+    });
+
+    test("an issue is open or closed, and closed is asked for as closed", async () => {
+      const { calls, client } = github(() =>
+        Response.json({ total_count: 1, items: [item(9, { state: "closed" })] }),
+      );
+
+      const page = await client.tracked(7, "acme/web", "issue", "closed", 1);
+
+      expect(page?.items.map(({ number, status }) => [number, status])).toEqual([[9, "closed"]]);
+      expect(new URL(calls.at(-1)!).searchParams.get("q")).toBe("repo:acme/web is:issue is:closed");
+    });
+
+    test("there is a later page while the matches go past this one, and never past the thousandth", async () => {
+      const total = (count: number, page: number) =>
+        github(() => Response.json({ total_count: count, items: [] })).client.tracked(
+          7,
+          "acme/web",
+          "pull",
+          "open",
+          page,
+        );
+
+      expect((await total(25, 2))?.hasMore).toBe(true);
+      expect((await total(20, 2))?.hasMore).toBe(false);
+      expect((await total(0, 1))?.hasMore).toBe(false);
+      expect((await total(5000, 100))?.hasMore).toBe(false);
+      expect((await total(5000, 99))?.hasMore).toBe(true);
+      expect((await total(25, 2))?.total).toBe(25);
+    });
+
+    test("issues are not listed, and the page says why, when the app is not approved to read them", async () => {
+      const { calls, client } = github(() => Response.json({ total_count: 0, items: [] }), {
+        pull_requests: "write",
+      });
+
+      await expect(client.tracked(7, "acme/web", "issue", "open", 1)).rejects.toBeInstanceOf(
+        GithubIssuesNotGrantedError,
+      );
+      // GitHub's search would have answered nothing: it is not asked.
+      expect(calls.some((url) => url.includes("/search/issues"))).toBe(false);
+      // Pull requests still list.
+      expect((await client.tracked(7, "acme/web", "pull", "open", 1))?.total).toBe(0);
+    });
+
+    test("a repository that is not seen is null, a page past what search gives is empty, anything else is an error", async () => {
+      const refused = github(() => new Response("no", { status: 422 }));
+      expect(await refused.client.tracked(7, "acme/gone", "pull", "open", 1)).toBeNull();
+      expect(await refused.client.tracked(7, "acme/gone", "pull", "open", 2)).toEqual({
+        items: [],
+        total: 0,
+        hasMore: false,
+      });
+      await expect(
+        github(() => new Response("limit", { status: 403 })).client.tracked(
+          7,
+          "acme/web",
+          "pull",
+          "open",
+          1,
+        ),
+      ).rejects.toThrow("GitHub answered 403");
     });
   });
 

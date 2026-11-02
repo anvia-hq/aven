@@ -36,4 +36,10 @@ export const commitsQuery = z.object({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
 });
 
+// A page of the repository's pull requests or issues, open or closed, from the latest changed.
+export const trackedQuery = z.object({
+  state: z.enum(["open", "closed"]).default("open"),
+  page: z.coerce.number().int().min(1).max(100).default(1),
+});
+
 export type ImportProjectBody = z.infer<typeof importProjectBody>;

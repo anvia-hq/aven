@@ -114,6 +114,49 @@ test.describe("the project page", () => {
     await expect(rows.first()).toContainText("Change number 14");
   });
 
+  test("lists the pull requests and issues with their status, open or closed, ten to a page", async ({
+    page,
+  }) => {
+    await registerUser(page, "tracked", "Tracked Person");
+    const project = await projectOf(page, "shiny-app");
+    await page.goto(`/projects/${project.id}`);
+
+    const card = page.getByRole("region", { name: "Pull requests and issues" });
+    const rows = card.getByRole("listitem");
+
+    // Open pull requests first, the latest changed on top, the newest of them a draft.
+    await expect(rows).toHaveCount(10);
+    await expect(rows.first()).toContainText("Open pull request 12");
+    await expect(rows.first()).toContainText("Draft");
+    await expect(rows.first()).toContainText("#100 · ada");
+    await expect(rows.first().getByLabel("3 comments")).toBeVisible();
+    await expect(rows.nth(1)).toContainText("Open");
+    await expect(rows.first().getByRole("link", { name: "Open pull request 12" })).toHaveAttribute(
+      "href",
+      "https://github.com/acme/web/pull/100",
+    );
+    await expect(card.getByText("Page 1 of 2")).toBeVisible();
+    await card.getByRole("button", { name: "Older" }).click();
+    await expect(rows).toHaveCount(2);
+    await expect(card.getByRole("button", { name: "Older" })).toBeDisabled();
+
+    // Closed shows what was merged, from the first page again.
+    await card.getByRole("button", { name: "Closed" }).click();
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText("Merged pull request");
+    await expect(rows.first()).toContainText("Merged");
+    await expect(rows.nth(1)).toContainText("Closed");
+    await expect(card.getByRole("navigation", { name: "Pages" })).toHaveCount(0);
+
+    // Issues are their own list, and an empty one says so.
+    await card.getByRole("tab", { name: "Issues" }).click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText("Closed issue");
+    await card.getByRole("button", { name: "Open", exact: true }).click();
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText("Open issue two");
+  });
+
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
     page,
   }) => {

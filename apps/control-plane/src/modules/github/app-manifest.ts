@@ -29,6 +29,7 @@ export function appManifest(origin: string, name: string, isPublic = false) {
     default_permissions: {
       contents: "write",
       pull_requests: "write",
+      issues: "read",
       actions: "read",
       checks: "read",
       statuses: "read",

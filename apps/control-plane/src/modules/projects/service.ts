@@ -5,6 +5,7 @@ import { threads } from "@aven/db/schema/threads";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { ConflictError, orNotFound, UnprocessableError } from "../../errors";
+import type { GithubTrackedKind, GithubTrackedState } from "../github/client";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import type { ImportProjectBody } from "./schema";
@@ -101,6 +102,26 @@ export const projectsService = {
       project.repoFullName,
       page,
       project.defaultBranch,
+    );
+    return { ...orNotFound(found, "Repository not found"), page };
+  },
+
+  // One page of the repository's open or closed pull requests or issues for the project page
+  // (decision 0092), read with the installation's token like the commits.
+  async tracked(
+    organizationId: string,
+    id: string,
+    kind: GithubTrackedKind,
+    state: GithubTrackedState,
+    page: number,
+  ) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const found = await githubService.tracked(
+      project.githubInstallationId,
+      project.repoFullName,
+      kind,
+      state,
+      page,
     );
     return { ...orNotFound(found, "Repository not found"), page };
   },
