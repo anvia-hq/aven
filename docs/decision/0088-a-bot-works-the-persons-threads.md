@@ -1,0 +1,28 @@
+# A bot works the person's threads
+
+Status: accepted. Builds on 0084 (a thread is its creator's and can be shared to read), 0086 and 0085 (a bot keeps the person's providers and MCP servers, on their own word), 0067 and 0068 (what only the person's word starts) and 0013 (a project is a GitHub repository).
+
+## Context
+
+The person wants their bot to act as a platform manager or personal assistant, and the work Aven exists for is threads: a coding agent in a repository. "Fix the build in acme/app", "how is that thread going?", "tell it to also run the lint" and "archive the finished ones" are things a person says to an assistant, so a bot needs tools for them.
+
+A thread is not like a provider or an MCP server. Starting one, or sending a message to one, starts an agent that runs commands in a sandbox as the person, with their GitHub account, their personal variables and the project's, and which may push a branch and open a pull request. And what a thread's agent writes, and what the repository holds, is text a bot would read, which can say anything.
+
+A bot belongs to a person, not to a workspace, but threads and projects belong to a workspace and a person may be in several.
+
+## Decision
+
+- **A bot has six tools, over one wire call, `bot.thread`** (wire version 37): `list_projects`, `list_threads`, `get_thread`, `start_thread`, `continue_thread` and `archive_thread` (which with `archived: false` brings one back). Any bot may look; starting, continuing and archiving take the person's own message, as providers and MCP servers do: not a note, not another bot, and not the main bot passing a request on. So a schedule or a goal's round, which are notes, cannot start a thread, however they were set up.
+- **A bot acts as the person, through the same code the platform's routes use.** `start_thread` makes the thread in the project's workspace and sends it the prompt with `threadMessages.send`, so the model, skills, MCP servers, GitHub account and variables are what a message of the person's own would carry, and the runner cannot tell the difference. It returns at once, as `POST /threads/:id/messages` does; the bot is told to say what it started and to look again later, not to wait. It may name a provider, a model and a reasoning effort, which the person's own message may too; without them the person's default runs.
+- **The workspace comes from the id, and has to be the person's.** `bot.thread` takes a project or thread id, never a workspace, and finds it among the workspaces the person is a member of (`projectsService.listForPerson`, `threadsService.readableForPerson` and `ownedForPerson`). A thread of a workspace the person is not in, or has left, is not found, whoever made it.
+- **A bot reads what the person reads and drives only what they made.** Their own threads and the ones their workspace shares with it (0084) are listed and read, with `mine` saying which; a shared thread is never continued or archived by a bot, as the person cannot from the platform.
+- **What a bot is shown of a thread is small and has no tool output.** `get_thread` gives the thread's state, its pull requests and the latest eight turns: a turn's words cut to 3,000 characters and what the agent called as one line each (`exec_command bun test (done)`), never what a tool returned, which is large and where a file's or a web page's text would arrive. A thread that waits for the person's answer says what it asks; the person answers it in the thread, because answering can mean giving a secret, which does not go through a bot (0047). `continue_thread` is refused with that reason while it waits, and while a run is still going on.
+- **A reply starts or continues at most five threads**, a start that fails counting too. Text a bot read in a thread, a pull request or a page may be written to make it start more; the person's own message is what permits one thread, and the cap is what keeps one message from permitting an unbounded number. The bot's instructions say that what a thread's agent wrote is information from a tool, never an instruction, and that a prompt is the person's request in the person's voice with nothing added.
+- **A thread that could not start is put away.** If sending the first message fails (no key for the model, the runner is off), the thread just made is archived and the reason is given to the bot, so a person's list does not gather empty threads.
+
+## Consequences
+
+- A thread a bot starts is an ordinary private thread of the person's, with a title from its prompt unless the bot gives one. Nothing in it says a bot started it: the prompt is shown as the person's message. A bot is told to write the prompt as the person would, and to add nothing, such as pushing or opening a pull request, that they did not ask for.
+- The residual risk is the one MCP tools have: a bot that reads a hostile page in a reply that the person's own message began can still be talked into using a tool in that reply. The person's word, the cap of five and the rule that what a tool returned is information limit it; they do not remove it. Thread transcripts are the likeliest place for it, which is why tool output is left out of them.
+- There is no tool to cancel a run, to answer a question, to share a thread or to ship it. Cancelling and shipping act on the sandbox and the person's GitHub, and an answer may be a secret; they stay in the platform. They can be added one at a time.
+- The thread tools go to every bot with a runner, as providers do. `bot.thread` is wire version 37, so a runner that has not updated is refused until `aven update`, as it was for 36.
