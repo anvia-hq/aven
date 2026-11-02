@@ -6,13 +6,12 @@ import {
   applyEvent,
   applyUsage,
   type ChatMessage,
-  type MessageAttachment,
   type QuestionAnswer,
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
-import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
+import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import type { ConversationStore } from "../../memory-store";
 import { parseSaved } from "./continuation";
@@ -326,10 +325,6 @@ export class RunManager {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
   }
-}
-
-function withoutBytes({ name, mediaType, size, image }: RunAttachment): MessageAttachment {
-  return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }
 
 function errorMessage(error: unknown) {

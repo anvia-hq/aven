@@ -6,9 +6,10 @@ import { botMessagesToChat } from "@aven/agents/bot-projection";
 import type { ModelConfig } from "@aven/agents/model";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import type { Bot, BotEvent } from "@aven/protocol/bots";
+import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import { BotRunner } from "./runner";
+import { BotRunner, type BotReplier, type BotReplyInput } from "./runner";
 import { inProcessReplier, type CreateBotAgent } from "./testing/in-process-replier";
 
 const USER = "u1";
@@ -108,6 +109,64 @@ const stopped = (events: BotEvent[]) =>
   events.some((event) => event.type === "typing" && !event.typing);
 
 describe("BotRunner", () => {
+  test("a message with files shows them in the chat without their bytes, and the reply is given the bytes (decision 0080)", async () => {
+    const answered: BotReplyInput[] = [];
+    const replier: BotReplier = {
+      ready: () => undefined,
+      answer: async (input) => void answered.push(input),
+    };
+    const runner = new BotRunner({ store: fakeStore(), replier });
+    const photo: RunAttachment = {
+      name: "cat.png",
+      mediaType: "image/png",
+      size: 4,
+      image: "0f0e0d.png",
+      data: "AAAA",
+    };
+    const report: RunAttachment = {
+      name: "report.pdf",
+      mediaType: "application/pdf",
+      size: 9,
+      data: "BBBB",
+    };
+    const client = await watch(runner, stopped);
+    await runner.send(bot, USER, "", model, [photo, report]);
+    await client.done;
+
+    const said = client.events.find((event) => event.type === "message");
+    expect(said).toEqual({
+      type: "message",
+      message: {
+        id: "m-0",
+        role: "user",
+        text: "",
+        attachments: [
+          { name: "cat.png", mediaType: "image/png", size: 4, image: "0f0e0d.png" },
+          { name: "report.pdf", mediaType: "application/pdf", size: 9 },
+        ],
+      },
+    });
+    expect(answered).toHaveLength(1);
+    expect(answered[0]?.attachments).toEqual([photo, report]);
+  });
+
+  test("a message with no files has no attachments, in the chat or the reply", async () => {
+    const answered: BotReplyInput[] = [];
+    const runner = new BotRunner({
+      store: fakeStore(),
+      replier: { ready: () => undefined, answer: async (input) => void answered.push(input) },
+    });
+    const client = await watch(runner, stopped);
+    await runner.send(bot, USER, "hello", model);
+    await client.done;
+    const said = client.events.find((event) => event.type === "message");
+    expect(said).toEqual({
+      type: "message",
+      message: { id: "m-0", role: "user", text: "hello" },
+    });
+    expect(answered[0]?.attachments).toEqual([]);
+  });
+
   test("the bot's messages come one after another, each after a pause worked out from it", async () => {
     const pauses: number[] = [];
     const runner = runnerWith({

@@ -13,7 +13,9 @@ import {
   type BotEvent,
   type BotQuestion,
 } from "@aven/protocol/bots";
+import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
+import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError } from "../../errors";
 
 const PING_MS = 5_000;
@@ -28,6 +30,8 @@ export type BotReplyInput = {
   model: ModelConfig;
   /** What the person, or another bot, said. */
   prompt: string;
+  /** The files the person sent with it, which the runner copies to the bot's computer (decision 0080). */
+  attachments?: RunAttachment[];
   /**
    * Whether what this reply answers is the person's word, said by them or passed on by their main
    * bot while it was theirs: only then may it change the bot, make bots or set schedules, whatever
@@ -117,15 +121,22 @@ export class BotRunner {
 
   // The person says something to the bot. Returns once the message is in the chat; the reply
   // comes as events. Throws if the bot cannot answer now, before anything is added.
-  async send(bot: Bot, userId: string, text: string, model: ModelConfig) {
+  async send(
+    bot: Bot,
+    userId: string,
+    text: string,
+    model: ModelConfig,
+    attachments: RunAttachment[] = [],
+  ) {
     await this.#enqueue({
       bot,
       userId,
       model,
       prompt: text,
+      attachments,
       hops: 0,
       onPersonsWord: true,
-      shown: { text },
+      shown: { text, attachments: attachments.map(withoutBytes) },
     });
   }
 
@@ -164,12 +175,16 @@ export class BotRunner {
   // another bot, whose message belongs in it (decision 0065).
   note(botId: string, role: BotChatMessage["role"], text: string, peer: BotChatPeer) {
     const channel = this.#channels.get(botId);
-    if (channel) this.#say(channel, role, text, peer);
+    if (channel) this.#say(channel, role, text, { peer });
   }
 
   // Puts one message in the chat, if it is to be shown, and the reply it asks for in line, behind
   // those already there. Resolves once it is in line.
-  async #enqueue(input: ReplyRequest & { shown: { text: string; peer?: BotChatPeer } | null }) {
+  async #enqueue(
+    input: ReplyRequest & {
+      shown: Pick<BotChatMessage, "text" | "peer" | "attachments"> | null;
+    },
+  ) {
     const { shown, ...reply } = input;
     this.#replier.ready(reply.model);
     const channel = await this.#open(reply.bot.id, reply.userId);
@@ -178,7 +193,7 @@ export class BotRunner {
     }
     // A client may have detached while this waited, which dropped the channel; it is in use again.
     this.#channels.set(reply.bot.id, channel);
-    if (shown) this.#say(channel, "user", shown.text, shown.peer);
+    if (shown) this.#say(channel, "user", shown.text, shown);
     channel.pending += 1;
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
     channel.tail = channel.tail.then(() => this.#reply(reply, channel));
@@ -325,12 +340,16 @@ export class BotRunner {
     channel: Channel,
     role: BotChatMessage["role"],
     text: string,
-    peer?: BotChatPeer,
-    questions?: BotQuestion[],
+    {
+      peer,
+      questions,
+      attachments,
+    }: Pick<BotChatMessage, "peer" | "questions" | "attachments"> = {},
   ) {
     const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
     if (peer) message.peer = peer;
     if (questions) message.questions = questions;
+    if (attachments?.length) message.attachments = attachments;
     this.#emit(channel, { type: "message", message });
   }
 
@@ -362,13 +381,9 @@ export class BotRunner {
         ...input,
         say: (text) => this.#say(channel, "bot", text),
         ask: (questions) =>
-          this.#say(
-            channel,
-            "bot",
-            questions.map((question) => question.text).join("\n"),
-            undefined,
+          this.#say(channel, "bot", questions.map((question) => question.text).join("\n"), {
             questions,
-          ),
+          }),
         signal: this.#shutdown.signal,
       });
       ok = true;

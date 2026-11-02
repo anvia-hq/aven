@@ -98,6 +98,7 @@ export class RemoteBotReplier implements BotReplier {
     userId,
     model,
     prompt,
+    attachments,
     hops,
     onPersonsWord,
     say,
@@ -264,6 +265,7 @@ export class RemoteBotReplier implements BotReplier {
           },
           prompt,
           model: runModel,
+          attachments: attachments?.length ? attachments : undefined,
         },
         sink,
       );

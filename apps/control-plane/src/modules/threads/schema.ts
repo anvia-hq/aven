@@ -2,6 +2,8 @@ import { MAX_SKILL_NAME, SKILL_NAME } from "@aven/agents/skills";
 import { ATTACHMENT_LIMITS, MENTION_LIMIT, mentionToken } from "@aven/protocol/events";
 import { z } from "zod";
 
+import { attachmentBody } from "../../attachments";
+
 export const threadParams = z.object({ id: z.uuid() });
 
 export const createThreadBody = z.object({
@@ -32,18 +34,6 @@ export const shipBody = z
   .object({ ...modelSelection, mode: z.enum(["update", "new"]).optional() })
   .optional();
 
-// A file sent with a message, its bytes in base64; sizes are checked once decoded (decision 0034).
-const attachment = z.object({
-  name: z.string().trim().min(1).max(255),
-  // What the browser says the file is; an image's type is read from its bytes instead.
-  mediaType: z
-    .string()
-    .regex(/^[\w.+-]+\/[\w.+-]+$/)
-    .max(100)
-    .optional(),
-  data: z.base64(),
-});
-
 // A path inside the workspace, as the composer's `@` found it: relative, with no `..` or empty part.
 const workspacePath = z
   .string()
@@ -73,7 +63,7 @@ function mentionRange() {
 export const sendMessageBody = z
   .object({
     prompt: z.string().trim().max(20_000),
-    attachments: z.array(attachment).max(ATTACHMENT_LIMITS.count).optional(),
+    attachments: z.array(attachmentBody).max(ATTACHMENT_LIMITS.count).optional(),
     mentions: z.array(mention).max(MENTION_LIMIT).optional(),
     ...modelSelection,
   })
@@ -108,5 +98,4 @@ export const answerQuestionBody = z.object({
 export type CreateThreadBody = z.infer<typeof createThreadBody>;
 export type UpdateThreadBody = z.infer<typeof updateThreadBody>;
 export type SendMessageBody = z.infer<typeof sendMessageBody>;
-export type AttachmentBody = z.infer<typeof attachment>;
 export type AnswerQuestionBody = z.infer<typeof answerQuestionBody>;

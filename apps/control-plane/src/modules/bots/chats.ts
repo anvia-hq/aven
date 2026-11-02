@@ -1,8 +1,9 @@
 import { BOT_MAX_HOPS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
 import type { BotSent } from "@aven/protocol/runtime-wire";
 
+import { prepareAttachments, type AttachmentBody } from "../../attachments";
 import { orNotFound, UnprocessableError } from "../../errors";
-import { environmentModel, resolveModel } from "../providers/resolve-model";
+import { assertSeesImages, environmentModel, resolveModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
 
@@ -36,9 +37,14 @@ export type BotLetter = {
 // else the person's default provider, or else the environment's. The runner is given, so `bots`
 // does not depend on how a reply is made.
 export const createBotChats = (runner: BotRunner) => ({
-  async send(userId: string, botId: string, text: string) {
+  // The person's message, with the files they attached (decision 0080): an image goes to the model
+  // too, so a model that cannot see one is refused before anything is added to the chat.
+  async send(userId: string, botId: string, text: string, files: readonly AttachmentBody[] = []) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
-    await runner.send(bot, userId, personPrompt(text), await modelOf(userId, bot));
+    const attachments = prepareAttachments(files);
+    const model = await modelOf(userId, bot);
+    if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    await runner.send(bot, userId, personPrompt(text), model, attachments);
   },
 
   // A bot writes to another of the person's bots, named by its handle (decision 0065). The message

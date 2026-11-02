@@ -70,10 +70,15 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
         ws.send(encodeViewerFrame(message.viewerId, new TextEncoder().encode("RFB 003.008\n")));
       }
       if (message.type === "call") {
-        const result =
-          message.method === "desktop.status" || message.method === "desktop.wake"
-            ? { state: "running", width: 1280, height: 800, control: { held: false } }
-            : { held: message.method === "desktop.takeover", expiresAt: "2030-01-01T00:00:00Z" };
+        let result: object = {
+          held: message.method === "desktop.takeover",
+          expiresAt: "2030-01-01T00:00:00Z",
+        };
+        if (message.method === "artifacts.read") {
+          result = { mediaType: "image/png", data: "iVBORw0KGgo=" };
+        } else if (message.method === "desktop.status" || message.method === "desktop.wake") {
+          result = { state: "running", width: 1280, height: 800, control: { held: false } };
+        }
         ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
       }
     };
@@ -151,6 +156,32 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     }
 
     expect(calls()).toHaveLength(before);
+  });
+
+  describe("the images sent to a bot (decision 0080)", () => {
+    const name = `${crypto.randomUUID()}.png`;
+
+    test("a person reads one, through the runner that keeps it", async () => {
+      const image = await api(`/bots/${mine!.id}/artifacts/${name}`, owner.token);
+      expect(image.status).toBe(200);
+      expect(image.headers.get("content-type")).toBe("image/png");
+      expect(image.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(new Uint8Array(await image.arrayBuffer())).toEqual(
+        Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      );
+      const asked = calls().filter((call) => call.method === "artifacts.read");
+      expect(asked.at(-1)?.params).toMatchObject({ threadId: mine!.id, name, bot: true });
+    });
+
+    test("only the bot's own person: another person's bot is not found, and nothing is asked of the runner", async () => {
+      const before = calls().length;
+      expect((await api(`/bots/${theirs!.id}/artifacts/${name}`, owner.token)).status).toBe(404);
+      expect((await api(`/bots/${mine!.id}/artifacts/${name}`, undefined)).status).toBe(401);
+      expect((await api(`/bots/${mine!.id}/artifacts/..%2Fsecret.png`, owner.token)).status).toBe(
+        422,
+      );
+      expect(calls()).toHaveLength(before);
+    });
   });
 
   test("streams the desktop to the browser", async () => {

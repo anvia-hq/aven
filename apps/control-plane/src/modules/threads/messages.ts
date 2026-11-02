@@ -1,3 +1,4 @@
+import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
@@ -6,7 +7,6 @@ import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
 import type { RunIdentity } from "../workload-identity/grants";
-import { prepareAttachments } from "./attachments";
 import { keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";

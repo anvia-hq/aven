@@ -6,6 +6,7 @@ import type {
   CallMethod,
   ControlPlaneToRuntime,
   RepoAccess,
+  RunAttachment,
   RunModel,
   RunnerCallMethod,
   RunOutcome,
@@ -119,7 +120,12 @@ export class RuntimeConnection {
   // runner is offline.
   startBotReply(
     replyId: string,
-    input: { bot: BotReplyInfo; prompt: string; model: RunModel },
+    input: {
+      bot: BotReplyInfo;
+      prompt: string;
+      model: RunModel;
+      attachments?: RunAttachment[];
+    },
     sink: BotReplySink,
   ) {
     this.#botReplies.set(replyId, sink);

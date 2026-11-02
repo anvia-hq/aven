@@ -3,7 +3,7 @@ import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
-import type { BotReplyInfo, RunModel } from "@aven/protocol/runtime-wire";
+import type { BotReplyInfo, RunAttachment, RunModel } from "@aven/protocol/runtime-wire";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
@@ -44,13 +44,24 @@ function fakeRunner(
     bots?: Partial<BotKeeper>;
   } = {},
 ) {
-  const started: { replyId: string; bot: BotReplyInfo; prompt: string; model: RunModel }[] = [];
+  const started: {
+    replyId: string;
+    bot: BotReplyInfo;
+    prompt: string;
+    model: RunModel;
+    attachments?: RunAttachment[];
+  }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
   const connection = {
     startBotReply(
       replyId: string,
-      input: { bot: BotReplyInfo; prompt: string; model: RunModel },
+      input: {
+        bot: BotReplyInfo;
+        prompt: string;
+        model: RunModel;
+        attachments?: RunAttachment[];
+      },
       sink: BotReplySink,
     ) {
       started.push({ replyId, ...input });
@@ -200,6 +211,27 @@ describe("RemoteBotReplier", () => {
     run.only().end();
     await answering;
     expect(run.grants.revoked).toEqual(run.grants.issued);
+  });
+
+  test("sends the files the person attached with the message, and none when there are none (decision 0080)", async () => {
+    const file: RunAttachment = {
+      name: "notes.txt",
+      mediaType: "text/plain",
+      size: 5,
+      data: "aGVsbG8=",
+    };
+    const run = fakeRunner();
+    const withFile = run.replier.answer({ ...input(() => undefined), attachments: [file] });
+    await Bun.sleep(0);
+    expect(run.started[0]?.attachments).toEqual([file]);
+    run.only().end();
+    await withFile;
+
+    const without = run.replier.answer({ ...input(() => undefined), attachments: [] });
+    await Bun.sleep(0);
+    expect(run.started[1]?.attachments).toBeUndefined();
+    [...run.sinks()][1]!.end();
+    await without;
   });
 
   test("what the bot says is shown, and the reply ends when the runner says it has", async () => {

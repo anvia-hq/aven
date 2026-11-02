@@ -105,6 +105,65 @@ run("createBotChats (postgres)", async () => {
     expect(seen).toEqual(["hello", "hi Alice"]);
   });
 
+  describe("files sent with a message (decision 0080)", () => {
+    const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const capturing = () => {
+      const answered: { prompt: string; attachments: unknown[] }[] = [];
+      const runner = new BotRunner({
+        store: keeping(),
+        replier: {
+          ready: () => undefined,
+          answer: async ({ prompt, attachments = [] }) =>
+            void answered.push({ prompt, attachments }),
+        },
+      });
+      return { botChats: createBotChats(runner), answered };
+    };
+
+    test("reach the reply with their bytes, an image under a name of its own, and a message may be only files", async () => {
+      const [mine] = await botsService.list(alice);
+      const { botChats, answered } = capturing();
+      await botChats.send(alice, mine!.id, "", [
+        { name: "cat.png", data: PNG.toBase64() },
+        {
+          name: "notes.txt",
+          mediaType: "text/plain",
+          data: new TextEncoder().encode("hi").toBase64(),
+        },
+      ]);
+      await Bun.sleep(20);
+
+      expect(answered).toHaveLength(1);
+      const [image, file] = answered[0]!.attachments as {
+        name: string;
+        mediaType: string;
+        image?: string;
+        data: string;
+      }[];
+      expect(image).toMatchObject({
+        name: "cat.png",
+        mediaType: "image/png",
+        data: PNG.toBase64(),
+      });
+      expect(image?.image).toMatch(/^[0-9a-f-]{36}\.png$/);
+      expect(file).toMatchObject({ name: "notes.txt", mediaType: "text/plain" });
+      expect(file?.image).toBeUndefined();
+    });
+
+    test("that are too big are refused before anything is added to the chat", async () => {
+      const [mine] = await botsService.list(alice);
+      const { botChats, answered } = capturing();
+      const big = new Uint8Array(6 * 1024 * 1024).toBase64();
+      await expect(
+        botChats.send(alice, mine!.id, "look", [
+          { name: "a.bin", data: big },
+          { name: "b.bin", data: big },
+        ]),
+      ).rejects.toBeInstanceOf(UnprocessableError);
+      expect(answered).toEqual([]);
+    });
+  });
+
   // The messages of a bot's chat as they are now, read from a runner.
   const chatOf = async (runner: InstanceType<typeof BotRunner>, botId: string, userId: string) => {
     const controller = new AbortController();

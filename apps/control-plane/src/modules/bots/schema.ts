@@ -1,3 +1,4 @@
+import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
 import {
   BOT_AVATAR_MAX,
   BOT_COMPACT_TOKENS,
@@ -6,9 +7,15 @@ import {
   BOT_MESSAGE_MAX,
   BOT_NAME_MAX,
 } from "@aven/protocol/bots";
+import { ARTIFACT_NAME } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
+import { attachmentBody } from "../../attachments";
+
 export const botParams = z.object({ id: z.uuid() });
+
+// A bot and the name the runner gave one of the images sent to it; nothing else is ever a name.
+export const botArtifactParams = botParams.extend({ name: z.string().regex(ARTIFACT_NAME) });
 
 // Everything may be changed; what is left out stays as it is.
 export const updateBotBody = z.object({
@@ -34,6 +41,14 @@ export const updateBotBody = z.object({
 
 export type UpdateBotBody = z.infer<typeof updateBotBody>;
 
-export const sendBotMessageBody = z.object({ text: z.string().trim().min(1).max(BOT_MESSAGE_MAX) });
+// What the person says to a bot: text, files (decision 0080), or both.
+export const sendBotMessageBody = z
+  .object({
+    text: z.string().trim().max(BOT_MESSAGE_MAX),
+    attachments: z.array(attachmentBody).max(ATTACHMENT_LIMITS.count).optional(),
+  })
+  .refine((body) => body.text.length > 0 || (body.attachments?.length ?? 0) > 0, {
+    message: "Write a message or attach a file",
+  });
 
 export type SendBotMessageBody = z.infer<typeof sendBotMessageBody>;
