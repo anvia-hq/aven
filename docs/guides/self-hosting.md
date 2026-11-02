@@ -26,16 +26,21 @@ Everything lives in `~/.aven`: the server's `.env` with its secrets, the runner'
 and the runner's workspaces in `~/.aven/runtime`. A checkout used for development keeps its own state
 in the project's git-ignored `.aven/` instead (see [Development](../../README.md#development)), so the two never mix.
 
-## Your own domain, with HTTPS
+## Who can reach it
 
-For a server that other machines or people reach, point a DNS name at it, open ports 80 and 443 and
-install with the name; Caddy gets and renews the certificate:
+A new install is reachable from **this machine only** (`127.0.0.1`). To let others in, choose how:
+`--domain aven.example.com` serves HTTPS (open ports 80 and 443; Caddy gets and renews the
+certificate), `--bind <address>` publishes plain HTTP on one address for a VPN or a proxy in front.
+A server others can reach starts with sign-ups closed and needs `--owner-email`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --domain aven.example.com
+curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- \
+  --domain aven.example.com --owner-email you@example.com
 ```
 
-Runners on other machines then connect over `wss://`, so their tokens never cross the network in the clear.
+Runners on other machines then connect over `wss://`, so their tokens never cross the network in the
+clear. The full checklist for a server in the cloud is in [Cloud](cloud.md); `aven doctor` shows
+what is open.
 
 ## More runners
 
@@ -81,4 +86,4 @@ keys, variables and GitHub App readable. `aven stop` and `aven update` keep the 
 Good to know: agents act without asking for approval for each step, inside their sandbox. A sandbox
 holds only its thread's workspace, but it can reach the network, and any member of an organization can
 run commands on the organization's runners. Invite people you trust, and keep sign-up closed unless
-you want it open.
+you want it open. Plain HTTP across a network is not private: see [Cloud](cloud.md).

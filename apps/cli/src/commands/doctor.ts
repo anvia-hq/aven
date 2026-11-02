@@ -68,8 +68,12 @@ export async function doctor() {
   if (!serverEnv && !runnerEnv)
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");
 
-  for (const { name, ok, detail, warn } of checks)
-    console.log(`${ok ? "ok  " : warn ? "warn" : "FAIL"} ${name.padEnd(14)} ${detail}`);
+  for (const { name, ok, detail, warn } of checks) {
+    let label = "FAIL";
+    if (ok) label = "ok  ";
+    else if (warn) label = "warn";
+    console.log(`${label} ${name.padEnd(14)} ${detail}`);
+  }
   if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
 }
 

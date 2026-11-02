@@ -26,6 +26,7 @@ GitHub and start a thread. Update later with `aven update`.
 ## Docs
 
 - [Self-hosting](docs/guides/self-hosting.md): how it works, your own domain, more runners, updating, backup
+- [Cloud](docs/guides/cloud.md): a server others can reach, HTTPS, who can connect
 - [Connect GitHub](docs/guides/connect-github.md)
 - [Troubleshooting](docs/guides/troubleshooting.md)
 - [The `aven` command](docs/guides/cli.md)
