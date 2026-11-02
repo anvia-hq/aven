@@ -111,25 +111,31 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
       <div className="flex items-end gap-1 py-2 pr-2 pl-2">
         <MentionMenu />
-        <AttachButton
-          onPick={attachments.add}
-          title="Attach files: images are shown to the bot, every file is copied to its computer"
-        />
+        {/* Each control has a slot as high as one line of text, so that it is centered on it and
+            stays at the bottom as the text grows. */}
+        <div className="flex h-9 shrink-0 items-center">
+          <AttachButton
+            onPick={attachments.add}
+            title="Attach files: images are shown to the bot, every file is copied to its computer"
+          />
+        </div>
         <ComposerPrimitive.Input
           aria-label="Message"
           placeholder={placeholder}
           renderEntity={renderEntity}
           className="max-h-48 min-h-9 flex-1 overflow-y-auto py-1.5 text-sm leading-6"
         />
-        <Button
-          size="icon"
-          className="rounded-full"
-          aria-label="Send"
-          disabled={!canSend}
-          onClick={() => void submit()}
-        >
-          <ArrowUp />
-        </Button>
+        <div className="flex h-9 shrink-0 items-center">
+          <Button
+            size="icon"
+            className="rounded-full"
+            aria-label="Send"
+            disabled={!canSend}
+            onClick={() => void submit()}
+          >
+            <ArrowUp />
+          </Button>
+        </div>
       </div>
     </div>
   );
