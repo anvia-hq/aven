@@ -33,14 +33,14 @@ export function ThreadShare({ thread }: { thread: Thread }) {
           value={thread.visibility}
           onValueChange={(value) => void share(thread, value as ThreadVisibility)}
         >
-          <DropdownMenuRadioItem value="private">
+          <DropdownMenuRadioItem value="private" closeOnClick>
             <Lock />
             <span className="flex flex-col">
               Only me
               <span className="text-xs text-muted-foreground">Nobody else can see it.</span>
             </span>
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="workspace">
+          <DropdownMenuRadioItem value="workspace" closeOnClick>
             <Globe />
             <span className="flex flex-col">
               Everyone in the workspace

@@ -139,8 +139,9 @@ export function useThread(threadId: string) {
   return {
     thread,
     owned,
-    // Whose it is is known once the session is.
-    loaded: loaded && !isPending,
+    // Whose it is is known once the session is; a session being looked up again (the window
+    // regained focus) does not unknown it.
+    loaded: loaded && (session != null || !isPending),
     messages,
     running,
     startedAt,
