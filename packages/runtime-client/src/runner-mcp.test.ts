@@ -6,6 +6,8 @@ import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-mod
 import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { readdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import * as z from "zod/v4";
 
 import type { CreateBotReplyAgent } from "./bot-replies";
@@ -43,6 +45,7 @@ afterEach(async () => {
 function connect(
   createAgent: CreateRuntimeAgent,
   extra: {
+    journalPath?: string;
     createBotAgent?: CreateBotReplyAgent;
     answer?: FakeControlPlaneOptions["answer"];
   } = {},
@@ -51,7 +54,7 @@ function connect(
   const runtime = startRuntime({
     url: plane.url,
     token: "t",
-    journalPath: journalPath(),
+    journalPath: extra.journalPath ?? journalPath(),
     sandbox,
     createAgent,
     createBotAgent: extra.createBotAgent,
@@ -129,6 +132,37 @@ describe("a run with the person's MCP servers", () => {
     expect(reports(plane)).toEqual([{ runId: "run-1", results: [{ id: serverId }] }]);
     // The header's value is a secret of the person's: it is not in anything sent home.
     expect(JSON.stringify(plane.received)).not.toContain("secret-token");
+  });
+
+  test("the headers are in memory only: no file in the runner's data folder holds them", async () => {
+    const journal = journalPath();
+    // The agent calls the tool, so the secret has been used and the run journaled before the check.
+    const { plane, runtime } = connect(
+      ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: [...tools],
+          model: scriptedModel([
+            [toolCall("team_notes_add-note", { text: "hush" })],
+            [text("Saved it.")],
+          ]),
+        }),
+      }),
+      { journalPath: journal },
+    );
+    await runtime.ready;
+    plane.send({ ...runStart, mcp: mcp() });
+    await until(() => ended(plane).length === 1);
+    plane.send({ type: "run.ack", runId: "run-1" });
+    await Bun.sleep(100);
+
+    const folder = dirname(journal);
+    const files = await readdir(folder);
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(await Bun.file(join(folder, file)).text()).not.toContain("secret-token");
+    }
   });
 
   test("a server that is down is reported and the run goes on without it", async () => {

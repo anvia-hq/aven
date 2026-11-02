@@ -141,6 +141,8 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
                 aria-label={`Value of ${row.name || "the header"}`}
                 type="password"
                 autoComplete="off"
+                // A header with no value to send is nothing; a saved one keeps its own.
+                required={!row.saved}
                 placeholder={row.saved ? "Saved: leave blank to keep" : "Bearer …"}
                 value={row.value}
                 onChange={(event) => setRow(row.key, { value: event.target.value })}

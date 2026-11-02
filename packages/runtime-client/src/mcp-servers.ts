@@ -5,6 +5,8 @@ import { errorMessage } from "@aven/agents/values";
 import { mcpSlug } from "@aven/protocol/mcp";
 import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
 
+import { refusePrivateHost, type ResolveHost } from "./mcp-address";
+
 export type ConnectedMcp = {
   /** The servers' tools as plain local tools: durable takes no `mcpServers`, and a bot's tools are kept small the same way. */
   tools: AnyTool[];
@@ -36,15 +38,31 @@ const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
 // it does not stop the others or the run. The connections are the run's: `close` ends them.
 export async function connectMcpServers(
   configs: readonly RunMcpServer[],
-  signal?: AbortSignal,
+  options: { signal?: AbortSignal; resolve?: ResolveHost } = {},
 ): Promise<ConnectedMcp> {
+  const { signal, resolve } = options;
   const clients: McpClient[] = [];
   const servers: McpServer[] = [];
   const results: McpConnectResult[] = [];
   const failed: McpNote["failed"][number][] = [];
 
+  const fail = (config: RunMcpServer, reason: string) => {
+    results.push({ id: config.id, error: reason });
+    failed.push({ name: config.name, reason });
+  };
+
   await Promise.all(
     configs.map(async (config) => {
+      // A server on the runner's own network is the person's to allow; a name that leads there is
+      // refused before anything is sent to it.
+      if (!config.allowLocal) {
+        try {
+          await refusePrivateHost(config.url, resolve);
+        } catch (error) {
+          fail(config, errorMessage(error));
+          return;
+        }
+      }
       const client = new McpClient({
         name: config.name,
         transport: {
@@ -68,9 +86,7 @@ export async function connectMcpServers(
         clients.push(client);
         results.push({ id: config.id });
       } catch (error) {
-        const reason = errorMessage(error);
-        results.push({ id: config.id, error: reason });
-        failed.push({ name: config.name, reason });
+        fail(config, errorMessage(error));
         await client.close().catch(() => undefined);
       }
     }),

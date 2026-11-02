@@ -26,7 +26,7 @@ function McpServerRow({ server }: { server: McpServer }) {
           {server.headerNames.length === 0
             ? "No headers"
             : `Headers: ${server.headerNames.join(", ")}`}
-          {server.lastUsedAt && ` · Used ${timeAgo(server.lastUsedAt, true)}`}
+          {server.lastUsedAt && ` · Connected ${timeAgo(server.lastUsedAt, true)}`}
         </p>
         {server.lastError && (
           <p role="alert" className="text-xs text-destructive">

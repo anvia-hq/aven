@@ -77,6 +77,24 @@ describe("connectMcpServers", () => {
     expect(connected.note.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
   });
 
+  test("a name that leads to this machine is refused before anything is sent to it", async () => {
+    const before = seen.length;
+    const connected = await connectMcpServers(
+      [notes({ allowLocal: false, url: "https://internal.example.com/mcp" })],
+      // The name resolves to the address the test server is on; no request may reach it.
+      { resolve: async () => ["127.0.0.1"] },
+    );
+    open.push(connected);
+    expect(connected.tools).toEqual([]);
+    expect(connected.results[0]?.error).toContain("private network");
+    expect(seen.length).toBe(before);
+
+    // The person's own switch lets it through, as it does an address on their network.
+    const allowed = await connectMcpServers([notes()], { resolve: async () => ["127.0.0.1"] });
+    open.push(allowed);
+    expect(allowed.tools).toHaveLength(1);
+  });
+
   test("a durable run calls the server's tool, as a plain local tool of the agent", async () => {
     const connected = await connectMcpServers([notes()]);
     open.push(connected);
