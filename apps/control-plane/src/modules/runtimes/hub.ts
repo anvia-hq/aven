@@ -2,6 +2,7 @@ import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
+  McpConnectResult,
   BotReplyInfo,
   CallMethod,
   ControlPlaneToRuntime,
@@ -56,6 +57,8 @@ type Run = {
   appended: Set<number>;
   /** The digests of the run's skills: the only ones its runtime may fetch (decision 0035). */
   skills: Set<string>;
+  /** The ids of the run's MCP servers: the only ones its runtime may report on (decision 0085). */
+  mcp: Set<string>;
   /** A cancel asked for while the run had no connection, sent when it has one again. */
   cancel?: string;
 };
@@ -107,13 +110,20 @@ export class RuntimeConnection {
     this.send(JSON.stringify(message));
   }
 
-  startRun(runId: string, thread: RunThreadInfo, sink: RunSink, skills: string[] = []) {
+  startRun(
+    runId: string,
+    thread: RunThreadInfo,
+    sink: RunSink,
+    skills: string[] = [],
+    mcp: string[] = [],
+  ) {
     this.#runs.set(runId, {
       thread,
       sink,
       lastSeq: 0,
       appended: new Set(),
       skills: new Set(skills),
+      mcp: new Set(mcp),
     });
   }
 
@@ -270,6 +280,7 @@ export class RuntimeConnection {
         store: this.hub.store,
         repoAccess: this.hub.repoAccess,
         skillArchive: this.hub.skillArchive,
+        mcpReport: this.hub.mcpReport,
       });
       this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
@@ -324,6 +335,8 @@ export class RuntimeHub {
     /** A skill's archive by its digest (decision 0035). */
     readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined> = async () =>
       undefined,
+    /** Keeps how a run's MCP servers connected (decision 0085). */
+    readonly mcpReport: (results: McpConnectResult[]) => Promise<void> = async () => undefined,
   ) {}
 
   // A runtime that reconnects replaces its previous connection.

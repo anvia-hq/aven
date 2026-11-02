@@ -65,6 +65,27 @@ describe("a run's message to its runtime", () => {
     expect(JSON.stringify(posted[0])).not.toContain("ghu_");
   });
 
+  test("carries the sender's MCP servers, and none when they have none", () => {
+    const { posted, remote } = runtime();
+    const mcp = [
+      {
+        id: "m1",
+        name: "Notes",
+        url: "https://mcp.example.com/mcp",
+        headers: { Authorization: "Bearer abc" },
+        allowLocal: false,
+      },
+    ];
+
+    remote.start({ thread, prompt: "hi", mcp });
+    remote.resume({ thread, continuation: {}, response: {}, mcp });
+    remote.start({ thread, prompt: "again", mcp: [] });
+
+    expect(posted[0]).toMatchObject({ type: "run.start", mcp });
+    expect(posted[1]).toMatchObject({ type: "run.resume", mcp });
+    expect(posted[2]).not.toHaveProperty("mcp", expect.anything());
+  });
+
   test("carries the project's environment variables, and none when it has none", () => {
     const { posted, remote } = runtime();
     const env = [{ name: "DATABASE_URL", value: "postgres://x" }];

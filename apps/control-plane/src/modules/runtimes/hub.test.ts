@@ -28,6 +28,8 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     token: "t",
   };
   const GRACE_MS = 400;
+  // How MCP servers connected, as the hub was told.
+  const reported: { id: string; error?: string }[] = [];
   const hub = new RuntimeHub(
     store,
     async (threadId) => {
@@ -36,6 +38,9 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     },
     GRACE_MS,
     async (digest) => (digest === SKILL_DIGEST ? SKILL_ARCHIVE : undefined),
+    async (results) => {
+      reported.push(...results);
+    },
   );
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
   const full = new Elysia().use(errorsRouter).use(runtimesRouter(hub)).listen({ port: 0 });
@@ -174,6 +179,37 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect((await ask(ws, received, "skills.get", { runId: "run-with", digest: "x" })).ok).toBe(
       false,
     );
+  });
+
+  test("a runtime reports only on the MCP servers of its own runs", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    const given = crypto.randomUUID();
+    const notGiven = crypto.randomUUID();
+    connection.startRun("run-mcp", thread, sink, [], [given]);
+    connection.startRun("run-no-mcp", thread, sink);
+    reported.length = 0;
+
+    const results = [{ id: given, error: "connection refused" }, { id: notGiven }];
+    const answered = await ask(ws, received, "mcp.report", { runId: "run-mcp", results });
+    expect(answered).toMatchObject({ ok: true, result: null });
+    // The server the run was given is kept, the one it was not given is dropped.
+    expect(reported).toEqual([{ id: given, error: "connection refused" }]);
+
+    reported.length = 0;
+    await ask(ws, received, "mcp.report", { runId: "run-no-mcp", results });
+    expect(reported).toEqual([]);
+    expect((await ask(ws, received, "mcp.report", { runId: "run-mcp", results: "x" })).ok).toBe(
+      false,
+    );
+    expect(
+      (await ask(ws, received, "mcp.report", { runId: "run-mcp", results: [{ id: "nope" }] })).ok,
+    ).toBe(false);
   });
 
   describe("a bot's reply", () => {

@@ -3,6 +3,7 @@ import { ConflictError } from "../../errors";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
+import { mcpService } from "../mcp/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
@@ -27,11 +28,13 @@ async function runIdentity(
   };
 }
 
-// What a run carries for its sender: their skills and their GitHub account.
+// What a run carries for its sender: their skills, their MCP servers for thread agents and their
+// GitHub account.
 async function senderExtras(userId: string) {
   const skills = await skillsService.forRun(userId);
+  const mcp = await mcpService.forRun(userId, "threads");
   const github = await githubUserTokenService.forRun(userId);
-  return { skills, github };
+  return { skills, mcp, github };
 }
 
 // What a run carries for its sender in this thread's project: the variables and who the run is.

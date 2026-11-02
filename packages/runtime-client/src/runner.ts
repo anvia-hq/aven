@@ -32,7 +32,7 @@ import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 // agent has no memory store.
 export const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, attended, tools, skills, envNames, model, role }) => {
+  ({ id, attended, tools, skills, envNames, mcp, model, role }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     return createCodingAgent({
       id,
@@ -49,6 +49,7 @@ export const defaultCreateAgent =
       tools,
       skills,
       envNames,
+      mcp,
     });
   };
 

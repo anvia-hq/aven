@@ -2,6 +2,7 @@ import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { environmentInstructions } from "./environment";
+import { mcpInstructions, type McpNote } from "./mcp";
 import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
@@ -24,6 +25,8 @@ type CodingAgentOptions = ModelSource & {
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables, which the instructions list; never their values (decision 0045). */
   envNames?: readonly string[];
+  /** The person's MCP servers this run has and the ones it could not reach, which the instructions say (decision 0085). */
+  mcp?: McpNote;
 };
 
 // Assembles the model and tools. Hosts own the run loop: start runs with `agent.stream()`.
@@ -43,6 +46,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
       options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
       skillsInstructions(options.skills ?? []),
       environmentInstructions(options.envNames ?? []),
+      mcpInstructions(options.mcp),
     ]
       .filter(Boolean)
       .join("\n\n"),

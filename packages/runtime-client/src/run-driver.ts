@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import type { DurableAgentRegistration } from "@anvia/durable";
+import type { McpNote } from "@aven/agents/mcp";
 import type { SkillListing } from "@aven/agents/skills";
 import type { SubagentType } from "@aven/agents/subagents";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
@@ -28,6 +29,7 @@ import { redactingTools, secretRedactor } from "./secret-redaction";
 import type { RunRecord, RunRecords } from "./run-records";
 import { toolsForRun } from "./run-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import { connectMcpServers, type ConnectedMcp } from "./mcp-servers";
 import { markTurn } from "./thread-diff";
 
 export type CreateRuntimeAgent = (input: {
@@ -42,6 +44,8 @@ export type CreateRuntimeAgent = (input: {
   skills?: readonly SkillListing[];
   /** The names of the project's environment variables the run came with (decision 0045). */
   envNames?: readonly string[];
+  /** The MCP servers the run connected and the ones it could not (decision 0085). */
+  mcp?: McpNote;
   model?: RunModel;
   /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
   role?: SubagentType;
@@ -57,6 +61,8 @@ type Live = {
   followed?: Pick<FollowedRun, "cancel">;
   /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
+  /** The person's MCP servers as this run connected them, until it ends or parks (decision 0085). */
+  mcp?: ConnectedMcp;
 };
 
 // What every part of one wire run works with. `record` is read from here each time, never kept:
@@ -144,6 +150,22 @@ export function createRunDriver(context: DriverContext) {
   // so what it hands over reaches the run that is going now, not the one that built it.
   const activeRun = (threadId: string) =>
     [...live.values()].find((run) => run.threadId === threadId);
+  // The MCP connections a thread has now, which the tools of an agent built by an earlier run call
+  // through (a run that waited for an answer outlives the connections of the run that asked).
+  const mcpConnections = new Map<string, ConnectedMcp>();
+
+  // Connects the servers the run came with and tells the control plane how each went, for the person
+  // to see in Settings. A server that is down is left out; it does not fail the run.
+  async function connectMcp(run: Live, runId: string, threadId: string, message?: RunMessage) {
+    if (!message?.mcp?.length) return undefined;
+    const connected = await connectMcpServers(message.mcp);
+    run.mcp = connected;
+    mcpConnections.set(threadId, connected);
+    context.call("mcp.report", { runId, results: connected.results }).catch((error: unknown) => {
+      console.warn(`Run ${runId} could not report on its MCP servers:`, errorMessage(error));
+    });
+    return connected;
+  }
 
   async function execute(initial: RunRecord, message?: RunMessage) {
     const { runId, thread } = initial;
@@ -167,6 +189,10 @@ export function createRunDriver(context: DriverContext) {
       finish(runId, { type: "error", error: errorMessage(error) });
     } finally {
       live.delete(runId);
+      if (run.mcp) {
+        if (mcpConnections.get(thread.id) === run.mcp) mcpConnections.delete(thread.id);
+        await run.mcp.close();
+      }
       context.finished(thread.id);
     }
   }
@@ -198,6 +224,8 @@ export function createRunDriver(context: DriverContext) {
     if (run.cancelReason) throw new Error(run.cancelReason);
     context.boxes.set(thread.id, box);
     await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
+    const mcp = await connectMcp(run, runId, thread.id, message);
+    if (run.cancelReason) throw new Error(run.cancelReason);
     // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     // What this turn changes is measured from here; a run picked up again after a restart, or
@@ -241,6 +269,10 @@ export function createRunDriver(context: DriverContext) {
             thread,
             tools: box.tools,
             current,
+            mcp: mcp && {
+              tools: mcp.tools,
+              current: () => mcpConnections.get(thread.id)?.tools,
+            },
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
@@ -256,12 +288,14 @@ export function createRunDriver(context: DriverContext) {
                 tools,
                 skills,
                 envNames,
+                mcp: mcp?.note,
                 model,
                 role: type,
               }).agent,
           }),
           skills,
           envNames,
+          mcp: mcp?.note,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };

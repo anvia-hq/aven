@@ -86,7 +86,15 @@ export class RunManager {
     thread: RunThread,
     prompt: string,
     model?: ModelConfig | null,
-    { attachments = [], mentions = [], skills = [], github, env, identity }: RunExtras = {},
+    {
+      attachments = [],
+      mentions = [],
+      skills = [],
+      mcp = [],
+      github,
+      env,
+      identity,
+    }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -97,6 +105,7 @@ export class RunManager {
       attachments,
       mentions,
       skills,
+      mcp,
       github,
       env,
       identity,
@@ -117,7 +126,13 @@ export class RunManager {
     continuation: unknown,
     answers: QuestionAnswer[],
     model?: ModelConfig | null,
-    { skills = [], github, env, identity }: Omit<RunExtras, "attachments" | "mentions"> = {},
+    {
+      skills = [],
+      mcp = [],
+      github,
+      env,
+      identity,
+    }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
@@ -135,6 +150,7 @@ export class RunManager {
       continuation: saved,
       response,
       skills,
+      mcp,
       github,
       env,
       identity,

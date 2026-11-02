@@ -16,6 +16,7 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createShipService } from "./modules/ship/service";
+import { mcpService } from "./modules/mcp/service";
 import { skillsService } from "./modules/skills/service";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
@@ -29,6 +30,7 @@ export const runtimeHub = new RuntimeHub(
   (threadId) => projectsService.repoAccess(threadId),
   DEFAULT_GRACE_MS,
   (digest) => skillsService.archive(digest),
+  (results) => mcpService.record(results),
 );
 
 export const runsService = new RunManager({

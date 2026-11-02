@@ -15,6 +15,7 @@ import type {
   BotUpdated,
   BotUpdateParams,
   CallMethod,
+  McpConnectResult,
   RepoAccess,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
@@ -29,6 +30,7 @@ import {
   parseBotSendParams,
   parseBotSkillParams,
   parseBotUpdateParams,
+  parseMcpReportParams,
   parseMemoryParams,
   parseSkillsGetParams,
 } from "./wire";
@@ -40,6 +42,8 @@ export type CallRun = {
   appended: Set<number>;
   /** The digests of the run's skills. */
   skills: Set<string>;
+  /** The ids of the run's MCP servers: the only ones its runtime may report on (decision 0085). */
+  mcp: Set<string>;
 };
 
 /** What answering a runner's call about a bot's conversation needs of the reply it names. */
@@ -70,6 +74,8 @@ export type RuntimeCallContext = {
   store: MemoryStore;
   repoAccess(threadId: string): Promise<RepoAccess>;
   skillArchive(digest: string): Promise<Uint8Array | undefined>;
+  /** Keeps how the run's MCP servers connected, for the person to see (decision 0085). */
+  mcpReport(results: McpConnectResult[]): Promise<void>;
 };
 
 // Every call names a run, which must be a live one of the connection it came over.
@@ -100,7 +106,7 @@ function answerBotCall<Params extends { replyId: string }, Result>(
 export async function answerRuntimeCall(
   method: CallMethod,
   params: unknown,
-  { findRun, findBotReply, store, repoAccess, skillArchive }: RuntimeCallContext,
+  { findRun, findBotReply, store, repoAccess, skillArchive, mcpReport }: RuntimeCallContext,
 ) {
   if (method === "bot.memory") {
     return answerBotCall(params, parseBotMemoryParams, findBotReply, (reply, call) =>
@@ -150,6 +156,12 @@ export async function answerRuntimeCall(
     const archive = run.skills.has(digest) ? await skillArchive(digest) : undefined;
     if (!archive) throw new Error("This run has no such skill");
     return { data: archive.toBase64() };
+  }
+  if (method === "mcp.report") {
+    // Only servers the run was given, whatever ids the runtime names.
+    const { results } = parseMcpReportParams(params);
+    await mcpReport(results.filter((result) => run.mcp.has(result.id)));
+    return null;
   }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {

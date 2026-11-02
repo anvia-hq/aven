@@ -256,6 +256,8 @@ export type ControlPlaneToRuntime =
       attachments?: RunAttachment[];
       mentions?: MessageMention[];
       skills?: RunSkill[];
+      /** The sender's enabled MCP servers for thread agents (decision 0085), which the runner connects for this run. */
+      mcp?: RunMcpServer[];
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
@@ -269,6 +271,7 @@ export type ControlPlaneToRuntime =
       continuation: unknown;
       response: unknown;
       skills?: RunSkill[];
+      mcp?: RunMcpServer[];
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
@@ -368,7 +371,18 @@ export type BotCallMethod =
   | "bot.goal"
   | "bot.skill";
 
-export type CallMethod = MemoryCallMethod | RepoCallMethod | SkillsCallMethod | BotCallMethod;
+/**
+ * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
+ * and a server it connected has none. Only servers the run was given count.
+ */
+export type McpReportCallMethod = "mcp.report";
+
+export type CallMethod =
+  | MemoryCallMethod
+  | RepoCallMethod
+  | SkillsCallMethod
+  | McpReportCallMethod
+  | BotCallMethod;
 
 /** What a runtime needs to clone a thread's repository. The token is short-lived and read-only. */
 export type RepoAccess = {
@@ -380,6 +394,11 @@ export type RepoAccess = {
 type RepoAccessParams = { runId: string };
 
 type SkillsGetParams = { runId: string; digest: string };
+
+/** How one MCP server connected: `error` is the reason it did not. */
+export type McpConnectResult = { id: string; error?: string };
+
+type McpReportParams = { runId: string; results: McpConnectResult[] };
 
 /** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
 export type BotSkillParams = { replyId: string; digest: string };
@@ -512,6 +531,7 @@ export type RuntimeCalls = {
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
+  "mcp.report": { params: McpReportParams; result: null };
 };
 
 /** WebSocket close codes the control plane ends a runtime's connection with. */
@@ -525,4 +545,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 35;
+export const WIRE_VERSION = 36;

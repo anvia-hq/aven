@@ -7,6 +7,7 @@ import type {
   RunGithub,
   RunOutcome,
   RunSkill,
+  RunMcpServer,
 } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
@@ -20,7 +21,7 @@ export type RunThread = {
 /** What can come with a run's prompt. */
 export type RunExtras = Pick<
   StartRunInput,
-  "attachments" | "mentions" | "skills" | "github" | "env" | "identity"
+  "attachments" | "mentions" | "skills" | "mcp" | "github" | "env" | "identity"
 >;
 
 export type StartRunInput = {
@@ -32,6 +33,8 @@ export type StartRunInput = {
   mentions?: MessageMention[];
   /** The sender's skills and the built-in ones (decision 0035). */
   skills?: RunSkill[];
+  /** The sender's MCP servers for thread agents, which the runner connects (decision 0085). */
+  mcp?: RunMcpServer[];
   /** The GitHub account the run acts as: the sender's own (decision 0044). */
   github?: RunGithub;
   /** The project's environment variables, for the agent's commands (decision 0045). */
@@ -47,6 +50,7 @@ export type ResumeRunInput = {
   continuation: unknown;
   response: unknown;
   skills?: RunSkill[];
+  mcp?: RunMcpServer[];
   github?: RunGithub;
   /** The project's environment variables, for the agent's commands (decision 0045). */
   env?: RunEnvVar[];

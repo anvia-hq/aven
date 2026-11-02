@@ -125,6 +125,29 @@ run("mcpService (postgres)", async () => {
     expect(await mcpService.remove(alice, server.id)).toBe(true);
   });
 
+  test("how a run's servers connected is kept: the reason one did not, and when one did", async () => {
+    const person = `mcp-e-${suffix}`;
+    await db.insert(users).values({ id: person, name: "E", email: `${person}@aven.test` });
+    try {
+      const down = await mcpService.create(person, make({ name: "Down" }));
+      const up = await mcpService.create(person, make({ name: "Up" }));
+      await mcpService.record([{ id: down.id, error: "connection refused" }, { id: up.id }]);
+      expect(await mcpService.get(person, down.id)).toMatchObject({
+        lastError: "connection refused",
+        lastUsedAt: null,
+      });
+      const connected = await mcpService.get(person, up.id);
+      expect(connected?.lastError).toBeNull();
+      expect(connected?.lastUsedAt).not.toBeNull();
+
+      // Once it connects, the error it had goes.
+      await mcpService.record([{ id: down.id }]);
+      expect((await mcpService.get(person, down.id))?.lastError).toBeNull();
+    } finally {
+      await db.delete(users).where(eq(users.id, person));
+    }
+  });
+
   test("a run gets the enabled servers for its kind of agent, with their headers", async () => {
     const person = `mcp-d-${suffix}`;
     await db.insert(users).values({ id: person, name: "D", email: `${person}@aven.test` });

@@ -1,7 +1,7 @@
 import { db } from "@aven/db/client";
 import { mcpServers, type McpServerRow } from "@aven/db/schema/mcp-servers";
 import { MCP_LIMIT, mcpSlug, type McpTarget } from "@aven/protocol/mcp";
-import type { RunMcpServer } from "@aven/protocol/runtime-wire";
+import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
@@ -137,6 +137,19 @@ export const mcpService = {
       id: mcpServers.id,
     });
     return removed.length > 0;
+  },
+
+  // How a run's servers connected, for the person to see in Settings: the reason one did not, or
+  // that it did and when. The ids are those the run was given, which the caller has checked.
+  async record(results: readonly McpConnectResult[]) {
+    for (const { id, error } of results) {
+      await db
+        .update(mcpServers)
+        .set(
+          error === undefined ? { lastError: null, lastUsedAt: new Date() } : { lastError: error },
+        )
+        .where(eq(mcpServers.id, id));
+    }
   },
 
   // The servers a run's agents use: the enabled ones that are for this kind of agent, with their

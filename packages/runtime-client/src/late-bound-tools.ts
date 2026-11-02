@@ -10,6 +10,9 @@ import { boundResult } from "./bounded-result";
 export function lateBoundTools(
   tools: readonly AnyTool[],
   current: () => readonly AnyTool[] | undefined,
+  // What the agent is told when the tool is not there to call: the sandbox's, unless said.
+  unavailable: (name: string) => string = (name) =>
+    `The thread's sandbox is not running, so ${name} is unavailable`,
 ): AnyTool[] {
   return tools.map((tool) => ({
     name: tool.name,
@@ -18,8 +21,7 @@ export function lateBoundTools(
     parseInput: tool.parseInput && ((args) => tool.parseInput!(args)),
     call: async (args, context) => {
       const live = current()?.find((candidate) => candidate.name === tool.name);
-      if (!live)
-        throw new Error(`The thread's sandbox is not running, so ${tool.name} is unavailable`);
+      if (!live) throw new Error(unavailable(tool.name));
       // What the run's journal can keep is limited; a command's output may not fit.
       return boundResult(await live.call(args, context));
     },

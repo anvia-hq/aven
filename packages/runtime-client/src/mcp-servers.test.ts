@@ -6,7 +6,9 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import * as z from "zod/v4";
 
 import { DurableRuns } from "./durable-runs";
-import { connectMcpServers, mcpPrefix, type McpServerConfig } from "./mcp-servers";
+import type { RunMcpServer } from "@aven/protocol/runtime-wire";
+
+import { connectMcpServers, mcpPrefix } from "./mcp-servers";
 import { journalPath } from "./testing/journal-path";
 
 // A real MCP server over HTTP, which writes down what it was sent.
@@ -27,7 +29,8 @@ const handler = createMcpHandler(({ requestInfo }) => {
 const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
 afterAll(() => http.stop(true));
 
-const notes = (changes: Partial<McpServerConfig> = {}): McpServerConfig => ({
+const notes = (changes: Partial<RunMcpServer> = {}): RunMcpServer => ({
+  id: "11111111-1111-4111-8111-111111111111",
   name: "Team Notes",
   url: `http://localhost:${http.port}/`,
   headers: { authorization: "Bearer secret-token" },
@@ -44,7 +47,8 @@ describe("connectMcpServers", () => {
   test("names the tools after the server and sends the headers", async () => {
     const connected = await connectMcpServers([notes()]);
     open.push(connected);
-    expect(connected.failed).toEqual([]);
+    expect(connected.results).toEqual([{ id: "11111111-1111-4111-8111-111111111111" }]);
+    expect(connected.note).toEqual({ servers: [{ name: "Team Notes", tools: 1 }], failed: [] });
     expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
     expect(connected.servers.map((server) => server.name)).toEqual(["Team Notes"]);
     expect(mcpPrefix("Team Notes")).toBe("team_notes_");
@@ -53,19 +57,25 @@ describe("connectMcpServers", () => {
   test("a server that is down is reported and the others still connect", async () => {
     const connected = await connectMcpServers([
       notes(),
-      notes({ name: "Gone", url: "http://localhost:1/" }),
+      notes({
+        id: "22222222-2222-4222-8222-222222222222",
+        name: "Gone",
+        url: "http://localhost:1/",
+      }),
     ]);
     open.push(connected);
     expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
-    expect(connected.failed.map((failure) => failure.name)).toEqual(["Gone"]);
-    expect(connected.failed[0]?.reason).not.toBe("");
+    expect(connected.note.failed.map((failure) => failure.name)).toEqual(["Gone"]);
+    const gone = connected.results.find((result) => result.id.startsWith("2222"));
+    expect(gone?.error).toBeTruthy();
+    expect(connected.note.failed[0]?.reason).toBe(gone?.error ?? "");
   });
 
   test("a server on this machine is refused unless the person allowed it", async () => {
     const connected = await connectMcpServers([notes({ allowLocal: false })]);
     open.push(connected);
     expect(connected.tools).toEqual([]);
-    expect(connected.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
+    expect(connected.note.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
   });
 
   test("a durable run calls the server's tool, as a plain local tool of the agent", async () => {

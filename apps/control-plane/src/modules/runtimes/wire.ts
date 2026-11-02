@@ -7,6 +7,7 @@ import {
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
 } from "@aven/protocol/goals";
+import { MCP_LIMIT } from "@aven/protocol/mcp";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import {
   BOT_DESCRIPTION_MAX,
@@ -49,6 +50,7 @@ const callMethods = [
   "memory.append",
   "repo.access",
   "skills.get",
+  "mcp.report",
   "bot.memory",
   "bot.create",
   "bot.update",
@@ -339,6 +341,13 @@ const appendParams = memoryParams.extend({
 
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
+// How the run's MCP servers connected: a reason is a line a person reads in Settings, so it is cut.
+const mcpReportParams = memoryParams.extend({
+  results: z
+    .array(z.object({ id: z.uuid(), error: z.string().trim().max(500).optional() }))
+    .max(MCP_LIMIT),
+});
+
 // A skill of a bot's reply, by its digest.
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
 
@@ -371,3 +380,4 @@ export const parseBotSkillParams = (params: unknown) =>
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
+export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);

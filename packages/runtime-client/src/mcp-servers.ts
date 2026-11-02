@@ -1,19 +1,19 @@
 import type { AnyTool } from "@anvia/core";
 import { McpClient, type McpServer } from "@anvia/mcp";
+import type { McpNote } from "@aven/agents/mcp";
 import { errorMessage } from "@aven/agents/values";
 import { mcpSlug } from "@aven/protocol/mcp";
-import type { RunMcpServer } from "@aven/protocol/runtime-wire";
-
-/** A remote MCP server a run was given: where it is and what to say to it (decision 0085). */
-export type McpServerConfig = Omit<RunMcpServer, "id">;
+import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
 
 export type ConnectedMcp = {
   /** For an agent that does not run through durable, as a bot's does: its `mcpServers`. */
   servers: McpServer[];
   /** The same tools as plain local tools, for an agent that does run through durable, which takes no `mcpServers`. */
   tools: AnyTool[];
-  /** The servers that could not be reached, and why. The run goes on without them. */
-  failed: { name: string; reason: string }[];
+  /** How each server connected, for the control plane to keep: the reason one did not. The run goes on without it. */
+  results: McpConnectResult[];
+  /** What the agent is told of them. */
+  note: McpNote;
   close(): Promise<void>;
 };
 
@@ -37,12 +37,13 @@ const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
 // Connects the servers a run was given, each by itself: one that is down is reported and left out,
 // it does not stop the others or the run. The connections are the run's: `close` ends them.
 export async function connectMcpServers(
-  configs: readonly McpServerConfig[],
+  configs: readonly RunMcpServer[],
   signal?: AbortSignal,
 ): Promise<ConnectedMcp> {
   const clients: McpClient[] = [];
   const servers: McpServer[] = [];
-  const failed: ConnectedMcp["failed"] = [];
+  const results: McpConnectResult[] = [];
+  const failed: McpNote["failed"][number][] = [];
 
   await Promise.all(
     configs.map(async (config) => {
@@ -67,8 +68,11 @@ export async function connectMcpServers(
           }),
         );
         clients.push(client);
+        results.push({ id: config.id });
       } catch (error) {
-        failed.push({ name: config.name, reason: errorMessage(error) });
+        const reason = errorMessage(error);
+        results.push({ id: config.id, error: reason });
+        failed.push({ name: config.name, reason });
         await client.close().catch(() => undefined);
       }
     }),
@@ -77,7 +81,11 @@ export async function connectMcpServers(
   return {
     servers,
     tools: servers.flatMap((server) => server.tools.map(asLocalTool)),
-    failed,
+    results,
+    note: {
+      servers: servers.map((server) => ({ name: server.name, tools: server.tools.length })),
+      failed,
+    },
     close: async () => {
       await Promise.all(clients.map((client) => client.close().catch(() => undefined)));
     },

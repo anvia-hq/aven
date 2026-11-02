@@ -18,6 +18,8 @@ export type RunToolsInput = {
   tools: readonly AnyTool[];
   /** The tools of the thread's sandbox as it is now. */
   current: () => readonly AnyTool[] | undefined;
+  /** The person's MCP servers' tools, and those the thread's connections have now (decision 0085). */
+  mcp?: { tools: readonly AnyTool[]; current: () => readonly AnyTool[] | undefined };
   /** Whether a person is there to answer: only then may the agent save an environment or take on a goal. */
   attended: boolean;
   /** Asks the control plane for read-only access to the thread's repository. */
@@ -37,6 +39,7 @@ export function toolsForRun({
   thread,
   tools,
   current,
+  mcp,
   attended,
   repoAccess,
   defineGoal,
@@ -51,6 +54,17 @@ export function toolsForRun({
     return fetchBranch(root, await repoAccess(), branch);
   });
   const bound: AnyTool[] = [...lateBoundTools(tools, current), gitFetch];
+  // A server's tools are called through whichever connection the thread has now, as the sandbox's
+  // are: an agent that waited for an answer was built by the run that asked, whose connections ended.
+  if (mcp) {
+    bound.push(
+      ...lateBoundTools(
+        mcp.tools,
+        mcp.current,
+        (name) => `The MCP server of ${name} is not connected, so it is unavailable`,
+      ),
+    );
+  }
   // Subagents work with the same tools, so a sandbox released and woken again is theirs too, and
   // what hides this run's secrets from the agent hides them from them.
   const spawnAgent = createSpawnAgentTool(subagentRunner(bound, createSubagent, emit));
