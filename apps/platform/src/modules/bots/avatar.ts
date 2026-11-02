@@ -92,18 +92,18 @@ export const families: readonly Family[] = [
 
 // What a bot can be colored: palette data kept with the bot, not theme colors.
 export const colors: readonly string[] = [
-  "#ffa3c7",
-  "#ff76b8",
-  "#a066c8",
-  "#ae86d6",
-  "#10a6ff",
-  "#0a68e8",
-  "#058a3c",
-  "#13a657",
-  "#ff5a0a",
-  "#ff7a00",
-  "#ff9f0a",
-  "#ffb800",
+  "#ff6eb4",
+  "#ff2d92",
+  "#9d4dff",
+  "#c06bff",
+  "#00b2ff",
+  "#0a5cff",
+  "#00a84f",
+  "#00d46a",
+  "#ff3b0a",
+  "#ff6a00",
+  "#ff9500",
+  "#ffc400",
 ];
 
 export const faces = ["smile", "grin", "curious", "glance"] as const;
