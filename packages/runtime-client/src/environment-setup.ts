@@ -113,6 +113,10 @@ export function hostUser() {
   return `${process.getuid()}:${process.getgid()}`;
 }
 
+// The folders of the image that any user of the container can write (decision 0095): the home, the
+// Python environment and the Rust toolchain.
+const SANDBOX_USER_TREES = ["/home/node", "/opt/venv", "/usr/local/rustup", "/usr/local/cargo"];
+
 const tail = (text: string, lines = 20) => text.trimEnd().split("\n").slice(-lines).join("\n");
 
 /**
@@ -155,7 +159,9 @@ export async function setupEnvironment(input: SetupInput) {
       );
     }
 
-    // What the script wrote into the workspace should be the host user's, as the agent's files are.
+    // What the script wrote should be the host user's to use, as the agent's files are: the
+    // workspace is theirs, and the home and toolchain folders, which the script wrote as the image's
+    // user, are writable by any user again (decision 0095).
     if (input.hostUser) {
       const owned = await docker([
         "exec",
@@ -169,6 +175,18 @@ export async function setupEnvironment(input: SetupInput) {
       ]);
       if (owned.code !== 0)
         throw new Error(`Could not hand the workspace back: ${owned.stderr.trim()}`);
+      const opened = await docker([
+        "exec",
+        "-u",
+        "0",
+        name,
+        "chmod",
+        "-R",
+        "a+rwX",
+        ...SANDBOX_USER_TREES,
+      ]);
+      if (opened.code !== 0)
+        throw new Error(`Could not open the environment to the host user: ${opened.stderr.trim()}`);
     }
 
     // The container ran `sleep`; a thread's container must run the sandbox's daemon.

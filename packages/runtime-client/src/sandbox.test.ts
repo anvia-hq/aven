@@ -968,6 +968,57 @@ live("signing a sandbox in to GitHub (real docker)", () => {
   }, 300_000);
 });
 
+// A Linux runner starts the container as the host user so the workspace's files are theirs, and
+// their uid is not the image's (decision 0095): the image has to work for whoever it is.
+live("the sandbox image for a user it has never heard of (real docker)", () => {
+  const runAs = async (user: string | undefined, script: string) => {
+    const asUser = user ? ["--user", user] : [];
+    const args = ["docker", "run", "--rm", ...asUser, image!, "sh", "-c", script];
+    const process = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr] = await Promise.all([
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+    ]);
+    return { code: await process.exited, stdout, stderr };
+  };
+
+  test("has a name, a home, a Python and a Rust environment, and git settings it can write", async () => {
+    const out = await runAs(
+      "4242:4242",
+      [
+        "echo whoami=$(id -un)",
+        "echo userInfo=$(node -e \"console.log(require('os').userInfo().username)\")",
+        'touch "$HOME/.probe" && echo home=ok',
+        'mkdir -p "$ANVIA_SANDBOX_STATE_DIR/operations" && echo state=ok',
+        "touch /opt/venv/.probe && echo venv=ok",
+        "mkdir -p /usr/local/cargo/registry && echo cargo=ok",
+        "touch /usr/local/rustup/.probe && echo rustup=ok",
+        "git config --global user.name probe && echo git=$(git config --global user.name)",
+        "gh --version | head -1 | cut -d' ' -f1",
+      ].join("; "),
+    );
+
+    expect(out.stderr).not.toContain("Permission denied");
+    expect(out.stdout.trim().split("\n")).toEqual([
+      "whoami=aven",
+      "userInfo=aven",
+      "home=ok",
+      "state=ok",
+      "venv=ok",
+      "cargo=ok",
+      "rustup=ok",
+      "git=probe",
+      "gh",
+    ]);
+  }, 120_000);
+
+  test("is still the image's own user when nobody names another", async () => {
+    const out = await runAs(undefined, 'echo $(id -un) && touch "$HOME/.probe" && echo home=ok');
+
+    expect(out.stdout.trim().split("\n")).toEqual(["node", "home=ok"]);
+  }, 120_000);
+});
+
 // The id of a local Docker image, which a snapshot is made from.
 async function imageId(name: string) {
   const out = await new Response(

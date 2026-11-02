@@ -1,0 +1,12 @@
+#!/bin/sh
+# A Linux runner starts the container as the host user (`docker run --user uid:gid`), so the files
+# the agent writes in the workspace belong to them. That uid has no entry in the image's user list,
+# and tools that look their user up (Node's os.userInfo, ssh, whoami) fail without one: give it one
+# before the daemon starts, as the image's own user would have (decision 0095).
+uid=$(id -u)
+gid=$(id -g)
+if [ "$uid" != 0 ] && ! getent passwd "$uid" >/dev/null 2>&1 && [ -w /etc/passwd ]; then
+  getent group "$gid" >/dev/null 2>&1 || { [ -w /etc/group ] && echo "aven:x:$gid:" >> /etc/group; }
+  echo "aven:x:$uid:$gid:Aven sandbox:${HOME:-/home/node}:/bin/bash" >> /etc/passwd
+fi
+exec "$@"

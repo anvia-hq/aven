@@ -67,10 +67,12 @@ RUN printf '%s\n' 'export RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/ca
 COPY anvia-chromium /usr/local/bin/anvia-chromium
 COPY openbox-session /usr/local/bin/openbox-session
 COPY aven /usr/local/bin/aven
+COPY aven-entrypoint /usr/local/bin/aven-entrypoint
 # The panel and links open the browser through its stock launcher, which would start it without
 # --no-sandbox and fail inside Docker's default seccomp profile, so point them at the wrapper. The
 # base image has a user on uid 1000 we do not want, so `node` takes its place (it owns /workspace).
 RUN chmod 0555 /usr/local/bin/anvia-chromium /usr/local/bin/openbox-session /usr/local/bin/aven \
+    /usr/local/bin/aven-entrypoint \
   && for entry in chromium google-chrome; do \
        f=/usr/share/applications/$entry.desktop; \
        [ -f "$f" ] && sed -i -E 's|^Exec=[^ ]*(chromium\|google-chrome-stable)|Exec=/usr/local/bin/anvia-chromium|' "$f"; \
@@ -82,7 +84,14 @@ RUN chmod 0555 /usr/local/bin/anvia-chromium /usr/local/bin/openbox-session /usr
   # the setup container: thread containers run with no-new-privileges, which makes sudo fail there.
   echo 'node ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/node; \
   chmod 0440 /etc/sudoers.d/node; \
-  chown -R node:users /opt/venv /usr/local/rustup /usr/local/cargo
+  chown -R node:users /opt/venv /usr/local/rustup /usr/local/cargo; \
+  # A Linux runner starts the container as the host user, whose uid is not node's, and that user must
+  # have its environment as node would: its home, the Python environment and the Rust toolchain are
+  # writable by any user, and so are the user and group lists the entrypoint adds the host user to
+  # (decision 0095). The container, not these permissions, is the boundary.
+  chmod -R a+rwX /home/node /opt/venv /usr/local/rustup /usr/local/cargo; \
+  chmod 0777 /home/node; \
+  chmod 0666 /etc/passwd /etc/group
 
 # The base sets no wallpaper (the screen is black) and its own is an SVG nothing here can draw;
 # `openbox-session` points the desktop at this one (a soft white wave image from Pinterest;
@@ -97,8 +106,9 @@ RUN printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Type=X-XFCE-Helper' 'X-XFCE-C
     'Icon=web-browser' 'Name=Browser' > /usr/share/xfce4/helpers/anvia-browser.desktop \
   && printf '%s\n' 'WebBrowser=anvia-browser' 'FileManager=thunar' 'TerminalEmulator=xfce4-terminal' > /etc/xdg/xfce4/helpers.rc
 
-# The base starts its own services through s6; the daemon owns the display here.
-ENTRYPOINT []
+# The base starts its own services through s6; the daemon owns the display here. The entrypoint only
+# gives the user the container runs as a name, then runs the command.
+ENTRYPOINT ["/usr/local/bin/aven-entrypoint"]
 USER node
 WORKDIR /workspace
 ENV HOME=/home/node \
