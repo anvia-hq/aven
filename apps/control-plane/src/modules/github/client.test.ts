@@ -231,6 +231,101 @@ describe("GithubClient", () => {
     });
   });
 
+  describe("a repository's commits", () => {
+    const token = new Response(
+      JSON.stringify({
+        token: "ghs_one",
+        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+      }),
+    );
+    const commit = (sha: string, message: string, extra: object = {}) => ({
+      sha,
+      commit: { message, author: { name: "Ada", date: "2026-11-01T10:00:00Z" } },
+      author: { login: "ada" },
+      ...extra,
+    });
+    // A GitHub that answers the commits listing with `answer`, and the token as the app asks.
+    const github = (answer: () => Response) => {
+      const calls: string[] = [];
+      const fetch = async (url: string) => {
+        calls.push(url);
+        return url.includes("/access_tokens") ? token.clone() : answer();
+      };
+      return { calls, client: new GithubClient(config, fetch) };
+    };
+
+    test("a page is the first line of each message, who wrote it and when, newest first", async () => {
+      const { calls, client } = github(() =>
+        Response.json([
+          commit("a1", "Fix the build\n\nA long body that is not shown."),
+          commit("b2", "  Spaced  "),
+          { ...commit("c3", "By login"), commit: { message: "By login", author: null } },
+          {
+            sha: "d4",
+            commit: {
+              message: "x".repeat(300),
+              author: { name: "Bo", date: "2026-10-31T10:00:00Z" },
+            },
+            author: null,
+          },
+        ]),
+      );
+
+      const page = await client.commits(7, "acme/web", 2);
+
+      expect(
+        page?.commits.map(({ sha, message, author }) => [sha, message.length, author]),
+      ).toEqual([
+        ["a1", 13, "Ada"],
+        ["b2", 6, "Ada"],
+        ["c3", 8, "ada"],
+        ["d4", 200, "Bo"],
+      ]);
+      expect(page?.commits[0]).toEqual({
+        sha: "a1",
+        message: "Fix the build",
+        author: "Ada",
+        date: "2026-11-01T10:00:00Z",
+      });
+      expect(calls.at(-1)).toBe("https://api.github.com/repos/acme/web/commits?per_page=10&page=2");
+    });
+
+    test("there is an older page only when GitHub links to one", async () => {
+      const more = github(
+        () =>
+          new Response("[]", {
+            headers: {
+              link: '<https://api.github.com/x?page=3>; rel="next", <https://api.github.com/x?page=9>; rel="last"',
+            },
+          }),
+      );
+      expect((await more.client.commits(7, "acme/web", 2))?.hasMore).toBe(true);
+
+      const last = github(
+        () =>
+          new Response("[]", {
+            headers: { link: '<https://api.github.com/x?page=1>; rel="prev"' },
+          }),
+      );
+      expect((await last.client.commits(7, "acme/web", 3))?.hasMore).toBe(false);
+      expect(
+        (await github(() => Response.json([])).client.commits(7, "acme/web", 1))?.hasMore,
+      ).toBe(false);
+    });
+
+    test("a repository with no commit is an empty page, and one that is not seen is null", async () => {
+      expect(
+        await github(() => new Response("empty", { status: 409 })).client.commits(7, "acme/new", 1),
+      ).toEqual({ commits: [], hasMore: false });
+      expect(
+        await github(() => new Response("gone", { status: 404 })).client.commits(7, "acme/gone", 1),
+      ).toBeNull();
+      await expect(
+        github(() => new Response("boom", { status: 500 })).client.commits(7, "acme/web", 1),
+      ).rejects.toThrow("GitHub answered 500");
+    });
+  });
+
   test("a user may use an installation only if GitHub lists it among theirs", async () => {
     const github = fakeGithub({
       "GET /user/installations?per_page=100&page=1": { installations: [{ id: 7 }] },

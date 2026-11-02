@@ -59,6 +59,43 @@ test.describe("the project page", () => {
     await expect(page.getByText("Environment variables")).toBeVisible();
   });
 
+  test("lists the latest commits ten to a page, newest first, and pages back and forward", async ({
+    page,
+  }) => {
+    await registerUser(page, "repo", "Repo Person");
+    const project = await projectOf(page, "shiny-app");
+    await page.goto(`/projects/${project.id}`);
+
+    const commits = page.getByRole("region", { name: "Commits" });
+    const rows = commits.getByRole("listitem");
+    await expect(rows).toHaveCount(10);
+    // The first line of the message and who wrote it; the body is not shown.
+    await expect(rows.first()).toContainText("Change number 14");
+    await expect(rows.first()).toContainText("Ada Lovelace");
+    await expect(commits.getByText("Why it changed")).toHaveCount(0);
+    await expect(rows.last()).toContainText("Change number 5");
+    await expect(
+      commits.getByRole("link", { name: "Open commit 14abcde on GitHub" }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/acme/shiny-app/commit/14abcdef0123456789abcdef0123456789abcdef",
+    );
+
+    // Newest first: no newer page to go to, and an older one.
+    await expect(commits.getByText("Page 1")).toBeVisible();
+    await expect(commits.getByRole("button", { name: "Newer" })).toBeDisabled();
+    await commits.getByRole("button", { name: "Older" }).click();
+
+    await expect(commits.getByText("Page 2")).toBeVisible();
+    await expect(rows).toHaveCount(4);
+    await expect(rows.first()).toContainText("Change number 4");
+    await expect(commits.getByRole("button", { name: "Older" })).toBeDisabled();
+
+    await commits.getByRole("button", { name: "Newer" }).click();
+    await expect(rows).toHaveCount(10);
+    await expect(rows.first()).toContainText("Change number 14");
+  });
+
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
     page,
   }) => {

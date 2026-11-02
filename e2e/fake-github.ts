@@ -123,6 +123,29 @@ Bun.serve({
         content: Buffer.from(text).toString("base64"),
       });
     }
+    // The history on the project page: fourteen commits, newest first, ten to a page, with GitHub's
+    // `next` link on the first page only.
+    const history = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits$/)?.[1];
+    if (history && repositories.includes(history)) {
+      const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
+      const commits = Array.from({ length: 14 }, (_, index) => ({
+        sha: `${String(14 - index).padStart(2, "0")}abcdef0123456789abcdef0123456789abcdef`,
+        commit: {
+          message: `Change number ${14 - index}\n\nWhy it changed, which is not shown.`,
+          author: {
+            name: "Ada Lovelace",
+            date: new Date(Date.now() - index * 3_600_000).toISOString(),
+          },
+        },
+        author: { login: "ada" },
+      }));
+      return Response.json(commits.slice((page - 1) * 10, page * 10), {
+        headers:
+          page === 1
+            ? { link: '<https://api.github.com/repositories/1/commits?page=2>; rel="next"' }
+            : {},
+      });
+    }
     const name = pathname.match(/^\/repos\/acme\/([\w.-]+)$/)?.[1];
     if (name && repositories.includes(name)) return Response.json(repo(name));
     return new Response("not found", { status: 404 });

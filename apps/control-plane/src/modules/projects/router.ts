@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
-import { folderQuery, importProjectBody, projectParams } from "./schema";
+import { commitsQuery, folderQuery, importProjectBody, projectParams } from "./schema";
 import { projectsService } from "./service";
 
 export const projectsRouter = new Elysia({ prefix: "/projects" })
@@ -36,4 +36,10 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
       org: true,
       params: projectParams,
     },
+  )
+  .get(
+    "/:id/commits",
+    ({ params, query, organizationId }) =>
+      projectsService.commits(organizationId, params.id, query.page),
+    { auth: true, org: true, params: projectParams, query: commitsQuery },
   );

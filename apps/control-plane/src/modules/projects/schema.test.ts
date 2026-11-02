@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { folderQuery, importProjectBody } from "./schema";
+import { commitsQuery, folderQuery, importProjectBody } from "./schema";
 
 const body = (repository: string) => ({
   installationId: crypto.randomUUID(),
@@ -40,4 +40,15 @@ describe("folderQuery", () => {
       expect(folderQuery.safeParse({ path }).success).toBe(false);
     },
   );
+});
+
+describe("commitsQuery", () => {
+  test("is the first page unless a page is asked for, and the query's text is a number", () => {
+    expect(commitsQuery.parse({})).toEqual({ page: 1 });
+    expect(commitsQuery.parse({ page: "3" })).toEqual({ page: 3 });
+  });
+
+  test.each(["0", "-1", "1.5", "abc", "", "10001"])("refuses page %p", (page) => {
+    expect(commitsQuery.safeParse({ page }).success).toBe(false);
+  });
 });

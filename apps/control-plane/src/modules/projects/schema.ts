@@ -31,4 +31,9 @@ export const folderQuery = z.object({
     .default(""),
 });
 
+// A page of the commit history, from the newest; GitHub allows as many as the history has.
+export const commitsQuery = z.object({
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+});
+
 export type ImportProjectBody = z.infer<typeof importProjectBody>;

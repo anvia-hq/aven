@@ -92,6 +92,18 @@ export const projectsService = {
     };
   },
 
+  // One page of the default branch's commits for the project page, read with the installation's
+  // token like the files and the README. A repository the installation no longer sees is not found.
+  async commits(organizationId: string, id: string, page: number) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const found = await githubService.commits(
+      project.githubInstallationId,
+      project.repoFullName,
+      page,
+    );
+    return { ...orNotFound(found, "Repository not found"), page };
+  },
+
   // What a runtime needs to clone the repository of a thread's project: the clone URL, the branch
   // and a short-lived read-only token (decision 0013).
   async repoAccess(threadId: string) {

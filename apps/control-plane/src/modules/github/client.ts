@@ -151,6 +151,28 @@ export type GithubReadme = { name: string; path: string; text: string; truncated
 
 export const README_MAX_CHARS = 200_000;
 
+/** One commit of the repository's default branch, as the project page lists it. */
+export type GithubCommit = {
+  sha: string;
+  /** The first line of the message. */
+  message: string;
+  /** Who wrote it: the name on the commit, else their GitHub login. */
+  author: string | null;
+  date: string;
+};
+
+/** One page of commits, and whether GitHub has an older one. */
+export type GithubCommitPage = { commits: GithubCommit[]; hasMore: boolean };
+
+export const COMMITS_PER_PAGE = 10;
+const COMMIT_MESSAGE_MAX = 200;
+
+type CommitPayload = {
+  sha: string;
+  commit: { message: string; author: { name: string; date: string } | null };
+  author: { login: string } | null;
+};
+
 // A path inside a repository, put into a GitHub API path one segment at a time: dot-only segments
 // are refused by the callers' schema, so the path cannot climb out of `/contents/`.
 const contentsPath = (path: string) =>
@@ -210,6 +232,10 @@ export class GithubClient {
   }
 
   async #api<T>(path: string, auth: string, init: RequestInit = {}): Promise<T> {
+    return (await this.#get(path, auth, init)).json() as Promise<T>;
+  }
+
+  async #get(path: string, auth: string, init: RequestInit = {}) {
     const headers: Record<string, string> = {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${auth}`,
@@ -224,7 +250,7 @@ export class GithubClient {
         response.status,
       );
     }
-    return (await response.json()) as T;
+    return response;
   }
 
   // The entries of a paged listing, page by page until a short one or MAX_PAGES. A caller that
@@ -399,6 +425,41 @@ export class GithubClient {
       path: found.path,
       text: text.slice(0, README_MAX_CHARS),
       truncated: text.length > README_MAX_CHARS,
+    };
+  }
+
+  /**
+   * One page of the default branch's commits, newest first, or null when the installation cannot
+   * see the repository. A repository with no commit yet has an empty page. Whether there is an
+   * older page is GitHub's own word, its `next` link, so a last page that is exactly full does not
+   * offer an empty one.
+   */
+  async commits(
+    installationId: number,
+    fullName: string,
+    page: number,
+  ): Promise<GithubCommitPage | null> {
+    const { token } = await this.installationToken(installationId);
+    const path = `${repoPath(fullName)}/commits?per_page=${COMMITS_PER_PAGE}&page=${page}`;
+    let response: Response;
+    try {
+      response = await this.#get(path, token);
+    } catch (error) {
+      // GitHub answers 409 for a repository that has no commit.
+      if (error instanceof GithubApiError && error.status === 409) {
+        return { commits: [], hasMore: false };
+      }
+      return nullWhenNotFound(error);
+    }
+    const listed = (await response.json()) as CommitPayload[];
+    return {
+      commits: listed.map(({ sha, commit, author }) => ({
+        sha,
+        message: commit.message.split("\n")[0]!.trim().slice(0, COMMIT_MESSAGE_MAX),
+        author: commit.author?.name ?? author?.login ?? null,
+        date: commit.author?.date ?? "",
+      })),
+      hasMore: /rel="next"/.test(response.headers.get("link") ?? ""),
     };
   }
 

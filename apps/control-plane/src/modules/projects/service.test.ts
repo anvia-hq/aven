@@ -77,6 +77,38 @@ run("projectsService (postgres)", async () => {
     expect(await githubService.get(orgB, installation.id)).toBeNull();
   });
 
+  test("a page of commits is read for the project's own organization only, and says which page it is", async () => {
+    const commits = spyOn(githubService, "commits").mockImplementation(async () => ({
+      commits: [{ sha: "a1", message: "Fix", author: "Ada", date: "2026-11-01T10:00:00Z" }],
+      hasMore: true,
+    }));
+    try {
+      const project = (await projectsService.list(orgA))[0]!;
+
+      expect(await projectsService.commits(orgA, project.id, 2)).toEqual({
+        commits: [{ sha: "a1", message: "Fix", author: "Ada", date: "2026-11-01T10:00:00Z" }],
+        hasMore: true,
+        page: 2,
+      });
+      expect(commits).toHaveBeenCalledWith(project.githubInstallationId, project.repoFullName, 2);
+
+      // Another organization's project is not found, and GitHub is not asked.
+      commits.mockClear();
+      await expect(projectsService.commits(orgB, project.id, 1)).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      expect(commits).not.toHaveBeenCalled();
+
+      // A repository the installation lost is not found either.
+      commits.mockImplementation(async () => null);
+      await expect(projectsService.commits(orgA, project.id, 1)).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    } finally {
+      commits.mockRestore();
+    }
+  });
+
   test("a folder and the README are read for the project's own organization only (decision 0082)", async () => {
     const folder = spyOn(githubService, "folder").mockImplementation(async () => [
       { name: "src", path: "src", type: "directory" },
