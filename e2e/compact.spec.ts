@@ -13,7 +13,7 @@ test.describe("compacting a thread", () => {
     runner = undefined;
   });
 
-  async function openThread(page: Page) {
+  async function openThread(page: Page, usedTokens = 700_000) {
     await registerUser(page, "cmp", "Compact User");
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
@@ -32,7 +32,7 @@ test.describe("compacting a thread", () => {
           messages: [],
           usage: {
             totals: { inputTokens: 1, outputTokens: 1, cacheWriteTokens: 0, cacheReadTokens: 0 },
-            context: { usedTokens: 700_000, contextWindow: 1_000_000 },
+            context: { usedTokens, contextWindow: 1_000_000 },
           },
         })}\n\n`,
       }),
@@ -54,6 +54,20 @@ test.describe("compacting a thread", () => {
       prompt: "/compact",
       compact: true,
     });
+  });
+
+  test("the button waits until a quarter of the window is used", async ({ page }) => {
+    await openThread(page, 240_000);
+    const context = page.getByRole("region", { name: "Context" });
+    await expect(context).toContainText("24% used");
+    await expect(context.getByRole("button", { name: "Compact" })).toHaveCount(0);
+  });
+
+  test("the button shows at a quarter", async ({ page }) => {
+    await openThread(page, 250_000);
+    const context = page.getByRole("region", { name: "Context" });
+    await expect(context).toContainText("25% used");
+    await expect(context.getByRole("button", { name: "Compact" })).toBeVisible();
   });
 
   test("/compact in the composer does the same, and is not sent as a message", async ({ page }) => {
