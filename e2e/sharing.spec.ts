@@ -71,7 +71,13 @@ test.describe("sharing a thread", () => {
     // The teammate finds it under Shared with workspace and can read it, nothing more.
     await mate.page.goto("/threads");
     await expect(sidebar(mate.page)).toContainText("Shared with workspace");
-    await sidebar(mate.page).getByRole("link", { name: "Private plans" }).click();
+    // The palette finds it too, with who shared it.
+    await mate.page.keyboard.press("ControlOrMeta+k");
+    await mate.page.keyboard.type("Private plans");
+    await expect(mate.page.getByRole("option", { name: /Private plans/ })).toContainText(
+      "Owner Person",
+    );
+    await mate.page.keyboard.press("Enter");
     await expect(mate.page).toHaveURL(new RegExp(`/threads/${thread.id}$`));
     await expect(mate.page.getByText(/Shared by/)).toContainText("Owner Person");
     await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);

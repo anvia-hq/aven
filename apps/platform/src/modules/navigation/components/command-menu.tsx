@@ -24,7 +24,7 @@ const pages = [
 
 export function CommandMenu() {
   const { open, setOpen } = useCommandMenu();
-  const { threads } = useThreads();
+  const { threads, shared } = useThreads();
   const { projects } = useProjects();
   const navigate = useNavigate();
 
@@ -81,6 +81,30 @@ export function CommandMenu() {
               </CommandItem>
             ))}
           </CommandGroup>
+          {shared.length > 0 && (
+            <>
+              <CommandSeparator />
+              {/* What the workspace shares to read (decision 0084). */}
+              <CommandGroup heading="Shared with workspace">
+                {shared.map((thread) => (
+                  <CommandItem
+                    key={thread.id}
+                    value={`shared thread ${thread.title} ${thread.createdByName}`}
+                    onSelect={() =>
+                      go(() =>
+                        navigate({ to: "/threads/$threadId", params: { threadId: thread.id } }),
+                      )
+                    }
+                  >
+                    {thread.title}
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {thread.createdByName}
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
           <CommandSeparator />
           <CommandGroup heading="Projects">
             {projects.map((project) => (
