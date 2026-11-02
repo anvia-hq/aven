@@ -79,7 +79,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("what are your skills?");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     // The first built-in skill by name, which only the runner's copy of the person's skills lists.
-    await expect(bubble(page, "I have the setup-env skill")).toBeVisible();
+    await expect(bubble(page, "I have the aven-help skill")).toBeVisible();
   });
 
   // A bot keeps the person's MCP servers on their word (decision 0085): what it adds is on their
