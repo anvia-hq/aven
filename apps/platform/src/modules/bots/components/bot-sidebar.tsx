@@ -13,7 +13,7 @@ import { BotSettingsDialog } from "./bot-settings-dialog";
 // The bot's own sidebar: the main bot as a tile on top, and under it the person's other bots, each
 // with its avatar, its name and what it said last, or what it is for until it has said anything.
 export function BotSidebar() {
-  const { bots, main } = useBots();
+  const { bots, main, loaded } = useBots();
   const lastMessages = useBotLastMessages();
   const working = useBotsWorking();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -21,6 +21,9 @@ export function BotSidebar() {
 
   return (
     <>
+      {!loaded && (
+        <div className="mx-auto mt-2 mb-3 h-[110px] w-28 rounded-xl bg-sidebar-accent/50 group-data-[collapsible=icon]:hidden" />
+      )}
       {main && (
         <div className="group/tile relative mx-auto mt-2 mb-3">
           <Link
