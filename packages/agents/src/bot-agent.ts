@@ -10,6 +10,7 @@ import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
 import { createGoalTools, type GoalHost } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools, type McpServersHost } from "./tools/mcp-servers";
+import { createProviderTools, type ProvidersHost } from "./tools/providers";
 import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
@@ -60,6 +61,8 @@ type BotAgentOptions = ModelSource & {
   mcp?: { tools: readonly AnyTool[]; note: McpNote };
   /** Keeps the person's MCP servers (decision 0085); without it the bot can use them but not change them. */
   mcpServers?: McpServersHost;
+  /** Keeps the person's model providers (decision 0086); without it the bot cannot. A key is never in it. */
+  providers?: ProvidersHost;
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -86,6 +89,7 @@ export function createBotAgent({
   skills,
   mcp,
   mcpServers,
+  providers,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -107,6 +111,7 @@ export function createBotAgent({
       skills,
       mcp: mcp?.note,
       mcpServers: Boolean(mcpServers),
+      providers: providers ? { keyForm: Boolean(providers.askKey) } : undefined,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
@@ -121,6 +126,7 @@ export function createBotAgent({
       ...changingSelf(updateSelf),
       ...usingMcp(mcp),
       ...keepingMcpServers(mcpServers),
+      ...keepingProviders(providers),
     ],
   });
 }
@@ -134,3 +140,4 @@ const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
 const usingMcp = (mcp?: { tools: readonly AnyTool[] }) => (mcp ? mcp.tools : []);
 const keepingMcpServers = (host?: McpServersHost) => (host ? createMcpServerTools(host) : []);
+const keepingProviders = (host?: ProvidersHost) => (host ? createProviderTools(host) : []);

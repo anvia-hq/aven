@@ -1,6 +1,7 @@
 // A person's model providers as a bot manages them (decision 0086). A bot never sees an API key,
 // and never gives one: the person types it into a masked card, which saves it to the provider.
 
+import type { QuestionPrompt } from "./events";
 import type { Provider } from "./runtime-wire";
 
 /** A provider as a bot reads it: what it is, never its key, only whether it has one. */
@@ -22,3 +23,12 @@ export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible"
  * saved to the provider, so it is in no message, no transcript and nothing the bot reads.
  */
 export type ProviderKeyAsk = { providerId: string; name: string };
+
+/** The card a bot's request for a key is, as the chat shows it and as it is read back from the bot's memory. */
+export const providerKeyQuestion = (
+  providerKey: ProviderKeyAsk,
+): QuestionPrompt & { providerKey: ProviderKeyAsk } => ({
+  id: "key",
+  text: `Enter the API key for ${providerKey.name}`,
+  providerKey,
+});

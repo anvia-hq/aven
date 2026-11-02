@@ -35,6 +35,8 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
+import { providerKeyQuestion } from "@aven/protocol/providers";
+
 import type { BotProviders } from "../providers/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
@@ -303,14 +305,8 @@ export class RemoteBotReplier implements BotReplier {
           const providerKey = await this.providers.keyFor(userId, params.id);
           if (asked) throw new Error("You have already asked. Stop now and wait for the answer.");
           asked = true;
-          ask([
-            {
-              id: "key",
-              text: `Enter the API key for ${providerKey.name}`,
-              providerKey,
-            },
-          ]);
-          return null;
+          ask([providerKeyQuestion(providerKey)]);
+          return providerKey;
         }
         if (!makesBotsOnTheirWord) {
           throw new Error(

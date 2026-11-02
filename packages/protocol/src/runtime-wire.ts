@@ -5,7 +5,7 @@
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
-import type { BotProviderView } from "./providers";
+import type { BotProviderView, ProviderKeyAsk } from "./providers";
 import type { BotScheduleView } from "./schedules";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
@@ -467,8 +467,13 @@ export type BotProviderParams = { replyId: string } & (
   | { op: "askKey"; id: string }
 );
 
-/** A provider for `add`, `update` and `askKey`, all of them for `list`, the model ids for `models`, nothing for `remove`. */
-export type BotProvided = BotProviderView | BotProviderView[] | { models: string[] } | null;
+/** A provider for `add` and `update`, all of them for `list`, the model ids for `models`, the provider the card is for with `askKey`, nothing for `remove`. */
+export type BotProvided =
+  | BotProviderView
+  | BotProviderView[]
+  | { models: string[] }
+  | ProviderKeyAsk
+  | null;
 
 /** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
 export type BotSkillParams = { replyId: string; digest: string };

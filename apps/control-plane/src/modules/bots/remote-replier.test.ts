@@ -1151,7 +1151,10 @@ describe("RemoteBotReplier", () => {
       });
       await Bun.sleep(0);
       const sink = run.only();
-      expect(await sink.provider({ replyId: "x", op: "askKey", id })).toBeNull();
+      expect(await sink.provider({ replyId: "x", op: "askKey", id })).toEqual({
+        providerId: id,
+        name: "Work Azure",
+      });
       expect(asked).toEqual([
         [
           {

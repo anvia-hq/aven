@@ -348,4 +348,57 @@ describe("botMessagesToChat", () => {
       expect(botMessagesToChat(messages)).toEqual([]);
     });
   });
+
+  describe("a request for a provider's key (decision 0086)", () => {
+    const asking = (id: string): Message => ({
+      role: "assistant",
+      content: [
+        { type: "tool-call", toolCallId: id, toolName: "ask_provider_key", input: { id: "p-1" } },
+      ],
+    });
+    const answered = (id: string, output: unknown): Message => ({
+      role: "tool",
+      content: [
+        { type: "tool-result", toolCallId: id, toolName: "ask_provider_key", output } as never,
+      ],
+    });
+
+    test("is a masked card in the chat, which the person's next message answers", () => {
+      const messages = [
+        { role: "user", content: "add my azure" } as Message,
+        asking("k1"),
+        answered("k1", {
+          type: "json",
+          value: { provider: { providerId: "p-1", name: "Work Azure" }, note: "Stop now" },
+        }),
+        { role: "user", content: "Saved the key." } as Message,
+      ];
+
+      expect(botMessagesToChat(messages)).toEqual([
+        { id: "m-0", role: "user", text: "add my azure" },
+        {
+          id: "m-1",
+          role: "bot",
+          text: "Enter the API key for Work Azure",
+          questions: [
+            {
+              id: "key",
+              text: "Enter the API key for Work Azure",
+              providerKey: { providerId: "p-1", name: "Work Azure" },
+            },
+          ],
+        },
+        { id: "m-2", role: "user", text: "Saved the key." },
+      ]);
+    });
+
+    test("is nothing when it was refused or the answer is not a provider", () => {
+      expect(
+        botMessagesToChat([asking("k1"), answered("k1", { type: "error-text", value: "No" })]),
+      ).toEqual([]);
+      expect(
+        botMessagesToChat([asking("k1"), answered("k1", { type: "json", value: { nope: 1 } })]),
+      ).toEqual([]);
+    });
+  });
 });

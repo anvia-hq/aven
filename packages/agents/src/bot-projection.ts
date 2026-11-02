@@ -8,8 +8,11 @@ import {
   type BotQuestion,
 } from "@aven/protocol/bots";
 
+import { providerKeyQuestion, type ProviderKeyAsk } from "@aven/protocol/providers";
+
 import { sentMessage } from "./attachments";
 import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
+import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
 
 // What each tool call of an assistant message was answered with, by the call's id, read from the
@@ -35,6 +38,17 @@ function relayedBy(output: ToolResultOutput | undefined) {
   const { relayed } = output.value as { relayed?: { handle?: unknown; text?: unknown } };
   if (typeof relayed?.handle !== "string" || typeof relayed.text !== "string") return undefined;
   return { handle: relayed.handle, text: relayed.text };
+}
+
+// The provider a key card was shown for, read from what the call to `ask_provider_key` returned: the
+// card is in the chat only if it was shown.
+function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | undefined {
+  if (output?.type !== "json") return undefined;
+  const { provider } = output.value as { provider?: { providerId?: unknown; name?: unknown } };
+  if (typeof provider?.providerId !== "string" || typeof provider.name !== "string") {
+    return undefined;
+  }
+  return { providerId: provider.providerId, name: provider.name };
 }
 
 // Rebuilds a bot's chat from its stored memory: what the person said, each message the bot sent
@@ -96,6 +110,11 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
             const questions = toQuestions(asked.data.questions);
             add("bot", questions.map((question) => question.text).join("\n"), undefined, questions);
           }
+        } else if (part.toolName === ASK_PROVIDER_KEY_TOOL_NAME) {
+          const asked = keyAskedFor(results.get(part.toolCallId));
+          if (!asked) continue;
+          const question = providerKeyQuestion(asked);
+          add("bot", question.text, undefined, [question]);
         }
       }
     }

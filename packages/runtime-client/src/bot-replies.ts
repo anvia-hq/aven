@@ -9,11 +9,13 @@ import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { GoalHost } from "@aven/agents/tools/goals";
 import type { McpNote } from "@aven/agents/mcp";
 import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
+import type { ProvidersHost } from "@aven/agents/tools/providers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { SendMessage } from "@aven/agents/tools/send-message";
-import { parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
+import { MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotMcpView } from "@aven/protocol/mcp";
+import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 import type {
@@ -63,6 +65,8 @@ export type CreateBotReplyAgent = (input: {
   mcp?: { tools: readonly AnyTool[]; note: McpNote };
   /** Keeps the person's MCP servers, on their word (decision 0085). */
   mcpServers: McpServersHost;
+  /** Keeps the person's model providers, on their word, and asks for a key when someone is there to type it (decision 0086). */
+  providers: ProvidersHost;
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -84,6 +88,7 @@ export const defaultCreateBotAgent =
     skills,
     mcp,
     mcpServers,
+    providers,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -112,6 +117,7 @@ export const defaultCreateBotAgent =
       skills,
       mcp,
       mcpServers,
+      providers,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -260,6 +266,10 @@ export class BotReplies {
     // What a bot sends the person is shown as typed; what it sends another bot goes at once, and
     // the other bot's answer is a message of its own (decision 0065).
     const peers = [...bot.peers];
+    // Someone is there to type a key in the person's chat: not for a note, and not for a bot that
+    // is answering another bot, which has no chat with the person in front of it (decision 0086).
+    const { from, note } = parseBotPrompt(prompt);
+    const canAskPerson = !note && (bot.handle === MAIN_BOT_HANDLE || from === undefined);
     const send: SendMessage = async ({ to, text }, { abortSignal }) => {
       if (to !== USER_HANDLE) {
         const sent = await call("bot.send", { replyId, to, text });
@@ -329,6 +339,24 @@ export class BotReplies {
         update: async (id, patch) =>
           (await call("bot.mcp", { replyId, op: "update", id, ...patch })) as BotMcpView,
         remove: async (id) => void (await call("bot.mcp", { replyId, op: "remove", id })),
+      },
+      providers: {
+        list: async () =>
+          (await call("bot.provider", { replyId, op: "list" })) as BotProviderView[],
+        add: async (input) =>
+          (await call("bot.provider", { replyId, op: "add", ...input })) as BotProviderView,
+        update: async (id, patch) =>
+          (await call("bot.provider", { replyId, op: "update", id, ...patch })) as BotProviderView,
+        remove: async (id) => void (await call("bot.provider", { replyId, op: "remove", id })),
+        models: async (id) =>
+          ((await call("bot.provider", { replyId, op: "models", id })) as { models: string[] })
+            .models,
+        // The control plane holds to who may be asked, as for a question: not a note, and not a bot
+        // that is answering another bot.
+        askKey: canAskPerson
+          ? async (id) =>
+              (await call("bot.provider", { replyId, op: "askKey", id })) as ProviderKeyAsk
+          : undefined,
       },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

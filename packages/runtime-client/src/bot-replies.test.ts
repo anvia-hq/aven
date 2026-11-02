@@ -765,6 +765,18 @@ describe("BotReplies", () => {
           },
           remove: async () => undefined,
         },
+        providers: {
+          list: async () => [],
+          add: async () => {
+            throw new Error("not added");
+          },
+          update: async () => {
+            throw new Error("not changed");
+          },
+          remove: async () => undefined,
+          models: async () => [],
+          askKey: asking ? async () => ({ providerId: "p", name: "P" }) : undefined,
+        },
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
           : undefined,
@@ -777,6 +789,20 @@ describe("BotReplies", () => {
       const none = build(false);
       expect(none.tools.map((each) => each.name)).not.toContain("ask_question");
       expect(none.instructions).not.toContain("<questions>");
+    });
+
+    test("a bot keeps the person's providers, and may ask for a key only where someone can type it (decision 0086)", () => {
+      const names = (agent: { tools: { name: string }[] }) => agent.tools.map((each) => each.name);
+      const asking = build(false, true);
+      expect(names(asking)).toEqual(
+        expect.arrayContaining(["list_providers", "add_provider", "ask_provider_key"]),
+      );
+      expect(asking.instructions).toContain("<providers>");
+      expect(asking.instructions).toContain("ask_provider_key");
+      const silent = build(false);
+      expect(names(silent)).toContain("add_provider");
+      expect(names(silent)).not.toContain("ask_provider_key");
+      expect(silent.instructions).toContain("Settings > Providers");
     });
 
     test("a bot with a computer is told its skills, and where to read them (decision 0081)", () => {
@@ -814,6 +840,11 @@ describe("BotReplies", () => {
         "add_mcp_server",
         "update_mcp_server",
         "remove_mcp_server",
+        "list_providers",
+        "add_provider",
+        "update_provider",
+        "remove_provider",
+        "list_provider_models",
       ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
@@ -851,6 +882,11 @@ describe("BotReplies", () => {
         "add_mcp_server",
         "update_mcp_server",
         "remove_mcp_server",
+        "list_providers",
+        "add_provider",
+        "update_provider",
+        "remove_provider",
+        "list_provider_models",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
       expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");
