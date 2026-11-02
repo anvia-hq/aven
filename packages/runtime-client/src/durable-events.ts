@@ -52,10 +52,15 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         const usage = asRecord(result.usage) as unknown as Usage;
         if (typeof usage.inputTokens === "number") {
           const { contextWindow } = options;
+          // The size of the context is the request's, which a turn that is no model call (the one
+          // that only reports a compaction, decision 0097) gives itself.
+          const used = asRecord(result.contextUsage).usedTokens;
           events.push({
             type: "usage",
             turn: tokenUsageOf(usage),
-            context: contextWindow ? { usedTokens: usage.inputTokens, contextWindow } : undefined,
+            context: contextWindow
+              ? { usedTokens: typeof used === "number" ? used : usage.inputTokens, contextWindow }
+              : undefined,
           });
         }
         return { events };

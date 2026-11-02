@@ -1,4 +1,11 @@
-import { Agent, createQuestionTool, createTool } from "@anvia/core";
+import {
+  Agent,
+  Usage,
+  createQuestionTool,
+  createTool,
+  getAssistantGenerationMetadata,
+  type CompletionRequest,
+} from "@anvia/core";
 import {
   COMPACT_PROMPT,
   COMPACTED,
@@ -305,6 +312,48 @@ describe("a run that only compacts (decision 0097)", () => {
     const reply = end.type === "response" ? JSON.stringify(end.messages.at(-1)) : "";
     expect(reply).toContain(COMPACTED);
     expect(events.some((event) => event.type === "usage")).toBe(true);
+  });
+
+  test("counts what the summary cost, and the new size of the history as the context", async () => {
+    const runs = await opened(journalPath());
+    await talk(runs, "thread-u");
+    // A summary model that says what its call cost.
+    const base = scriptedModel([[text("They greeted: alpha, beta.")]]);
+    const billed = { ...Usage.empty(), inputTokens: 500, outputTokens: 40, totalTokens: 540 };
+    const summaryModel = {
+      ...base,
+      completion: async (request: CompletionRequest) => ({
+        ...(await base.completion(request)),
+        usage: billed,
+      }),
+    };
+    const events: RunEvent[] = [];
+    const run = await runs.start(
+      "compact-u",
+      "thread-u",
+      COMPACT_PROMPT,
+      {
+        ...createCompactionAgent({ id: "compact-u", model: summaryModel, contextWindow: 10_000 }),
+        // As the runner gives it, for the usage events' context.
+        contextWindow: 10_000,
+      },
+      (event) => events.push(event),
+    );
+    const end = await run.done;
+    const usage = events.filter((event) => event.type === "usage");
+    // The call is counted once, at what it cost; the context is the history as it is now, which
+    // is far from the 500 tokens the summary call read.
+    expect(usage).toHaveLength(1);
+    expect(usage[0]).toMatchObject({ turn: { inputTokens: 500, outputTokens: 40 } });
+    const context = usage[0]?.type === "usage" ? usage[0].context : undefined;
+    expect(context?.contextWindow).toBe(10_000);
+    expect(context?.usedTokens).toBeGreaterThan(0);
+    expect(context?.usedTokens).toBeLessThan(500);
+    // A reload reads the same from the stored message.
+    const stored =
+      end.type === "response" ? getAssistantGenerationMetadata(end.messages.at(-1)!) : undefined;
+    expect(stored?.usage.inputTokens).toBe(500);
+    expect(stored?.contextUsage?.usedTokens).toBe(context?.usedTokens);
   });
 
   test("a thread with nothing before the prompt has nothing to compact", async () => {

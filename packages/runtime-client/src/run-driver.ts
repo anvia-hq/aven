@@ -9,7 +9,6 @@ import type { SkillListing } from "@aven/agents/skills";
 import type { SubagentType } from "@aven/agents/subagents";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
-import type { RunEvent } from "@aven/protocol/events";
 import type {
   ControlPlaneToRuntime,
   RunModel,
@@ -208,6 +207,25 @@ export function createRunDriver(context: DriverContext) {
     return store.install(thread.id, skills, fetch, await context.sandbox.workspace(thread.id));
   }
 
+  // What every run does the same with or without a sandbox: tell the control plane what happens,
+  // file its transcript there, and stop once it is cancelled.
+  function reporting({ runId }: RunRecord, state: { record: RunRecord }, run: Live) {
+    return {
+      // Events reach the control plane as the journal records them.
+      forward: ((event, source) =>
+        report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source)) as Emit,
+      // The transcript the control plane keeps, filed as each part of the run ends.
+      async file(messages: Message[]) {
+        if (messages.length === 0) return;
+        await context.call("memory.append", { runId, turn: state.record.turn, messages });
+        run.save({ turn: state.record.turn + messages.length });
+      },
+      stopIfCancelled() {
+        if (run.cancelReason) throw new Error(run.cancelReason);
+      },
+    };
+  }
+
   // What a run that only compacts works with: the journal, and nothing of the thread's sandbox,
   // which it neither starts nor needs (decision 0097).
   async function compactionScope(
@@ -216,12 +234,6 @@ export function createRunDriver(context: DriverContext) {
     run: Live,
   ): Promise<RunScope> {
     const { runId, thread, model } = initial;
-    const save = (changes: Partial<RunRecord>) => {
-      state.record = { ...state.record, ...changes };
-      if (!context.stopped()) records.save(state.record);
-    };
-    const forward: Emit = (event: RunEvent, source) =>
-      report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source);
     return {
       runId,
       thread,
@@ -231,20 +243,12 @@ export function createRunDriver(context: DriverContext) {
       get record() {
         return state.record;
       },
-      save,
+      save: run.save,
       build: (id) => ({
         ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
         contextWindow: model?.contextWindow,
       }),
-      forward,
-      async file(messages) {
-        if (messages.length === 0) return;
-        await context.call("memory.append", { runId, turn: state.record.turn, messages });
-        save({ turn: state.record.turn + messages.length });
-      },
-      stopIfCancelled() {
-        if (run.cancelReason) throw new Error(run.cancelReason);
-      },
+      ...reporting(initial, state, run),
     };
   }
 
@@ -286,9 +290,7 @@ export function createRunDriver(context: DriverContext) {
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
-    // Events reach the control plane as the journal records them.
-    const forward: Emit = (event: RunEvent, source) =>
-      report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source);
+    const { forward, file, stopIfCancelled } = reporting(initial, state, run);
 
     return {
       runId,
@@ -344,15 +346,8 @@ export function createRunDriver(context: DriverContext) {
         return { agent, compaction, contextWindow: model?.contextWindow };
       },
       forward,
-      // The transcript the control plane keeps, filed as each part of the run ends.
-      async file(messages) {
-        if (messages.length === 0) return;
-        await context.call("memory.append", { runId, turn: state.record.turn, messages });
-        run.save({ turn: state.record.turn + messages.length });
-      },
-      stopIfCancelled() {
-        if (run.cancelReason) throw new Error(run.cancelReason);
-      },
+      file,
+      stopIfCancelled,
     };
   }
 
