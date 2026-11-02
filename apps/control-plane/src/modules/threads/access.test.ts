@@ -154,9 +154,12 @@ run("a thread's access (real postgres)", async () => {
   // Whether a socket is let through the upgrade: it opens, or the request is refused first.
   const upgrades = (path: string, token: string) =>
     new Promise<boolean>((resolve) => {
-      const socket = new WebSocket(`${base.replace("http", "ws")}${path}`, {
-        headers: { authorization: `Bearer ${token}` },
-      });
+      // Bun takes headers here; its type for the second argument only knows protocols.
+      const init = { headers: { authorization: `Bearer ${token}` } };
+      const socket = new WebSocket(
+        `${base.replace("http", "ws")}${path}`,
+        init as unknown as string[],
+      );
       socket.onopen = () => {
         socket.close();
         resolve(true);
