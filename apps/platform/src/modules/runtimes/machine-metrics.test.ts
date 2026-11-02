@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { filledSegments, machineMetrics } from "./machine-metrics";
+import { machineMetrics } from "./machine-metrics";
 
 const stats = {
   cores: 4,
@@ -16,9 +16,9 @@ const stats = {
 describe("machineMetrics", () => {
   test("are CPU, memory and disk, each with what is behind its number", () => {
     expect(machineMetrics(stats)).toEqual([
-      { key: "cpu", label: "CPU", percent: 37, detail: "4 cores" },
-      { key: "memory", label: "Memory", percent: 38, detail: "6.0 of 16.0 GB" },
-      { key: "disk", label: "Disk", percent: 76, detail: "74.0 of 98.0 GB" },
+      { key: "cpu", label: "CPU", short: "CPU", percent: 37, detail: "4 cores" },
+      { key: "memory", label: "Memory", short: "MEM", percent: 38, detail: "6.0 of 16.0 GB" },
+      { key: "disk", label: "Disk", short: "DSK", percent: 76, detail: "74.0 of 98.0 GB" },
     ]);
   });
 
@@ -35,15 +35,5 @@ describe("machineMetrics", () => {
 
   test("say nothing of a disk with no size", () => {
     expect(machineMetrics({ ...stats, diskTotalBytes: 0 })[2]?.percent).toBeNull();
-  });
-});
-
-describe("filledSegments", () => {
-  test("is the share of the bars, with a little load showing as one bar and none as none", () => {
-    expect(filledSegments(58, 30)).toBe(17);
-    expect(filledSegments(100, 30)).toBe(30);
-    expect(filledSegments(1, 30)).toBe(1);
-    expect(filledSegments(0, 30)).toBe(0);
-    expect(filledSegments(null, 30)).toBe(0);
   });
 });

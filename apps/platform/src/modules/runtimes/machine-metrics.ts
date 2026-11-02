@@ -8,6 +8,8 @@ export type MachineMetricKey = "cpu" | "memory" | "disk";
 export type MachineMetric = {
   key: MachineMetricKey;
   label: string;
+  /** Three letters, for a row with no room for the name. */
+  short: string;
   percent: number | null;
   detail: string;
 };
@@ -24,26 +26,23 @@ export function machineMetrics(stats: RuntimeStats): MachineMetric[] {
     {
       key: "cpu",
       label: "CPU",
+      short: "CPU",
       percent: stats.cpuPercent,
       detail: `${stats.cores} ${stats.cores === 1 ? "core" : "cores"}`,
     },
     {
       key: "memory",
       label: "Memory",
+      short: "MEM",
       percent: share(stats.memoryUsedBytes, stats.memoryTotalBytes),
       detail: storageUsage(stats.memoryUsedBytes, stats.memoryTotalBytes),
     },
     {
       key: "disk",
       label: "Disk",
+      short: "DSK",
       percent: share(stats.diskUsedBytes, stats.diskTotalBytes),
       detail: storageUsage(stats.diskUsedBytes, stats.diskTotalBytes),
     },
   ];
-}
-
-/** How many of `segments` bars are filled for `percent`: a little load still shows one. */
-export function filledSegments(percent: number | null, segments: number) {
-  if (percent === null || percent <= 0) return 0;
-  return Math.min(segments, Math.max(1, Math.round((percent / 100) * segments)));
 }

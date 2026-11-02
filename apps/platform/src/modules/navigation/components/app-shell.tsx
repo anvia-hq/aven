@@ -18,6 +18,7 @@ import {
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
+import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
@@ -110,6 +111,7 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
+            <MachineMonitor />
             <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
               <Button
                 variant="ghost"

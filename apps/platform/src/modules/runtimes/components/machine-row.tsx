@@ -1,100 +1,105 @@
-import { ChevronLeft, ChevronRight } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { useState } from "react";
 
-import { Button, buttonVariants } from "@/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
-import { machineMetrics } from "../machine-metrics";
+import { machineMetrics, type MachineMetric } from "../machine-metrics";
 import type { Runtime } from "../types";
-import { SegmentedMeter } from "./segmented-meter";
+import { MeterBar } from "./meter-bar";
 
 const sandboxesLine = (count: number) =>
   `${count} ${count === 1 ? "sandbox" : "sandboxes"} running`;
 
-// What a row says when there is nothing to measure: why, and what would change it.
-function missingLine(runtime: Runtime) {
+// What the row says when there is nothing to measure, and the longer reason for the tooltip.
+function missing(runtime: Runtime) {
   if (!runtime.online) {
-    return runtime.lastSeenAt ? `Offline, seen ${timeAgo(runtime.lastSeenAt, true)}` : "Offline";
+    return {
+      short: "Offline",
+      reason: runtime.lastSeenAt ? `Offline, seen ${timeAgo(runtime.lastSeenAt, true)}` : "Offline",
+    };
   }
-  return runtime.outdated
-    ? "No load reported: this runner is behind the server, run aven update on its machine."
-    : "Waiting for the runner to report its load.";
+  if (runtime.outdated) {
+    return {
+      short: "Update runner",
+      reason: "No load reported: this runner is behind the server, run aven update on its machine.",
+    };
+  }
+  return { short: "Waiting…", reason: "Waiting for the runner to report its load." };
 }
 
-// One runner, as a row of its own: how loaded its machine is, with the arrows going through CPU,
-// memory and disk, as a monitor of that machine (decision 0091).
+function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }) {
+  return (
+    <span
+      role="meter"
+      aria-label={`${metric.label} of ${runtime.name}`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={metric.percent ?? undefined}
+      aria-valuetext={metric.percent === null ? "unknown" : `${metric.percent}%`}
+      className="flex w-[34px] shrink-0 flex-col gap-[3px]"
+    >
+      <span className="flex items-baseline justify-between leading-none">
+        <span className="text-[9px] font-medium tracking-wide text-muted-foreground">
+          {metric.short}
+        </span>
+        <span className="text-[11px] tabular-nums">{metric.percent ?? "–"}</span>
+      </span>
+      <MeterBar percent={metric.percent} />
+    </span>
+  );
+}
+
+// One runner as a single row: whether it is online, its name, and CPU, memory and disk as three
+// small meters; the detail behind them is on hover, and a click goes to the runtimes (decision 0091).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
-  const [selected, setSelected] = useState(0);
   const metrics = runtime.stats ? machineMetrics(runtime.stats) : [];
-  const metric = metrics[selected % Math.max(metrics.length, 1)];
-  const step = (by: number) => setSelected((selected + by + metrics.length) % metrics.length);
+  const gap = missing(runtime);
 
   return (
-    <li
-      data-slot="machine-row"
-      aria-label={runtime.name}
-      className="flex flex-col gap-3 rounded-xl border bg-card p-3 text-card-foreground"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+    <li data-slot="machine-row" aria-label={runtime.name}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Link
+              to="/settings/runtimes"
+              className="flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            />
+          }
+        >
           <span
             aria-hidden
             className={cn(
-              "size-2 shrink-0 rounded-full",
+              "size-1.5 shrink-0 rounded-full",
               runtime.online ? "bg-success" : "bg-muted-foreground/40",
             )}
           />
-          <span className="truncate text-sm text-muted-foreground" title={runtime.name}>
-            {runtime.name}
-          </span>
-        </div>
-        <Link
-          to="/settings/runtimes"
-          className={buttonVariants({ variant: "outline", size: "xs" })}
-        >
-          Details
-        </Link>
-      </div>
-
-      {runtime.stats && metric ? (
-        <>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl leading-none font-medium tabular-nums">
-              {metric.percent === null ? "–" : `${metric.percent}%`}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {sandboxesLine(runtime.stats.sandboxes)}
-            </span>
+          <span className="min-w-0 flex-1 truncate">{runtime.name}</span>
+          {runtime.stats ? (
+            metrics.map((metric) => <Metric key={metric.key} metric={metric} runtime={runtime} />)
+          ) : (
+            <span className="shrink-0 text-muted-foreground">{gap.short}</span>
+          )}
+        </TooltipTrigger>
+        <TooltipContent side="right" className="items-start">
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">{runtime.name}</span>
+            {runtime.stats ? (
+              <>
+                {metrics.map((metric) => (
+                  <span key={metric.key}>
+                    {metric.label}: {metric.percent === null ? "unknown" : `${metric.percent}%`},{" "}
+                    {metric.detail}
+                  </span>
+                ))}
+                <span>{sandboxesLine(runtime.stats.sandboxes)}</span>
+              </>
+            ) : (
+              <span>{gap.reason}</span>
+            )}
           </div>
-          <SegmentedMeter label={`${metric.label} of ${runtime.name}`} percent={metric.percent} />
-          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="min-w-12 text-sm text-foreground/80">{metric.label}</span>
-              <Button
-                variant="outline"
-                size="icon-xs"
-                aria-label="Previous measure"
-                onClick={() => step(-1)}
-              >
-                <ChevronLeft />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-xs"
-                aria-label="Next measure"
-                onClick={() => step(1)}
-              >
-                <ChevronRight />
-              </Button>
-            </div>
-            <span className="truncate text-sm">{metric.detail}</span>
-          </div>
-        </>
-      ) : (
-        <p className="text-xs text-muted-foreground">{missingLine(runtime)}</p>
-      )}
+        </TooltipContent>
+      </Tooltip>
     </li>
   );
 }

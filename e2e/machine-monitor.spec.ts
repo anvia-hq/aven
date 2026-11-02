@@ -44,7 +44,7 @@ const stats = (overrides: Record<string, unknown>) =>
   });
 
 test.describe("machine monitor", () => {
-  test("settings starts with a row for each runtime: its load, and the arrows go through CPU, memory and disk", async ({
+  test("the sidebar has a single row for each runtime above Settings, with its load", async ({
     page,
   }) => {
     await registerUser(page, "mon", "Monitor User");
@@ -53,49 +53,68 @@ test.describe("machine monitor", () => {
     await runner(page, "old-box");
     await page.request.post("/api/runtimes", { data: { name: "sleeping-box" } });
 
-    await page.goto("/settings/profile");
+    await page.goto("/threads");
     const machines = page.getByRole("list", { name: "Machines" });
     const rows = machines.locator("[data-slot=machine-row]");
-    // One row each, the online ones first and each group oldest first, and above the pages of settings.
+    // One row each, the online ones first and each group oldest first.
     await expect(rows).toHaveCount(4);
     expect(
       await rows.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual(["build-box", "hot-box", "old-box", "sleeping-box"]);
-    const first = await machines.boundingBox();
-    const profile = await page.getByRole("link", { name: "Profile" }).boundingBox();
-    expect(first!.y).toBeLessThan(profile!.y);
+    // Above Settings, and every row as tall as one line of the menu.
+    const settings = await page.getByRole("button", { name: "Settings" }).boundingBox();
+    const last = await rows.last().boundingBox();
+    expect(last!.y + last!.height).toBeLessThanOrEqual(settings!.y);
+    for (const box of await Promise.all((await rows.all()).map((row) => row.boundingBox()))) {
+      expect(box!.height).toBeLessThanOrEqual(34);
+    }
 
-    // A runner that reports: CPU first, then the arrows, and the sandboxes it holds.
+    // CPU, memory and disk of a runner that reports, each as a meter with its number.
     const build = machines.getByRole("listitem", { name: "build-box" });
-    await expect(build).toContainText("58%");
-    await expect(build).toContainText("2 sandboxes running");
-    await expect(build).toContainText("4 cores");
-    await expect(build.getByRole("meter")).toHaveAttribute("aria-valuenow", "58");
-    await expect(build.locator("[data-filled]")).toHaveCount(16);
-    await build.getByRole("button", { name: "Next measure" }).click();
-    await expect(build).toContainText("Memory");
-    await expect(build).toContainText("38%");
-    await expect(build).toContainText("6.0 of 16.0 GB");
-    await build.getByRole("button", { name: "Next measure" }).click();
-    await expect(build).toContainText("Disk");
-    await expect(build).toContainText("76%");
-    await build.getByRole("button", { name: "Next measure" }).click();
-    await expect(build).toContainText("CPU");
-    await build.getByRole("button", { name: "Previous measure" }).click();
-    await expect(build).toContainText("Disk");
-
-    // Nearly full is drawn as a warning; a runner that does not report, and one that is off, say so.
-    const hot = machines.getByRole("listitem", { name: "hot-box" });
-    await expect(hot).toContainText("96%");
-    await expect(hot.locator("[data-filled]").first()).toHaveClass(/bg-destructive/);
-    await expect(build.locator("[data-filled]").first()).toHaveClass(/bg-meter/);
-    await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText(
-      "Waiting for the runner to report its load",
+    await expect(build.getByRole("meter", { name: "CPU of build-box" })).toHaveAttribute(
+      "aria-valuenow",
+      "58",
     );
+    await expect(build.getByRole("meter", { name: "Memory of build-box" })).toHaveAttribute(
+      "aria-valuenow",
+      "38",
+    );
+    await expect(build.getByRole("meter", { name: "Disk of build-box" })).toHaveAttribute(
+      "aria-valuenow",
+      "76",
+    );
+    // The numbers are read off the meters; the row has no room for a percent sign.
+    await expect(build).toContainText("CPU58");
+    await expect(build).toContainText("MEM38");
+    await expect(build).toContainText("DSK76");
+    await expect(
+      build.getByRole("meter", { name: "CPU of build-box" }).locator("[data-slot=meter-fill]"),
+    ).toHaveCSS("width", /^\d/);
+
+    // Nearly full is drawn as a warning, and not before.
+    const fillOf = (row: typeof build, name: string) =>
+      row.getByRole("meter", { name }).locator("[data-slot=meter-fill]");
+    await expect(
+      fillOf(machines.getByRole("listitem", { name: "hot-box" }), "CPU of hot-box"),
+    ).toHaveAttribute("data-high", "");
+    await expect(fillOf(build, "CPU of build-box")).not.toHaveAttribute("data-high", "");
+
+    // A runner that does not report, and one that is off, say so in the row.
+    await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");
     await expect(machines.getByRole("listitem", { name: "sleeping-box" })).toContainText("Offline");
 
-    // Details goes to the runtimes page.
-    await build.getByRole("link", { name: "Details" }).click();
+    // The detail is on hover.
+    await build.hover();
+    const tip = page.locator('[data-slot="tooltip-content"]');
+    await expect(tip).toContainText("Memory: 38%, 6.0 of 16.0 GB");
+    await expect(tip).toContainText("Disk: 76%, 74.0 of 98.0 GB");
+    await expect(tip).toContainText("4 cores");
+    await expect(tip).toContainText("2 sandboxes running");
+
+    // On every page of the shell, and a click goes to the runtimes.
+    await page.goto("/bot");
+    await expect(rows).toHaveCount(4);
+    await build.click();
     await expect(page).toHaveURL(/\/settings\/runtimes$/);
   });
 });
