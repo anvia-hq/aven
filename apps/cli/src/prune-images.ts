@@ -9,10 +9,13 @@ const RELEASE_TAG = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
 /**
  * The images of other releases in a `docker images --format '{{.Repository}}:{{.Tag}}'` listing:
- * ours, tagged with an exact version that is not `current`. `latest`, `0.1`, `dev` and images
- * made by hand are left alone.
+ * ours, tagged with an exact version that is not `current`, which must itself be a release.
+ * `latest`, `0.1`, `dev` and images made by hand are left alone.
  */
 export function staleImages(listing: string, current: string) {
+  // Only a release has older ones: an update to a dev build or `latest` removes nothing, so trying
+  // a build on a machine that has Aven installed leaves that install's images where they are.
+  if (!RELEASE_TAG.test(current)) return [];
   return listing
     .split("\n")
     .map((line) => line.trim())

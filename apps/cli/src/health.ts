@@ -15,12 +15,18 @@ export async function waitForHealthy(
   }
 }
 
-/** Whether nothing is listening on the port, so a server can be published on it. */
+/**
+ * Whether nothing is listening on the port, so a server can be published on it. Both the wildcard
+ * and loopback are tried: a process bound to 127.0.0.1 alone (the API port of another Aven, a
+ * published container) does not stop a bind to 0.0.0.0 on macOS, but it does stop Docker's.
+ */
 export function portIsFree(port: number) {
-  try {
-    Bun.listen({ hostname: "0.0.0.0", port, socket: { data() {} } }).stop(true);
-    return true;
-  } catch {
-    return false;
+  for (const hostname of ["0.0.0.0", "127.0.0.1"]) {
+    try {
+      Bun.listen({ hostname, port, socket: { data() {} } }).stop(true);
+    } catch {
+      return false;
+    }
   }
+  return true;
 }
