@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **34**: `bot.reply` can carry the files the person sent with the message, `attachments`, which the runner copies into the bot's computer (decision 0080).
 - **33**: a runner lists, stops and reads the logs of the processes in a thread's sandbox, `processes.list`, `processes.stop` and `processes.logs` (decision 0071).
 - **32**: a bot's goal, `bot.goal` (get, start, update), a long task the control plane wakes the bot to work on round after round (decision 0068).
 - **31**: a bot's schedules, `bot.schedule` (list, create, update, delete), and the person's `timezone` on `bot.reply` (decision 0067).

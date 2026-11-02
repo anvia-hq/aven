@@ -1,3 +1,4 @@
+import { UPLOADS_DIR } from "./attachments";
 import { WORKSPACE_DIR } from "./sandbox-tools";
 import { MAIN_BOT_HANDLE, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotPeer } from "@aven/protocol/runtime-wire";
@@ -46,6 +47,7 @@ const COMPUTER_SECTION = `
 <computer>
 - Use the computer when it helps the person: to look something up, run code, make a file, check a fact. Do not use it for a plain chat.
 - Nothing you do there is seen. Tell the person what you found or made in your messages, in plain words, not tool output.
+- Files the person attaches to a message are in ${UPLOADS_DIR}, read-only, outside your home; the message lists their paths, and you see attached images directly. Read them where they are, and copy one into your home only when you need to change it or keep it.
 - The person cannot see your files unless you say what is in them. Keep to your own computer: do nothing that harms others or the person.
 </computer>`;
 

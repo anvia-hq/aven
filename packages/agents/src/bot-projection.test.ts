@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Message } from "@anvia/core";
 
+import { sentPrompt, type KeptAttachment } from "./attachments";
 import { botMessagesToChat } from "./bot-projection";
 
 const call = (toolCallId: string, input: Record<string, string>) =>
@@ -77,6 +78,54 @@ describe("botMessagesToChat", () => {
       { id: "m-2", role: "bot", text: "how are you?" },
       { id: "m-3", role: "user", text: "good" },
     ]);
+  });
+
+  describe("files the person sent (decision 0080)", () => {
+    const photo: KeptAttachment = {
+      name: "cat.png",
+      mediaType: "image/png",
+      size: 2048,
+      image: "0f0e0d.png",
+      path: "/uploads/cat.png",
+    };
+    const report: KeptAttachment = {
+      name: "report.pdf",
+      mediaType: "application/pdf",
+      size: 90_000,
+      path: "/uploads/report.pdf",
+    };
+    const said = (text: string, files: KeptAttachment[]): Message => {
+      const prompt = sentPrompt(text, {
+        attachments: files,
+        images: new Map([[photo.image!, "AAAA"]]),
+      });
+      if (typeof prompt === "string") throw new Error("a message with files is not plain text");
+      return prompt as Message;
+    };
+
+    test("are on the person's message as they sent them, and the note the bot was given is not its text", () => {
+      expect(botMessagesToChat([said("what is this?", [photo, report])])).toEqual([
+        {
+          id: "m-0",
+          role: "user",
+          text: "what is this?",
+          attachments: [
+            { name: "cat.png", mediaType: "image/png", size: 2048, image: "0f0e0d.png" },
+            { name: "report.pdf", mediaType: "application/pdf", size: 90_000 },
+          ],
+        },
+      ]);
+    });
+
+    test("make a message of their own with no text", () => {
+      const [message] = botMessagesToChat([said("", [report])]);
+      expect(message).toEqual({
+        id: "m-0",
+        role: "user",
+        text: "",
+        attachments: [{ name: "report.pdf", mediaType: "application/pdf", size: 90_000 }],
+      });
+    });
   });
 
   test("leaves out other tools, malformed calls and summaries", () => {

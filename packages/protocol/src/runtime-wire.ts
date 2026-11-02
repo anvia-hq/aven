@@ -267,7 +267,15 @@ export type ControlPlaneToRuntime =
    * computer, and says each message the bot sends with `bot.say` (decision 0059). A reply does not
    * survive a dropped connection.
    */
-  | { type: "bot.reply"; replyId: string; bot: BotReplyInfo; prompt: string; model: RunModel }
+  | {
+      type: "bot.reply";
+      replyId: string;
+      bot: BotReplyInfo;
+      prompt: string;
+      model: RunModel;
+      /** The files the person sent with the message, which the runner copies to the bot's computer (decision 0080). */
+      attachments?: RunAttachment[];
+    }
   | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
   | { type: "run.attach"; runId: string; after: number }
@@ -497,4 +505,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 33;
+export const WIRE_VERSION = 34;

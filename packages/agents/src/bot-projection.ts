@@ -1,4 +1,5 @@
 import type { Message, ToolResultOutput } from "@anvia/core";
+import type { MessageAttachment } from "@aven/protocol/events";
 import {
   botMessageId,
   parseBotPrompt,
@@ -7,13 +8,9 @@ import {
   type BotQuestion,
 } from "@aven/protocol/bots";
 
+import { sentMessage } from "./attachments";
 import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
-
-const textOf = (content: Extract<Message, { role: "user" }>["content"]) =>
-  typeof content === "string"
-    ? content
-    : content.map((part) => (part.type === "text" ? part.text : "")).join("");
 
 // What each tool call of an assistant message was answered with, by the call's id, read from the
 // tool results that follow it. A provider may reuse an id from one turn to the next, so the results
@@ -51,18 +48,29 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
     text: string,
     peer?: BotChatMessage["peer"],
     questions?: BotQuestion[],
+    attachments?: MessageAttachment[],
   ) => {
     const message: BotChatMessage = { id: botMessageId(chat.length), role, text };
     if (peer) message.peer = peer;
     if (questions) message.questions = questions;
+    if (attachments?.length) message.attachments = attachments;
     chat.push(message);
   };
 
   for (const [at, message] of messages.entries()) {
     if (message.role === "user") {
-      const { from, note, text } = parseBotPrompt(textOf(message.content).trim());
-      if (note || !text) continue;
-      add("user", text, from ? { name: from, handle: from, direction: "from" } : undefined);
+      // What the person sent as they sent it: with files, the text is in the message's metadata, not
+      // in the note the bot was given about them (decision 0080).
+      const sent = sentMessage(message);
+      const { from, note, text } = parseBotPrompt(sent.text.trim());
+      if (note || (!text && !sent.attachments?.length)) continue;
+      add(
+        "user",
+        text,
+        from ? { name: from, handle: from, direction: "from" } : undefined,
+        undefined,
+        sent.attachments,
+      );
     } else if (message.role === "assistant" && typeof message.content !== "string") {
       const results = resultsAfter(messages, at);
       for (const part of message.content) {

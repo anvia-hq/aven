@@ -67,6 +67,11 @@ describe("botInstructions", () => {
     expect(working).toContain("<computer>");
     expect(working).not.toContain("no files, commands or internet");
   });
+
+  test("tells a bot with a computer where the files the person attaches are, and a bot without one nothing of them", () => {
+    expect(botInstructions({ ...pip, instruction: "", computer: true })).toContain("/uploads");
+    expect(botInstructions({ ...pip, instruction: "" })).not.toContain("/uploads");
+  });
 });
 
 describe("createBotAgent", () => {

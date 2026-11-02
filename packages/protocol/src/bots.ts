@@ -1,4 +1,4 @@
-import type { QuestionPrompt } from "./events";
+import type { MessageAttachment, QuestionPrompt } from "./events";
 
 // A bot (decision 0058): a named agent a person talks to in a chat of its own. Types and limits
 // shared by the control plane and the platform.
@@ -94,6 +94,8 @@ export type BotChatMessage = {
   id: string;
   role: "user" | "bot";
   text: string;
+  /** The files the person sent with this message (decision 0080): `text` may be empty when there are some. */
+  attachments?: MessageAttachment[];
   peer?: BotChatPeer;
   /** The bot is asking the person these; `text` is what they say, in words. The person's answer is their next message. */
   questions?: BotQuestion[];
