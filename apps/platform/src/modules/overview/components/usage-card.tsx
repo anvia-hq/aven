@@ -1,5 +1,6 @@
 import type { TokenUsage } from "@aven/protocol/events";
 
+import { Skeleton } from "@/components/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
@@ -7,7 +8,26 @@ import { OverviewCard } from "./overview-card";
 // Tokens added up over every model call of the thread. Each call sends the conversation again, so
 // this grows far past the context window. The cache figures are parts of the input; what is left
 // of it is the uncached part.
-export function UsageCard({ totals }: { totals: TokenUsage | undefined }) {
+export function UsageCard({
+  totals,
+  loading,
+}: {
+  totals: TokenUsage | undefined;
+  /** The thread's usage is still on its way: the card is drawn with its loaded shape, empty. */
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <OverviewCard title="Usage">
+        <div className="flex flex-col gap-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-4 w-full" />
+          ))}
+        </div>
+        <Skeleton className="h-4 w-40" />
+      </OverviewCard>
+    );
+  }
   if (!totals || totals.inputTokens + totals.outputTokens === 0) return null;
 
   const uncached = Math.max(

@@ -10,7 +10,16 @@ import { UsageCard } from "./usage-card";
 // The thread's overview beside its conversation. It needs room, so it only shows when the
 // conversation panel is wide enough; the panel is a container for that. It sticks to the top of
 // the conversation's scroll area, which keeps the scrollbar at the panel's edge.
-export function OverviewColumn({ thread, usage }: { thread: Thread; usage: ThreadUsage | null }) {
+export function OverviewColumn({
+  thread,
+  usage,
+  synced,
+}: {
+  thread: Thread;
+  usage: ThreadUsage | null;
+  /** The thread's usage has arrived: until it has, the cards that show it hold their place. */
+  synced: boolean;
+}) {
   return (
     <aside
       aria-label="Overview"
@@ -18,8 +27,8 @@ export function OverviewColumn({ thread, usage }: { thread: Thread; usage: Threa
     >
       <EnvironmentCard thread={thread} />
       <BackgroundTasksCard threadId={thread.id} running={thread.running} />
-      <ContextCard context={usage?.context} />
-      <UsageCard totals={usage?.totals} />
+      <ContextCard context={usage?.context} loading={!synced} />
+      <UsageCard totals={usage?.totals} loading={!synced} />
     </aside>
   );
 }

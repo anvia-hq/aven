@@ -1,5 +1,7 @@
 import type { ProcessView } from "@aven/protocol/runtime-wire";
 
+import { Skeleton } from "@/components/skeleton";
+
 import { useThreadProcesses } from "../hooks/use-thread-processes";
 import { BackgroundProcess } from "./background-process";
 import { OverviewCard } from "./overview-card";
@@ -23,6 +25,7 @@ export function BackgroundTasksCard({ threadId, running }: { threadId: string; r
 
   return (
     <OverviewCard title="Background tasks">
+      {!loaded && <Skeleton className="h-10 w-full" />}
       {problem && <p className="text-muted-foreground">Could not read the background tasks.</p>}
       {!problem && loaded && rows.length === 0 && (
         <p className="text-muted-foreground">Nothing is running in the background.</p>

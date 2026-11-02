@@ -212,3 +212,51 @@ test("text that arrives in one burst is paced out, not shown at once", async ({ 
     stream.close();
   }
 });
+
+// Moving to another thread, the cards wait for its usage in the shape they will have, so nothing
+// appears, disappears or changes the column's height while the stream answers.
+test("the column keeps its height while another thread's usage arrives", async ({ page }) => {
+  await registerUser(page, "ins", "Overview User");
+  await addRunner(page);
+  await connectGithub(page);
+  await page.goto("/threads");
+  await importRepository(page, "docs-site");
+  const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+  const ids: string[] = [];
+  for (let index = 0; index < 2; index++) {
+    const made = await page.request.post("/api/threads", { data: { projectId: project!.id } });
+    ids.push(((await made.json()) as { id: string }).id);
+  }
+  await page.route("**/api/threads/*/events", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `retry: 600000\n\ndata: ${JSON.stringify({ type: "snapshot", running: false, messages: [], usage })}\n\n`,
+    });
+  });
+  await page.setViewportSize({ width: 1500, height: 800 });
+  await page.goto(`/threads/${ids[0]}`);
+  await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
+
+  // The column's height in every frame from now on.
+  await page.evaluate(() => {
+    const heights = new Set<number>();
+    (window as unknown as { __heights: Set<number> }).__heights = heights;
+    const sample = () => {
+      const aside = document.querySelector('aside[aria-label="Overview"]');
+      heights.add(aside ? Math.round(aside.getBoundingClientRect().height) : 0);
+      requestAnimationFrame(sample);
+    };
+    sample();
+  });
+  await page.locator(`a[href="/threads/${ids[1]}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`/threads/${ids[1]}$`));
+  await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
+  await page.waitForTimeout(300);
+
+  const heights = await page.evaluate(() => [
+    ...(window as unknown as { __heights: Set<number> }).__heights,
+  ]);
+  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(2);
+});

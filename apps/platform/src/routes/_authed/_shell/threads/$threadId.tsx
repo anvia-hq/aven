@@ -32,6 +32,7 @@ function ThreadPage() {
     running,
     startedAt,
     usage,
+    synced,
     error,
     question,
     send,
@@ -82,7 +83,11 @@ function ThreadPage() {
                   running={running}
                   startedAt={startedAt}
                   error={error}
-                  aside={overview.open && <OverviewColumn thread={thread} usage={usage} />}
+                  aside={
+                    overview.open && (
+                      <OverviewColumn thread={thread} usage={usage} synced={synced} />
+                    )
+                  }
                 />
                 <div
                   className={cn(

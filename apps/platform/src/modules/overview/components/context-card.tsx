@@ -1,13 +1,32 @@
 import type { ContextUsage } from "@aven/protocol/events";
 
 import { Progress } from "@/components/progress";
+import { Skeleton } from "@/components/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
 
 // How much of the model's window the latest request filled: the whole conversation as it was sent,
 // not a running total.
-export function ContextCard({ context }: { context: ContextUsage | undefined }) {
+export function ContextCard({
+  context,
+  loading,
+}: {
+  context: ContextUsage | undefined;
+  /** The thread's usage is still on its way: the card is drawn with its loaded shape, empty. */
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <OverviewCard title="Context">
+        <div className="flex items-baseline justify-between">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-1 w-full" />
+      </OverviewCard>
+    );
+  }
   if (!context) {
     return (
       <OverviewCard title="Context">
@@ -28,7 +47,6 @@ export function ContextCard({ context }: { context: ContextUsage | undefined }) 
         </span>
       </div>
       <Progress value={percent} aria-label="Context used" />
-      <p className="text-xs text-muted-foreground">Size of the latest request.</p>
     </OverviewCard>
   );
 }

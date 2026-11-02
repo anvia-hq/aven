@@ -41,6 +41,9 @@ export function useThread(threadId: string) {
   // When the run in progress started, by this browser's clock; null when none is.
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [usage, setUsage] = useState<ThreadUsage | null>(null);
+  // Whether the stream has given this thread's snapshot yet: until it has, `usage` is not known to
+  // be none, and what hangs on it should hold its place instead of showing nothing.
+  const [synced, setSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export function useThread(threadId: string) {
     setRunning(false);
     setStartedAt(null);
     setUsage(null);
+    setSynced(false);
     setError(null);
 
     const source = new EventSource(`/api/threads/${threadId}/events`);
@@ -58,6 +62,7 @@ export function useThread(threadId: string) {
       setRunning((current) => isRunning(current, event));
       switch (event.type) {
         case "snapshot":
+          setSynced(true);
           setUsage(event.usage ?? null);
           setStartedAt(event.running ? Date.now() - (event.runningMs ?? 0) : null);
           break;
@@ -134,6 +139,7 @@ export function useThread(threadId: string) {
     running,
     startedAt,
     usage,
+    synced,
     error,
     question,
     send,
