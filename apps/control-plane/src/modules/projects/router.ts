@@ -8,6 +8,7 @@ import {
   importProjectBody,
   projectParams,
   trackedQuery,
+  updateProjectBody,
 } from "./schema";
 import { projectsService } from "./service";
 
@@ -27,6 +28,12 @@ export const projectsRouter = new Elysia({ prefix: "/projects" })
     async ({ params, organizationId }) =>
       orNotFound(await projectsService.get(organizationId, params.id), "Project not found"),
     { auth: true, org: true, params: projectParams },
+  )
+  .patch(
+    "/:id",
+    ({ params, body, organizationId, user }) =>
+      projectsService.update(organizationId, user.id, params.id, body),
+    { auth: true, org: true, params: projectParams, body: updateProjectBody },
   )
   .get(
     "/:id/files",

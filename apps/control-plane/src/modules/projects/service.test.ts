@@ -1,6 +1,12 @@
 import { afterAll, describe, expect, spyOn, test } from "bun:test";
 
-import { NotFoundError } from "../../errors";
+import { db } from "@aven/db/client";
+import { members } from "@aven/db/schema/members";
+import { threads } from "@aven/db/schema/threads";
+import { users } from "@aven/db/schema/users";
+import { eq } from "drizzle-orm";
+
+import { ForbiddenError, NotFoundError } from "../../errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import {
@@ -169,6 +175,68 @@ run("projectsService (postgres)", async () => {
     } finally {
       tracked.mockRestore();
     }
+  });
+
+  test("a project moves to another runner for the threads to come, and the threads it has stay where they began (decision 0093)", async () => {
+    const { project } = await seedProject(orgA, userId, runnerA.id, "movable");
+    const [thread] = await db
+      .insert(threads)
+      .values({
+        organizationId: orgA,
+        projectId: project.id,
+        createdBy: userId,
+        runtimeId: runnerA.id,
+        title: "Old",
+      })
+      .returning();
+    const second = (await runtimesService.create(orgA, userId, { name: "second" })).runtime;
+
+    const moved = await projectsService.update(orgA, userId, project.id, { runtimeId: second.id });
+
+    expect(moved.runtimeId).toBe(second.id);
+    expect((await projectsService.get(orgA, project.id))?.runtimeId).toBe(second.id);
+    // The thread's workspace and history are on the runner it began on.
+    const [kept] = await db.select().from(threads).where(eq(threads.id, thread!.id));
+    expect(kept?.runtimeId).toBe(runnerA.id);
+  });
+
+  test("only whoever imported the project, an owner or an admin moves it, and to a runner of the workspace that is not revoked", async () => {
+    const { project } = await seedProject(orgA, userId, runnerA.id, "guarded");
+    const person = (role: string) => {
+      const id = `u-${role}-${crypto.randomUUID().slice(0, 8)}`;
+      return db
+        .insert(users)
+        .values({ id, name: role, email: `${id}@aven.test` })
+        .then(() =>
+          db.insert(members).values({ id: `m-${id}`, organizationId: orgA, userId: id, role }),
+        )
+        .then(() => id);
+    };
+    const other = await runtimesService.create(orgA, userId, { name: "other" });
+    const move = (who: string, runtimeId: string) =>
+      projectsService.update(orgA, who, project.id, { runtimeId });
+
+    // A member who did not import it is refused, and nothing changes.
+    const plain = await person("member");
+    await expect(move(plain, other.runtime.id)).rejects.toBeInstanceOf(ForbiddenError);
+    expect((await projectsService.get(orgA, project.id))?.runtimeId).toBe(runnerA.id);
+
+    // An admin may, and a role that holds several still counts.
+    const admin = await person("admin");
+    expect((await move(admin, other.runtime.id)).runtimeId).toBe(other.runtime.id);
+    const both = await person("member,owner");
+    expect((await move(both, runnerA.id)).runtimeId).toBe(runnerA.id);
+
+    // Another organization's runner, one that does not exist and a revoked one are not runners to
+    // move to; another organization's project is not found.
+    await expect(move(userId, runnerB.id)).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    await expect(move(userId, crypto.randomUUID())).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    await runtimesService.revoke(orgA, userId, other.runtime.id);
+    await expect(move(userId, other.runtime.id)).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    expect((await projectsService.get(orgA, project.id))?.runtimeId).toBe(runnerA.id);
+    await expect(
+      projectsService.update(orgB, userId, project.id, { runtimeId: runnerB.id }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test("a folder and the README are read for the project's own organization only (decision 0082)", async () => {

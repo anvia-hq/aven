@@ -43,4 +43,8 @@ export const trackedQuery = z.object({
   page: z.coerce.number().int().min(1).max(100).default(1),
 });
 
+// What may change on a project: the runner its new threads run on (decision 0093).
+export const updateProjectBody = z.object({ runtimeId: z.string().uuid() });
+
 export type ImportProjectBody = z.infer<typeof importProjectBody>;
+export type UpdateProjectBody = z.infer<typeof updateProjectBody>;

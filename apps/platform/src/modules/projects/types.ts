@@ -6,6 +6,8 @@ export type Project = {
   defaultBranch: string;
   /** The runner that hosts the project's sandboxes. */
   runtimeId: string;
+  /** Who imported it, who with an owner or an admin may change or delete it. */
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
 };

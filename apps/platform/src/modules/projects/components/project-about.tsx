@@ -1,8 +1,8 @@
 import { SectionCard } from "@/components/section-card";
 import { timeAgo } from "@/lib/format";
-import { RuntimeBadge } from "@/modules/runtimes/components/runtime-badge";
 
 import type { Project } from "../types";
+import { ProjectRunner } from "./project-runner";
 
 const row = "flex items-center justify-between gap-4 px-4 py-2.5 text-sm";
 
@@ -14,7 +14,7 @@ export function ProjectAbout({ project }: { project: Project }) {
         <div className={row}>
           <dt className="text-muted-foreground">Runner</dt>
           <dd>
-            <RuntimeBadge runtimeId={project.runtimeId} />
+            <ProjectRunner project={project} />
           </dd>
         </div>
         <div className={row}>

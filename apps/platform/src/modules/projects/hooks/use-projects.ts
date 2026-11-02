@@ -40,10 +40,28 @@ export function useProjects() {
     return project;
   }
 
+  // Moves a project to another runner, for the threads started from now on (decision 0093).
+  async function moveProject(project: Project, runtimeId: string) {
+    const moved = await attempt("Could not change the runner", () =>
+      postJson<Project>(`/projects/${project.id}`, { runtimeId }, "PATCH"),
+    );
+    if (!moved) return null;
+    setProjects(
+      (current) => current?.map((entry) => (entry.id === moved.id ? moved : entry)) ?? null,
+    );
+    toast.add({
+      title: "Runner changed",
+      description: `New threads in ${project.name} run on the new runner.`,
+      type: "success",
+    });
+    return moved;
+  }
+
   return {
     projects: projects ?? [],
     loaded: projects !== null,
     refresh: projectsStore.refresh,
     importRepository,
+    moveProject,
   };
 }

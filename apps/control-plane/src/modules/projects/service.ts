@@ -4,11 +4,12 @@ import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
-import { ConflictError, orNotFound, UnprocessableError } from "../../errors";
+import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
+import { isOwnerOrAdmin } from "../auth/members";
 import type { GithubTrackedKind, GithubTrackedState } from "../github/client";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
-import type { ImportProjectBody } from "./schema";
+import type { ImportProjectBody, UpdateProjectBody } from "./schema";
 
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryNotFoundError extends UnprocessableError {}
@@ -71,6 +72,32 @@ export const projectsService = {
       .returning();
     if (!project) throw new RepositoryAlreadyImportedError("This repository is already imported");
     return project;
+  },
+
+  // Whoever imported a project, or an owner or an admin of the workspace, changes it or deletes it
+  // (decisions 0093 and 0094): the other members use it.
+  async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {
+    if (project.createdBy === userId || (await isOwnerOrAdmin(organizationId, userId))) return;
+    throw new ForbiddenError(
+      "Only the person who imported the project, an owner or an admin can do that",
+    );
+  },
+
+  // Moves the project to another runner (decision 0093). Only threads started from now on run
+  // there: each thread keeps the runner it began on, where its workspace and history are. The
+  // runner must belong to the organization and not be revoked; it need not be online.
+  async update(organizationId: string, userId: string, id: string, body: UpdateProjectBody) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    await projectsService.requireManager(organizationId, userId, project);
+    if (!(await runtimesService.get(organizationId, body.runtimeId))) {
+      throw new RuntimeNotFoundError("Runner not found");
+    }
+    const [updated] = await db
+      .update(projects)
+      .set({ runtimeId: body.runtimeId })
+      .where(eq(projects.id, project.id))
+      .returning();
+    return updated!;
   },
 
   // A folder of the project's repository, as GitHub has it on the default branch, and its README

@@ -157,6 +157,31 @@ test.describe("the project page", () => {
     await expect(rows.first()).toContainText("Open issue two");
   });
 
+  test("the person who imported a project moves it to another runner", async ({ page }) => {
+    await registerUser(page, "mover", "Mover Person");
+    const project = await projectOf(page, "shiny-app");
+    const second = await page.request.post("/api/runtimes", { data: { name: "second" } });
+    expect(second.ok()).toBe(true);
+    await page.goto(`/projects/${project.id}`);
+
+    const runner = page.getByRole("combobox", { name: "Runner" });
+    await expect(runner).toContainText("runner");
+    await expect(page.getByText("Threads already started stay on their runner.")).toBeVisible();
+    await runner.click();
+    await page.getByRole("option", { name: "second · offline" }).click();
+
+    await expect(page.getByText("Runner changed")).toBeVisible();
+    await expect(runner).toContainText("second");
+    const moved = await (await page.request.get(`/api/projects/${project.id}`)).json();
+    const secondId = (await second.json()).runtime.id;
+    expect(moved.runtimeId).toBe(secondId);
+
+    // A thread started now runs on the new runner.
+    const made = await page.request.post("/api/threads", { data: { projectId: project.id } });
+    expect(made.ok()).toBe(true);
+    expect((await made.json()).runtimeId).toBe(secondId);
+  });
+
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
     page,
   }) => {
