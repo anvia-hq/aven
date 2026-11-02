@@ -37,14 +37,14 @@ describe("tileStyle", () => {
     const seen = new Set(
       Array.from({ length: 200 }, (_, index) => tileStyle(`id-${index}`).backgroundImage),
     );
-    // Ten palettes turned four ways: forty looks, most of which 200 ids will have met.
-    expect(seen.size).toBeGreaterThan(25);
+    // Seven palettes turned four ways: 28 looks, most of which 200 ids will have met.
+    expect(seen.size).toBeGreaterThan(20);
   });
 });
 
 describe("tilePalettes", () => {
-  // The two projects of a real install: their ids hash to the same palette.
-  const twins = ["94f2e296-0110-4638-a704-83bd184b151e", "4b52c634-8f6e-4a9e-b588-fef8b91a5c55"];
+  // Two ids that hash to the same palette, as two projects of one install may.
+  const twins = ["8af5a3bb-82fd-4446-b6a0-9ee7a2b79630", "6b016842-763f-4b8f-b55e-b5b73eedd735"];
 
   test("two ids that hash to one palette are given two", () => {
     expect(tileStyle(twins[0]!).backgroundColor).toBe(tileStyle(twins[1]!).backgroundColor);
@@ -52,10 +52,10 @@ describe("tilePalettes", () => {
     expect(palettes.get(twins[0]!)).not.toBe(palettes.get(twins[1]!));
   });
 
-  test("the first ten projects all differ, whatever their ids", () => {
+  test("the first seven projects all differ, whatever their ids", () => {
     for (let run = 0; run < 20; run++) {
-      const ids = Array.from({ length: 10 }, (_, index) => `run-${run}-project-${index}`);
-      expect(new Set(tilePalettes(ids).values()).size).toBe(10);
+      const ids = Array.from({ length: 7 }, (_, index) => `run-${run}-project-${index}`);
+      expect(new Set(tilePalettes(ids).values()).size).toBe(7);
     }
   });
 
@@ -65,7 +65,7 @@ describe("tilePalettes", () => {
     for (const id of ["a", "b", "c"]) expect(after.get(id)).toBe(before.get(id));
   });
 
-  test("past ten projects the palettes are shared out evenly", () => {
+  test("past seven projects the palettes are shared out evenly", () => {
     const counts = new Map<number, number>();
     for (const palette of tilePalettes(Array.from({ length: 25 }, (_, i) => `p-${i}`)).values()) {
       counts.set(palette, (counts.get(palette) ?? 0) + 1);
