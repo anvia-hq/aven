@@ -49,7 +49,16 @@ export type RepoEntry = { name: string; path: string; type: "file" | "directory"
 export type RepoReadme = { name: string; path: string; text: string; truncated: boolean };
 
 /** A commit of a project's default branch (`GET /projects/:id/commits`): the first line of its message. */
-export type RepoCommit = { sha: string; message: string; author: string | null; date: string };
+export type RepoCommit = {
+  sha: string;
+  message: string;
+  author: string | null;
+  date: string;
+  /** The commits it follows, the first being the branch it was made on; the graph is drawn from them (decision 0090). */
+  parents: string[];
+  /** The branches whose latest commit it is. */
+  refs: string[];
+};
 
 /** One page of a project's commit history, and whether there is an older one. */
 export type RepoCommitPage = { commits: RepoCommit[]; hasMore: boolean };

@@ -1,6 +1,8 @@
-import { ChevronLeft, ChevronRight, GitCommit } from "@mynaui/icons-react";
-import { useState } from "react";
+import { layoutGraph, type GraphRow } from "@aven/protocol/commit-graph";
+import { ChevronLeft, ChevronRight, GitBranch, GitCommit } from "@mynaui/icons-react";
+import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
@@ -9,14 +11,63 @@ import { timeAgo } from "@/lib/format";
 import { useProjectCommits } from "../hooks/use-project-commits";
 import { commitUrl } from "../repo-links";
 import type { Project, RepoCommit } from "../types";
+import { CommitGraphRow, ROW_HEIGHT } from "./commit-graph";
 
-function Commit({ project, commit }: { project: Project; commit: RepoCommit }) {
+const CHIPS_SHOWN = 2;
+
+// The branches that end on a commit, the default branch first; the rest are a count.
+function Branches({ refs, defaultBranch }: { refs: string[]; defaultBranch: string }) {
+  const ordered = [...refs].sort(
+    (a, b) => Number(b === defaultBranch) - Number(a === defaultBranch) || a.localeCompare(b),
+  );
+  const shown = ordered.slice(0, CHIPS_SHOWN);
+  const more = ordered.length - shown.length;
   return (
-    <li className="flex items-center gap-3 px-4 py-2.5 text-sm">
+    <>
+      {shown.map((name) => (
+        <Badge
+          key={name}
+          variant={name === defaultBranch ? "secondary" : "outline"}
+          title={name}
+          className="max-w-32"
+        >
+          <GitBranch />
+          <span className="truncate">{name}</span>
+        </Badge>
+      ))}
+      {more > 0 && (
+        <Badge variant="outline" title={ordered.slice(CHIPS_SHOWN).join(", ")}>
+          +{more}
+        </Badge>
+      )}
+    </>
+  );
+}
+
+function Commit({
+  project,
+  commit,
+  row,
+  lanes,
+}: {
+  project: Project;
+  commit: RepoCommit;
+  row: GraphRow;
+  lanes: number;
+}) {
+  return (
+    <li
+      className="flex items-center gap-3 pr-4 pl-3 text-sm hover:bg-muted/50"
+      style={{ height: ROW_HEIGHT }}
+    >
+      <CommitGraphRow row={row} lanes={lanes} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate" title={commit.message}>
-          {commit.message || "No message"}
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate" title={commit.message}>
+            {commit.message || "No message"}
+          </span>
+          <Branches refs={commit.refs} defaultBranch={project.defaultBranch} />
+        </div>
         <span className="truncate text-xs text-muted-foreground">
           {commit.author ?? "Unknown author"}
           {commit.date ? ` · ${timeAgo(commit.date, true)}` : ""}
@@ -36,10 +87,12 @@ function Commit({ project, commit }: { project: Project; commit: RepoCommit }) {
   );
 }
 
-// The latest commits of the project's default branch, ten to a page, newest first.
+// The latest commits of the project's default branch, ten to a page, newest first, drawn as a graph
+// of the branches and merges among them (decision 0090).
 export function RepoCommits({ project }: { project: Project }) {
   const [page, setPage] = useState(1);
   const { commits, hasMore, problem, loading } = useProjectCommits(project.id, page);
+  const graph = useMemo(() => layoutGraph(commits ?? []), [commits]);
 
   return (
     <SectionCard
@@ -64,9 +117,15 @@ export function RepoCommits({ project }: { project: Project }) {
         </p>
       )}
       {commits && (
-        <ul className="flex flex-col divide-y">
-          {commits.map((commit) => (
-            <Commit key={commit.sha} project={project} commit={commit} />
+        <ul className="flex flex-col">
+          {commits.map((commit, index) => (
+            <Commit
+              key={commit.sha}
+              project={project}
+              commit={commit}
+              row={graph.rows[index]!}
+              lanes={graph.lanes}
+            />
           ))}
           {commits.length === 0 && (
             <li className="px-4 py-3 text-sm text-muted-foreground">No commits yet.</li>

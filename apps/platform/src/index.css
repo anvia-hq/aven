@@ -26,6 +26,12 @@
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
+  --graph-1: oklch(0.6 0.16 250);
+  --graph-2: oklch(0.6 0.15 150);
+  --graph-3: oklch(0.6 0.19 330);
+  --graph-4: oklch(0.68 0.15 70);
+  --graph-5: oklch(0.62 0.12 200);
+  --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.5 0.27 280);
   --effort: oklch(0.7 0.19 160);
   --frame: oklch(0.965 0 0);
@@ -60,6 +66,12 @@
   --accent-foreground: oklch(0.92 0.006 277);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
+  --graph-1: oklch(0.74 0.16 250);
+  --graph-2: oklch(0.74 0.15 150);
+  --graph-3: oklch(0.74 0.19 330);
+  --graph-4: oklch(0.8 0.15 70);
+  --graph-5: oklch(0.76 0.12 200);
+  --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.74 0.29 278);
   --effort: oklch(0.74 0.2 160);
   --frame: oklch(0.235 0.014 277);
@@ -107,6 +119,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-graph-1: var(--graph-1);
+  --color-graph-2: var(--graph-2);
+  --color-graph-3: var(--graph-3);
+  --color-graph-4: var(--graph-4);
+  --color-graph-5: var(--graph-5);
+  --color-graph-6: var(--graph-6);
   --color-code: var(--code);
   --color-effort: var(--effort);
   --color-frame: var(--frame);

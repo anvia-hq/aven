@@ -124,12 +124,20 @@ Bun.serve({
       });
     }
     // The history on the project page: fourteen commits, newest first, ten to a page, with GitHub's
-    // `next` link on the first page only.
+    // `next` link on the first page only. Commit 12 merges a branch that began at 9, as 10 and 11 both
+    // did: 11 on main and 10 on the branch `feature/login`, whose head it is.
+    const sha = (n: number) =>
+      `${String(n).padStart(2, "0")}abcdef0123456789abcdef0123456789abcdef`;
     const history = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits$/)?.[1];
     if (history && repositories.includes(history)) {
       const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
+      const parentsOf = (n: number) => {
+        if (n === 12) return [11, 10];
+        if (n === 11 || n === 10) return [9];
+        return n === 1 ? [] : [n - 1];
+      };
       const commits = Array.from({ length: 14 }, (_, index) => ({
-        sha: `${String(14 - index).padStart(2, "0")}abcdef0123456789abcdef0123456789abcdef`,
+        sha: sha(14 - index),
         commit: {
           message: `Change number ${14 - index}\n\nWhy it changed, which is not shown.`,
           author: {
@@ -138,6 +146,7 @@ Bun.serve({
           },
         },
         author: { login: "ada" },
+        parents: parentsOf(14 - index).map((n) => ({ sha: sha(n) })),
       }));
       return Response.json(commits.slice((page - 1) * 10, page * 10), {
         headers:
@@ -145,6 +154,13 @@ Bun.serve({
             ? { link: '<https://api.github.com/repositories/1/commits?page=2>; rel="next"' }
             : {},
       });
+    }
+    const branches = pathname.match(/^\/repos\/acme\/([\w.-]+)\/branches$/)?.[1];
+    if (branches && repositories.includes(branches)) {
+      return Response.json([
+        { name: "main", commit: { sha: sha(14) } },
+        { name: "feature/login", commit: { sha: sha(10) } },
+      ]);
     }
     const name = pathname.match(/^\/repos\/acme\/([\w.-]+)$/)?.[1];
     if (name && repositories.includes(name)) return Response.json(repo(name));

@@ -159,6 +159,10 @@ export type GithubCommit = {
   /** Who wrote it: the name on the commit, else their GitHub login. */
   author: string | null;
   date: string;
+  /** The commits it follows, the first being the branch it was made on; what the graph is drawn from (decision 0090). */
+  parents: string[];
+  /** The branches whose latest commit it is. */
+  refs: string[];
 };
 
 /** One page of commits, and whether GitHub has an older one. */
@@ -171,7 +175,11 @@ type CommitPayload = {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
   author: { login: string } | null;
+  parents: { sha: string }[];
 };
+
+// How many branches are asked for, to say which commits are where one ends: GitHub's page maximum.
+const BRANCHES_LISTED = 100;
 
 // A path inside a repository, put into a GitHub API path one segment at a time: dot-only segments
 // are refused by the callers' schema, so the path cannot climb out of `/contents/`.
@@ -441,6 +449,8 @@ export class GithubClient {
   ): Promise<GithubCommitPage | null> {
     const { token } = await this.installationToken(installationId);
     const path = `${repoPath(fullName)}/commits?per_page=${COMMITS_PER_PAGE}&page=${page}`;
+    // Asked together; the branch names only decorate the page, so they are not worth failing it for.
+    const heads = this.#branchHeads(token, fullName);
     let response: Response;
     try {
       response = await this.#get(path, token);
@@ -452,15 +462,33 @@ export class GithubClient {
       return nullWhenNotFound(error);
     }
     const listed = (await response.json()) as CommitPayload[];
+    const refs = await heads;
     return {
-      commits: listed.map(({ sha, commit, author }) => ({
+      commits: listed.map(({ sha, commit, author, parents }) => ({
         sha,
         message: commit.message.split("\n")[0]!.trim().slice(0, COMMIT_MESSAGE_MAX),
         author: commit.author?.name ?? author?.login ?? null,
         date: commit.author?.date ?? "",
+        parents: parents.map((parent) => parent.sha),
+        refs: refs.get(sha) ?? [],
       })),
       hasMore: /rel="next"/.test(response.headers.get("link") ?? ""),
     };
+  }
+
+  // The branches by the commit each ends on, with the branches that end on the same one in a list.
+  async #branchHeads(token: string, fullName: string) {
+    const heads = new Map<string, string[]>();
+    const branches = await this.#api<{ name: string; commit: { sha: string } }[]>(
+      `${repoPath(fullName)}/branches?per_page=${BRANCHES_LISTED}`,
+      token,
+    ).catch(() => []);
+    for (const { name, commit } of branches) {
+      const same = heads.get(commit.sha);
+      if (same) same.push(name);
+      else heads.set(commit.sha, [name]);
+    }
+    return heads;
   }
 
   // Whether GitHub lists `installationId` among the installations the person's token can use: they

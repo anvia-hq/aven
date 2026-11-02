@@ -78,15 +78,23 @@ run("projectsService (postgres)", async () => {
   });
 
   test("a page of commits is read for the project's own organization only, and says which page it is", async () => {
+    const commit = {
+      sha: "a1",
+      message: "Fix",
+      author: "Ada",
+      date: "2026-11-01T10:00:00Z",
+      parents: ["a0"],
+      refs: ["main"],
+    };
     const commits = spyOn(githubService, "commits").mockImplementation(async () => ({
-      commits: [{ sha: "a1", message: "Fix", author: "Ada", date: "2026-11-01T10:00:00Z" }],
+      commits: [commit],
       hasMore: true,
     }));
     try {
       const project = (await projectsService.list(orgA))[0]!;
 
       expect(await projectsService.commits(orgA, project.id, 2)).toEqual({
-        commits: [{ sha: "a1", message: "Fix", author: "Ada", date: "2026-11-01T10:00:00Z" }],
+        commits: [commit],
         hasMore: true,
         page: 2,
       });

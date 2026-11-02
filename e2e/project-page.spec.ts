@@ -81,6 +81,24 @@ test.describe("the project page", () => {
       "https://github.com/acme/shiny-app/commit/14abcdef0123456789abcdef0123456789abcdef",
     );
 
+    // The branches that end on a commit are named beside it: main on the newest, and the branch the
+    // merge brought in on its own head (commit 10, the fifth row).
+    await expect(rows.first().getByText("main", { exact: true })).toBeVisible();
+    await expect(rows.nth(4).getByText("feature/login")).toBeVisible();
+    await expect(rows.nth(3).getByText("feature/login")).toHaveCount(0);
+
+    // The graph: two lanes wide for every row, since the merge (commit 12, the third row) opens a
+    // second lane that comes back at commit 9. The newest commit has one line, down; the merge has
+    // one from above and two down; and the dot of each row is there.
+    await expect(rows.first().locator("svg[data-slot=commit-graph]")).toHaveAttribute(
+      "width",
+      "32",
+    );
+    await expect(rows.nth(1).locator("svg[data-slot=commit-graph]")).toHaveAttribute("width", "32");
+    await expect(rows.first().locator("svg[data-slot=commit-graph] path")).toHaveCount(1);
+    await expect(rows.nth(2).locator("svg[data-slot=commit-graph] path")).toHaveCount(3);
+    await expect(commits.locator("svg[data-slot=commit-graph] circle")).toHaveCount(10);
+
     // Newest first: no newer page to go to, and an older one.
     await expect(commits.getByText("Page 1")).toBeVisible();
     await expect(commits.getByRole("button", { name: "Newer" })).toBeDisabled();

@@ -242,14 +242,17 @@ describe("GithubClient", () => {
       sha,
       commit: { message, author: { name: "Ada", date: "2026-11-01T10:00:00Z" } },
       author: { login: "ada" },
+      parents: [],
       ...extra,
     });
-    // A GitHub that answers the commits listing with `answer`, and the token as the app asks.
-    const github = (answer: () => Response) => {
+    // A GitHub that answers the commits listing with `answer` and the branch listing with
+    // `branches`, and the token as the app asks.
+    const github = (answer: () => Response, branches: () => Response = () => Response.json([])) => {
       const calls: string[] = [];
       const fetch = async (url: string) => {
         calls.push(url);
-        return url.includes("/access_tokens") ? token.clone() : answer();
+        if (url.includes("/access_tokens")) return token.clone();
+        return url.includes("/branches") ? branches() : answer();
       };
       return { calls, client: new GithubClient(config, fetch) };
     };
@@ -259,7 +262,11 @@ describe("GithubClient", () => {
         Response.json([
           commit("a1", "Fix the build\n\nA long body that is not shown."),
           commit("b2", "  Spaced  "),
-          { ...commit("c3", "By login"), commit: { message: "By login", author: null } },
+          {
+            ...commit("c3", "By login"),
+            commit: { message: "By login", author: null },
+            parents: [],
+          },
           {
             sha: "d4",
             commit: {
@@ -267,6 +274,7 @@ describe("GithubClient", () => {
               author: { name: "Bo", date: "2026-10-31T10:00:00Z" },
             },
             author: null,
+            parents: [],
           },
         ]),
       );
@@ -286,8 +294,51 @@ describe("GithubClient", () => {
         message: "Fix the build",
         author: "Ada",
         date: "2026-11-01T10:00:00Z",
+        parents: [],
+        refs: [],
       });
       expect(calls.at(-1)).toBe("https://api.github.com/repos/acme/web/commits?per_page=10&page=2");
+    });
+
+    test("each commit says which commits it follows, and which branches end on it", async () => {
+      const { calls, client } = github(
+        () =>
+          Response.json([
+            commit("m1", "Merge", { parents: [{ sha: "b2" }, { sha: "f3" }] }),
+            commit("b2", "Main", { parents: [{ sha: "a0" }] }),
+            commit("f3", "Feature", { parents: [{ sha: "a0" }] }),
+          ]),
+        () =>
+          Response.json([
+            { name: "main", commit: { sha: "m1" } },
+            { name: "release", commit: { sha: "m1" } },
+            { name: "feature/login", commit: { sha: "f3" } },
+            // A branch that ends on a commit this page does not have.
+            { name: "old", commit: { sha: "zzz" } },
+          ]),
+      );
+
+      const page = await client.commits(7, "acme/web", 1);
+
+      expect(page?.commits.map(({ sha, parents, refs }) => [sha, parents, refs])).toEqual([
+        ["m1", ["b2", "f3"], ["main", "release"]],
+        ["b2", ["a0"], []],
+        ["f3", ["a0"], ["feature/login"]],
+      ]);
+      expect(calls.some((url) => url.endsWith("/repos/acme/web/branches?per_page=100"))).toBe(true);
+    });
+
+    test("branch names that cannot be had leave the page as it is, with none", async () => {
+      const { client } = github(
+        () => Response.json([commit("a1", "Fix", { parents: [{ sha: "a0" }] })]),
+        () => new Response("boom", { status: 500 }),
+      );
+
+      expect((await client.commits(7, "acme/web", 1))?.commits[0]).toMatchObject({
+        sha: "a1",
+        parents: ["a0"],
+        refs: [],
+      });
     });
 
     test("there is an older page only when GitHub links to one", async () => {
