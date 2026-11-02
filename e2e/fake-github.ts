@@ -93,6 +93,36 @@ Bun.serve({
       const expires = new Date(Date.now() + 60 * 60_000).toISOString();
       return Response.json({ token: "ghs_fake", expires_at: expires });
     }
+    // What the project page reads (decision 0082): the top of every repository, one folder below it
+    // and a README, except for composer-app, which has none.
+    const contents = pathname.match(/^\/repos\/acme\/([\w.-]+)\/contents(?:\/(.*))?$/);
+    if (contents && repositories.includes(contents[1]!)) {
+      const folder = contents[2] ?? "";
+      if (folder === "") {
+        return Response.json([
+          { name: "package.json", path: "package.json", type: "file" },
+          { name: "src", path: "src", type: "dir" },
+          { name: "README.md", path: "README.md", type: "file" },
+          { name: "docs", path: "docs", type: "dir" },
+        ]);
+      }
+      if (folder === "src") {
+        return Response.json([{ name: "index.ts", path: "src/index.ts", type: "file" }]);
+      }
+      if (folder === "package.json") {
+        return Response.json({ name: "package.json", path: "package.json", type: "file" });
+      }
+    }
+    const readme = pathname.match(/^\/repos\/acme\/([\w.-]+)\/readme$/)?.[1];
+    if (readme && repositories.includes(readme) && readme !== "composer-app") {
+      const text = `# ${readme}\n\nA **fine** project. Read [the guide](docs/guide.md).\n\n![logo](docs/logo.png)`;
+      return Response.json({
+        name: "README.md",
+        path: "README.md",
+        encoding: "base64",
+        content: Buffer.from(text).toString("base64"),
+      });
+    }
     const name = pathname.match(/^\/repos\/acme\/([\w.-]+)$/)?.[1];
     if (name && repositories.includes(name)) return Response.json(repo(name));
     return new Response("not found", { status: 404 });

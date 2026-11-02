@@ -41,3 +41,9 @@ export type GithubRepo = {
   defaultBranch: string;
   description: string | null;
 };
+
+/** An entry of a folder of a project's repository (`GET /projects/:id/files`), folders first. */
+export type RepoEntry = { name: string; path: string; type: "file" | "directory" };
+
+/** A project's README as text (`GET /projects/:id/readme`; decision 0082). */
+export type RepoReadme = { name: string; path: string; text: string; truncated: boolean };
