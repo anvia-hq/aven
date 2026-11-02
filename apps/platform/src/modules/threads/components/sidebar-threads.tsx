@@ -1,6 +1,5 @@
 import { Archive, Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMemo } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -10,8 +9,8 @@ import {
   SidebarMenuItem,
 } from "@/components/sidebar";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
-import { tilePalettes } from "@/modules/projects/tile";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
@@ -46,16 +45,7 @@ export function SidebarThreads() {
   const threads = useThreads().threads.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
   const { projects } = useProjects();
-  // Oldest first, so a project keeps its palette as newer ones arrive.
-  const palettes = useMemo(
-    () =>
-      tilePalettes(
-        [...projects]
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
-          .map((project) => project.id),
-      ),
-    [projects],
-  );
+  const palettes = useProjectPalettes();
   const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
