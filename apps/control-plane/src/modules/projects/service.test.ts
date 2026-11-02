@@ -11,6 +11,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "../threads/messages";
+import { threadsService } from "../threads/service";
 import {
   projectsService,
   RepositoryAlreadyImportedError,
@@ -312,6 +313,17 @@ run("projectsService (postgres)", async () => {
       }),
     ).rejects.toBeInstanceOf(ConflictError);
     await expect(projectsService.repoAccess(open!.id)).rejects.toThrow("project was deleted");
+    // And it stays archived: reopening it is refused, archiving it again is not.
+    const viewer = { organizationId: orgA, userId };
+    await expect(threadsService.update(viewer, open!.id, { state: "open" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect((await threadsService.update(viewer, open!.id, { state: "archived" }))?.state).toBe(
+      "archived",
+    );
+    expect((await threadsService.update(viewer, open!.id, { title: "Renamed" }))?.title).toBe(
+      "Renamed",
+    );
   });
 
   test("a deleted project lets its repository be imported again, as a project of its own", async () => {

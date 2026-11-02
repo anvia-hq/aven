@@ -5,7 +5,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm";
 
-import { NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 
@@ -64,6 +64,18 @@ const inPersonsWorkspaces = (userId: string) =>
     threads.organizationId,
     db.select({ id: members.organizationId }).from(members).where(eq(members.userId, userId)),
   );
+
+// A thread of a deleted project stays archived (decision 0094): reopening it would put a thread in
+// the lists that nobody can drive. A thread that is not found is left to the update to say so.
+async function requireLiveProject(organizationId: string, threadId: string) {
+  const [thread] = await db
+    .select({ projectId: threads.projectId })
+    .from(threads)
+    .where(and(eq(threads.organizationId, organizationId), eq(threads.id, threadId)));
+  if (thread && !(await projectsService.get(organizationId, thread.projectId))) {
+    throw new ConflictError("This thread's project was deleted, so it stays archived");
+  }
+}
 
 export const threadsService = {
   list: (viewer: Viewer) =>
@@ -176,6 +188,7 @@ export const threadsService = {
 
   // Only the creator changes a thread: its title, its state and who it is shared with.
   async update({ organizationId, userId }: Viewer, id: string, body: UpdateThreadBody) {
+    if (body.state && body.state !== "archived") await requireLiveProject(organizationId, id);
     const [thread] = await db
       .update(threads)
       .set(body)

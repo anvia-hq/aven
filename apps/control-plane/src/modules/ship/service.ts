@@ -73,8 +73,8 @@ export function createShipService(
     (async (organizationId: string, threadId: string) => {
       const thread = await threadsService.require(organizationId, threadId);
       const project = await projectsService.get(organizationId, thread.projectId);
-      // A thread's project row is guaranteed by its foreign key.
-      if (!project) throw new Error("The thread's project is missing");
+      // The row is there (its foreign key), unless the project was deleted (decision 0094).
+      if (!project) throw new ConflictError("This thread's project was deleted");
       return { ...project, pullRequests: thread.pullRequests };
     });
   const readShipFile =

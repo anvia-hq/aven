@@ -214,6 +214,13 @@ test.describe("the project page", () => {
     expect(listed.map((entry) => entry.id)).not.toContain(project.id);
     const kept = await (await page.request.get(`/api/threads/${thread.id}`)).json();
     expect(kept.state).toBe("archived");
+    // It stays archived, whatever asks for it open, and its page still opens.
+    const reopened = await page.request.patch(`/api/threads/${thread.id}`, {
+      data: { state: "open" },
+    });
+    expect(reopened.status()).toBe(409);
+    await page.goto(`/threads/${thread.id}`);
+    await expect(page.getByText("shiny-app").first()).toBeVisible();
     // Nobody can send to it any more.
     const sent = await page.request.post(`/api/threads/${thread.id}/messages`, {
       data: { prompt: "hello" },
