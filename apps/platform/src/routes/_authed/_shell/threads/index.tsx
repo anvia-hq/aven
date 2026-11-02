@@ -25,7 +25,10 @@ function NewThread() {
   const recent = useThreads()
     .threads.filter((thread) => thread.state === "open")
     .slice(0, 3);
-  const [projectId, setProjectId] = useState<string | undefined>(Route.useSearch().project);
+  const asked = Route.useSearch().project;
+  const [chosen, setProjectId] = useState<string | undefined>(undefined);
+  // The person's own choice, else the project the address asks for if it is one of theirs.
+  const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
     startThread(projectId, message, selection);

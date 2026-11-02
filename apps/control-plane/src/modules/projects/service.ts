@@ -61,7 +61,7 @@ export const projectsService = {
   // (decision 0082): read with the installation's token, so it needs no runner and no clone. A
   // repository the installation no longer sees, or a path that is not a folder, is not found.
   async folder(organizationId: string, id: string, path: string) {
-    const project = orNotFound(await this.get(organizationId, id), "Project not found");
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     const entries = await githubService.folder(
       project.githubInstallationId,
       project.repoFullName,
@@ -71,7 +71,7 @@ export const projectsService = {
   },
 
   async readme(organizationId: string, id: string) {
-    const project = orNotFound(await this.get(organizationId, id), "Project not found");
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     return {
       readme: await githubService.readme(project.githubInstallationId, project.repoFullName),
     };

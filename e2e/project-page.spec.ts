@@ -24,7 +24,8 @@ test.describe("the project page", () => {
     const project = await projectOf(page, "shiny-app");
     await page.goto(`/projects/${project.id}`);
 
-    await expect(page.getByRole("heading", { name: "shiny-app", level: 1 })).toBeVisible();
+    // The README has a heading of its own, also named after the repository: the title comes first.
+    await expect(page.getByRole("heading", { name: "shiny-app", level: 1 }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "acme/shiny-app" })).toHaveAttribute(
       "href",
       "https://github.com/acme/shiny-app",
@@ -109,6 +110,15 @@ test.describe("the project page", () => {
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "Look at the docs",
     );
+  });
+
+  test("a project in the new-thread address that is not the person's is not chosen", async ({
+    page,
+  }) => {
+    await registerUser(page, "repo", "Repo Person");
+    await projectOf(page, "shiny-app");
+    await page.goto(`/threads?project=${crypto.randomUUID()}`);
+    await expect(page.getByRole("combobox", { name: "Project" })).toContainText("Choose a project");
   });
 
   test("a repository with no README has no README section, and a path that is not a folder says so", async ({
