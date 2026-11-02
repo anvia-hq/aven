@@ -66,6 +66,9 @@ export function useThread(threadId: string) {
       setRunning((current) => isRunning(current, event));
       switch (event.type) {
         case "snapshot":
+          // What the sidebar shows of this thread is brought to what the server says now: a run
+          // may have ended while no stream was listening to it.
+          setThreadRunning(threadId, event.running);
           setSynced(true);
           setUsage(event.usage ?? null);
           setStartedAt(event.running ? Date.now() - (event.runningMs ?? 0) : null);
@@ -100,6 +103,8 @@ export function useThread(threadId: string) {
       setRunning(false);
       setStartedAt(null);
       setError("Lost the connection to the server");
+      // Whether it still runs is not known from here: the list is asked.
+      void refresh();
     };
     return () => source.close();
   }, [threadId, setThreadRunning, refresh]);

@@ -1,5 +1,6 @@
 import { Archive, Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -17,6 +18,8 @@ import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
+
+const RUNNING_REFRESH_MS = 5000;
 
 // The thread's project as a tile, pulsing while the thread runs. Until the project is known the
 // tile's place is kept, so a row does not show a question mark and then change.
@@ -42,7 +45,7 @@ function SidebarProjectTile({
 
 export function SidebarThreads() {
   const navigate = useNavigate();
-  const { threads: own, shared: others } = useThreads();
+  const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   // What the workspace shares to read (decision 0084), which its creator can still archive.
   const shared = others.filter((thread) => thread.state === "open");
@@ -51,6 +54,15 @@ export function SidebarThreads() {
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  // Only the open thread has a stream to hear its run end on. While a thread is shown as running,
+  // the list is asked again now and then, so another thread's tile stops pulsing when its run ends.
+  const anyRunning = [...own, ...others].some((thread) => thread.running);
+  useEffect(() => {
+    if (!anyRunning) return;
+    const timer = setInterval(() => void refresh(), RUNNING_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [anyRunning, refresh]);
 
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";

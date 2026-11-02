@@ -40,18 +40,25 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         return { events: projected ? [projected] : [] };
       }
       case "model_completed": {
-        const usage = asRecord(asRecord(data.result).usage) as unknown as Usage;
-        if (typeof usage.inputTokens !== "number") return { events: [] };
-        const { contextWindow } = options;
-        return {
-          events: [
-            {
-              type: "usage",
-              turn: tokenUsageOf(usage),
-              context: contextWindow ? { usedTokens: usage.inputTokens, contextWindow } : undefined,
-            },
-          ],
-        };
+        const result = asRecord(data.result);
+        // A model whose stream has no finished call, and a call that is never started (a question
+        // parks the run before its tool runs), are announced here, from the finished turn: without
+        // it the client never learns of the question and shows none until it reloads.
+        const events: RunEvent[] = toolCallsOf(result.choice).flatMap((call) => {
+          if (announced.has(call.toolCallId)) return [];
+          announced.add(call.toolCallId);
+          return [{ type: "tool_start" as const, tool: projectToolCall(call) }];
+        });
+        const usage = asRecord(result.usage) as unknown as Usage;
+        if (typeof usage.inputTokens === "number") {
+          const { contextWindow } = options;
+          events.push({
+            type: "usage",
+            turn: tokenUsageOf(usage),
+            context: contextWindow ? { usedTokens: usage.inputTokens, contextWindow } : undefined,
+          });
+        }
+        return { events };
       }
       case "tool_started": {
         const call = asRecord(asRecord(data.input).toolCall);
@@ -81,6 +88,17 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
   }
 
   return { map };
+}
+
+// The tool calls of a finished model turn, in the order the model made them.
+function toolCallsOf(choice: unknown): ToolCallPart[] {
+  if (!Array.isArray(choice)) return [];
+  return choice.filter(
+    (part): part is ToolCallPart =>
+      asRecord(part).type === "tool-call" &&
+      typeof asRecord(part).toolCallId === "string" &&
+      typeof asRecord(part).toolName === "string",
+  );
 }
 
 function endOf(data: Record<string, unknown>): DurableEnd | undefined {

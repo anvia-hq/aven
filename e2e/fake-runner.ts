@@ -174,7 +174,7 @@ ws.onmessage = ({ data }) => {
   } else if (message.type === "run.start" && !ASKING) {
     // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
     event({ type: "started", prompt: message.prompt, mentions: message.mentions });
-    if (process.env.FAKE_RUN_ENDS) {
+    const finish = () => {
       const { runId } = message;
       send({
         type: "run.event",
@@ -183,7 +183,11 @@ ws.onmessage = ({ data }) => {
         event: { type: "text", delta: "Done." },
       });
       send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
-    }
+    };
+    if (process.env.FAKE_RUN_ENDS) finish();
+    // With FAKE_RUN_ENDS_AFTER (milliseconds) it finishes later, while a spec is elsewhere.
+    else if (process.env.FAKE_RUN_ENDS_AFTER)
+      setTimeout(finish, Number(process.env.FAKE_RUN_ENDS_AFTER));
   } else if (message.type === "run.start" && ASKING) {
     const { runId } = message;
     const ask = {
