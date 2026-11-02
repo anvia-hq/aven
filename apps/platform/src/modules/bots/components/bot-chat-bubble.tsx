@@ -1,6 +1,7 @@
 import { Bubble, BubbleContent } from "@/components/bubble";
 import { Markdown } from "@/components/markdown";
 import { MessageContent } from "@/components/message";
+import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 
 import type { Bot, BotChatMessage } from "../types";
 import { MentionedText } from "./mentioned-text";
@@ -12,26 +13,38 @@ export const isPersons = (message: BotChatMessage) => message.role === "user";
 // mentions drawn as chips; the bot's own shows its Markdown. Messages between bots are not bubbles
 // (`BotActivity`).
 export function BotChatBubble({
+  botId,
   message,
   bots,
 }: {
+  /** The bot whose chat it is, where the images sent to it are kept. */
+  botId: string;
   message: BotChatMessage;
   bots: readonly Bot[];
 }) {
   const mine = isPersons(message);
   return (
     <MessageContent>
-      <Bubble variant={mine ? "tinted" : "muted"} align={mine ? "end" : "start"}>
-        <BubbleContent className="rounded-2xl">
-          {mine ? (
-            <span className="whitespace-pre-wrap">
-              <MentionedText text={message.text} bots={bots} />
-            </span>
-          ) : (
-            <Markdown>{message.text}</Markdown>
-          )}
-        </BubbleContent>
-      </Bubble>
+      {/* The files the person sent with it (decision 0080), above their words as in a thread. */}
+      {message.attachments?.length ? (
+        <SentAttachments
+          artifactsPath={`/api/bots/${botId}/artifacts`}
+          attachments={message.attachments}
+        />
+      ) : null}
+      {message.text && (
+        <Bubble variant={mine ? "tinted" : "muted"} align={mine ? "end" : "start"}>
+          <BubbleContent className="rounded-2xl">
+            {mine ? (
+              <span className="whitespace-pre-wrap">
+                <MentionedText text={message.text} bots={bots} />
+              </span>
+            ) : (
+              <Markdown>{message.text}</Markdown>
+            )}
+          </BubbleContent>
+        </Bubble>
+      )}
     </MessageContent>
   );
 }

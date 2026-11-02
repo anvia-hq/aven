@@ -3,6 +3,7 @@ import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 import { attempt, postJson } from "@/lib/api";
+import type { AttachmentUpload } from "@/modules/threads/types";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import type { BotChatMessage } from "../types";
@@ -69,11 +70,15 @@ export function useBotChat(botId: string) {
     return () => source.close();
   }, [botId, setLastMessages]);
 
-  // True once the message is accepted, so the composer knows it can clear.
+  // True once the message is accepted, so the composer knows it can clear. It may carry files
+  // (decision 0080), sent with it as a thread's message sends them.
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, attachments: AttachmentUpload[] = []) => {
       const sent = await attempt("Could not send message", async () => {
-        await postJson(`/bots/${botId}/messages`, { text });
+        await postJson(
+          `/bots/${botId}/messages`,
+          attachments.length ? { text, attachments } : { text },
+        );
         return true;
       });
       return sent ?? false;

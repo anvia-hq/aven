@@ -59,7 +59,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                       onSubmit={send}
                     />
                   ) : (
-                    <BotChatBubble message={message} bots={bots} />
+                    <BotChatBubble botId={bot.id} message={message} bots={bots} />
                   )}
                 </Message>
               );

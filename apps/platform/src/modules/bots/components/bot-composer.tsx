@@ -5,11 +5,17 @@ import {
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
 import { ArrowUp } from "@mynaui/icons-react";
-import type { KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/button";
+import { AttachButton } from "@/modules/threads/components/attach-button";
 import { MentionMenu } from "@/modules/threads/components/mention-menu";
+import { PendingAttachments } from "@/modules/threads/components/pending-attachments";
+import { useAttachmentDrop } from "@/modules/threads/hooks/use-attachment-drop";
+import { useAttachments } from "@/modules/threads/hooks/use-attachments";
 import { useComposerChat } from "@/modules/threads/hooks/use-composer-chat";
+import type { AttachmentUpload } from "@/modules/threads/types";
+import { toast } from "@/components/toast";
 
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { BotMentionChip } from "./bot-mention-chip";
@@ -19,8 +25,8 @@ type Props = {
   botId: string;
   /** Whether it is the main bot, the only one that can write to the others and so the only one `@` is for. */
   main: boolean;
-  /** Resolves to whether the message was taken; the text is only cleared when it was. */
-  onSend: (text: string) => Promise<boolean>;
+  /** Resolves to whether the message was taken; the text and files are only cleared when it was. */
+  onSend: (text: string, files: AttachmentUpload[]) => Promise<boolean>;
   placeholder: string;
 };
 
@@ -36,8 +42,9 @@ const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) =>
 
 // Where the person writes to a bot: a pill with the text and Send in it, growing with what is
 // written, in Anvia's tiptap composer, where `@` mentions another of their bots (decision 0063).
-// Enter sends, Shift+Enter starts a new line. The bot may be at work: a message sent meanwhile
-// waits its turn, so the composer is never locked.
+// Files go with the message as a thread's do, attached from the button, by paste or by drop
+// (decision 0080). Enter sends, Shift+Enter starts a new line. The bot may be at work: a message
+// sent meanwhile waits its turn, so the composer is never locked.
 export function BotComposer({ botId, main, ...props }: Props) {
   const chat = useComposerChat();
   const triggers = useBotMentions(botId, main);
@@ -57,13 +64,31 @@ export function BotComposer({ botId, main, ...props }: Props) {
 
 function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
   const composer = useComposer();
+  const attachments = useAttachments();
+  const drop = useAttachmentDrop(attachments);
+  const [sending, setSending] = useState(false);
   const message = composer.input.trim();
+  const canSend = (message.length > 0 || attachments.files.length > 0) && !sending;
 
   const submit = async () => {
-    if (!message) return;
-    if (await onSend(message)) {
-      composer.setInput("");
-      composer.setEntities([]);
+    if (!canSend) return;
+    setSending(true);
+    try {
+      const files = await attachments.encode();
+      if (await onSend(message, files)) {
+        composer.setInput("");
+        composer.setEntities([]);
+        attachments.clear();
+      }
+    } catch (error) {
+      // A picked file can no longer be read, say it was moved; the message stays to send again.
+      toast.add({
+        title: "Could not read the attached files",
+        description: error instanceof Error ? error.message : undefined,
+        type: "error",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -79,25 +104,33 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
 
   return (
     <div
-      className="relative flex items-end gap-2 rounded-3xl border bg-card py-2 pr-2 pl-4 focus-within:border-ring"
+      className="relative rounded-3xl border bg-card focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      {...drop}
       onKeyDownCapture={onKeyDown}
     >
-      <MentionMenu />
-      <ComposerPrimitive.Input
-        aria-label="Message"
-        placeholder={placeholder}
-        renderEntity={renderEntity}
-        className="max-h-48 min-h-9 flex-1 overflow-y-auto py-1.5 text-sm leading-6"
-      />
-      <Button
-        size="icon"
-        className="rounded-full"
-        aria-label="Send"
-        disabled={!message}
-        onClick={() => void submit()}
-      >
-        <ArrowUp />
-      </Button>
+      <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
+      <div className="flex items-end gap-1 py-2 pr-2 pl-2">
+        <MentionMenu />
+        <AttachButton
+          onPick={attachments.add}
+          title="Attach files: images are shown to the bot, every file is copied to its computer"
+        />
+        <ComposerPrimitive.Input
+          aria-label="Message"
+          placeholder={placeholder}
+          renderEntity={renderEntity}
+          className="max-h-48 min-h-9 flex-1 overflow-y-auto py-1.5 text-sm leading-6"
+        />
+        <Button
+          size="icon"
+          className="rounded-full"
+          aria-label="Send"
+          disabled={!canSend}
+          onClick={() => void submit()}
+        >
+          <ArrowUp />
+        </Button>
+      </div>
     </div>
   );
 }

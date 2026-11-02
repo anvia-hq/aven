@@ -2,6 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
+// A 1 x 1 PNG, the smallest picture a message can show.
+const PIXEL =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
+
 // A message in the conversation; the sidebar shows the bot's last words too.
 const bubble = (page: Page, text: string) =>
   page
@@ -55,6 +59,92 @@ test.describe("bots", () => {
     await expect(bubble(page, "hello bot")).toBeVisible();
     await expect(bubble(page, "Hey there!")).toBeVisible();
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
+  });
+
+  // Files go to a bot as they go to a thread's agent (decision 0080): a file lands in the bot's
+  // /uploads and it is told where, an image is shown to the model too, and all of it is in the chat
+  // after a reload.
+  test("a person sends a bot files and an image, and the bot is told where they are", async ({
+    page,
+  }) => {
+    test.slow();
+    await registerUser(page, "bot-files", "Files Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("remember the milk") },
+      { name: "pixel.png", mimeType: "image/png", buffer: Buffer.from(PIXEL, "base64") },
+    ]);
+    // Picked, not sent: the chip and the preview have a remove button each.
+    await expect(page.getByRole("button", { name: "Remove notes.txt" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove pixel.png" })).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Message" }).fill("look at these");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+
+    // Sent: the composer is clear, and the message shows its files above the words.
+    await expect(bubble(page, "look at these")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove notes.txt" })).toBeHidden();
+    await expect(page.getByText("notes.txt", { exact: true })).toBeVisible();
+    const image = page.getByRole("img", { name: "pixel.png" });
+    await expect(image).toBeVisible();
+    await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+
+    // The bot heard the words and was told where the runner put each file.
+    const heard = page.locator('[data-slot="bubble-content"]').filter({ hasText: "You said:" });
+    await expect(heard).toContainText("look at these");
+    await expect(heard).toContainText("/uploads/notes.txt");
+    await expect(heard).toContainText("/uploads/pixel.png");
+    await expect(heard).toContainText("shown to you below");
+
+    // The chat is the server's: the files are in it after a reload, the image still loads, and the
+    // note the bot was given about them is not part of what the person said.
+    await page.reload();
+    await expect(bubble(page, "look at these")).toBeVisible();
+    await expect(page.getByText("notes.txt", { exact: true })).toBeVisible();
+    const again = page.getByRole("img", { name: "pixel.png" });
+    await expect(again).toBeVisible();
+    await expect.poll(() => again.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+    await expect(page.getByText("The user attached 2 files")).toHaveCount(1);
+  });
+
+  // A message may be only files.
+  test("files alone make a message", async ({ page }) => {
+    test.slow();
+    await registerUser(page, "bot-files-only", "Files Only");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const send = page.getByRole("button", { name: "Send", exact: true });
+    await expect(send).toBeDisabled();
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([
+        { name: "plan.md", mimeType: "text/markdown", buffer: Buffer.from("# plan") },
+      ]);
+    await expect(send).toBeEnabled();
+    await send.click();
+    await expect(page.getByText("plan.md", { exact: true })).toBeVisible();
+    await expect(
+      page.locator('[data-slot="bubble-content"]').filter({ hasText: "/uploads/plan.md" }),
+    ).toBeVisible();
   });
 
   // The main bot makes a bot when asked (decision 0060): it shows in the sidebar, has a chat of

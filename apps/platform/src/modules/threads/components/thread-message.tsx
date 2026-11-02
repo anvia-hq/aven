@@ -87,7 +87,10 @@ export const ThreadMessage = memo(function ThreadMessage({
     return (
       <div className="my-12 ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
         {message.attachments?.length ? (
-          <SentAttachments threadId={threadId} attachments={message.attachments} />
+          <SentAttachments
+            artifactsPath={`/api/threads/${threadId}/artifacts`}
+            attachments={message.attachments}
+          />
         ) : null}
         {text && (
           <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">

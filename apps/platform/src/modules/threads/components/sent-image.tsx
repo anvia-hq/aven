@@ -7,11 +7,17 @@ import { FileChip } from "./file-chip";
 const RETRY_DELAYS_MS = [500, 1_500, 4_000];
 
 // An image sent with a message, from the copy the runner keeps; a chip when it cannot be loaded.
-export function SentImage({ threadId, file }: { threadId: string; file: MessageAttachment }) {
+export function SentImage({
+  artifactsPath,
+  file,
+}: {
+  artifactsPath: string;
+  file: MessageAttachment;
+}) {
   const [attempt, setAttempt] = useState(0);
   const failed = attempt > RETRY_DELAYS_MS.length;
   if (failed || !file.image) return <FileChip name={file.name} size={file.size} />;
-  const src = `/api/threads/${threadId}/artifacts/${file.image}`;
+  const src = `${artifactsPath}/${file.image}`;
   const retry = () => {
     const delay = RETRY_DELAYS_MS[attempt];
     if (delay === undefined) setAttempt((count) => count + 1);
