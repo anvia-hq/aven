@@ -4,7 +4,7 @@ import { elapsed } from "@/lib/format";
 
 import { useWorkingWord } from "../hooks/use-working-word";
 
-// Three rows of three dots whose color runs from pale blue (top left) to rose (bottom right), and
+// Three rows of three dots whose color runs from pale blue (top left) to indigo (bottom right), and
 // whose pulse crosses the grid diagonally, one step after another. The colors are the
 // `--working-from` and `--working-to` tokens of index.css.
 const STEPS = 4;
