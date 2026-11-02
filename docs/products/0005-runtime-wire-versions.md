@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **36**: `run.start`, `run.resume` and `bot.reply` carry the person's enabled MCP servers (`mcp`, with their headers in the clear, for the runner to keep in memory), which a runner connects for the run or reply; the runner says how each connected with `mcp.report` (a run) or `bot.mcp` `report` (a bot), and a bot looks at and changes the person's servers with `bot.mcp` (decision 0085). A runner that has not updated is refused until `aven update`.
 - **35**: `bot.reply` can carry the person's skills, `skills`, which the runner puts in the bot's `/skills`, and fetches an archive for with `bot.skill` (decision 0081).
 - **34**: `bot.reply` can carry the files the person sent with the message, `attachments`, which the runner copies into the bot's computer (decision 0080).
 - **33**: a runner lists, stops and reads the logs of the processes in a thread's sandbox, `processes.list`, `processes.stop` and `processes.logs` (decision 0071).

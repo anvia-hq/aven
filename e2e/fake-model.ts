@@ -99,6 +99,19 @@ const updateSelf = (id: string) => ({
   },
 });
 
+const addMcpServer = (id: string) => ({
+  id,
+  type: "function",
+  function: {
+    name: "add_mcp_server",
+    arguments: JSON.stringify({
+      name: "Docs",
+      url: "https://docs.example.com/mcp",
+      headers: [{ name: "Authorization", value: "Bearer given-by-the-person" }],
+    }),
+  },
+});
+
 // What the bot says once the tool it called has answered.
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
@@ -106,6 +119,7 @@ const SAID_AFTER: Record<string, string> = {
   create_schedule: "Scheduled: Morning news",
   start_goal: "Working on it in the background",
   update_goal: "Goal finished: the report is written",
+  add_mcp_server: "Docs is connected",
 };
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
@@ -217,6 +231,13 @@ Bun.serve({
       const skill = /Available skills:\n- ([a-z0-9-]+):/.exec(everything)?.[1];
       const said = skill ? `I have the ${skill} skill` : "I have no skills";
       return reply({ content: null, tool_calls: [sendMessage("call_1", said)] }, "tool_calls");
+    }
+    // Asked to connect an MCP server, a bot adds one (decision 0085) and says so.
+    if (
+      /connect .*mcp server/i.test(heard) &&
+      !body.messages.some((message) => calledTool(message, "add_mcp_server"))
+    ) {
+      return reply({ content: null, tool_calls: [addMcpServer("call_1")] }, "tool_calls");
     }
     // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {

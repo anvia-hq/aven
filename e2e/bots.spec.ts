@@ -82,6 +82,40 @@ test.describe("bots", () => {
     await expect(bubble(page, "I have the setup-env skill")).toBeVisible();
   });
 
+  // A bot keeps the person's MCP servers on their word (decision 0085): what it adds is on their
+  // Settings page, with the header's name and never its value.
+  test("a bot connects an MCP server when asked, and it is on the person's Settings page", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-mcp", "Mcp Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    await page
+      .getByRole("textbox", { name: "Message" })
+      .fill("connect the docs mcp server at https://docs.example.com/mcp");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "Docs is connected")).toBeVisible();
+
+    await page.goto("/settings/mcp");
+    const row = page.getByRole("list", { name: "MCP servers" }).getByRole("listitem");
+    await expect(row).toContainText("Docs");
+    await expect(row).toContainText("https://docs.example.com/mcp");
+    await expect(row).toContainText("Headers: Authorization");
+    await expect(page.getByText("given-by-the-person")).toHaveCount(0);
+    expect(await (await page.request.get("/api/mcp-servers")).text()).not.toContain(
+      "given-by-the-person",
+    );
+  });
+
   // Files go to a bot as they go to a thread's agent (decision 0080): a file lands in the bot's
   // /uploads and it is told where, an image is shown to the model too, and all of it is in the chat
   // after a reload.
