@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 
 import { bytesOf } from "../../bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
-import { authRouter } from "../auth/router";
+import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { TerminalHandle } from "../runtimes/viewer-streams";
 import { threadParams } from "../threads/schema";
@@ -14,9 +14,8 @@ import { createTerminalService } from "./service";
 export const terminalRouter = (hub: RuntimeHub) => {
   const service = createTerminalService(hub);
   const terminals = bridgeToRunner<TerminalHandle>("The terminal is too slow");
-  return new Elysia({ prefix: "/threads" }).use(authRouter).ws("/:id/terminal/stream", {
-    auth: true,
-    org: true,
+  return new Elysia({ prefix: "/threads" }).use(threadAccess).ws("/:id/terminal/stream", {
+    thread: "own",
     params: threadParams,
     query: terminalSize,
     async beforeHandle({ request, status, organizationId, user, params }) {

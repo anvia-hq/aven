@@ -1,7 +1,8 @@
 import { db } from "@aven/db/client";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threads } from "@aven/db/schema/threads";
-import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { users } from "@aven/db/schema/users";
+import { and, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
@@ -29,6 +30,8 @@ export type ThreadPullRequest = {
 const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads);
 const columns = {
   ...publicColumns,
+  // Who made it, for the people a shared thread is shown to.
+  createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
   pullRequests: sql<ThreadPullRequest[]>`coalesce((
     select json_agg(json_build_object(
@@ -43,13 +46,47 @@ const columns = {
   ), '[]'::json)`,
 };
 
+/** Who is asking: a member of an organization. */
+export type Viewer = { organizationId: string; userId: string };
+
+// The threads a person may see: their own, and the ones their workspace shares (decision 0084).
+const seenBy = ({ organizationId, userId }: Viewer) =>
+  and(
+    eq(threads.organizationId, organizationId),
+    or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+  );
+
 export const threadsService = {
-  list: (organizationId: string) =>
-    db
+  list: (viewer: Viewer) =>
+    db.select(columns).from(threads).where(seenBy(viewer)).orderBy(desc(threads.updatedAt)),
+
+  // A thread the person may read: their own, or one shared with the workspace. Anything else is
+  // simply not found, as another organization's thread is.
+  async readable(viewer: Viewer, id: string) {
+    const [thread] = await db
       .select(columns)
       .from(threads)
-      .where(eq(threads.organizationId, organizationId))
-      .orderBy(desc(threads.updatedAt)),
+      .where(and(seenBy(viewer), eq(threads.id, id)));
+    if (!thread) throw new ThreadNotFoundError();
+    return thread;
+  },
+
+  // A thread the person made, for whatever acts on it or on its sandbox. A shared thread is not
+  // theirs to drive: it is not found here either.
+  async owned({ organizationId, userId }: Viewer, id: string) {
+    const [thread] = await db
+      .select(columns)
+      .from(threads)
+      .where(
+        and(
+          eq(threads.organizationId, organizationId),
+          eq(threads.createdBy, userId),
+          eq(threads.id, id),
+        ),
+      );
+    if (!thread) throw new ThreadNotFoundError();
+    return thread;
+  },
 
   // Every lookup is scoped to the organization: another organization's thread is simply not found.
   async get(organizationId: string, id: string) {
@@ -88,11 +125,18 @@ export const threadsService = {
     return thread!;
   },
 
-  async update(organizationId: string, id: string, body: UpdateThreadBody) {
+  // Only the creator changes a thread: its title, its state and who it is shared with.
+  async update({ organizationId, userId }: Viewer, id: string, body: UpdateThreadBody) {
     const [thread] = await db
       .update(threads)
       .set(body)
-      .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)))
+      .where(
+        and(
+          eq(threads.organizationId, organizationId),
+          eq(threads.createdBy, userId),
+          eq(threads.id, id),
+        ),
+      )
       .returning(columns);
     return thread ?? null;
   },

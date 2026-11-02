@@ -62,7 +62,7 @@ export const createThreadMessages = (runs: RunManager) => ({
     threadId: string,
     { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
   ) {
-    const thread = await threadsService.require(organizationId, threadId);
+    const thread = await threadsService.owned({ organizationId, userId }, threadId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
@@ -79,7 +79,7 @@ export const createThreadMessages = (runs: RunManager) => ({
     threadId: string,
     { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
   ) {
-    const thread = await threadsService.require(organizationId, threadId);
+    const thread = await threadsService.owned({ organizationId, userId }, threadId);
     const continuation = await threadsService.continuation(thread.id);
     if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
     const model = await resolveModel(userId, selection);

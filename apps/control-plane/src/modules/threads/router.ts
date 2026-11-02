@@ -1,7 +1,7 @@
 import { Elysia, sse, status } from "elysia";
 
 import { orNotFound } from "../../errors";
-import { authRouter } from "../auth/router";
+import { threadAccess } from "./access";
 import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
@@ -16,11 +16,11 @@ import { threadsService } from "./service";
 // The runs and messages are given: they are made with the rest of the app in `composition.ts`.
 export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
   new Elysia({ prefix: "/threads" })
-    .use(authRouter)
+    .use(threadAccess)
     .get(
       "/",
-      async ({ organizationId }) => {
-        const rows = await threadsService.list(organizationId);
+      async ({ organizationId, user }) => {
+        const rows = await threadsService.list({ organizationId, userId: user.id });
         return rows.map((thread) => ({ ...thread, running: runs.isRunning(thread.id) }));
       },
       { auth: true, org: true },
@@ -32,24 +32,27 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
     )
     .get(
       "/:id",
-      async ({ params, organizationId }) => {
-        const thread = await threadsService.require(organizationId, params.id);
+      async ({ params, organizationId, user }) => {
+        const thread = await threadsService.readable(
+          { organizationId, userId: user.id },
+          params.id,
+        );
         return {
           ...thread,
           running: runs.isRunning(thread.id),
           messages: await runs.history(thread),
         };
       },
-      { auth: true, org: true, params: threadParams },
+      { thread: "read", params: threadParams },
     )
     .patch(
       "/:id",
-      async ({ params, body, organizationId }) =>
+      async ({ params, body, organizationId, user }) =>
         orNotFound(
-          await threadsService.update(organizationId, params.id, body),
+          await threadsService.update({ organizationId, userId: user.id }, params.id, body),
           "Thread not found",
         ),
-      { auth: true, org: true, params: threadParams, body: updateThreadBody },
+      { thread: "own", params: threadParams, body: updateThreadBody },
     )
     .post(
       "/:id/messages",
@@ -57,7 +60,7 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
         await messages.send(organizationId, user.id, params.id, body);
         return status(202, { ok: true });
       },
-      { auth: true, org: true, params: threadParams, body: sendMessageBody },
+      { thread: "own", params: threadParams, body: sendMessageBody },
     )
     .post(
       "/:id/answer",
@@ -65,25 +68,24 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
         await messages.answer(organizationId, user.id, params.id, body);
         return status(202, { ok: true });
       },
-      { auth: true, org: true, params: threadParams, body: answerQuestionBody },
+      { thread: "own", params: threadParams, body: answerQuestionBody },
     )
-    .post(
-      "/:id/cancel",
-      async ({ params, organizationId }) => {
-        const thread = await threadsService.require(organizationId, params.id);
-        return { cancelled: runs.cancel(thread.id) };
-      },
-      { auth: true, org: true, params: threadParams },
-    )
+    .post("/:id/cancel", ({ params }) => ({ cancelled: runs.cancel(params.id) }), {
+      thread: "own",
+      params: threadParams,
+    })
     // Server-sent events: a snapshot first, then live run events. Closing the connection never
     // affects a running agent.
     .get(
       "/:id/events",
-      async function* ({ params, organizationId, request }) {
-        const thread = await threadsService.require(organizationId, params.id);
+      async function* ({ params, organizationId, user, request }) {
+        const thread = await threadsService.readable(
+          { organizationId, userId: user.id },
+          params.id,
+        );
         for await (const event of runs.events(thread, request.signal)) {
           yield event ? sse({ data: event }) : sse({ event: "ping", data: "" });
         }
       },
-      { auth: true, org: true, params: threadParams },
+      { thread: "read", params: threadParams },
     );

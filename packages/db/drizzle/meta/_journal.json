@@ -253,6 +253,13 @@
       "when": 1793499256804,
       "tag": "0035_parched_pandemic",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793592744425,
+      "tag": "0036_thick_azazel",
+      "breakpoints": true
     }
   ]
 }

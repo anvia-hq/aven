@@ -15,10 +15,14 @@ export const updateThreadBody = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
     state: z.enum(["open", "snoozed", "archived"]).optional(),
+    visibility: z.enum(["private", "workspace"]).optional(),
   })
-  .refine((body) => body.title !== undefined || body.state !== undefined, {
-    message: "Nothing to update",
-  });
+  .refine(
+    (body) => body.title !== undefined || body.state !== undefined || body.visibility !== undefined,
+    {
+      message: "Nothing to update",
+    },
+  );
 
 // Optional per-message choice; without it the sender's default provider runs.
 const modelSelection = {

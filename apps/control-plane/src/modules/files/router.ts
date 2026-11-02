@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { authRouter } from "../auth/router";
+import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadParams } from "../threads/schema";
 import { filesQuery, searchQuery } from "./schema";
@@ -10,10 +10,10 @@ import { createFilesService } from "./service";
 // find (decision 0036). Nothing is written.
 export const filesRouter = (hub: RuntimeHub) => {
   const service = createFilesService(hub);
-  const options = { auth: true, org: true, params: threadParams, query: filesQuery } as const;
-  const search = { auth: true, org: true, params: threadParams, query: searchQuery } as const;
+  const options = { thread: "read", params: threadParams, query: filesQuery } as const;
+  const search = { thread: "read", params: threadParams, query: searchQuery } as const;
   return new Elysia({ prefix: "/threads" })
-    .use(authRouter)
+    .use(threadAccess)
     .get(
       "/:id/files",
       ({ params, query, organizationId }) => service.list(organizationId, params.id, query.path),

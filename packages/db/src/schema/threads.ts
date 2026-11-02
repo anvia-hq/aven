@@ -31,6 +31,13 @@ export const threads = pgTable(
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
+    /**
+     * Who may see the thread: only its creator (`private`), or every member of its organization,
+     * read-only (`workspace`; decision 0084).
+     */
+    visibility: text("visibility", { enum: ["private", "workspace"] })
+      .notNull()
+      .default("private"),
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),

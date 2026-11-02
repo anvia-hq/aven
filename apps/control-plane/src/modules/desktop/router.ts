@@ -2,10 +2,9 @@ import { Elysia } from "elysia";
 
 import { bytesOf } from "../../bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
-import { authRouter } from "../auth/router";
+import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { ViewerHandle } from "../runtimes/viewer-streams";
-import { threadsService } from "../threads/service";
 import { threadParams } from "../threads/schema";
 import { runnerFor } from "../runtimes/ask-runner";
 import { createDesktopService } from "./service";
@@ -19,39 +18,36 @@ export const desktopRouter = (hub: RuntimeHub) => {
   const service = createDesktopService(runnerFor(hub), { what: "The thread's sandbox" });
   const viewers = bridgeToRunner<ViewerHandle>("The viewer is too slow");
   return new Elysia({ prefix: "/threads" })
-    .use(authRouter)
+    .use(threadAccess)
     .get(
       "/:id/desktop",
       ({ params, organizationId, user }) => service.status(organizationId, user.id, params.id),
       {
-        auth: true,
-        org: true,
+        thread: "own",
         params: threadParams,
       },
     )
     .post(
       "/:id/desktop/wake",
       ({ params, organizationId, user }) => service.wake(organizationId, user.id, params.id),
-      { auth: true, org: true, params: threadParams },
+      { thread: "own", params: threadParams },
     )
     .post(
       "/:id/desktop/takeover",
       ({ params, organizationId, user }) => service.takeover(organizationId, user.id, params.id),
-      { auth: true, org: true, params: threadParams },
+      { thread: "own", params: threadParams },
     )
     .post(
       "/:id/desktop/release",
       ({ params, organizationId, user }) => service.release(organizationId, user.id, params.id),
-      { auth: true, org: true, params: threadParams },
+      { thread: "own", params: threadParams },
     )
     .ws("/:id/desktop/stream", {
-      auth: true,
-      org: true,
+      thread: "own",
       params: threadParams,
-      async beforeHandle({ request, set, status, organizationId, params }) {
+      // `thread` has already found it, before any socket is upgraded.
+      beforeHandle({ request, set, status }) {
         if (!originAllowed(request)) return status(403, "Forbidden origin");
-        // A thread of another organization is not found before any socket is upgraded.
-        await threadsService.require(organizationId, params.id);
         const offered = request.headers.get("sec-websocket-protocol") ?? "";
         if (offered.split(",").some((protocol) => protocol.trim() === VIEWER_SUBPROTOCOL)) {
           set.headers["sec-websocket-protocol"] = VIEWER_SUBPROTOCOL;

@@ -11,10 +11,10 @@ export function createTerminalService(hub: RuntimeHub) {
 
   return {
     // The shell sees what the latest run was given: its sender's GitHub account and personal
-    // variables. Only that person gets in; before any run, the thread's creator. A thread of
-    // another organization is not found.
+    // variables. Only that person gets in, and only a thread's creator can send a run (decision
+    // 0084), so this is the creator, unless a run was sent as someone else before then.
     async requireShell(organizationId: string, userId: string, threadId: string) {
-      const thread = await threadsService.require(organizationId, threadId);
+      const thread = await threadsService.owned({ organizationId, userId }, threadId);
       if ((thread.lastRunBy ?? thread.createdBy) !== userId) {
         throw new ForbiddenError("Only the person the thread last ran as has its terminal");
       }
