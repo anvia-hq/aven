@@ -1,0 +1,94 @@
+import { Agent } from "@anvia/core";
+import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
+import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
+import type { RunEvent } from "@aven/protocol/events";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import * as z from "zod/v4";
+
+import { DurableRuns } from "./durable-runs";
+import { connectMcpServers, mcpPrefix, type McpServerConfig } from "./mcp-servers";
+import { journalPath } from "./testing/journal-path";
+
+// A real MCP server over HTTP, which writes down what it was sent.
+const seen: { authorization: string | null; note: string }[] = [];
+const handler = createMcpHandler(({ requestInfo }) => {
+  const server = new McpServer({ name: "notes", version: "1.0.0" });
+  server.registerTool(
+    "add-note",
+    { description: "Save a note", inputSchema: z.object({ text: z.string() }) },
+    async ({ text: note }) => {
+      seen.push({ authorization: requestInfo?.headers.get("authorization") ?? null, note });
+      return { content: [{ type: "text", text: `Saved: ${note}` }] };
+    },
+  );
+  return server;
+});
+// `fetch` takes an options argument that Bun's own `fetch` calls with its server instead.
+const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
+afterAll(() => http.stop(true));
+
+const notes = (changes: Partial<McpServerConfig> = {}): McpServerConfig => ({
+  name: "Team Notes",
+  url: `http://localhost:${http.port}/`,
+  headers: { authorization: "Bearer secret-token" },
+  allowLocal: true,
+  ...changes,
+});
+
+describe("connectMcpServers", () => {
+  const open: { close(): Promise<void> }[] = [];
+  afterEach(async () => {
+    for (const item of open.splice(0)) await item.close();
+  });
+
+  test("names the tools after the server and sends the headers", async () => {
+    const connected = await connectMcpServers([notes()]);
+    open.push(connected);
+    expect(connected.failed).toEqual([]);
+    expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
+    expect(connected.servers.map((server) => server.name)).toEqual(["Team Notes"]);
+    expect(mcpPrefix("Team Notes")).toBe("team_notes_");
+  });
+
+  test("a server that is down is reported and the others still connect", async () => {
+    const connected = await connectMcpServers([
+      notes(),
+      notes({ name: "Gone", url: "http://localhost:1/" }),
+    ]);
+    open.push(connected);
+    expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
+    expect(connected.failed.map((failure) => failure.name)).toEqual(["Gone"]);
+    expect(connected.failed[0]?.reason).not.toBe("");
+  });
+
+  test("a server on this machine is refused unless the person allowed it", async () => {
+    const connected = await connectMcpServers([notes({ allowLocal: false })]);
+    open.push(connected);
+    expect(connected.tools).toEqual([]);
+    expect(connected.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
+  });
+
+  test("a durable run calls the server's tool, as a plain local tool of the agent", async () => {
+    const connected = await connectMcpServers([notes()]);
+    open.push(connected);
+    const runs = await DurableRuns.open(journalPath());
+    open.push(runs);
+    const agent = new Agent({
+      id: "run-1",
+      instructions: "x",
+      tools: connected.tools,
+      model: scriptedModel([
+        [toolCall("team_notes_add-note", { text: "ship friday" })],
+        [text("Saved it.")],
+      ]),
+    });
+    const events: RunEvent[] = [];
+    const run = await runs.start("run-1", "thread-1", "note it", { agent }, (event) =>
+      events.push(event),
+    );
+    expect(await run.done).toMatchObject({ type: "response" });
+    expect(seen.at(-1)).toEqual({ authorization: "Bearer secret-token", note: "ship friday" });
+    expect(events).toContainEqual({ type: "text", delta: "Saved it." });
+    expect(JSON.stringify(events)).toContain("Saved: ship friday");
+  });
+});
