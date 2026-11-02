@@ -1,5 +1,5 @@
 import type { ModelConfig } from "@aven/agents/model";
-import type { MessageMention, RunEvent } from "@aven/protocol/events";
+import type { MessageMention, QueuedSteer, RunEvent } from "@aven/protocol/events";
 import type { RunIdentity } from "../workload-identity/grants";
 import type {
   RunAttachment,
@@ -8,6 +8,7 @@ import type {
   RunOutcome,
   RunSkill,
   RunMcpServer,
+  SteerResult,
 } from "@aven/protocol/runtime-wire";
 
 /** What a run needs to know about its thread. The workspace is the runner's own business. */
@@ -72,6 +73,11 @@ export type RuntimeRun = {
   /** How the run ended. */
   result: Promise<RunResult>;
   cancel(reason: string): void;
+  /**
+   * Hands the run a message from the person, for the agent to take at its next safe step; the
+   * runner's `steer_applied` event says when it has (decision 0098). Rejects when the runner cannot be asked.
+   */
+  steer(message: QueuedSteer): Promise<SteerResult>;
 };
 
 export interface Runtime {

@@ -19,6 +19,7 @@ function liveRun() {
     },
     result: done.promise,
     cancel: () => undefined,
+    steer: async () => ({ status: "closed" as const }),
   };
   return { handle, finish: () => done.resolve({ type: "response" }) };
 }
@@ -73,6 +74,83 @@ describe("starting a run", () => {
     expect(manager.cancel(thread.id)).toBe(true);
     expect(cancelled).toBe("Cancelled by user");
     expect(manager.cancel(newThread().id)).toBe(false);
+  });
+});
+
+describe("steering a run (decision 0098)", () => {
+  const message = { id: "steer-1", prompt: "also this", mentions: [] };
+  const heard = (manager: RunManager, thread: RunThread) => {
+    const events: RunEvent[] = [];
+    const controller = new AbortController();
+    void (async () => {
+      for await (const event of manager.events(thread, controller.signal)) {
+        if (event) events.push(event);
+      }
+    })();
+    return { events, stop: () => controller.abort() };
+  };
+
+  test("an agent that is finishing takes no more: the message is for a run of its own, once this one is over", async () => {
+    const { handle, finish } = liveRun();
+    handle.steer = async () => ({ status: "closed" });
+    const manager = managerRunning(handle);
+    const thread = newThread();
+    const listener = heard(manager, thread);
+    await manager.start(thread, "one");
+
+    let outcome: string | undefined;
+    const steering = manager.steer(thread, message).then((result) => (outcome = result));
+    await Bun.sleep(30);
+    // It waits for the run to be over, so the caller can start the next without being refused.
+    expect(outcome).toBeUndefined();
+    finish();
+    await steering;
+
+    expect(outcome).toBe("ended");
+    expect(manager.isRunning(thread.id)).toBe(false);
+    listener.stop();
+    const steers = listener.events.filter((event) => event.type.startsWith("steer"));
+    expect(steers).toEqual([
+      { type: "steer_queued", ...message },
+      { type: "steer_rejected", id: "steer-1", reason: undefined },
+    ]);
+  });
+
+  test("a runner that cannot be asked is unavailable, and nothing is left waiting", async () => {
+    const { handle } = liveRun();
+    handle.steer = async () => {
+      throw new Error("The runtime did not answer run.steer");
+    };
+    const manager = managerRunning(handle);
+    const thread = newThread();
+    const listener = heard(manager, thread);
+    await manager.start(thread, "one");
+    const silenced = console.warn;
+    console.warn = () => undefined;
+    try {
+      await expect(manager.steer(thread, message)).rejects.toBeInstanceOf(UnavailableError);
+    } finally {
+      console.warn = silenced;
+    }
+    listener.stop();
+    expect(listener.events.map((event) => event.type)).toContain("steer_rejected");
+    expect(manager.isRunning(thread.id)).toBe(true);
+  });
+
+  test("a runner that says the agent took a message the control plane does not know of changes nothing", async () => {
+    const { handle, finish } = liveRun();
+    handle.events = (async function* () {
+      yield { type: "steer_applied", id: "unknown" } as RunEvent;
+    })();
+    const manager = managerRunning(handle);
+    const thread = newThread();
+    const listener = heard(manager, thread);
+    await manager.start(thread, "one");
+    finish();
+    await Bun.sleep(30);
+    listener.stop();
+    expect(listener.events.map((event) => event.type)).not.toContain("steer");
+    expect(listener.events.map((event) => event.type)).not.toContain("steer_applied");
   });
 });
 

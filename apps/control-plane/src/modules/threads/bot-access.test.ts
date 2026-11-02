@@ -66,6 +66,7 @@ run("a bot's threads (postgres)", async () => {
         if (failSend) throw failSend;
         sent.push({ org, userId: user, thread, body });
         running.add(thread);
+        return { steered: false };
       },
     },
   });

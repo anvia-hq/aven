@@ -6,6 +6,7 @@ import {
   applyEvent,
   applyUsage,
   type ChatMessage,
+  type QueuedSteer,
   type QuestionAnswer,
   type RunEvent,
   type ThreadUsage,
@@ -28,6 +29,10 @@ type ActiveRun = {
   startedAt: number;
   /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
+  /** What the person said during the run that the agent has not taken yet (decision 0098), by id. */
+  steers: Map<string, QueuedSteer>;
+  /** Settles once the run is over and the thread has no run any more. */
+  finished: PromiseWithResolvers<void>;
 };
 
 type Channel = {
@@ -180,6 +185,8 @@ export class RunManager {
       cancelled: false,
       startedAt: Date.now(),
       ready: Promise.resolve(),
+      steers: new Map(),
+      finished: Promise.withResolvers<void>(),
     };
     channel.run = run;
     const loaded = prepare()
@@ -208,6 +215,38 @@ export class RunManager {
     run.cancelled = true;
     run.handle.cancel("Cancelled by user");
     return true;
+  }
+
+  /**
+   * Hands the run a message the person sent while it works (decision 0098). It is `queued` once the
+   * runner has it, and the agent takes it at its next safe step: `steer` follows in the events,
+   * which every client shows the same way. `ended` when there is no run to take it, or it was
+   * finishing and has now ended, which is for the caller to send as a message of its own. Throws
+   * when the runner refuses it or cannot be asked; clients first hear it as `steer_queued` and
+   * then as `steer_rejected`, so what they showed of it goes away.
+   */
+  async steer(thread: RunThread, message: QueuedSteer): Promise<"queued" | "ended"> {
+    const channel = this.#channels.get(thread.id);
+    const run = channel?.run;
+    if (!channel || !run) return "ended";
+    // Before the runner is asked, so that its word that the agent took it, which can come before
+    // its answer, finds the message.
+    run.steers.set(message.id, message);
+    this.#emit(channel, { type: "steer_queued", ...message });
+    let result: Awaited<ReturnType<RuntimeRun["steer"]>>;
+    try {
+      result = await run.handle.steer(message);
+    } catch (error) {
+      this.#reject(channel, run, message.id);
+      console.warn(`Could not hand a message to the run of thread ${thread.id}:`, error);
+      throw new UnavailableError("The runner could not be reached; try again shortly");
+    }
+    if (result.status === "queued") return "queued";
+    this.#reject(channel, run, message.id);
+    if (result.status === "refused") throw new ConflictError(result.reason);
+    // The agent is finishing: its run is over in a moment, and the message starts the next.
+    await run.finished.promise;
+    return "ended";
   }
 
   // Attaches a client: yields a snapshot, then live events, with `null` as a keep-alive tick.
@@ -286,6 +325,7 @@ export class RunManager {
           running: true,
           usage: run.usage,
           runningMs: Date.now() - run.startedAt,
+          steers: [...run.steers.values()],
         };
       }
       const history = await this.#store.load({ scope: this.#scope(channel.thread) });
@@ -309,7 +349,11 @@ export class RunManager {
   async #consume(channel: Channel, run: ActiveRun) {
     let failure: string | undefined;
     try {
-      for await (const event of run.handle.events) this.#emit(channel, event);
+      for await (const event of run.handle.events) {
+        // A runner says the agent took a message by its id; the words are ours.
+        if (event.type === "steer_applied") this.#apply(channel, run, event.id);
+        else this.#emit(channel, event);
+      }
       const outcome = await run.handle.result;
       if (outcome.type === "interaction") await this.#suspend(channel.thread, outcome.continuation);
       else if (outcome.type !== "response") {
@@ -336,9 +380,29 @@ export class RunManager {
     await this.#continuations.save(thread.id, saved);
   }
 
+  // The agent took a message the person sent while it worked: it is their next message.
+  #apply(channel: Channel, run: ActiveRun, id: string) {
+    const message = run.steers.get(id);
+    if (!message) return;
+    run.steers.delete(id);
+    this.#emit(channel, { type: "steer", ...message });
+  }
+
+  // A message the agent will not take: clients stop showing it as waiting. A `reason` is for the
+  // person; without one they have been told another way, or it is sent as a message of its own.
+  #reject(channel: Channel, run: ActiveRun, id: string, reason?: string) {
+    if (!run.steers.delete(id)) return;
+    this.#emit(channel, { type: "steer_rejected", id, reason });
+  }
+
   #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
+    // Whatever the agent never took was not delivered; the person is told, with what they said.
+    for (const id of run.steers.keys()) {
+      this.#reject(channel, run, id, "The run ended before the agent read it");
+    }
     this.#emit(channel, event);
     if (channel.run === run) channel.run = undefined;
+    run.finished.resolve();
     Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });

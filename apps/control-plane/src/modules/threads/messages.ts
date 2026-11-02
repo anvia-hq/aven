@@ -68,8 +68,9 @@ async function requireLiveProject(organizationId: string, projectId: string) {
 // run on the model the sender chose, or else their default provider (null falls back to the
 // environment's shared one), with the sender's skills, acting as their GitHub account, and with the project's
 // environment variables. The runs are given, so `threads` does not depend on how they are made.
-export const createThreadMessages = (runs: RunManager) => ({
-  async send(
+export const createThreadMessages = (runs: RunManager) => {
+  // A message that starts a run of its own: refused while one is going.
+  async function start(
     organizationId: string,
     userId: string,
     threadId: string,
@@ -85,50 +86,90 @@ export const createThreadMessages = (runs: RunManager) => ({
     const sender = await senderExtras(userId);
     const scoped = await threadExtras(organizationId, thread, userId);
     await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
-  },
+  }
 
-  // Summarizes the thread's history, as a run of its own that needs no sandbox and no tools
-  // (decision 0097). The person's prompt is `/compact`, which the thread shows, and the agent's
-  // reply says whether anything was summarized.
-  async compact(
+  // A message to an agent that is working, for it to take at its next step (decision 0098). True
+  // once the runner has it; false when the run ended first, as the agent was finishing, and the
+  // message is then one of its own. Files are not taken: they are copied into the sandbox as a run
+  // starts.
+  async function steer(
     organizationId: string,
     userId: string,
     threadId: string,
-    selection: CompactBody = {},
+    { prompt, steerId, attachments = [], mentions = [] }: SendMessageBody,
   ) {
     const thread = await threadsService.owned({ organizationId, userId }, threadId);
     await requireLiveProject(organizationId, thread.projectId);
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
-    const model = await resolveModel(userId, selection);
-    await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
-  },
+    if (attachments.length > 0) {
+      throw new ConflictError("Files can be sent when the agent is not working");
+    }
+    if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
+    const message = { id: steerId ?? crypto.randomUUID(), prompt, mentions };
+    return (await runs.steer(thread, message)) === "queued";
+  }
 
-  async answer(
-    organizationId: string,
-    userId: string,
-    threadId: string,
-    { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
-  ) {
-    const thread = await threadsService.owned({ organizationId, userId }, threadId);
-    await requireLiveProject(organizationId, thread.projectId);
-    const continuation = await threadsService.continuation(thread.id);
-    if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
-    const model = await resolveModel(userId, selection);
-    const sender = await senderExtras(userId);
-    // A request for a secret is stored here and the agent told only that it was (decision 0047),
-    // before the run's variables are read, so the run that resumes has it.
-    const kept = await keepSecretAnswers({
-      organizationId,
-      userId,
-      projectId: thread.projectId,
-      continuation,
-      answers,
-      scope: secretScope,
-      skip: skipSecrets,
-    });
-    const scoped = await threadExtras(organizationId, thread, userId);
-    await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
-  },
-});
+  return {
+    start,
+
+    // What a person says in a thread: to an agent that is working it is a steering message, and
+    // otherwise it starts a run. Says which it was.
+    async send(
+      organizationId: string,
+      userId: string,
+      threadId: string,
+      body: SendMessageBody,
+    ): Promise<{ steered: boolean }> {
+      if (runs.isRunning(threadId) && (await steer(organizationId, userId, threadId, body))) {
+        return { steered: true };
+      }
+      await start(organizationId, userId, threadId, body);
+      return { steered: false };
+    },
+
+    // Summarizes the thread's history, as a run of its own that needs no sandbox and no tools
+    // (decision 0097). The person's prompt is `/compact`, which the thread shows, and the agent's
+    // reply says whether anything was summarized.
+    async compact(
+      organizationId: string,
+      userId: string,
+      threadId: string,
+      selection: CompactBody = {},
+    ) {
+      const thread = await threadsService.owned({ organizationId, userId }, threadId);
+      await requireLiveProject(organizationId, thread.projectId);
+      if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+      const model = await resolveModel(userId, selection);
+      await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
+    },
+
+    async answer(
+      organizationId: string,
+      userId: string,
+      threadId: string,
+      { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
+    ) {
+      const thread = await threadsService.owned({ organizationId, userId }, threadId);
+      await requireLiveProject(organizationId, thread.projectId);
+      const continuation = await threadsService.continuation(thread.id);
+      if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
+      const model = await resolveModel(userId, selection);
+      const sender = await senderExtras(userId);
+      // A request for a secret is stored here and the agent told only that it was (decision 0047),
+      // before the run's variables are read, so the run that resumes has it.
+      const kept = await keepSecretAnswers({
+        organizationId,
+        userId,
+        projectId: thread.projectId,
+        continuation,
+        answers,
+        scope: secretScope,
+        skip: skipSecrets,
+      });
+      const scoped = await threadExtras(organizationId, thread, userId);
+      await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
+    },
+  };
+};
 
 export type ThreadMessages = ReturnType<typeof createThreadMessages>;

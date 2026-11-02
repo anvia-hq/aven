@@ -308,9 +308,14 @@ run("projectsService (postgres)", async () => {
     ).toEqual([]);
     // Nobody drives a thread of a deleted project, and its repository is no longer cloned for it.
     await expect(
-      createThreadMessages({ start: async () => {} } as never).send(orgA, userId, open!.id, {
-        prompt: "hello",
-      }),
+      createThreadMessages({ isRunning: () => false, start: async () => {} } as never).send(
+        orgA,
+        userId,
+        open!.id,
+        {
+          prompt: "hello",
+        },
+      ),
     ).rejects.toBeInstanceOf(ConflictError);
     await expect(projectsService.repoAccess(open!.id)).rejects.toThrow("project was deleted");
     // And it stays archived: reopening it is refused, archiving it again is not.

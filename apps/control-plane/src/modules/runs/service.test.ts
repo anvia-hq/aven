@@ -9,7 +9,7 @@ import {
   type ScriptStep,
 } from "@aven/agents/testing/scripted-model";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import type { RunEvent } from "@aven/protocol/events";
+import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
 
 import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
@@ -373,5 +373,103 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     // This is what the API answers with 503; any other error is not.
     await expect(manager.start(offline, "hi")).rejects.toBeInstanceOf(UnavailableError);
     expect(await manager.history(offline)).toEqual([]);
+  });
+
+  // What the person says while the agent works (decision 0098): it is queued, the agent takes it at
+  // its next step, and every client shows it the same way, live and after a reload.
+  describe("a message sent while the agent works", () => {
+    const message = (id: string, prompt = "use the other one") => ({ id, prompt, mentions: [] });
+
+    test("is queued, taken at the next step and kept in the transcript where it was taken", async () => {
+      const manager = await managerWith([
+        [toolCall("exec_command", { command: "sleep 0.6; echo slow" }, "c1")],
+        [text("Switched.")],
+      ]);
+      const thread = newThread();
+      const client = attach(manager, thread);
+      await until(() => client.events.length > 0);
+      await manager.start(thread, "build it");
+      await until(() => client.events.some((event) => event.type === "tool_start"));
+
+      expect(await manager.steer(thread, message("steer-1"))).toBe("queued");
+      // A client that attaches now is told what is waiting.
+      const late = attach(manager, thread);
+      await until(() => late.events.length > 0);
+      await late.detach();
+      expect(late.events[0]).toMatchObject({
+        type: "snapshot",
+        steers: [{ id: "steer-1", prompt: "use the other one" }],
+      });
+
+      await until(() => client.events.some((event) => event.type === "done"));
+      await client.detach();
+      const types = client.events.map((event) => event.type);
+      expect(types.filter((type) => type.startsWith("steer"))).toEqual(["steer_queued", "steer"]);
+      // The runner's own word is not passed on: clients get the message with its words.
+      expect(types).not.toContain("steer_applied");
+      expect(client.events.find((event) => event.type === "steer")).toMatchObject({
+        id: "steer-1",
+        prompt: "use the other one",
+      });
+
+      // The transcript as the live events built it is what a reload reads back.
+      const live = client.events.reduce(
+        (messages, event) => applyEvent(messages, event),
+        [] as ChatMessage[],
+      );
+      const history = await manager.history(thread);
+      expect(history.map((entry) => entry.role)).toEqual([
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+      ]);
+      expect(history).toEqual(live);
+      await until(() => finished > 0);
+    });
+
+    test("is refused, and shown as such, for a run that only compacts", async () => {
+      const manager = await managerWith([[text("Nothing to summarize.")]]);
+      const thread = newThread();
+      const client = attach(manager, thread);
+      await until(() => client.events.length > 0);
+      await manager.start(thread, "/compact", undefined, { compact: true });
+      await expect(manager.steer(thread, message("steer-2"))).rejects.toThrow("compacted");
+      await until(() => client.events.some((event) => event.type === "done"));
+      await client.detach();
+      const types = client.events.map((event) => event.type);
+      expect(types.filter((type) => type.startsWith("steer"))).toEqual([
+        "steer_queued",
+        "steer_rejected",
+      ]);
+    });
+
+    test("that the agent never took is said not to be delivered when the run is stopped", async () => {
+      const manager = await managerWith([
+        [toolCall("exec_command", { command: "sleep 41" }, "c1")],
+      ]);
+      const thread = newThread();
+      const client = attach(manager, thread);
+      await until(() => client.events.length > 0);
+      await manager.start(thread, "wait");
+      await until(() => client.events.some((event) => event.type === "tool_start"));
+      expect(await manager.steer(thread, message("steer-3"))).toBe("queued");
+
+      manager.cancel(thread.id);
+      await until(() => client.events.some((event) => event.type === "done"));
+      await client.detach();
+      expect(client.events.find((event) => event.type === "steer_rejected")).toMatchObject({
+        id: "steer-3",
+        reason: expect.stringContaining("ended"),
+      });
+      // The run is over, and so is the thread's wait: nothing is left pending.
+      expect(manager.isRunning(thread.id)).toBe(false);
+      await Bun.$`pkill -f ${"sleep 41"}`.nothrow().quiet();
+    });
+
+    test("has nowhere to go when the thread has no run", async () => {
+      const manager = await managerWith([]);
+      expect(await manager.steer(newThread(), message("steer-4"))).toBe("ended");
+    });
   });
 });

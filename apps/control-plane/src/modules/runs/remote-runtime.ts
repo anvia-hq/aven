@@ -8,6 +8,7 @@ import type {
   RunMcpServer,
 } from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
+import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
@@ -21,6 +22,17 @@ import type {
   RuntimeRun,
   StartRunInput,
 } from "./runtime";
+
+// How long a runner has to say whether it took a message sent to a run: it is a call to a process
+// that answers at once, so a runner that does not is as good as gone.
+const STEER_TIMEOUT_MS = 10_000;
+
+// What a runner answers to `run.steer` (decision 0098); anything else is as good as offline.
+const steerResult = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("queued") }),
+  z.object({ status: z.literal("closed") }),
+  z.object({ status: z.literal("refused"), reason: z.string().max(500) }),
+]);
 
 // A minimal async queue: `events` for a run is fed by the connection and consumed by RunManager.
 class EventQueue implements AsyncIterable<RunEvent> {
@@ -164,6 +176,14 @@ export class RemoteRuntime implements Runtime {
       events: queue,
       result: result.promise,
       cancel: (reason) => this.hub.cancelRun(thread.runtimeId, runId, reason),
+      steer: async ({ id, prompt, mentions }) =>
+        steerResult.parse(
+          await connection.call(
+            "run.steer",
+            { runId, steerId: id, prompt, mentions },
+            STEER_TIMEOUT_MS,
+          ),
+        ),
     };
   }
 

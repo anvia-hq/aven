@@ -61,7 +61,7 @@ export const threadMessages = createThreadMessages(runsService);
 // platform's routes use, so a thread a bot starts is an ordinary one.
 const botThreads = createBotThreads({ runs: runsService, messages: threadMessages });
 
-export const shipService = createShipService(runtimeHub, { send: threadMessages.send });
+export const shipService = createShipService(runtimeHub, { send: threadMessages.start });
 
 // Every bot's computer is on one runner: the control plane's own, which every person has, or the one
 // `AVEN_BOT_RUNNER` names for a deployment that has turned its own off (decision 0059).

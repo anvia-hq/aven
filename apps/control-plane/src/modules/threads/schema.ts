@@ -70,6 +70,14 @@ function mentionRange() {
 export const sendMessageBody = z
   .object({
     prompt: z.string().trim().max(20_000),
+    // Names the message if it is steered into a run that is going (decision 0098), so the client
+    // that sent it can tell its own message, which it already shows, from the events about it.
+    steerId: z
+      .string()
+      .min(8)
+      .max(64)
+      .regex(/^[\w-]+$/)
+      .optional(),
     attachments: z.array(attachmentBody).max(ATTACHMENT_LIMITS.count).optional(),
     mentions: z.array(mention).max(MENTION_LIMIT).optional(),
     ...modelSelection,

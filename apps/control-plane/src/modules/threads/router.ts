@@ -58,8 +58,8 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
     .post(
       "/:id/messages",
       async ({ params, body, organizationId, user }) => {
-        await messages.send(organizationId, user.id, params.id, body);
-        return status(202, { ok: true });
+        const { steered } = await messages.send(organizationId, user.id, params.id, body);
+        return status(202, { ok: true, steered });
       },
       { thread: "own", params: threadParams, body: sendMessageBody },
     )
