@@ -14,6 +14,7 @@ run("createBotChats (postgres)", async () => {
   const { BOT_MAX_HOPS } = await import("@aven/protocol/bots");
   const { botMemoryStore } = await import("../../memory-store");
   const { providers } = await import("@aven/db/schema/providers");
+  const { encryptSecret } = await import("../../crypto");
   const { modelCatalog } = await import("../providers/model-catalog");
   const { InvalidSelectionError } = await import("../providers/resolve-model");
   const { createBotChats } = await import("./chats");
@@ -563,7 +564,13 @@ run("createBotChats (postgres)", async () => {
     const [mine] = await botsService.list(alice);
     const [openai] = await db
       .insert(providers)
-      .values({ userId: alice, kind: "openai", name: "OpenAI", modelId: "gpt-5" })
+      .values({
+        userId: alice,
+        kind: "openai",
+        name: "OpenAI",
+        modelId: "gpt-5",
+        apiKeyEncrypted: encryptSecret("sk-test"),
+      })
       .returning();
     await botsService.update(alice, mine!.id, {
       providerId: openai!.id,

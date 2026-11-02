@@ -1,5 +1,7 @@
 import type { ModelConfig, Provider } from "@aven/agents/model";
 
+import { providerNeedsKey } from "@aven/protocol/providers";
+
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
@@ -46,6 +48,12 @@ export async function resolveModel(
 ): Promise<ModelConfig | null> {
   const row = await providersService.forRun(userId, selection.providerId);
   if (!row) return noProvider(selection);
+  // A provider a bot made waits for its key, which the person types into a card (decision 0086).
+  if (providerNeedsKey(row.kind) && !row.apiKeyEncrypted) {
+    throw new InvalidSelectionError(
+      `${row.name} has no API key yet; add it in Settings > Providers, or ask your bot for the key card`,
+    );
+  }
   const config: ModelConfig = {
     provider: row.kind,
     modelId: selection.modelId ?? row.modelId ?? undefined,

@@ -1,4 +1,5 @@
 import type { MessageAttachment, QuestionPrompt } from "./events";
+import type { ProviderKeyAsk } from "./providers";
 
 // A bot (decision 0058): a named agent a person talks to in a chat of its own. Types and limits
 // shared by the control plane and the platform.
@@ -79,8 +80,12 @@ export type BotChatPeer = {
   direction: "to" | "from";
 };
 
-/** One question a bot asks the person (decision 0066): the thread agent's own shape. */
-export type BotQuestion = QuestionPrompt;
+/**
+ * One question a bot asks the person (decision 0066): the thread agent's own shape. One with a
+ * `providerKey` is a masked field for a provider's API key, saved to that provider and sent to no
+ * one else (decision 0086).
+ */
+export type BotQuestion = QuestionPrompt & { providerKey?: ProviderKeyAsk };
 
 /** The most questions one `ask_question` may hold, and the most choices one question may have. */
 export const BOT_QUESTIONS_MAX = 4;

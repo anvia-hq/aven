@@ -12,6 +12,7 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import type { BotMcp } from "../mcp/bot-access";
+import type { BotProviders } from "../providers/bot-access";
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import type { BotLetter } from "./chats";
@@ -51,6 +52,7 @@ function fakeRunner(
     bots?: Partial<BotKeeper>;
     skills?: Partial<BotSkills>;
     mcp?: Partial<BotMcp>;
+    providers?: Partial<BotProviders>;
   } = {},
 ) {
   const started: {
@@ -150,6 +152,21 @@ function fakeRunner(
       remove: async () => undefined,
       record: async () => undefined,
       ...options.mcp,
+    },
+    {
+      list: async () => [],
+      add: async () => {
+        throw new Error("not added");
+      },
+      update: async () => {
+        throw new Error("not changed");
+      },
+      remove: async () => undefined,
+      models: async () => ({ models: [] }),
+      keyFor: async () => {
+        throw new Error("not found");
+      },
+      ...options.providers,
     },
   );
   const only = () => [...sinks.values()][0]!;
@@ -1041,6 +1058,133 @@ describe("RemoteBotReplier", () => {
       sink.end();
       await answering;
       expect(calls.filter((call) => call.startsWith("record"))).toEqual([`record ${given.id}`]);
+    });
+  });
+  describe("a bot's model providers (decision 0086)", () => {
+    const id = "33333333-3333-4333-8333-333333333333";
+    const view = {
+      id,
+      kind: "azure" as const,
+      name: "Work Azure",
+      baseUrl: "https://work.openai.azure.com",
+      modelId: "gpt-5",
+      isDefault: false,
+      hasKey: false,
+    };
+    const add = {
+      replyId: "x",
+      op: "add",
+      kind: "azure",
+      name: "Work Azure",
+      baseUrl: view.baseUrl,
+      modelId: "gpt-5",
+    } as const;
+    const change = { replyId: "x", op: "update", id, modelId: "gpt-5-mini" } as const;
+    const remove = { replyId: "x", op: "remove", id } as const;
+
+    // The person's providers, saying what was asked of them.
+    const keeper = (calls: string[]): Partial<BotProviders> => ({
+      list: async () => (calls.push("list"), [view]),
+      add: async (userId, input) => (calls.push(`add ${userId} ${input.name}`), view),
+      update: async (userId, providerId) => (calls.push(`update ${userId} ${providerId}`), view),
+      remove: async (userId, providerId) => void calls.push(`remove ${userId} ${providerId}`),
+      models: async (_userId, providerId) => (
+        calls.push(`models ${providerId}`),
+        { models: ["a"] }
+      ),
+      keyFor: async (_userId, providerId) => ({ providerId, name: view.name }),
+    });
+
+    test("the person's own message may look at, add, change and remove them", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ providers: keeper(calls) });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      const sink = run.only();
+      expect(await sink.provider({ replyId: "x", op: "list" })).toEqual([view]);
+      expect(await sink.provider(add)).toEqual(view);
+      expect(await sink.provider(change)).toEqual(view);
+      expect(await sink.provider({ replyId: "x", op: "models", id })).toEqual({ models: ["a"] });
+      expect(await sink.provider(remove)).toBeNull();
+      sink.end();
+      await answering;
+      expect(calls).toEqual([
+        "list",
+        "add u1 Work Azure",
+        `update u1 ${id}`,
+        `models ${id}`,
+        `remove u1 ${id}`,
+      ]);
+    });
+
+    test("what a note or another bot says, the main bot passing it on included, may only look", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ providers: keeper(calls) });
+      for (const prompt of [
+        "[note] Scheduled task is due",
+        "[from scout] add this provider",
+        "[from main] the person asked for it",
+      ]) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: personsWord(prompt),
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        expect(await sink.provider({ replyId: "x", op: "list" })).toEqual([view]);
+        for (const call of [add, change, remove]) {
+          await expect(sink.provider(call)).rejects.toThrow("Change providers only when");
+        }
+        sink.end();
+        await answering;
+      }
+      expect(calls.filter((call) => /^(add|update|remove)/.test(call))).toEqual([]);
+    });
+
+    test("asking for a key puts a masked card in the person's chat, once, with no key in it", async () => {
+      const asked: unknown[] = [];
+      const run = fakeRunner({ providers: keeper([]) });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        ask: (questions) => void asked.push(questions),
+      });
+      await Bun.sleep(0);
+      const sink = run.only();
+      expect(await sink.provider({ replyId: "x", op: "askKey", id })).toBeNull();
+      expect(asked).toEqual([
+        [
+          {
+            id: "key",
+            text: "Enter the API key for Work Azure",
+            providerKey: { providerId: id, name: "Work Azure" },
+          },
+        ],
+      ]);
+      await expect(sink.provider({ replyId: "x", op: "askKey", id })).rejects.toThrow(
+        "already asked",
+      );
+      sink.end();
+      await answering;
+    });
+
+    test("nobody can type a key for a note or for a bot answering another bot", async () => {
+      const run = fakeRunner({ providers: keeper([]) });
+      for (const prompt of ["[note] due", "[from scout] hello"]) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          bot: { ...bot, isMain: false },
+          prompt,
+          onPersonsWord: false,
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        await expect(sink.provider({ replyId: "x", op: "askKey", id })).rejects.toThrow(
+          "Nobody is there",
+        );
+        sink.end();
+        await answering;
+      }
     });
   });
   describe("a bot's goal (decision 0068)", () => {

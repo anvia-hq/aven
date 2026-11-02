@@ -25,16 +25,19 @@ import {
   type BotSendParams,
   type BotCreateParams,
   type BotMcpParams,
+  type BotProviderParams,
   type BotMemoryParams,
   type BotSkillParams,
   type BotUpdateParams,
   type CallMethod,
+  PROVIDERS,
   type RunOutcome,
   type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "../mcp/schema";
+import { providerBaseUrl, providerModelId, providerName } from "../providers/schema";
 
 // A runtime is not trusted, so every frame it sends is checked before anything acts on it.
 // `@aven/protocol` has the types and no runtime imports; the checking lives here.
@@ -63,6 +66,7 @@ const callMethods = [
   "bot.goal",
   "bot.skill",
   "bot.mcp",
+  "bot.provider",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -392,6 +396,33 @@ const botMcpParams = z.discriminatedUnion("op", [
   }),
 ]);
 
+// A bot's look at the person's providers, or its change to one (decision 0086): shaped here, and
+// held to each kind's own rules by the providers. There is no key in any of it.
+const botProviderParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("list") }),
+  z.object({
+    replyId,
+    op: z.literal("add"),
+    kind: z.enum(PROVIDERS),
+    name: providerName,
+    baseUrl: z.string().max(500).optional(),
+    modelId: providerModelId.optional(),
+    isDefault: z.boolean().optional(),
+  }),
+  z.object({
+    replyId,
+    op: z.literal("update"),
+    id: z.uuid(),
+    name: providerName.optional(),
+    baseUrl: providerBaseUrl.optional(),
+    modelId: providerModelId.optional(),
+    isDefault: z.literal(true).optional(),
+  }),
+  z.object({ replyId, op: z.literal("remove"), id: z.uuid() }),
+  z.object({ replyId, op: z.literal("models"), id: z.uuid() }),
+  z.object({ replyId, op: z.literal("askKey"), id: z.uuid() }),
+]);
+
 // A skill of a bot's reply, by its digest.
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
 
@@ -421,6 +452,8 @@ export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
 export const parseBotMcpParams = (params: unknown) =>
   parseParams(botMcpParams, params) as BotMcpParams;
+export const parseBotProviderParams = (params: unknown) =>
+  parseParams(botProviderParams, params) as BotProviderParams;
 export const parseBotSkillParams = (params: unknown) =>
   parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

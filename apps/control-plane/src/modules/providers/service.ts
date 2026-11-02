@@ -3,11 +3,18 @@ import { providers, type ProviderRow } from "@aven/db/schema/providers";
 import type { ModelConfig } from "@aven/agents/model";
 import { and, asc, eq } from "drizzle-orm";
 
+import { providerNeedsKey } from "@aven/protocol/providers";
+
 import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";
 import { readKey } from "./crypto";
 import { effortsByModel, listAgentModels, ModelListError, type ModelSource } from "./model-list";
-import { azureEndpoint, type CreateProviderBody, type UpdateProviderBody } from "./schema";
+import {
+  azureEndpoint,
+  type CreateProviderBody,
+  type KeylessProviderBody,
+  type UpdateProviderBody,
+} from "./schema";
 
 class InvalidProviderError extends UnprocessableError {}
 
@@ -40,6 +47,13 @@ const hint = (apiKey: string) => apiKey.slice(-4);
 const secretColumns = (apiKey: string | undefined) =>
   apiKey ? { apiKeyEncrypted: encryptSecret(apiKey), keyHint: hint(apiKey) } : {};
 
+// What an update does to the key: a new one replaces it, forgetting it clears it, else it stays.
+function keyColumns(apiKey: string | undefined, dropKey: boolean) {
+  if (apiKey) return secretColumns(apiKey);
+  if (dropKey) return { apiKeyEncrypted: null, keyHint: null };
+  return {};
+}
+
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // A user has at most one default provider; call this before making another one the default.
@@ -62,7 +76,9 @@ export const providersService = {
     return rows.map(view);
   },
 
-  async create(userId: string, body: CreateProviderBody) {
+  // A provider with no key, which a bot asks for (decision 0086), cannot run, so it is not made the
+  // default: the person gives its key first.
+  async create(userId: string, body: CreateProviderBody | KeylessProviderBody) {
     return db.transaction(async (tx) => {
       // The first provider a user adds becomes their default.
       const existing = await tx
@@ -79,7 +95,8 @@ export const providersService = {
         if (same)
           throw new InvalidProviderError("This provider is already connected; remove it first");
       }
-      const isDefault = body.isDefault ?? existing.length === 0;
+      const cannotRun = providerNeedsKey(body.kind) && !body.apiKey;
+      const isDefault = !cannotRun && (body.isDefault ?? existing.length === 0);
       if (isDefault) await clearDefault(tx, userId);
       const [row] = await tx
         .insert(providers)
@@ -97,7 +114,14 @@ export const providersService = {
     });
   },
 
-  async update(userId: string, id: string, body: UpdateProviderBody) {
+  // `dropKey` forgets the saved key: a bot that moves a provider to another address must not send the
+  // person's key there (decision 0086), so the person gives it again.
+  async update(
+    userId: string,
+    id: string,
+    body: UpdateProviderBody,
+    { dropKey = false }: { dropKey?: boolean } = {},
+  ) {
     return db.transaction(async (tx) => {
       const [current] = await tx.select().from(providers).where(ownProvider(userId, id));
       if (!current) return null;
@@ -113,7 +137,13 @@ export const providersService = {
         body.baseUrl !== undefined && current.kind === "azure"
           ? azureEndpointOf(body.baseUrl)
           : body.baseUrl;
-      if (body.isDefault === true) await clearDefault(tx, userId);
+      const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
+      if (body.isDefault === true) {
+        if (providerNeedsKey(current.kind) && !keyed) {
+          throw new InvalidProviderError("Add this provider's key before making it the default");
+        }
+        await clearDefault(tx, userId);
+      }
       const [row] = await tx
         .update(providers)
         .set({
@@ -121,7 +151,7 @@ export const providersService = {
           baseUrl,
           modelId: body.modelId,
           isDefault: body.isDefault,
-          ...secretColumns(body.apiKey),
+          ...keyColumns(body.apiKey, dropKey),
         })
         .where(ownProvider(userId, id))
         .returning();

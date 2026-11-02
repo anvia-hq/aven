@@ -5,6 +5,7 @@
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
+import type { BotProviderView } from "./providers";
 import type { BotScheduleView } from "./schedules";
 import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 
@@ -373,7 +374,8 @@ export type BotCallMethod =
   | "bot.schedule"
   | "bot.goal"
   | "bot.skill"
-  | "bot.mcp";
+  | "bot.mcp"
+  | "bot.provider";
 
 /**
  * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
@@ -434,6 +436,39 @@ export type BotMcpParams = { replyId: string } & (
 
 /** A server for `add` and `update`, all of them for `list`, nothing for `remove` and `report`. */
 export type BotMcped = BotMcpView | BotMcpView[] | null;
+
+/**
+ * A bot looks at the person's model providers, adds, changes or removes one, lists a provider's
+ * models, or asks the person for its API key (decision 0086); `replyId` names the live reply it is
+ * working on. There is no key in any of it: a bot makes a provider without one, and the person
+ * types it into a masked card that `askKey` puts in the chat. A bot that moves a provider to another
+ * address leaves it without its key.
+ */
+export type BotProviderParams = { replyId: string } & (
+  | { op: "list" }
+  | {
+      op: "add";
+      kind: Provider;
+      name: string;
+      baseUrl?: string;
+      modelId?: string;
+      isDefault?: boolean;
+    }
+  | {
+      op: "update";
+      id: string;
+      name?: string;
+      baseUrl?: string;
+      modelId?: string;
+      isDefault?: true;
+    }
+  | { op: "remove"; id: string }
+  | { op: "models"; id: string }
+  | { op: "askKey"; id: string }
+);
+
+/** A provider for `add`, `update` and `askKey`, all of them for `list`, the model ids for `models`, nothing for `remove`. */
+export type BotProvided = BotProviderView | BotProviderView[] | { models: string[] } | null;
 
 /** A skill's archive for a bot's reply (decision 0081): only one of the skills the reply was given. */
 export type BotSkillParams = { replyId: string; digest: string };
@@ -564,6 +599,7 @@ export type RuntimeCalls = {
   "bot.goal": { params: BotGoalParams; result: BotGoaled };
   "bot.skill": { params: BotSkillParams; result: SkillArchive };
   "bot.mcp": { params: BotMcpParams; result: BotMcped };
+  "bot.provider": { params: BotProviderParams; result: BotProvided };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };

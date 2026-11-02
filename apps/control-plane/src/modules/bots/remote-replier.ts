@@ -18,6 +18,8 @@ import type {
   BotSent,
   BotMcped,
   BotMcpParams,
+  BotProvided,
+  BotProviderParams,
   BotSkillParams,
   BotUpdateParams,
   RunSkill,
@@ -33,6 +35,7 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
+import type { BotProviders } from "../providers/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
 import type { NewBot } from "./service";
 
@@ -99,6 +102,7 @@ export class RemoteBotReplier implements BotReplier {
     private bots: BotKeeper,
     private skills: BotSkills,
     private mcp: BotMcp,
+    private providers: BotProviders,
   ) {}
 
   ready(model: ModelConfig) {
@@ -285,6 +289,44 @@ export class RemoteBotReplier implements BotReplier {
         }
         const { name, url, headers, target } = params;
         return this.mcp.add(userId, { name, url, headers, target });
+      },
+      // The person's model providers are theirs: any bot may look, and only their own message may
+      // add, change or remove one. A key is never in any of it: the person types it into a masked
+      // card that this puts in the chat, once a reply, as for a question (decision 0086).
+      provider: async (params: BotProviderParams): Promise<BotProvided> => {
+        if (params.op === "list") return this.providers.list(userId);
+        if (params.op === "models") return this.providers.models(userId, params.id);
+        if (params.op === "askKey") {
+          if (note || (!bot.isMain && from !== undefined)) {
+            throw new Error("Nobody is there to type a key: this was not the person's message");
+          }
+          const providerKey = await this.providers.keyFor(userId, params.id);
+          if (asked) throw new Error("You have already asked. Stop now and wait for the answer.");
+          asked = true;
+          ask([
+            {
+              id: "key",
+              text: `Enter the API key for ${providerKey.name}`,
+              providerKey,
+            },
+          ]);
+          return null;
+        }
+        if (!makesBotsOnTheirWord) {
+          throw new Error(
+            "Change providers only when the person asks you to, in their own message",
+          );
+        }
+        if (params.op === "remove") {
+          await this.providers.remove(userId, params.id);
+          return null;
+        }
+        if (params.op === "update") {
+          const { id, name, baseUrl, modelId, isDefault } = params;
+          return this.providers.update(userId, id, { name, baseUrl, modelId, isDefault });
+        }
+        const { kind, name, baseUrl, modelId, isDefault } = params;
+        return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
       },
       // The bot is the reply's, whichever bot the runner might name.
       update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {

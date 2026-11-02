@@ -10,6 +10,7 @@ run("botsService (postgres)", async () => {
   const { eq, inArray } = await import("drizzle-orm");
   const { bots } = await import("@aven/db/schema/bots");
   const { providers } = await import("@aven/db/schema/providers");
+  const { encryptSecret } = await import("../../crypto");
   const { UnprocessableError } = await import("../../errors");
   const { botsService } = await import("./service");
 
@@ -236,7 +237,13 @@ run("botsService (postgres)", async () => {
   const addOpenAi = async (userId: string) => {
     const [row] = await db
       .insert(providers)
-      .values({ userId, kind: "openai", name: "OpenAI", modelId: "gpt-5" })
+      .values({
+        userId,
+        kind: "openai",
+        name: "OpenAI",
+        modelId: "gpt-5",
+        apiKeyEncrypted: encryptSecret("sk-test"),
+      })
       .returning();
     return row!;
   };
