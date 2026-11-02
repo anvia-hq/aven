@@ -135,7 +135,7 @@ test.describe("the project page", () => {
       "href",
       "https://github.com/acme/web/pull/100",
     );
-    await expect(card.getByText("Page 1 of 2")).toBeVisible();
+    await expect(card.getByText("Page 1 · 12 in all")).toBeVisible();
     await card.getByRole("button", { name: "Older" }).click();
     await expect(rows).toHaveCount(2);
     await expect(card.getByRole("button", { name: "Older" })).toBeDisabled();

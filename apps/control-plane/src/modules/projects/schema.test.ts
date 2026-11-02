@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { commitsQuery, folderQuery, importProjectBody } from "./schema";
+import { commitsQuery, folderQuery, importProjectBody, trackedQuery } from "./schema";
 
 const body = (repository: string) => ({
   installationId: crypto.randomUUID(),
@@ -40,6 +40,28 @@ describe("folderQuery", () => {
       expect(folderQuery.safeParse({ path }).success).toBe(false);
     },
   );
+});
+
+describe("trackedQuery", () => {
+  test("is the first page of the open ones unless asked, and the query's page is a number", () => {
+    expect(trackedQuery.parse({})).toEqual({ state: "open", page: 1 });
+    expect(trackedQuery.parse({ state: "closed", page: "3" })).toEqual({
+      state: "closed",
+      page: 3,
+    });
+  });
+
+  // Search stops at a thousand matches: a hundred pages of ten.
+  test.each([{ state: "all" }, { state: "merged" }, { page: "0" }, { page: "101" }, { page: "x" }])(
+    "refuses %p",
+    (query) => {
+      expect(trackedQuery.safeParse(query).success).toBe(false);
+    },
+  );
+
+  test("accepts the last page search gives", () => {
+    expect(trackedQuery.safeParse({ page: "100" }).success).toBe(true);
+  });
 });
 
 describe("commitsQuery", () => {

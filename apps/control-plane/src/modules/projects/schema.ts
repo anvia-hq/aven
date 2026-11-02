@@ -37,6 +37,7 @@ export const commitsQuery = z.object({
 });
 
 // A page of the repository's pull requests or issues, open or closed, from the latest changed.
+// GitHub's search gives the first thousand matches, which is a hundred pages of ten.
 export const trackedQuery = z.object({
   state: z.enum(["open", "closed"]).default("open"),
   page: z.coerce.number().int().min(1).max(100).default(1),

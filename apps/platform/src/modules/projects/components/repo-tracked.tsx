@@ -166,7 +166,7 @@ export function RepoTracked({ projectId }: { projectId: string }) {
           </Button>
           <span className="text-xs text-muted-foreground">
             Page {page}
-            {total !== undefined && ` of ${Math.max(1, Math.ceil(Math.min(total, 1000) / 10))}`}
+            {total !== undefined && ` · ${total} in all`}
           </span>
           <Button
             variant="outline"

@@ -543,8 +543,9 @@ export class GithubClient {
     state: GithubTrackedState,
     page: number,
   ): Promise<GithubTrackedPage | null> {
-    const { token } = await this.installationToken(installationId);
+    // Refused before a token is asked for when issues are not allowed.
     if (kind === "issue") await this.#requireIssues(installationId);
+    const { token } = await this.installationToken(installationId);
     const query = new URLSearchParams({
       q: `repo:${fullName} is:${kind === "pull" ? "pr" : "issue"} is:${state}`,
       sort: "updated",
