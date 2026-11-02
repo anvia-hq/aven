@@ -19,6 +19,22 @@ export const fileSize = (bytes: number) => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
+// For a disk or memory: 5_400_000_000 -> "5.0 GB", 2_199_023_255_552 -> "2.0 TB", smaller ones as fileSize.
+export const storageSize = (bytes: number) => {
+  const GB = 1024 ** 3;
+  if (bytes < GB) return fileSize(bytes);
+  if (bytes < 1024 * GB) return `${(bytes / GB).toFixed(1)} GB`;
+  return `${(bytes / 1024 / GB).toFixed(1)} TB`;
+};
+
+// How much of a disk or memory is used, in the total's unit: 6.4 GB of 15.6 GB -> "6.4 of 15.6 GB".
+export const storageUsage = (used: number, total: number) => {
+  const unit = storageSize(total).split(" ")[1]!;
+  const scale = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit]!;
+  const own = (bytes: number) => (unit === "B" ? `${bytes}` : (bytes / scale).toFixed(1));
+  return `${own(used)} of ${own(total)} ${unit}`;
+};
+
 // 331300 -> "331.3k", 1000000 -> "1M".
 export const compactNumber = (value: number) =>
   new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);

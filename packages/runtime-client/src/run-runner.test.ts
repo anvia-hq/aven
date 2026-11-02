@@ -35,4 +35,9 @@ describe("controlPlaneBase", () => {
       "https://aven.example.com/api",
     );
   });
+
+  test("is the origin for an address that is not the usual connect path", () => {
+    expect(controlPlaneBase("ws://localhost:8000/connect")).toBe("http://localhost:8000");
+    expect(controlPlaneBase("ws://localhost:8000")).toBe("http://localhost:8000");
+  });
 });

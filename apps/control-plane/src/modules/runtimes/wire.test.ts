@@ -428,3 +428,34 @@ describe("a bot's threads", () => {
     }
   });
 });
+
+describe("host stats", () => {
+  const stats = {
+    cores: 4,
+    cpuPercent: 37,
+    memoryUsedBytes: 6_000_000_000,
+    memoryTotalBytes: 16_000_000_000,
+    diskUsedBytes: 74_000_000_000,
+    diskTotalBytes: 98_000_000_000,
+    sandboxes: 2,
+  };
+  const frame = (override: Record<string, unknown> = {}) =>
+    JSON.stringify({ type: "host.stats", stats: { ...stats, ...override } });
+
+  test("is how loaded the machine is, and the processors may be unknown", () => {
+    expect(parseRuntimeFrame(frame())).toEqual({ type: "host.stats", stats });
+    expect(parseRuntimeFrame(frame({ cpuPercent: null }))).toMatchObject({
+      stats: { cpuPercent: null },
+    });
+  });
+
+  test("is refused when a number is not one a machine can have", () => {
+    expect(parseRuntimeFrame(frame({ cpuPercent: 101 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ cpuPercent: -1 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ memoryTotalBytes: -5 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ cores: 0 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ sandboxes: 1.5 }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ diskUsedBytes: "lots" }))).toBeNull();
+    expect(parseRuntimeFrame(JSON.stringify({ type: "host.stats" }))).toBeNull();
+  });
+});

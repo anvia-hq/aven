@@ -1,3 +1,5 @@
+import { dirname } from "node:path";
+
 import { createCodingAgent } from "@aven/agents/coding-agent";
 import { subagentInstructions } from "@aven/agents/subagent-instruction";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
@@ -18,6 +20,7 @@ import {
 } from "./bot-replies";
 import { createControlPlaneCalls } from "./control-plane-calls";
 import { DesktopViewers, type ViewerLink } from "./desktop-viewers";
+import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
@@ -83,8 +86,11 @@ export type RuntimeOptions = {
    * stay). Default 15 minutes.
    */
   idleReleaseMs?: number;
+  /** How often the machine's load is told to the control plane (decision 0091). Default 15 seconds. */
+  statsIntervalMs?: number;
 };
 
+const DEFAULT_STATS_INTERVAL_MS = 15_000;
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 // About as long as the control plane holds a run for its runtime to come back.
@@ -99,7 +105,9 @@ const DEFAULT_IDLE_RELEASE_MS = 15 * 60_000;
  */
 export function controlPlaneBase(connectUrl: string) {
   const url = new URL(connectUrl.replace(/^ws/, "http"));
-  return `${url.origin}${url.pathname.replace(/\/runtimes\/connect\/?$/, "").replace(/\/+$/, "")}`;
+  // The prefix is what comes before `/runtimes/connect`; an address that does not end so has none to keep.
+  const prefix = /^(.*)\/runtimes\/connect\/?$/.exec(url.pathname)?.[1] ?? "";
+  return `${url.origin}${prefix}`;
 }
 
 // Connects out to the control plane and runs whatever it is told to, until stopped. Reconnects
@@ -268,6 +276,24 @@ export function startRuntime(options: RuntimeOptions) {
     }
   }
 
+  // The machine's load goes to the control plane while connected, for Settings to show. It is
+  // information only: a failed reading is skipped, never a reason to drop the connection.
+  const cpu = cpuSampler();
+  const statsEveryMs = options.statsIntervalMs ?? DEFAULT_STATS_INTERVAL_MS;
+  let statsTimer: ReturnType<typeof setInterval> | undefined;
+  async function reportStats() {
+    try {
+      const stats = await readHostStats({
+        home: dirname(options.journalPath),
+        cpu,
+        sandboxes: options.sandbox.running?.() ?? 0,
+      });
+      if (socket?.readyState === WebSocket.OPEN) send({ type: "host.stats", stats });
+    } catch {
+      // Tried again at the next interval.
+    }
+  }
+
   function connect() {
     if (stopped) return;
     // Bun's WebSocket takes request headers, which is how the token travels; the DOM typings
@@ -283,6 +309,9 @@ export function startRuntime(options: RuntimeOptions) {
       send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids(), build: options.build });
       resend();
       connected.resolve();
+      clearInterval(statsTimer);
+      void reportStats();
+      statsTimer = setInterval(() => void reportStats(), statsEveryMs);
     };
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
@@ -304,6 +333,7 @@ export function startRuntime(options: RuntimeOptions) {
       });
     };
     ws.onclose = (event) => {
+      clearInterval(statsTimer);
       // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
       terminals.closeAll();
@@ -330,6 +360,7 @@ export function startRuntime(options: RuntimeOptions) {
     async stop() {
       stopped = true;
       clearTimeout(retry);
+      clearInterval(statsTimer);
       idle.cancelAll();
       viewers.closeAll();
       terminals.closeAll();

@@ -319,6 +319,26 @@ export type ControlPlaneToRuntime =
     }
   | Reply;
 
+/**
+ * How loaded a runner's machine is, as the runner measures it (decision 0091). Percentages are whole
+ * numbers from 0 to 100; a number is null when the machine cannot say.
+ */
+export type HostStats = {
+  cores: number;
+  /** The share of the processors' time spent working over the last seconds. */
+  cpuPercent: number | null;
+  memoryUsedBytes: number;
+  memoryTotalBytes: number;
+  /** The disk under the runner's home, where workspaces and snapshots are kept. */
+  diskUsedBytes: number;
+  diskTotalBytes: number;
+  /** Thread and bot containers running now. */
+  sandboxes: number;
+};
+
+/** What the control plane tells clients of a runner's load: the stats and when they were taken. */
+export type ReportedStats = HostStats & { reportedAt: string };
+
 export type RuntimeToControlPlane =
   /**
    * `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged
@@ -326,6 +346,12 @@ export type RuntimeToControlPlane =
    * behind the server (decision 0073); a runner that is not a release leaves it out.
    */
   | { type: "hello"; version: number; runs: string[]; build?: string }
+  /**
+   * How loaded the machine is, sent after hello and every few seconds. Optional on the wire: a
+   * control plane that does not know it ignores it, and a runner that does not send it shows no load
+   * (decision 0091).
+   */
+  | { type: "host.stats"; stats: HostStats }
   /** Every event and the end of a run are numbered from 1, so a reconnect can say where it stopped. */
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error"; `continuation` what resumes a run that is "interaction" (it waits for the user's answer). */

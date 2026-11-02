@@ -166,6 +166,23 @@ const runEvent = z.discriminatedUnion("type", [
   }),
 ]);
 
+// A machine's load as a runner measured it (decision 0091). The numbers are the runner's to report;
+// they are bounded here so a client never has to draw something absurd.
+const bytes = z
+  .number()
+  .int()
+  .nonnegative()
+  .max(2 ** 50);
+const hostStats = z.object({
+  cores: z.number().int().min(1).max(4096),
+  cpuPercent: z.number().min(0).max(100).nullable(),
+  memoryUsedBytes: bytes,
+  memoryTotalBytes: bytes,
+  diskUsedBytes: bytes,
+  diskTotalBytes: bytes,
+  sandboxes: z.number().int().nonnegative().max(100_000),
+});
+
 const frame = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("hello"),
@@ -173,6 +190,7 @@ const frame = z.discriminatedUnion("type", [
     runs: z.array(runId).default([]),
     build: z.string().max(64).optional(),
   }),
+  z.object({ type: z.literal("host.stats"), stats: hostStats }),
   z.object({ type: z.literal("run.event"), runId, seq, event: runEvent }),
   z.object({
     type: z.literal("run.end"),

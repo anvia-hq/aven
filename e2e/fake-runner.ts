@@ -64,7 +64,13 @@ const numbered = (runId: string) => {
   return seq;
 };
 
-ws.onopen = () => send({ type: "hello", version: WIRE_VERSION, runs: [] });
+// With FAKE_STATS (the JSON of a `host.stats` message's stats) the runner tells how loaded its
+// machine is, as a runner of this release does; without it, as an older runner that never does.
+ws.onopen = () => {
+  send({ type: "hello", version: WIRE_VERSION, runs: [] });
+  if (process.env.FAKE_STATS)
+    send({ type: "host.stats", stats: JSON.parse(process.env.FAKE_STATS) });
+};
 ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));

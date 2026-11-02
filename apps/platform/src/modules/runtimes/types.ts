@@ -1,3 +1,17 @@
+/** How loaded a runner's machine was when it last said (decision 0091). */
+export type RuntimeStats = {
+  cores: number;
+  /** Null when the machine cannot say. */
+  cpuPercent: number | null;
+  memoryUsedBytes: number;
+  memoryTotalBytes: number;
+  diskUsedBytes: number;
+  diskTotalBytes: number;
+  /** Containers running on it now. */
+  sandboxes: number;
+  reportedAt: string;
+};
+
 // A machine attached to the workspace to run agents on. Shared with every member; only its
 // owner can revoke it. The connection token is never returned again after creation.
 export type Runtime = {
@@ -12,6 +26,8 @@ export type Runtime = {
   build: string | null;
   /** The runner is on an older release than the server: run `aven update` on its machine. */
   outdated: boolean;
+  /** Null while offline, and for a runner that does not report its load (an older release). */
+  stats: RuntimeStats | null;
   lastSeenAt: string | null;
   createdAt: string;
 };

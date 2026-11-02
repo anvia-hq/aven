@@ -749,6 +749,47 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(hub.buildOf(runtime.id)).toBeUndefined();
   });
 
+  test("how loaded a runtime's machine is shows in the list while it is online, and not after", async () => {
+    const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "monitored",
+    });
+    const listed = async () => {
+      const response = await asPerson("GET", "/runtimes", owner.token);
+      const rows = (await response.json()) as { id: string; stats: unknown }[];
+      return rows.find((row) => row.id === runtime.id);
+    };
+    const ws = await open(full.server?.port, token, "/runtimes/connect");
+    await until(() => hub.isOnline(runtime.id));
+    // A runner that has not said has none, as an older runner never does.
+    expect(await listed()).toMatchObject({ stats: null });
+
+    ws.send(
+      JSON.stringify({
+        type: "host.stats",
+        stats: {
+          cores: 4,
+          cpuPercent: 37,
+          memoryUsedBytes: 6,
+          memoryTotalBytes: 16,
+          diskUsedBytes: 74,
+          diskTotalBytes: 98,
+          sandboxes: 2,
+        },
+      }),
+    );
+    await until(() => hub.statsOf(runtime.id) !== undefined);
+    expect(await listed()).toMatchObject({
+      stats: { cpuPercent: 37, sandboxes: 2, memoryTotalBytes: 16, reportedAt: expect.any(String) },
+    });
+
+    // A frame that is not stats changes nothing, and once the runtime is gone so are its numbers.
+    ws.send(JSON.stringify({ type: "host.stats", stats: { cores: 0 } }));
+    ws.close();
+    await until(() => !hub.isOnline(runtime.id));
+    expect(hub.statsOf(runtime.id)).toBeUndefined();
+    expect(await listed()).toMatchObject({ stats: null });
+  });
+
   test("revoking cuts a connected runtime off and fails its live runs", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "x",

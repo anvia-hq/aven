@@ -18,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/sidebar";
+import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
 const groups = [
@@ -48,7 +49,7 @@ const platformGroup = {
 } as const;
 
 // What the sidebar lists on the settings pages: the same menu as the thread list, in the same
-// shell, with the pages in groups. Platform is for an owner of the installation.
+// shell, with the workspace's machines on top and the pages in groups. Platform is for an owner of the installation.
 export function SettingsSidebar() {
   const { config } = usePlatformConfig();
   const visibleGroups = config?.isOwner ? [...groups, platformGroup] : groups;
@@ -56,6 +57,7 @@ export function SettingsSidebar() {
 
   return (
     <nav aria-label="Settings">
+      <MachineMonitor />
       {visibleGroups.map((group) => (
         <SidebarGroup key={group.label} className="py-1">
           <SidebarGroupLabel>{group.label}</SidebarGroupLabel>

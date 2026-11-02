@@ -13,6 +13,7 @@ import type {
   RunModel,
   RunnerCallMethod,
   RunOutcome,
+  ReportedStats,
   RuntimeToControlPlane,
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
@@ -82,6 +83,8 @@ export class RuntimeConnection {
   #ready = false;
   /** The release the runtime says it is, if it says. */
   #build: string | undefined;
+  /** How loaded the runtime's machine was when it last said (decision 0091). */
+  #stats: ReportedStats | undefined;
 
   constructor(
     readonly runtimeId: string,
@@ -104,6 +107,10 @@ export class RuntimeConnection {
 
   get build() {
     return this.#build;
+  }
+
+  get stats() {
+    return this.#stats;
   }
 
   post(message: ControlPlaneToRuntime) {
@@ -231,6 +238,9 @@ export class RuntimeConnection {
       }
       case "run.end":
         this.#endRun(message);
+        return;
+      case "host.stats":
+        this.#stats = { ...message.stats, reportedAt: new Date().toISOString() };
         return;
       case "bot.say":
         this.#botReplies.get(message.replyId)?.say(message.text);
@@ -430,6 +440,11 @@ export class RuntimeHub {
   /** The release an online runtime says it is, if it says. */
   buildOf(runtimeId: string) {
     return this.get(runtimeId)?.build;
+  }
+
+  /** How loaded an online runtime's machine was when it last said, if it says. */
+  statsOf(runtimeId: string) {
+    return this.get(runtimeId)?.stats;
   }
 
   closeAll() {

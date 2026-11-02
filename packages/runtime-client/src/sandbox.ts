@@ -183,6 +183,8 @@ export interface ThreadWorkspaces {
   workspace(threadId: string): Promise<string | undefined>;
   /** Frees what a thread holds (its container); its workspace files stay for the next `acquire`. */
   release(threadId: string): Promise<void>;
+  /** How many containers are running now, for the machine's load shown in Settings (decision 0091). */
+  running?(): number;
   /**
    * Signs `gh` and `git` in to GitHub as `github` inside the thread's container, or out when there
    * is none, for a run that is starting (decision 0044). The thread's container must be running.
@@ -346,6 +348,10 @@ export class Sandboxes implements ThreadWorkspaces {
   async workspace(threadId: string) {
     const dir = this.#workspaceDir(threadId);
     return (await isCloned(dir)) ? realpath(dir) : undefined;
+  }
+
+  running() {
+    return this.#running.size;
   }
 
   async release(threadId: string) {

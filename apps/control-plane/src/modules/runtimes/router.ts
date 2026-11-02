@@ -26,6 +26,8 @@ export const runtimesRouter = (hub: RuntimeHub) =>
             // The release the runner says it is, and whether it is behind this server's.
             build,
             outdated: isBehind(build ?? undefined, server),
+            // How loaded its machine was when it last said; null while offline or if it never does.
+            stats: hub.statsOf(runtime.id) ?? null,
           };
         });
       },

@@ -8,17 +8,18 @@ Applies to `apps/platform`.
 
 Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token structure, oklch palette: a light theme with very low chroma, and a charcoal dark theme with a faint indigo tint, hue 277, on its surfaces; the primary is near-white on dark and near-black on light). Do not use raw palette classes (`neutral-*`, `red-*`, `white`, `black`) or hex/rgb values in components.
 
-| Token pair                              | Use for                         |
-| --------------------------------------- | ------------------------------- |
-| `background` / `foreground`             | page surface and default text   |
-| `card`, `popover` (+ `-foreground`)     | raised surfaces                 |
-| `primary` / `primary-foreground`        | main actions                    |
-| `secondary`, `accent` (+ `-foreground`) | secondary actions, hover states |
-| `muted` / `muted-foreground`            | subdued surfaces and text       |
-| `destructive`                           | errors and destructive actions  |
-| `border`, `input`, `ring`               | borders, field borders, focus   |
-| `frame`                                 | the shell's outer frame         |
-| `graph-1` … `graph-6`                   | the lanes of the commit graph   |
+| Token pair                              | Use for                                   |
+| --------------------------------------- | ----------------------------------------- |
+| `background` / `foreground`             | page surface and default text             |
+| `card`, `popover` (+ `-foreground`)     | raised surfaces                           |
+| `primary` / `primary-foreground`        | main actions                              |
+| `secondary`, `accent` (+ `-foreground`) | secondary actions, hover states           |
+| `muted` / `muted-foreground`            | subdued surfaces and text                 |
+| `destructive`                           | errors and destructive actions            |
+| `border`, `input`, `ring`               | borders, field borders, focus             |
+| `frame`                                 | the shell's outer frame                   |
+| `graph-1` … `graph-6`                   | the lanes of the commit graph             |
+| `meter`                                 | the filled part of a machine's load meter |
 
 Use them as Tailwind utilities: `bg-primary text-primary-foreground`, `text-muted-foreground`, `border-border`, `bg-primary/90`.
 

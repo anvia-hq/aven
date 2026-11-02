@@ -37,3 +37,5 @@ Status: current. What each version of the wire between the control plane and a r
 - **5**: a runtime can stream a thread's desktop to a viewer and answer the control plane's calls about it (decision 0015).
 - **4**: a runtime can ask for access to the thread's repository, `repo.access` (decision 0013).
 - **3**: a run is only started and cancelled; commands and processes are the sandbox's, so no job notices, job stops or steering (decision 0012).
+
+Not a version: `host.stats` (a runner tells how loaded its machine is, decision 0091) is an optional message. A control plane ignores a frame it does not know and a runner that does not send it shows no load, so it did not change `WIRE_VERSION`.

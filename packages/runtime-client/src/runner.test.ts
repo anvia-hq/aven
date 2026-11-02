@@ -135,6 +135,26 @@ describe("startRuntime processes", () => {
   });
 });
 
+describe("startRuntime host stats", () => {
+  test("tells the control plane how loaded the machine is, as soon as it connects and again after", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const { plane, runtime } = connect({
+      sandbox: { ...workspaces, running: () => 2 },
+      statsIntervalMs: 50,
+    });
+    await runtime.ready;
+    const stats = () => plane.received.filter((m) => m.type === "host.stats");
+
+    await until(() => stats().length >= 2);
+
+    expect(stats()[0]).toMatchObject({
+      type: "host.stats",
+      stats: { sandboxes: 2, cores: expect.any(Number), diskTotalBytes: expect.any(Number) },
+    });
+  });
+});
+
 describe("startRuntime desktops", () => {
   const viewerId = crypto.randomUUID();
   const withDesktop = (desktop: ReturnType<typeof fakeDesktop>["desktop"] | undefined) => {
