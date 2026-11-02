@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import type { CompletionRequest, MemoryStore, Message } from "@anvia/core";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -14,6 +14,8 @@ run("createBotChats (postgres)", async () => {
   const { BOT_MAX_HOPS } = await import("@aven/protocol/bots");
   const { botMemoryStore } = await import("../../memory-store");
   const { providers } = await import("@aven/db/schema/providers");
+  const { modelCatalog } = await import("../providers/model-catalog");
+  const { InvalidSelectionError } = await import("../providers/resolve-model");
   const { createBotChats } = await import("./chats");
   const { BotRunner } = await import("./runner");
   const { inProcessReplier } = await import("./testing/in-process-replier");
@@ -107,6 +109,10 @@ run("createBotChats (postgres)", async () => {
 
   describe("files sent with a message (decision 0080)", () => {
     const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    // The reply is given to the replier a moment after `send` returns, once its turn comes.
+    const answeredBy = async (answered: unknown[], count: number) => {
+      for (let tries = 0; answered.length < count && tries < 2000; tries++) await Bun.sleep(1);
+    };
     const capturing = () => {
       const answered: { prompt: string; attachments: unknown[] }[] = [];
       const runner = new BotRunner({
@@ -131,7 +137,7 @@ run("createBotChats (postgres)", async () => {
           data: new TextEncoder().encode("hi").toBase64(),
         },
       ]);
-      await Bun.sleep(20);
+      await answeredBy(answered, 1);
 
       expect(answered).toHaveLength(1);
       const [image, file] = answered[0]!.attachments as {
@@ -148,6 +154,27 @@ run("createBotChats (postgres)", async () => {
       expect(image?.image).toMatch(/^[0-9a-f-]{36}\.png$/);
       expect(file).toMatchObject({ name: "notes.txt", mediaType: "text/plain" });
       expect(file?.image).toBeUndefined();
+    });
+
+    test("an image for a model that cannot see one is refused, and other files are not", async () => {
+      const [mine] = await botsService.list(alice);
+      const { botChats, answered } = capturing();
+      const blind = spyOn(modelCatalog, "seesImages").mockResolvedValue(false);
+      try {
+        await expect(
+          botChats.send(alice, mine!.id, "look", [{ name: "cat.png", data: PNG.toBase64() }]),
+        ).rejects.toBeInstanceOf(InvalidSelectionError);
+        expect(answered).toEqual([]);
+
+        // A file that is no image is for the computer, and needs no eyes.
+        await botChats.send(alice, mine!.id, "read", [
+          { name: "notes.txt", data: new TextEncoder().encode("hi").toBase64() },
+        ]);
+        await answeredBy(answered, 1);
+        expect(answered).toHaveLength(1);
+      } finally {
+        blind.mockRestore();
+      }
     });
 
     test("that are too big are refused before anything is added to the chat", async () => {

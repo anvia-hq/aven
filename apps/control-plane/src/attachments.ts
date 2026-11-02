@@ -23,9 +23,9 @@ export const attachmentBody = z.object({
 export type AttachmentBody = z.infer<typeof attachmentBody>;
 
 // The files sent with a message to a thread or a bot, checked and named for the runner (decisions
-// 0034 and 0080). A file whose
-// bytes are a PNG, JPEG, GIF or WebP image is shown to the model as well, so it gets the name the
-// runner keeps its copy under; anything else, an SVG included, only goes to the sandbox.
+// 0034 and 0080). A file whose bytes are a PNG, JPEG, GIF or WebP image is shown to the model as
+// well, so it gets the name the runner keeps its copy under; anything else, an SVG included, only
+// goes to the sandbox.
 export function prepareAttachments(files: readonly AttachmentBody[]): RunAttachment[] {
   let total = 0;
   return files.map(({ name, mediaType, data }) => {
