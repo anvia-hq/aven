@@ -6,6 +6,7 @@ import { exec } from "../compose";
 import { parseEnv } from "../env-file";
 import { serverDir } from "../home";
 import { runnerInstall } from "./runner";
+import { isExposed } from "../server-plan";
 import { serverInstall } from "./server";
 import { finish } from "./update";
 
@@ -30,8 +31,15 @@ export async function install(args: Args) {
   }
 
   if (stringFlag(args, "owner-email") === undefined && process.stdin.isTTY) {
+    // A server others can reach has to name its owner: the first account registered owns it.
+    const needed = isExposed({
+      domain: stringFlag(args, "domain"),
+      bind: stringFlag(args, "bind"),
+    });
     const answer = prompt(
-      "Your email, to be the platform owner who can close sign-ups (Enter to skip):",
+      needed
+        ? "Your email, to be the platform owner (the only one who can register at first):"
+        : "Your email, to be the platform owner who can close sign-ups (Enter to skip):",
     );
     if (answer?.trim()) args.flags["owner-email"] = answer.trim();
   }

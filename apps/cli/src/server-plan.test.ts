@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { planServer } from "./server-plan";
+import { isExposed, planServer } from "./server-plan";
 
 const base = { release: "1.0.0" };
+const owner = { ownerEmail: "me@example.com" };
 
 describe("planServer", () => {
   test("is plain HTTP on 2836, with the API on 2837 and HTTPS on 2838 on this machine", () => {
@@ -54,7 +55,7 @@ describe("planServer", () => {
   });
 
   test("a domain means HTTPS on the standard ports, both of which must be free", () => {
-    const { options, needed } = planServer({ ...base, domain: "aven.example.com" });
+    const { options, needed } = planServer({ ...base, ...owner, domain: "aven.example.com" });
     expect(options).toMatchObject({
       origin: "https://aven.example.com",
       port: 80,
@@ -67,6 +68,7 @@ describe("planServer", () => {
   test("a domain on other ports names the HTTPS port in the address", () => {
     const { options } = planServer({
       ...base,
+      ...owner,
       domain: "localhost",
       port: "8080",
       httpsPort: "8443",
@@ -93,30 +95,61 @@ describe("who can connect (the bind address)", () => {
     expect(notes).toEqual([]);
   });
 
-  test("a domain is open to the world, which the certificate needs, with no warning", () => {
-    const { options, notes } = planServer({ ...base, domain: "aven.example.com" });
+  test("a domain is open to the world, which the certificate needs, with no warning of HTTP", () => {
+    const { options, notes } = planServer({ ...base, ...owner, domain: "aven.example.com" });
     expect(options.bind).toBe("0.0.0.0");
-    expect(notes).toEqual([]);
+    expect(notes.join(" ")).not.toContain("not encrypted");
   });
 
   test("--bind opens plain HTTP to a network, and says it is not encrypted", () => {
-    const everyone = planServer({ ...base, bind: "0.0.0.0" });
+    const everyone = planServer({ ...base, ...owner, bind: "0.0.0.0" });
     expect(everyone.options.bind).toBe("0.0.0.0");
     expect(everyone.notes.join(" ")).toContain("not encrypted");
     expect(everyone.notes.join(" ")).toContain("every network");
 
-    const tailnet = planServer({ ...base, bind: "100.64.0.7" });
+    const tailnet = planServer({ ...base, ...owner, bind: "100.64.0.7" });
     expect(tailnet.options.bind).toBe("100.64.0.7");
     expect(tailnet.notes.join(" ")).toContain("100.64.0.7");
   });
 
-  test("an explicit loopback address, and any bind with a domain, warn of nothing", () => {
+  test("an explicit loopback address warns of nothing", () => {
     expect(planServer({ ...base, bind: "127.0.0.1" }).notes).toEqual([]);
-    expect(planServer({ ...base, domain: "aven.example.com", bind: "0.0.0.0" }).notes).toEqual([]);
   });
 
   test("refuses what is not an IPv4 address", () => {
     for (const bind of ["localhost", "::1", "999.1.1.1", "", "0.0.0.0/0"])
-      expect(() => planServer({ ...base, bind })).toThrow("--bind must be an IPv4 address");
+      expect(() => planServer({ ...base, ...owner, bind })).toThrow(
+        "--bind must be an IPv4 address",
+      );
+  });
+});
+
+describe("a server others can reach", () => {
+  test("is exposed with a domain or a bind address that is not this machine's", () => {
+    expect(isExposed({})).toBe(false);
+    expect(isExposed({ bind: "127.0.0.1" })).toBe(false);
+    expect(isExposed({ domain: "aven.example.com" })).toBe(true);
+    expect(isExposed({ bind: "0.0.0.0" })).toBe(true);
+    expect(isExposed({ bind: "100.64.0.7" })).toBe(true);
+  });
+
+  test("starts with sign-ups closed, naming who can make the first account", () => {
+    const { options, notes } = planServer({ ...base, ...owner, domain: "aven.example.com" });
+    expect(options.registration).toBe("closed");
+    expect(notes.join(" ")).toContain("only me@example.com can make the first account");
+  });
+
+  test("is refused with no owner named, since nobody could register or anybody could", () => {
+    for (const input of [
+      { domain: "aven.example.com" },
+      { bind: "0.0.0.0" },
+      { domain: "aven.example.com", ownerEmail: "  " },
+    ])
+      expect(() => planServer({ ...base, ...input })).toThrow("--owner-email");
+  });
+
+  test("an install for this machine stays open, with or without an owner", () => {
+    expect(planServer(base).options.registration).toBe("open");
+    expect(planServer({ ...base, ...owner }).options.registration).toBe("open");
   });
 });

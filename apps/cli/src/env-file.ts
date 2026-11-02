@@ -76,6 +76,8 @@ export type ServerEnvOptions = {
   apiPort?: number;
   /** The address the web port is published on: 127.0.0.1 is this machine only. */
   bind?: string;
+  /** Whether anyone can register before an owner chooses: closed for a server others can reach. */
+  registration?: "open" | "closed";
 };
 
 /** A new install's `.env`: the template with the secrets made and the address filled in. */
@@ -88,6 +90,7 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
     ...newSecrets(),
   };
   if (options.bind !== undefined) values.AVEN_BIND = options.bind;
+  if (options.registration !== undefined) values.AVEN_REGISTRATION = options.registration;
   if (options.ownerEmail) values.PLATFORM_OWNER_EMAILS = options.ownerEmail;
   if (options.apiPort) values.AVEN_API_PORT = String(options.apiPort);
   if (options.domain) {

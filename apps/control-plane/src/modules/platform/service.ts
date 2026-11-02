@@ -28,19 +28,27 @@ async function firstUserId() {
   return first?.id;
 }
 
+/**
+ * Whether registration is open when no owner has chosen: `AVEN_REGISTRATION=closed` starts it
+ * closed (an install that others can reach is made so, decision 0079), anything else open.
+ */
+export function registrationDefault(env: Record<string, string | undefined> = process.env) {
+  return env.AVEN_REGISTRATION?.trim().toLowerCase() !== "closed";
+}
+
 export const platformService = {
   /** The first account, or anyone listed in PLATFORM_OWNER_EMAILS. */
   async isOwner(person: { id: string; email: string }) {
     return isListedOwner(person.email) || (await firstUserId()) === person.id;
   },
 
-  // Registration is open until an owner closes it.
+  // An owner's choice wins; until they make one, the install's own (`registrationDefault`).
   async isRegistrationEnabled() {
     const [row] = await db
       .select({ value: platformSettings.value })
       .from(platformSettings)
       .where(eq(platformSettings.key, REGISTRATION_KEY));
-    return row?.value !== "false";
+    return row ? row.value !== "false" : registrationDefault();
   },
 
   async setRegistrationEnabled(enabled: boolean) {

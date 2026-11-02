@@ -4,7 +4,7 @@ import { db } from "@aven/db/client";
 import { users } from "@aven/db/schema/users";
 import { inArray } from "drizzle-orm";
 
-import { platformService } from "./service";
+import { platformService, registrationDefault } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -52,5 +52,20 @@ run("who owns the platform (real postgres)", () => {
     expect(await platformService.isOwner(listed)).toBe(true);
     expect(await platformService.isOwner(first)).toBe(true);
     expect(await platformService.isOwner(second)).toBe(false);
+  });
+});
+
+describe("whether registration starts open", () => {
+  test("is open unless the install says closed", () => {
+    expect(registrationDefault({})).toBe(true);
+    expect(registrationDefault({ AVEN_REGISTRATION: "open" })).toBe(true);
+    expect(registrationDefault({ AVEN_REGISTRATION: "" })).toBe(true);
+    expect(registrationDefault({ AVEN_REGISTRATION: "nonsense" })).toBe(true);
+  });
+
+  test("is closed for closed, whatever its case or spacing", () => {
+    for (const value of ["closed", "CLOSED", " Closed "]) {
+      expect(registrationDefault({ AVEN_REGISTRATION: value })).toBe(false);
+    }
   });
 });

@@ -103,3 +103,14 @@ describe("the address the web port is published on", () => {
     expect(parseEnv(addMissingKeys("AVEN_BIND=\n", template)).AVEN_BIND).toBe("");
   });
 });
+
+test("a new server env says whether sign-ups start closed", () => {
+  const template = "AVEN_REGISTRATION=open\n";
+  const base = { origin: "http://x", port: 1, version: "1" };
+  expect(
+    parseEnv(newServerEnv(template, { ...base, registration: "closed" })).AVEN_REGISTRATION,
+  ).toBe("closed");
+  expect(parseEnv(newServerEnv(template, base)).AVEN_REGISTRATION).toBe("open");
+  // An install from before the setting is open, and the template's value says so.
+  expect(parseEnv(addMissingKeys("A=1\n", template)).AVEN_REGISTRATION).toBe("open");
+});

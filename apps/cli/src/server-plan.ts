@@ -22,6 +22,14 @@ export const API_PORT = 2837;
 export const HTTPS_PORT = 2838;
 const LAST_PORT = 2899;
 
+/**
+ * Whether the server will be reachable by other machines: it has a domain, which the world has to
+ * reach, or a bind address that is not this machine's own.
+ */
+export function isExposed(input: Pick<ServerPlanInput, "domain" | "bind">) {
+  return input.domain !== undefined || (input.bind !== undefined && !input.bind.startsWith("127."));
+}
+
 function portNumber(value: string | undefined, fallback: number, flag: string) {
   const port = value === undefined ? fallback : Number(value);
   if (!Number.isInteger(port) || port <= 0 || port > 65535)
@@ -58,9 +66,21 @@ export function planServer(input: ServerPlanInput, isFree: (port: number) => boo
   if (input.bind !== undefined && !isIPv4(input.bind))
     throw new Error("--bind must be an IPv4 address, such as 127.0.0.1 or 0.0.0.0");
   const bind = input.bind ?? (domain ? "0.0.0.0" : "127.0.0.1");
+  const exposed = isExposed({ domain, bind });
+  // Whoever registers first owns the server, so one that others can reach starts closed to
+  // everybody but its owner: with no owner named there would be no one who can make the first
+  // account, or, left open, anyone could (decision 0079).
+  if (exposed && !input.ownerEmail?.trim())
+    throw new Error(
+      "A server that other machines can reach starts with sign-ups closed, and needs its owner: add --owner-email you@example.com",
+    );
 
   const chosen: number[] = [];
   const notes: string[] = [];
+  if (exposed)
+    notes.push(
+      `Sign-ups start closed: only ${input.ownerEmail?.trim()} can make the first account. Invite people from Settings > Members; Settings > Platform opens sign-ups.`,
+    );
   if (!domain && !bind.startsWith("127."))
     notes.push(
       `Plain HTTP will be open to ${bind === "0.0.0.0" ? "every network this machine is on" : bind}: ` +
@@ -89,6 +109,7 @@ export function planServer(input: ServerPlanInput, isFree: (port: number) => boo
     apiPort,
     httpsPort,
     bind,
+    registration: exposed ? "closed" : "open",
   };
   const needed = [port, apiPort, httpsPort];
   if (domain) {
