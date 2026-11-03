@@ -45,16 +45,17 @@ function SidebarProjectTile({
   );
 }
 
-// When the thread last changed, at the row's end. With `yields` it gives way to the Archive button
-// on hover, which takes its place.
+// When the thread last changed, in the place the Archive button takes at the row's end: centred on
+// it, so on hover the button is drawn where the time was. Outside the row's link, which keeps that
+// room free, and not something to click.
 function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolean }) {
   return (
     <time
       dateTime={thread.updatedAt}
       title={timeAgo(thread.updatedAt, true)}
       className={cn(
-        "shrink-0 text-xs text-muted-foreground tabular-nums",
-        yields && "group-focus-within/menu-item:opacity-0 group-hover/menu-item:opacity-0",
+        "pointer-events-none absolute inset-y-0 right-1 flex w-5 items-center justify-center text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
+        yields && "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0",
       )}
     >
       {shortTimeAgo(thread.updatedAt)}
@@ -123,10 +124,12 @@ export function SidebarThreads() {
               <span className="flex-1 truncate" title={hostLabel(thread)}>
                 {thread.title}
               </span>
-              <UpdatedAt thread={thread} yields />
             </SidebarMenuButton>
+            <UpdatedAt thread={thread} yields />
+            {/* Shown on hover or keyboard focus, not `showOnHover`: that also shows it while the
+                row's link keeps focus after a click, over the time. */}
             <SidebarMenuAction
-              showOnHover
+              className="peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
               aria-label={`Archive ${thread.title}`}
               title="Archive"
               onClick={() => void archive(thread)}
@@ -147,9 +150,11 @@ export function SidebarThreads() {
           <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
             {shared.map((thread) => (
               <SidebarMenuItem key={thread.id}>
+                {/* No Archive here, so the room for the time is kept by hand. */}
                 <SidebarMenuButton
                   render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
                   isActive={pathname === `/threads/${thread.id}`}
+                  className="pr-8"
                 >
                   <SidebarProjectTile
                     thread={thread}
@@ -160,8 +165,8 @@ export function SidebarThreads() {
                   <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
                     {thread.title}
                   </span>
-                  <UpdatedAt thread={thread} />
                 </SidebarMenuButton>
+                <UpdatedAt thread={thread} />
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

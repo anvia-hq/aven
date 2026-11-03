@@ -56,8 +56,21 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     const item = page.locator("[data-slot=sidebar-menu-item]", { hasText: "archive me" });
+    const archive = item.getByRole("button", { name: "Archive archive me" });
+    const time = item.locator("time");
+    // At rest the row ends in when it changed; the Archive button takes that place on hover.
+    await page.mouse.move(800, 400);
+    await expect(time).toHaveText("now");
+    await expect(archive).toHaveCSS("opacity", "0");
+    // A click leaves the row's link focused, which is not a reason to keep the button up.
+    await item.getByRole("link").click();
+    await page.mouse.move(800, 400);
+    await expect(archive).toHaveCSS("opacity", "0");
+    await expect(time).toHaveCSS("opacity", "1");
     await item.hover();
-    await item.getByRole("button", { name: "Archive archive me" }).click();
+    await expect(archive).toHaveCSS("opacity", "1");
+    await expect(time).toHaveCSS("opacity", "0");
+    await archive.click();
 
     await expect(page).toHaveURL(/\/threads$/);
     await expect(page.getByText("Thread archived")).toBeVisible();
