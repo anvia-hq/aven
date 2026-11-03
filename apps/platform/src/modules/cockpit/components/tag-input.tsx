@@ -63,13 +63,18 @@ export function TagInput({
         )}
       >
         {value.map((tag) => (
-          <TagBadge key={tag} tag={tag} className="gap-0.5 pr-1">
+          // The × shows on hover, or when it has the keyboard's focus.
+          <TagBadge
+            key={tag}
+            tag={tag}
+            className="gap-0 has-focus-visible:gap-0.5 has-focus-visible:pr-1 hover:gap-0.5 hover:pr-1"
+          >
             {tag}
             <Button
               type="button"
               variant="ghost"
               aria-label={`Remove ${tag}`}
-              className="size-3.5 rounded-sm p-0 text-inherit opacity-70 hover:bg-transparent hover:text-inherit hover:opacity-100"
+              className="h-3.5 w-0 min-w-0 overflow-hidden rounded-sm border-0 p-0 text-inherit opacity-0 group-hover/badge:w-3.5 group-hover/badge:opacity-70 hover:bg-transparent hover:text-inherit hover:opacity-100! focus-visible:w-3.5 focus-visible:opacity-100"
               onClick={() => onChange(value.filter((each) => each !== tag))}
             >
               <X />
