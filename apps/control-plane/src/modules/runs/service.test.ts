@@ -18,7 +18,7 @@ import { journalPath } from "@aven/runtime-client/testing/journal-path";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { createMemoryStore } from "../../memory-store";
-import { memoryContinuations } from "../../testing/memory-continuations";
+import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
@@ -49,6 +49,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     revoke: () => undefined,
   };
   const continuations = memoryContinuations();
+  const failures = memoryFailures();
   const hub = new RuntimeHub(store);
   const seed = await seedOrgPair();
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
@@ -84,6 +85,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       runtime: new RemoteRuntime(hub, scriptedGateway),
       onRunFinished,
       continuations: continuations.store,
+      failures: failures.store,
       ...extra,
     });
   };
@@ -278,6 +280,48 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       "done",
     ]);
   });
+
+  test("a run that failed says why to a client that comes later, and after a restart, until the next run", async () => {
+    const refusing = () => {
+      throw new Error("500 The model is unavailable. Try again later.");
+    };
+    const kept = memoryFailures();
+    const manager = await managerWith(
+      Array.from({ length: 20 }, () => refusing),
+      {
+        failures: kept.store,
+      },
+    );
+    const thread = newThread();
+    await manager.start(thread, "go");
+    await until(async () => !manager.isRunning(thread.id), 60_000);
+
+    // Nobody was watching when it failed: a client that opens the thread now is told.
+    const later = attach(manager, thread);
+    await until(() => later.events.length > 0);
+    await later.detach();
+    expect(later.events[0]).toMatchObject({ type: "snapshot", running: false });
+    const said = (later.events[0] as { error?: string }).error;
+    expect(said).toContain("The model is unavailable");
+    expect(kept.saved.get(thread.id)).toBe(said);
+
+    // A restarted server knows it from the store, and the next run clears it.
+    const restarted = await managerWith([[text("fine now")]], { failures: kept.store });
+    // The same thread, on the runner this manager connected, whose script answers.
+    const again: RunThread = { ...thread, runtimeId: runtimeId! };
+    const fresh = attach(restarted, again);
+    await until(() => fresh.events.length > 0);
+    expect(fresh.events[0]).toMatchObject({ type: "snapshot", error: said });
+    await restarted.start(again, "again");
+    await until(() => fresh.events.some((event) => event.type === "done"));
+    await fresh.detach();
+    expect(kept.saved.has(thread.id)).toBe(false);
+
+    const after = attach(restarted, again);
+    await until(() => after.events.length > 0);
+    await after.detach();
+    expect(after.events[0]).not.toHaveProperty("error");
+  }, 90_000);
 
   test("dropping every client does not cancel the run", async () => {
     const manager = await managerWith([

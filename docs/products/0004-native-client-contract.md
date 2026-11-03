@@ -29,7 +29,7 @@ The user enters the control plane's address (`BASE`, for example `https://aven.e
 `GET /threads/:id/events` is `text/event-stream`. Every message is `data: <json>` with a `type`, plus a keep-alive `event: ping` every 5 seconds. Always attach before or right after sending; a snapshot comes first, so reconnecting is safe at any time.
 
 ```
-snapshot    { messages: Message[], running: bool, usage?: Usage, runningMs?: number }   replaces all local state; runningMs is how long the run in progress has gone on
+snapshot    { messages: Message[], running: bool, usage?: Usage, runningMs?: number, error?: string }   replaces all local state; runningMs is how long the run in progress has gone on; error is why the latest run failed, until the next one starts
 run_start   { prompt, attachments?: Attachment[], mentions?: Mention[] }
 text        { delta }
 tool_start  { tool: Tool }
@@ -61,7 +61,7 @@ DiffLine = { type: "add" | "del" | "ctx", text }
 
 Keep `messages` and `running`. For each event:
 
-- `snapshot`: `messages = event.messages`, `running = event.running`.
+- `snapshot`: `messages = event.messages`, `running = event.running`. Show `event.error`, when there is one, where the reply would be, as for an `error` event.
 - `run_start`: `running = true`; append `{ id: "m-<n>", role: "user", parts: [text(prompt)] }` (with `attachments` and `mentions` when the event has any) then `{ id: "m-<n+1>", role: "assistant", parts: [] }`, where `n` is the message count before.
 - `text`: on the **last assistant message**, if its last part is text, append `delta` to it; otherwise add a new text part.
 - `tool_start`: add `{ type: "tool", tool }` to the last assistant message.

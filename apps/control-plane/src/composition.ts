@@ -53,6 +53,10 @@ export const runsService = new RunManager({
     save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
     clear: (threadId) => threadsService.clearContinuation(threadId),
   },
+  failures: {
+    record: (threadId, message) => threadsService.saveLastError(threadId, message),
+    read: (threadId) => threadsService.lastError(threadId),
+  },
 });
 
 export const threadMessages = createThreadMessages(runsService);

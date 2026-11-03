@@ -166,6 +166,8 @@ export type RunEvent =
       runningMs?: number;
       /** What the person said during the run that the agent has not taken yet, oldest first. */
       steers?: QueuedSteer[];
+      /** Why the latest run failed, while no run has started since (decision 0100). */
+      error?: string;
     }
   | {
       type: "run_start";

@@ -181,6 +181,12 @@ ws.onmessage = ({ data }) => {
     });
     const finish = () => {
       const { runId } = message;
+      // With FAKE_RUN_FAILS the run ends with that error, as a model provider that keeps refusing does.
+      if (process.env.FAKE_RUN_FAILS) {
+        const error = process.env.FAKE_RUN_FAILS;
+        send({ type: "run.end", runId, seq: numbered(runId), outcome: "error", error });
+        return;
+      }
       send({
         type: "run.event",
         runId,

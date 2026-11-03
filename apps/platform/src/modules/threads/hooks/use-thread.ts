@@ -111,6 +111,8 @@ export function useThread(threadId: string) {
         }
         case "snapshot":
           changeSteers(() => event.steers ?? []);
+          // A run that failed while this page was not listening still says why (decision 0100).
+          setError(event.error ?? null);
           // What the sidebar shows of this thread is brought to what the server says now: a run
           // may have ended while no stream was listening to it.
           setThreadRunning(threadId, event.running);

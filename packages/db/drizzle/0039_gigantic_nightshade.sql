@@ -1,0 +1,1 @@
+ALTER TABLE "threads" ADD COLUMN "last_error" text;

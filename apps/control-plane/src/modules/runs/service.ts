@@ -41,11 +41,26 @@ type Channel = {
   thread: RunThread;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
+  /**
+   * Why the latest run failed (null: it did not), once this process knows; undefined until then,
+   * when the failure store says.
+   */
+  failure?: string | null;
 };
 
 export type ContinuationStore = {
   save(threadId: string, continuation: unknown): Promise<void>;
   clear(threadId: string): Promise<void>;
+};
+
+/**
+ * Why a thread's latest run failed, kept with the thread (decision 0100): the `error` event reaches
+ * only the clients attached when it happens, and one that opens the thread later is told too.
+ */
+export type FailureStore = {
+  /** Sets the failure, or clears it with null. */
+  record(threadId: string, message: string | null): Promise<void>;
+  read(threadId: string): Promise<string | null>;
 };
 
 export class RunBusyError extends ConflictError {
@@ -64,6 +79,7 @@ export class RunManager {
   #runtime: Runtime;
   #onRunFinished: (thread: RunThread) => void | Promise<void>;
   #continuations: ContinuationStore;
+  #failures: FailureStore;
 
   constructor(deps: {
     store: ConversationStore;
@@ -73,11 +89,14 @@ export class RunManager {
     onRunFinished: (thread: RunThread) => void | Promise<void>;
     /** Where a run that stopped on the agent's question waits for the answer. */
     continuations: ContinuationStore;
+    /** Where why the latest run failed is kept for clients that come later. */
+    failures: FailureStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
     this.#continuations = deps.continuations;
+    this.#failures = deps.failures;
   }
 
   isRunning(threadId: string) {
@@ -209,6 +228,7 @@ export class RunManager {
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
     this.#emit(channel, opening);
+    this.#recordFailure(channel, null);
     void this.#consume(channel, run);
   }
 
@@ -334,14 +354,19 @@ export class RunManager {
           steers: [...run.steers.values()],
         };
       }
-      const history = await this.#store.load({ scope: this.#scope(channel.thread) });
+      const [history, failure] = await Promise.all([
+        this.#store.load({ scope: this.#scope(channel.thread) }),
+        this.#failure(channel),
+      ]);
       if (channel.run) continue;
       queue.length = 0;
-      return {
+      const snapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
         messages: messagesToChat(history),
         running: false,
         usage: usageFromHistory(history),
       };
+      if (failure) snapshot.error = failure;
+      return snapshot;
     }
   }
 
@@ -401,12 +426,31 @@ export class RunManager {
     this.#emit(channel, { type: "steer_rejected", id, reason });
   }
 
+  // What this process knows of the latest run's failure, else what the store kept, which is only
+  // the way to it after a restart: a store that cannot be read says nothing failed.
+  async #failure(channel: Channel) {
+    if (channel.failure !== undefined) return channel.failure;
+    return this.#failures.read(channel.thread.id).catch((error: unknown) => {
+      console.warn(`Could not read why the last run of thread ${channel.thread.id} failed:`, error);
+      return null;
+    });
+  }
+
+  // Known here at once, kept in the store for later; a store that fails only costs a restart's memory.
+  #recordFailure(channel: Channel, message: string | null) {
+    channel.failure = message;
+    this.#failures.record(channel.thread.id, message).catch((error: unknown) => {
+      console.warn(`Could not keep why the last run of thread ${channel.thread.id} failed:`, error);
+    });
+  }
+
   #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
     // Whatever the agent never took was not delivered; the person is told, with what they said.
     for (const id of run.steers.keys()) {
       this.#reject(channel, run, id, "The run ended before the agent read it");
     }
     this.#emit(channel, event);
+    if (event.type === "error") this.#recordFailure(channel, event.message);
     if (channel.run === run) channel.run = undefined;
     run.finished.resolve();
     Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {

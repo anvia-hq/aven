@@ -46,6 +46,11 @@ export const threads = pgTable(
      * here; decision 0020). Set while the question is unanswered, otherwise null.
      */
     pendingContinuation: jsonb("pending_continuation"),
+    /**
+     * Why the thread's latest run failed, such as a model provider that kept refusing, so a client
+     * that opens the thread later is told (decision 0100). Cleared when the next run starts.
+     */
+    lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

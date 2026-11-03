@@ -101,3 +101,44 @@ test.describe("a thread that is running", () => {
     await expect(page.locator(".animate-pulse")).toHaveCount(0, { timeout: 3000 });
   });
 });
+
+// A run that fails says why where the reply would be, and keeps saying it to a page opened later
+// (decision 0100), until the next run starts.
+test.describe("a thread whose run failed", () => {
+  let runner: ChildProcess | undefined;
+  test.afterEach(() => {
+    runner?.kill();
+    runner = undefined;
+  });
+
+  test("shows the error after a reload, not an empty reply", async ({ page }) => {
+    await registerUser(page, "fail", "Failing Person");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS_AFTER: "300",
+      FAKE_RUN_FAILS: "404 This model is not available.",
+    });
+    runner = child;
+
+    // Sent while nobody has the thread open, as when someone leaves and comes back.
+    const sent = await page.request.post(`/api/threads/${threadId}/messages`, {
+      data: { prompt: "work on it" },
+    });
+    expect(sent.ok()).toBe(true);
+    await expect(async () => {
+      const threads = (await (await page.request.get("/api/threads")).json()) as {
+        id: string;
+        running: boolean;
+      }[];
+      expect(threads.find((thread) => thread.id === threadId)?.running).toBe(false);
+    }).toPass({ timeout: 10_000 });
+
+    await page.goto(`/threads/${threadId}`);
+    await expect(page.getByText("404 This model is not available.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("404 This model is not available.")).toBeVisible();
+  });
+});

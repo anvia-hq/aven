@@ -220,6 +220,23 @@ export const threadsService = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
+  // Why the thread's latest run failed, or null (decision 0100). Not a change to the thread, so its
+  // `updated_at` stays as it was.
+  async saveLastError(id: string, message: string | null) {
+    await db
+      .update(threads)
+      .set({ lastError: message, updatedAt: sql`${threads.updatedAt}` })
+      .where(eq(threads.id, id));
+  },
+
+  async lastError(id: string) {
+    const [row] = await db
+      .select({ lastError: threads.lastError })
+      .from(threads)
+      .where(eq(threads.id, id));
+    return row?.lastError ?? null;
+  },
+
   // The pull requests found for the thread's branches after a run (decisions 0044 and 0069): new
   // ones are added and the title and state of known ones are brought up to date.
   async savePullRequests(id: string, pullRequests: ThreadPullRequest[]) {
