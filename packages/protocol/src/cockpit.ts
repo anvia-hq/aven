@@ -26,7 +26,8 @@ export const TAG_RULE =
 export const TAGS_MAX = 10;
 
 export const COCKPIT_TITLE_MAX = 200;
-export const COCKPIT_BODY_MAX = 50_000;
+/** A body is BlockNote's blocks as JSON (decision 0105), which takes more room than the words. */
+export const COCKPIT_BODY_MAX = 200_000;
 /** The most items of one kind a person keeps. */
 export const COCKPIT_ITEMS_MAX = 2000;
 

@@ -5,6 +5,9 @@
 
 @plugin "@tailwindcss/typography";
 
+/* The cockpit's editor draws with Tailwind classes of its own (decision 0105). */
+@source "../node_modules/@blocknote/shadcn";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
@@ -391,4 +394,15 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   .bot-avatar[data-mood="working"] .bot-orbit {
     animation: bot-orbit 2.4s linear infinite;
   }
+}
+
+/* BlockNote in the cockpit: the page's own surface and font, and no padding of its own beyond the
+   room its side menu needs (decision 0105). */
+.bn-shadcn .bn-editor {
+  background: transparent;
+  font-family: inherit;
+  padding-inline: 2.75rem 0.5rem;
+}
+.bn-shadcn .bn-container {
+  font-family: inherit;
 }

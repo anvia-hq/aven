@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { registerUser } from "./helpers";
 
 test.describe("Cockpit", () => {
-  test("the rail opens the cockpit, and the inbox captures, ticks off and deletes", async ({
+  test("the rail opens the cockpit, and the inbox reads like mail: captured, opened, written in, done and deleted", async ({
     page,
   }) => {
     await registerUser(page, "cockpit", "Cockpit Person");
@@ -12,20 +12,31 @@ test.describe("Cockpit", () => {
     await expect(page).toHaveURL(/\/cockpit\/inbox/);
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
 
-    await page.getByLabel("Capture", { exact: true }).fill("Call the bank");
-    await page.getByLabel("Tags for the capture").fill("Errand");
-    await page.getByLabel("Tags for the capture").press("Enter");
-    await page.getByRole("button", { name: "Capture" }).click();
-    const open = page.getByRole("list", { name: "Open items" });
-    await expect(open).toContainText("Call the bank");
-    await expect(open).toContainText("#errand");
-    await expect(page.getByRole("navigation", { name: "Cockpit" })).toContainText("errand");
+    await page.getByRole("textbox", { name: "Capture" }).fill("Call the bank");
+    await page.getByRole("textbox", { name: "Capture" }).press("Enter");
+    // Captured and opened beside the list.
+    const reader = page.getByRole("article", { name: "Call the bank" });
+    await expect(reader).toBeVisible();
+    await expect(page).toHaveURL(/item=/);
+    await reader.getByLabel("Tags").fill("errand");
+    await reader.getByLabel("Tags").press("Enter");
+    const editor = reader.locator(".bn-editor");
+    await editor.click();
+    await page.keyboard.type("Ask about the card fee.");
+    await expect(page.getByRole("list", { name: "Open items" })).toContainText(
+      "Ask about the card fee.",
+    );
 
-    await page.getByRole("checkbox", { name: "Mark Call the bank done" }).click();
+    // Saved: there after a reload.
+    await page.reload();
+    await expect(reader.locator(".bn-editor")).toContainText("Ask about the card fee.");
+    await expect(page.getByRole("list", { name: "Open items" })).toContainText("#errand");
+
+    await reader.getByRole("button", { name: "Done" }).click();
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
-    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("tab", { name: "Done" }).click();
     await expect(page.getByRole("list", { name: "Done items" })).toContainText("Call the bank");
-    await page.getByRole("button", { name: "Delete Call the bank" }).click();
+    await reader.getByRole("button", { name: "Delete" }).click();
     await expect(page.getByText("Nothing done yet.")).toBeVisible();
   });
 
@@ -64,7 +75,7 @@ test.describe("Cockpit", () => {
         .getByRole("listitem", { name: "T-1 Write the plan" }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await page.getByRole("tab", { name: "List" }).click();
     await expect(page).toHaveURL(/view=list/);
     const table = page.getByRole("table", { name: "Tasks" });
     await expect(table).toContainText("Write the plan");
@@ -119,23 +130,37 @@ test.describe("Cockpit", () => {
       .toEqual(["First", "Third", "Second"]);
   });
 
-  test("notes are written, pinned and previewed", async ({ page }) => {
+  test("a note is started, written in BlockNote, pinned, found and kept", async ({ page }) => {
     await registerUser(page, "cockpit", "Cockpit Person");
     await page.goto("/cockpit/notes");
     await page.getByRole("button", { name: "New note" }).click();
-    await page.getByLabel("Title").fill("Release checklist");
-    await page.getByRole("textbox", { name: "Note" }).fill("# Steps\n\n- Tag it\n- Check the run");
-    await page.getByRole("tab", { name: "Preview" }).click();
-    await expect(page.getByRole("heading", { name: "Steps" })).toBeVisible();
-    await page.getByRole("switch", { name: "Pin to the top" }).click();
-    await page.getByRole("button", { name: "Create note" }).click();
+    // Its title is ready to be typed over.
+    const title = page.getByRole("textbox", { name: "Title" });
+    await expect(title).toBeFocused();
+    await page.keyboard.type("Release checklist");
+    const note = page.getByRole("article", { name: /Release checklist|Untitled/ });
+    await note.locator(".bn-editor").click();
+    await page.keyboard.type("# Steps");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Tag it");
+    await expect(note.locator(".bn-editor h1")).toHaveText("Steps");
+    await note.getByRole("button", { name: "Pin" }).click();
 
     const notes = page.getByRole("list", { name: "Notes" });
     await expect(notes).toContainText("Release checklist");
+    await expect(notes).toContainText("Steps Tag it");
     await expect(notes.getByRole("img", { name: "Pinned" })).toBeVisible();
-    await notes.getByRole("button", { name: /Release checklist/ }).click();
-    await page.getByLabel("Title").fill("Release steps");
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(notes).toContainText("Release steps");
+
+    await page.reload();
+    await expect(
+      page.getByRole("article", { name: "Release checklist" }).locator(".bn-editor h1"),
+    ).toHaveText("Steps");
+    await page
+      .getByRole("searchbox", { name: "Search notes" })
+      .or(page.getByLabel("Search notes"))
+      .fill("nothing like it");
+    await expect(page.getByText("No note matches.")).toBeVisible();
+    await page.getByLabel("Search notes").fill("tag it");
+    await expect(notes).toContainText("Release checklist");
   });
 });

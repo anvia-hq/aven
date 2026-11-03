@@ -14,12 +14,12 @@ import { Field, FieldLabel } from "@/components/field";
 import { Form } from "@/components/form";
 import { Input } from "@/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Textarea } from "@/components/textarea";
 
 import { useTasks, type TaskInput } from "../hooks/use-tasks";
 import type { CockpitTask, TaskPriority, TaskStatus } from "../types";
 import { PriorityFlag, StatusDot } from "./task-badges";
 import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
+import { RichTextEditor } from "./rich-text-editor";
 import { TagInput } from "./tag-input";
 
 function TaskForm({
@@ -79,13 +79,14 @@ function TaskForm({
       </Field>
       <Field>
         <FieldLabel>Description</FieldLabel>
-        <Textarea
-          aria-label="Description"
-          value={description}
-          placeholder="Details, links, a checklist…"
-          onChange={(event) => setDescription(event.target.value)}
-          className="max-h-72 min-h-28"
-        />
+        <div className="max-h-[50vh] min-h-32 overflow-y-auto rounded-lg border py-2">
+          <RichTextEditor
+            label="Description"
+            value={description}
+            placeholder="Details, links, a checklist… or press '/'"
+            onChange={setDescription}
+          />
+        </div>
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field>

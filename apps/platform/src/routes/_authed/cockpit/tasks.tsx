@@ -2,7 +2,7 @@ import { Kanban, List } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { CockpitPage, withTag } from "@/modules/cockpit/components/cockpit-page";
 import { TaskBoard } from "@/modules/cockpit/components/task-board";
 import { EditTaskDialog, NewTaskDialog } from "@/modules/cockpit/components/task-dialog";
@@ -35,26 +35,23 @@ function TasksPage() {
       wide
       actions={
         <>
-          <ToggleGroup
-            aria-label="View"
-            value={[view]}
-            onValueChange={(value: string[]) =>
-              value[0] &&
+          <Tabs
+            value={view}
+            onValueChange={(value) =>
               void navigate({
-                search: (prev) => ({ ...prev, view: value[0] === "list" ? "list" : undefined }),
+                search: (prev) => ({ ...prev, view: value === "list" ? "list" : undefined }),
               })
             }
-            variant="outline"
-            size="sm"
-            spacing={0}
           >
-            <ToggleGroupItem value="board" aria-label="Board">
-              <Kanban /> Board
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="List">
-              <List /> List
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <TabsList aria-label="View">
+              <TabsTrigger value="board">
+                <Kanban /> Board
+              </TabsTrigger>
+              <TabsTrigger value="list">
+                <List /> List
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <NewTaskDialog initial={{ tags: tag ? [tag] : [] }} />
         </>
       }

@@ -1,34 +1,59 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useRef } from "react";
 
-import { CockpitPage, withTag } from "@/modules/cockpit/components/cockpit-page";
-import { EditNoteDialog, NewNoteDialog } from "@/modules/cockpit/components/note-dialog";
-import { NoteGrid } from "@/modules/cockpit/components/note-grid";
+import { withTag } from "@/modules/cockpit/components/cockpit-page";
+import { NoteEditor } from "@/modules/cockpit/components/note-editor";
+import { NotesPane } from "@/modules/cockpit/components/notes-pane";
+import { NothingOpen, SplitView } from "@/modules/cockpit/components/split-view";
 import { useNotes } from "@/modules/cockpit/hooks/use-notes";
 
+type NotesSearch = { tag?: string; note?: string };
+
 export const Route = createFileRoute("/_authed/cockpit/notes")({
-  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
+  validateSearch: (search: Record<string, unknown>): NotesSearch => ({
     tag: typeof search.tag === "string" && search.tag !== "" ? search.tag : undefined,
+    note: typeof search.note === "string" && search.note !== "" ? search.note : undefined,
   }),
   component: NotesPage,
 });
 
 function NotesPage() {
-  const { tag } = Route.useSearch();
+  const { tag, note: openId } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const { notes, loaded } = useNotes();
-  const [editing, setEditing] = useState<string | null>(null);
-  const open = notes.find((note) => note.id === editing) ?? null;
+  // The note just started here, whose title is ready to be typed over.
+  const started = useRef<string | null>(null);
+  const open = notes.find((note) => note.id === openId);
+  const select = (id?: string) => void navigate({ search: (prev) => ({ ...prev, note: id }) });
 
   return (
-    <CockpitPage
-      title="Notes"
-      tag={tag}
-      to="/cockpit/notes"
-      wide
-      actions={<NewNoteDialog tag={tag} />}
-    >
-      {loaded && <NoteGrid notes={withTag(notes, tag)} onOpen={(note) => setEditing(note.id)} />}
-      <EditNoteDialog note={open} onOpenChange={(isOpen) => !isOpen && setEditing(null)} />
-    </CockpitPage>
+    <SplitView
+      open={Boolean(open)}
+      list={
+        loaded && (
+          <NotesPane
+            notes={withTag(notes, tag)}
+            tag={tag}
+            selected={openId}
+            onSelect={(id) => {
+              started.current = notes.some((note) => note.id === id) ? null : id;
+              select(id);
+            }}
+          />
+        )
+      }
+      detail={
+        open ? (
+          <NoteEditor
+            key={open.id}
+            note={open}
+            fresh={started.current === open.id}
+            onClose={() => select(undefined)}
+          />
+        ) : (
+          <NothingOpen>Pick a note, or start one with +.</NothingOpen>
+        )
+      }
+    />
   );
 }
