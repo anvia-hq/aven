@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Badge } from "@/components/badge";
+import { TagBadge } from "./tag-badge";
 
 // A record's tags, each a link that shows only what carries it on this page.
 export function TagList({
@@ -14,10 +14,9 @@ export function TagList({
   return (
     <span className="flex flex-wrap gap-1">
       {tags.map((tag) => (
-        <Badge
+        <TagBadge
           key={tag}
-          variant="outline"
-          className="text-muted-foreground"
+          tag={tag}
           render={
             <Link
               to={to}
@@ -27,7 +26,7 @@ export function TagList({
           }
         >
           #{tag}
-        </Badge>
+        </TagBadge>
       ))}
     </span>
   );

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
+import { TagBadge } from "./tag-badge";
 
 type Props = {
   title: string;
@@ -30,8 +30,8 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {tag && (
-            <Badge
-              variant="secondary"
+            <TagBadge
+              tag={tag}
               render={
                 <Link
                   to={to}
@@ -42,7 +42,7 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
             >
               #{tag}
               <X />
-            </Badge>
+            </TagBadge>
           )}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

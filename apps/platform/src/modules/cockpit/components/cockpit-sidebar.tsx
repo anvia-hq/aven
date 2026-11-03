@@ -15,6 +15,7 @@ import { useInbox } from "../hooks/use-inbox";
 import { useNotes } from "../hooks/use-notes";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTag } from "../types";
+import { tagColor } from "./tag-badge";
 
 type Page = "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes";
 
@@ -117,7 +118,7 @@ export function CockpitSidebar() {
                       />
                     }
                   >
-                    <Tag />
+                    <Tag style={tagColor(tag.name)} className="text-(--tag)" />
                     <span>{tag.name}</span>
                   </SidebarMenuButton>
                   {here > 0 && <SidebarMenuBadge>{here}</SidebarMenuBadge>}

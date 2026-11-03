@@ -7,6 +7,7 @@ import { shortTimeAgo } from "@/lib/format";
 
 import { plainTextOf } from "../rich-text";
 import type { InboxItem } from "../types";
+import { TagBadge } from "./tag-badge";
 
 export type InboxShown = "open" | "done";
 
@@ -48,8 +49,10 @@ function InboxRow({
           <span className="flex min-w-0 gap-2 text-xs text-muted-foreground">
             <span className="min-w-0 flex-1 truncate">{preview}</span>
             {item.tags.length > 0 && (
-              <span className="shrink-0 truncate text-muted-foreground/70">
-                {item.tags.map((tag) => `#${tag}`).join(" ")}
+              <span className="flex shrink-0 gap-1">
+                {item.tags.slice(0, 2).map((tag) => (
+                  <TagBadge key={tag} tag={tag} className="h-4 px-1.5 text-[0.6875rem]" />
+                ))}
               </span>
             )}
           </span>

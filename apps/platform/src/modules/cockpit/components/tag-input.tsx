@@ -4,11 +4,11 @@ import { useState, type KeyboardEvent } from "react";
 
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 
 import { useCockpitTags } from "../hooks/use-collection";
+import { TagBadge, tagClass, tagColor } from "./tag-badge";
 
 // The tags of a record as chips, and a field that adds one on Enter or a comma and takes the last
 // away on Backspace. The tags the person already uses are offered as they type.
@@ -63,18 +63,18 @@ export function TagInput({
         )}
       >
         {value.map((tag) => (
-          <Badge key={tag} variant="secondary" className="gap-0.5 pr-1">
+          <TagBadge key={tag} tag={tag} className="gap-0.5 pr-1">
             #{tag}
             <Button
               type="button"
               variant="ghost"
               aria-label={`Remove ${tag}`}
-              className="size-3.5 rounded-sm p-0 hover:bg-transparent hover:text-foreground"
+              className="size-3.5 rounded-sm p-0 text-inherit opacity-70 hover:bg-transparent hover:text-inherit hover:opacity-100"
               onClick={() => onChange(value.filter((each) => each !== tag))}
             >
               <X />
             </Button>
-          </Badge>
+          </TagBadge>
         ))}
         <Input
           aria-label={label}
@@ -89,21 +89,21 @@ export function TagInput({
       {offered.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {offered.map((name) => (
-            <Badge
+            <Button
               key={name}
-              variant="outline"
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onMouseDown={(event) => event.preventDefault()}
-                />
-              }
+              type="button"
+              variant="ghost"
+              size="xs"
+              style={tagColor(name)}
+              className={cn(
+                tagClass,
+                "h-5 rounded-4xl px-2 hover:bg-(--tag)/25 dark:hover:bg-(--tag)/30",
+              )}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => add(name)}
             >
               #{name}
-            </Badge>
+            </Button>
           ))}
         </div>
       )}

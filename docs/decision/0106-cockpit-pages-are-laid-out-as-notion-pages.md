@@ -14,6 +14,8 @@ The first split views of 0105 put a boxed list and a boxed form side by side: a 
 - **The inbox stays a mail view** (the person's earlier ask), made quiet: a small header with Open and Done as line tabs and a + button, rows without borders that are tinted on hover and when open, and the item open beside them as a page.
 - **A new inbox item is a draft until it is added.** + opens `?item=new`, a page like an item's own with its title chosen (`components/inbox-draft.tsx`); Add to inbox (or ⌘/Ctrl+Enter) creates it with its title, tags and details and opens it in the draft's place, and Cancel discards it, nothing of it sent.
 
+- **A tag has a color**, one of the bots' avatar palette (decision 0062) picked by its name (`paletteColor` in `bots/avatar.ts`), so a tag looks the same wherever it is: a tinted chip (`components/tag-badge.tsx`) in a page's properties, on a task, in an inbox row, and its icon in the sidebar.
+
 ## Consequences
 
 - Moving between notes is through the index, the pinned notes or the browser's back, not a list kept beside the note.

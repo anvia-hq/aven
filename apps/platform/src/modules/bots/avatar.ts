@@ -132,6 +132,11 @@ function hash(seed: string) {
   return value >>> 0;
 }
 
+/** A color of the palette for a name, the same every time: a cockpit tag's (decision 0106). */
+export function paletteColor(name: string) {
+  return colors[hash(name) % colors.length]!;
+}
+
 // A stream of numbers from 0 to 1 that is the same every time for the same seed.
 function random(seed: string) {
   let state = hash(seed);
