@@ -63,10 +63,13 @@ test.describe("sharing a thread", () => {
     await choose(/Only me/);
     await expect(page.getByText("Only you can see it now")).toBeVisible();
     await expect(share).toContainText("Private");
+    await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(0);
     expect((await mate.page.request.get(`/api/threads/${thread.id}`)).status()).toBe(404);
 
     await choose(/Everyone in the workspace/);
     await expect(share).toContainText("Shared");
+    // The creator's own list marks it as shared, beside the project's tile.
+    await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(1);
 
     // The teammate finds it under Shared with workspace and can read it, nothing more.
     await mate.page.goto("/threads");

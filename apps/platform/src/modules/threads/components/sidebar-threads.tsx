@@ -1,4 +1,4 @@
-import { Archive, Plus } from "@mynaui/icons-react";
+import { Archive, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -41,6 +41,12 @@ function SidebarProjectTile({
       className={thread.running ? "animate-pulse" : undefined}
     />
   );
+}
+
+// Beside the project's tile, for a thread shared with the workspace (decision 0084).
+function SharedMark({ thread }: { thread: Thread }) {
+  if (thread.visibility !== "workspace") return null;
+  return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
 export function SidebarThreads() {
@@ -94,6 +100,7 @@ export function SidebarThreads() {
                 project={projects.find((candidate) => candidate.id === thread.projectId)}
                 palette={palettes.get(thread.projectId)}
               />
+              <SharedMark thread={thread} />
               <span className="flex-1 truncate" title={hostLabel(thread)}>
                 {thread.title}
               </span>
@@ -129,6 +136,7 @@ export function SidebarThreads() {
                     project={projects.find((candidate) => candidate.id === thread.projectId)}
                     palette={palettes.get(thread.projectId)}
                   />
+                  <SharedMark thread={thread} />
                   <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
                     {thread.title}
                   </span>
