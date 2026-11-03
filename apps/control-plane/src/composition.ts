@@ -16,6 +16,8 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createShipService } from "./modules/ship/service";
+import { threadWatchService } from "./modules/thread-watch/service";
+import { createThreadWatcher } from "./modules/thread-watch/watcher";
 import { botMcp } from "./modules/mcp/bot-access";
 import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
@@ -39,7 +41,7 @@ export const runtimeHub = new RuntimeHub(
 export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(runtimeHub, runGateway),
-  onRunFinished: async (thread) => {
+  onRunFinished: async (thread, ending) => {
     await threadsService.touch(thread.id);
     // The agent may have opened the thread's pull request (decision 0044); the badge learns of it here.
     await syncPullRequest(thread).catch((error: unknown) => {
@@ -48,6 +50,8 @@ export const runsService = new RunManager({
         describeError(error),
       );
     });
+    // A bot that sent the run is told how it ended, pull request and all (decision 0101).
+    await threadWatcher.ended(thread.id, ending);
   },
   continuations: {
     save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
@@ -63,7 +67,11 @@ export const threadMessages = createThreadMessages(runsService);
 
 // What a bot may do with the person's threads (decision 0088): the same runs and messages the
 // platform's routes use, so a thread a bot starts is an ordinary one.
-const botThreads = createBotThreads({ runs: runsService, messages: threadMessages });
+const botThreads = createBotThreads({
+  runs: runsService,
+  messages: threadMessages,
+  watch: threadWatchService,
+});
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });
 
@@ -123,4 +131,14 @@ export const goalDriver = createGoalDriver({
   wake: (userId, botId, note) => botChats.fire(userId, botId, note),
   isIdle: (botId) => botRunner.isIdle(botId),
   intervalMs: 30_000,
+});
+
+// Tells a bot how the run it sent a thread ended, at the run's end or, for one whose end was missed,
+// on a minute's tick (decision 0101).
+export const threadWatcher = createThreadWatcher({
+  get: (userId, threadId) => botThreads.get(userId, threadId),
+  lastError: (threadId) => threadsService.lastError(threadId),
+  isRunning: (threadId) => runsService.isRunning(threadId),
+  wake: (userId, botId, note) => botChats.fire(userId, botId, note),
+  intervalMs: 60_000,
 });

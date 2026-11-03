@@ -8,6 +8,7 @@ import {
   runtimeHub,
   goalDriver,
   scheduler,
+  threadWatcher,
   shipService,
   threadMessages,
 } from "./composition";
@@ -86,6 +87,7 @@ const shutdown = async () => {
   await localRunner?.stop();
   await scheduler.close();
   await goalDriver.close();
+  await threadWatcher.close();
   runsService.dispose();
   process.exit(0);
 };
@@ -94,6 +96,7 @@ process.on("SIGTERM", shutdown);
 
 scheduler.start();
 goalDriver.start();
+threadWatcher.start();
 
 console.log(`control-plane listening on ${app.server?.url}`);
 

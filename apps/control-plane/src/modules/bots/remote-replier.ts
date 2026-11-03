@@ -359,8 +359,10 @@ export class RemoteBotReplier implements BotReplier {
         threadRuns += 1;
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
-        if (params.op === "continue") return this.threads.continue(userId, params.id, choice);
-        return this.threads.start(userId, {
+        if (params.op === "continue") {
+          return this.threads.continue(userId, bot.id, params.id, choice);
+        }
+        return this.threads.start(userId, bot.id, {
           ...choice,
           projectId: params.projectId,
           title: params.title,

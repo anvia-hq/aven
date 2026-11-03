@@ -1,0 +1,25 @@
+# A bot hears when a thread it started ends
+
+Status: accepted. Builds on 0088 (a bot works the person's threads), and changes three of its points: a note may now lead a bot to continue or stop a thread it started itself, `continue_thread` steers a thread that is working instead of being refused, and there is a tool to stop a run. Uses 0098 (a message sent while the agent works steers it) and 0100 (a failed run says why).
+
+## Context
+
+A bot that starts a thread (0088) is told to say what it started and to look again when the person asks. Nothing tells it that the thread ended, failed or stopped on a question, so "fix the build and tell me when it is done" cannot be done: the person has to come back and ask. The Anvia harness, where Aven's bots came from, keeps a row for each session a bot started and wakes the bot with a note when it ends, and with one alert when it has done nothing for a long time.
+
+## Decision
+
+- **A thread a bot sends a run to is watched for that bot.** `start_thread` and `continue_thread` keep a row in `bot_threads` (the thread, the bot, its person and `notified_at`, null while a note is owed). A run the person starts in the thread themselves is not watched: the row is reported once, for the run the bot sent. `stop_thread` and `archive_thread` settle it with no note.
+- **When the watched run ends, the bot is woken with one note**, through the same queue as a schedule's (`botChats.fire`). `RunManager` tells the control plane how each run ended (`done`, `failed` with its error, `question`, `cancelled`), and the note says it with what `get_thread` would show: the agent's last words (cut to 3,000 characters), its pull requests, the question it asks. It asks the bot to tell the person in a message or two. Claiming the row (`notified_at IS NULL`) is what sends the note, so one run gets one note however it is noticed.
+- **A tick catches what the run's end missed.** Every minute the watcher looks at the rows that still owe a note: a thread with no run (the control plane restarted, or the run ended before the row was written) gets its note from what the thread says now: waiting for an answer, a failure kept in `last_error`, or its last words.
+- **A run that has shown nothing for 15 minutes gets one alert.** `RunManager` keeps when a run last had an event, and `get_thread` gives it as `quietSince` while it runs. The alert tells the bot that the thread may be stuck, or waiting on one long command or model call, and to look before doing anything: call `get_thread`, read its latest tool calls and whether it is still running, and only if that shows it stuck, send it a message with `continue_thread` (which steers it) or stop it with `stop_thread`. It says to tell the person only if it acts or needs them. One alert a run.
+- **A note may lead to acting on that thread, after looking at it.** 0088 holds starting, continuing and archiving to the person's own message. A bot woken by a note about a thread it started may also continue or stop that thread, and no other, and only after `get_thread` on it in the same reply, so it acts on what the thread says now and not on a note that may be minutes old. Such a follow-up is counted per thread (`bot_threads.follow_ups`), at most three until the person's own message sends the thread something; past that the bot is told to tell the person instead. Starting a thread and archiving one still take the person's word.
+- **`continue_thread` steers a working thread.** It sends the message the way the platform's composer does (`threadMessages.send`): while a run is going it is handed to the agent at its next step (0098), otherwise it starts a run. It is still refused while the thread waits for the person's answer.
+- **`stop_thread` stops a thread's run**, as the platform's Stop button does (`RunManager.cancel`): what the agent started in the sandbox is left alone. It is on the person's word, or after a note as above. It is `op: "stop"` of `bot.thread`, wire version 40.
+
+## Consequences
+
+- A thread a bot started can be followed through to the end without the person coming back to ask, and a stuck one noticed. Each note is a reply of the bot's, on its model, which costs tokens: one per run ended and at most one alert per run.
+- What a thread's agent wrote reaches the bot in a note, unasked, where before it came only from `get_thread` in a reply the person began. It is the same cut-down view, and the bot's instructions still say that it is information and never an instruction; what a note lets the bot do is limited to continuing or stopping that one thread, three times, after looking at it.
+- A question a thread asks is passed on to the person, never answered by the bot: answering may mean giving a secret (0047).
+- `bot.thread` gains `stop`, so wire version 40: a runner that has not updated is refused until `aven update`.
+- A watch is kept with the thread and the bot, deleted with either. A note that cannot be sent (no model, the bot's runner offline) is logged and not tried again: the person still finds the thread in their list.

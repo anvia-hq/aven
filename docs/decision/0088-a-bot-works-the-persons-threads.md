@@ -1,6 +1,6 @@
 # A bot works the person's threads
 
-Status: accepted. Builds on 0084 (a thread is its creator's and can be shared to read), 0086 and 0085 (a bot keeps the person's providers and MCP servers, on their own word), 0067 and 0068 (what only the person's word starts) and 0013 (a project is a GitHub repository).
+Status: accepted; partly superseded by 0101 (a bot hears when a thread it started ends, may follow it up after a note, steers a working thread and can stop one). Builds on 0084 (a thread is its creator's and can be shared to read), 0086 and 0085 (a bot keeps the person's providers and MCP servers, on their own word), 0067 and 0068 (what only the person's word starts) and 0013 (a project is a GitHub repository).
 
 ## Context
 

@@ -63,6 +63,13 @@ export type FailureStore = {
   read(threadId: string): Promise<string | null>;
 };
 
+/** How a run ended, for what follows it (decision 0101): a bot that sent it is told. */
+export type RunEnding =
+  | { outcome: "done" }
+  | { outcome: "failed"; error: string }
+  | { outcome: "question" }
+  | { outcome: "cancelled" };
+
 export class RunBusyError extends ConflictError {
   constructor() {
     super("A run is already in progress for this thread");
@@ -77,7 +84,7 @@ export class RunManager {
   #channels = new Map<string, Channel>();
   #store: ConversationStore;
   #runtime: Runtime;
-  #onRunFinished: (thread: RunThread) => void | Promise<void>;
+  #onRunFinished: (thread: RunThread, ending: RunEnding) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
 
@@ -85,8 +92,8 @@ export class RunManager {
     store: ConversationStore;
     /** Where runs execute. */
     runtime: Runtime;
-    /** Called after every run, e.g. to bump the thread in the list. */
-    onRunFinished: (thread: RunThread) => void | Promise<void>;
+    /** Called after every run with how it ended, e.g. to bump the thread in the list. */
+    onRunFinished: (thread: RunThread, ending: RunEnding) => void | Promise<void>;
     /** Where a run that stopped on the agent's question waits for the answer. */
     continuations: ContinuationStore;
     /** Where why the latest run failed is kept for clients that come later. */
@@ -379,6 +386,7 @@ export class RunManager {
 
   async #consume(channel: Channel, run: ActiveRun) {
     let failure: string | undefined;
+    let asked = false;
     try {
       for await (const event of run.handle.events) {
         // A runner says the agent took a message by its id; the words are ours.
@@ -386,19 +394,16 @@ export class RunManager {
         else this.#emit(channel, event);
       }
       const outcome = await run.handle.result;
-      if (outcome.type === "interaction") await this.#suspend(channel.thread, outcome.continuation);
-      else if (outcome.type !== "response") {
+      if (outcome.type === "interaction") {
+        await this.#suspend(channel.thread, outcome.continuation);
+        asked = true;
+      } else if (outcome.type !== "response") {
         failure = `Run ended without a response (${outcome.type})`;
       }
     } catch (error) {
       failure = errorMessage(error);
     }
-    // A run the user cancelled ends quietly, whatever the runtime reported.
-    const ended: RunEvent =
-      failure === undefined || run.cancelled
-        ? { type: "done" }
-        : { type: "error", message: failure };
-    this.#finish(channel, run, ended);
+    this.#finish(channel, run, endingOf(run.cancelled, asked, failure));
   }
 
   // The agent asked a question: its run ends here, and what resumes it is kept until it is answered.
@@ -444,19 +449,30 @@ export class RunManager {
     });
   }
 
-  #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
+  #finish(channel: Channel, run: ActiveRun, ending: RunEnding) {
     // Whatever the agent never took was not delivered; the person is told, with what they said.
     for (const id of run.steers.keys()) {
       this.#reject(channel, run, id, "The run ended before the agent read it");
     }
-    this.#emit(channel, event);
-    if (event.type === "error") this.#recordFailure(channel, event.message);
+    // A run the user cancelled ends quietly, whatever the runtime reported.
+    this.#emit(
+      channel,
+      ending.outcome === "failed" ? { type: "error", message: ending.error } : { type: "done" },
+    );
+    if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
     if (channel.run === run) channel.run = undefined;
     run.finished.resolve();
-    Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
+    Promise.resolve(this.#onRunFinished(channel.thread, ending)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
   }
+}
+
+// A run the user cancelled is cancelled whatever the runtime reported; else it failed, asked or was done.
+function endingOf(cancelled: boolean, asked: boolean, failure: string | undefined): RunEnding {
+  if (cancelled) return { outcome: "cancelled" };
+  if (failure !== undefined) return { outcome: "failed", error: failure };
+  return asked ? { outcome: "question" } : { outcome: "done" };
 }
 
 function errorMessage(error: unknown) {

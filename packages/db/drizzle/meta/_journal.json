@@ -281,6 +281,13 @@
       "when": 1793701852406,
       "tag": "0039_gigantic_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793705119145,
+      "tag": "0040_mixed_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

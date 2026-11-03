@@ -11,6 +11,7 @@ import {
 import { UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
+import type { Watcher } from "../thread-watch/service";
 import type { ThreadMessages } from "./messages";
 import { threadsService } from "./service";
 
@@ -25,14 +26,19 @@ export type BotThreads = {
     filter: { projectId?: string; archived?: boolean },
   ): Promise<BotThreadView[]>;
   get(userId: string, id: string): Promise<BotThreadDetail>;
-  /** Makes a thread in the project and sends it the prompt, which starts the agent; returns at once. */
+  /**
+   * Makes a thread in the project and sends it the prompt, which starts the agent; returns at once.
+   * The bot is told when the run ends (decision 0101).
+   */
   start(
     userId: string,
+    botId: string,
     input: { projectId: string; prompt: string; title?: string } & ThreadModelChoice,
   ): Promise<BotThreadView>;
-  /** Sends a message to one of the person's own threads, as they would. */
+  /** Sends a message to one of the person's own threads, as they would; the bot is told when the run ends. */
   continue(
     userId: string,
+    botId: string,
     id: string,
     input: { prompt: string } & ThreadModelChoice,
   ): Promise<BotThreadView>;
@@ -52,9 +58,15 @@ const QUESTION_MAX = 1000;
 export function createBotThreads({
   runs,
   messages,
+  watch,
 }: {
   runs: Pick<RunManager, "isRunning" | "history">;
   messages: Pick<ThreadMessages, "send">;
+  /** Keeps which bot sent a thread its run, so it hears how the run ended (decision 0101). */
+  watch: {
+    watch(threadId: string, watcher: Watcher): Promise<void>;
+    settle(threadId: string): Promise<void>;
+  };
 }): BotThreads {
   const repositories = async (userId: string) =>
     new Map(
@@ -127,7 +139,7 @@ export function createBotThreads({
       };
     },
 
-    async start(userId, { projectId, prompt, title, ...selection }) {
+    async start(userId, botId, { projectId, prompt, title, ...selection }) {
       const project = (await projectsService.listForPerson(userId)).find(
         (found) => found.id === projectId,
       );
@@ -148,10 +160,11 @@ export function createBotThreads({
           .catch(() => undefined);
         throw error;
       }
+      await watch.watch(thread.id, { botId, userId });
       return viewOf(userId, thread, project.repoFullName);
     },
 
-    async continue(userId, id, { prompt, ...selection }) {
+    async continue(userId, botId, id, { prompt, ...selection }) {
       const thread = await threadsService.ownedForPerson(userId, id);
       if (thread.awaitingAnswer) {
         throw new UnprocessableError(
@@ -164,6 +177,7 @@ export function createBotThreads({
         );
       }
       await messages.send(thread.organizationId, userId, id, { prompt, ...selection });
+      await watch.watch(id, { botId, userId });
       return view(userId, thread);
     },
 
@@ -175,6 +189,8 @@ export function createBotThreads({
         { state: archived ? "archived" : "open" },
       );
       if (!changed) throw new UnprocessableError("This thread no longer exists");
+      // Put away by the bot, so it is not told of it again.
+      if (archived) await watch.settle(id);
       return view(userId, changed);
     },
   };

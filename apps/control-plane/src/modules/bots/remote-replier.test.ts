@@ -1239,9 +1239,12 @@ describe("RemoteBotReplier", () => {
         calls.push(`get ${userId} ${threadId}`),
         { ...thread, turns: [], earlier: 0 }
       ),
-      start: async (userId, input) => (calls.push(`start ${userId} ${input.prompt}`), thread),
-      continue: async (userId, threadId, input) => (
-        calls.push(`continue ${userId} ${threadId} ${input.prompt}`),
+      start: async (userId, botId, input) => (
+        calls.push(`start ${userId} ${botId} ${input.prompt}`),
+        thread
+      ),
+      continue: async (userId, botId, threadId, input) => (
+        calls.push(`continue ${userId} ${botId} ${threadId} ${input.prompt}`),
         thread
       ),
       archive: async (userId, threadId, archived) => (
@@ -1268,8 +1271,8 @@ describe("RemoteBotReplier", () => {
       expect(calls).toEqual([
         "list u1 true",
         `get u1 ${id}`,
-        "start u1 Fix the build",
-        `continue u1 ${id} Also the lint`,
+        "start u1 b1 Fix the build",
+        `continue u1 b1 ${id} Also the lint`,
         `archive u1 ${id} true`,
         `archive u1 ${id} false`,
       ]);

@@ -77,7 +77,7 @@ export type StartThreadInput = z.infer<typeof startSchema>;
 export type ContinueThreadInput = Omit<z.infer<typeof continueSchema>, "id">;
 
 const WORKING =
-  "The agent is working in the thread on its own and its first answer takes a while. Tell the person what you started and that it is in their Threads list under this title. Look at it with get_thread when they ask how it is going: do not wait for it.";
+  "The agent is working in the thread on its own and its answer takes a while. Tell the person what you started and that it is in their Threads list under this title, then stop: you get a note when its run ends, and then tell them how it went. Do not wait for it or keep checking; look at it with get_thread when they ask how it is going.";
 
 // How a bot works the person's threads (decision 0088): a thread is an agent that runs in the
 // repository of a project with the person's own accounts, so the host holds starting, continuing and
@@ -111,7 +111,7 @@ export function createThreadTools(host: ThreadsHost) {
   const start = createTool({
     name: START_THREAD_TOOL_NAME,
     description:
-      "Start a new thread in a project, when the person asks for work to be done in a repository: an agent starts on your prompt at once, as the person, with their GitHub account and variables, and may change files and open a pull request. Returns right away; the work goes on without you. Do not start one for something you can answer or do yourself.",
+      "Start a new thread in a project, when the person asks for work to be done in a repository: an agent starts on your prompt at once, as the person, with their GitHub account and variables, and may change files and open a pull request. Returns right away; the work goes on without you, and you get a note when its run ends. Do not start one for something you can answer or do yourself.",
     inputSchema: startSchema,
     execute: async (input) => ({ thread: await host.start(input), note: WORKING }),
   });

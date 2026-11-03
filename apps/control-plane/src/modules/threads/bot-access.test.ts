@@ -59,8 +59,14 @@ run("a bot's threads (postgres)", async () => {
   const sent: { org: string; userId: string; thread: string; body: unknown }[] = [];
   let failSend: Error | undefined;
   let running = new Set<string>();
+  const botId = crypto.randomUUID();
+  const watched: string[] = [];
   const bot = createBotThreads({
     runs: { isRunning: (id) => running.has(id), history: async () => transcript },
+    watch: {
+      watch: async (thread, watcher) => void watched.push(`watch ${thread} ${watcher.botId}`),
+      settle: async (thread) => void watched.push(`settle ${thread}`),
+    },
     messages: {
       send: async (org, user, thread, body) => {
         if (failSend) throw failSend;
@@ -82,7 +88,7 @@ run("a bot's threads (postgres)", async () => {
   });
 
   test("starting makes a thread in the project's workspace, titled from the prompt, and sends it the prompt as the person", async () => {
-    const started = await bot.start(userId, {
+    const started = await bot.start(userId, botId, {
       projectId: projectA.id,
       prompt: "Fix the build\nand then the lint",
       modelId: "gpt-5",
@@ -108,7 +114,7 @@ run("a bot's threads (postgres)", async () => {
   test("a project of another workspace, or one that is not there, is not found, and nothing is made", async () => {
     const before = (await bot.list(userId, {})).length;
     for (const projectId of [projectB.id, crypto.randomUUID()]) {
-      await expect(bot.start(userId, { projectId, prompt: "x" })).rejects.toThrow(
+      await expect(bot.start(userId, botId, { projectId, prompt: "x" })).rejects.toThrow(
         "There is no project with that id",
       );
     }
@@ -118,9 +124,9 @@ run("a bot's threads (postgres)", async () => {
   test("a thread that could not be started is put away and the reason is given", async () => {
     failSend = new Error("The runner is offline");
     try {
-      await expect(bot.start(userId, { projectId: projectA.id, prompt: "Doomed" })).rejects.toThrow(
-        "The runner is offline",
-      );
+      await expect(
+        bot.start(userId, botId, { projectId: projectA.id, prompt: "Doomed" }),
+      ).rejects.toThrow("The runner is offline");
     } finally {
       failSend = undefined;
     }
@@ -131,7 +137,7 @@ run("a bot's threads (postgres)", async () => {
   });
 
   test("lists the open threads, narrowed to a project, and the archived ones apart", async () => {
-    const one = await bot.start(userId, { projectId: projectA.id, prompt: "List me" });
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "List me" });
     const open = await bot.list(userId, { projectId: projectA.id });
     expect(open.map((thread) => thread.id)).toContain(one.id);
     expect(open.every((thread) => thread.state !== "archived")).toBe(true);
@@ -144,7 +150,7 @@ run("a bot's threads (postgres)", async () => {
   });
 
   test("looking at a thread gives its latest turns, with what the agent called and none of what it returned", async () => {
-    const one = await bot.start(userId, { projectId: projectA.id, prompt: "Look at me" });
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Look at me" });
     const seen = await bot.get(userId, one.id);
     expect(seen.turns).toEqual([
       { role: "user", text: "Fix the build", tools: undefined },
@@ -155,13 +161,13 @@ run("a bot's threads (postgres)", async () => {
   });
 
   test("continuing sends the message to the person's own thread, and not while it works or waits for an answer", async () => {
-    const one = await bot.start(userId, { projectId: projectA.id, prompt: "Continue me" });
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Continue me" });
     // A run is going on.
-    await expect(bot.continue(userId, one.id, { prompt: "More" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, one.id, { prompt: "More" })).rejects.toThrow(
       "still going on",
     );
     running = new Set();
-    await bot.continue(userId, one.id, { prompt: "More", reasoningEffort: "high" });
+    await bot.continue(userId, botId, one.id, { prompt: "More", reasoningEffort: "high" });
     expect(sent.at(-1)).toEqual({
       org: orgA,
       userId,
@@ -171,7 +177,7 @@ run("a bot's threads (postgres)", async () => {
     // The agent asked a question.
     running = new Set();
     await threadsService.saveContinuation(one.id, { waiting: true });
-    await expect(bot.continue(userId, one.id, { prompt: "Again" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, one.id, { prompt: "Again" })).rejects.toThrow(
       "waits for the answer",
     );
     expect((await bot.get(userId, one.id)).awaitingAnswer).toBe(true);
@@ -194,7 +200,7 @@ run("a bot's threads (postgres)", async () => {
       false,
     );
 
-    await expect(bot.continue(userId, theirs.id, { prompt: "Hi" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, theirs.id, { prompt: "Hi" })).rejects.toThrow(
       "Thread not found",
     );
     await expect(bot.archive(userId, theirs.id, true)).rejects.toThrow("Thread not found");
@@ -207,15 +213,42 @@ run("a bot's threads (postgres)", async () => {
       title: "Elsewhere",
     });
     await expect(bot.get(userId, elsewhere.id)).rejects.toThrow("Thread not found");
-    await expect(bot.continue(userId, elsewhere.id, { prompt: "Hi" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, elsewhere.id, { prompt: "Hi" })).rejects.toThrow(
       "Thread not found",
     );
     await expect(bot.archive(userId, elsewhere.id, true)).rejects.toThrow("Thread not found");
     expect((await bot.list(userId, {})).map((thread) => thread.id)).not.toContain(elsewhere.id);
   });
 
+  test("a thread the bot starts or continues is watched for it, and one it archives is settled", async () => {
+    running = new Set();
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Watch me" });
+    running = new Set();
+    await bot.continue(userId, botId, one.id, { prompt: "And more" });
+    await bot.archive(userId, one.id, true);
+    await bot.archive(userId, one.id, false);
+    expect(watched.filter((line) => line.includes(one.id))).toEqual([
+      `watch ${one.id} ${botId}`,
+      `watch ${one.id} ${botId}`,
+      `settle ${one.id}`,
+    ]);
+  });
+
+  test("a thread that could not be started is not watched", async () => {
+    const before = watched.length;
+    failSend = new Error("The runner is offline");
+    try {
+      await expect(
+        bot.start(userId, botId, { projectId: projectA.id, prompt: "Unwatched" }),
+      ).rejects.toThrow("The runner is offline");
+    } finally {
+      failSend = undefined;
+    }
+    expect(watched.length).toBe(before);
+  });
+
   test("archiving puts the thread away, and false brings it back, leaving it open", async () => {
-    const one = await bot.start(userId, { projectId: projectA.id, prompt: "Archive me" });
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Archive me" });
     expect((await bot.archive(userId, one.id, true)).state).toBe("archived");
     expect((await bot.archive(userId, one.id, false)).state).toBe("open");
   });
