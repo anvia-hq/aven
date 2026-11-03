@@ -33,7 +33,7 @@ test.describe("a thread's changes", () => {
     await expect(panel.getByText("2 files")).toBeVisible();
 
     // Split puts the old line and the new one on one row, in two halves.
-    await panel.getByRole("button", { name: "Split" }).click();
+    await panel.getByRole("tab", { name: "Split" }).click();
     await expect(panel.locator(".grid-cols-2").first()).toBeVisible();
 
     await page.reload();

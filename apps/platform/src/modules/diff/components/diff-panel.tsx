@@ -4,7 +4,6 @@ import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
-import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
 
 import { useDiffPreferences } from "../hooks/use-diff-preferences";
 import { useThreadDiff } from "../hooks/use-thread-diff";
@@ -48,21 +47,16 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
             </p>
           )}
           {files.length === 0 && <span className="flex-1" />}
-          <ToggleGroup
-            value={[layout]}
-            onValueChange={(next) => isDiffLayout(next[0]) && setLayout(next[0])}
-            variant="outline"
-            size="sm"
-            spacing={0}
-            aria-label="Layout"
-          >
-            <ToggleGroupItem value="unified" aria-label="Unified">
-              <Menu />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="split" aria-label="Split">
-              <Columns />
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <Tabs value={layout} onValueChange={(next) => isDiffLayout(next) && setLayout(next)}>
+            <TabsList aria-label="Layout">
+              <TabsTrigger value="unified" aria-label="Unified">
+                <Menu />
+              </TabsTrigger>
+              <TabsTrigger value="split" aria-label="Split">
+                <Columns />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </>
       }
     >
