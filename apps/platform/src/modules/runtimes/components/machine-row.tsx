@@ -59,9 +59,9 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
   );
 }
 
-// One runner as a single row: whether it is online, its name, and CPU, memory and disk as three
+// One runner as a single card: whether it is online, its name, and CPU, memory and disk as three
 // small upright meters, each with its label over its percent; the detail behind them is on hover,
-// and a click goes to the runtimes (decision 0091).
+// and a click goes to the runtimes (decision 0091). Each row is a card of its own (decision 0100).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
   // Numbers from a runner that stopped reporting are not shown as its load now.
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
@@ -75,7 +75,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
           render={
             <Link
               to="/settings/runtimes"
-              className="flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              className="flex h-8 w-full items-center gap-1.5 rounded-lg border bg-card px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             />
           }
         >
