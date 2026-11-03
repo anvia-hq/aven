@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Starts the PostgreSQL 17 that .aven/setup installed, as this user, with its data in the home
+# folder and a socket in /tmp (the default one is not writable). It makes the data directory and
+# the `aven` database only when they are missing, so it is quick and safe to run every time.
+# The data lives in the container: after a thread's container is freed, run the migrations again.
+set -euo pipefail
+
+PGBIN=/usr/lib/postgresql/17/bin
+PGDATA="$HOME/pgdata"
+
+[ -d "$PGDATA" ] || "$PGBIN/initdb" -D "$PGDATA" -U "$(id -un)" --auth=trust > /dev/null
+"$PGBIN/pg_ctl" -D "$PGDATA" status > /dev/null 2>&1 ||
+  "$PGBIN/pg_ctl" -D "$PGDATA" -l "$HOME/pgdata.log" -w \
+    -o "-c unix_socket_directories=/tmp -c listen_addresses=localhost" start > /dev/null
+"$PGBIN/psql" -h localhost -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='aven'" | grep -q 1 ||
+  "$PGBIN/createdb" -h localhost aven
