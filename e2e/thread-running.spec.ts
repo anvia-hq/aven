@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// A thread's project tile pulses in the sidebar while the thread runs. Only the thread that is open
+// A running thread shows working dots beside its project tile in the sidebar. Only the thread that is open
 // has a stream to hear its run end on, so the sidebar must find out for the others another way.
 test.describe("a thread that is running", () => {
   let runner: ChildProcess | undefined;
@@ -28,7 +28,7 @@ test.describe("a thread that is running", () => {
       data: { prompt: "work on it" },
     });
     expect(sent.ok()).toBe(true);
-    await expect(page.locator(".animate-pulse")).toHaveCount(1);
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(1);
     return threadId;
   }
 
@@ -41,7 +41,7 @@ test.describe("a thread that is running", () => {
     return threads.find((thread) => thread.id === threadId)?.running;
   };
 
-  test("stops pulsing in the sidebar when its run ends while another page is open", async ({
+  test("loses its working dots in the sidebar when its run ends while another page is open", async ({
     page,
   }) => {
     const threadId = await startRun(page);
@@ -54,10 +54,10 @@ test.describe("a thread that is running", () => {
     // The run ends by itself, with nobody listening to it.
     await expect.poll(() => runningOnServer(page, threadId), { timeout: 15_000 }).toBe(false);
 
-    await expect(page.locator(".animate-pulse")).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(0, { timeout: 15_000 });
   });
 
-  test("a thread that began running while the sidebar thought it idle pulses once it is opened", async ({
+  test("a thread that began running while the sidebar thought it idle shows its dots once it is opened", async ({
     page,
   }) => {
     await registerUser(page, "pls", "Pulse Person");
@@ -70,7 +70,7 @@ test.describe("a thread that is running", () => {
 
     // The list is loaded with the thread idle, so nothing is checking on it.
     await page.goto("/projects");
-    await expect(page.locator(".animate-pulse")).toHaveCount(0);
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(0);
     const sent = await page.request.post(`/api/threads/${threadId}/messages`, {
       data: { prompt: "work on it" },
     });
@@ -82,10 +82,10 @@ test.describe("a thread that is running", () => {
       .first()
       .click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
-    await expect(page.locator(".animate-pulse")).toHaveCount(1, { timeout: 3000 });
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(1, { timeout: 3000 });
   });
 
-  test("a thread opened after its run ended does not keep the sidebar pulsing", async ({
+  test("a thread opened after its run ended does not keep its working dots in the sidebar", async ({
     page,
   }) => {
     const threadId = await startRun(page);
@@ -98,7 +98,7 @@ test.describe("a thread that is running", () => {
       .first()
       .click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
-    await expect(page.locator(".animate-pulse")).toHaveCount(0, { timeout: 3000 });
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(0, { timeout: 3000 });
   });
 });
 

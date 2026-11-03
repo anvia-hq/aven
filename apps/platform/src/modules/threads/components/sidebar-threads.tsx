@@ -20,11 +20,12 @@ import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
+import { WorkingDots } from "./working-indicator";
 
 const RUNNING_REFRESH_MS = 5000;
 
-// The thread's project as a tile, pulsing while the thread runs. Until the project is known the
-// tile's place is kept, so a row does not show a question mark and then change.
+// The thread's project as a tile, with the working dots beside it while the thread runs. Until the
+// project is known the tile's place is kept, so a row does not show a question mark and then change.
 function SidebarProjectTile({
   thread,
   project,
@@ -34,14 +35,20 @@ function SidebarProjectTile({
   project?: Project;
   palette?: number;
 }) {
-  if (!project) return <span className="size-4 shrink-0" aria-hidden />;
+  const working = thread.running && <WorkingDots label="Working" />;
+  if (!project) {
+    return (
+      <>
+        <span className="size-4 shrink-0" aria-hidden />
+        {working}
+      </>
+    );
+  }
   return (
-    <ProjectTile
-      projectId={project.id}
-      palette={palette}
-      name={project.name}
-      className={thread.running ? "animate-pulse" : undefined}
-    />
+    <>
+      <ProjectTile projectId={project.id} palette={palette} name={project.name} />
+      {working}
+    </>
   );
 }
 
@@ -83,7 +90,7 @@ export function SidebarThreads() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   // Only the open thread has a stream to hear its run end on. While a thread is shown as running,
-  // the list is asked again now and then, so another thread's tile stops pulsing when its run ends.
+  // the list is asked again now and then, so another thread's dots go when its run ends.
   const anyRunning = [...own, ...others].some((thread) => thread.running);
   useEffect(() => {
     if (!anyRunning) return;
