@@ -6,4 +6,9 @@ test-results
 playwright-report
 .build
 .swiftpm
-.aven
+# Aven's own state and a runner's workspaces, but its setup scripts are committed.
+.aven/*
+!.aven/setup
+!.aven/resume
+!.aven/ship.md
+!.aven/proof/

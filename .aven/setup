@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Aven's development environment: Bun's dependencies, the PostgreSQL 17 the repository runs on
+# (deploy/docker-compose.yml: postgres:17-alpine), Chromium for the e2e suite, and a local .env.
+# Bun 1.4.4 is already in the image, as the Dockerfiles ask for (oven/bun:1.4.4).
+# The database server itself is started by .aven/resume, as the plain user, in each container.
+set -euo pipefail
+
+echo "Dependencies from bun.lock"
+bun install --frozen-lockfile > /dev/null
+
+echo "PostgreSQL 17"
+sudo apt-get update -qq
+if ! sudo apt-get install -y --no-install-recommends postgresql-17 > /dev/null; then
+  # Debian's packages do not have it: PostgreSQL's own repository, for the same major version.
+  sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg > /dev/null
+  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc |
+    sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+  echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" |
+    sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+  sudo apt-get update -qq
+  sudo apt-get install -y --no-install-recommends postgresql-17 > /dev/null
+fi
+
+echo "Chromium for the e2e suite"
+bunx playwright install chromium > /dev/null
+
+echo "Local .env"
+if [ ! -f .env ]; then
+  # The checkout is root's in the setup container, so the file is made and edited as root, then
+  # given back: sed -i writes a temporary file beside it, which needs the directory.
+  sudo cp .env.example .env
+  # Secrets the control plane needs. They are local to this snapshot, and .env is git-ignored.
+  sudo sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -base64 32)|" .env
+  sudo sed -i "s|^PROVIDER_ENCRYPTION_KEY=.*|PROVIDER_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
+  # A runner started from this checkout keeps its state here, apart from an installed Aven's.
+  sudo sed -i "s|^AVEN_RUNTIME_HOME=.*|AVEN_RUNTIME_HOME=$PWD/.aven/runtime|" .env
+  sudo chown "$(id -u):$(id -g)" .env
+fi
+
+echo "Done"
