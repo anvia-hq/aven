@@ -18,6 +18,7 @@ import {
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
+import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 
@@ -64,8 +65,9 @@ export function AppShell({ user, sidebar }: Props) {
         >
           <AvenMark className="w-4" />
         </Link>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-col items-center gap-2">
           <BotRailLink />
+          <CockpitRailLink />
         </div>
       </aside>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own

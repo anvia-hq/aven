@@ -1,0 +1,176 @@
+import { Fragment, useState, type DragEvent } from "react";
+
+import { cn } from "cn";
+
+import { Button } from "@/components/button";
+
+import { useTasks } from "../hooks/use-tasks";
+import type { CockpitTask, TaskStatus } from "../types";
+import { NewTaskDialog } from "./task-dialog";
+import { DueDate, PriorityFlag, StatusDot } from "./task-badges";
+import { STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
+import { TagList } from "./tag-list";
+
+type DropAt = { status: TaskStatus; index: number };
+
+// Where a card dropped at `index` of a column goes: between its neighbours there, the dragged card
+// left out, at the top or bottom past the ends.
+function positionAt(column: CockpitTask[], index: number) {
+  const before = column[index - 1];
+  const after = column[index];
+  if (before && after) return (before.position + after.position) / 2;
+  if (after) return after.position - 1;
+  if (before) return before.position + 1;
+  return 0;
+}
+
+// Where a dragged card would land.
+const DropLine = () => <li aria-hidden="true" className="h-0.5 rounded-full bg-primary" />;
+
+function TaskCard({
+  task,
+  dragging,
+  onOpen,
+  onDragStart,
+  onDragOver,
+}: {
+  task: CockpitTask;
+  dragging: boolean;
+  onOpen: () => void;
+  onDragStart: () => void;
+  onDragOver: (below: boolean) => void;
+}) {
+  return (
+    <li
+      draggable
+      aria-label={`${taskKey(task)} ${task.title}`}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", task.id);
+        onDragStart();
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        const box = event.currentTarget.getBoundingClientRect();
+        onDragOver(event.clientY > box.top + box.height / 2);
+      }}
+      className={cn(
+        "cursor-grab rounded-lg border bg-card p-2.5 shadow-xs transition-opacity active:cursor-grabbing",
+        dragging && "opacity-40",
+      )}
+    >
+      <Button
+        variant="ghost"
+        className="h-auto w-full flex-col items-stretch gap-1.5 p-0 text-left font-normal whitespace-normal hover:bg-transparent"
+        onClick={onOpen}
+      >
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <PriorityFlag priority={task.priority} />
+          {taskKey(task)}
+        </span>
+        <span className="text-sm leading-snug">{task.title}</span>
+      </Button>
+      {(task.tags.length > 0 || task.dueDate) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <DueDate task={task} />
+          <TagList tags={task.tags} to="/cockpit/tasks" />
+        </div>
+      )}
+    </li>
+  );
+}
+
+// The tasks as a board, a column a status, as Linear has it: a card is dragged to another column
+// or place, which saves its status and position at once.
+export function TaskBoard({
+  tasks,
+  tag,
+  onOpen,
+}: {
+  tasks: CockpitTask[];
+  tag?: string;
+  onOpen: (task: CockpitTask) => void;
+}) {
+  const { update } = useTasks();
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<DropAt | null>(null);
+
+  const columnOf = (status: TaskStatus) =>
+    tasks.filter((task) => task.status === status && task.id !== dragged);
+
+  function drop(event: DragEvent, status: TaskStatus) {
+    event.preventDefault();
+    const task = tasks.find((each) => each.id === dragged);
+    const at = dropAt?.status === status ? dropAt.index : columnOf(status).length;
+    setDragged(null);
+    setDropAt(null);
+    if (!task) return;
+    const position = positionAt(columnOf(status), at);
+    if (task.status === status && task.position === position) return;
+    void update(task, { status, position });
+  }
+
+  return (
+    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4" aria-label="Board">
+      {STATUSES.map((status) => {
+        const column = tasks.filter((task) => task.status === status);
+        const shown = columnOf(status);
+        return (
+          <section
+            key={status}
+            aria-label={STATUS_LABELS[status]}
+            className={cn(
+              "flex w-72 shrink-0 flex-col gap-2 rounded-xl bg-muted/50 p-2",
+              dropAt?.status === status && "ring-2 ring-ring/40",
+            )}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (dropAt?.status !== status) setDropAt({ status, index: shown.length });
+            }}
+            onDrop={(event) => drop(event, status)}
+          >
+            <header className="flex items-center gap-2 px-1">
+              <StatusDot status={status} />
+              <h2 className="text-sm font-medium">{STATUS_LABELS[status]}</h2>
+              <span className="text-xs text-muted-foreground">{column.length}</span>
+              <NewTaskDialog
+                initial={{ status, tags: tag ? [tag] : [] }}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="ml-auto"
+                    aria-label={`New task in ${STATUS_LABELS[status]}`}
+                  />
+                }
+              />
+            </header>
+            <ul className="flex min-h-12 flex-col gap-2">
+              {column.map((task) => {
+                const index = shown.findIndex((each) => each.id === task.id);
+                return (
+                  <Fragment key={task.id}>
+                    {dropAt?.status === status && dropAt.index === index && dragged && <DropLine />}
+                    <TaskCard
+                      task={task}
+                      dragging={task.id === dragged}
+                      onOpen={() => onOpen(task)}
+                      onDragStart={() => setDragged(task.id)}
+                      onDragOver={(below) => {
+                        if (task.id === dragged || index === -1) return;
+                        setDropAt({ status, index: below ? index + 1 : index });
+                      }}
+                    />
+                  </Fragment>
+                );
+              })}
+              {dropAt?.status === status && dropAt.index === shown.length && dragged && (
+                <DropLine />
+              )}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  );
+}

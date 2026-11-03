@@ -1,0 +1,39 @@
+import { toast } from "@/components/toast";
+
+import { notesAtom } from "../atoms/cockpit-atoms";
+import type { CockpitNote } from "../types";
+import { createCollection } from "./use-collection";
+
+export type NoteInput = { title: string; body?: string; tags?: string[]; pinned?: boolean };
+
+// Pinned first, then the latest changed.
+const pinnedFirst = (notes: CockpitNote[]) =>
+  [...notes].sort(
+    (a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt),
+  );
+
+const notes = createCollection<CockpitNote, NoteInput, Partial<NoteInput>>({
+  path: "/cockpit/notes",
+  atom: notesAtom,
+  label: "notes",
+  order: pinnedFirst,
+});
+
+export const resetNotes = notes.reset;
+
+// The person's notes.
+export function useNotes() {
+  const { items, loaded } = notes.useItems();
+  return {
+    notes: items,
+    loaded,
+    create: (input: NoteInput) => notes.create(input, "Could not save the note"),
+    update: (note: CockpitNote, patch: Partial<NoteInput>) =>
+      notes.update(note, patch, "Could not save the note"),
+    async remove(note: CockpitNote) {
+      if (await notes.remove(note, "Could not delete the note")) {
+        toast.add({ title: "Note deleted", description: note.title });
+      }
+    },
+  };
+}

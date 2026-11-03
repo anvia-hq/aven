@@ -15,10 +15,15 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
 import { Route as AuthedBotRouteImport } from './routes/_authed/bot'
+import { Route as AuthedCockpitRouteImport } from './routes/_authed/cockpit'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
 import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
+import { Route as AuthedCockpitIndexRouteImport } from './routes/_authed/cockpit/index'
+import { Route as AuthedCockpitInboxRouteImport } from './routes/_authed/cockpit/inbox'
+import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit/notes'
+import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
@@ -64,6 +69,11 @@ const AuthedBotRoute = AuthedBotRouteImport.update({
   path: '/bot',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedCockpitRoute = AuthedCockpitRouteImport.update({
+  id: '/cockpit',
+  path: '/cockpit',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -84,6 +94,26 @@ const AuthedBotBotIdRoute = AuthedBotBotIdRouteImport.update({
   id: '/$botId',
   path: '/$botId',
   getParentRoute: () => AuthedBotRoute,
+} as any)
+const AuthedCockpitIndexRoute = AuthedCockpitIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedCockpitRoute,
+} as any)
+const AuthedCockpitInboxRoute = AuthedCockpitInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthedCockpitRoute,
+} as any)
+const AuthedCockpitNotesRoute = AuthedCockpitNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AuthedCockpitRoute,
+} as any)
+const AuthedCockpitTasksRoute = AuthedCockpitTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AuthedCockpitRoute,
 } as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
@@ -176,9 +206,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/bot': typeof AuthedBotRouteWithChildren
+  '/cockpit': typeof AuthedCockpitRouteWithChildren
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/bot/$botId': typeof AuthedBotBotIdRoute
+  '/cockpit/inbox': typeof AuthedCockpitInboxRoute
+  '/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -191,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/bot/': typeof AuthedBotIndexRoute
+  '/cockpit/': typeof AuthedCockpitIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -203,6 +238,9 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/bot/$botId': typeof AuthedBotBotIdRoute
+  '/cockpit/inbox': typeof AuthedCockpitInboxRoute
+  '/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -215,6 +253,7 @@ export interface FileRoutesByTo {
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/bot': typeof AuthedBotIndexRoute
+  '/cockpit': typeof AuthedCockpitIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
   '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -229,9 +268,13 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
   '/_authed/bot': typeof AuthedBotRouteWithChildren
+  '/_authed/cockpit': typeof AuthedCockpitRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_authed/bot/$botId': typeof AuthedBotBotIdRoute
+  '/_authed/cockpit/inbox': typeof AuthedCockpitInboxRoute
+  '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -244,6 +287,7 @@ export interface FileRoutesById {
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/_authed/bot/': typeof AuthedBotIndexRoute
+  '/_authed/cockpit/': typeof AuthedCockpitIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/_shell/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
   '/_authed/_shell/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
@@ -257,9 +301,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/bot'
+    | '/cockpit'
     | '/settings'
     | '/accept-invitation/$invitationId'
     | '/bot/$botId'
+    | '/cockpit/inbox'
+    | '/cockpit/notes'
+    | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
     | '/settings/mcp'
@@ -272,6 +320,7 @@ export interface FileRouteTypes {
     | '/settings/skills'
     | '/settings/workspace-variables'
     | '/bot/'
+    | '/cockpit/'
     | '/settings/'
     | '/projects/$projectId'
     | '/threads/$threadId'
@@ -284,6 +333,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/accept-invitation/$invitationId'
     | '/bot/$botId'
+    | '/cockpit/inbox'
+    | '/cockpit/notes'
+    | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
     | '/settings/mcp'
@@ -296,6 +348,7 @@ export interface FileRouteTypes {
     | '/settings/skills'
     | '/settings/workspace-variables'
     | '/bot'
+    | '/cockpit'
     | '/settings'
     | '/projects/$projectId'
     | '/threads/$threadId'
@@ -309,9 +362,13 @@ export interface FileRouteTypes {
     | '/register'
     | '/_authed/_shell'
     | '/_authed/bot'
+    | '/_authed/cockpit'
     | '/_authed/settings'
     | '/accept-invitation/$invitationId'
     | '/_authed/bot/$botId'
+    | '/_authed/cockpit/inbox'
+    | '/_authed/cockpit/notes'
+    | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/mcp'
@@ -324,6 +381,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/skills'
     | '/_authed/settings/workspace-variables'
     | '/_authed/bot/'
+    | '/_authed/cockpit/'
     | '/_authed/settings/'
     | '/_authed/_shell/projects/$projectId'
     | '/_authed/_shell/threads/$threadId'
@@ -383,6 +441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedBotRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/cockpit': {
+      id: '/_authed/cockpit'
+      path: '/cockpit'
+      fullPath: '/cockpit'
+      preLoaderRoute: typeof AuthedCockpitRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -410,6 +475,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/bot/$botId'
       preLoaderRoute: typeof AuthedBotBotIdRouteImport
       parentRoute: typeof AuthedBotRoute
+    }
+    '/_authed/cockpit/': {
+      id: '/_authed/cockpit/'
+      path: '/'
+      fullPath: '/cockpit/'
+      preLoaderRoute: typeof AuthedCockpitIndexRouteImport
+      parentRoute: typeof AuthedCockpitRoute
+    }
+    '/_authed/cockpit/inbox': {
+      id: '/_authed/cockpit/inbox'
+      path: '/inbox'
+      fullPath: '/cockpit/inbox'
+      preLoaderRoute: typeof AuthedCockpitInboxRouteImport
+      parentRoute: typeof AuthedCockpitRoute
+    }
+    '/_authed/cockpit/notes': {
+      id: '/_authed/cockpit/notes'
+      path: '/notes'
+      fullPath: '/cockpit/notes'
+      preLoaderRoute: typeof AuthedCockpitNotesRouteImport
+      parentRoute: typeof AuthedCockpitRoute
+    }
+    '/_authed/cockpit/tasks': {
+      id: '/_authed/cockpit/tasks'
+      path: '/tasks'
+      fullPath: '/cockpit/tasks'
+      preLoaderRoute: typeof AuthedCockpitTasksRouteImport
+      parentRoute: typeof AuthedCockpitRoute
     }
     '/_authed/settings/': {
       id: '/_authed/settings/'
@@ -558,6 +651,24 @@ const AuthedBotRouteWithChildren = AuthedBotRoute._addFileChildren(
   AuthedBotRouteChildren,
 )
 
+interface AuthedCockpitRouteChildren {
+  AuthedCockpitInboxRoute: typeof AuthedCockpitInboxRoute
+  AuthedCockpitNotesRoute: typeof AuthedCockpitNotesRoute
+  AuthedCockpitTasksRoute: typeof AuthedCockpitTasksRoute
+  AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
+}
+
+const AuthedCockpitRouteChildren: AuthedCockpitRouteChildren = {
+  AuthedCockpitInboxRoute: AuthedCockpitInboxRoute,
+  AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
+  AuthedCockpitTasksRoute: AuthedCockpitTasksRoute,
+  AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
+}
+
+const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
+  AuthedCockpitRouteChildren,
+)
+
 interface AuthedSettingsRouteChildren {
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
@@ -596,12 +707,14 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedShellRoute: typeof AuthedShellRouteWithChildren
   AuthedBotRoute: typeof AuthedBotRouteWithChildren
+  AuthedCockpitRoute: typeof AuthedCockpitRouteWithChildren
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedShellRoute: AuthedShellRouteWithChildren,
   AuthedBotRoute: AuthedBotRouteWithChildren,
+  AuthedCockpitRoute: AuthedCockpitRouteWithChildren,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
 }
 
