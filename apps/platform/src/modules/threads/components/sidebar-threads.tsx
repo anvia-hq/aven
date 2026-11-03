@@ -47,7 +47,7 @@ function SidebarProjectTile({
 
 // When the thread last changed, in the place the Archive button takes at the row's end: centred on
 // it, so on hover the button is drawn where the time was. Outside the row's link, which keeps that
-// room free, and not something to click.
+// room free, and not something to click. Below `md` the button is always shown, so the time is not.
 function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolean }) {
   return (
     <time
@@ -55,7 +55,8 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
       title={timeAgo(thread.updatedAt, true)}
       className={cn(
         "pointer-events-none absolute inset-y-0 right-1 flex w-5 items-center justify-center text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
-        yields && "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0",
+        yields &&
+          "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 max-md:hidden",
       )}
     >
       {shortTimeAgo(thread.updatedAt)}

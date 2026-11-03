@@ -28,7 +28,8 @@ export function ProjectPicker({ value, onChange }: Props) {
         <Folder />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
-      {/* A list under the button, not over it: drawn over it, each item's folder sat beside the button's. */}
+      {/* A list under the button, not over it: drawn over it, each item's folder sat beside the
+          button's. */}
       <SelectContent alignItemWithTrigger={false} align="start">
         {projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>

@@ -95,8 +95,8 @@ test.describe("machine monitor", () => {
       row.getByRole("meter", { name }).locator("[data-slot=meter-fill]");
     await expect(
       fillOf(machines.getByRole("listitem", { name: "hot-box" }), "CPU of hot-box"),
-    ).toHaveAttribute("data-high", "");
-    await expect(fillOf(build, "CPU of build-box")).not.toHaveAttribute("data-high", "");
+    ).toHaveAttribute("data-level", "high");
+    await expect(fillOf(build, "CPU of build-box")).toHaveAttribute("data-level", "low");
 
     // A runner that does not report, and one that is off, say so in the row.
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");

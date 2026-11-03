@@ -1,9 +1,9 @@
 import { useRuntimes } from "../hooks/use-runtimes";
 import { MachineRow } from "./machine-row";
 
-// The workspace's runners above Settings in the sidebar, one compact row each in a card (decision 0091). It
-// polls, as a machine's load changes without anyone doing anything; with no runner there is nothing
-// to show, and the rows give way when the sidebar is collapsed to icons.
+// The workspace's runners above Settings in the sidebar, one compact row each in a card (decision
+// 0091). It polls, as a machine's load changes without anyone doing anything; with no runner there
+// is nothing to show, and the rows give way when the sidebar is collapsed to icons.
 export function MachineMonitor() {
   const { runtimes } = useRuntimes({ poll: true });
   if (runtimes.length === 0) return null;

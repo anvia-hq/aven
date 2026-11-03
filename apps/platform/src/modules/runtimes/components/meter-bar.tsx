@@ -20,7 +20,6 @@ export function MeterBar({ percent }: { percent: number | null }) {
       <span
         data-slot="meter-fill"
         data-level={level}
-        data-high={level === "high" ? "" : undefined}
         className={cn("absolute inset-x-0 bottom-0 block", fill[level])}
         style={{ height: `${percent ?? 0}%` }}
       />

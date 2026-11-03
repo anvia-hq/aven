@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { isStale, machineMetrics, STATS_STALE_MS } from "./machine-metrics";
+import { isStale, machineMetrics, meterLevel, STATS_STALE_MS } from "./machine-metrics";
 
 const stats = {
   cores: 4,
@@ -44,5 +44,20 @@ describe("isStale", () => {
     expect(isStale(stats, at + 15_000)).toBe(false);
     expect(isStale(stats, at + STATS_STALE_MS)).toBe(false);
     expect(isStale(stats, at + STATS_STALE_MS + 1)).toBe(true);
+  });
+});
+
+describe("meterLevel", () => {
+  test("is low below 60%, busy from 60% and high from 90%", () => {
+    expect(meterLevel(0)).toBe("low");
+    expect(meterLevel(59)).toBe("low");
+    expect(meterLevel(60)).toBe("busy");
+    expect(meterLevel(89)).toBe("busy");
+    expect(meterLevel(90)).toBe("high");
+    expect(meterLevel(100)).toBe("high");
+  });
+
+  test("is low for a reading the machine could not give", () => {
+    expect(meterLevel(null)).toBe("low");
   });
 });
