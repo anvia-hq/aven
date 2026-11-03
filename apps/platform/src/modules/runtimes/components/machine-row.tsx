@@ -43,21 +43,24 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
       aria-valuemax={100}
       aria-valuenow={metric.percent ?? undefined}
       aria-valuetext={metric.percent === null ? "unknown" : `${metric.percent}%`}
-      className="flex shrink-0 items-center gap-1"
+      className="flex shrink-0 items-center gap-[3px]"
     >
       <MeterBar percent={metric.percent} />
-      <span className="flex w-[18px] flex-col gap-px leading-none">
+      <span className="flex w-[22px] flex-col gap-px leading-none">
         <span className="text-[8px] font-medium tracking-wide text-muted-foreground/80">
           {metric.short}
         </span>
-        <span className="text-[11px] tabular-nums">{metric.percent ?? "–"}</span>
+        <span className="text-[10px] tabular-nums">
+          {metric.percent ?? "–"}
+          {metric.percent !== null && <span className="text-[7px] text-muted-foreground">%</span>}
+        </span>
       </span>
     </span>
   );
 }
 
 // One runner as a single row: whether it is online, its name, and CPU, memory and disk as three
-// small upright meters, each with its label over its number; the detail behind them is on hover, and a click goes to the runtimes (decision 0091).
+// small upright meters, each with its label over its percent; the detail behind them is on hover, and a click goes to the runtimes (decision 0091).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
   // Numbers from a runner that stopped reporting are not shown as its load now.
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
@@ -84,7 +87,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
           />
           <span className="min-w-0 flex-1 truncate">{runtime.name}</span>
           {stats ? (
-            <span className="flex shrink-0 items-center gap-2">
+            <span className="flex shrink-0 items-center gap-1.5">
               {metrics.map((metric) => (
                 <Metric key={metric.key} metric={metric} runtime={runtime} />
               ))}

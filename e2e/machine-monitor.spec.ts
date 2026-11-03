@@ -83,10 +83,9 @@ test.describe("machine monitor", () => {
       "aria-valuenow",
       "76",
     );
-    // The numbers are read off the meters; the row has no room for a percent sign.
-    await expect(build).toContainText("CPU58");
-    await expect(build).toContainText("MEM38");
-    await expect(build).toContainText("DSK76");
+    await expect(build).toContainText("CPU58%");
+    await expect(build).toContainText("MEM38%");
+    await expect(build).toContainText("DSK76%");
     await expect(
       build.getByRole("meter", { name: "CPU of build-box" }).locator("[data-slot=meter-fill]"),
     ).toHaveCSS("width", /^\d/);
