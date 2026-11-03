@@ -328,6 +328,31 @@ let held: { holder: string; expiresAt: string } | null = null;
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { holder?: string; leaseMs?: number };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
+  if (call.method === "run.steer") {
+    // The person spoke while the run goes on (decision 0098). With FAKE_STEER_REFUSES the runner says
+    // why it cannot take it; otherwise it takes it and the agent reads it a moment later, as it
+    // would at the end of its tool, which FAKE_STEER_APPLIES_AFTER (milliseconds) sets.
+    const { runId, steerId, prompt } = call.params as {
+      runId: string;
+      steerId: string;
+      prompt: string;
+    };
+    event({ type: "steer", prompt });
+    if (process.env.FAKE_STEER_REFUSES) {
+      return reply({ status: "refused", reason: process.env.FAKE_STEER_REFUSES });
+    }
+    setTimeout(
+      () =>
+        send({
+          type: "run.event",
+          runId,
+          seq: numbered(runId),
+          event: { type: "steer_applied", id: steerId },
+        }),
+      Number(process.env.FAKE_STEER_APPLIES_AFTER ?? 400),
+    );
+    return reply({ status: "queued" });
+  }
   if (call.method === "diff.get") {
     const { scope } = call.params as { scope: "turn" | "all" };
     return reply({

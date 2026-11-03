@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, QueuedSteer } from "../types";
+import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
 import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
   threadId: string;
   messages: ChatMessage[];
+  /** What the person said while the agent worked, which it has not read yet (decision 0098). */
+  steers?: QueuedSteer[];
   /** The agent is writing the last message. */
   running?: boolean;
   /** When the run in progress started (`Date.now()`), for the time shown beside the indicator. */
@@ -20,12 +23,13 @@ type Props = {
 export function ThreadMessages({
   threadId,
   messages,
+  steers = [],
   running = false,
   startedAt = null,
   error,
   aside,
 }: Props) {
-  const scrollRef = useScrollToBottom(messages.length);
+  const scrollRef = useScrollToBottom(messages.length + steers.length);
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">
@@ -43,6 +47,9 @@ export function ThreadMessages({
                 threadId={threadId}
                 streaming={running && index === messages.length - 1}
               />
+            ))}
+            {steers.map((steer) => (
+              <QueuedMessage key={steer.id} message={steer} />
             ))}
             {running && <WorkingIndicator startedAt={startedAt} />}
             {error && (

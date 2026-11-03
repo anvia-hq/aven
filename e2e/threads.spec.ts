@@ -280,7 +280,7 @@ test.describe("threads", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
   });
 
-  test("a running thread shows it is working, and its composer offers Stop instead of Send", async ({
+  test("a running thread shows it is working, and its composer offers Stop, with Send beside it once there is something to say", async ({
     page,
   }) => {
     await page.route("**/api/threads/*/events", (route) =>
@@ -308,10 +308,13 @@ test.describe("threads", () => {
 
     await expect(page.getByRole("status").filter({ hasText: "Working…" })).toBeVisible();
     await expect(page.getByText(/^4m \d{1,2}s$/)).toBeVisible();
-    await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
-    await page.getByRole("textbox", { name: "Prompt" }).press("Enter");
+    // Nothing to say: only Stop. With words, Send appears beside it and the words steer the agent
+    // (decision 0098; e2e/steer.spec.ts).
+    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
-    await expect(page.locator('[data-role="user"]')).toHaveCount(1);
+    await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
+    await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await page.getByRole("button", { name: "Stop" }).click();
     await expect.poll(() => cancelled).toBe(true);
   });

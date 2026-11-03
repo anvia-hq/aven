@@ -6,8 +6,9 @@ import {
   type RunEvent,
   type ThreadUsage,
 } from "@aven/protocol/events";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { toast } from "@/components/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
@@ -15,12 +16,22 @@ import { messageBody } from "../message-body";
 import type {
   ChatMessage,
   OutgoingMessage,
+  QueuedSteer,
   QuestionAnswer,
   RunSelection,
   SecretChoice,
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
+
+// A name for a message the agent has not taken yet, which the server and the other tabs use to tell
+// it from the others. `randomUUID` is only there on a secure origin, a plain-HTTP address has none.
+function newSteerId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  );
+}
 
 function parseEvent(data: string): RunEvent | null {
   try {
@@ -49,8 +60,17 @@ export function useThread(threadId: string) {
   // be none, and what hangs on it should hold its place instead of showing nothing.
   const [synced, setSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What was said while the agent worked and it has not taken yet (decision 0098). Kept in a ref as
+  // well, so an event that drops one can say what it was.
+  const [steers, setSteersState] = useState<QueuedSteer[]>([]);
+  const steersRef = useRef<QueuedSteer[]>([]);
+  const changeSteers = useCallback((change: (current: QueuedSteer[]) => QueuedSteer[]) => {
+    steersRef.current = change(steersRef.current);
+    setSteersState(steersRef.current);
+  }, []);
 
   useEffect(() => {
+    changeSteers(() => []);
     setMessages([]);
     setRunning(false);
     setStartedAt(null);
@@ -65,7 +85,32 @@ export function useThread(threadId: string) {
       setMessages((current) => applyEvent(current, event));
       setRunning((current) => isRunning(current, event));
       switch (event.type) {
+        case "steer_queued":
+          // Shown already by the browser that sent it, which named it.
+          changeSteers((current) =>
+            current.some(({ id }) => id === event.id)
+              ? current
+              : [...current, { id: event.id, prompt: event.prompt, mentions: event.mentions }],
+          );
+          break;
+        case "steer":
+          changeSteers((current) => current.filter(({ id }) => id !== event.id));
+          break;
+        case "steer_rejected": {
+          const lost = steersRef.current.find(({ id }) => id === event.id);
+          changeSteers((current) => current.filter(({ id }) => id !== event.id));
+          // With a reason the person has not been told: say what was lost, so it can be sent again.
+          if (lost && event.reason) {
+            toast.add({
+              title: "A message was not delivered",
+              description: `${event.reason}: “${lost.prompt}”`,
+              type: "error",
+            });
+          }
+          break;
+        }
         case "snapshot":
+          changeSteers(() => event.steers ?? []);
           // What the sidebar shows of this thread is brought to what the server says now: a run
           // may have ended while no stream was listening to it.
           setThreadRunning(threadId, event.running);
@@ -107,19 +152,34 @@ export function useThread(threadId: string) {
       void refresh();
     };
     return () => source.close();
-  }, [threadId, setThreadRunning, refresh]);
+  }, [threadId, setThreadRunning, refresh, changeSteers]);
 
-  // True once the message is accepted, so the composer knows it can clear.
+  // True once the message is accepted, so the composer knows it can clear. While the agent works
+  // the message goes to it, to be read at its next step (decision 0098): it shows at once, as
+  // waiting, and becomes the person's message when the agent takes it. It goes away again if it
+  // was not taken, or was sent as a message of its own because the run ended first.
   const send = useCallback(
     async (message: OutgoingMessage, selection: RunSelection = {}) => {
+      const id = newSteerId();
+      const drop = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
+      if (running && message.attachments.length === 0) {
+        changeSteers((current) => [
+          ...current,
+          { id, prompt: message.prompt, mentions: message.mentions },
+        ]);
+      }
       const sent = await attempt("Could not send message", async () => {
-        await postJson(`/threads/${threadId}/messages`, messageBody(message, selection));
+        const result = await postJson<{ steered: boolean }>(`/threads/${threadId}/messages`, {
+          ...messageBody(message, selection),
+          steerId: id,
+        });
         rememberModelSelection(threadId, selection);
-        return true;
+        return result;
       });
-      return sent ?? false;
+      if (!sent?.steered) drop();
+      return sent !== null;
     },
-    [threadId],
+    [threadId, running, changeSteers],
   );
 
   // True once the answers are accepted; the run then continues, and the stream shows it.
@@ -148,6 +208,7 @@ export function useThread(threadId: string) {
     // regained focus) does not unknown it.
     loaded: loaded && (session != null || !isPending),
     messages,
+    steers,
     running,
     startedAt,
     usage,

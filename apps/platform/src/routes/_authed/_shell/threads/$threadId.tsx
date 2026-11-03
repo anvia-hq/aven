@@ -32,6 +32,7 @@ function ThreadPage() {
     owned,
     loaded,
     messages,
+    steers,
     running,
     startedAt,
     usage,
@@ -87,6 +88,7 @@ function ThreadPage() {
                 <ThreadMessages
                   threadId={thread.id}
                   messages={messages}
+                  steers={steers}
                   running={running}
                   startedAt={startedAt}
                   error={error}
@@ -130,6 +132,8 @@ function ThreadPage() {
                           running={running}
                           onStop={cancel}
                           onCompact={compact}
+                          // The same while the agent works: the composer's editor is made again
+                          // when its placeholder changes, which broke a message sent as a run began.
                           placeholder="Reply to the agent…"
                           onSubmit={send}
                         />

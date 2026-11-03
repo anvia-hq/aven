@@ -8,9 +8,12 @@ import { Input } from "@/components/input";
 export function AttachButton({
   onPick,
   title,
+  disabled = false,
 }: {
   onPick: (files: FileList) => void;
   title: string;
+  /** Files cannot be sent just now; `title` says why. */
+  disabled?: boolean;
 }) {
   const picker = useRef<HTMLInputElement>(null);
   return (
@@ -31,6 +34,7 @@ export function AttachButton({
         size="icon-sm"
         aria-label="Attach files"
         title={title}
+        disabled={disabled}
         onClick={() => picker.current?.click()}
       >
         <Paperclip />

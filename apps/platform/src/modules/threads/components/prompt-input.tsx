@@ -27,7 +27,7 @@ type Props = {
   // Resolves to whether the message was taken; the text and files are only cleared when it was.
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
-  /** The agent is working: nothing can be sent, and Send gives way to Stop. */
+  /** The agent is working: Stop is there, and what is sent steers it (decision 0098). */
   running?: boolean;
   onStop?: () => void;
   /** What `/compact` does, in a thread: summarize its history (decision 0097). */
@@ -79,7 +79,7 @@ function Composer({
   const model = useModelSelection(threadId);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
-  const { canSend, submit } = useSendComposer({
+  const { canSend, hasContent, submit } = useSendComposer({
     composer,
     attachments,
     selection: model.selection,
@@ -122,19 +122,36 @@ function Composer({
       <div className="flex items-center gap-2 pt-2">
         <AttachButton
           onPick={attachments.add}
-          title="Attach files: images are shown to the model, every file is copied into the sandbox"
+          disabled={running}
+          title={
+            running
+              ? "Files can be sent when the agent is not working"
+              : "Attach files: images are shown to the model, every file is copied into the sandbox"
+          }
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
-          {running ? (
-            <Button size="icon-sm" aria-label="Stop" onClick={onStop}>
+          {running && (
+            <Button
+              size="icon-sm"
+              variant={canSend ? "outline" : "default"}
+              aria-label="Stop"
+              onClick={onStop}
+            >
               <StopSolid />
             </Button>
-          ) : (
+          )}
+          {/* While the agent works Send is there only with something to say, beside Stop. */}
+          {(!running || hasContent) && (
             <Button
               size="icon-sm"
               aria-label="Send"
+              title={
+                running && attachments.files.length > 0
+                  ? "Files can be sent when the agent is not working"
+                  : undefined
+              }
               disabled={!canSend}
               onClick={() => void submit()}
             >

@@ -32,7 +32,7 @@ type Options = {
   composer: ReturnType<typeof useComposer>;
   attachments: ReturnType<typeof useAttachments>;
   selection: RunSelection;
-  /** The agent is working: nothing can be sent. */
+  /** The agent is working: what is sent steers it (decision 0098), and files cannot go with it. */
   running: boolean;
   // Resolves to whether the message was taken; the text and files are only cleared when it was.
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
@@ -51,7 +51,7 @@ export function useSendComposer({
 }: Options) {
   const [sending, setSending] = useState(false);
   const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
-  const canSend = hasContent && !running && !sending;
+  const canSend = hasContent && !sending && !(running && attachments.files.length > 0);
 
   async function submit() {
     if (!canSend) return;
@@ -97,5 +97,5 @@ export function useSendComposer({
     }
   }
 
-  return { canSend, submit };
+  return { canSend, hasContent, submit };
 }
