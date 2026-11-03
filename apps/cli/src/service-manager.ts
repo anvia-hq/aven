@@ -1,9 +1,10 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 
 import { exec } from "./compose";
 import { launchdPlist, systemdUnit, type ServiceDefinition } from "./service-files";
+import { withUserBus } from "./user-bus";
 
 /** A background service of the person's own: a launchd agent on macOS, a systemd user unit on Linux. */
 export type ServiceManager = {
@@ -17,8 +18,8 @@ export type ServiceManager = {
   status(): Promise<string>;
 };
 
-async function mustRun(command: string[]) {
-  const { code, out } = await exec(command);
+async function mustRun(command: string[], env?: Record<string, string | undefined>) {
+  const { code, out } = await exec(command, env);
   if (code !== 0) throw new Error(`${command.slice(0, 2).join(" ")} failed: ${out}`);
 }
 
@@ -65,29 +66,33 @@ function launchd(label: string): ServiceManager {
 
 function systemd(unit: string): ServiceManager {
   const file = join(homedir(), ".config", "systemd", "user", `${unit}.service`);
+  // Found again for every call, as a session can be one with no runtime directory (`withUserBus`).
+  const env = () => withUserBus(process.env, process.getuid?.());
   const ctl = (...args: string[]) => ["systemctl", "--user", ...args];
+  const run = (...args: string[]) => mustRun(ctl(...args), env());
+  const attempt = (...args: string[]) => exec(ctl(...args), env());
   return {
     async install(def) {
       await mkdir(dirname(file), { recursive: true });
       await mkdir(dirname(def.logFile), { recursive: true });
       await writeFile(file, systemdUnit(def));
-      await mustRun(ctl("daemon-reload"));
-      await mustRun(ctl("enable", unit));
+      await run("daemon-reload");
+      await run("enable", unit);
       // Restarted, so a service that was already running moves to the new files.
-      await mustRun(ctl("restart", unit));
+      await run("restart", unit);
       // Without lingering the service stops when the person logs out. It may need a password or not exist; the service still works while logged in.
-      await exec(["loginctl", "enable-linger", process.env.USER ?? ""]);
+      await exec(["loginctl", "enable-linger", process.env.USER ?? userInfo().username]);
     },
     async uninstall() {
-      await exec(ctl("disable", "--now", unit));
+      await attempt("disable", "--now", unit);
       await rm(file, { force: true });
-      await exec(ctl("daemon-reload"));
+      await attempt("daemon-reload");
     },
-    start: () => mustRun(ctl("start", unit)),
-    stop: () => mustRun(ctl("stop", unit)),
-    restart: () => mustRun(ctl("restart", unit)),
+    start: () => run("start", unit),
+    stop: () => run("stop", unit),
+    restart: () => run("restart", unit),
     async status() {
-      const { out } = await exec(ctl("is-active", unit));
+      const { out } = await attempt("is-active", unit);
       return out === "active" ? "running" : out || "not installed";
     },
   };

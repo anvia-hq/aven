@@ -43,9 +43,9 @@ export async function dockerProblem() {
 }
 
 /** Runs a command and returns its exit code and everything it printed, for commands whose failure is an answer. */
-export async function exec(command: string[]) {
+export async function exec(command: string[], env?: Record<string, string | undefined>) {
   try {
-    const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
+    const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe", env });
     const [out, err, code] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),
