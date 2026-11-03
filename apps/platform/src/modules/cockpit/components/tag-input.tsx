@@ -58,7 +58,7 @@ export function TagInput({
         className={cn(
           "flex flex-wrap items-center gap-1",
           bare
-            ? "min-h-8 rounded-md px-1 py-0.5 hover:bg-muted/50 focus-within:bg-muted/50"
+            ? "min-h-8 rounded-md py-0.5 hover:bg-muted/50 focus-within:bg-muted/50"
             : "min-h-9 rounded-md border border-input px-2 py-1 focus-within:border-ring",
         )}
       >

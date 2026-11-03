@@ -21,14 +21,33 @@ test.describe("Cockpit", () => {
     await expect(page).toHaveURL(/\/cockpit\/inbox/);
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
 
-    await page.getByRole("textbox", { name: "Capture" }).fill("Call the bank");
-    await page.getByRole("textbox", { name: "Capture" }).press("Enter");
-    // Captured and opened beside the list.
+    // A new item cancelled is gone, nothing of it sent.
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/cockpit/inbox")) {
+        posts.push(request.url());
+      }
+    });
+    await page.getByRole("button", { name: "New item" }).click();
+    const draft = page.getByRole("article", { name: "New item" });
+    await expect(draft.getByRole("textbox", { name: "Title" })).toBeFocused();
+    await page.keyboard.type("Never mind");
+    await draft.getByRole("button", { name: "Cancel" }).click();
+    await expect(draft).toHaveCount(0);
+    await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
+    expect(posts).toEqual([]);
+
+    // A new item added: kept, with its tags, and opened beside the list.
+    await page.getByRole("button", { name: "New item" }).click();
+    await expect(draft.getByRole("button", { name: "Add to inbox" })).toBeDisabled();
+    await page.keyboard.type("Call the bank");
+    await draft.getByLabel("Tags").fill("errand");
+    await draft.getByLabel("Tags").press("Enter");
+    await draft.getByRole("button", { name: "Add to inbox" }).click();
     const reader = page.getByRole("article", { name: "Call the bank" });
     await expect(reader).toBeVisible();
-    await expect(page).toHaveURL(/item=/);
-    await reader.getByLabel("Tags").fill("errand");
-    await reader.getByLabel("Tags").press("Enter");
+    await expect(page).toHaveURL(/item=(?!new)/);
+    expect(posts).toHaveLength(1);
     const editor = reader.locator(".bn-editor");
     const saved = savedWith(page, "card fee");
     await editor.click();

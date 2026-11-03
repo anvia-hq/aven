@@ -1,15 +1,10 @@
 import { Plus } from "@mynaui/icons-react";
-import { useState, type FormEvent } from "react";
-
 import { cn } from "cn";
 
 import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { shortTimeAgo } from "@/lib/format";
 
-import { useInbox } from "../hooks/use-inbox";
 import { plainTextOf } from "../rich-text";
 import type { InboxItem } from "../types";
 
@@ -68,49 +63,45 @@ function InboxRow({
   );
 }
 
-// The inbox's list, as a mail app's (decisions 0105 and 0106): Open or Done, a line that captures,
+// The inbox's list, as a mail app's (decisions 0105 and 0106): Open or Done, + for a new item,
 // and each item as a quiet row of its title, when it came and the start of its details.
 export function InboxPane({
   items,
   shown,
   tag,
   selected,
+  creating,
   onShow,
   onSelect,
+  onNew,
 }: {
   items: InboxItem[];
   shown: InboxShown;
   tag?: string;
   selected?: string;
+  /** A new item is open, not yet kept. */
+  creating: boolean;
   onShow: (shown: InboxShown) => void;
   onSelect: (id: string) => void;
+  onNew: () => void;
 }) {
-  const { capture } = useInbox();
-  const [title, setTitle] = useState("");
-  const [busy, setBusy] = useState(false);
   const listed = items.filter((item) => item.done === (shown === "done"));
   const open = items.filter((item) => !item.done).length;
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!title.trim() || busy) return;
-    setBusy(true);
-    try {
-      const made = await capture({ title: title.trim(), tags: tag ? [tag] : [] });
-      if (made) {
-        setTitle("");
-        if (shown === "done") onShow("open");
-        onSelect(made.id);
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <>
       <header className="flex items-center gap-2 px-4 pt-4 pb-2">
         <h1 className="flex-1 text-sm font-semibold">Inbox{tag && ` · #${tag}`}</h1>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="New item"
+          aria-current={creating ? "true" : undefined}
+          className="text-muted-foreground"
+          onClick={onNew}
+        >
+          <Plus />
+        </Button>
         <Tabs value={shown} onValueChange={(value) => onShow(value === "done" ? "done" : "open")}>
           <TabsList variant="line" aria-label="Show" className="h-7">
             <TabsTrigger value="open" className="text-xs">
@@ -122,24 +113,10 @@ export function InboxPane({
           </TabsList>
         </Tabs>
       </header>
-      <Form onSubmit={onSubmit} className="px-2 pb-1">
-        <div className="flex h-9 items-center gap-2 rounded-md px-2.5 text-muted-foreground focus-within:bg-muted/60 hover:bg-muted/60">
-          <Plus className="size-4 shrink-0" />
-          <Input
-            aria-label="Capture"
-            placeholder="Capture something…"
-            value={title}
-            maxLength={200}
-            disabled={busy}
-            onChange={(event) => setTitle(event.target.value)}
-            className="h-8 border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-muted-foreground focus-visible:ring-0 md:text-sm dark:bg-transparent"
-          />
-        </div>
-      </Form>
       {listed.length === 0 ? (
         <p className="px-4 py-6 text-sm text-muted-foreground">
           {shown === "open"
-            ? "Nothing in your inbox. Capture whatever comes to mind."
+            ? "Nothing in your inbox. Add whatever comes to mind with +."
             : "Nothing done yet."}
         </p>
       ) : (
