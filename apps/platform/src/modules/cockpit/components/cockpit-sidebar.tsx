@@ -82,7 +82,6 @@ export function CockpitSidebar() {
             {pinned.map((note) => (
               <SidebarMenuItem key={note.id}>
                 <SidebarMenuButton
-                  size="sm"
                   isActive={openNote === note.id}
                   tooltip={note.title}
                   render={<Link to="/cockpit/notes" search={{ note: note.id }} />}
@@ -105,7 +104,6 @@ export function CockpitSidebar() {
               return (
                 <SidebarMenuItem key={tag.name}>
                   <SidebarMenuButton
-                    size="sm"
                     isActive={selected}
                     tooltip={tag.name}
                     render={
