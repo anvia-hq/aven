@@ -68,24 +68,23 @@ test.describe("steering a running agent", () => {
     let calls = 0;
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
-      calls++;
+      const call = ++calls;
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      if (calls === 1) return route.continue();
+      if (call === 1) return route.continue();
       return route.fulfill({ status: 409, contentType: "text/plain", body: "No thanks" });
     });
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     await prompt.click();
     await page.keyboard.type("first");
     await page.keyboard.press("Enter");
-    // Within a fraction of the server's 1.5 seconds, the composer still holding what was typed.
+    // Within a fraction of the server's 1.5 seconds, the message is shown and the composer is free.
     await expect(page.locator("[data-queued]")).toContainText("first", { timeout: 500 });
-    await expect(prompt).toHaveText("first");
-    await expect(prompt).toHaveText("", { timeout: 4000 });
+    await expect(prompt).toHaveText("", { timeout: 500 });
 
     await page.keyboard.type("second");
     await page.keyboard.press("Enter");
     await expect(page.locator("[data-queued]")).toHaveCount(2, { timeout: 500 });
-    // Refused: it is not shown as waiting any more, and what was typed is still there to send again.
+    // Refused: it is not shown as waiting any more, and what was typed is back to send again.
     await expect(page.locator("[data-queued]")).toHaveCount(1, { timeout: 4000 });
     await expect(page.locator("[data-queued]")).toContainText("first");
     await expect(prompt).toHaveText("second");

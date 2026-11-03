@@ -1,6 +1,6 @@
 import type { ComposerSubmitMessageArgs, useComposer } from "@anvia/react-ui/chat";
 import { MENTION_LIMIT } from "@aven/protocol/events";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
 
@@ -50,6 +50,9 @@ export function useSendComposer({
   onCompact,
 }: Options) {
   const [sending, setSending] = useState(false);
+  // The composer as it is now, for a send that ends after the person has gone on typing.
+  const latest = useRef(composer);
+  latest.current = composer;
   const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
   const canSend = hasContent && !sending && !(running && attachments.files.length > 0);
 
@@ -76,14 +79,35 @@ export function useSendComposer({
       });
       return;
     }
-    setSending(true);
+    // To an agent that is working the message shows at once as queued (decision 0098), so the
+    // composer is cleared at once too, ready for the next, and given the message back if it was not
+    // sent. Otherwise it is cleared when the message is taken.
+    const draft = { input: composer.input, entities: composer.entities };
+    const optimistic = running && attachments.files.length === 0;
+    if (optimistic) {
+      composer.setInput("");
+      composer.setEntities([]);
+    } else {
+      setSending(true);
+    }
     try {
       const files = await attachments.encode();
       const sent = await onSubmit({ prompt, attachments: files, mentions }, selection);
       if (sent) {
-        composer.setInput("");
-        composer.setEntities([]);
+        if (!optimistic) {
+          composer.setInput("");
+          composer.setEntities([]);
+        }
         attachments.clear();
+      } else if (optimistic) {
+        // Not sent: back in the composer, unless the person has begun another message, which is
+        // not replaced; its words are in the notice instead.
+        if (latest.current.input.trim() === "") {
+          latest.current.setInput(draft.input);
+          latest.current.setEntities(draft.entities);
+        } else {
+          toast.add({ title: "Your message was not sent", description: prompt, type: "error" });
+        }
       }
     } catch (error) {
       // A picked file can no longer be read, say it was moved; the message stays to send again.
