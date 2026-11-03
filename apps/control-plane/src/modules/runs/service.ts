@@ -72,6 +72,9 @@ export type RunEnding =
   | { outcome: "question" }
   | { outcome: "cancelled" };
 
+/** Which run ended: its start, which `activity` gave while it ran. */
+export type FinishedRun = { startedAt: number };
+
 export class RunBusyError extends ConflictError {
   constructor() {
     super("A run is already in progress for this thread");
@@ -86,7 +89,7 @@ export class RunManager {
   #channels = new Map<string, Channel>();
   #store: ConversationStore;
   #runtime: Runtime;
-  #onRunFinished: (thread: RunThread, ending: RunEnding) => void | Promise<void>;
+  #onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
 
@@ -94,8 +97,11 @@ export class RunManager {
     store: ConversationStore;
     /** Where runs execute. */
     runtime: Runtime;
-    /** Called after every run with how it ended, e.g. to bump the thread in the list. */
-    onRunFinished: (thread: RunThread, ending: RunEnding) => void | Promise<void>;
+    /**
+     * Called after every run with how it ended and which run it was, e.g. to bump the thread in the
+     * list. Its first step runs before anything else does, so it can mark the run as ending.
+     */
+    onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
     /** Where a run that stopped on the agent's question waits for the answer. */
     continuations: ContinuationStore;
     /** Where why the latest run failed is kept for clients that come later. */
@@ -474,7 +480,8 @@ export class RunManager {
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
     if (channel.run === run) channel.run = undefined;
     run.finished.resolve();
-    Promise.resolve(this.#onRunFinished(channel.thread, ending)).catch((error) => {
+    const finished = { startedAt: run.startedAt };
+    Promise.resolve(this.#onRunFinished(channel.thread, ending, finished)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
   }

@@ -189,7 +189,6 @@ function fakeRunner(
       stop: async () => {
         throw new Error("not stopped");
       },
-      followUp: async () => undefined,
       ...options.threads,
     },
   );
@@ -1234,7 +1233,7 @@ describe("RemoteBotReplier", () => {
     const archive = { replyId: "x", op: "archive", id } as const;
     const stop = { replyId: "x", op: "stop", id } as const;
 
-    // The person's threads, saying what was asked of them.
+    // The person's threads, saying what was asked of them and on whose word.
     const keeper = (calls: string[]): Partial<BotThreads> => ({
       projects: async () => [
         { id: projectId, name: "app", repository: "acme/app", defaultBranch: "main" },
@@ -1244,25 +1243,27 @@ describe("RemoteBotReplier", () => {
         calls.push(`get ${userId} ${threadId}`),
         { ...thread, turns: [], earlier: 0 }
       ),
-      start: async (userId, botId, input) => (
-        calls.push(`start ${userId} ${botId} ${input.prompt}`),
+      start: async (actor, input) => (
+        calls.push(`start ${actor.userId} ${actor.botId} ${input.prompt}`),
         thread
       ),
-      continue: async (userId, botId, threadId, input, personsWord) => (
+      continue: async (actor, threadId, input) => (
         calls.push(
-          `continue ${userId} ${botId} ${threadId} ${input.prompt}${personsWord ? "" : " (follow-up)"}`,
+          `continue ${actor.via} ${actor.userId} ${actor.botId} ${threadId} ${input.prompt}`,
         ),
         thread
       ),
-      archive: async (userId, threadId, archived) => (
-        calls.push(`archive ${userId} ${threadId} ${archived}`),
+      archive: async (actor, threadId, archived) => (
+        calls.push(`archive ${actor.userId} ${threadId} ${archived}`),
         thread
       ),
-      stop: async (userId, threadId) => (calls.push(`stop ${userId} ${threadId}`), thread),
-      followUp: async (botId, threadId) => void calls.push(`follow-up ${botId} ${threadId}`),
+      stop: async (actor, threadId) => (
+        calls.push(`stop ${actor.via} ${actor.userId} ${threadId}`),
+        thread
+      ),
     });
 
-    test("the person's own message may look, start, continue and archive, and an archive without a word archives", async () => {
+    test("the person's own message may look, start, continue, stop and archive, and an archive without a word archives", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ threads: keeper(calls) });
       const answering = run.replier.answer(input(() => undefined));
@@ -1282,10 +1283,10 @@ describe("RemoteBotReplier", () => {
         "list u1 true",
         `get u1 ${id}`,
         "start u1 b1 Fix the build",
-        `continue u1 b1 ${id} Also the lint`,
+        `continue person u1 b1 ${id} Also the lint`,
         `archive u1 ${id} true`,
         `archive u1 ${id} false`,
-        `stop u1 ${id}`,
+        `stop person u1 ${id}`,
       ]);
     });
 
@@ -1305,75 +1306,58 @@ describe("RemoteBotReplier", () => {
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
+        await sink.thread({ replyId: "x", op: "get", id });
         for (const call of [start, archive]) {
           await expect(sink.thread(call)).rejects.toThrow("only when the person asks you to");
         }
-        // Another bot never follows a thread up; a note does only after looking at it.
+        // A note that is about no thread, as a schedule's, follows none up; nor does another bot.
         for (const call of [next, stop]) {
           await expect(sink.thread(call)).rejects.toThrow(
-            prompt.startsWith("[note]") ? "get_thread first" : "only when the person asks you to",
+            prompt.startsWith("[note]")
+              ? "This note is not about that thread"
+              : "only when the person asks you to",
           );
         }
         sink.end();
         await answering;
       }
-      expect(calls.filter((call) => /^(start|continue|archive|stop|follow)/.test(call))).toEqual(
-        [],
-      );
+      expect(calls.filter((call) => /^(start|continue|archive|stop)/.test(call))).toEqual([]);
     });
 
-    test("after a note, a bot that looked at a thread may continue or stop it, counted, and that is not the person's word (decision 0101)", async () => {
+    test("a note about a thread may continue or stop that thread once the bot looked at it, as a note, and no other (decision 0101)", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ threads: keeper(calls) });
       const answering = run.replier.answer({
         ...input(() => undefined),
         prompt: "[note] The thread has not shown anything for 15 minutes",
         onPersonsWord: false,
+        aboutThread: id,
       });
       await Bun.sleep(0);
       const sink = run.only();
+      // Before looking, nothing.
+      await expect(sink.thread(stop)).rejects.toThrow("get_thread first");
       await sink.thread({ replyId: "x", op: "get", id });
       expect(await sink.thread(next)).toEqual(thread);
       expect(await sink.thread(stop)).toEqual(thread);
-      // A thread it did not look at in this reply is not followed up.
+      // Another thread, even one it looked at, is not the note's.
       const other = "77777777-7777-4777-8777-777777777777";
-      await expect(sink.thread({ ...stop, id: other })).rejects.toThrow("get_thread first");
+      await sink.thread({ replyId: "x", op: "get", id: other });
+      await expect(sink.thread({ ...stop, id: other })).rejects.toThrow(
+        "This note is not about that thread",
+      );
+      await expect(sink.thread(archive)).rejects.toThrow("only when the person asks you to");
       sink.end();
       await answering;
       expect(calls).toEqual([
         `get u1 ${id}`,
-        `follow-up b1 ${id}`,
-        `continue u1 b1 ${id} Also the lint (follow-up)`,
-        `follow-up b1 ${id}`,
-        `stop u1 ${id}`,
+        `continue note u1 b1 ${id} Also the lint`,
+        `stop note u1 ${id}`,
+        `get u1 ${other}`,
       ]);
     });
 
-    test("a follow-up the keeper refuses is not made", async () => {
-      const calls: string[] = [];
-      const run = fakeRunner({
-        threads: {
-          ...keeper(calls),
-          followUp: async () => {
-            throw new Error("You did not send this thread its run");
-          },
-        },
-      });
-      const answering = run.replier.answer({
-        ...input(() => undefined),
-        prompt: "[note] due",
-        onPersonsWord: false,
-      });
-      await Bun.sleep(0);
-      const sink = run.only();
-      await sink.thread({ replyId: "x", op: "get", id });
-      await expect(sink.thread(next)).rejects.toThrow("You did not send this thread its run");
-      sink.end();
-      await answering;
-      expect(calls).toEqual([`get u1 ${id}`]);
-    });
-
-    test("a reply starts or continues only so many threads, whatever a thread told it, and may still archive and look", async () => {
+    test("a reply starts, continues or stops only so many threads, whatever a thread told it, and may still archive and look", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ threads: keeper(calls) });
       const answering = run.replier.answer(input(() => undefined));
@@ -1382,6 +1366,7 @@ describe("RemoteBotReplier", () => {
       for (let i = 0; i < BOT_THREAD_RUNS_PER_REPLY; i++) await sink.thread(start);
       await expect(sink.thread(start)).rejects.toThrow("threads 5 times in this reply");
       await expect(sink.thread(next)).rejects.toThrow("threads 5 times in this reply");
+      await expect(sink.thread(stop)).rejects.toThrow("threads 5 times in this reply");
       expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
       expect(await sink.thread(archive)).toEqual(thread);
       sink.end();

@@ -41,17 +41,21 @@ export const runtimeHub = new RuntimeHub(
 export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(runtimeHub, runGateway),
-  onRunFinished: async (thread, ending) => {
-    await threadsService.touch(thread.id);
-    // The agent may have opened the thread's pull request (decision 0044); the badge learns of it here.
-    await syncPullRequest(thread).catch((error: unknown) => {
-      console.warn(
-        `Could not look for the pull request of thread ${thread.id}:`,
-        describeError(error),
-      );
-    });
-    // A bot that sent the run is told how it ended, pull request and all (decision 0101).
-    await threadWatcher.ended(thread.id, ending);
+  onRunFinished: async (thread, ending, run) => {
+    const updated = (async () => {
+      await threadsService.touch(thread.id);
+      // The agent may have opened the thread's pull request (decision 0044); the badge learns of it here.
+      await syncPullRequest(thread).catch((error: unknown) => {
+        console.warn(
+          `Could not look for the pull request of thread ${thread.id}:`,
+          describeError(error),
+        );
+      });
+    })();
+    // A bot that sent the run is told how it ended, pull request and all, once the thread is
+    // updated (decision 0101). `threadWatcher` is made below; this runs only when a run ends.
+    await threadWatcher.ended(thread.id, run.startedAt, ending, updated);
+    await updated;
   },
   continuations: {
     save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
@@ -139,6 +143,6 @@ export const threadWatcher = createThreadWatcher({
   get: (userId, threadId) => botThreads.get(userId, threadId),
   lastError: (threadId) => threadsService.lastError(threadId),
   activity: (threadId) => runsService.activity(threadId),
-  wake: (userId, botId, note) => botChats.fire(userId, botId, note),
+  wake: (userId, botId, note, threadId) => botChats.fire(userId, botId, note, threadId),
   intervalMs: 60_000,
 });

@@ -11,12 +11,19 @@ import {
 import { UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
-import type { Watcher } from "../thread-watch/service";
+import type { WatchedRun, Watcher } from "../thread-watch/service";
 import type { ThreadMessages } from "./messages";
 import { threadsService } from "./service";
 
 /** The model a message may choose, as a person's composer does; without one their default runs. */
 export type ThreadModelChoice = { providerId?: string; modelId?: string; reasoningEffort?: string };
+
+/**
+ * Who acts on a thread: the bot and its person, and on whose word. `person` is the person's own
+ * message; `note` is the app's word on the one thread the note is about, which may only continue or
+ * stop that thread, a few times, with no model of its own choosing (decision 0101).
+ */
+export type BotActor = { userId: string; botId: string; via: "person" | "note" };
 
 /** What a bot's reply does with the person's threads (decision 0088). */
 export type BotThreads = {
@@ -31,32 +38,26 @@ export type BotThreads = {
    * The bot is told when the run ends (decision 0101).
    */
   start(
-    userId: string,
-    botId: string,
+    actor: BotActor,
     input: { projectId: string; prompt: string; title?: string } & ThreadModelChoice,
   ): Promise<BotThreadView>;
   /**
    * Sends a message to one of the person's own threads, as they would: it steers a run that is going
-   * (decision 0098) or starts one. The bot is told when the run ends. `personsWord` says whether
-   * the person asked for it, or the bot follows a note up (decision 0101).
+   * (decision 0098) or starts one. The bot is told when the run ends.
    */
   continue(
-    userId: string,
-    botId: string,
+    actor: BotActor,
     id: string,
     input: { prompt: string } & ThreadModelChoice,
-    personsWord: boolean,
   ): Promise<BotThreadView>;
-  archive(userId: string, id: string, archived: boolean): Promise<BotThreadView>;
-  /** Stops the run of one of the person's own threads, as their Stop button does; nothing is owed of it. */
-  stop(userId: string, id: string): Promise<BotThreadView>;
-  /** Counts a follow-up after a note, on a thread the bot sent a run to (decision 0101); throws when it may not. */
-  followUp(botId: string, id: string): Promise<void>;
+  archive(actor: BotActor, id: string, archived: boolean): Promise<BotThreadView>;
+  /** Stops the run of one of the person's own threads, as their Stop button does; the bot is owed no note of it. */
+  stop(actor: BotActor, id: string): Promise<BotThreadView>;
 };
 
 type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
 
-const quietSince = (activity?: { lastEventAt: number }) =>
+const lastActivityAt = (activity?: { lastEventAt: number }) =>
   activity && new Date(activity.lastEventAt).toISOString();
 
 const NO_PROJECT = "There is no project with that id. Use list_projects.";
@@ -65,8 +66,8 @@ const QUESTION_MAX = 1000;
 // The threads of a person, which a bot acts on as the person and finds by id: the workspace comes
 // from the thread or project, and it must be one the person belongs to. A bot reads what the person
 // reads, and drives only what the person made: a thread shared with the workspace is read-only, as
-// it is in the platform (decision 0084). Whether it may start, continue or archive anything is the
-// replier's to say, as for providers and MCP servers.
+// it is in the platform (decision 0084). Whose word an action is on is the replier's to say, as for
+// providers and MCP servers; what a note's follow-up may do is held here (decision 0101).
 export function createBotThreads({
   runs,
   messages,
@@ -76,9 +77,14 @@ export function createBotThreads({
   messages: Pick<ThreadMessages, "send">;
   /** Keeps which bot sent a thread its run, so it hears how the run ended (decision 0101). */
   watch: {
-    watch(threadId: string, watcher: Watcher, personsWord?: boolean): Promise<void>;
-    settle(threadId: string): Promise<void>;
+    watch(
+      threadId: string,
+      watcher: Watcher,
+      options: { run: WatchedRun; personsWord: boolean },
+    ): Promise<void>;
+    settle(threadId: string, botId: string): Promise<void>;
     followUp(threadId: string, botId: string): Promise<"ok" | "unwatched" | "spent">;
+    giveBack(threadId: string, botId: string): Promise<void>;
   };
 }): BotThreads {
   const repositories = async (userId: string) =>
@@ -100,7 +106,7 @@ export function createBotThreads({
       mine,
       createdBy: mine ? undefined : thread.createdByName,
       running: runs.isRunning(thread.id),
-      quietSince: quietSince(runs.activity(thread.id)),
+      lastActivityAt: lastActivityAt(runs.activity(thread.id)),
       awaitingAnswer: thread.awaitingAnswer,
       pullRequests: thread.pullRequests.map(({ number, url, title, state }) => ({
         number,
@@ -114,6 +120,47 @@ export function createBotThreads({
 
   const view = async (userId: string, thread: ThreadRow) =>
     viewOf(userId, thread, (await repositories(userId)).get(thread.projectId) ?? "");
+
+  // The bot is owed a note for the run its message started or steered: the one going now, or none
+  // when it was so quick it has ended already (the tick tells of that one). A watch that cannot be
+  // kept costs only the note: the work was sent, so it is not reported as failed.
+  const watchRun = async (actor: BotActor, id: string) => {
+    const run = runs.activity(id)?.startedAt ?? null;
+    await watch
+      .watch(id, actor, { run, personsWord: actor.via === "person" })
+      .catch((error: unknown) => console.warn(`Could not watch thread ${id} for its bot:`, error));
+  };
+
+  // A note's follow-up is counted once its checks have passed, and given back when it is not made.
+  const followingUp = async <T>(actor: BotActor, id: string, act: () => Promise<T>) => {
+    if (actor.via === "person") return act();
+    const allowed = await watch.followUp(id, actor.botId);
+    if (allowed === "unwatched") {
+      throw new UnprocessableError(
+        "You did not send this thread its run, so continue or stop it only when the person's own message asks you to.",
+      );
+    }
+    if (allowed === "spent") {
+      throw new UnprocessableError(
+        "You have followed this thread up as often as you may without the person. Tell the person what it needs instead.",
+      );
+    }
+    try {
+      return await act();
+    } catch (error) {
+      await watch.giveBack(id, actor.botId).catch(() => undefined);
+      throw error;
+    }
+  };
+
+  // One of the person's own threads; a note does not bring back one they put away.
+  const owned = async (actor: BotActor, id: string) => {
+    const thread = await threadsService.ownedForPerson(actor.userId, id);
+    if (actor.via === "note" && thread.state === "archived") {
+      throw new UnprocessableError("This thread is archived. Leave it, or tell the person.");
+    }
+    return thread;
+  };
 
   return {
     async projects(userId) {
@@ -153,7 +200,8 @@ export function createBotThreads({
       };
     },
 
-    async start(userId, botId, { projectId, prompt, title, ...selection }) {
+    async start(actor, { projectId, prompt, title, ...selection }) {
+      const { userId } = actor;
       const project = (await projectsService.listForPerson(userId)).find(
         (found) => found.id === projectId,
       );
@@ -174,60 +222,53 @@ export function createBotThreads({
           .catch(() => undefined);
         throw error;
       }
-      await watch.watch(thread.id, { botId, userId });
+      await watchRun(actor, thread.id);
       return viewOf(userId, thread, project.repoFullName);
     },
 
-    async continue(userId, botId, id, { prompt, ...selection }, personsWord) {
-      const thread = await threadsService.ownedForPerson(userId, id);
+    async continue(actor, id, { prompt, ...selection }) {
+      const thread = await owned(actor, id);
       if (thread.awaitingAnswer) {
         throw new UnprocessableError(
           "The agent in this thread asked the person a question and waits for the answer. Tell the person to answer it in the thread: a message from you cannot.",
         );
       }
+      // A note's follow-up runs on the person's default model: what a thread wrote cannot pick one.
+      const choice = actor.via === "person" ? selection : {};
       // A run that is going takes it at its next step; otherwise it starts one (decision 0101).
-      await messages.send(thread.organizationId, userId, id, { prompt, ...selection });
-      await watch.watch(id, { botId, userId }, personsWord);
-      return view(userId, thread);
+      await followingUp(actor, id, () =>
+        messages.send(thread.organizationId, actor.userId, id, { prompt, ...choice }),
+      );
+      await watchRun(actor, id);
+      return view(actor.userId, thread);
     },
 
-    async archive(userId, id, archived) {
-      const thread = await threadsService.ownedForPerson(userId, id);
+    async archive(actor, id, archived) {
+      const thread = await threadsService.ownedForPerson(actor.userId, id);
       const changed = await threadsService.update(
-        { organizationId: thread.organizationId, userId },
+        { organizationId: thread.organizationId, userId: actor.userId },
         id,
         { state: archived ? "archived" : "open" },
       );
       if (!changed) throw new UnprocessableError("This thread no longer exists");
-      // Put away by the bot, so it is not told of it again.
-      if (archived) await watch.settle(id);
-      return view(userId, changed);
+      // Put away by the bot, so it is not told of it again; another bot's note is its own.
+      if (archived) await watch.settle(id, actor.botId);
+      return view(actor.userId, changed);
     },
 
-    async stop(userId, id) {
-      const thread = await threadsService.ownedForPerson(userId, id);
-      // Stopped by the bot, so it is not told of it; the cancel is heard after this.
-      await watch.settle(id);
-      if (!runs.cancel(id)) {
+    async stop(actor, id) {
+      const thread = await owned(actor, id);
+      if (!runs.isRunning(id)) {
         throw new UnprocessableError(
           "No run is going on in this thread. Look at it with get_thread.",
         );
       }
-      return { ...(await view(userId, thread)), running: false };
-    },
-
-    async followUp(botId, id) {
-      const allowed = await watch.followUp(id, botId);
-      if (allowed === "unwatched") {
-        throw new UnprocessableError(
-          "You did not send this thread its run, so continue or stop it only when the person's own message asks you to.",
-        );
-      }
-      if (allowed === "spent") {
-        throw new UnprocessableError(
-          "You have followed this thread up as often as you may without the person. Tell the person what it needs instead.",
-        );
-      }
+      await followingUp(actor, id, async () => {
+        // Stopped by the bot, so it is not told of it; a run that ended meanwhile is over all the same.
+        await watch.settle(id, actor.botId);
+        runs.cancel(id);
+      });
+      return { ...(await view(actor.userId, thread)), running: false };
     },
   };
 }

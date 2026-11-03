@@ -124,6 +124,7 @@ export class RemoteBotReplier implements BotReplier {
     attachments,
     hops,
     onPersonsWord,
+    aboutThread,
     say,
     ask,
     signal,
@@ -331,11 +332,13 @@ export class RemoteBotReplier implements BotReplier {
         const { kind, name, baseUrl, modelId, isDefault } = params;
         return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
       },
-      // The person's threads are theirs: any bot may look, and only their own message may start one,
-      // send a message to one or archive one, as a person's message in a thread starts an agent as
-      // them. What a thread's agent wrote, a page or another bot said is not their word, and only so
-      // many threads are started or continued in a reply, so a thread cannot talk a bot into more
-      // (decision 0088).
+      // The person's threads are theirs: any bot may look, and only their own message may start,
+      // continue, stop or archive one, as a person's message in a thread starts an agent as them.
+      // What a thread's agent wrote, a page or another bot said is not their word (decision 0088).
+      // The one exception is a note about a thread this bot sent a run to: it may continue or stop
+      // that thread, once it has looked at it in this reply, a few times until the person's word
+      // (decision 0101). Only so many threads are started, continued or stopped in a reply, so a
+      // thread cannot talk a bot into more.
       thread: async (params: BotThreadParams): Promise<BotThreaded> => {
         if (params.op === "projects") return this.threads.projects(userId);
         if (params.op === "list") {
@@ -349,43 +352,23 @@ export class RemoteBotReplier implements BotReplier {
           inspected.add(params.id);
           return seen;
         }
-        // A note about a thread this bot sent a run to may lead it to continue or stop that thread,
-        // once it has looked at it in this reply, a few times until the person's word (decision 0101).
-        const followsUp =
-          !makesBotsOnTheirWord && (params.op === "continue" || params.op === "stop");
-        if (followsUp) {
-          if (!note) {
-            throw new Error(
-              "Continue or stop a thread only when the person asks you to, in their own message",
-            );
-          }
-          if (!inspected.has(params.id)) {
-            throw new Error(
-              "Look at the thread with get_thread first, in this reply: act on where it is now, not on the note",
-            );
-          }
-          await this.threads.followUp(bot.id, params.id);
-        } else if (!makesBotsOnTheirWord) {
-          throw new Error(
-            "Start, continue or archive threads only when the person asks you to, in their own message",
-          );
-        }
-        if (params.op === "stop") return this.threads.stop(userId, params.id);
+        const via = makesBotsOnTheirWord ? "person" : "note";
+        if (via === "note") this.#mayFollowUp(params, { note, aboutThread, inspected });
+        const actor = { userId, botId: bot.id, via } as const;
         if (params.op === "archive") {
-          return this.threads.archive(userId, params.id, params.archived ?? true);
+          return this.threads.archive(actor, params.id, params.archived ?? true);
         }
         if (threadRuns >= BOT_THREAD_RUNS_PER_REPLY) {
           throw new Error(
-            `You have started or continued threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
+            `You have started, continued or stopped threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
           );
         }
         threadRuns += 1;
+        if (params.op === "stop") return this.threads.stop(actor, params.id);
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
-        if (params.op === "continue") {
-          return this.threads.continue(userId, bot.id, params.id, choice, !followsUp);
-        }
-        return this.threads.start(userId, bot.id, {
+        if (params.op === "continue") return this.threads.continue(actor, params.id, choice);
+        return this.threads.start(actor, {
           ...choice,
           projectId: params.projectId,
           title: params.title,
@@ -432,6 +415,28 @@ export class RemoteBotReplier implements BotReplier {
     } finally {
       signal.removeEventListener("abort", cancel);
       this.gateway.revoke(replyId);
+    }
+  }
+
+  // Whether a reply a note began may do this to a thread (decision 0101): only continue or stop it,
+  // only the thread the note is about, and only once it has looked at it with get_thread, so it acts
+  // on where the thread is now and not on the note. Another bot's message may do none of it.
+  #mayFollowUp(
+    params: Exclude<BotThreadParams, { op: "projects" | "list" | "get" }>,
+    reply: { note?: boolean; aboutThread?: string; inspected: ReadonlySet<string> },
+  ) {
+    const asked = "only when the person asks you to, in their own message";
+    if (params.op === "start" || params.op === "archive") {
+      throw new Error(`Start or archive threads ${asked}`);
+    }
+    if (!reply.note) throw new Error(`Continue or stop a thread ${asked}`);
+    if (params.id !== reply.aboutThread) {
+      throw new Error(`This note is not about that thread: continue or stop it ${asked}`);
+    }
+    if (!reply.inspected.has(params.id)) {
+      throw new Error(
+        "Look at the thread with get_thread first, in this reply: act on where it is now, not on the note",
+      );
     }
   }
 
