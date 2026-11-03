@@ -60,7 +60,7 @@ test.describe("Cockpit", () => {
     await saved;
     await page.reload();
     await expect(reader.locator(".bn-editor")).toContainText("Ask about the card fee.");
-    await expect(page.getByRole("list", { name: "Open items" })).toContainText("#errand");
+    await expect(page.getByRole("list", { name: "Open items" })).toContainText("errand");
 
     // Written in and done at once, every save held back: the details' reply, which lands first,
     // does not undo Done while Done's own is on its way, and both are kept.

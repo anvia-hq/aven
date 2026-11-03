@@ -107,7 +107,7 @@ export function CockpitSidebar() {
                   <SidebarMenuButton
                     size="sm"
                     isActive={selected}
-                    tooltip={`#${tag.name}`}
+                    tooltip={tag.name}
                     render={
                       <Link
                         to={page}
@@ -118,7 +118,7 @@ export function CockpitSidebar() {
                       />
                     }
                   >
-                    <Tag style={tagColor(tag.name)} className="text-(--tag)" />
+                    <Tag style={tagColor(tag.name)} className="fill-(--tag) text-(--tag)" />
                     <span>{tag.name}</span>
                   </SidebarMenuButton>
                   {here > 0 && <SidebarMenuBadge>{here}</SidebarMenuBadge>}

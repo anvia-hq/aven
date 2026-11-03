@@ -64,7 +64,7 @@ export function TagInput({
       >
         {value.map((tag) => (
           <TagBadge key={tag} tag={tag} className="gap-0.5 pr-1">
-            #{tag}
+            {tag}
             <Button
               type="button"
               variant="ghost"
@@ -97,12 +97,12 @@ export function TagInput({
               style={tagColor(name)}
               className={cn(
                 tagClass,
-                "h-5 rounded-4xl px-2 hover:bg-(--tag)/25 dark:hover:bg-(--tag)/30",
+                "h-5 rounded-4xl px-2 opacity-80 hover:bg-(--tag) hover:text-(--tag-ink) hover:opacity-100",
               )}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => add(name)}
             >
-              #{name}
+              {name}
             </Button>
           ))}
         </div>

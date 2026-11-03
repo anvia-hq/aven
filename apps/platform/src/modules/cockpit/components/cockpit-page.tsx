@@ -40,7 +40,7 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
               }
               aria-label={`Clear the tag ${tag}`}
             >
-              #{tag}
+              {tag}
               <X />
             </TagBadge>
           )}

@@ -25,7 +25,7 @@ export function TagList({
             />
           }
         >
-          #{tag}
+          {tag}
         </TagBadge>
       ))}
     </span>

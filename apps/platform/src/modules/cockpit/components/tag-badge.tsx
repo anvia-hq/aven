@@ -5,13 +5,29 @@ import { cn } from "cn";
 import { Badge } from "@/components/badge";
 import { paletteColor } from "@/modules/bots/avatar";
 
-/** A tag's color, the bots' palette picked by its name (decision 0106), as `--tag`. */
-export const tagColor = (tag: string) => ({ "--tag": paletteColor(tag) }) as CSSProperties;
+// Black or white, whichever reads on a color: by its relative luminance (WCAG), black on light
+// colors such as yellow, white on dark ones such as blue.
+function inkOn(hex: string) {
+  const channel = (at: number) => {
+    const value = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  // Where black and white contrast equally with the color.
+  return luminance > 0.179 ? "#000" : "#fff";
+}
 
-// A tag tinted its color: the color faint behind, and the text darker in light mode and lighter in
-// dark so it reads on either.
-export const tagClass =
-  "border-transparent bg-(--tag)/15 text-[color-mix(in_oklab,var(--tag)_65%,black)] dark:bg-(--tag)/20 dark:text-[color-mix(in_oklab,var(--tag)_70%,white)]";
+/**
+ * A tag's color, the bots' palette picked by its name (decision 0106), as `--tag`, and the ink
+ * that reads on it, as `--tag-ink`.
+ */
+export function tagColor(tag: string) {
+  const color = paletteColor(tag);
+  return { "--tag": color, "--tag-ink": inkOn(color) } as CSSProperties;
+}
+
+// A tag as a solid chip of its color, as a bot's avatar is, its name in black or white.
+export const tagClass = "border-transparent bg-(--tag) text-(--tag-ink)";
 
 export function TagBadge({
   tag,
@@ -22,10 +38,10 @@ export function TagBadge({
     <Badge
       variant="outline"
       style={tagColor(tag)}
-      className={cn(tagClass, "[a]:hover:bg-(--tag)/25 [a]:hover:text-inherit", className)}
+      className={cn(tagClass, "[a]:hover:bg-(--tag)/85 [a]:hover:text-(--tag-ink)", className)}
       {...props}
     >
-      {props.children ?? `#${tag}`}
+      {props.children ?? tag}
     </Badge>
   );
 }

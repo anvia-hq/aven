@@ -66,7 +66,7 @@ export function NotesIndex({
       <h1 className="text-[2.5rem] leading-tight font-bold tracking-tight">Notes</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {notes.length === 1 ? "1 note" : `${notes.length} notes`}
-        {tag && ` tagged #${tag}`}
+        {tag && ` tagged ${tag}`}
       </p>
       <div className="mt-8 flex items-center gap-2 border-b border-border/60 pb-2">
         <Search className="size-4 shrink-0 text-muted-foreground" />

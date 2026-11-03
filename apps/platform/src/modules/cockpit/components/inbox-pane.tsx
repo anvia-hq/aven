@@ -32,31 +32,26 @@ function InboxRow({
           selected && "bg-muted hover:bg-muted",
         )}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
-              "min-w-0 flex-1 truncate text-sm",
+              "min-w-0 truncate text-sm",
               item.done ? "text-muted-foreground" : "font-medium",
             )}
           >
             {item.title}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground/80">
+          {item.tags.slice(0, 2).map((tag) => (
+            <TagBadge key={tag} tag={tag} className="h-4 shrink-0 px-1.5 text-[0.6875rem]" />
+          ))}
+          {item.tags.length > 2 && (
+            <span className="shrink-0 text-xs text-muted-foreground">+{item.tags.length - 2}</span>
+          )}
+          <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/80">
             {shortTimeAgo(item.createdAt)}
           </span>
         </span>
-        {(preview || item.tags.length > 0) && (
-          <span className="flex min-w-0 gap-2 text-xs text-muted-foreground">
-            <span className="min-w-0 flex-1 truncate">{preview}</span>
-            {item.tags.length > 0 && (
-              <span className="flex shrink-0 gap-1">
-                {item.tags.slice(0, 2).map((tag) => (
-                  <TagBadge key={tag} tag={tag} className="h-4 px-1.5 text-[0.6875rem]" />
-                ))}
-              </span>
-            )}
-          </span>
-        )}
+        {preview && <span className="truncate text-xs text-muted-foreground">{preview}</span>}
       </Button>
     </li>
   );
@@ -90,7 +85,7 @@ export function InboxPane({
   return (
     <>
       <header className="flex items-center gap-2 px-4 pt-4 pb-2">
-        <h1 className="flex-1 text-sm font-semibold">Inbox{tag && ` · #${tag}`}</h1>
+        <h1 className="flex-1 text-sm font-semibold">Inbox{tag && ` · ${tag}`}</h1>
         <Button
           variant="ghost"
           size="icon-sm"
