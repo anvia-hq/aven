@@ -3,6 +3,7 @@ import {
   COCKPIT_TITLE_MAX,
   normalizeTag,
   TAG_PATTERN,
+  TAG_COLOR,
   TAG_RULE,
   TAGS_MAX,
   TASK_PRIORITIES,
@@ -81,3 +82,11 @@ export type CreateTaskBody = z.infer<typeof createTaskBody>;
 export type UpdateTaskBody = z.infer<typeof updateTaskBody>;
 export type CreateNoteBody = z.infer<typeof createNoteBody>;
 export type UpdateNoteBody = z.infer<typeof updateNoteBody>;
+
+// A tag as the person names it, made lowercase and dashed as a record's are.
+const tagName = z.string().transform(normalizeTag).pipe(z.string().regex(TAG_PATTERN, TAG_RULE));
+const tagColor = z.string().toLowerCase().regex(TAG_COLOR, "A color is #rrggbb").nullable();
+
+export const tagParams = z.object({ name: tagName });
+export const createTagBody = z.object({ name: tagName, color: tagColor.optional() });
+export const updateTagBody = z.object({ color: tagColor });

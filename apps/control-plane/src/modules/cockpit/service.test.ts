@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { createTaskBody, updateInboxBody, updateNoteBody, updateTaskBody } from "./schema";
+import {
+  createTagBody,
+  createTaskBody,
+  updateInboxBody,
+  updateNoteBody,
+  updateTagBody,
+  updateTaskBody,
+} from "./schema";
 
 describe("cockpit schema", () => {
   test("tags are made lowercase and dashed, once each, and odd ones are refused", () => {
@@ -87,6 +94,7 @@ run("cockpitService (postgres)", async () => {
     const tags = await cockpitService.tags(person.userId);
     expect(tags.find((tag) => tag.name === "ops")).toEqual({
       name: "ops",
+      color: null,
       inbox: 0,
       tasks: 1,
       notes: 1,
@@ -118,5 +126,31 @@ run("cockpitService (postgres)", async () => {
     );
     expect(await cockpitService.inbox.list(other.userId)).toEqual([]);
     expect(await cockpitService.notes.list(other.userId)).toEqual([]);
+  });
+
+  test("a tag is added before use, colored, and its color given back; another's is not touched", async () => {
+    const added = await cockpitService.addTag(person.userId, { name: "later-on" });
+    expect(added).toMatchObject({ name: "later-on", color: null, inbox: 0, tasks: 0, notes: 0 });
+    await expect(cockpitService.addTag(person.userId, { name: "later-on" })).rejects.toThrow(
+      "already",
+    );
+    // A tag in use, with no row yet, takes a color too.
+    await cockpitService.notes.create(person.userId, { title: "Tagged", tags: ["used"] });
+    expect(await cockpitService.colorTag(person.userId, "used", "#00a84f")).toMatchObject({
+      color: "#00a84f",
+      notes: 1,
+    });
+    await cockpitService.colorTag(person.userId, "used", null);
+    const tags = await cockpitService.tags(person.userId);
+    expect(tags.find((tag) => tag.name === "used")?.color).toBeNull();
+    expect(tags.some((tag) => tag.name === "later-on")).toBe(true);
+    await expect(cockpitService.colorTag(other.userId, "used", "#000000")).rejects.toThrow(
+      "Tag not found",
+    );
+    expect(updateTagBody.safeParse({ color: "red" }).success).toBe(false);
+    expect(createTagBody.parse({ name: "#Big Idea", color: "#FF6EB4" })).toEqual({
+      name: "big-idea",
+      color: "#ff6eb4",
+    });
   });
 });

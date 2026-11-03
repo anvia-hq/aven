@@ -108,8 +108,8 @@ test.describe("Cockpit", () => {
       await page.getByRole("button", { name: "New task", exact: true }).click();
       await page.getByLabel("Title").fill(title);
       if (tag) {
-        await page.getByLabel("Tags").fill(tag);
-        await page.getByLabel("Tags").press("Enter");
+        await page.getByRole("dialog").getByRole("textbox", { name: "Tags" }).fill(tag);
+        await page.getByRole("dialog").getByRole("textbox", { name: "Tags" }).press("Enter");
       }
       await page.getByRole("button", { name: "Create task" }).click();
       // The toast is a dialog too: the form is gone when its title field is.
@@ -234,5 +234,43 @@ test.describe("Cockpit", () => {
     await expect(notes).toContainText("Release checklist");
     await notes.getByRole("button", { name: /Release checklist/ }).click();
     await expect(page.getByRole("article", { name: "Release checklist" })).toBeVisible();
+  });
+
+  test("a tag is added on the tags page, given a color, and shown in it everywhere", async ({
+    page,
+  }) => {
+    await registerUser(page, "cockpit", "Cockpit Person");
+    await page.goto("/cockpit/inbox");
+    await page
+      .getByRole("navigation", { name: "Cockpit" })
+      .getByRole("link", { name: "Tags", exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: "Tags", level: 1 })).toBeVisible();
+
+    await page.getByLabel("New tag").fill("Big Idea");
+    await page.getByRole("button", { name: "Add tag" }).click();
+    const row = page.getByRole("list", { name: "All tags" }).getByRole("listitem", {
+      name: "big-idea",
+    });
+    await expect(row).toContainText("Not used yet");
+
+    await row.getByRole("button", { name: "Color of big-idea" }).click();
+    await page.getByRole("button", { name: "Green", exact: true }).click();
+    await page.reload();
+    await row.getByRole("button", { name: "Color of big-idea" }).click();
+    await expect(page.getByRole("button", { name: "Green", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+
+    // A note given the tag draws it in that color.
+    await page.goto("/cockpit/notes");
+    await page.getByRole("button", { name: "New note" }).click();
+    const tags = page.getByRole("article").getByRole("textbox", { name: "Tags" });
+    await tags.fill("big-idea");
+    await tags.press("Enter");
+    const chip = page.getByRole("article").getByText("big-idea", { exact: true });
+    await expect(chip).toHaveCSS("background-color", "rgb(0, 168, 79)");
   });
 });

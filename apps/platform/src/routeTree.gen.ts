@@ -23,6 +23,7 @@ import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
 import { Route as AuthedCockpitIndexRouteImport } from './routes/_authed/cockpit/index'
 import { Route as AuthedCockpitInboxRouteImport } from './routes/_authed/cockpit/inbox'
 import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit/notes'
+import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/tags'
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
@@ -108,6 +109,11 @@ const AuthedCockpitInboxRoute = AuthedCockpitInboxRouteImport.update({
 const AuthedCockpitNotesRoute = AuthedCockpitNotesRouteImport.update({
   id: '/notes',
   path: '/notes',
+  getParentRoute: () => AuthedCockpitRoute,
+} as any)
+const AuthedCockpitTagsRoute = AuthedCockpitTagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
   getParentRoute: () => AuthedCockpitRoute,
 } as any)
 const AuthedCockpitTasksRoute = AuthedCockpitTasksRouteImport.update({
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/bot/$botId': typeof AuthedBotBotIdRoute
   '/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/bot/$botId': typeof AuthedBotBotIdRoute
   '/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/_authed/bot/$botId': typeof AuthedBotBotIdRoute
   '/_authed/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
+  '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/bot/$botId'
     | '/cockpit/inbox'
     | '/cockpit/notes'
+    | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/bot/$botId'
     | '/cockpit/inbox'
     | '/cockpit/notes'
+    | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/_authed/bot/$botId'
     | '/_authed/cockpit/inbox'
     | '/_authed/cockpit/notes'
+    | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
     | '/_authed/settings/environment-variables'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/notes'
       fullPath: '/cockpit/notes'
       preLoaderRoute: typeof AuthedCockpitNotesRouteImport
+      parentRoute: typeof AuthedCockpitRoute
+    }
+    '/_authed/cockpit/tags': {
+      id: '/_authed/cockpit/tags'
+      path: '/tags'
+      fullPath: '/cockpit/tags'
+      preLoaderRoute: typeof AuthedCockpitTagsRouteImport
       parentRoute: typeof AuthedCockpitRoute
     }
     '/_authed/cockpit/tasks': {
@@ -654,6 +673,7 @@ const AuthedBotRouteWithChildren = AuthedBotRoute._addFileChildren(
 interface AuthedCockpitRouteChildren {
   AuthedCockpitInboxRoute: typeof AuthedCockpitInboxRoute
   AuthedCockpitNotesRoute: typeof AuthedCockpitNotesRoute
+  AuthedCockpitTagsRoute: typeof AuthedCockpitTagsRoute
   AuthedCockpitTasksRoute: typeof AuthedCockpitTasksRoute
   AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
 }
@@ -661,6 +681,7 @@ interface AuthedCockpitRouteChildren {
 const AuthedCockpitRouteChildren: AuthedCockpitRouteChildren = {
   AuthedCockpitInboxRoute: AuthedCockpitInboxRoute,
   AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
+  AuthedCockpitTagsRoute: AuthedCockpitTagsRoute,
   AuthedCockpitTasksRoute: AuthedCockpitTasksRoute,
   AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
 }

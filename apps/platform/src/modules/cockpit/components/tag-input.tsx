@@ -8,7 +8,8 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 
 import { useCockpitTags } from "../hooks/use-collection";
-import { TagBadge, tagClass, tagColor } from "./tag-badge";
+import { useTagColors } from "../hooks/use-tags";
+import { TagBadge, tagClass, tagStyle } from "./tag-badge";
 
 // The tags of a record as chips, and a field that adds one on Enter or a comma and takes the last
 // away on Backspace. The tags the person already uses are offered as they type.
@@ -26,6 +27,7 @@ export function TagInput({
 }) {
   const [draft, setDraft] = useState("");
   const known = useCockpitTags();
+  const colorOf = useTagColors();
   const typed = normalizeTag(draft);
   const emptyText = bare ? "Empty" : "Add tags…";
   const offered = typed
@@ -99,7 +101,7 @@ export function TagInput({
               type="button"
               variant="ghost"
               size="xs"
-              style={tagColor(name)}
+              style={tagStyle(colorOf(name))}
               className={cn(
                 tagClass,
                 "h-5 rounded-4xl px-2 opacity-80 hover:bg-(--tag) hover:text-(--tag-ink) hover:opacity-100",

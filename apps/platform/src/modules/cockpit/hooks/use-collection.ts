@@ -117,3 +117,7 @@ export function createCollection<T extends Item, Create, Update>(options: {
 export function resetCockpitTags() {
   tagsStore.reset();
 }
+
+export function refreshCockpitTags() {
+  return tagsStore.refresh();
+}

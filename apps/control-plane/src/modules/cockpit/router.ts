@@ -4,10 +4,13 @@ import { authRouter } from "../auth/router";
 import {
   createInboxBody,
   createNoteBody,
+  createTagBody,
   createTaskBody,
   itemParams,
+  tagParams,
   updateInboxBody,
   updateNoteBody,
+  updateTagBody,
   updateTaskBody,
 } from "./schema";
 import { cockpitService } from "./service";
@@ -16,6 +19,20 @@ import { cockpitService } from "./service";
 export const cockpitRouter = new Elysia({ prefix: "/cockpit" })
   .use(authRouter)
   .get("/tags", ({ user }) => cockpitService.tags(user.id), { auth: true })
+  .post(
+    "/tags",
+    async ({ user, body, set }) => {
+      const tag = await cockpitService.addTag(user.id, body);
+      set.status = 201;
+      return tag;
+    },
+    { auth: true, body: createTagBody },
+  )
+  .patch(
+    "/tags/:name",
+    ({ user, params, body }) => cockpitService.colorTag(user.id, params.name, body.color),
+    { auth: true, params: tagParams, body: updateTagBody },
+  )
   .get("/inbox", ({ user }) => cockpitService.inbox.list(user.id), { auth: true })
   .post("/inbox", ({ user, body }) => cockpitService.inbox.create(user.id, body), {
     auth: true,

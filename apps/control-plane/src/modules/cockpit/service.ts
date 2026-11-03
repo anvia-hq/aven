@@ -1,9 +1,11 @@
 import { db } from "@aven/db/client";
 import { cockpitInboxItems, type CockpitInboxItemRow } from "@aven/db/schema/cockpit-inbox-items";
 import { cockpitNotes, type CockpitNoteRow } from "@aven/db/schema/cockpit-notes";
+import { cockpitTags } from "@aven/db/schema/cockpit-tags";
 import { cockpitTasks, type CockpitTaskRow } from "@aven/db/schema/cockpit-tasks";
 import {
   COCKPIT_ITEMS_MAX,
+  TAGS_DEFINED_MAX,
   type CockpitNote,
   type CockpitTag,
   type CockpitTask,
@@ -11,7 +13,7 @@ import {
 } from "@aven/protocol/cockpit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 
-import { NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import type {
   CreateInboxBody,
   CreateNoteBody,
@@ -76,6 +78,17 @@ async function roomFor(
 }
 
 const notFound = (what: string) => new NotFoundError(`${what} not found`);
+
+// A person defines at most so many tags.
+async function checkDefinedRoom(tx: Tx, userId: string) {
+  const [row] = await tx
+    .select({ n: count() })
+    .from(cockpitTags)
+    .where(eq(cockpitTags.userId, userId));
+  if (Number(row?.n ?? 0) >= TAGS_DEFINED_MAX) {
+    throw new UnprocessableError(`At most ${TAGS_DEFINED_MAX} tags`);
+  }
+}
 
 // A person's cockpit (decision 0104): their inbox, tasks and notes, each theirs alone and found by
 // id within what is theirs.
@@ -225,7 +238,10 @@ export const cockpitService = {
     },
   },
 
-  /** Every tag the person uses, with how many of each kind carry it, most used first. */
+  /**
+   * Every tag the person uses or defined, with how many of each kind carry it and its color, most
+   * used first.
+   */
   async tags(userId: string): Promise<CockpitTag[]> {
     const counted = async (
       table: typeof cockpitInboxItems | typeof cockpitTasks | typeof cockpitNotes,
@@ -237,15 +253,21 @@ export const cockpitService = {
         .groupBy(sql`1`);
       return new Map(rows.map((row) => [row.name, Number(row.n)]));
     };
-    const [inbox, tasks, notes] = await Promise.all([
+    const [inbox, tasks, notes, defined] = await Promise.all([
       counted(cockpitInboxItems),
       counted(cockpitTasks),
       counted(cockpitNotes),
+      db
+        .select({ name: cockpitTags.name, color: cockpitTags.color })
+        .from(cockpitTags)
+        .where(eq(cockpitTags.userId, userId)),
     ]);
-    const names = new Set([...inbox.keys(), ...tasks.keys(), ...notes.keys()]);
+    const colors = new Map(defined.map((row) => [row.name, row.color]));
+    const names = new Set([...inbox.keys(), ...tasks.keys(), ...notes.keys(), ...colors.keys()]);
     return [...names]
       .map((name) => ({
         name,
+        color: colors.get(name) ?? null,
         inbox: inbox.get(name) ?? 0,
         tasks: tasks.get(name) ?? 0,
         notes: notes.get(name) ?? 0,
@@ -255,5 +277,42 @@ export const cockpitService = {
           b.inbox + b.tasks + b.notes - (a.inbox + a.tasks + a.notes) ||
           a.name.localeCompare(b.name),
       );
+  },
+
+  /** Adds a tag before anything carries it (decision 0107); one the person has already is refused. */
+  async addTag(userId: string, input: { name: string; color?: string | null }) {
+    await db.transaction(async (tx) => {
+      await lockPerson(tx, userId, "tags");
+      const inUse = (await this.tags(userId)).some((tag) => tag.name === input.name);
+      if (inUse) throw new ConflictError(`There is a tag ${input.name} already`);
+      await checkDefinedRoom(tx, userId);
+      await tx.insert(cockpitTags).values({ userId, name: input.name, color: input.color ?? null });
+    });
+    return this.tag(userId, input.name);
+  },
+
+  /** Sets a tag's color, or with null gives it back the one its name picks. */
+  async colorTag(userId: string, name: string, color: string | null) {
+    const tag = await this.tag(userId, name);
+    await db.transaction(async (tx) => {
+      await lockPerson(tx, userId, "tags");
+      const [row] = await tx
+        .select({ id: cockpitTags.id })
+        .from(cockpitTags)
+        .where(and(eq(cockpitTags.userId, userId), eq(cockpitTags.name, name)));
+      if (row) {
+        await tx.update(cockpitTags).set({ color }).where(eq(cockpitTags.id, row.id));
+      } else {
+        await checkDefinedRoom(tx, userId);
+        await tx.insert(cockpitTags).values({ userId, name, color });
+      }
+    });
+    return { ...tag, color };
+  },
+
+  async tag(userId: string, name: string) {
+    const tag = (await this.tags(userId)).find((each) => each.name === name);
+    if (!tag) throw notFound("Tag");
+    return tag;
   },
 };

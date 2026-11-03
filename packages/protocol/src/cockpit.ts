@@ -74,5 +74,20 @@ export type CockpitNote = {
   updatedAt: string;
 };
 
-/** A tag in use, with how many of each kind carry it. */
-export type CockpitTag = { name: string; inbox: number; tasks: number; notes: number };
+/** A tag's color: a hex color as `#rrggbb`, which the platform offers from the bots' palette. */
+export const TAG_COLOR = /^#[0-9a-f]{6}$/;
+
+/** The most tags a person defines (adds before using, or gives a color). */
+export const TAGS_DEFINED_MAX = 200;
+
+/**
+ * A tag the person uses or defined, with how many of each kind carry it and the color they chose,
+ * or null for the one its name picks (decision 0107).
+ */
+export type CockpitTag = {
+  name: string;
+  color: string | null;
+  inbox: number;
+  tasks: number;
+  notes: number;
+};

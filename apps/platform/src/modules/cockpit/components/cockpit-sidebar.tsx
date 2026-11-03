@@ -13,14 +13,18 @@ import {
 import { useCockpitTags } from "../hooks/use-collection";
 import { useInbox } from "../hooks/use-inbox";
 import { useNotes } from "../hooks/use-notes";
+import { useTagColors } from "../hooks/use-tags";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTag } from "../types";
-import { tagColor } from "./tag-badge";
+import { tagStyle } from "./tag-badge";
 
-type Page = "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes";
+type Page = "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes" | "/cockpit/tags";
+
+// The pages a tag filters; on the tags page a tag opens the inbox with it.
+type Filtered = Exclude<Page, "/cockpit/tags">;
 
 // How many of the page's records carry a tag.
-function countOn(page: Page, tag: CockpitTag) {
+function countOn(page: Filtered, tag: CockpitTag) {
   if (page === "/cockpit/tasks") return tag.tasks;
   if (page === "/cockpit/notes") return tag.notes;
   return tag.inbox;
@@ -42,8 +46,11 @@ export function CockpitSidebar() {
     select: (state) => (state.location.search as { note?: string }).note,
   });
   const page: Page =
-    (["/cockpit/tasks", "/cockpit/notes"] as const).find((to) => pathname.startsWith(to)) ??
-    "/cockpit/inbox";
+    (["/cockpit/tasks", "/cockpit/notes", "/cockpit/tags"] as const).find((to) =>
+      pathname.startsWith(to),
+    ) ?? "/cockpit/inbox";
+  const filtered: Filtered = page === "/cockpit/tags" ? "/cockpit/inbox" : page;
+  const colorOf = useTagColors();
   const open = items.filter((item) => !item.done).length;
   const active = tasks.filter(
     (task) => task.status !== "done" && task.status !== "cancelled",
@@ -53,6 +60,7 @@ export function CockpitSidebar() {
     { to: "/cockpit/inbox", label: "Inbox", icon: Inbox, count: open },
     { to: "/cockpit/tasks", label: "Tasks", icon: Kanban, count: active },
     { to: "/cockpit/notes", label: "Notes", icon: Clipboard, count: 0 },
+    { to: "/cockpit/tags", label: "Tags", icon: Tag, count: 0 },
   ] as const;
 
   return (
@@ -99,7 +107,7 @@ export function CockpitSidebar() {
           <SidebarGroupLabel>Tags</SidebarGroupLabel>
           <SidebarMenu aria-label="Tags">
             {tags.map((tag) => {
-              const here = countOn(page, tag);
+              const here = countOn(filtered, tag);
               const selected = activeTag === tag.name;
               return (
                 <SidebarMenuItem key={tag.name}>
@@ -108,7 +116,7 @@ export function CockpitSidebar() {
                     tooltip={tag.name}
                     render={
                       <Link
-                        to={page}
+                        to={filtered}
                         search={(prev: Record<string, unknown>) => ({
                           ...prev,
                           tag: selected ? undefined : tag.name,
@@ -116,7 +124,10 @@ export function CockpitSidebar() {
                       />
                     }
                   >
-                    <Tag style={tagColor(tag.name)} className="fill-(--tag) text-(--tag)" />
+                    <Tag
+                      style={tagStyle(colorOf(tag.name))}
+                      className="fill-(--tag) text-(--tag)"
+                    />
                     <span>{tag.name}</span>
                   </SidebarMenuButton>
                   {here > 0 && <SidebarMenuBadge>{here}</SidebarMenuBadge>}

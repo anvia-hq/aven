@@ -309,6 +309,13 @@
       "when": 1793710861318,
       "tag": "0043_high_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793713780571,
+      "tag": "0044_marvelous_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

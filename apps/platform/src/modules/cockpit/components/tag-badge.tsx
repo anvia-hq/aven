@@ -3,7 +3,8 @@ import type { CSSProperties } from "react";
 import { cn } from "cn";
 
 import { Badge } from "@/components/badge";
-import { paletteColor } from "@/modules/bots/avatar";
+
+import { useTagColors } from "../hooks/use-tags";
 
 // Black or white, whichever reads on a color: by its relative luminance (WCAG), black on light
 // colors such as yellow, white on dark ones such as blue.
@@ -17,12 +18,8 @@ function inkOn(hex: string) {
   return luminance > 0.179 ? "#000" : "#fff";
 }
 
-/**
- * A tag's color, the bots' palette picked by its name (decision 0106), as `--tag`, and the ink
- * that reads on it, as `--tag-ink`.
- */
-export function tagColor(tag: string) {
-  const color = paletteColor(tag);
+/** A tag's color as `--tag`, and the ink that reads on it as `--tag-ink`. */
+export function tagStyle(color: string) {
   return { "--tag": color, "--tag-ink": inkOn(color) } as CSSProperties;
 }
 
@@ -34,10 +31,11 @@ export function TagBadge({
   className,
   ...props
 }: { tag: string } & Omit<React.ComponentProps<typeof Badge>, "variant">) {
+  const colorOf = useTagColors();
   return (
     <Badge
       variant="outline"
-      style={tagColor(tag)}
+      style={tagStyle(colorOf(tag))}
       className={cn(tagClass, "[a]:hover:bg-(--tag)/85 [a]:hover:text-(--tag-ink)", className)}
       {...props}
     >
