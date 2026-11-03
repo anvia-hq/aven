@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { compactionFor, resolveAgentModel } from "./agent-model";
+import { isStreamingCompletionModel } from "@anvia/core/completion";
+
+import { compactionFor, outputLimitFor, resolveAgentModel } from "./agent-model";
 import { scriptedModel } from "./testing/scripted-model";
 
 const model = scriptedModel([]);
@@ -22,6 +24,73 @@ describe("resolveAgentModel", () => {
     const openai = resolveAgentModel({ provider: "openai", apiKey: "k", reasoningEffort: "high" });
     expect(openai.providerOptions).toBeUndefined();
     expect(openai.controls).toEqual({ reasoningEffort: "high" });
+  });
+});
+
+describe("the output limit", () => {
+  // Asks the Anthropic adapter for a reply through a local server that refuses it, and returns the
+  // body it was sent.
+  async function sentTo(
+    call: (model: ReturnType<typeof resolveAgentModel>["model"]) => Promise<unknown>,
+  ) {
+    const bodies: Record<string, unknown>[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return Response.json({ error: { type: "error", message: "stop here" } }, { status: 400 });
+      },
+    });
+    try {
+      const { model } = resolveAgentModel({
+        provider: "anthropic",
+        apiKey: "k",
+        modelId: "claude-haiku-5-5",
+        baseUrl: `http://localhost:${server.port}/v1`,
+      });
+      await call(model).catch(() => undefined);
+    } finally {
+      await server.stop(true);
+    }
+    return bodies[0];
+  }
+
+  test("a streamed reply from an Anthropic model is allowed 16,000 tokens", async () => {
+    const { maxTokens } = resolveAgentModel({ provider: "anthropic", apiKey: "k" });
+    expect(maxTokens).toBe(16_000);
+    const body = await sentTo(async (model) => {
+      if (!isStreamingCompletionModel(model)) throw new Error("Anthropic models stream");
+      for await (const _ of model.streamCompletion({
+        chatHistory: [{ role: "user", content: "hello" }],
+        documents: [],
+        tools: [],
+        maxTokens,
+      })) {
+        // the stream is refused before any event
+      }
+    });
+    expect(body?.max_tokens).toBe(16_000);
+    expect(body?.stream).toBe(true);
+  });
+
+  test("a reply that is not streamed, as a bot's or a summary is, is allowed the same", async () => {
+    const maxTokens = outputLimitFor({ provider: "anthropic", apiKey: "k" });
+    const body = await sentTo((model) =>
+      model.completion({
+        chatHistory: [{ role: "user", content: "hello" }],
+        documents: [],
+        tools: [],
+        maxTokens,
+      }),
+    );
+    expect(body?.max_tokens).toBe(16_000);
+    expect(body).not.toHaveProperty("stream");
+  });
+
+  test("other providers keep their own default", () => {
+    expect(resolveAgentModel({ provider: "openai", apiKey: "k" }).maxTokens).toBeUndefined();
+    expect(resolveAgentModel({ model }).maxTokens).toBeUndefined();
+    expect(outputLimitFor({ provider: "openai", apiKey: "k" })).toBeUndefined();
   });
 });
 

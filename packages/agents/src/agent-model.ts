@@ -19,11 +19,30 @@ const MODEL_REQUEST_ATTEMPTS = 5;
 // request and the summary itself.
 const COMPACT_AT = 0.7;
 
+// Anthropic requires a limit on what one reply may write, and Anvia's adapter defaults it to 1,024
+// tokens, which cut replies off mid-answer. 16,000 is well above that, and it stays under the
+// most the SDK lets a request that is not streamed ask for (about 21,000), since bot replies and
+// summaries are not streamed.
+const ANTHROPIC_MAX_OUTPUT_TOKENS = 16_000;
+
+// The output limit of a model config's requests: Anthropic's, else none (the provider's default).
+export function outputLimitFor(source: ModelSource) {
+  return "provider" in source && source.provider === "anthropic"
+    ? ANTHROPIC_MAX_OUTPUT_TOKENS
+    : undefined;
+}
+
 // What every agent takes from its model, whatever else it is: the model, the provider's own
-// options, the reasoning effort and how a failed request is retried.
+// options, the reasoning effort, the output limit and how a failed request is retried.
 export function resolveAgentModel(source: ModelSource) {
   const { model, providerOptions, controls } = resolveModel(source);
-  return { model, providerOptions, controls, retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS } };
+  return {
+    model,
+    providerOptions,
+    controls,
+    maxTokens: outputLimitFor(source),
+    retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
+  };
 }
 
 // Old history is summarized by the agent's own model once it passes the trigger: the size the host
@@ -37,7 +56,11 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
   return {
     trigger: { afterTokens: trigger },
     // No temperature: Anvia sends 0 by default, which reasoning models refuse (bug 0004).
-    compactor: createSummaryMemoryCompactor({ model, temperature: null }),
+    compactor: createSummaryMemoryCompactor({
+      model,
+      temperature: null,
+      maxTokens: outputLimitFor(source),
+    }),
   };
 }
 

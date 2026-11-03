@@ -12,7 +12,7 @@ import {
   isMemoryCompactionMessage,
 } from "@anvia/core/memory";
 
-import { resolveAgentModel, type ModelSource } from "./agent-model";
+import { outputLimitFor, resolveAgentModel, type ModelSource } from "./agent-model";
 
 /** What the thread says once the conversation has been summarized, and when there was too little to. */
 export const COMPACTED = "Compacted the conversation: the earlier turns are now a summary.";
@@ -76,7 +76,11 @@ function compactionReply(spent: () => Usage, contextWindow?: number): StreamingC
  */
 export function createCompactionAgent(options: ModelSource & { id: string }) {
   const { model } = resolveAgentModel(options);
-  const summarize = createSummaryMemoryCompactor({ model, temperature: null });
+  const summarize = createSummaryMemoryCompactor({
+    model,
+    temperature: null,
+    maxTokens: outputLimitFor(options),
+  });
   let spent = Usage.empty();
   const agent = new Agent({
     id: options.id,

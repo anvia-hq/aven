@@ -505,6 +505,8 @@ describe("createBotAgent", () => {
       const openai = await ask("openai", "/v1");
 
       expect(anthropic.cache_control).toEqual({ type: "ephemeral" });
+      // A reply is not streamed here, so the limit must be one the SDK accepts without a stream.
+      expect(anthropic.max_tokens).toBe(16_000);
       expect(openai).not.toHaveProperty("cache_control");
     } finally {
       await server.stop(true);
