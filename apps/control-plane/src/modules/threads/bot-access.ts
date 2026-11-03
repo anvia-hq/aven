@@ -56,6 +56,9 @@ export type BotThreads = {
 
 type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
 
+const quietSince = (activity?: { lastEventAt: number }) =>
+  activity && new Date(activity.lastEventAt).toISOString();
+
 const NO_PROJECT = "There is no project with that id. Use list_projects.";
 const QUESTION_MAX = 1000;
 
@@ -69,7 +72,7 @@ export function createBotThreads({
   messages,
   watch,
 }: {
-  runs: Pick<RunManager, "isRunning" | "history" | "cancel">;
+  runs: Pick<RunManager, "isRunning" | "history" | "cancel" | "activity">;
   messages: Pick<ThreadMessages, "send">;
   /** Keeps which bot sent a thread its run, so it hears how the run ended (decision 0101). */
   watch: {
@@ -97,6 +100,7 @@ export function createBotThreads({
       mine,
       createdBy: mine ? undefined : thread.createdByName,
       running: runs.isRunning(thread.id),
+      quietSince: quietSince(runs.activity(thread.id)),
       awaitingAnswer: thread.awaitingAnswer,
       pullRequests: thread.pullRequests.map(({ number, url, title, state }) => ({
         number,

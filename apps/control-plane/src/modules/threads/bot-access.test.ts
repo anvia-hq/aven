@@ -60,6 +60,7 @@ run("a bot's threads (postgres)", async () => {
   let failSend: Error | undefined;
   let running = new Set<string>();
   const botId = crypto.randomUUID();
+  const QUIET_AT = Date.parse("2026-11-03T10:00:00.000Z");
   const watched: string[] = [];
   let followUp: "ok" | "unwatched" | "spent" = "ok";
   const bot = createBotThreads({
@@ -67,6 +68,7 @@ run("a bot's threads (postgres)", async () => {
       isRunning: (id) => running.has(id),
       history: async () => transcript,
       cancel: (id) => running.delete(id),
+      activity: (id) => (running.has(id) ? { startedAt: 0, lastEventAt: QUIET_AT } : undefined),
     },
     watch: {
       watch: async (thread, watcher, personsWord = true) =>
@@ -243,6 +245,7 @@ run("a bot's threads (postgres)", async () => {
   test("stopping ends the run of the person's own thread and owes no note, and with no run says so", async () => {
     running = new Set();
     const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Stop me" });
+    expect((await bot.get(userId, one.id)).quietSince).toBe("2026-11-03T10:00:00.000Z");
     expect((await bot.stop(userId, one.id)).running).toBe(false);
     expect(running.has(one.id)).toBe(false);
     expect(watched.at(-1)).toBe(`settle ${one.id}`);

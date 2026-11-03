@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import type { BotThreadDetail } from "@aven/protocol/threads";
 
-import { endedNote } from "./watcher";
+import { endedNote, QUIET_ALERT_MS, quietNote } from "./watcher";
 
 const detail = (over: Partial<BotThreadDetail> = {}): BotThreadDetail => ({
   id: "t1",
@@ -21,6 +21,19 @@ const detail = (over: Partial<BotThreadDetail> = {}): BotThreadDetail => ({
   ],
   earlier: 0,
   ...over,
+});
+
+describe("quietNote", () => {
+  test("has the bot look with get_thread before it steers or stops, and act only if it is stuck", () => {
+    const note = quietNote({ id: "t1", title: "Fix the build", repository: "acme/app" }, 15);
+    expect(note).toContain("has shown nothing for 15 minutes");
+    const look = note.indexOf("Before anything else, look at it with get_thread");
+    expect(look).toBeGreaterThan(0);
+    expect(note.indexOf("continue_thread")).toBeGreaterThan(look);
+    expect(note.indexOf("stop_thread")).toBeGreaterThan(look);
+    expect(note).toContain("Only if that shows it stuck");
+    expect(note).toContain("If it is still making progress, leave it alone.");
+  });
 });
 
 describe("endedNote", () => {
@@ -99,16 +112,23 @@ run("createThreadWatcher (postgres)", async () => {
     });
     await threadWatchService.watch(thread.id, { botId: bot.id, userId });
     const woken: { botId: string; note: string }[] = [];
-    const state = { running: new Set<string>(), refuse: false };
+    // This test's runs, by thread: when each started and last had an event; the clock is `clock`.
+    const state = {
+      runs: new Map<string, { startedAt: number; lastEventAt: number }>(),
+      refuse: false,
+      clock: 1_000_000_000,
+    };
     const watcher = createThreadWatcher({
       get: async (_userId, id) => detail({ id, title: "Watched" }),
       lastError: async () => null,
-      isRunning: (id) => id !== thread.id || state.running.has(id),
+      activity: (id) =>
+        id === thread.id ? state.runs.get(id) : { startedAt: 0, lastEventAt: state.clock },
       wake: async (_userId, botId, note) => {
         if (state.refuse) throw new Error("the runner is offline");
         woken.push({ botId, note });
       },
       intervalMs: 60_000,
+      now: () => state.clock,
     });
     return { thread, watcher, woken, state };
   }
@@ -133,10 +153,10 @@ run("createThreadWatcher (postgres)", async () => {
 
   test("a tick tells of a thread that stopped running unheard, and leaves a running one", async () => {
     const { thread, watcher, woken, state } = await setup();
-    state.running.add(thread.id);
+    state.runs.set(thread.id, { startedAt: 1, lastEventAt: state.clock });
     await watcher.tick();
     expect(woken).toEqual([]);
-    state.running.delete(thread.id);
+    state.runs.delete(thread.id);
     await watcher.tick();
     expect(woken).toHaveLength(1);
     expect(woken[0]!.note).toContain("how its run ended was not heard");
@@ -171,5 +191,25 @@ run("createThreadWatcher (postgres)", async () => {
     expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("spent");
     await threadWatchService.watch(thread.id, { botId: bot.id, userId });
     expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("ok");
+  });
+
+  test("a run that shows nothing for 15 minutes alerts its bot once, and its end is still told", async () => {
+    const { thread, watcher, woken, state } = await setup();
+    state.runs.set(thread.id, { startedAt: 1, lastEventAt: state.clock });
+    state.clock += QUIET_ALERT_MS - 1;
+    await watcher.tick();
+    expect(woken).toEqual([]);
+    state.clock += 1;
+    await watcher.tick();
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+    expect(woken[0]!.note).toContain("has shown nothing for 15 minutes");
+    // The next run of the thread may be alerted about again; this one's end is still owed.
+    state.runs.set(thread.id, { startedAt: 2, lastEventAt: state.clock - QUIET_ALERT_MS });
+    await watcher.tick();
+    expect(woken).toHaveLength(2);
+    state.runs.delete(thread.id);
+    await watcher.ended(thread.id, { outcome: "done" });
+    expect(woken.at(-1)!.note).toContain("has finished.");
   });
 });

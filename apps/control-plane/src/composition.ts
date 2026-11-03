@@ -138,7 +138,7 @@ export const goalDriver = createGoalDriver({
 export const threadWatcher = createThreadWatcher({
   get: (userId, threadId) => botThreads.get(userId, threadId),
   lastError: (threadId) => threadsService.lastError(threadId),
-  isRunning: (threadId) => runsService.isRunning(threadId),
+  activity: (threadId) => runsService.activity(threadId),
   wake: (userId, botId, note) => botChats.fire(userId, botId, note),
   intervalMs: 60_000,
 });

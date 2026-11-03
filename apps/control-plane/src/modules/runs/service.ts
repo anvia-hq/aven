@@ -27,6 +27,8 @@ type ActiveRun = {
   cancelled: boolean;
   /** When the run was claimed (`Date.now()`), so a client that attaches late can say how long it has gone on. */
   startedAt: number;
+  /** When the run last had an event (`Date.now()`), so a run that shows nothing for long is noticed (decision 0101). */
+  lastEventAt: number;
   /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
   /** What the person said during the run that the agent has not taken yet (decision 0098), by id. */
@@ -108,6 +110,12 @@ export class RunManager {
 
   isRunning(threadId: string) {
     return this.#channels.get(threadId)?.run !== undefined;
+  }
+
+  /** When the thread's run started and last had an event, while it has one. */
+  activity(threadId: string): { startedAt: number; lastEventAt: number } | undefined {
+    const run = this.#channels.get(threadId)?.run;
+    return run && { startedAt: run.startedAt, lastEventAt: run.lastEventAt };
   }
 
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
@@ -212,6 +220,7 @@ export class RunManager {
       usage: usageFromHistory([]),
       cancelled: false,
       startedAt: Date.now(),
+      lastEventAt: Date.now(),
       ready: Promise.resolve(),
       steers: new Map(),
       steerIds: new Set(),
@@ -379,7 +388,10 @@ export class RunManager {
 
   #emit(channel: Channel, event: RunEvent) {
     const { run } = channel;
-    if (run) run.messages = applyEvent(run.messages, event);
+    if (run) {
+      run.messages = applyEvent(run.messages, event);
+      run.lastEventAt = Date.now();
+    }
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
     for (const subscriber of channel.subscribers) subscriber(event);
   }

@@ -35,6 +35,8 @@ export type BotThreadView = {
   createdBy?: string;
   /** Whether a run is going on. */
   running: boolean;
+  /** While a run is going on, when it last showed anything: a tool call, a word, a result. */
+  quietSince?: string;
   /** Whether the agent asked a question and waits for the person to answer it in the thread. */
   awaitingAnswer: boolean;
   pullRequests: BotThreadPullRequest[];
