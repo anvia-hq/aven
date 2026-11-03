@@ -1,12 +1,12 @@
+import { Plus } from "@mynaui/icons-react";
 import { Fragment, useState, type DragEvent } from "react";
 
 import { cn } from "cn";
 
 import { Button } from "@/components/button";
 
-import { useTasks } from "../hooks/use-tasks";
+import { useTasks, type TaskInput } from "../hooks/use-tasks";
 import type { CockpitTask, TaskStatus } from "../types";
-import { NewTaskDialog } from "./task-dialog";
 import { DueDate, PriorityFlag, StatusDot } from "./task-badges";
 import { STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
 import { TagList } from "./tag-list";
@@ -92,10 +92,13 @@ export function TaskBoard({
   tasks,
   tag,
   onOpen,
+  onNew,
 }: {
   tasks: CockpitTask[];
   tag?: string;
   onOpen: (task: CockpitTask) => void;
+  /** Starts a task in a column. */
+  onNew: (initial: Partial<TaskInput>) => void;
 }) {
   const { update } = useTasks();
   const [dragged, setDragged] = useState<string | null>(null);
@@ -146,17 +149,15 @@ export function TaskBoard({
               <StatusDot status={status} />
               <h2 className="text-sm font-medium">{STATUS_LABELS[status]}</h2>
               <span className="text-xs text-muted-foreground">{column.length}</span>
-              <NewTaskDialog
-                initial={{ status, tags: tag ? [tag] : [] }}
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="ml-auto"
-                    aria-label={`New task in ${STATUS_LABELS[status]}`}
-                  />
-                }
-              />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="ml-auto"
+                aria-label={`New task in ${STATUS_LABELS[status]}`}
+                onClick={() => onNew({ status, tags: tag ? [tag] : [] })}
+              >
+                <Plus />
+              </Button>
             </header>
             <ul className="flex min-h-12 flex-col gap-2">
               {column.map((task) => {

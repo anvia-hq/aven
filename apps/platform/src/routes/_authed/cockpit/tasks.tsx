@@ -1,11 +1,12 @@
-import { Kanban, List } from "@mynaui/icons-react";
+import { Kanban, List, Plus } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { Button } from "@/components/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { CockpitPage, withTag } from "@/modules/cockpit/components/cockpit-page";
 import { TaskBoard } from "@/modules/cockpit/components/task-board";
-import { EditTaskDialog, NewTaskDialog } from "@/modules/cockpit/components/task-dialog";
+import { TaskDrawer, type TaskOpen } from "@/modules/cockpit/components/task-drawer";
 import { TaskTable } from "@/modules/cockpit/components/task-table";
 import { useTasks } from "@/modules/cockpit/hooks/use-tasks";
 import type { TaskView } from "@/modules/cockpit/types";
@@ -22,10 +23,9 @@ function TasksPage() {
   const { tag, view = "board" } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { tasks, loaded } = useTasks();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [open, setOpen] = useState<TaskOpen | null>(null);
   const shown = withTag(tasks, tag);
-  // The task as it is now, so the form opens on what the board last saved.
-  const open = tasks.find((task) => task.id === editing) ?? null;
+  const openTask = (task: { id: string }) => setOpen({ kind: "task", id: task.id });
 
   return (
     <CockpitPage
@@ -52,17 +52,27 @@ function TasksPage() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <NewTaskDialog initial={{ tags: tag ? [tag] : [] }} />
+          <Button
+            size="sm"
+            onClick={() => setOpen({ kind: "new", initial: { tags: tag ? [tag] : [] } })}
+          >
+            <Plus /> New task
+          </Button>
         </>
       }
     >
       {loaded &&
         (view === "board" ? (
-          <TaskBoard tasks={shown} tag={tag} onOpen={(task) => setEditing(task.id)} />
+          <TaskBoard
+            tasks={shown}
+            tag={tag}
+            onOpen={openTask}
+            onNew={(initial) => setOpen({ kind: "new", initial })}
+          />
         ) : (
-          <TaskTable tasks={shown} onOpen={(task) => setEditing(task.id)} />
+          <TaskTable tasks={shown} onOpen={openTask} />
         ))}
-      <EditTaskDialog task={open} onOpenChange={(isOpen) => !isOpen && setEditing(null)} />
+      <TaskDrawer open={open} onClose={() => setOpen(null)} />
     </CockpitPage>
   );
 }

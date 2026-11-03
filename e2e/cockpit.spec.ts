@@ -106,14 +106,16 @@ test.describe("Cockpit", () => {
 
     const make = async (title: string, tag?: string) => {
       await page.getByRole("button", { name: "New task", exact: true }).click();
-      await page.getByLabel("Title").fill(title);
+      // A drawer from the right, its title ready to be typed in.
+      const drawer = page.getByRole("article", { name: "New task" });
+      await expect(drawer.getByRole("textbox", { name: "Title" })).toBeFocused();
+      await page.keyboard.type(title);
       if (tag) {
-        await page.getByRole("dialog").getByRole("textbox", { name: "Tags" }).fill(tag);
-        await page.getByRole("dialog").getByRole("textbox", { name: "Tags" }).press("Enter");
+        await drawer.getByRole("textbox", { name: "Tags" }).fill(tag);
+        await drawer.getByRole("textbox", { name: "Tags" }).press("Enter");
       }
-      await page.getByRole("button", { name: "Create task" }).click();
-      // The toast is a dialog too: the form is gone when its title field is.
-      await expect(page.getByLabel("Title")).toHaveCount(0);
+      await drawer.getByRole("button", { name: "Create task" }).click();
+      await expect(drawer).toHaveCount(0);
     };
     await make("Write the plan", "work");
     await make("Buy milk");
@@ -149,8 +151,23 @@ test.describe("Cockpit", () => {
     await expect(table).toContainText("Write the plan");
     await expect(table).not.toContainText("Buy milk");
 
+    // Opened in the drawer, a task saves each change as it is made.
     await table.getByRole("button", { name: "Write the plan" }).click();
-    await page.getByRole("button", { name: "Delete" }).click();
+    const task = page.getByRole("article", { name: "T-1 Write the plan" });
+    const titled = savedWith(page, "Write the plan today");
+    await task.getByRole("textbox", { name: "Title" }).fill("Write the plan today");
+    await titled;
+    const prioritized = savedWith(page, "high");
+    await task.getByRole("combobox", { name: "Priority" }).click();
+    await page.getByRole("option", { name: "High" }).click();
+    await prioritized;
+    await page.reload();
+    await expect(table).toContainText("Write the plan today");
+    await expect(page.getByRole("combobox", { name: "Priority of T-1" })).toContainText("High");
+
+    await table.getByRole("button", { name: "Write the plan today" }).click();
+    await page.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Delete task" }).click();
     await expect(page.getByText("No tasks yet.")).toBeVisible();
   });
 
