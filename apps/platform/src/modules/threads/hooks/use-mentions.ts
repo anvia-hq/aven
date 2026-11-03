@@ -1,6 +1,6 @@
 import type { ComposerTriggerDefinition, ComposerTriggerItem } from "@anvia/react-ui/chat";
 import { mentionToken } from "@aven/protocol/events";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
@@ -13,6 +13,9 @@ const REPO_SKILLS = ".aven/skills";
 // A search waits this long for the next key before it asks the runner.
 const SEARCH_DELAY_MS = 120;
 const MAX_SKILLS = 50;
+// A `/` typed before the skills have loaded waits this long for them, so the menu is not made, and
+// kept, with none of them in it.
+const SKILLS_WAIT_MS = 3000;
 
 const itemOf = (mention: Mentionable, detail?: string): ComposerTriggerItem => ({
   id: mention.name,
@@ -45,7 +48,11 @@ const compactItem: ComposerTriggerItem = {
 // thread), the user's enabled ones and the built-in ones, the first of these winning on a name.
 // The triggers stay the same object while the composer lives: a new one would remake its editor.
 export function useMentions(threadId: string | undefined) {
-  const { personal, builtIn } = useSkills();
+  const { personal, builtIn, loaded } = useSkills();
+  const skillsLoaded = useRef(Promise.withResolvers<void>());
+  useEffect(() => {
+    if (loaded) skillsLoaded.current.resolve();
+  }, [loaded]);
   const skills = useRef<SkillOption[]>([]);
   skills.current = [
     ...personal
@@ -70,7 +77,14 @@ export function useMentions(threadId: string | undefined) {
     const skillTrigger: ComposerTriggerDefinition = {
       id: "skill",
       char: "/",
-      items: async ({ query }) => {
+      items: async ({ query, signal }) => {
+        await Promise.race([
+          skillsLoaded.current.promise,
+          new Promise((resolve) => {
+            const timer = setTimeout(resolve, SKILLS_WAIT_MS);
+            signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+          }),
+        ]);
         if (threadId && (query === "" || !repoSkills.current)) {
           repoSkills.current = listRepoSkills(threadId);
         }
