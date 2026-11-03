@@ -41,8 +41,8 @@ async function senderExtras(userId: string) {
   return { skills, mcp, github };
 }
 
-// What a run carries for its sender in this thread's project: the variables, who the run is and
-// their memory.
+// What a run carries for its sender in this thread's project: the variables, who the run is,
+// their memory and their cockpit to read.
 // Also records the sender as the person the thread last ran as, just before the run starts.
 async function threadExtras(
   organizationId: string,
@@ -58,7 +58,9 @@ async function threadExtras(
   const identity = await runIdentity(thread, userId);
   const memory = await runMemory(thread, userId, onPersonsWord);
   await threadsService.markRunBy(thread.id, userId);
-  return { env, identity, memory };
+  // The sender's cockpit, which a thread's agent reads and never changes (decision 0109).
+  const cockpit = { userId, access: "read" as const, mayDelete: false };
+  return { env, identity, memory, cockpit };
 }
 
 // The sender's memory in the project, which the thread's agent reads, and keeps when the run is on

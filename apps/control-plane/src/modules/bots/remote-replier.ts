@@ -41,6 +41,7 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
+import { runCockpitCommand } from "../cockpit/commands";
 import type { MemoryCaller } from "../memory/commands";
 import type { MemoryOwner } from "../memory/service";
 import type { BotProviders } from "../providers/bot-access";
@@ -408,6 +409,10 @@ export class RemoteBotReplier implements BotReplier {
           { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: keepsNotes },
           command,
         ),
+      // The owner's cockpit, whichever person the runner might name: a bot adds and changes in
+      // it on any reply, as a schedule's task may, and deletes only on the person's word (decision 0109).
+      cockpit: ({ command }: { command: unknown }) =>
+        runCockpitCommand({ userId, access: "write", mayDelete: onPersonsWord }, command),
     };
     const cancel = () => this.#cancel(replyId, signal);
     try {
@@ -431,6 +436,7 @@ export class RemoteBotReplier implements BotReplier {
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,
           memory: { folders, writable: keepsNotes },
+          cockpit: "write",
         },
         sink,
       );

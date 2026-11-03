@@ -2,6 +2,7 @@ import type { ModelConfig } from "@aven/agents/model";
 import type { MessageMention, QueuedSteer, RunEvent } from "@aven/protocol/events";
 import type { RunMemory } from "@aven/protocol/memory";
 
+import type { CockpitCaller } from "../cockpit/commands";
 import type { MemoryCaller } from "../memory/commands";
 import type { RunIdentity } from "../workload-identity/grants";
 import type {
@@ -34,6 +35,7 @@ export type RunExtras = Pick<
   | "identity"
   | "compact"
   | "memory"
+  | "cockpit"
 >;
 
 /**
@@ -62,6 +64,8 @@ export type StartRunInput = {
   /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
   memory?: RunMemoryInput;
+  /** The sender's cockpit, which a thread's agent reads (decision 0109). */
+  cockpit?: CockpitCaller;
   model?: ModelConfig;
 };
 
@@ -78,6 +82,8 @@ export type ResumeRunInput = {
   /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
   memory?: RunMemoryInput;
+  /** The sender's cockpit, which a thread's agent reads (decision 0109). */
+  cockpit?: CockpitCaller;
   model?: ModelConfig;
 };
 

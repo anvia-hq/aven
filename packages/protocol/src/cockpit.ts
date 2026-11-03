@@ -91,3 +91,47 @@ export type CockpitTag = {
   tasks: number;
   notes: number;
 };
+
+/** The kinds of record an agent works on in the cockpit (decision 0109). */
+export const COCKPIT_KINDS = ["inbox", "tasks", "notes"] as const;
+export type CockpitKind = (typeof COCKPIT_KINDS)[number];
+
+/**
+ * What an agent may do in the person's cockpit: a thread's agent `read`s, a bot `write`s, and a
+ * bot deletes only on the person's own word (decision 0109).
+ */
+export type CockpitAccess = "read" | "write";
+
+/** What an agent changes of a record; a body is markdown. */
+export type CockpitFields = {
+  title?: string;
+  body?: string;
+  tags?: string[];
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: string | null;
+  done?: boolean;
+  pinned?: boolean;
+};
+
+/**
+ * What an agent asks of the cockpit (decision 0109). A record is named by its id, or a task by
+ * its key (`T-3`).
+ */
+export type CockpitCommand =
+  | {
+      command: "list";
+      kind: CockpitKind;
+      tag?: string;
+      query?: string;
+      status?: TaskStatus;
+      done?: boolean;
+    }
+  | { command: "get"; kind: CockpitKind; id: string }
+  | { command: "tags" }
+  | { command: "create"; kind: CockpitKind; fields: CockpitFields & { title: string } }
+  | { command: "update"; kind: CockpitKind; id: string; fields: CockpitFields }
+  | { command: "delete"; kind: CockpitKind; id: string };
+
+/** The commands that change the cockpit. */
+export const COCKPIT_WRITES = ["create", "update", "delete"] as const;

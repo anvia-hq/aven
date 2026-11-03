@@ -95,9 +95,10 @@ export class RemoteRuntime implements Runtime {
     env,
     identity,
     memory,
+    cockpit,
     model,
   }: StartRunInput): RuntimeRun {
-    const extras = { skills, mcp, identity, memory };
+    const extras = { skills, mcp, identity, memory, cockpit };
     return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.start",
       runId,
@@ -112,6 +113,7 @@ export class RemoteRuntime implements Runtime {
       env: env?.length ? env : undefined,
       identity: credential,
       memory: memory?.index,
+      cockpit: cockpit?.access,
       model: runModel,
     }));
   }
@@ -126,9 +128,10 @@ export class RemoteRuntime implements Runtime {
     env,
     identity,
     memory,
+    cockpit,
     model,
   }: ResumeRunInput): RuntimeRun {
-    const extras = { skills, mcp, identity, memory };
+    const extras = { skills, mcp, identity, memory, cockpit };
     return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.resume",
       runId,
@@ -141,6 +144,7 @@ export class RemoteRuntime implements Runtime {
       env: env?.length ? env : undefined,
       identity: credential,
       memory: memory?.index,
+      cockpit: cockpit?.access,
       model: runModel,
     }));
   }
@@ -153,7 +157,8 @@ export class RemoteRuntime implements Runtime {
       mcp,
       identity,
       memory,
-    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory">,
+      cockpit,
+    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit">,
     message: (
       runId: string,
       runModel: RunModel,
@@ -176,6 +181,7 @@ export class RemoteRuntime implements Runtime {
       skills?.map((skill) => skill.digest),
       mcp?.map((server) => server.id),
       memory?.caller,
+      cockpit,
     );
     const credential = identity && { credential: this.identities.issue(runId, identity) };
     this.#post(connection, runId, message(runId, runModel, credential));

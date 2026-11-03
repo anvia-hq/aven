@@ -73,6 +73,8 @@ const callMethods = [
   "bot.thread",
   "bot.notes",
   "memory.notes",
+  "bot.cockpit",
+  "cockpit.read",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -496,6 +498,11 @@ const memoryCommand = z.discriminatedUnion("command", [
 const memoryNotesParams = z.object({ runId, command: memoryCommand });
 const botNotesParams = z.object({ replyId, command: memoryCommand });
 
+// A cockpit command is checked in full where it is answered, against the cockpit's own rules
+// (`cockpit/commands.ts`); here only whose call it is (decision 0109).
+const cockpitReadParams = z.object({ runId, command: z.unknown() });
+const botCockpitParams = z.object({ replyId, command: z.unknown() });
+
 const botThreadParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("projects") }),
   z.object({
@@ -567,6 +574,8 @@ export const parseBotSkillParams = (params: unknown) =>
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseMemoryNotesParams = (params: unknown) => parseParams(memoryNotesParams, params);
 export const parseBotNotesParams = (params: unknown) => parseParams(botNotesParams, params);
+export const parseCockpitReadParams = (params: unknown) => parseParams(cockpitReadParams, params);
+export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
 export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);

@@ -12,6 +12,7 @@ import type {
   BotThreadParams,
   BotMemoryParams,
   BotNotesParams,
+  BotCockpitParams,
   BotQuestioned,
   BotQuestionParams,
   BotScheduled,
@@ -27,6 +28,7 @@ import type {
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
+import { runCockpitCommand, type CockpitCaller } from "../cockpit/commands";
 import { runMemoryCommand, type MemoryCaller } from "../memory/commands";
 import {
   parseAppendParams,
@@ -45,6 +47,8 @@ import {
   parseBotUpdateParams,
   parseMcpReportParams,
   parseMemoryParams,
+  parseBotCockpitParams,
+  parseCockpitReadParams,
   parseSkillsGetParams,
 } from "./wire";
 
@@ -59,6 +63,8 @@ export type CallRun = {
   mcp: Set<string>;
   /** Whose memory the run's agent works in, when it has one (decision 0102). */
   memory?: MemoryCaller;
+  /** Whose cockpit the run's agent reads, when it may (decision 0109). */
+  cockpit?: CockpitCaller;
 };
 
 /** What answering a runner's call about a bot's conversation needs of the reply it names. */
@@ -87,6 +93,8 @@ export type CallBotReply = {
   thread(params: BotThreadParams): Promise<BotThreaded>;
   /** Works the memory of the reply's own bot and its owner (decision 0102). */
   notes(params: BotNotesParams): Promise<string>;
+  /** Works the reply's owner's cockpit, as the reply may; the command is checked where it is answered (decision 0109). */
+  cockpit(params: Omit<BotCockpitParams, "command"> & { command: unknown }): Promise<string>;
 };
 
 export type RuntimeCallContext = {
@@ -184,6 +192,11 @@ export async function answerRuntimeCall(
       reply.notes(call),
     );
   }
+  if (method === "bot.cockpit") {
+    return answerBotCall(params, parseBotCockpitParams, findBotReply, (reply, call) =>
+      reply.cockpit(call),
+    );
+  }
   if (method === "bot.update") {
     return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>
       reply.update(call),
@@ -208,6 +221,11 @@ export async function answerRuntimeCall(
     // The run's own sender and project, whatever the runtime names.
     if (!run.memory) throw new Error("This run has no memory");
     return runMemoryCommand(run.memory, parseMemoryNotesParams(params).command);
+  }
+  if (method === "cockpit.read") {
+    // The run's own sender, whatever the runtime names, and read only (decision 0109).
+    if (!run.cockpit) throw new Error("This run has no cockpit");
+    return runCockpitCommand(run.cockpit, parseCockpitReadParams(params).command);
   }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {

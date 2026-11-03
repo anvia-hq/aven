@@ -143,6 +143,7 @@ export class RunManager {
       identity,
       compact,
       memory,
+      cockpit,
     }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
@@ -160,6 +161,7 @@ export class RunManager {
       env,
       identity,
       memory,
+      cockpit,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
@@ -184,6 +186,7 @@ export class RunManager {
       env,
       identity,
       memory,
+      cockpit,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     const channel = this.#channel(thread);
@@ -207,6 +210,7 @@ export class RunManager {
       env,
       identity,
       memory,
+      cockpit,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.

@@ -9,6 +9,7 @@ import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { GoalHost } from "@aven/agents/tools/goals";
 import type { McpNote } from "@aven/agents/mcp";
 import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
+import type { CockpitHost } from "@aven/agents/tools/cockpit";
 import type { MemoryHost } from "@aven/agents/tools/memory";
 import type { ProvidersHost } from "@aven/agents/tools/providers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
@@ -17,6 +18,7 @@ import type { SendMessage } from "@aven/agents/tools/send-message";
 import { MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotMcpView } from "@aven/protocol/mcp";
+import type { CockpitAccess } from "@aven/protocol/cockpit";
 import type { RunMemory } from "@aven/protocol/memory";
 import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import type { BotScheduleView } from "@aven/protocol/schedules";
@@ -75,6 +77,8 @@ export type CreateBotReplyAgent = (input: {
   threads: ThreadsHost;
   /** The bot's notes and its person's, when the reply has them (decision 0102). */
   notes?: { memory: RunMemory; host: MemoryHost };
+  /** The person's cockpit, when the reply may work it (decision 0109). */
+  cockpit?: { access: CockpitAccess; host: CockpitHost };
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -99,6 +103,7 @@ export const defaultCreateBotAgent =
     providers,
     threads,
     notes,
+    cockpit,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -130,6 +135,7 @@ export const defaultCreateBotAgent =
       providers,
       threads,
       notes,
+      cockpit,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -201,7 +207,17 @@ export class BotReplies {
 
   // One reply, which never throws: how it ended is told to the control plane.
   async #answer(
-    { replyId, bot, prompt, model, attachments, skills, mcp: servers, memory }: BotReplyMessage,
+    {
+      replyId,
+      bot,
+      prompt,
+      model,
+      attachments,
+      skills,
+      mcp: servers,
+      memory,
+      cockpit,
+    }: BotReplyMessage,
     abort: AbortController,
   ) {
     const { send } = this.#context;
@@ -211,7 +227,7 @@ export class BotReplies {
       mcp = await this.#connectMcp(replyId, servers);
       const agent = await this.#agentFor(
         replyId,
-        { bot, prompt, model, skills: skills ?? [], memory },
+        { bot, prompt, model, skills: skills ?? [], memory, cockpit },
         mcp,
         abort,
       );
@@ -273,12 +289,14 @@ export class BotReplies {
       model,
       skills,
       memory,
+      cockpit,
     }: {
       bot: BotReplyInfo;
       prompt: string;
       model: RunModel;
       skills: readonly RunSkill[];
       memory?: RunMemory;
+      cockpit?: CockpitAccess;
     },
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
@@ -405,6 +423,11 @@ export class BotReplies {
       notes: memory && {
         memory,
         host: (command) => call("bot.notes", { replyId, command }),
+      },
+      // What the bot may do there is the control plane's to say, and it holds to it (decision 0109).
+      cockpit: cockpit && {
+        access: cockpit,
+        host: (command) => call("bot.cockpit", { replyId, command }),
       },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

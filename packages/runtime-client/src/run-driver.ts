@@ -340,6 +340,14 @@ export function createRunDriver(context: DriverContext) {
                 });
                 return redact ? redact(answer) : answer;
               }),
+            // The sender's cockpit, read only, its answers with this run's secrets hidden as the
+            // other tools' are (decision 0109).
+            cockpit:
+              state.record.cockpit &&
+              (async (command) => {
+                const answer = await context.call("cockpit.read", { runId, command });
+                return redact ? redact(answer) : answer;
+              }),
             // A subagent is not in the journal, so what it does is sent as it happens.
             emit: (event) => forward(event),
             // Nobody is there to answer a subagent, and it is not journaled: its agent id only
@@ -549,6 +557,7 @@ export function createRunDriver(context: DriverContext) {
         mentions: message.type === "run.start" ? message.mentions : undefined,
         skills: message.skills,
         memory: message.memory,
+        cockpit: message.cockpit,
         agentId: `run-${message.runId}`,
         turn: 0,
         phase: "chat",

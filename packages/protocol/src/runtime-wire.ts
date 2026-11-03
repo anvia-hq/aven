@@ -5,6 +5,7 @@
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
+import type { CockpitAccess, CockpitCommand } from "./cockpit";
 import type { MemoryCommand, RunMemory } from "./memory";
 import type { BotProviderView, ProviderKeyAsk } from "./providers";
 import type { BotScheduleView } from "./schedules";
@@ -287,6 +288,8 @@ export type ControlPlaneToRuntime =
       identity?: RunIdentityCredential;
       /** The sender's memory in the thread's project, which the instructions list (decision 0102). */
       memory?: RunMemory;
+      /** What the agent may do in the sender's cockpit, `read` for a thread's agent (decision 0109). */
+      cockpit?: CockpitAccess;
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -302,6 +305,7 @@ export type ControlPlaneToRuntime =
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
       memory?: RunMemory;
+      cockpit?: CockpitAccess;
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
@@ -324,6 +328,8 @@ export type ControlPlaneToRuntime =
       mcp?: RunMcpServer[];
       /** The bot's memory and its owner's, which the instructions list (decision 0102). */
       memory?: RunMemory;
+      /** What the bot may do in its owner's cockpit (decision 0109). */
+      cockpit?: CockpitAccess;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
@@ -410,6 +416,9 @@ export type RuntimeToControlPlane =
  */
 export type MemoryCallMethod = "memory.append" | "memory.notes";
 
+/** The runtime works the sender's cockpit for a run's agent, read only (decision 0109). */
+export type CockpitCallMethod = "cockpit.read";
+
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
 
@@ -433,7 +442,8 @@ export type BotCallMethod =
   | "bot.mcp"
   | "bot.provider"
   | "bot.thread"
-  | "bot.notes";
+  | "bot.notes"
+  | "bot.cockpit";
 
 /**
  * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
@@ -443,6 +453,7 @@ export type McpReportCallMethod = "mcp.report";
 
 export type CallMethod =
   | MemoryCallMethod
+  | CockpitCallMethod
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
@@ -569,6 +580,12 @@ export type MemoryNotesParams = { runId: string; command: MemoryCommand };
 
 /** A memory command of a bot's reply: answered for the reply's bot and its owner (decision 0102). */
 export type BotNotesParams = { replyId: string; command: MemoryCommand };
+
+/** A command of a run's agent in the sender's cockpit (decision 0109). */
+export type CockpitReadParams = { runId: string; command: CockpitCommand };
+
+/** A command of a bot in its owner's cockpit (decision 0109). */
+export type BotCockpitParams = { replyId: string; command: CockpitCommand };
 
 type MemoryAppendParams = {
   runId: string;
@@ -697,6 +714,8 @@ export type RuntimeCalls = {
   "bot.thread": { params: BotThreadParams; result: BotThreaded };
   "bot.notes": { params: BotNotesParams; result: string };
   "memory.notes": { params: MemoryNotesParams; result: string };
+  "bot.cockpit": { params: BotCockpitParams; result: string };
+  "cockpit.read": { params: CockpitReadParams; result: string };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -714,4 +733,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 41;
+export const WIRE_VERSION = 42;

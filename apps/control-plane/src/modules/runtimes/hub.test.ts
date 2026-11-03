@@ -263,6 +263,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
             { name: params.name ?? "Pip", description: params.description ?? "" }
           ),
           notes: async (params) => (asked.push(params), "noted"),
+          cockpit: async () => "cockpit",
         },
       );
       return { ws, received, connection, heard, asked, runtime };

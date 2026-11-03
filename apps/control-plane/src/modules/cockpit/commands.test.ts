@@ -1,0 +1,134 @@
+import { afterAll, describe, expect, test } from "bun:test";
+
+const run = process.env.DATABASE_URL ? describe : describe.skip;
+
+run("runCockpitCommand (postgres)", async () => {
+  const { signUp } = await import("../../testing/sign-up");
+  const { runCockpitCommand } = await import("./commands");
+  const { cockpitService } = await import("./service");
+  const person = await signUp("Pilot");
+  const other = await signUp("Other");
+  afterAll(async () => {
+    await person.remove();
+    await other.remove();
+  });
+  const bot = { userId: person.userId, access: "write" as const, mayDelete: false };
+  const thread = { userId: person.userId, access: "read" as const, mayDelete: false };
+
+  test("a bot writes markdown, which is kept and read back as it was written", async () => {
+    const body = "# Plan\n\n- [ ] Draft\n- [x] Outline\n\n| a | b |\n| --- | --- |\n| 1 | 2 |";
+    const made = await runCockpitCommand(bot, {
+      command: "create",
+      kind: "notes",
+      fields: { title: "Launch", body, tags: ["Work"], pinned: true },
+    });
+    expect(made).toStartWith("Created Launch (id ");
+    const [note] = await cockpitService.notes.list(person.userId);
+    expect(note).toMatchObject({ body, tags: ["work"], pinned: true });
+    const shown = await runCockpitCommand(thread, { command: "get", kind: "notes", id: note!.id });
+    expect(shown).toContain("pinned: true");
+    expect(shown).toEndWith(body);
+  });
+
+  test("a body the person wrote in the editor is read as markdown", async () => {
+    const blocks = [
+      {
+        type: "heading",
+        props: { level: 2 },
+        content: [{ type: "text", text: "Steps", styles: {} }],
+        children: [],
+      },
+      {
+        type: "checkListItem",
+        props: { checked: true },
+        content: [{ type: "text", text: "Done", styles: { bold: true } }],
+        children: [],
+      },
+      {
+        type: "paragraph",
+        props: {},
+        content: [
+          {
+            type: "link",
+            href: "https://aven.dev",
+            content: [{ type: "text", text: "site", styles: {} }],
+          },
+        ],
+        children: [],
+      },
+    ];
+    const item = await cockpitService.inbox.create(person.userId, {
+      title: "Written by hand",
+      body: JSON.stringify(blocks),
+    });
+    const shown = await runCockpitCommand(thread, { command: "get", kind: "inbox", id: item.id });
+    expect(shown).toEndWith("## Steps\n\n- [x] **Done**\n\n[site](https://aven.dev)");
+  });
+
+  test("a task is found by its key, moved, listed and filtered", async () => {
+    await runCockpitCommand(bot, {
+      command: "create",
+      kind: "tasks",
+      fields: { title: "Ship it", body: "Check **CI**", priority: "high", dueDate: "2026-12-01" },
+    });
+    const [task] = await cockpitService.tasks.list(person.userId);
+    const key = `T-${task!.number}`;
+    expect(task!.description).toBe("Check **CI**");
+    expect(
+      await runCockpitCommand(bot, {
+        command: "update",
+        kind: "tasks",
+        id: key.toLowerCase(),
+        fields: { status: "in_progress" },
+      }),
+    ).toBe(`Updated ${key} Ship it.`);
+    const listed = await runCockpitCommand(thread, {
+      command: "list",
+      kind: "tasks",
+      status: "in_progress",
+    });
+    expect(listed).toContain(`${key} · Ship it · in_progress · priority high · due 2026-12-01`);
+    expect(listed).toContain("Check CI");
+    expect(
+      await runCockpitCommand(thread, { command: "list", kind: "tasks", status: "done" }),
+    ).toBe("No tasks records match.");
+  });
+
+  test("a thread's agent only reads, a bot deletes only on the person's word, and fields are checked", async () => {
+    await expect(
+      runCockpitCommand(thread, { command: "create", kind: "inbox", fields: { title: "No" } }),
+    ).rejects.toThrow("only read");
+    const item = await cockpitService.inbox.create(person.userId, { title: "Keep" });
+    await expect(
+      runCockpitCommand(bot, { command: "delete", kind: "inbox", id: item.id }),
+    ).rejects.toThrow("when the person asks");
+    expect(
+      await runCockpitCommand(
+        { ...bot, mayDelete: true },
+        { command: "delete", kind: "inbox", id: item.id },
+      ),
+    ).toBe("Deleted Keep.");
+    await expect(
+      runCockpitCommand(bot, {
+        command: "create",
+        kind: "inbox",
+        fields: { title: "x", priority: "high" },
+      }),
+    ).rejects.toThrow("inbox has no priority");
+    await expect(
+      runCockpitCommand(bot, { command: "create", kind: "notes", fields: { title: " " } }),
+    ).rejects.toThrow("Give it a title");
+    await expect(runCockpitCommand(bot, { command: "drop" })).rejects.toThrow();
+  });
+
+  test("another person's records are not there", async () => {
+    const [note] = await cockpitService.notes.list(person.userId);
+    const theirs = { userId: other.userId, access: "write" as const, mayDelete: true };
+    await expect(
+      runCockpitCommand(theirs, { command: "get", kind: "notes", id: note!.id }),
+    ).rejects.toThrow("There is no notes record");
+    expect(await runCockpitCommand(theirs, { command: "list", kind: "notes" })).toBe(
+      "No notes records match.",
+    );
+  });
+});

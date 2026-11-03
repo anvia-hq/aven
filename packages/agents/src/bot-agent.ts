@@ -12,7 +12,9 @@ import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools, type McpServersHost } from "./tools/mcp-servers";
 import { createProviderTools, type ProvidersHost } from "./tools/providers";
 import { createThreadTools, type ThreadsHost } from "./tools/threads";
+import { createCockpitTool, type CockpitHost } from "./tools/cockpit";
 import { createMemoryTool, type MemoryHost } from "./tools/memory";
+import type { CockpitAccess } from "@aven/protocol/cockpit";
 import type { RunMemory } from "@aven/protocol/memory";
 import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
@@ -73,6 +75,8 @@ type BotAgentOptions = ModelSource & {
    * list and what the `memory` tool asks. `memory` above is the chat itself.
    */
   notes?: { memory: RunMemory; host: MemoryHost };
+  /** The person's cockpit, which the bot reads and writes (decision 0109); without it the bot cannot. */
+  cockpit?: { access: CockpitAccess; host: CockpitHost };
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -102,6 +106,7 @@ export function createBotAgent({
   providers,
   threads,
   notes,
+  cockpit,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -143,11 +148,14 @@ export function createBotAgent({
       ...keepingProviders(providers),
       ...workingThreads(threads),
       ...keepingNotes(notes?.host),
+      ...workingCockpit(cockpit),
     ],
   });
 }
 
 const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
+const workingCockpit = (cockpit?: { access: CockpitAccess; host: CockpitHost }) =>
+  cockpit ? [createCockpitTool(cockpit.host, cockpit.access)] : [];
 const working = (goals?: GoalHost) => (goals ? createGoalTools(goals) : []);
 const scheduling = (schedules?: ScheduleHost) => (schedules ? createScheduleTools(schedules) : []);
 const asking = (askQuestion?: AskQuestion) =>

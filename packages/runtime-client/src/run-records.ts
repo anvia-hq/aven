@@ -3,6 +3,7 @@ import type { KeptAttachment } from "@aven/agents/attachments";
 import type { SkillListing } from "@aven/agents/skills";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { MessageMention } from "@aven/protocol/events";
+import type { CockpitAccess } from "@aven/protocol/cockpit";
 import type { RunMemory } from "@aven/protocol/memory";
 import type { RunModel, RunSkill, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
@@ -29,6 +30,8 @@ export type RunRecord = {
   skillListing?: SkillListing[];
   /** The person's memory the run was given (decision 0102): kept so a run taken up again is told of it. */
   memory?: RunMemory;
+  /** What the agent may do in the sender's cockpit (decision 0109): kept so a run taken up again has it. */
+  cockpit?: CockpitAccess;
   /** The agent the run's first part uses, and the run it has in the journal once submitted. */
   agentId: string;
   durableId?: string;
