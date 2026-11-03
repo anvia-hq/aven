@@ -1,15 +1,10 @@
 // A cockpit body as BlockNote keeps it (decision 0105): the editor's blocks as JSON, or, for one
 // written before, plain text or markdown, which the editor reads in on open.
 
+import { isBlockDocument } from "@aven/protocol/cockpit-markdown";
+
 type InlineLike = { text?: unknown; content?: unknown };
 type BlockLike = { content?: unknown; children?: unknown };
-
-// A block as BlockNote writes one: an object with its type and its children.
-const isBlock = (value: unknown): boolean =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as { type?: unknown }).type === "string" &&
-  Array.isArray((value as BlockLike).children);
 
 /**
  * The blocks of a body, or null for one that is text (or empty): text that happens to be a JSON
@@ -19,7 +14,7 @@ export function blocksOf(body: string): unknown[] | null {
   if (!body.trimStart().startsWith("[")) return null;
   try {
     const parsed: unknown = JSON.parse(body);
-    return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isBlock) ? parsed : null;
+    return isBlockDocument(parsed) ? parsed : null;
   } catch {
     return null;
   }

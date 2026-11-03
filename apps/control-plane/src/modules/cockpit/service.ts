@@ -79,6 +79,19 @@ async function roomFor(
 
 const notFound = (what: string) => new NotFoundError(`${what} not found`);
 
+// Whether any of the person's records carries a tag.
+async function tagInUse(tx: Tx, userId: string, name: string) {
+  for (const table of [cockpitInboxItems, cockpitTasks, cockpitNotes]) {
+    const [row] = await tx
+      .select({ id: table.id })
+      .from(table)
+      .where(and(eq(table.userId, userId), sql`${name} = any(${table.tags})`))
+      .limit(1);
+    if (row) return true;
+  }
+  return false;
+}
+
 // A person defines at most so many tags.
 async function checkDefinedRoom(tx: Tx, userId: string) {
   const [row] = await tx
@@ -283,15 +296,25 @@ export const cockpitService = {
   async addTag(userId: string, input: { name: string; color?: string | null }) {
     await db.transaction(async (tx) => {
       await lockPerson(tx, userId, "tags");
-      const inUse = (await this.tags(userId)).some((tag) => tag.name === input.name);
-      if (inUse) throw new ConflictError(`There is a tag ${input.name} already`);
+      // Asked on the transaction's own connection: a request holding one while it waits for
+      // another, as many at once would, can take every connection there is.
+      const [defined] = await tx
+        .select({ id: cockpitTags.id })
+        .from(cockpitTags)
+        .where(and(eq(cockpitTags.userId, userId), eq(cockpitTags.name, input.name)));
+      if (defined || (await tagInUse(tx, userId, input.name))) {
+        throw new ConflictError(`There is a tag ${input.name} already`);
+      }
       await checkDefinedRoom(tx, userId);
       await tx.insert(cockpitTags).values({ userId, name: input.name, color: input.color ?? null });
     });
     return this.tag(userId, input.name);
   },
 
-  /** Sets a tag's color, or with null gives it back the one its name picks. */
+  /**
+   * Sets a tag's color, or with null gives it back the one its name picks. A tag in use that goes
+   * back to its default needs no row, so it stops counting toward the tags a person defines.
+   */
   async colorTag(userId: string, name: string, color: string | null) {
     const tag = await this.tag(userId, name);
     await db.transaction(async (tx) => {
@@ -300,9 +323,11 @@ export const cockpitService = {
         .select({ id: cockpitTags.id })
         .from(cockpitTags)
         .where(and(eq(cockpitTags.userId, userId), eq(cockpitTags.name, name)));
-      if (row) {
+      if (row && color === null && (await tagInUse(tx, userId, name))) {
+        await tx.delete(cockpitTags).where(eq(cockpitTags.id, row.id));
+      } else if (row) {
         await tx.update(cockpitTags).set({ color }).where(eq(cockpitTags.id, row.id));
-      } else {
+      } else if (color !== null) {
         await checkDefinedRoom(tx, userId);
         await tx.insert(cockpitTags).values({ userId, name, color });
       }

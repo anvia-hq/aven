@@ -6,6 +6,7 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { mcpService } from "../mcp/service";
+import { threadCockpit } from "../cockpit/commands";
 import { memoryService } from "../memory/service";
 import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
@@ -59,7 +60,7 @@ async function threadExtras(
   const memory = await runMemory(thread, userId, onPersonsWord);
   await threadsService.markRunBy(thread.id, userId);
   // The sender's cockpit, which a thread's agent reads and never changes (decision 0109).
-  const cockpit = { userId, access: "read" as const, mayDelete: false };
+  const cockpit = threadCockpit(userId);
   return { env, identity, memory, cockpit };
 }
 

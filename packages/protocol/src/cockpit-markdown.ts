@@ -16,14 +16,27 @@ const isBlock = (value: unknown): value is Block =>
   typeof (value as Block).type === "string" &&
   Array.isArray((value as Block).children);
 
+// A run of backticks longer than any in the text, so code that holds backticks stays code.
+function fence(text: string, least: number) {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  return "`".repeat(Math.max(least, longest + 1));
+}
+
 function styled(text: string, styles: Styles = {}) {
   if (!text) return text;
-  if (styles.code) return `\`${text}\``;
-  let out = text;
+  if (styles.code) {
+    const ticks = fence(text, 1);
+    const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+    return `${ticks}${pad}${text}${pad}${ticks}`;
+  }
+  // Markers hug the words: spaces at either end go outside them, where markdown reads them.
+  const [, lead = "", core = "", trail = ""] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text) ?? [];
+  if (!core) return text;
+  let out = core;
   if (styles.bold) out = `**${out}**`;
   if (styles.italic) out = `*${out}*`;
   if (styles.strike) out = `~~${out}~~`;
-  return out;
+  return `${lead}${out}${trail}`;
 }
 
 function inline(content: unknown): string {
@@ -40,11 +53,13 @@ function inline(content: unknown): string {
     .join("");
 }
 
-// A table's rows, the first as its header.
+// A table's rows, the first as its header; a cell is one line.
 function table(content: unknown) {
   const rows = (content as { rows?: { cells?: unknown[] }[] } | null)?.rows ?? [];
   const cell = (value: unknown) =>
-    inline(Array.isArray(value) ? value : (value as Inline | null)?.content).replace(/\|/g, "\\|");
+    inline(Array.isArray(value) ? value : (value as Inline | null)?.content)
+      .replace(/\s*\n\s*/g, " ")
+      .replace(/\|/g, "\\|");
   const lines = rows.map((row) => `| ${(row.cells ?? []).map(cell).join(" | ")} |`);
   if (lines.length === 0) return "";
   const width = rows[0]?.cells?.length ?? 1;
@@ -52,50 +67,100 @@ function table(content: unknown) {
   return lines.join("\n");
 }
 
-function blocks(list: Block[], depth: number): string[] {
-  const indent = "  ".repeat(depth);
-  let number = 0;
-  return list.flatMap((block) => {
-    const text = inline(block.content);
-    const props = block.props ?? {};
-    number = block.type === "numberedListItem" ? number + 1 : 0;
-    let line: string;
-    switch (block.type) {
-      case "heading":
-        line = `${"#".repeat(Math.min(Number(props.level) || 1, 6))} ${text}`;
-        break;
-      case "bulletListItem":
-        line = `- ${text}`;
-        break;
-      case "numberedListItem":
-        line = `${number}. ${text}`;
-        break;
-      case "checkListItem":
-        line = `- [${props.checked ? "x" : " "}] ${text}`;
-        break;
-      case "quote":
-        line = `> ${text}`;
-        break;
-      case "codeBlock":
-        line = `\`\`\`${typeof props.language === "string" ? props.language : ""}\n${text}\n\`\`\``;
-        break;
-      case "table":
-        line = table(block.content);
-        break;
-      case "image":
-      case "video":
-      case "audio":
-      case "file":
-        line = props.url ? `[${props.name || block.type}](${String(props.url)})` : "";
-        break;
-      default:
-        line = text;
+const LIST_ITEMS = new Set(["bulletListItem", "numberedListItem", "checkListItem"]);
+
+// Every line of `text` moved right by `width`, as a list item's content must be.
+const indent = (text: string, width: number) =>
+  text
+    .split("\n")
+    .map((line) => (line ? `${" ".repeat(width)}${line}` : line))
+    .join("\n");
+
+// One block: its marker and text, and its children under it, indented by the marker's width so
+// they stay in the item; blocks that are not list items have no marker to sit under.
+function block(item: Block, number: number): string {
+  const text = inline(item.content);
+  const props = item.props ?? {};
+  let marker = "";
+  let line: string;
+  switch (item.type) {
+    case "heading":
+      line = `${"#".repeat(Math.min(Number(props.level) || 1, 6))} ${text}`;
+      break;
+    case "bulletListItem":
+      marker = "- ";
+      line = text;
+      break;
+    case "numberedListItem":
+      marker = `${number}. `;
+      line = text;
+      break;
+    case "checkListItem":
+      marker = `- [${props.checked ? "x" : " "}] `;
+      line = text;
+      break;
+    case "quote":
+      line = text
+        .split("\n")
+        .map((each) => `> ${each}`)
+        .join("\n");
+      break;
+    case "codeBlock": {
+      const ticks = fence(text, 3);
+      const language = typeof props.language === "string" ? props.language : "";
+      line = `${ticks}${language}\n${text}\n${ticks}`;
+      break;
     }
-    const children = Array.isArray(block.children)
-      ? blocks(block.children.filter(isBlock), depth + 1)
-      : [];
-    return [`${indent}${line}`, ...children];
-  });
+    case "table":
+      line = table(item.content);
+      break;
+    case "divider":
+      line = "---";
+      break;
+    case "image":
+    case "video":
+    case "audio":
+    case "file":
+      line = props.url ? `[${String(props.name || item.type)}](${String(props.url)})` : "";
+      break;
+    default:
+      line = text;
+  }
+  const children = Array.isArray(item.children) ? blocks(item.children.filter(isBlock)) : "";
+  const head = marker ? `${marker}${indent(line, marker.length).trimStart()}` : line;
+  if (!children) return head;
+  const under = indent(children, marker.length);
+  return head ? `${head}\n${marker ? "" : "\n"}${under}` : under;
+}
+
+// Blocks one after another: items of one list on their own lines, anything else apart by a
+// blank line. A numbered list counts on from its first item's `start`.
+function blocks(list: Block[]): string {
+  let out = "";
+  let previous: string | undefined;
+  let number = 0;
+  for (const item of list) {
+    if (item.type === "numberedListItem") {
+      const start = Number(item.props?.start);
+      const first = Number.isFinite(start) && start > 0 ? start : 1;
+      number = previous === "numberedListItem" ? number + 1 : first;
+    }
+    const text = block(item, number);
+    if (!text.trim()) {
+      previous = item.type;
+      continue;
+    }
+    const tight =
+      previous !== undefined && LIST_ITEMS.has(previous) && LIST_ITEMS.has(item.type ?? "");
+    out += out ? (tight ? "\n" : "\n\n") + text : text;
+    previous = item.type;
+  }
+  return out;
+}
+
+/** Whether a body is BlockNote's blocks, rather than text an agent or an earlier version wrote. */
+export function isBlockDocument(parsed: unknown): parsed is unknown[] {
+  return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isBlock);
 }
 
 /** A body as markdown: BlockNote's blocks written out, or a body that is text as it is. */
@@ -107,9 +172,6 @@ export function cockpitMarkdown(body: string): string {
   } catch {
     return body;
   }
-  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isBlock)) return body;
-  return blocks(parsed, 0)
-    .join("\n\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  if (!isBlockDocument(parsed)) return body;
+  return blocks(parsed as Block[]).trim();
 }

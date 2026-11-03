@@ -11,6 +11,7 @@ import { signUp } from "../../testing/sign-up";
 import { runtimesRouter } from "./router";
 import { connectRouter } from "./connect";
 import { RuntimeHub } from "./hub";
+import { threadCockpit } from "../cockpit/commands";
 import { runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -179,6 +180,35 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect((await ask(ws, received, "skills.get", { runId: "run-with", digest: "x" })).ok).toBe(
       false,
     );
+  });
+
+  test("a thread run's cockpit is its sender's to read, and a write through it is refused", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "c" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    connection.startRun("run-read", thread, sink, [], [], undefined, threadCockpit(seed.userId));
+    connection.startRun("run-no-cockpit", thread, sink);
+
+    const listed = await ask(ws, received, "cockpit.read", {
+      runId: "run-read",
+      command: { command: "list", kind: "notes" },
+    });
+    expect(listed).toMatchObject({ ok: true });
+    const write = await ask(ws, received, "cockpit.read", {
+      runId: "run-read",
+      command: { command: "create", kind: "notes", fields: { title: "Planted" } },
+    });
+    expect(write).toMatchObject({ ok: false });
+    expect(JSON.stringify(write)).toContain("only read");
+    const none = await ask(ws, received, "cockpit.read", {
+      runId: "run-no-cockpit",
+      command: { command: "list", kind: "notes" },
+    });
+    expect(none).toMatchObject({ ok: false });
   });
 
   test("a runtime reports only on the MCP servers of its own runs", async () => {

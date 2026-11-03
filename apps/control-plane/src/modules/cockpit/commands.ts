@@ -1,6 +1,7 @@
 import {
   COCKPIT_KINDS,
   COCKPIT_WRITES,
+  normalizeTag,
   TASK_PRIORITIES,
   TASK_STATUSES,
   type CockpitAccess,
@@ -27,9 +28,17 @@ import { cockpitService } from "./service";
 
 /**
  * Whose cockpit an agent's command is answered in, and what it may do there (decision 0109): a
- * thread's agent reads, a bot writes, and deletes only on the person's own word.
+ * thread's agent reads, a bot adds and changes, and deletes or rewrites only on the person's own
+ * word.
  */
-export type CockpitCaller = { userId: string; access: CockpitAccess; mayDelete: boolean };
+export type CockpitCaller = { userId: string; access: CockpitAccess; onPersonsWord: boolean };
+
+/** A thread's agent reads its sender's cockpit and changes nothing in it (decision 0109). */
+export const threadCockpit = (userId: string): CockpitCaller => ({
+  userId,
+  access: "read",
+  onPersonsWord: false,
+});
 
 const kind = z.enum(COCKPIT_KINDS);
 const fields = z
@@ -73,6 +82,7 @@ const KIND_FIELDS: Record<CockpitKind, readonly string[]> = {
 
 const LISTED_MAX = 50;
 const PREVIEW = 100;
+const SHOWN_MAX = 40_000;
 
 type CockpitFields = z.infer<typeof fields>;
 type CockpitRecord = InboxItem | CockpitTask | CockpitNote;
@@ -155,9 +165,16 @@ function line(kind: CockpitKind, record: CockpitRecord) {
 }
 
 async function listing(userId: string, cmd: Extract<CockpitCommand, { command: "list" }>) {
+  // A filter the kind has no field for is a mistake to say, not a reason to find nothing.
+  if (cmd.status && cmd.kind !== "tasks") throw new UnprocessableError("Only tasks have a status.");
+  if (cmd.done !== undefined && cmd.kind !== "inbox") {
+    throw new UnprocessableError("Only inbox items are done or open.");
+  }
+  // Tags are kept as `normalizeTag` makes them, so `#Big Idea` finds `big-idea`.
+  const tag = cmd.tag === undefined ? undefined : normalizeTag(cmd.tag);
   const needle = cmd.query?.trim().toLowerCase();
   const shown = (await list(cmd.kind, userId)).filter((record) => {
-    if (cmd.tag && !record.tags.includes(cmd.tag.trim().toLowerCase())) return false;
+    if (tag && !record.tags.includes(tag)) return false;
     if (cmd.status && (record as CockpitTask).status !== cmd.status) return false;
     if (cmd.done !== undefined && (record as InboxItem).done !== cmd.done) return false;
     if (!needle) return true;
@@ -187,7 +204,12 @@ function shown(kind: CockpitKind, record: CockpitRecord) {
   if (kind === "inbox") facts.push(`done: ${(record as InboxItem).done}`);
   if (kind === "notes") facts.push(`pinned: ${(record as CockpitNote).pinned}`);
   facts.push(`tags: ${record.tags.join(", ") || "none"}`, `updated: ${record.updatedAt}`);
-  const body = cockpitMarkdown(bodyOf(kind, record)).trim();
+  const whole = cockpitMarkdown(bodyOf(kind, record)).trim();
+  // A long body is cut, as a sandbox tool's long output is, and the cut is said.
+  const body =
+    whole.length > SHOWN_MAX
+      ? `${whole.slice(0, SHOWN_MAX)}\n\n[cut: the body is ${whole.length} characters; this is the first ${SHOWN_MAX}]`
+      : whole;
   return `${facts.join("\n")}\n\n${body || "(no body)"}`;
 }
 
@@ -260,12 +282,20 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
       return `Created ${label(cmd.kind, made)} (id ${made.id}).`;
     }
     case "update": {
+      // Rewriting what a record says takes the person's word, as deleting does: an empty body is
+      // a delete by another name (decision 0109). Its status, tags and the like a bot may change.
+      const rewrites = cmd.fields.title !== undefined || cmd.fields.body !== undefined;
+      if (rewrites && !caller.onPersonsWord) {
+        throw new UnprocessableError(
+          "Change a record's title or body only when the person asks you to in their own message; add a new record instead.",
+        );
+      }
       const record = await find(cmd.kind, userId, cmd.id);
       const changed = await update(userId, cmd.kind, record, cmd.fields);
       return `Updated ${label(cmd.kind, changed)}.`;
     }
     case "delete": {
-      if (!caller.mayDelete) {
+      if (!caller.onPersonsWord) {
         throw new UnprocessableError(
           "Delete from the cockpit only when the person asks you to in their own message.",
         );

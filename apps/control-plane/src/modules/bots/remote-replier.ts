@@ -412,7 +412,7 @@ export class RemoteBotReplier implements BotReplier {
       // The owner's cockpit, whichever person the runner might name: a bot adds and changes in
       // it on any reply, as a schedule's task may, and deletes only on the person's word (decision 0109).
       cockpit: ({ command }: { command: unknown }) =>
-        runCockpitCommand({ userId, access: "write", mayDelete: onPersonsWord }, command),
+        runCockpitCommand({ userId, access: "write", onPersonsWord }, command),
     };
     const cancel = () => this.#cancel(replyId, signal);
     try {

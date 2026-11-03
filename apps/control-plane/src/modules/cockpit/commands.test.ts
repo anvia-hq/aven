@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
+import { threadCockpit } from "./commands";
+
+test("a thread's agent reads, and nothing it does is the person's word", () => {
+  expect(threadCockpit("u1")).toEqual({ userId: "u1", access: "read", onPersonsWord: false });
+});
+
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("runCockpitCommand (postgres)", async () => {
@@ -12,8 +18,8 @@ run("runCockpitCommand (postgres)", async () => {
     await person.remove();
     await other.remove();
   });
-  const bot = { userId: person.userId, access: "write" as const, mayDelete: false };
-  const thread = { userId: person.userId, access: "read" as const, mayDelete: false };
+  const bot = { userId: person.userId, access: "write" as const, onPersonsWord: false };
+  const thread = { userId: person.userId, access: "read" as const, onPersonsWord: false };
 
   test("a bot writes markdown, which is kept and read back as it was written", async () => {
     const body = "# Plan\n\n- [ ] Draft\n- [x] Outline\n\n| a | b |\n| --- | --- |\n| 1 | 2 |";
@@ -104,7 +110,7 @@ run("runCockpitCommand (postgres)", async () => {
     ).rejects.toThrow("when the person asks");
     expect(
       await runCockpitCommand(
-        { ...bot, mayDelete: true },
+        { ...bot, onPersonsWord: true },
         { command: "delete", kind: "inbox", id: item.id },
       ),
     ).toBe("Deleted Keep.");
@@ -123,12 +129,53 @@ run("runCockpitCommand (postgres)", async () => {
 
   test("another person's records are not there", async () => {
     const [note] = await cockpitService.notes.list(person.userId);
-    const theirs = { userId: other.userId, access: "write" as const, mayDelete: true };
+    const theirs = { userId: other.userId, access: "write" as const, onPersonsWord: true };
     await expect(
       runCockpitCommand(theirs, { command: "get", kind: "notes", id: note!.id }),
     ).rejects.toThrow("There is no notes record");
     expect(await runCockpitCommand(theirs, { command: "list", kind: "notes" })).toBe(
       "No notes records match.",
     );
+  });
+
+  test("a tag filter is normalized as tags are, a filter the kind lacks is refused, and a rewrite needs the person's word", async () => {
+    await runCockpitCommand(bot, {
+      command: "create",
+      kind: "notes",
+      fields: { title: "Tagged", tags: ["My Tag", "#Work"] },
+    });
+    for (const tag of ["My Tag", "#work"]) {
+      expect(await runCockpitCommand(thread, { command: "list", kind: "notes", tag })).toContain(
+        "Tagged",
+      );
+    }
+    await expect(
+      runCockpitCommand(thread, { command: "list", kind: "inbox", status: "todo" }),
+    ).rejects.toThrow("Only tasks have a status");
+    const [note] = (await cockpitService.notes.list(person.userId)).filter(
+      (each) => each.title === "Tagged",
+    );
+    await expect(
+      runCockpitCommand(bot, {
+        command: "update",
+        kind: "notes",
+        id: note!.id,
+        fields: { body: "" },
+      }),
+    ).rejects.toThrow("only when the person asks");
+    expect(
+      await runCockpitCommand(bot, {
+        command: "update",
+        kind: "notes",
+        id: note!.id,
+        fields: { pinned: true, tags: ["work"] },
+      }),
+    ).toBe("Updated Tagged.");
+    expect(
+      await runCockpitCommand(
+        { ...bot, onPersonsWord: true },
+        { command: "update", kind: "notes", id: note!.id, fields: { title: "Retitled" } },
+      ),
+    ).toBe("Updated Retitled.");
   });
 });

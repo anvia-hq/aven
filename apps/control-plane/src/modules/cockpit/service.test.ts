@@ -153,4 +153,27 @@ run("cockpitService (postgres)", async () => {
       color: "#ff6eb4",
     });
   });
+
+  test("many tags added at once neither hang nor repeat, and a reset color frees its row", async () => {
+    const names = Array.from({ length: 14 }, (_, index) => `many-${index % 7}`);
+    const outcomes = await Promise.allSettled(
+      names.map((name) => cockpitService.addTag(person.userId, { name })),
+    );
+    expect(outcomes.filter((each) => each.status === "fulfilled")).toHaveLength(7);
+    // A tag in use, colored and given back its default, has no row left to count.
+    await cockpitService.inbox.create(person.userId, { title: "Tagged", tags: ["in-use"] });
+    await cockpitService.colorTag(person.userId, "in-use", "#00a84f");
+    await cockpitService.colorTag(person.userId, "in-use", null);
+    const { db } = await import("@aven/db/client");
+    const { cockpitTags } = await import("@aven/db/schema/cockpit-tags");
+    const { and, eq } = await import("drizzle-orm");
+    const rows = await db
+      .select()
+      .from(cockpitTags)
+      .where(and(eq(cockpitTags.userId, person.userId), eq(cockpitTags.name, "in-use")));
+    expect(rows).toEqual([]);
+    await expect(cockpitService.addTag(person.userId, { name: "in-use" })).rejects.toThrow(
+      "already",
+    );
+  }, 20_000);
 });

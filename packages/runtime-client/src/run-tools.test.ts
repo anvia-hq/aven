@@ -12,7 +12,7 @@ const sandbox = {
 } as unknown as ThreadWorkspaces;
 
 describe("toolsForRun", () => {
-  test("the run's agent has the memory tool and its subagents do not (decision 0102)", async () => {
+  test("the run's agent has the memory tool and a read-only cockpit, and its subagents neither (decisions 0102 and 0109)", async () => {
     const given: string[][] = [];
     const createSubagent: CreateSubagent = ({ tools }) => {
       given.push(tools.map((tool) => tool.name));
@@ -34,9 +34,16 @@ describe("toolsForRun", () => {
       createSubagent,
       emit: () => undefined,
       memory: async () => "ok",
+      cockpit: async () => "ok",
     });
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("memory");
+    // The cockpit is read only for a thread's agent (decision 0109): no write is offered.
+    const cockpit = tools.find((tool) => tool.name === "cockpit") as AnyTool & {
+      call(input: unknown): Promise<unknown>;
+    };
+    expect(await cockpit.call({ command: "list", kind: "notes" })).toBe("ok");
+    await expect(cockpit.call({ command: "create", kind: "notes", title: "x" })).rejects.toThrow();
 
     const spawn = tools.find((tool) => tool.name === "spawn_agent") as AnyTool & {
       call(input: unknown): Promise<unknown>;
@@ -44,5 +51,6 @@ describe("toolsForRun", () => {
     await spawn.call({ tasks: [{ description: "task", prompt: "look", type: "general" }] });
     expect(given).toHaveLength(1);
     expect(given[0]).not.toContain("memory");
+    expect(given[0]).not.toContain("cockpit");
   });
 });
