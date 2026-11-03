@@ -3,8 +3,7 @@ import { useRef } from "react";
 
 import { withTag } from "@/modules/cockpit/components/cockpit-page";
 import { NoteEditor } from "@/modules/cockpit/components/note-editor";
-import { NotesPane } from "@/modules/cockpit/components/notes-pane";
-import { NothingOpen, SplitView } from "@/modules/cockpit/components/split-view";
+import { NotesIndex } from "@/modules/cockpit/components/notes-index";
 import { useNotes } from "@/modules/cockpit/hooks/use-notes";
 
 type NotesSearch = { tag?: string; note?: string };
@@ -26,34 +25,26 @@ function NotesPage() {
   const open = notes.find((note) => note.id === openId);
   const select = (id?: string) => void navigate({ search: (prev) => ({ ...prev, note: id }) });
 
+  if (open) {
+    return (
+      <NoteEditor
+        key={open.id}
+        note={open}
+        fresh={started.current === open.id}
+        onClose={() => select(undefined)}
+      />
+    );
+  }
   return (
-    <SplitView
-      open={Boolean(open)}
-      list={
-        loaded && (
-          <NotesPane
-            notes={withTag(notes, tag)}
-            tag={tag}
-            selected={openId}
-            onSelect={(id) => {
-              started.current = notes.some((note) => note.id === id) ? null : id;
-              select(id);
-            }}
-          />
-        )
-      }
-      detail={
-        open ? (
-          <NoteEditor
-            key={open.id}
-            note={open}
-            fresh={started.current === open.id}
-            onClose={() => select(undefined)}
-          />
-        ) : (
-          <NothingOpen>Pick a note, or start one with +.</NothingOpen>
-        )
-      }
-    />
+    loaded && (
+      <NotesIndex
+        notes={withTag(notes, tag)}
+        tag={tag}
+        onOpen={(id, fresh) => {
+          started.current = fresh ? id : null;
+          select(id);
+        }}
+      />
+    )
   );
 }

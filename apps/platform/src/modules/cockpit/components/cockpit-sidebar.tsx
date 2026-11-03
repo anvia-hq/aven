@@ -1,4 +1,4 @@
-import { Clipboard, Inbox, Kanban, Tag } from "@mynaui/icons-react";
+import { Clipboard, FileText, Inbox, Kanban, Tag } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -12,6 +12,7 @@ import {
 
 import { useCockpitTags } from "../hooks/use-collection";
 import { useInbox } from "../hooks/use-inbox";
+import { useNotes } from "../hooks/use-notes";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTag } from "../types";
 
@@ -25,7 +26,7 @@ function countOn(page: Page, tag: CockpitTag) {
 }
 
 // What the sidebar lists in the cockpit (decision 0104): its three pages, with what is open in the
-// inbox and the tasks not finished, and the person's tags, which filter the page on screen.
+// inbox and the tasks not finished, the notes pinned, as Notion's favourites, and the person's tags, which filter the page on screen.
 export function CockpitSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const activeTag = useRouterState({
@@ -34,6 +35,11 @@ export function CockpitSidebar() {
   const { items } = useInbox();
   const { tasks } = useTasks();
   const tags = useCockpitTags();
+  const { notes } = useNotes();
+  const pinned = notes.filter((note) => note.pinned);
+  const openNote = useRouterState({
+    select: (state) => (state.location.search as { note?: string }).note,
+  });
   const page: Page =
     (["/cockpit/tasks", "/cockpit/notes"] as const).find((to) => pathname.startsWith(to)) ??
     "/cockpit/inbox";
@@ -68,6 +74,26 @@ export function CockpitSidebar() {
           ))}
         </SidebarMenu>
       </SidebarGroup>
+      {pinned.length > 0 && (
+        <SidebarGroup className="py-1">
+          <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+          <SidebarMenu aria-label="Pinned notes">
+            {pinned.map((note) => (
+              <SidebarMenuItem key={note.id}>
+                <SidebarMenuButton
+                  size="sm"
+                  isActive={openNote === note.id}
+                  tooltip={note.title}
+                  render={<Link to="/cockpit/notes" search={{ note: note.id }} />}
+                >
+                  <FileText />
+                  <span>{note.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
       {tags.length > 0 && (
         <SidebarGroup className="py-1">
           <SidebarGroupLabel>Tags</SidebarGroupLabel>

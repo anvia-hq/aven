@@ -1,20 +1,29 @@
-import { ArrowLeft, Pin, Trash } from "@mynaui/icons-react";
+import { Calendar, Pin, Tag, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { cn } from "cn";
 
 import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { DropdownMenuItem } from "@/components/dropdown-menu";
 import { timeAgo } from "@/lib/format";
 
 import { useAutosave } from "../hooks/use-autosave";
 import { useNotes } from "../hooks/use-notes";
 import type { CockpitNote } from "../types";
-import { RichTextEditor } from "./rich-text-editor";
+import {
+  Crumb,
+  CurrentCrumb,
+  DocumentBody,
+  DocumentPage,
+  DocumentTitle,
+  MoreMenu,
+  Properties,
+  Property,
+} from "./document-page";
 import { TagInput } from "./tag-input";
 
-// A note open beside the list, as a page (decision 0105): its title and tags above, then the
-// document in BlockNote, each saved as it is written.
+// A note as a page of its own, as Notion has one (decisions 0105 and 0106): a large title, its
+// tags and when it was edited, then the document, each saved as it is written.
 export function NoteEditor({
   note,
   fresh,
@@ -33,72 +42,74 @@ export function NoteEditor({
   const saveBody = useAutosave((body: string) => void update(note, { body }));
 
   return (
-    <article
-      aria-label={note.title}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-4 md:px-8"
+    <DocumentPage
+      label={note.title}
+      onBack={onClose}
+      backLabel="Back to the notes"
+      trail={
+        <>
+          <Crumb onClick={onClose}>Notes</Crumb>
+          <CurrentCrumb>{title.trim() || "Untitled"}</CurrentCrumb>
+        </>
+      }
+      actions={
+        <>
+          <span className="mr-2 hidden text-xs text-muted-foreground sm:inline">
+            Edited {timeAgo(note.updatedAt, true)}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={note.pinned ? "Unpin" : "Pin"}
+            aria-pressed={note.pinned}
+            className={cn(note.pinned ? "text-foreground" : "text-muted-foreground")}
+            onClick={() => void update(note, { pinned: !note.pinned })}
+          >
+            <Pin className={cn(note.pinned && "fill-current")} />
+          </Button>
+          <MoreMenu>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                saveTitle.cancel();
+                saveBody.cancel();
+                if (await remove(note)) onClose();
+              }}
+            >
+              <Trash /> Delete note
+            </DropdownMenuItem>
+          </MoreMenu>
+        </>
+      }
     >
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Back to the notes"
-          className="md:hidden"
-          onClick={onClose}
-        >
-          <ArrowLeft />
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          Edited {timeAgo(note.updatedAt, true)}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={note.pinned ? "Unpin" : "Pin"}
-          aria-pressed={note.pinned}
-          className={cn("ml-auto", note.pinned ? "text-primary" : "text-muted-foreground")}
-          onClick={() => void update(note, { pinned: !note.pinned })}
-        >
-          <Pin />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Delete note"
-          className="text-muted-foreground"
-          onClick={async () => {
-            saveTitle.cancel();
-            saveBody.cancel();
-            if (await remove(note)) onClose();
-          }}
-        >
-          <Trash />
-        </Button>
-      </div>
-      <Input
-        aria-label="Title"
+      <DocumentTitle
         value={title}
-        maxLength={200}
         autoFocus={fresh}
-        onFocus={(event) => fresh && event.currentTarget.select()}
-        onChange={(event) => {
-          setTitle(event.target.value);
-          saveTitle.schedule(event.target.value);
+        onChange={(value) => {
+          setTitle(value);
+          saveTitle.schedule(value);
         }}
-        onBlur={() => {
+        onCommit={() => {
           saveTitle.flush();
           // A title cleared is not saved: the one kept comes back.
           if (!title.trim()) setTitle(note.title);
         }}
-        className="h-auto rounded-none border-0 border-b border-transparent px-0 text-2xl font-bold shadow-none focus-visible:border-ring focus-visible:ring-0 md:text-2xl dark:bg-transparent"
       />
-      <TagInput value={note.tags} onChange={(tags) => void update(note, { tags })} />
-      <RichTextEditor
+      <Properties>
+        <Property icon={Tag} label="Tags">
+          <TagInput bare value={note.tags} onChange={(tags) => void update(note, { tags })} />
+        </Property>
+        <Property icon={Calendar} label="Created">
+          <span className="px-1">{new Date(note.createdAt).toLocaleDateString()}</span>
+        </Property>
+      </Properties>
+      <DocumentBody
         key={note.id}
         label="Note"
         value={note.body}
+        placeholder="Write something, or press '/' for blocks"
         onChange={saveBody.schedule}
-        className="-mx-2 min-h-[60vh]"
       />
-    </article>
+    </DocumentPage>
   );
 }

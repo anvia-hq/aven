@@ -1,3 +1,4 @@
+import { Inbox } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { withTag } from "@/modules/cockpit/components/cockpit-page";
@@ -45,7 +46,9 @@ function InboxPage() {
         open ? (
           <InboxReader key={open.id} item={open} onClose={() => go({ item: undefined })} />
         ) : (
-          <NothingOpen>Pick something from your inbox, or capture something new.</NothingOpen>
+          <NothingOpen icon={Inbox}>
+            Pick something from your inbox, or capture something new.
+          </NothingOpen>
         )
       }
     />

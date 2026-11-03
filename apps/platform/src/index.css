@@ -406,3 +406,17 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
 .bn-shadcn .bn-container {
   font-family: inherit;
 }
+
+/* A cockpit page (decision 0106): its column's side room, which the editor's text lines up with
+   and its handles sit in, as Notion's do. */
+.cockpit-doc {
+  --doc-gutter: 1.25rem;
+}
+@media (width >= 48rem) {
+  .cockpit-doc {
+    --doc-gutter: 3.5rem;
+  }
+}
+.cockpit-doc .bn-shadcn .bn-editor {
+  padding-inline: var(--doc-gutter);
+}

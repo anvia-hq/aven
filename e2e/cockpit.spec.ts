@@ -72,7 +72,8 @@ test.describe("Cockpit", () => {
     });
     await reader.locator(".bn-editor").click();
     await page.keyboard.type(" Gone.");
-    await reader.getByRole("button", { name: "Delete" }).click();
+    await reader.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
     await expect(page.getByText("Nothing done yet.")).toBeVisible();
     await page.waitForTimeout(1000);
     expect(failed).toEqual([]);
@@ -176,31 +177,43 @@ test.describe("Cockpit", () => {
     const title = page.getByRole("textbox", { name: "Title" });
     await expect(title).toBeFocused();
     await page.keyboard.type("Release checklist");
+    // Enter goes on from the title to the document, as in Notion, once the editor has loaded.
     const note = page.getByRole("article", { name: /Release checklist|Untitled/ });
+    await expect(note.locator(".bn-editor")).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(note.locator(".bn-editor")).toBeFocused();
     const saved = savedWith(page, "Tag it");
-    await note.locator(".bn-editor").click();
     await page.keyboard.type("# Steps");
     await page.keyboard.press("Enter");
     await page.keyboard.type("Tag it");
     await expect(note.locator(".bn-editor h1")).toHaveText("Steps");
     await note.getByRole("button", { name: "Pin" }).click();
-
-    const notes = page.getByRole("list", { name: "Notes" });
-    await expect(notes).toContainText("Release checklist");
-    await expect(notes).toContainText("Steps Tag it");
-    await expect(notes.getByRole("img", { name: "Pinned" })).toBeVisible();
+    // Pinned, it is in the sidebar.
+    await expect(page.getByRole("list", { name: "Pinned notes" })).toContainText(
+      "Release checklist",
+    );
 
     await saved;
     await page.reload();
     await expect(
       page.getByRole("article", { name: "Release checklist" }).locator(".bn-editor h1"),
     ).toHaveText("Steps");
+
+    // Back to the notes, a page that lists them.
     await page
-      .getByRole("searchbox", { name: "Search notes" })
-      .or(page.getByLabel("Search notes"))
-      .fill("nothing like it");
+      .getByRole("navigation", { name: "Breadcrumb" })
+      .getByRole("button", { name: "Notes" })
+      .click();
+    await expect(page.getByRole("heading", { name: "Notes", level: 1 })).toBeVisible();
+    const notes = page.getByRole("list", { name: "Notes", exact: true });
+    await expect(notes).toContainText("Release checklist");
+    await expect(notes).toContainText("Steps Tag it");
+    await expect(notes.getByRole("img", { name: "Pinned" })).toBeVisible();
+    await page.getByLabel("Search notes").fill("nothing like it");
     await expect(page.getByText("No note matches.")).toBeVisible();
     await page.getByLabel("Search notes").fill("tag it");
     await expect(notes).toContainText("Release checklist");
+    await notes.getByRole("button", { name: /Release checklist/ }).click();
+    await expect(page.getByRole("article", { name: "Release checklist" })).toBeVisible();
   });
 });

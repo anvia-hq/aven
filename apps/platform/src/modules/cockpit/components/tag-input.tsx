@@ -2,6 +2,8 @@ import { X } from "@mynaui/icons-react";
 import { normalizeTag, TAG_PATTERN, TAGS_MAX } from "@aven/protocol/cockpit";
 import { useState, type KeyboardEvent } from "react";
 
+import { cn } from "cn";
+
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -14,14 +16,18 @@ export function TagInput({
   value,
   onChange,
   label = "Tags",
+  bare = false,
 }: {
   value: string[];
   onChange: (tags: string[]) => void;
   label?: string;
+  /** As a page's property: no box, only the chips and a quiet field. */
+  bare?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const known = useCockpitTags();
   const typed = normalizeTag(draft);
+  const emptyText = bare ? "Empty" : "Add tags…";
   const offered = typed
     ? known
         .map((tag) => tag.name)
@@ -47,8 +53,15 @@ export function TagInput({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-md border border-input px-2 py-1 focus-within:border-ring">
+    <div className="flex w-full flex-col gap-1.5">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-1",
+          bare
+            ? "min-h-8 rounded-md px-1 py-0.5 hover:bg-muted/50 focus-within:bg-muted/50"
+            : "min-h-9 rounded-md border border-input px-2 py-1 focus-within:border-ring",
+        )}
+      >
         {value.map((tag) => (
           <Badge key={tag} variant="secondary" className="gap-0.5 pr-1">
             #{tag}
@@ -66,11 +79,11 @@ export function TagInput({
         <Input
           aria-label={label}
           value={draft}
-          placeholder={value.length === 0 ? "Add tags…" : ""}
+          placeholder={value.length === 0 ? emptyText : ""}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           onBlur={() => draft.trim() && add(draft)}
-          className="h-7 min-w-24 flex-1 border-0 px-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
+          className="h-7 min-w-24 flex-1 border-0 bg-transparent px-1 shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 dark:bg-transparent"
         />
       </div>
       {offered.length > 0 && (
