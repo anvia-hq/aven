@@ -1,6 +1,7 @@
 import type { AnyTool } from "@anvia/core";
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
 import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
+import { createMemoryTool, type MemoryHost } from "@aven/agents/tools/memory";
 import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import type { RunEvent } from "@aven/protocol/events";
@@ -30,6 +31,8 @@ export type RunToolsInput = {
   createSubagent: CreateSubagent;
   /** Tells clients what the run's subagents do. */
   emit: (event: RunEvent) => void;
+  /** Works the person's memory, when the run has one (decision 0102). */
+  memory?: MemoryHost;
 };
 
 // What the agent of a run can do: the sandbox's tools, pointed at the thread's current sandbox, and
@@ -45,6 +48,7 @@ export function toolsForRun({
   defineGoal,
   createSubagent,
   emit,
+  memory,
 }: RunToolsInput): AnyTool[] {
   // For a person who has not connected GitHub, so the sandbox cannot fetch itself: it is done
   // here, on the host, with the read-only access the control plane gives this run (decision 0042).
@@ -68,7 +72,9 @@ export function toolsForRun({
   // Subagents work with the same tools, so a sandbox released and woken again is theirs too, and
   // what hides this run's secrets from the agent hides them from them.
   const spawnAgent = createSpawnAgentTool(subagentRunner(bound, createSubagent, emit));
-  const withSubagents = [...bound, spawnAgent];
+  // The memory is the run's agent's: its subagents, which nobody watches, have none (decision 0102).
+  const notes = memory ? [createMemoryTool(memory)] : [];
+  const withSubagents = [...bound, spawnAgent, ...notes];
   // Only an agent with a person to set the repository up with may save its environment,
   // which can take many minutes (decision 0043); a runner without snapshots has no tool.
   const saveEnvironment = sandbox.saveEnvironment

@@ -693,6 +693,33 @@ describe("BotReplies", () => {
     ]);
   });
 
+  test("a reply with memory has the bot's notes, worked through bot.notes (decision 0102)", async () => {
+    const memory = { folders: [{ scope: "bot" as const, notes: [] }], writable: true };
+    let given: Parameters<CreateBotReplyAgent>[0]["notes"];
+    const run = harness((input) => {
+      given = input.notes;
+      return agentThat([text("")])(input);
+    });
+
+    run.replies.start({ ...message, memory });
+    await run.until();
+    expect(given?.memory).toEqual(memory);
+    await given!.host({ command: "view", path: "/memories/bot" });
+    expect(run.calls).toContainEqual({
+      method: "bot.notes",
+      params: { replyId: "r1", command: { command: "view", path: "/memories/bot" } },
+    });
+
+    let none: unknown = "unset";
+    const plain = harness((input) => {
+      none = input.notes;
+      return agentThat([text("")])(input);
+    });
+    plain.replies.start(message);
+    await plain.until();
+    expect(none).toBeUndefined();
+  });
+
   test("the agent is told the bot's description as it is now", async () => {
     let described: string | undefined;
     const run = harness((input) => {

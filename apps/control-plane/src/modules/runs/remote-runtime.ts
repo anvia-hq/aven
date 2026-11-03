@@ -4,8 +4,6 @@ import type {
   RunIdentityCredential,
   RunModel,
   RunOutcome,
-  RunSkill,
-  RunMcpServer,
 } from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
 import { z } from "zod";
@@ -13,7 +11,7 @@ import { z } from "zod";
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
-import { runIdentities, type RunIdentities, type RunIdentity } from "../workload-identity/grants";
+import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
   Runtime,
@@ -96,9 +94,11 @@ export class RemoteRuntime implements Runtime {
     github,
     env,
     identity,
+    memory,
     model,
   }: StartRunInput): RuntimeRun {
-    return this.#launch(thread, model, skills, mcp, identity, (runId, runModel, credential) => ({
+    const extras = { skills, mcp, identity, memory };
+    return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.start",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
@@ -111,6 +111,7 @@ export class RemoteRuntime implements Runtime {
       github,
       env: env?.length ? env : undefined,
       identity: credential,
+      memory: memory?.index,
       model: runModel,
     }));
   }
@@ -124,9 +125,11 @@ export class RemoteRuntime implements Runtime {
     github,
     env,
     identity,
+    memory,
     model,
   }: ResumeRunInput): RuntimeRun {
-    return this.#launch(thread, model, skills, mcp, identity, (runId, runModel, credential) => ({
+    const extras = { skills, mcp, identity, memory };
+    return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.resume",
       runId,
       thread: { id: thread.id, organizationId: thread.organizationId },
@@ -137,6 +140,7 @@ export class RemoteRuntime implements Runtime {
       github,
       env: env?.length ? env : undefined,
       identity: credential,
+      memory: memory?.index,
       model: runModel,
     }));
   }
@@ -144,9 +148,12 @@ export class RemoteRuntime implements Runtime {
   #launch(
     thread: RunThread,
     model: ModelConfig | undefined,
-    skills: RunSkill[] | undefined,
-    mcp: RunMcpServer[] | undefined,
-    identity: RunIdentity | undefined,
+    {
+      skills,
+      mcp,
+      identity,
+      memory,
+    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory">,
     message: (
       runId: string,
       runModel: RunModel,
@@ -168,6 +175,7 @@ export class RemoteRuntime implements Runtime {
       this.#sink(runId, queue, result),
       skills?.map((skill) => skill.digest),
       mcp?.map((server) => server.id),
+      memory?.caller,
     );
     const credential = identity && { credential: this.identities.issue(runId, identity) };
     this.#post(connection, runId, message(runId, runModel, credential));

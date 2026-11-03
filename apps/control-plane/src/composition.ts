@@ -1,3 +1,5 @@
+import { runMemoryCommand } from "./modules/memory/commands";
+import { memoryService } from "./modules/memory/service";
 import { describeError } from "./errors";
 import { botMemoryStore, memoryStore } from "./memory-store";
 import { createGoalDriver } from "./modules/goals/driver";
@@ -115,6 +117,10 @@ export const botRunner = new BotRunner({
     botMcp,
     botProviders,
     botThreads,
+    {
+      folders: (owner) => memoryService.folders(owner),
+      run: (caller, command) => runMemoryCommand(caller, command),
+    },
   ),
   // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
   settled: (reply) => goalDriver.settled(reply),

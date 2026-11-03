@@ -3,6 +3,8 @@ import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { environmentInstructions } from "./environment";
 import { mcpInstructions, type McpNote } from "./mcp";
+import { memoryInstructions } from "./memory";
+import type { RunMemory } from "@aven/protocol/memory";
 import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
@@ -27,6 +29,8 @@ type CodingAgentOptions = ModelSource & {
   envNames?: readonly string[];
   /** The person's MCP servers this run has and the ones it could not reach, which the instructions say (decision 0085). */
   mcp?: McpNote;
+  /** The person's memory, listed in the instructions; the host gives the `memory` tool (decision 0102). */
+  memory?: RunMemory;
 };
 
 // Assembles the model and tools. Hosts own the run loop: start runs with `agent.stream()`.
@@ -47,6 +51,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
       skillsInstructions(options.skills ?? []),
       environmentInstructions(options.envNames ?? []),
       mcpInstructions(options.mcp),
+      memoryInstructions(options.memory),
     ]
       .filter(Boolean)
       .join("\n\n"),

@@ -142,6 +142,7 @@ export class RunManager {
       env,
       identity,
       compact,
+      memory,
     }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
@@ -158,6 +159,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
@@ -181,6 +183,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     const channel = this.#channel(thread);
@@ -203,6 +206,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.

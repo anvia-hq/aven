@@ -1,5 +1,8 @@
 import type { ModelConfig } from "@aven/agents/model";
 import type { MessageMention, QueuedSteer, RunEvent } from "@aven/protocol/events";
+import type { RunMemory } from "@aven/protocol/memory";
+
+import type { MemoryCaller } from "../memory/commands";
 import type { RunIdentity } from "../workload-identity/grants";
 import type {
   RunAttachment,
@@ -22,8 +25,22 @@ export type RunThread = {
 /** What can come with a run's prompt. */
 export type RunExtras = Pick<
   StartRunInput,
-  "attachments" | "mentions" | "skills" | "mcp" | "github" | "env" | "identity" | "compact"
+  | "attachments"
+  | "mentions"
+  | "skills"
+  | "mcp"
+  | "github"
+  | "env"
+  | "identity"
+  | "compact"
+  | "memory"
 >;
+
+/**
+ * The agent's memory for a run (decision 0102): whose it is, which the control plane holds to when
+ * the runner asks, and the folders the run is told of.
+ */
+export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
 
 export type StartRunInput = {
   thread: RunThread;
@@ -44,6 +61,7 @@ export type StartRunInput = {
   env?: RunEnvVar[];
   /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
+  memory?: RunMemoryInput;
   model?: ModelConfig;
 };
 
@@ -59,6 +77,7 @@ export type ResumeRunInput = {
   env?: RunEnvVar[];
   /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
+  memory?: RunMemoryInput;
   model?: ModelConfig;
 };
 

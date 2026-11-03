@@ -20,6 +20,7 @@ import type {
   BotSent,
   BotMcped,
   BotMcpParams,
+  BotNotesParams,
   BotProvided,
   BotProviderParams,
   BotThreaded,
@@ -29,6 +30,7 @@ import type {
   RunSkill,
 } from "@aven/protocol/runtime-wire";
 import { isGoalRoundNote, type BotGoalView, type GoalAction } from "@aven/protocol/goals";
+import type { MemoryCommand, MemoryFolder } from "@aven/protocol/memory";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import type { RunGateway } from "../runtimes/gateway";
@@ -39,6 +41,8 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
+import type { MemoryCaller } from "../memory/commands";
+import type { MemoryOwner } from "../memory/service";
 import type { BotProviders } from "../providers/bot-access";
 import type { BotThreads } from "../threads/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
@@ -68,6 +72,12 @@ export type BotKeeper = {
   };
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string, hops: number): Promise<void>;
+};
+
+/** A bot's memory and its owner's (decision 0102): what its instructions list, and its commands. */
+export type BotMemoryNotes = {
+  folders(owner: MemoryOwner): Promise<MemoryFolder[]>;
+  run(caller: MemoryCaller, command: MemoryCommand): Promise<string>;
 };
 
 /** The skills a bot's reply has: the person's enabled ones and the built-in ones, and their archives (decision 0081). */
@@ -109,6 +119,7 @@ export class RemoteBotReplier implements BotReplier {
     private mcp: BotMcp,
     private providers: BotProviders,
     private threads: BotThreads,
+    private notes: BotMemoryNotes,
   ) {}
 
   ready(model: ModelConfig) {
@@ -142,6 +153,10 @@ export class RemoteBotReplier implements BotReplier {
     // The person's MCP servers for bots, which the runner connects for this reply (decision 0085).
     const mcpServers = await this.mcp.forRun(userId);
     const givenMcp = new Set(mcpServers.map((server) => server.id));
+    // The bot's notes and its owner's. A reply a note began only reads them: what a schedule's task
+    // or a thread wrote is never kept by itself (decision 0102).
+    const memoryOwner = { userId, botId: bot.id };
+    const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -385,6 +400,11 @@ export class RemoteBotReplier implements BotReplier {
         if (!changed) throw new Error("This bot no longer exists");
         return { name: changed.name, description: changed.description };
       },
+      notes: ({ command }: Omit<BotNotesParams, "replyId">) =>
+        this.notes.run(
+          { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: !note },
+          command,
+        ),
     };
     const cancel = () => this.#cancel(replyId, signal);
     try {
@@ -407,6 +427,7 @@ export class RemoteBotReplier implements BotReplier {
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,
+          memory: { folders, writable: !note },
         },
         sink,
       );

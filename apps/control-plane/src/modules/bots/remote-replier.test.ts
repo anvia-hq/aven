@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { RunMemory } from "@aven/protocol/memory";
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
@@ -18,7 +19,12 @@ import { ModelUnavailableError } from "../providers/resolve-model";
 import type { BotThreads } from "../threads/bot-access";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import type { BotLetter } from "./chats";
-import { RemoteBotReplier, type BotKeeper, type BotSkills } from "./remote-replier";
+import {
+  RemoteBotReplier,
+  type BotKeeper,
+  type BotMemoryNotes,
+  type BotSkills,
+} from "./remote-replier";
 import type { NewBot } from "./service";
 
 const bot: Bot = {
@@ -56,6 +62,7 @@ function fakeRunner(
     mcp?: Partial<BotMcp>;
     providers?: Partial<BotProviders>;
     threads?: Partial<BotThreads>;
+    notes?: Partial<BotMemoryNotes>;
   } = {},
 ) {
   const started: {
@@ -66,6 +73,7 @@ function fakeRunner(
     attachments?: RunAttachment[];
     skills?: RunSkill[];
     mcp?: RunMcpServer[];
+    memory?: RunMemory;
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
@@ -190,6 +198,11 @@ function fakeRunner(
         throw new Error("not stopped");
       },
       ...options.threads,
+    },
+    {
+      folders: async () => [],
+      run: async () => "done",
+      ...options.notes,
     },
   );
   const only = () => [...sinks.values()][0]!;
@@ -1575,6 +1588,47 @@ describe("RemoteBotReplier", () => {
       expect(calls).toEqual([]);
       sink.end();
       await answering;
+    });
+  });
+
+  describe("a bot's memory (decision 0102)", () => {
+    test("a reply has the bot's notes and its person's, and one a note began may only read them", async () => {
+      const asked: { writable: boolean; botId?: string; source: string }[] = [];
+      const run = fakeRunner({
+        notes: {
+          folders: async (owner) => [
+            { scope: "bot", notes: [{ name: owner.botId!, description: "" }] },
+          ],
+          run: async (caller) => {
+            asked.push({
+              writable: caller.writable,
+              botId: caller.owner.botId,
+              source: caller.actor.source,
+            });
+            return "ok";
+          },
+        },
+      });
+      for (const prompt of ["remember I like tea", "[note] Scheduled task is due"]) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord: !prompt.startsWith("[note]"),
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        await sink.notes({ replyId: "x", command: { command: "view", path: "/memories" } });
+        sink.end();
+        await answering;
+      }
+      expect(run.started.map((reply) => reply.memory)).toEqual([
+        { folders: [{ scope: "bot", notes: [{ name: "b1", description: "" }] }], writable: true },
+        { folders: [{ scope: "bot", notes: [{ name: "b1", description: "" }] }], writable: false },
+      ]);
+      expect(asked).toEqual([
+        { writable: true, botId: "b1", source: "bot" },
+        { writable: false, botId: "b1", source: "bot" },
+      ]);
     });
   });
 });

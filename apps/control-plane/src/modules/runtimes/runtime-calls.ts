@@ -11,6 +11,7 @@ import type {
   BotThreaded,
   BotThreadParams,
   BotMemoryParams,
+  BotNotesParams,
   BotQuestioned,
   BotQuestionParams,
   BotScheduled,
@@ -26,8 +27,11 @@ import type {
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
+import { runMemoryCommand, type MemoryCaller } from "../memory/commands";
 import {
   parseAppendParams,
+  parseBotNotesParams,
+  parseMemoryNotesParams,
   parseBotCreateParams,
   parseBotGoalParams,
   parseBotMcpParams,
@@ -53,6 +57,8 @@ export type CallRun = {
   skills: Set<string>;
   /** The ids of the run's MCP servers: the only ones its runtime may report on (decision 0085). */
   mcp: Set<string>;
+  /** Whose memory the run's agent works in, when it has one (decision 0102). */
+  memory?: MemoryCaller;
 };
 
 /** What answering a runner's call about a bot's conversation needs of the reply it names. */
@@ -79,6 +85,8 @@ export type CallBotReply = {
   provider(params: BotProviderParams): Promise<BotProvided>;
   /** Looks at the person's projects and threads, and on their word starts, continues or archives a thread (decision 0088). */
   thread(params: BotThreadParams): Promise<BotThreaded>;
+  /** Works the memory of the reply's own bot and its owner (decision 0102). */
+  notes(params: BotNotesParams): Promise<string>;
 };
 
 export type RuntimeCallContext = {
@@ -171,6 +179,11 @@ export async function answerRuntimeCall(
       reply.thread(call),
     );
   }
+  if (method === "bot.notes") {
+    return answerBotCall(params, parseBotNotesParams, findBotReply, (reply, call) =>
+      reply.notes(call),
+    );
+  }
   if (method === "bot.update") {
     return answerBotCall(params, parseBotUpdateParams, findBotReply, (reply, call) =>
       reply.update(call),
@@ -190,6 +203,11 @@ export async function answerRuntimeCall(
     const { results } = parseMcpReportParams(params);
     await mcpReport(results.filter((result) => run.mcp.has(result.id)));
     return null;
+  }
+  if (method === "memory.notes") {
+    // The run's own sender and project, whatever the runtime names.
+    if (!run.memory) throw new Error("This run has no memory");
+    return runMemoryCommand(run.memory, parseMemoryNotesParams(params).command);
   }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {

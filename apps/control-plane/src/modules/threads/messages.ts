@@ -6,6 +6,7 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { mcpService } from "../mcp/service";
+import { memoryService } from "../memory/service";
 import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
@@ -40,7 +41,8 @@ async function senderExtras(userId: string) {
   return { skills, mcp, github };
 }
 
-// What a run carries for its sender in this thread's project: the variables and who the run is.
+// What a run carries for its sender in this thread's project: the variables, who the run is and
+// their memory.
 // Also records the sender as the person the thread last ran as, just before the run starts.
 async function threadExtras(
   organizationId: string,
@@ -53,8 +55,18 @@ async function threadExtras(
     userId,
   });
   const identity = await runIdentity(thread, userId);
+  const memory = await runMemory(thread, userId);
   await threadsService.markRunBy(thread.id, userId);
-  return { env, identity };
+  return { env, identity, memory };
+}
+
+// The sender's memory in the project, which the thread's agent reads and keeps (decision 0102).
+async function runMemory(thread: { id: string; projectId: string }, userId: string) {
+  const owner = { userId, projectId: thread.projectId };
+  return {
+    caller: { owner, actor: { source: "thread" as const, threadId: thread.id }, writable: true },
+    index: { folders: await memoryService.folders(owner), writable: true },
+  };
 }
 
 // A thread of a deleted project is kept, archived, but nobody drives it any more (decision 0094).
