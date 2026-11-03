@@ -1,0 +1,93 @@
+import { afterAll, describe, expect, test } from "bun:test";
+
+import { createTaskBody, updateTaskBody } from "./schema";
+
+describe("cockpit schema", () => {
+  test("tags are made lowercase and dashed, once each, and odd ones are refused", () => {
+    const parsed = createTaskBody.parse({
+      title: "Ship",
+      tags: ["#Front End", "front-end", "Ops"],
+    });
+    expect(parsed.tags).toEqual(["front-end", "ops"]);
+    expect(createTaskBody.safeParse({ title: "Ship", tags: ["no spaces?"] }).success).toBe(false);
+    expect(createTaskBody.safeParse({ title: " " }).success).toBe(false);
+    expect(updateTaskBody.safeParse({ status: "doing" }).success).toBe(false);
+    expect(updateTaskBody.parse({ dueDate: "2026-11-30" })).toEqual({ dueDate: "2026-11-30" });
+  });
+});
+
+const run = process.env.DATABASE_URL ? describe : describe.skip;
+
+run("cockpitService (postgres)", async () => {
+  const { signUp } = await import("../../testing/sign-up");
+  const { cockpitService } = await import("./service");
+  const person = await signUp("Pilot");
+  const other = await signUp("Other");
+  afterAll(async () => {
+    await person.remove();
+    await other.remove();
+  });
+
+  test("inbox items are captured, marked done, changed and deleted", async () => {
+    const item = await cockpitService.inbox.create(person.userId, {
+      title: "Call the bank",
+      tags: ["errand"],
+    });
+    expect(item).toMatchObject({ title: "Call the bank", tags: ["errand"], done: false });
+    const done = await cockpitService.inbox.update(person.userId, item.id, { done: true });
+    expect(done.done).toBe(true);
+    expect((await cockpitService.inbox.list(person.userId)).map((i) => i.id)).toEqual([item.id]);
+    await cockpitService.inbox.remove(person.userId, item.id);
+    expect(await cockpitService.inbox.list(person.userId)).toEqual([]);
+  });
+
+  test("tasks are numbered per person and go to the top of their column", async () => {
+    const one = await cockpitService.tasks.create(person.userId, { title: "One" });
+    const two = await cockpitService.tasks.create(person.userId, {
+      title: "Two",
+      priority: "high",
+    });
+    const theirs = await cockpitService.tasks.create(other.userId, { title: "Theirs" });
+    expect([one.number, two.number, theirs.number]).toEqual([1, 2, 1]);
+    expect(one).toMatchObject({ status: "todo", priority: "none", dueDate: null });
+    expect(two.position).toBeLessThan(one.position);
+    const moved = await cockpitService.tasks.update(person.userId, one.id, {
+      status: "in_progress",
+      position: 5,
+      dueDate: "2026-12-01",
+    });
+    expect(moved).toMatchObject({ status: "in_progress", position: 5, dueDate: "2026-12-01" });
+  });
+
+  test("notes are kept with pinned ones first", async () => {
+    const plain = await cockpitService.notes.create(person.userId, { title: "Plain", body: "x" });
+    const pinned = await cockpitService.notes.create(person.userId, {
+      title: "Pinned",
+      pinned: true,
+      tags: ["ops"],
+    });
+    expect((await cockpitService.notes.list(person.userId)).map((n) => n.id)).toEqual([
+      pinned.id,
+      plain.id,
+    ]);
+  });
+
+  test("tags count each kind, and another person's items cannot be reached", async () => {
+    await cockpitService.tasks.create(person.userId, { title: "Tagged", tags: ["ops"] });
+    const tags = await cockpitService.tags(person.userId);
+    expect(tags.find((tag) => tag.name === "ops")).toEqual({
+      name: "ops",
+      inbox: 0,
+      tasks: 1,
+      notes: 1,
+    });
+    const [mine] = await cockpitService.tasks.list(person.userId);
+    await expect(
+      cockpitService.tasks.update(other.userId, mine!.id, { title: "Taken" }),
+    ).rejects.toThrow("Task not found");
+    await expect(cockpitService.tasks.remove(other.userId, mine!.id)).rejects.toThrow(
+      "Task not found",
+    );
+    expect(await cockpitService.tags(other.userId)).toEqual([]);
+  });
+});

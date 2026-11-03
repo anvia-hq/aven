@@ -1,0 +1,30 @@
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+import { users } from "./users";
+
+// A thing the person captured to deal with later, in their cockpit's inbox (decision 0104).
+export const cockpitInboxItems = pgTable(
+  "cockpit_inbox_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    done: boolean("done").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("cockpit_inbox_items_user_idx").on(table.userId, table.createdAt)],
+);
+
+export type CockpitInboxItemRow = typeof cockpitInboxItems.$inferSelect;
