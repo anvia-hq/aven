@@ -33,10 +33,6 @@ function InboxRow({
       >
         <span className="flex items-center gap-2">
           <span
-            aria-hidden="true"
-            className={cn("size-1.5 shrink-0 rounded-full", !item.done && "bg-primary")}
-          />
-          <span
             className={cn(
               "min-w-0 flex-1 truncate text-sm",
               item.done ? "text-muted-foreground" : "font-medium",
@@ -49,7 +45,7 @@ function InboxRow({
           </span>
         </span>
         {(preview || item.tags.length > 0) && (
-          <span className="flex min-w-0 gap-2 pl-3.5 text-xs text-muted-foreground">
+          <span className="flex min-w-0 gap-2 text-xs text-muted-foreground">
             <span className="min-w-0 flex-1 truncate">{preview}</span>
             {item.tags.length > 0 && (
               <span className="shrink-0 truncate text-muted-foreground/70">
