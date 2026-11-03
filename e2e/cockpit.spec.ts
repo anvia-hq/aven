@@ -85,6 +85,40 @@ test.describe("Cockpit", () => {
     await expect(page.getByText("No tasks yet.")).toBeVisible();
   });
 
+  test("a card is reordered in its column and stays so, and one dropped on itself does not move", async ({
+    page,
+  }) => {
+    await registerUser(page, "cockpit", "Cockpit Person");
+    for (const title of ["First", "Second", "Third"]) {
+      await page.request.post("/api/cockpit/tasks", { data: { title } });
+    }
+    await page.goto("/cockpit/tasks");
+    const todo = page.getByRole("region", { name: "Todo" });
+    const order = () => todo.getByRole("listitem").filter({ hasText: "T-" }).allInnerTexts();
+    // A new task goes to the top: Third, Second, First.
+    await expect
+      .poll(async () => (await order()).map((text) => text.split("\n")[1]))
+      .toEqual(["Third", "Second", "First"]);
+    const card = (name: string) => todo.getByRole("listitem", { name });
+
+    // Dropped on its own lower half: nothing is saved.
+    const saves: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PATCH") saves.push(request.url());
+    });
+    await card("T-2 Second").dragTo(card("T-2 Second"), { targetPosition: { x: 20, y: 40 } });
+    await page.waitForTimeout(300);
+    expect(saves).toEqual([]);
+
+    // First, dragged onto the top half of Third, goes first.
+    await card("T-1 First").dragTo(card("T-3 Third"), { targetPosition: { x: 20, y: 5 } });
+    await expect.poll(() => saves.length).toBe(1);
+    await page.reload();
+    await expect
+      .poll(async () => (await order()).map((text) => text.split("\n")[1]))
+      .toEqual(["First", "Third", "Second"]);
+  });
+
   test("notes are written, pinned and previewed", async ({ page }) => {
     await registerUser(page, "cockpit", "Cockpit Person");
     await page.goto("/cockpit/notes");

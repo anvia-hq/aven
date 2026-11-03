@@ -33,12 +33,14 @@ function TaskCard({
   onOpen,
   onDragStart,
   onDragOver,
+  onDragEnd,
 }: {
   task: CockpitTask;
   dragging: boolean;
   onOpen: () => void;
   onDragStart: () => void;
   onDragOver: (below: boolean) => void;
+  onDragEnd: () => void;
 }) {
   return (
     <li
@@ -51,9 +53,13 @@ function TaskCard({
       }}
       onDragOver={(event) => {
         event.preventDefault();
+        // The card says where in the column; the column only answers for its empty space.
+        event.stopPropagation();
         const box = event.currentTarget.getBoundingClientRect();
         onDragOver(event.clientY > box.top + box.height / 2);
       }}
+      // A drag dropped off the board, or given up with Escape, leaves nothing behind.
+      onDragEnd={onDragEnd}
       className={cn(
         "cursor-grab rounded-lg border bg-card p-2.5 shadow-xs transition-opacity active:cursor-grabbing",
         dragging && "opacity-40",
@@ -97,6 +103,13 @@ export function TaskBoard({
 
   const columnOf = (status: TaskStatus) =>
     tasks.filter((task) => task.status === status && task.id !== dragged);
+  // Where the dragged card is in its column, counted among the others: the cards before it.
+  const placeOf = (task: CockpitTask) =>
+    tasks.filter((each) => each.status === task.status).findIndex((each) => each.id === task.id);
+  const endDrag = () => {
+    setDragged(null);
+    setDropAt(null);
+  };
 
   function drop(event: DragEvent, status: TaskStatus) {
     event.preventDefault();
@@ -105,13 +118,13 @@ export function TaskBoard({
     setDragged(null);
     setDropAt(null);
     if (!task) return;
-    const position = positionAt(columnOf(status), at);
-    if (task.status === status && task.position === position) return;
-    void update(task, { status, position });
+    // Back where it was, as when it is dropped on itself: nothing to save.
+    if (task.status === status && at === placeOf(task)) return;
+    void update(task, { status, position: positionAt(columnOf(status), at) });
   }
 
   return (
-    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4" aria-label="Board">
+    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4" role="group" aria-label="Board">
       {STATUSES.map((status) => {
         const column = tasks.filter((task) => task.status === status);
         const shown = columnOf(status);
@@ -157,9 +170,11 @@ export function TaskBoard({
                       onOpen={() => onOpen(task)}
                       onDragStart={() => setDragged(task.id)}
                       onDragOver={(below) => {
-                        if (task.id === dragged || index === -1) return;
-                        setDropAt({ status, index: below ? index + 1 : index });
+                        // Over itself: it would stay where it is.
+                        if (task.id === dragged) setDropAt({ status, index: placeOf(task) });
+                        else setDropAt({ status, index: below ? index + 1 : index });
                       }}
+                      onDragEnd={endDrag}
                     />
                   </Fragment>
                 );

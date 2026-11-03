@@ -138,9 +138,9 @@ function TaskForm({
             type="button"
             variant="ghost"
             className="text-destructive"
+            // Closed only once it is gone: a failure keeps the form, and says why.
             onClick={async () => {
-              await remove(task);
-              onDone();
+              if (await remove(task)) onDone();
             }}
           >
             <Trash /> Delete

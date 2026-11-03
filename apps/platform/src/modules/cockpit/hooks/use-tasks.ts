@@ -39,12 +39,21 @@ export function useTasks() {
         toast.add({ title: `Created T-${made.number}`, description: made.title, type: "success" });
       return made;
     },
-    update: (task: CockpitTask, patch: TaskPatch) =>
-      tasks.update(task, patch, "Could not save the task"),
-    async remove(task: CockpitTask) {
-      if (await tasks.remove(task, "Could not delete the task")) {
-        toast.add({ title: `Deleted T-${task.number}`, description: task.title });
+    // A task moved to another status from the table or its form goes to the top of that column,
+    // as a new one does; the board says where itself.
+    update(task: CockpitTask, patch: TaskPatch) {
+      const moving = patch.status !== undefined && patch.status !== task.status;
+      if (moving && patch.position === undefined) {
+        const column = items.filter((each) => each.status === patch.status);
+        const top = Math.min(...column.map((each) => each.position));
+        patch = { ...patch, position: column.length > 0 ? top - 1 : 0 };
       }
+      return tasks.update(task, patch, "Could not save the task");
+    },
+    async remove(task: CockpitTask) {
+      const removed = await tasks.remove(task, "Could not delete the task");
+      if (removed) toast.add({ title: `Deleted T-${task.number}`, description: task.title });
+      return removed;
     },
   };
 }

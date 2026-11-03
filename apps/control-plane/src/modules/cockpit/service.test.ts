@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { createTaskBody, updateTaskBody } from "./schema";
+import { createTaskBody, updateInboxBody, updateNoteBody, updateTaskBody } from "./schema";
 
 describe("cockpit schema", () => {
   test("tags are made lowercase and dashed, once each, and odd ones are refused", () => {
@@ -13,6 +13,16 @@ describe("cockpit schema", () => {
     expect(createTaskBody.safeParse({ title: " " }).success).toBe(false);
     expect(updateTaskBody.safeParse({ status: "doing" }).success).toBe(false);
     expect(updateTaskBody.parse({ dueDate: "2026-11-30" })).toEqual({ dueDate: "2026-11-30" });
+    // Eleven tags of which one is a repeat are ten.
+    const eleven = [...Array.from({ length: 10 }, (_, i) => `t${i}`), "T0"];
+    expect(createTaskBody.parse({ title: "x", tags: eleven }).tags).toHaveLength(10);
+  });
+
+  test("an update that changes nothing, or only fields there are not, is refused", () => {
+    for (const schema of [updateInboxBody, updateTaskBody, updateNoteBody]) {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ userId: "someone", number: 9 }).success).toBe(false);
+    }
   });
 });
 
@@ -89,5 +99,24 @@ run("cockpitService (postgres)", async () => {
       "Task not found",
     );
     expect(await cockpitService.tags(other.userId)).toEqual([]);
+  });
+
+  test("another person's inbox items and notes cannot be changed or deleted", async () => {
+    const item = await cockpitService.inbox.create(person.userId, { title: "Mine" });
+    const note = await cockpitService.notes.create(person.userId, { title: "Mine" });
+    await expect(
+      cockpitService.inbox.update(other.userId, item.id, { title: "Taken" }),
+    ).rejects.toThrow("Inbox item not found");
+    await expect(cockpitService.inbox.remove(other.userId, item.id)).rejects.toThrow(
+      "Inbox item not found",
+    );
+    await expect(
+      cockpitService.notes.update(other.userId, note.id, { title: "Taken" }),
+    ).rejects.toThrow("Note not found");
+    await expect(cockpitService.notes.remove(other.userId, note.id)).rejects.toThrow(
+      "Note not found",
+    );
+    expect(await cockpitService.inbox.list(other.userId)).toEqual([]);
+    expect(await cockpitService.notes.list(other.userId)).toEqual([]);
   });
 });

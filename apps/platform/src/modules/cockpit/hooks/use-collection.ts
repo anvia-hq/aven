@@ -39,8 +39,12 @@ export function createCollection<T extends Item, Create, Update>(options: {
   const { path, atom, label, order = (items) => items } = options;
   const store = getDefaultStore();
   const list = createListStore<T>({ path, atom, label });
-  const set = (change: (items: T[]) => T[]) =>
-    store.set(atom, order(change(store.get(atom) ?? [])));
+  // A list not loaded, as after sign-out, is left for its next load: a late reply for the person
+  // who signed out must not stand in for the next person's list.
+  const set = (change: (items: T[]) => T[]) => {
+    const items = store.get(atom);
+    if (items !== null) store.set(atom, order(change(items)));
+  };
   const refreshTags = () => void tagsStore.refresh();
 
   async function create(input: Create, failure: string) {
@@ -57,7 +61,8 @@ export function createCollection<T extends Item, Create, Update>(options: {
     const saved = await attempt(failure, () => postJson<T>(`${path}/${item.id}`, patch, "PATCH"));
     if (saved) {
       set((items) => items.map((each) => (each.id === item.id ? saved : each)));
-      refreshTags();
+      // Only a change of tags changes the tags' counts.
+      if ((patch as { tags?: unknown }).tags !== undefined) refreshTags();
     } else {
       await list.refresh();
     }

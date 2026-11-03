@@ -2,6 +2,8 @@ import { X } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { cn } from "cn";
+
 import { Badge } from "@/components/badge";
 
 type Props = {
@@ -19,7 +21,10 @@ type Props = {
 export function CockpitPage({ title, tag, to, actions, wide = false, children }: Props) {
   return (
     <div
-      className={`mx-auto flex w-full flex-col gap-4 px-4 py-6 md:py-10 ${wide ? "max-w-7xl" : "max-w-4xl"}`}
+      className={cn(
+        "mx-auto flex w-full flex-col gap-4 px-4 py-6 md:py-10",
+        wide ? "max-w-7xl" : "max-w-4xl",
+      )}
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
