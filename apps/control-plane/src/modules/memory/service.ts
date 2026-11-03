@@ -2,6 +2,7 @@ import { db } from "@aven/db/client";
 import { memoryEvents, type MemoryEventRow } from "@aven/db/schema/memory-events";
 import { memoryNotes, type MemoryNoteRow } from "@aven/db/schema/memory-notes";
 import {
+  MEMORY_INDEXED_PER_SCOPE,
   MEMORY_NOTE_MAX,
   MEMORY_NOTE_NAME,
   MEMORY_NOTE_NAME_RULE,
@@ -12,7 +13,8 @@ import {
   type MemoryNoteView,
   type MemoryScope,
 } from "@aven/protocol/memory";
-import { and, asc, count, desc, eq, isNull, type SQL } from "drizzle-orm";
+import { projects } from "@aven/db/schema/projects";
+import { and, asc, count, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
@@ -142,19 +144,49 @@ async function roomFor(tx: Tx, place: MemoryPlace) {
   }
 }
 
-// A note or a name held by another note in the same folder, for the unique constraint's error.
-const isNameTaken = (error: unknown) =>
-  (error as { code?: string; cause?: { code?: string } })?.code === "23505" ||
-  (error as { cause?: { code?: string } })?.cause?.code === "23505";
+// One write at a time in a folder: its count and its names hold while the write is made.
+// Folders are locked in the order of their keys, so two writes that take two never wait on each other.
+async function lockFolder(tx: Tx, ...places: MemoryPlace[]) {
+  const keys = places.map((place) =>
+    [place.userId, place.scope, place.projectId ?? "", place.botId ?? ""].join("|"),
+  );
+  for (const key of [...new Set(keys)].sort()) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${key}))`);
+  }
+}
 
-function writeOnce(place: MemoryPlace, name: string, body: string, actor: MemoryActor) {
+// A project's folder takes no new note once the project is deleted (decision 0094): its notes went
+// with it. Waits for a deletion going on, which holds the project's row.
+async function requireLiveProject(tx: Tx, place: MemoryPlace) {
+  if (place.scope !== "project" || !place.projectId) return;
+  const [project] = await tx
+    .select({ deletedAt: projects.deletedAt })
+    .from(projects)
+    .where(eq(projects.id, place.projectId))
+    .for("share");
+  if (!project || project.deletedAt) throw new UnprocessableError("This project was deleted.");
+}
+
+const nameTaken = (name: string) =>
+  new ConflictError(`There is a note called ${name} there already`);
+
+function writeOnce(
+  place: MemoryPlace,
+  name: string,
+  body: string,
+  actor: MemoryActor,
+  onlyNew: boolean,
+) {
   return db.transaction(async (tx) => {
+    await lockFolder(tx, place);
     const existing = await find(tx, place, name);
+    if (existing && onlyNew) throw nameTaken(name);
     if (existing) {
       await tx.update(memoryNotes).set({ body }).where(eq(memoryNotes.id, existing.id));
       await record(tx, place, actor, { name, action: "updated" });
       return { created: false };
     }
+    await requireLiveProject(tx, place);
     await roomFor(tx, place);
     await tx.insert(memoryNotes).values({
       userId: place.userId,
@@ -177,17 +209,33 @@ export const memoryService = {
     return db.select().from(memoryNotes).where(inPlace(place)).orderBy(asc(memoryNotes.name));
   },
 
-  /** What an agent's instructions list of its memory: each folder's notes, by name and description. */
+  /**
+   * What an agent's instructions list of its memory: each folder's latest notes, by name and
+   * description, and how many more it has, so a full folder does not fill the instructions.
+   */
   async folders(owner: MemoryOwner): Promise<MemoryFolder[]> {
     const places = placesOf(owner);
     return Promise.all(
-      places.map(async (place) => ({
-        scope: place.scope,
-        notes: (await memoryService.notes(place)).map((row) => ({
-          name: row.name,
-          description: noteDescription(row.body),
-        })),
-      })),
+      places.map(async (place) => {
+        const rows = await db
+          .select()
+          .from(memoryNotes)
+          .where(inPlace(place))
+          .orderBy(desc(memoryNotes.updatedAt))
+          .limit(MEMORY_INDEXED_PER_SCOPE + 1);
+        const [counted] =
+          rows.length > MEMORY_INDEXED_PER_SCOPE
+            ? await db.select({ n: count() }).from(memoryNotes).where(inPlace(place))
+            : [{ n: rows.length }];
+        const listed = rows.slice(0, MEMORY_INDEXED_PER_SCOPE);
+        return {
+          scope: place.scope,
+          notes: listed
+            .map((row) => ({ name: row.name, description: noteDescription(row.body) }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+          more: (counted?.n ?? 0) - listed.length,
+        };
+      }),
     );
   },
 
@@ -204,13 +252,7 @@ export const memoryService = {
   ): Promise<{ created: boolean }> {
     checkName(name);
     checkBody(body);
-    try {
-      return await writeOnce(place, name, body, actor);
-    } catch (error) {
-      // Made meanwhile by another write: this one replaces it.
-      if (isNameTaken(error)) return writeOnce(place, name, body, actor);
-      throw error;
-    }
+    return writeOnce(place, name, body, actor, false);
   },
 
   /**
@@ -219,6 +261,7 @@ export const memoryService = {
    */
   async edit(place: MemoryPlace, name: string, edit: (body: string) => string, actor: MemoryActor) {
     return db.transaction(async (tx) => {
+      await lockFolder(tx, place);
       const [row] = await tx
         .select()
         .from(memoryNotes)
@@ -250,41 +293,37 @@ export const memoryService = {
     actor: MemoryActor,
   ) {
     checkName(to.name);
-    try {
-      return await db.transaction(async (tx) => {
-        const row = await find(tx, from.place, from.name);
-        if (!row) return false;
-        if (await find(tx, to.place, to.name)) {
-          throw new ConflictError(`There is a note called ${to.name} there already`);
-        }
-        const moved = from.place.scope !== to.place.scope;
-        if (moved) await roomFor(tx, to.place);
-        await tx
-          .update(memoryNotes)
-          .set({
-            scope: to.place.scope,
-            projectId: to.place.projectId ?? null,
-            botId: to.place.botId ?? null,
-            name: to.name,
-          })
-          .where(eq(memoryNotes.id, row.id));
-        if (moved) {
-          await record(tx, from.place, actor, { name: from.name, action: "removed" });
-          await record(tx, to.place, actor, { name: to.name, action: "created" });
-        } else {
-          await record(tx, to.place, actor, {
-            name: to.name,
-            action: "renamed",
-            from: from.name,
-          });
-        }
-        return true;
-      });
-    } catch (error) {
-      if (isNameTaken(error))
-        throw new ConflictError(`There is a note called ${to.name} there already`);
-      throw error;
-    }
+    return db.transaction(async (tx) => {
+      await lockFolder(tx, from.place, to.place);
+      const row = await find(tx, from.place, from.name);
+      if (!row) return false;
+      if (await find(tx, to.place, to.name)) throw nameTaken(to.name);
+      const moved = from.place.scope !== to.place.scope;
+      if (moved) {
+        await requireLiveProject(tx, to.place);
+        await roomFor(tx, to.place);
+      }
+      await tx
+        .update(memoryNotes)
+        .set({
+          scope: to.place.scope,
+          projectId: to.place.projectId ?? null,
+          botId: to.place.botId ?? null,
+          name: to.name,
+        })
+        .where(eq(memoryNotes.id, row.id));
+      if (moved) {
+        await record(tx, from.place, actor, { name: from.name, action: "removed" });
+        await record(tx, to.place, actor, { name: to.name, action: "created" });
+      } else {
+        await record(tx, to.place, actor, {
+          name: to.name,
+          action: "renamed",
+          from: from.name,
+        });
+      }
+      return true;
+    });
   },
 
   // What the person sees and changes in Settings: every note of theirs, in every scope.
@@ -321,29 +360,41 @@ export const memoryService = {
     input: { scope: MemoryScope; projectId?: string; botId?: string; name: string; body: string },
   ) {
     const place = await memoryService.placeFor(userId, input);
-    if (await find(db, place, input.name)) {
-      throw new ConflictError(`There is a note called ${input.name} there already`);
-    }
-    await memoryService.write(place, input.name, input.body, { source: "person" });
+    checkName(input.name);
+    checkBody(input.body);
+    await writeOnce(place, input.name, input.body, { source: "person" }, true);
     return noteView((await find(db, place, input.name))!);
   },
 
+  /** Changes a note's name, body or both, at once: either both change or neither. */
   async update(userId: string, id: string, changes: { name?: string; body?: string }) {
-    const [row] = await db
-      .select()
-      .from(memoryNotes)
-      .where(and(eq(memoryNotes.userId, userId), eq(memoryNotes.id, id)));
-    if (!row) throw new NotFoundError("Note not found");
-    const place = placeOf(row);
-    const actor = { source: "person" } as const;
-    if (changes.body !== undefined && changes.body !== row.body) {
-      await memoryService.edit(place, row.name, () => changes.body!, actor);
-    }
-    if (changes.name !== undefined && changes.name !== row.name) {
-      await memoryService.rename({ place, name: row.name }, { place, name: changes.name }, actor);
-    }
-    const [now] = await db.select().from(memoryNotes).where(eq(memoryNotes.id, id));
-    return noteView(now!);
+    if (changes.name !== undefined) checkName(changes.name);
+    if (changes.body !== undefined) checkBody(changes.body);
+    const ofPerson = and(eq(memoryNotes.userId, userId), eq(memoryNotes.id, id));
+    const updated = await db.transaction(async (tx) => {
+      // The folder first, as every write takes it, then the note as it is now.
+      const [found] = await tx.select().from(memoryNotes).where(ofPerson);
+      if (!found) throw new NotFoundError("Note not found");
+      await lockFolder(tx, placeOf(found));
+      const [row] = await tx.select().from(memoryNotes).where(ofPerson).for("update");
+      if (!row) throw new NotFoundError("Note not found");
+      const place = placeOf(row);
+      const actor = { source: "person" } as const;
+      const name = changes.name ?? row.name;
+      const body = changes.body ?? row.body;
+      if (name !== row.name && (await find(tx, place, name))) throw nameTaken(name);
+      const [now] = await tx
+        .update(memoryNotes)
+        .set({ name, body })
+        .where(eq(memoryNotes.id, row.id))
+        .returning();
+      if (body !== row.body) await record(tx, place, actor, { name: row.name, action: "updated" });
+      if (name !== row.name) {
+        await record(tx, place, actor, { name, action: "renamed", from: row.name });
+      }
+      return now!;
+    });
+    return noteView(updated);
   },
 
   async removeById(userId: string, id: string) {

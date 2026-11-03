@@ -38,6 +38,9 @@ export function memoryInstructions(memory: RunMemory | undefined) {
     for (const note of folder.notes) {
       lines.push(`- ${note.name}${note.description ? `: ${plain(note.description)}` : ""}`);
     }
+    if (folder.more) {
+      lines.push(`(${folder.more} more, not listed: view ${MEMORY_ROOT}/${folder.scope} for them)`);
+    }
   }
   lines.push("</memory>");
   return lines.join("\n");

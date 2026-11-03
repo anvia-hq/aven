@@ -57,6 +57,8 @@ run("a bot's threads (postgres)", async () => {
     },
   ];
   const sent: { org: string; userId: string; thread: string; body: unknown }[] = [];
+  // Whether each message was sent on the person's word, which lets its run keep notes (decision 0102).
+  const onWord: (boolean | undefined)[] = [];
   let failSend: Error | undefined;
   // Whether a message starts a run that is still going when the bot is answered.
   let sendStartsRun = true;
@@ -84,9 +86,10 @@ run("a bot's threads (postgres)", async () => {
       giveBack: async (thread) => void watched.push(`give back ${thread}`),
     },
     messages: {
-      send: async (org, user, thread, body) => {
+      send: async (org, user, thread, body, options) => {
         if (failSend) throw failSend;
         sent.push({ org, userId: user, thread, body });
+        onWord.push(options?.onPersonsWord);
         if (sendStartsRun) running.add(thread);
         return { steered: false };
       },
@@ -181,6 +184,7 @@ run("a bot's threads (postgres)", async () => {
     // A run is going on: the message steers it, as the person's composer does.
     await bot.continue(person, one.id, { prompt: "Steer" });
     expect(sent.at(-1)).toMatchObject({ thread: one.id, body: { prompt: "Steer" } });
+    expect(onWord.at(-1)).toBe(true);
     running = new Set();
     await bot.continue(person, one.id, { prompt: "More", reasoningEffort: "high" });
     expect(sent.at(-1)).toEqual({
@@ -273,6 +277,8 @@ run("a bot's threads (postgres)", async () => {
     });
     expect(sent.at(-1)).toMatchObject({ thread: one.id, body: { prompt: "Again" } });
     expect(sent.at(-1)!.body).not.toHaveProperty("modelId");
+    // Its run may read the person's memory and not change it.
+    expect(onWord.at(-1)).toBe(false);
     expect(watched.slice(-2)).toEqual([
       `follow-up ${one.id}`,
       `watch ${one.id} ${botId} run 7 follow-up`,

@@ -48,6 +48,7 @@ async function threadExtras(
   organizationId: string,
   thread: { id: string; organizationId: string; projectId: string },
   userId: string,
+  onPersonsWord = true,
 ) {
   const env = await variablesService.forRun({
     organizationId,
@@ -55,17 +56,23 @@ async function threadExtras(
     userId,
   });
   const identity = await runIdentity(thread, userId);
-  const memory = await runMemory(thread, userId);
+  const memory = await runMemory(thread, userId, onPersonsWord);
   await threadsService.markRunBy(thread.id, userId);
   return { env, identity, memory };
 }
 
-// The sender's memory in the project, which the thread's agent reads and keeps (decision 0102).
-async function runMemory(thread: { id: string; projectId: string }, userId: string) {
+// The sender's memory in the project, which the thread's agent reads, and keeps when the run is on
+// the person's word: a run a bot's note began, such as a follow-up on what a thread wrote, only reads,
+// so what a thread or a schedule's task wrote is never kept by itself (decision 0102).
+async function runMemory(
+  thread: { id: string; projectId: string },
+  userId: string,
+  writable: boolean,
+) {
   const owner = { userId, projectId: thread.projectId };
   return {
-    caller: { owner, actor: { source: "thread" as const, threadId: thread.id }, writable: true },
-    index: { folders: await memoryService.folders(owner), writable: true },
+    caller: { owner, actor: { source: "thread" as const, threadId: thread.id }, writable },
+    index: { folders: await memoryService.folders(owner), writable },
   };
 }
 
@@ -81,12 +88,14 @@ async function requireLiveProject(organizationId: string, projectId: string) {
 // environment's shared one), with the sender's skills, acting as their GitHub account, and with the project's
 // environment variables. The runs are given, so `threads` does not depend on how they are made.
 export const createThreadMessages = (runs: RunManager) => {
-  // A message that starts a run of its own: refused while one is going.
+  // A message that starts a run of its own: refused while one is going. `onPersonsWord` is false
+  // for a message a bot sends after a note, whose run may not keep notes (decision 0102).
   async function start(
     organizationId: string,
     userId: string,
     threadId: string,
     { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
+    { onPersonsWord = true }: { onPersonsWord?: boolean } = {},
   ) {
     const thread = await threadsService.owned({ organizationId, userId }, threadId);
     await requireLiveProject(organizationId, thread.projectId);
@@ -96,7 +105,7 @@ export const createThreadMessages = (runs: RunManager) => {
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     const sender = await senderExtras(userId);
-    const scoped = await threadExtras(organizationId, thread, userId);
+    const scoped = await threadExtras(organizationId, thread, userId, onPersonsWord);
     await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
   }
 
@@ -131,11 +140,12 @@ export const createThreadMessages = (runs: RunManager) => {
       userId: string,
       threadId: string,
       body: SendMessageBody,
+      options: { onPersonsWord?: boolean } = {},
     ): Promise<{ steered: boolean }> {
       if (runs.isRunning(threadId) && (await steer(organizationId, userId, threadId, body))) {
         return { steered: true };
       }
-      await start(organizationId, userId, threadId, body);
+      await start(organizationId, userId, threadId, body, options);
       return { steered: false };
     },
 

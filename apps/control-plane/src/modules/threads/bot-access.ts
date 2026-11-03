@@ -237,7 +237,14 @@ export function createBotThreads({
       const choice = actor.via === "person" ? selection : {};
       // A run that is going takes it at its next step; otherwise it starts one (decision 0101).
       await followingUp(actor, id, () =>
-        messages.send(thread.organizationId, actor.userId, id, { prompt, ...choice }),
+        // A run it starts keeps no notes: it was begun by a note, not the person (decision 0102).
+        messages.send(
+          thread.organizationId,
+          actor.userId,
+          id,
+          { prompt, ...choice },
+          { onPersonsWord: actor.via === "person" },
+        ),
       );
       await watchRun(actor, id);
       return view(actor.userId, thread);

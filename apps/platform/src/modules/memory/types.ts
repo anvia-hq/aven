@@ -9,3 +9,6 @@ export type MemoryFolder =
   | { scope: "personal" }
   | { scope: "project"; projectId: string }
   | { scope: "bot"; botId: string };
+
+/** A folder the person can write a note in, with what to call it. */
+export type FolderChoice = { key: string; label: string; folder: MemoryFolder };

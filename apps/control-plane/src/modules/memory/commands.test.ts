@@ -165,6 +165,87 @@ run("runMemoryCommand (postgres)", async () => {
   });
 });
 
+run("memory is each person's (postgres)", async () => {
+  const { db } = await import("@aven/db/client");
+  const { users } = await import("@aven/db/schema/users");
+  const { eq } = await import("drizzle-orm");
+  const { seedOrgPair } = await import("../../testing/seed-org-pair");
+  const { seedProject } = await import("../../testing/seed-project");
+  const { runtimesService } = await import("../runtimes/service");
+  const { projectsService } = await import("../projects/service");
+  const { memoryService } = await import("./service");
+  const { runMemoryCommand } = await import("./commands");
+
+  const { userId, orgA, cleanup } = await seedOrgPair();
+  const otherId = `u2-${crypto.randomUUID().slice(0, 8)}`;
+  await db.insert(users).values({ id: otherId, name: "Other", email: `${otherId}@aven.test` });
+  const runner = (await runtimesService.create(orgA, userId, { name: "m2" })).runtime;
+  const { project } = await seedProject(orgA, userId, runner.id, "shared-repo");
+  afterAll(async () => {
+    await db.delete(users).where(eq(users.id, otherId));
+    await cleanup();
+  });
+
+  const as = (who: string) => ({
+    owner: { userId: who, projectId: project.id },
+    actor: { source: "person" as const },
+    writable: true,
+  });
+
+  test("two people in one project see only their own project and personal notes", async () => {
+    await runMemoryCommand(as(userId), {
+      command: "create",
+      path: "/memories/project/mine.md",
+      fileText: "Mine",
+    });
+    await runMemoryCommand(as(userId), {
+      command: "create",
+      path: "/memories/personal/me.md",
+      fileText: "Me",
+    });
+    expect(
+      await runMemoryCommand(as(otherId), { command: "view", path: "/memories/project" }),
+    ).toBe("/memories/project: no notes yet.");
+    expect(
+      await runMemoryCommand(as(otherId), { command: "view", path: "/memories/personal" }),
+    ).toBe("/memories/personal: no notes yet.");
+    await expect(
+      runMemoryCommand(as(otherId), { command: "delete", path: "/memories/personal/me.md" }),
+    ).rejects.toThrow("There is no note");
+    expect((await memoryService.folders(as(otherId).owner)).flatMap((f) => f.notes)).toEqual([]);
+  });
+
+  test("deleting the project takes its notes, every person's, keeps personal ones, and takes no more", async () => {
+    await runMemoryCommand(as(otherId), {
+      command: "create",
+      path: "/memories/project/theirs.md",
+      fileText: "Theirs",
+    });
+    await projectsService.remove(orgA, userId, project.id, () => undefined);
+    const left = [...(await memoryService.list(userId)), ...(await memoryService.list(otherId))];
+    expect(left.map((note) => note.name)).toEqual(["me.md"]);
+    await expect(
+      runMemoryCommand(as(userId), {
+        command: "create",
+        path: "/memories/project/late.md",
+        fileText: "Late",
+      }),
+    ).rejects.toThrow("This project was deleted.");
+  });
+
+  test("the index lists a folder's latest notes and says how many more there are", async () => {
+    const place = { userId, scope: "personal" as const };
+    for (let i = 0; i < 45; i++) {
+      await memoryService.write(place, `n${String(i).padStart(2, "0")}.md`, `Note ${i}`, {
+        source: "person",
+      });
+    }
+    const [personal] = await memoryService.folders({ userId });
+    expect(personal!.notes).toHaveLength(40);
+    expect(personal!.more).toBe(6);
+  });
+});
+
 run("memoryService.create (postgres)", async () => {
   const { signUp } = await import("../../testing/sign-up");
   const { botsService } = await import("../bots/service");

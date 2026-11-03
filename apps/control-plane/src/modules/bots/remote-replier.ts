@@ -153,9 +153,12 @@ export class RemoteBotReplier implements BotReplier {
     // The person's MCP servers for bots, which the runner connects for this reply (decision 0085).
     const mcpServers = await this.mcp.forRun(userId);
     const givenMcp = new Set(mcpServers.map((server) => server.id));
-    // The bot's notes and its owner's. A reply a note began only reads them: what a schedule's task
-    // or a thread wrote is never kept by itself (decision 0102).
+    // The bot's notes and its owner's, kept only on the person's word: their own message, or the
+    // main bot passing it on while it was theirs. A reply a note began, or another bot's request
+    // that a note may be behind, only reads them, so what a schedule's task or a thread wrote is
+    // never kept by itself (decision 0102).
     const memoryOwner = { userId, botId: bot.id };
+    const keepsNotes = onPersonsWord;
     const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
     const connection = this.#connection();
@@ -402,7 +405,7 @@ export class RemoteBotReplier implements BotReplier {
       },
       notes: ({ command }: Omit<BotNotesParams, "replyId">) =>
         this.notes.run(
-          { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: !note },
+          { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: keepsNotes },
           command,
         ),
     };
@@ -427,7 +430,7 @@ export class RemoteBotReplier implements BotReplier {
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,
-          memory: { folders, writable: !note },
+          memory: { folders, writable: keepsNotes },
         },
         sink,
       );

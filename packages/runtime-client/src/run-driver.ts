@@ -329,14 +329,17 @@ export function createRunDriver(context: DriverContext) {
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
-            // What the agent writes in its memory hides this run's secrets too (decision 0102).
+            // What the agent writes in its memory, and what it reads back, hides this run's
+            // secrets as its other tools do: a note the person or a bot wrote may hold one (decision 0102).
             memory:
               state.record.memory &&
-              ((command) =>
-                context.call("memory.notes", {
+              (async (command) => {
+                const answer = await context.call("memory.notes", {
                   runId,
                   command: redact ? redact(command) : command,
-                })),
+                });
+                return redact ? redact(answer) : answer;
+              }),
             // A subagent is not in the journal, so what it does is sent as it happens.
             emit: (event) => forward(event),
             // Nobody is there to answer a subagent, and it is not journaled: its agent id only

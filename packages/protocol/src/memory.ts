@@ -22,6 +22,9 @@ export const MEMORY_NOTE_MAX = 8000;
 /** The most notes a scope holds. */
 export const MEMORY_NOTES_PER_SCOPE = 200;
 
+/** The most notes of a folder the agent's instructions list: the latest; it views the folder for the rest. */
+export const MEMORY_INDEXED_PER_SCOPE = 40;
+
 /** The kinds of note, as the frontmatter's `type` says. */
 export const MEMORY_TYPES = ["user", "feedback", "project", "reference"] as const;
 
@@ -47,7 +50,12 @@ export const MEMORY_WRITES = ["create", "str_replace", "insert", "delete", "rena
 export type MemoryListing = { name: string; description: string };
 
 /** A folder the agent has, with its notes, which its instructions list (`memory` on a run or a reply). */
-export type MemoryFolder = { scope: MemoryScope; notes: MemoryListing[] };
+export type MemoryFolder = {
+  scope: MemoryScope;
+  notes: MemoryListing[];
+  /** Notes of the folder left out of the list, which `view` of the folder shows. */
+  more?: number;
+};
 
 /** What a run or a reply carries of memory: its folders, and whether it may change them. */
 export type RunMemory = { folders: MemoryFolder[]; writable: boolean };

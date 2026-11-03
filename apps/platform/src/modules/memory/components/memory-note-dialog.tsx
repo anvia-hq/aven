@@ -19,10 +19,7 @@ import { Textarea } from "@/components/textarea";
 import { TextField } from "@/components/text-field";
 
 import { useMemory } from "../hooks/use-memory";
-import type { MemoryFolder, MemoryNote } from "../types";
-
-/** A folder the person can write a note in, with what to call it. */
-export type FolderChoice = { key: string; label: string; folder: MemoryFolder };
+import type { FolderChoice, MemoryNote } from "../types";
 
 const NAME_PATTERN = "[a-z0-9][a-z0-9._\\-]{0,78}\\.md";
 

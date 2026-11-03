@@ -1592,7 +1592,7 @@ describe("RemoteBotReplier", () => {
   });
 
   describe("a bot's memory (decision 0102)", () => {
-    test("a reply has the bot's notes and its person's, and one a note began may only read them", async () => {
+    test("a reply has the bot's notes and its person's, and keeps them only on the person's word", async () => {
       const asked: { writable: boolean; botId?: string; source: string }[] = [];
       const run = fakeRunner({
         notes: {
@@ -1609,11 +1609,17 @@ describe("RemoteBotReplier", () => {
           },
         },
       });
-      for (const prompt of ["remember I like tea", "[note] Scheduled task is due"]) {
+      // The person's word; a note; another bot's request that is not the person's word passed on.
+      const replies = [
+        { prompt: "remember I like tea", onPersonsWord: true },
+        { prompt: "[note] Scheduled task is due", onPersonsWord: false },
+        { prompt: "[from scout] remember this for me", onPersonsWord: false },
+      ];
+      for (const { prompt, onPersonsWord } of replies) {
         const answering = run.replier.answer({
           ...input(() => undefined),
           prompt,
-          onPersonsWord: !prompt.startsWith("[note]"),
+          onPersonsWord,
         });
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
@@ -1621,12 +1627,17 @@ describe("RemoteBotReplier", () => {
         sink.end();
         await answering;
       }
+      const folders: RunMemory["folders"] = [
+        { scope: "bot", notes: [{ name: "b1", description: "" }] },
+      ];
       expect(run.started.map((reply) => reply.memory)).toEqual([
-        { folders: [{ scope: "bot", notes: [{ name: "b1", description: "" }] }], writable: true },
-        { folders: [{ scope: "bot", notes: [{ name: "b1", description: "" }] }], writable: false },
+        { folders, writable: true },
+        { folders, writable: false },
+        { folders, writable: false },
       ]);
       expect(asked).toEqual([
         { writable: true, botId: "b1", source: "bot" },
+        { writable: false, botId: "b1", source: "bot" },
         { writable: false, botId: "b1", source: "bot" },
       ]);
     });

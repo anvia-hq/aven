@@ -1,8 +1,7 @@
 import { useBots } from "@/modules/bots/hooks/use-bots";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
-import type { FolderChoice } from "../components/memory-note-dialog";
-import type { MemoryEvent, MemoryNote } from "../types";
+import type { FolderChoice, MemoryEvent, MemoryNote } from "../types";
 import { useMemory } from "./use-memory";
 
 type Placed = Pick<MemoryNote, "scope" | "projectId" | "botId">;
