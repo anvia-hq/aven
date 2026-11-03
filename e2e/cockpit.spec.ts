@@ -87,10 +87,9 @@ test.describe("Cockpit", () => {
     // Deleted while a save waits: the save is dropped, not sent to a record that is gone.
     const failed: string[] = [];
     page.on("response", (response) => {
-      if (!response.ok())
-        failed.push(
-          `${response.request().method()} ${response.status()} ${new URL(response.url()).pathname}`,
-        );
+      // A 304 is the browser's cache answering, not a failure.
+      if (response.status() >= 400)
+        failed.push(`${response.request().method()} ${response.status()}`);
     });
     await reader.locator(".bn-editor").click();
     await page.keyboard.type(" Gone.");
