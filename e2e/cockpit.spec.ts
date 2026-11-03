@@ -87,7 +87,10 @@ test.describe("Cockpit", () => {
     // Deleted while a save waits: the save is dropped, not sent to a record that is gone.
     const failed: string[] = [];
     page.on("response", (response) => {
-      if (!response.ok()) failed.push(`${response.request().method()} ${response.status()}`);
+      if (!response.ok())
+        failed.push(
+          `${response.request().method()} ${response.status()} ${new URL(response.url()).pathname}`,
+        );
     });
     await reader.locator(".bn-editor").click();
     await page.keyboard.type(" Gone.");
@@ -299,8 +302,11 @@ test.describe("Cockpit", () => {
     await page.goto("/cockpit/tasks");
     const failed: string[] = [];
     page.on("response", (response) => {
-      if (!response.ok() && response.url().includes("/cockpit/")) {
-        failed.push(`${response.request().method()} ${response.status()}`);
+      // A 304 is the browser's cache answering, not a failure.
+      if (response.status() >= 400 && response.url().includes("/cockpit/")) {
+        failed.push(
+          `${response.request().method()} ${response.status()} ${new URL(response.url()).pathname}`,
+        );
       }
     });
 
