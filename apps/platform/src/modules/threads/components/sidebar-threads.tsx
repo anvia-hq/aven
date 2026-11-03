@@ -1,5 +1,6 @@
 import { Archive, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { cn } from "cn";
 import { useEffect } from "react";
 
 import { Button } from "@/components/button";
@@ -9,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/sidebar";
+import { shortTimeAgo, timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -40,6 +42,23 @@ function SidebarProjectTile({
       name={project.name}
       className={thread.running ? "animate-pulse" : undefined}
     />
+  );
+}
+
+// When the thread last changed, at the row's end. With `yields` it gives way to the Archive button
+// on hover, which takes its place.
+function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolean }) {
+  return (
+    <time
+      dateTime={thread.updatedAt}
+      title={timeAgo(thread.updatedAt, true)}
+      className={cn(
+        "shrink-0 text-xs text-muted-foreground tabular-nums",
+        yields && "group-focus-within/menu-item:opacity-0 group-hover/menu-item:opacity-0",
+      )}
+    >
+      {shortTimeAgo(thread.updatedAt)}
+    </time>
   );
 }
 
@@ -104,6 +123,7 @@ export function SidebarThreads() {
               <span className="flex-1 truncate" title={hostLabel(thread)}>
                 {thread.title}
               </span>
+              <UpdatedAt thread={thread} yields />
             </SidebarMenuButton>
             <SidebarMenuAction
               showOnHover
@@ -140,6 +160,7 @@ export function SidebarThreads() {
                   <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
                     {thread.title}
                   </span>
+                  <UpdatedAt thread={thread} />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

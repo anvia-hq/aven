@@ -4,6 +4,23 @@ import { formatDistanceToNowStrict } from "date-fns";
 export const timeAgo = (iso: string, suffix = false) =>
   formatDistanceToNowStrict(new Date(iso), { addSuffix: suffix });
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+// How long ago in a few letters, for a row with no room for words: "now", "5m", "3h", "2d", "4w",
+// "6mo", "1y".
+export function shortTimeAgo(iso: string, now = Date.now()) {
+  const past = Math.max(0, now - Date.parse(iso));
+  if (past < MINUTE) return "now";
+  if (past < HOUR) return `${Math.floor(past / MINUTE)}m`;
+  if (past < DAY) return `${Math.floor(past / HOUR)}h`;
+  if (past < 7 * DAY) return `${Math.floor(past / DAY)}d`;
+  if (past < 30 * DAY) return `${Math.floor(past / (7 * DAY))}w`;
+  if (past < 365 * DAY) return `${Math.floor(past / (30 * DAY))}mo`;
+  return `${Math.floor(past / (365 * DAY))}y`;
+}
+
 export const initials = (name: string) =>
   name
     .split(/\s+/)

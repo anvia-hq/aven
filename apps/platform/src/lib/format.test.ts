@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { elapsed, storageSize, storageUsage } from "./format";
+import { elapsed, shortTimeAgo, storageSize, storageUsage } from "./format";
 
 describe("elapsed", () => {
   test("is seconds under a minute", () => {
@@ -43,5 +43,26 @@ describe("storageUsage", () => {
     expect(storageUsage(6.4 * 1024 ** 3, 15.6 * 1024 ** 3)).toBe("6.4 of 15.6 GB");
     expect(storageUsage(1.5 * 1024 ** 4, 2 * 1024 ** 4)).toBe("1.5 of 2.0 TB");
     expect(storageUsage(200, 1000)).toBe("200 B of 1000 B");
+  });
+});
+
+describe("shortTimeAgo", () => {
+  const now = Date.parse("2026-11-03T12:00:00Z");
+  const ago = (ms: number) => shortTimeAgo(new Date(now - ms).toISOString(), now);
+  const MIN = 60_000;
+  const DAY = 24 * 60 * MIN;
+
+  test("says the largest unit that fits, in a few letters", () => {
+    expect(ago(30_000)).toBe("now");
+    expect(ago(5 * MIN)).toBe("5m");
+    expect(ago(3 * 60 * MIN)).toBe("3h");
+    expect(ago(2 * DAY)).toBe("2d");
+    expect(ago(15 * DAY)).toBe("2w");
+    expect(ago(65 * DAY)).toBe("2mo");
+    expect(ago(400 * DAY)).toBe("1y");
+  });
+
+  test("is now for a time a little ahead of the clock", () => {
+    expect(ago(-5_000)).toBe("now");
   });
 });
