@@ -2,6 +2,8 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **41**: a run and a bot's reply carry the agent's memory (`memory` on `run.start`, `run.resume` and `bot.reply`), and the agent works its notes with the calls `memory.notes` and `bot.notes` (decision 0102).
+- **40**: a bot can stop a thread's run, `bot.thread` `stop` (decision 0101). A runner that has not updated is refused until `aven update`.
 - **39**: the control plane can steer a run that is going, `run.steer` (a `call` with `{ runId, steerId, prompt, mentions? }` that answers with a `SteerResult`), and a run's events can say `steer_applied` (decision 0098; `run.steer` was gone since version 3). A runner that has not updated is refused until `aven update`.
 - **38**: `run.start` can say `compact`: the run only summarizes the thread's history, in no sandbox and with no tools (decision 0097). A runner that has not updated is refused until `aven update`.
 - **37**: a bot looks at the person's projects and threads and, on their word, starts a thread, sends a message to one of their own and archives one, `bot.thread` (decision 0088). A runner that has not updated is refused until `aven update`.

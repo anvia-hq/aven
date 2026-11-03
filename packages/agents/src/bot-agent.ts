@@ -12,6 +12,8 @@ import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools, type McpServersHost } from "./tools/mcp-servers";
 import { createProviderTools, type ProvidersHost } from "./tools/providers";
 import { createThreadTools, type ThreadsHost } from "./tools/threads";
+import { createMemoryTool, type MemoryHost } from "./tools/memory";
+import type { RunMemory } from "@aven/protocol/memory";
 import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
@@ -66,6 +68,11 @@ type BotAgentOptions = ModelSource & {
   providers?: ProvidersHost;
   /** Looks at the person's threads and, on their word, works them (decision 0088); without it the bot cannot. */
   threads?: ThreadsHost;
+  /**
+   * The bot's notes and its person's, which outlive the chat (decision 0102): what the instructions
+   * list and what the `memory` tool asks. `memory` above is the chat itself.
+   */
+  notes?: { memory: RunMemory; host: MemoryHost };
 };
 
 // A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
@@ -94,6 +101,7 @@ export function createBotAgent({
   mcpServers,
   providers,
   threads,
+  notes,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -117,6 +125,7 @@ export function createBotAgent({
       mcpServers: Boolean(mcpServers),
       providers: providers ? { keyForm: Boolean(providers.askKey) } : undefined,
       threads: Boolean(threads),
+      notes: notes?.memory,
     }),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
@@ -133,10 +142,12 @@ export function createBotAgent({
       ...keepingMcpServers(mcpServers),
       ...keepingProviders(providers),
       ...workingThreads(threads),
+      ...keepingNotes(notes?.host),
     ],
   });
 }
 
+const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
 const working = (goals?: GoalHost) => (goals ? createGoalTools(goals) : []);
 const scheduling = (schedules?: ScheduleHost) => (schedules ? createScheduleTools(schedules) : []);
 const asking = (askQuestion?: AskQuestion) =>

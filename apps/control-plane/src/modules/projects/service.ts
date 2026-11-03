@@ -1,5 +1,6 @@
 import { db } from "@aven/db/client";
 import { environmentVariables } from "@aven/db/schema/environment-variables";
+import { memoryNotes } from "@aven/db/schema/memory-notes";
 import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
@@ -114,7 +115,7 @@ export const projectsService = {
   },
 
   // Deletes a project (decision 0094): it is hidden, not removed. Its threads are archived, so they
-  // leave the lists and stay for what counts them; its variables, which may be secrets, are wiped;
+  // leave the lists and stay for what counts them; its variables, which may be secrets, and its memory notes are wiped;
   // and the repository can be imported again. A run in any of its threads is stopped once that is
   // done (`cancelRun` is the run manager's). Threads and files on the runner are left as archiving
   // leaves them.
@@ -129,6 +130,8 @@ export const projectsService = {
     const threadIds = await db.transaction(async (tx) => {
       await tx.update(projects).set({ deletedAt: new Date() }).where(eq(projects.id, project.id));
       await tx.delete(environmentVariables).where(eq(environmentVariables.projectId, project.id));
+      // Every person's notes of the project go with it (decision 0102).
+      await tx.delete(memoryNotes).where(eq(memoryNotes.projectId, project.id));
       const archived = await tx
         .update(threads)
         .set({ state: "archived" })

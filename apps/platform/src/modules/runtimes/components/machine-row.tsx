@@ -61,7 +61,7 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
 
 // One runner as a single card: whether it is online, its name, and CPU, memory and disk as three
 // small upright meters, each with its label over its percent; the detail behind them is on hover,
-// and a click goes to the runtimes (decision 0091). Each row is a card of its own (decision 0100).
+// and a click goes to the runtimes (decision 0091). Each row is a card of its own (decision 0103).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
   // Numbers from a runner that stopped reporting are not shown as its load now.
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;

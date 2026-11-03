@@ -5,6 +5,7 @@
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
+import type { MemoryCommand, RunMemory } from "./memory";
 import type { BotProviderView, ProviderKeyAsk } from "./providers";
 import type { BotScheduleView } from "./schedules";
 import type { BotProjectView, BotThreadDetail, BotThreadView } from "./threads";
@@ -284,6 +285,8 @@ export type ControlPlaneToRuntime =
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
+      /** The sender's memory in the thread's project, which the instructions list (decision 0102). */
+      memory?: RunMemory;
       model?: RunModel;
     }
   /** Continue a run that suspended on a question: `continuation` is what its `run.end` carried, `response` the user's answers. Both are opaque Anvia values. */
@@ -298,6 +301,7 @@ export type ControlPlaneToRuntime =
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
+      memory?: RunMemory;
       model?: RunModel;
     }
   | { type: "run.cancel"; runId: string; reason: string }
@@ -318,6 +322,8 @@ export type ControlPlaneToRuntime =
       skills?: RunSkill[];
       /** The person's enabled MCP servers for bots (decision 0085), which the runner connects for this reply. */
       mcp?: RunMcpServer[];
+      /** The bot's memory and its owner's, which the instructions list (decision 0102). */
+      memory?: RunMemory;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
   /** After a reconnect: the control plane still follows this run and has everything up to `after`; send what came later, then carry on. */
@@ -398,8 +404,11 @@ export type RuntimeToControlPlane =
   | { type: "terminal.closed"; viewerId: string; reason: string }
   | Reply;
 
-/** The runtime adds a turn to the transcript, which the control plane owns (decision 0021). */
-export type MemoryCallMethod = "memory.append";
+/**
+ * The runtime adds a turn to the transcript, which the control plane owns (decision 0021), and
+ * works the agent's memory notes, `memory.notes` (decision 0102).
+ */
+export type MemoryCallMethod = "memory.append" | "memory.notes";
 
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
@@ -423,7 +432,8 @@ export type BotCallMethod =
   | "bot.skill"
   | "bot.mcp"
   | "bot.provider"
-  | "bot.thread";
+  | "bot.thread"
+  | "bot.notes";
 
 /**
  * The runner says how each MCP server of a run connected (decision 0085): `error` is why it did not,
@@ -539,6 +549,7 @@ export type BotThreadParams = { replyId: string } & (
   | ({ op: "start"; projectId: string; prompt: string; title?: string } & ThreadModelChoice)
   | ({ op: "continue"; id: string; prompt: string } & ThreadModelChoice)
   | { op: "archive"; id: string; archived?: boolean }
+  | { op: "stop"; id: string }
 );
 
 /** The projects for `projects`, threads for `list`, a thread with its latest turns for `get`, the thread acted on for the rest. */
@@ -549,6 +560,15 @@ export type BotSkillParams = { replyId: string; digest: string };
 
 /** A skill's folder as a `.tar.gz`, in base64. */
 type SkillArchive = { data: string };
+
+/**
+ * A memory command of the agent of a run (decision 0102): answered for the run's sender and
+ * project, in words the model reads.
+ */
+export type MemoryNotesParams = { runId: string; command: MemoryCommand };
+
+/** A memory command of a bot's reply: answered for the reply's bot and its owner (decision 0102). */
+export type BotNotesParams = { replyId: string; command: MemoryCommand };
 
 type MemoryAppendParams = {
   runId: string;
@@ -675,6 +695,8 @@ export type RuntimeCalls = {
   "bot.mcp": { params: BotMcpParams; result: BotMcped };
   "bot.provider": { params: BotProviderParams; result: BotProvided };
   "bot.thread": { params: BotThreadParams; result: BotThreaded };
+  "bot.notes": { params: BotNotesParams; result: string };
+  "memory.notes": { params: MemoryNotesParams; result: string };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -692,4 +714,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 39;
+export const WIRE_VERSION = 41;

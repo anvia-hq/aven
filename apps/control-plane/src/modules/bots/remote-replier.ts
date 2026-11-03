@@ -20,6 +20,7 @@ import type {
   BotSent,
   BotMcped,
   BotMcpParams,
+  BotNotesParams,
   BotProvided,
   BotProviderParams,
   BotThreaded,
@@ -29,6 +30,7 @@ import type {
   RunSkill,
 } from "@aven/protocol/runtime-wire";
 import { isGoalRoundNote, type BotGoalView, type GoalAction } from "@aven/protocol/goals";
+import type { MemoryCommand, MemoryFolder } from "@aven/protocol/memory";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import type { RunGateway } from "../runtimes/gateway";
@@ -39,6 +41,8 @@ import type { BotReplier, BotReplyInput } from "./runner";
 import type { UpdateBotBody } from "./schema";
 import type { GoalInput } from "../goals/service";
 import type { BotMcp } from "../mcp/bot-access";
+import type { MemoryCaller } from "../memory/commands";
+import type { MemoryOwner } from "../memory/service";
 import type { BotProviders } from "../providers/bot-access";
 import type { BotThreads } from "../threads/bot-access";
 import type { SchedulePatch, ScheduleInput } from "../schedules/service";
@@ -68,6 +72,12 @@ export type BotKeeper = {
   };
   /** A bot just made says hello to its person, unasked (decision 0063). */
   greet(userId: string, botId: string, hops: number): Promise<void>;
+};
+
+/** A bot's memory and its owner's (decision 0102): what its instructions list, and its commands. */
+export type BotMemoryNotes = {
+  folders(owner: MemoryOwner): Promise<MemoryFolder[]>;
+  run(caller: MemoryCaller, command: MemoryCommand): Promise<string>;
 };
 
 /** The skills a bot's reply has: the person's enabled ones and the built-in ones, and their archives (decision 0081). */
@@ -109,6 +119,7 @@ export class RemoteBotReplier implements BotReplier {
     private mcp: BotMcp,
     private providers: BotProviders,
     private threads: BotThreads,
+    private notes: BotMemoryNotes,
   ) {}
 
   ready(model: ModelConfig) {
@@ -124,6 +135,7 @@ export class RemoteBotReplier implements BotReplier {
     attachments,
     hops,
     onPersonsWord,
+    aboutThread,
     say,
     ask,
     signal,
@@ -141,6 +153,13 @@ export class RemoteBotReplier implements BotReplier {
     // The person's MCP servers for bots, which the runner connects for this reply (decision 0085).
     const mcpServers = await this.mcp.forRun(userId);
     const givenMcp = new Set(mcpServers.map((server) => server.id));
+    // The bot's notes and its owner's, kept only on the person's word: their own message, or the
+    // main bot passing it on while it was theirs. A reply a note began, or another bot's request
+    // that a note may be behind, only reads them, so what a schedule's task or a thread wrote is
+    // never kept by itself (decision 0102).
+    const memoryOwner = { userId, botId: bot.id };
+    const keepsNotes = onPersonsWord;
+    const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
     const connection = this.#connection();
     const replyId = crypto.randomUUID();
@@ -156,6 +175,8 @@ export class RemoteBotReplier implements BotReplier {
     let written = 0;
     let asked = false;
     let threadRuns = 0;
+    // The threads this reply looked at with get_thread: a note's follow-up acts only on one of them.
+    const inspected = new Set<string>();
     // As itself, whichever bot the runner might name, and only so many to a reply.
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -329,11 +350,13 @@ export class RemoteBotReplier implements BotReplier {
         const { kind, name, baseUrl, modelId, isDefault } = params;
         return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
       },
-      // The person's threads are theirs: any bot may look, and only their own message may start one,
-      // send a message to one or archive one, as a person's message in a thread starts an agent as
-      // them. What a thread's agent wrote, a page or another bot said is not their word, and only so
-      // many threads are started or continued in a reply, so a thread cannot talk a bot into more
-      // (decision 0088).
+      // The person's threads are theirs: any bot may look, and only their own message may start,
+      // continue, stop or archive one, as a person's message in a thread starts an agent as them.
+      // What a thread's agent wrote, a page or another bot said is not their word (decision 0088).
+      // The one exception is a note about a thread this bot sent a run to: it may continue or stop
+      // that thread, once it has looked at it in this reply, a few times until the person's word
+      // (decision 0101). Only so many threads are started, continued or stopped in a reply, so a
+      // thread cannot talk a bot into more.
       thread: async (params: BotThreadParams): Promise<BotThreaded> => {
         if (params.op === "projects") return this.threads.projects(userId);
         if (params.op === "list") {
@@ -342,25 +365,28 @@ export class RemoteBotReplier implements BotReplier {
             archived: params.archived,
           });
         }
-        if (params.op === "get") return this.threads.get(userId, params.id);
-        if (!makesBotsOnTheirWord) {
-          throw new Error(
-            "Start, continue or archive threads only when the person asks you to, in their own message",
-          );
+        if (params.op === "get") {
+          const seen = await this.threads.get(userId, params.id);
+          inspected.add(params.id);
+          return seen;
         }
+        const via = makesBotsOnTheirWord ? "person" : "note";
+        if (via === "note") this.#mayFollowUp(params, { note, aboutThread, inspected });
+        const actor = { userId, botId: bot.id, via } as const;
         if (params.op === "archive") {
-          return this.threads.archive(userId, params.id, params.archived ?? true);
+          return this.threads.archive(actor, params.id, params.archived ?? true);
         }
         if (threadRuns >= BOT_THREAD_RUNS_PER_REPLY) {
           throw new Error(
-            `You have started or continued threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
+            `You have started, continued or stopped threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
           );
         }
         threadRuns += 1;
+        if (params.op === "stop") return this.threads.stop(actor, params.id);
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
-        if (params.op === "continue") return this.threads.continue(userId, params.id, choice);
-        return this.threads.start(userId, {
+        if (params.op === "continue") return this.threads.continue(actor, params.id, choice);
+        return this.threads.start(actor, {
           ...choice,
           projectId: params.projectId,
           title: params.title,
@@ -377,6 +403,11 @@ export class RemoteBotReplier implements BotReplier {
         if (!changed) throw new Error("This bot no longer exists");
         return { name: changed.name, description: changed.description };
       },
+      notes: ({ command }: Omit<BotNotesParams, "replyId">) =>
+        this.notes.run(
+          { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: keepsNotes },
+          command,
+        ),
     };
     const cancel = () => this.#cancel(replyId, signal);
     try {
@@ -399,6 +430,7 @@ export class RemoteBotReplier implements BotReplier {
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,
+          memory: { folders, writable: keepsNotes },
         },
         sink,
       );
@@ -407,6 +439,28 @@ export class RemoteBotReplier implements BotReplier {
     } finally {
       signal.removeEventListener("abort", cancel);
       this.gateway.revoke(replyId);
+    }
+  }
+
+  // Whether a reply a note began may do this to a thread (decision 0101): only continue or stop it,
+  // only the thread the note is about, and only once it has looked at it with get_thread, so it acts
+  // on where the thread is now and not on the note. Another bot's message may do none of it.
+  #mayFollowUp(
+    params: Exclude<BotThreadParams, { op: "projects" | "list" | "get" }>,
+    reply: { note?: boolean; aboutThread?: string; inspected: ReadonlySet<string> },
+  ) {
+    const asked = "only when the person asks you to, in their own message";
+    if (params.op === "start" || params.op === "archive") {
+      throw new Error(`Start or archive threads ${asked}`);
+    }
+    if (!reply.note) throw new Error(`Continue or stop a thread ${asked}`);
+    if (params.id !== reply.aboutThread) {
+      throw new Error(`This note is not about that thread: continue or stop it ${asked}`);
+    }
+    if (!reply.inspected.has(params.id)) {
+      throw new Error(
+        "Look at the thread with get_thread first, in this reply: act on where it is now, not on the note",
+      );
     }
   }
 

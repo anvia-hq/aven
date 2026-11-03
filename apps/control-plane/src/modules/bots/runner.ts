@@ -40,6 +40,11 @@ export type BotReplyInput = {
   onPersonsWord: boolean;
   /** How many messages between bots led to this one: none when the person said it (decision 0065). */
   hops: number;
+  /**
+   * The thread a note is about, when it is the app's word on a thread the bot sent a run to: the
+   * one thread such a reply may follow up (decision 0101).
+   */
+  aboutThread?: string;
   /** Shows a message the bot sent the person, once it has been "typed". */
   say(text: string): void;
   /** Shows the person a question the bot asks, as a card (decision 0066). */
@@ -159,7 +164,14 @@ export class BotRunner {
   // The app wakes the bot with a note the chat does not show, such as to greet its person when it
   // was just made (decision 0063). What the bot says is in the chat as usual. `hops` is how many
   // messages between bots led to the wake, so a bot made at the end of a chain starts none afresh.
-  async wake(bot: Bot, userId: string, note: string, hops: number, model: ModelConfig) {
+  async wake(
+    bot: Bot,
+    userId: string,
+    note: string,
+    hops: number,
+    model: ModelConfig,
+    aboutThread?: string,
+  ) {
     await this.#enqueue({
       bot,
       userId,
@@ -167,6 +179,7 @@ export class BotRunner {
       prompt: botNote(note),
       hops,
       onPersonsWord: false,
+      aboutThread,
       shown: null,
     });
   }

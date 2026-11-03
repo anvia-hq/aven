@@ -8,6 +8,7 @@ import {
   GOAL_REASON_MAX,
 } from "@aven/protocol/goals";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
+import { MEMORY_NOTE_MAX, type MemoryCommand } from "@aven/protocol/memory";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
 import {
@@ -70,6 +71,8 @@ const callMethods = [
   "bot.mcp",
   "bot.provider",
   "bot.thread",
+  "bot.notes",
+  "memory.notes",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
@@ -462,6 +465,37 @@ const threadModel = {
   modelId: z.string().trim().min(1).max(200).optional(),
   reasoningEffort: z.string().trim().min(1).max(20).optional(),
 };
+// What an agent asks of its memory (decision 0102). Paths are checked against the owner's folders
+// when the command is answered; here only their size.
+const memoryPath = z.string().min(1).max(200);
+const memoryText = z.string().max(MEMORY_NOTE_MAX);
+const lineNumber = z.number().int().min(-1).max(100_000);
+const memoryCommand = z.discriminatedUnion("command", [
+  z.object({
+    command: z.literal("view"),
+    path: memoryPath,
+    viewRange: z.tuple([lineNumber, lineNumber]).optional(),
+  }),
+  z.object({ command: z.literal("create"), path: memoryPath, fileText: memoryText }),
+  z.object({
+    command: z.literal("str_replace"),
+    path: memoryPath,
+    oldStr: memoryText,
+    newStr: memoryText,
+  }),
+  z.object({
+    command: z.literal("insert"),
+    path: memoryPath,
+    insertLine: lineNumber,
+    insertText: memoryText,
+  }),
+  z.object({ command: z.literal("delete"), path: memoryPath }),
+  z.object({ command: z.literal("rename"), oldPath: memoryPath, newPath: memoryPath }),
+]) satisfies z.ZodType<MemoryCommand>;
+
+const memoryNotesParams = z.object({ runId, command: memoryCommand });
+const botNotesParams = z.object({ replyId, command: memoryCommand });
+
 const botThreadParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("projects") }),
   z.object({
@@ -492,6 +526,7 @@ const botThreadParams = z.discriminatedUnion("op", [
     id: z.uuid(),
     archived: z.boolean().optional(),
   }),
+  z.object({ replyId, op: z.literal("stop"), id: z.uuid() }),
 ]);
 
 // A skill of a bot's reply, by its digest.
@@ -530,6 +565,8 @@ export const parseBotThreadParams = (params: unknown) =>
 export const parseBotSkillParams = (params: unknown) =>
   parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);
+export const parseMemoryNotesParams = (params: unknown) => parseParams(memoryNotesParams, params);
+export const parseBotNotesParams = (params: unknown) => parseParams(botNotesParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
 export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);

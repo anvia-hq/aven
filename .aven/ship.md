@@ -34,7 +34,8 @@ Ship this thread's work.
 
 7. **Record a decision** when the change makes a choice worth keeping: add
    `docs/decision/<next number>-<name>.md` with a `# Title`, a `Status:` line and Context, Decision
-   and Consequences, as `AGENTS.md` asks.
+   and Consequences, as `AGENTS.md` asks. Take the number after step 2's rebase: another change
+   on `main` may have used the one you had in mind.
 
 8. **Push the branch:** `git push -u origin HEAD`. Never force-push, and never push to `main`.
 

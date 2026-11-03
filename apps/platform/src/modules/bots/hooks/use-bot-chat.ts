@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { attempt, postJson } from "@/lib/api";
 import { refreshMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
+import { refreshMemory } from "@/modules/memory/hooks/use-memory";
 import { refreshProviders } from "@/modules/providers/hooks/use-providers";
 import type { AttachmentUpload } from "@/modules/threads/types";
 
@@ -58,12 +59,13 @@ export function useBotChat(botId: string) {
       if (event.type === "error") setError(event.message);
       if (event.type === "typing" && event.typing) setError(null);
       // A reply that ends may have made a bot or changed one (decisions 0060 and 0061), or changed
-      // the person's MCP servers or providers (decisions 0085 and 0086), and a chat that opens is
+      // the person's MCP servers, providers or memory (decisions 0085, 0086 and 0102), and a chat that opens is
       // the first look at what changed while another was open.
       if (event.type === "snapshot" || (event.type === "typing" && !event.typing)) {
         void refreshBots();
         refreshMcpServers();
         refreshProviders();
+        refreshMemory();
       }
     };
     source.onerror = () => {

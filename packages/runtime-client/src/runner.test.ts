@@ -649,6 +649,97 @@ describe("startRuntime", () => {
     });
   });
 
+  test("the agent keeps notes through the control plane, told of them in its instructions, with the run's secrets hidden (decision 0102)", async () => {
+    const memory = {
+      folders: [
+        { scope: "project" as const, notes: [{ name: "staging.md", description: "Shared" }] },
+        { scope: "personal" as const, notes: [] },
+      ],
+      writable: true,
+    };
+    const built: Parameters<CreateRuntimeAgent>[0][] = [];
+    const sandbox: ThreadWorkspaces = {
+      async acquire(): Promise<ThreadSandbox> {
+        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
+      },
+      desktop: () => undefined,
+      workspace: async () => undefined,
+      async release() {},
+      async dispose() {},
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: (input) => {
+        built.push(input);
+        return {
+          agent: new Agent({
+            id: input.id,
+            instructions: "x",
+            tools: [...input.tools],
+            model: scriptedModel([
+              [
+                {
+                  type: "tool-call",
+                  toolCallId: "m1",
+                  toolName: "memory",
+                  input: {
+                    command: "create",
+                    path: "/memories/project/db.md",
+                    file_text: "The database is postgres://very-secret-value",
+                  },
+                },
+              ],
+              [text("done")],
+            ]),
+          }),
+        };
+      },
+    });
+    await runtime.ready;
+    plane.send({
+      ...runStart,
+      memory,
+      env: [{ name: "DATABASE_URL", value: "postgres://very-secret-value", secret: true }],
+    });
+
+    const asked = () =>
+      plane.received.find(
+        (message) => message.type === "call" && message.method === "memory.notes",
+      );
+    await until(() => asked() !== undefined);
+    const call = asked() as { id: string; params: unknown };
+    expect(call.params).toEqual({
+      runId: "run-1",
+      command: {
+        command: "create",
+        path: "/memories/project/db.md",
+        fileText: "The database is [redacted]",
+      },
+    });
+    plane.send({ type: "reply", id: call.id, ok: true, result: "Saved /memories/project/db.md." });
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+
+    expect(built[0]?.memory).toEqual(memory);
+    expect(built[0]?.tools.map((tool) => tool.name)).toContain("memory");
+    expect(JSON.stringify(plane.received)).toContain("Saved /memories/project/db.md.");
+  });
+
+  test("a run without memory has no memory tool", async () => {
+    const built: Parameters<CreateRuntimeAgent>[0][] = [];
+    const sandbox = directoryWorkspaces();
+    cleanups.push(() => sandbox.dispose());
+    const inner = reply();
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: (input) => (built.push(input), inner(input)),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    expect(built[0]?.tools.map((tool) => tool.name)).not.toContain("memory");
+    expect(built[0]?.memory).toBeUndefined();
+  });
+
   test("a run whose history grows past a megabyte, as screenshots and command output make it, does not end", async () => {
     // What a few desktop screenshots amount to: results of a few hundred kilobytes each.
     const screenshot = createTool({

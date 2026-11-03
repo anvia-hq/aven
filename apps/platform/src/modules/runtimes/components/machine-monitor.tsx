@@ -2,7 +2,7 @@ import { useRuntimes } from "../hooks/use-runtimes";
 import { MachineRow } from "./machine-row";
 
 // The workspace's runners above Settings in the sidebar, one compact card each (decision 0091, as
-// 0100 changes it). It polls, as a machine's load changes without anyone doing anything; with no
+// 0103 changes it). It polls, as a machine's load changes without anyone doing anything; with no
 // runner there is nothing to show, and the cards give way when the sidebar is collapsed to icons.
 export function MachineMonitor() {
   const { runtimes } = useRuntimes({ poll: true });

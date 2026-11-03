@@ -26,7 +26,7 @@ import { runtimesService } from "../runtimes/service";
 import { RunGateway } from "../runtimes/gateway";
 import { RemoteRuntime } from "./remote-runtime";
 import type { RunThread } from "./runtime";
-import { RunBusyError, RunManager } from "./service";
+import { RunBusyError, RunManager, type RunEnding } from "./service";
 
 // Needs the migrated Postgres from DATABASE_URL; skipped when there is none.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -286,15 +286,21 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       throw new Error("500 The model is unavailable. Try again later.");
     };
     const kept = memoryFailures();
+    const endings: RunEnding[] = [];
     const manager = await managerWith(
       Array.from({ length: 20 }, () => refusing),
       {
         failures: kept.store,
+        onRunFinished: (_thread, ending) => void endings.push(ending),
       },
     );
     const thread = newThread();
     await manager.start(thread, "go");
     await until(async () => !manager.isRunning(thread.id), 60_000);
+    // What comes after the run, such as telling a bot that sent it, hears why (decision 0101).
+    await until(() => endings.length > 0);
+    expect(endings[0]).toMatchObject({ outcome: "failed" });
+    expect((endings[0] as { error: string }).error).toContain("The model is unavailable");
 
     // Nobody was watching when it failed: a client that opens the thread now is told.
     const later = attach(manager, thread);
@@ -322,6 +328,49 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await after.detach();
     expect(after.events[0]).not.toHaveProperty("error");
   }, 90_000);
+
+  test("what comes after a run hears how it ended and which run it was, and activity follows the run (decision 0101)", async () => {
+    const endings: { ending: RunEnding; startedAt: number }[] = [];
+    const manager = await managerWith(
+      [
+        [text("Done.")],
+        [
+          {
+            type: "tool-call",
+            toolCallId: "q2",
+            toolName: "ask_user",
+            input: { questions: [{ id: "go", text: "Go on?" }] },
+          },
+        ],
+        [toolCall("exec_command", { command: "sleep 43" })],
+      ],
+      {
+        onRunFinished: (_thread, ending, run) =>
+          void endings.push({ ending, startedAt: run.startedAt }),
+      },
+    );
+    const thread = newThread();
+    await manager.start(thread, "one");
+    const first = manager.activity(thread.id)!;
+    expect(first.lastEventAt).toBeGreaterThanOrEqual(first.startedAt);
+    await until(() => endings.length === 1);
+    expect(manager.activity(thread.id)).toBeUndefined();
+    expect(endings[0]).toEqual({ ending: { outcome: "done" }, startedAt: first.startedAt });
+
+    await manager.start(thread, "two");
+    await until(() => endings.length === 2);
+    expect(endings[1]!.ending).toEqual({ outcome: "question" });
+
+    // Another thread, whose run waits on a command: what it shows moves its last activity on.
+    const other = newThread();
+    await manager.start(other, "three");
+    const early = manager.activity(other.id)!;
+    await until(() => manager.activity(other.id)!.lastEventAt > early.lastEventAt);
+    await until(() => alive("sleep 43"));
+    manager.cancel(other.id);
+    await until(() => endings.length === 3);
+    expect(endings[2]).toEqual({ ending: { outcome: "cancelled" }, startedAt: early.startedAt });
+  });
 
   test("dropping every client does not cancel the run", async () => {
     const manager = await managerWith([

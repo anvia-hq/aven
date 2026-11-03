@@ -1,5 +1,6 @@
 import type { MemoryStore } from "@anvia/core";
 import type { RunEvent } from "@aven/protocol/events";
+import type { RunMemory } from "@aven/protocol/memory";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type {
   McpConnectResult,
@@ -19,6 +20,7 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
+import type { MemoryCaller } from "../memory/commands";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall, type CallBotReply } from "./runtime-calls";
 import { runtimesService } from "./service";
@@ -61,6 +63,8 @@ type Run = {
   skills: Set<string>;
   /** The ids of the run's MCP servers: the only ones its runtime may report on (decision 0085). */
   mcp: Set<string>;
+  /** Whose memory the run's agent works in (decision 0102). */
+  memory?: MemoryCaller;
   /** A cancel asked for while the run had no connection, sent when it has one again. */
   cancel?: string;
 };
@@ -124,6 +128,7 @@ export class RuntimeConnection {
     sink: RunSink,
     skills: string[] = [],
     mcp: string[] = [],
+    memory?: MemoryCaller,
   ) {
     this.#runs.set(runId, {
       thread,
@@ -132,6 +137,7 @@ export class RuntimeConnection {
       appended: new Set(),
       skills: new Set(skills),
       mcp: new Set(mcp),
+      memory,
     });
   }
 
@@ -146,6 +152,7 @@ export class RuntimeConnection {
       attachments?: RunAttachment[];
       skills?: RunSkill[];
       mcp?: RunMcpServer[];
+      memory?: RunMemory;
     },
     sink: BotReplySink,
   ) {

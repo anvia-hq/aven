@@ -13,6 +13,7 @@ export const GET_THREAD_TOOL_NAME = "get_thread";
 export const START_THREAD_TOOL_NAME = "start_thread";
 export const CONTINUE_THREAD_TOOL_NAME = "continue_thread";
 export const ARCHIVE_THREAD_TOOL_NAME = "archive_thread";
+export const STOP_THREAD_TOOL_NAME = "stop_thread";
 
 /**
  * What a bot may ask of the person's threads (decision 0088); whose word it takes, which threads
@@ -25,6 +26,7 @@ export type ThreadsHost = {
   start(input: StartThreadInput): Promise<BotThreadView>;
   continue(id: string, input: ContinueThreadInput): Promise<BotThreadView>;
   archive(id: string, archived: boolean): Promise<BotThreadView>;
+  stop(id: string): Promise<BotThreadView>;
 };
 
 const id = z.uuid().describe("The thread id from list_threads or start_thread.");
@@ -77,7 +79,7 @@ export type StartThreadInput = z.infer<typeof startSchema>;
 export type ContinueThreadInput = Omit<z.infer<typeof continueSchema>, "id">;
 
 const WORKING =
-  "The agent is working in the thread on its own and its first answer takes a while. Tell the person what you started and that it is in their Threads list under this title. Look at it with get_thread when they ask how it is going: do not wait for it.";
+  "The agent is working in the thread on its own and its answer takes a while. Tell the person what you started and that it is in their Threads list under this title, then stop: you get a note when its run ends, and then tell them how it went. Do not wait for it or keep checking; look at it with get_thread when they ask how it is going.";
 
 // How a bot works the person's threads (decision 0088): a thread is an agent that runs in the
 // repository of a project with the person's own accounts, so the host holds starting, continuing and
@@ -111,14 +113,14 @@ export function createThreadTools(host: ThreadsHost) {
   const start = createTool({
     name: START_THREAD_TOOL_NAME,
     description:
-      "Start a new thread in a project, when the person asks for work to be done in a repository: an agent starts on your prompt at once, as the person, with their GitHub account and variables, and may change files and open a pull request. Returns right away; the work goes on without you. Do not start one for something you can answer or do yourself.",
+      "Start a new thread in a project, when the person asks for work to be done in a repository: an agent starts on your prompt at once, as the person, with their GitHub account and variables, and may change files and open a pull request. Returns right away; the work goes on without you, and you get a note when its run ends. Do not start one for something you can answer or do yourself.",
     inputSchema: startSchema,
     execute: async (input) => ({ thread: await host.start(input), note: WORKING }),
   });
   const next = createTool({
     name: CONTINUE_THREAD_TOOL_NAME,
     description:
-      "Send a message to one of the person's own threads, when they ask, and the thread's agent carries on from it as it would from the person typing. It fails while the agent is still working or when it waits for the person's answer to a question. Returns right away.",
+      "Send a message to one of the person's own threads, and the thread's agent carries on from it as it would from the person typing. While its agent is working, the message reaches it at its next step and steers it; otherwise it starts a new run. It fails when the thread waits for the person's answer to a question. Returns right away.",
     inputSchema: continueSchema,
     execute: async ({ id, ...input }) => ({
       thread: await host.continue(id, input),
@@ -135,5 +137,12 @@ export function createThreadTools(host: ThreadsHost) {
     }),
     execute: async ({ id, archived = true }) => ({ thread: await host.archive(id, archived) }),
   });
-  return [projects, list, get, start, next, archive];
+  const stop = createTool({
+    name: STOP_THREAD_TOOL_NAME,
+    description:
+      "Stop the run of one of the person's own threads, as their Stop button does: the agent stops at once and what it started in its sandbox, such as a dev server, is left running. What it did so far is kept, and continue_thread carries on from it. Look at the thread with get_thread first.",
+    inputSchema: z.object({ id }),
+    execute: async ({ id }) => ({ thread: await host.stop(id) }),
+  });
+  return [projects, list, get, start, next, archive, stop];
 }

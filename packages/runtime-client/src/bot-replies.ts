@@ -9,6 +9,7 @@ import type { UpdateSelf } from "@aven/agents/tools/update-self";
 import type { GoalHost } from "@aven/agents/tools/goals";
 import type { McpNote } from "@aven/agents/mcp";
 import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
+import type { MemoryHost } from "@aven/agents/tools/memory";
 import type { ProvidersHost } from "@aven/agents/tools/providers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { ThreadsHost } from "@aven/agents/tools/threads";
@@ -16,6 +17,7 @@ import type { SendMessage } from "@aven/agents/tools/send-message";
 import { MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotMcpView } from "@aven/protocol/mcp";
+import type { RunMemory } from "@aven/protocol/memory";
 import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 import type { BotProjectView, BotThreadDetail, BotThreadView } from "@aven/protocol/threads";
@@ -71,6 +73,8 @@ export type CreateBotReplyAgent = (input: {
   providers: ProvidersHost;
   /** Looks at the person's threads and, on their word, works them (decision 0088). */
   threads: ThreadsHost;
+  /** The bot's notes and its person's, when the reply has them (decision 0102). */
+  notes?: { memory: RunMemory; host: MemoryHost };
 }) => Pick<Agent<unknown>, "generate">;
 
 // Builds the agent as a run's is: the model is reached through the control plane's gateway with the
@@ -94,6 +98,7 @@ export const defaultCreateBotAgent =
     mcpServers,
     providers,
     threads,
+    notes,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -124,6 +129,7 @@ export const defaultCreateBotAgent =
       mcpServers,
       providers,
       threads,
+      notes,
     });
 
 // What makes a message "typed": the wait before it is sent, which a cancel cuts short.
@@ -195,7 +201,7 @@ export class BotReplies {
 
   // One reply, which never throws: how it ended is told to the control plane.
   async #answer(
-    { replyId, bot, prompt, model, attachments, skills, mcp: servers }: BotReplyMessage,
+    { replyId, bot, prompt, model, attachments, skills, mcp: servers, memory }: BotReplyMessage,
     abort: AbortController,
   ) {
     const { send } = this.#context;
@@ -203,7 +209,12 @@ export class BotReplies {
     let mcp: ConnectedMcp | undefined;
     try {
       mcp = await this.#connectMcp(replyId, servers);
-      const agent = await this.#agentFor(replyId, bot, prompt, model, skills ?? [], mcp, abort);
+      const agent = await this.#agentFor(
+        replyId,
+        { bot, prompt, model, skills: skills ?? [], memory },
+        mcp,
+        abort,
+      );
       const asked = await this.#promptOf(bot.id, prompt, attachments);
       await agent.generate({ prompt: asked, session: { sessionId: bot.id }, abortSignal: signal });
       send({ type: "bot.end", replyId });
@@ -256,10 +267,19 @@ export class BotReplies {
 
   async #agentFor(
     replyId: string,
-    bot: BotReplyInfo,
-    prompt: string,
-    model: RunModel,
-    skills: readonly RunSkill[],
+    {
+      bot,
+      prompt,
+      model,
+      skills,
+      memory,
+    }: {
+      bot: BotReplyInfo;
+      prompt: string;
+      model: RunModel;
+      skills: readonly RunSkill[];
+      memory?: RunMemory;
+    },
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
   ) {
@@ -378,6 +398,13 @@ export class BotReplies {
           (await call("bot.thread", { replyId, op: "continue", id, ...input })) as BotThreadView,
         archive: async (id, archived) =>
           (await call("bot.thread", { replyId, op: "archive", id, archived })) as BotThreadView,
+        stop: async (id) =>
+          (await call("bot.thread", { replyId, op: "stop", id })) as BotThreadView,
+      },
+      // Whether the reply may change them is the control plane's to say, and it holds to it.
+      notes: memory && {
+        memory,
+        host: (command) => call("bot.notes", { replyId, command }),
       },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

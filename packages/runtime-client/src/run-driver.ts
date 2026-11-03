@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import type { DurableAgentRegistration } from "@anvia/durable";
+import type { RunMemory } from "@aven/protocol/memory";
 import { sentPrompt } from "@aven/agents/attachments";
 import type { McpNote } from "@aven/agents/mcp";
 import type { SkillListing } from "@aven/agents/skills";
@@ -48,6 +49,8 @@ export type CreateRuntimeAgent = (input: {
   envNames?: readonly string[];
   /** The MCP servers the run connected and the ones it could not (decision 0085). */
   mcp?: McpNote;
+  /** The person's memory the run was given, for the instructions (decision 0102); not a subagent's. */
+  memory?: RunMemory;
   model?: RunModel;
   /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
   role?: SubagentType;
@@ -326,6 +329,17 @@ export function createRunDriver(context: DriverContext) {
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+            // What the agent writes in its memory, and what it reads back, hides this run's
+            // secrets as its other tools do: a note the person or a bot wrote may hold one (decision 0102).
+            memory:
+              state.record.memory &&
+              (async (command) => {
+                const answer = await context.call("memory.notes", {
+                  runId,
+                  command: redact ? redact(command) : command,
+                });
+                return redact ? redact(answer) : answer;
+              }),
             // A subagent is not in the journal, so what it does is sent as it happens.
             emit: (event) => forward(event),
             // Nobody is there to answer a subagent, and it is not journaled: its agent id only
@@ -346,6 +360,7 @@ export function createRunDriver(context: DriverContext) {
           skills,
           envNames,
           mcp: mcp?.note,
+          memory: state.record.memory,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
@@ -533,6 +548,7 @@ export function createRunDriver(context: DriverContext) {
         compact: message.type === "run.start" ? message.compact : undefined,
         mentions: message.type === "run.start" ? message.mentions : undefined,
         skills: message.skills,
+        memory: message.memory,
         agentId: `run-${message.runId}`,
         turn: 0,
         phase: "chat",

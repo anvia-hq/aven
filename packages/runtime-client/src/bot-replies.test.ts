@@ -693,6 +693,33 @@ describe("BotReplies", () => {
     ]);
   });
 
+  test("a reply with memory has the bot's notes, worked through bot.notes (decision 0102)", async () => {
+    const memory = { folders: [{ scope: "bot" as const, notes: [] }], writable: true };
+    let given: Parameters<CreateBotReplyAgent>[0]["notes"];
+    const run = harness((input) => {
+      given = input.notes;
+      return agentThat([text("")])(input);
+    });
+
+    run.replies.start({ ...message, memory });
+    await run.until();
+    expect(given?.memory).toEqual(memory);
+    await given!.host({ command: "view", path: "/memories/bot" });
+    expect(run.calls).toContainEqual({
+      method: "bot.notes",
+      params: { replyId: "r1", command: { command: "view", path: "/memories/bot" } },
+    });
+
+    let none: unknown = "unset";
+    const plain = harness((input) => {
+      none = input.notes;
+      return agentThat([text("")])(input);
+    });
+    plain.replies.start(message);
+    await plain.until();
+    expect(none).toBeUndefined();
+  });
+
   test("the agent is told the bot's description as it is now", async () => {
     let described: string | undefined;
     const run = harness((input) => {
@@ -792,6 +819,9 @@ describe("BotReplies", () => {
           archive: async () => {
             throw new Error("not archived");
           },
+          stop: async () => {
+            throw new Error("not stopped");
+          },
         },
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
@@ -877,6 +907,7 @@ describe("BotReplies", () => {
         "start_thread",
         "continue_thread",
         "archive_thread",
+        "stop_thread",
       ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
@@ -925,6 +956,7 @@ describe("BotReplies", () => {
         "start_thread",
         "continue_thread",
         "archive_thread",
+        "stop_thread",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
       expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");

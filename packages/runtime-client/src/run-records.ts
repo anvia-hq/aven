@@ -3,6 +3,7 @@ import type { KeptAttachment } from "@aven/agents/attachments";
 import type { SkillListing } from "@aven/agents/skills";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { MessageMention } from "@aven/protocol/events";
+import type { RunMemory } from "@aven/protocol/memory";
 import type { RunModel, RunSkill, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
 import type { GoalState } from "./durable-goals";
@@ -26,6 +27,8 @@ export type RunRecord = {
   /** The skills the control plane gave the run, and what the agent is told of once they are in the sandbox (decision 0035). */
   skills?: RunSkill[];
   skillListing?: SkillListing[];
+  /** The person's memory the run was given (decision 0102): kept so a run taken up again is told of it. */
+  memory?: RunMemory;
   /** The agent the run's first part uses, and the run it has in the journal once submitted. */
   agentId: string;
   durableId?: string;

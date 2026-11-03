@@ -6,16 +6,22 @@ import { useWorkingWord } from "../hooks/use-working-word";
 
 // Three rows of three dots whose color runs from pale blue (top left) to indigo (bottom right), and
 // whose pulse crosses the grid diagonally, one step after another. The colors are the
-// `--working-from` and `--working-to` tokens of index.css.
+// `--working-from` and `--working-to` tokens of index.css. Also beside a running thread in the
+// sidebar, where `label` names it, as it is the only thing there that says the thread works.
 const STEPS = 4;
 const DOTS = Array.from({ length: 9 }, (_, index) => {
   const step = Math.floor(index / 3) + (index % 3);
   return { index, step };
 });
 
-function Dots() {
+export function WorkingDots({ label }: { label?: string }) {
   return (
-    <span className="grid grid-cols-3 gap-[2px]" aria-hidden>
+    <span
+      className="grid shrink-0 grid-cols-3 gap-[2px]"
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+    >
       {DOTS.map(({ index, step }) => (
         <span
           key={index}
@@ -82,7 +88,7 @@ type Props = {
 export function WorkingIndicator({ startedAt = null }: Props) {
   return (
     <div className="sticky bottom-48 z-10 flex items-center gap-2 bg-background text-sm text-muted-foreground">
-      <Dots />
+      <WorkingDots />
       <WorkingWord />
       {startedAt !== null && <WorkingTime startedAt={startedAt} />}
     </div>

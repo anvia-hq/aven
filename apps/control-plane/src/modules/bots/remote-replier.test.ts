@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { RunMemory } from "@aven/protocol/memory";
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
@@ -18,7 +19,12 @@ import { ModelUnavailableError } from "../providers/resolve-model";
 import type { BotThreads } from "../threads/bot-access";
 import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
 import type { BotLetter } from "./chats";
-import { RemoteBotReplier, type BotKeeper, type BotSkills } from "./remote-replier";
+import {
+  RemoteBotReplier,
+  type BotKeeper,
+  type BotMemoryNotes,
+  type BotSkills,
+} from "./remote-replier";
 import type { NewBot } from "./service";
 
 const bot: Bot = {
@@ -56,6 +62,7 @@ function fakeRunner(
     mcp?: Partial<BotMcp>;
     providers?: Partial<BotProviders>;
     threads?: Partial<BotThreads>;
+    notes?: Partial<BotMemoryNotes>;
   } = {},
 ) {
   const started: {
@@ -66,6 +73,7 @@ function fakeRunner(
     attachments?: RunAttachment[];
     skills?: RunSkill[];
     mcp?: RunMcpServer[];
+    memory?: RunMemory;
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
@@ -186,7 +194,15 @@ function fakeRunner(
       archive: async () => {
         throw new Error("not archived");
       },
+      stop: async () => {
+        throw new Error("not stopped");
+      },
       ...options.threads,
+    },
+    {
+      folders: async () => [],
+      run: async () => "done",
+      ...options.notes,
     },
   );
   const only = () => [...sinks.values()][0]!;
@@ -1228,8 +1244,9 @@ describe("RemoteBotReplier", () => {
     const start = { replyId: "x", op: "start", projectId, prompt: "Fix the build" } as const;
     const next = { replyId: "x", op: "continue", id, prompt: "Also the lint" } as const;
     const archive = { replyId: "x", op: "archive", id } as const;
+    const stop = { replyId: "x", op: "stop", id } as const;
 
-    // The person's threads, saying what was asked of them.
+    // The person's threads, saying what was asked of them and on whose word.
     const keeper = (calls: string[]): Partial<BotThreads> => ({
       projects: async () => [
         { id: projectId, name: "app", repository: "acme/app", defaultBranch: "main" },
@@ -1239,18 +1256,27 @@ describe("RemoteBotReplier", () => {
         calls.push(`get ${userId} ${threadId}`),
         { ...thread, turns: [], earlier: 0 }
       ),
-      start: async (userId, input) => (calls.push(`start ${userId} ${input.prompt}`), thread),
-      continue: async (userId, threadId, input) => (
-        calls.push(`continue ${userId} ${threadId} ${input.prompt}`),
+      start: async (actor, input) => (
+        calls.push(`start ${actor.userId} ${actor.botId} ${input.prompt}`),
         thread
       ),
-      archive: async (userId, threadId, archived) => (
-        calls.push(`archive ${userId} ${threadId} ${archived}`),
+      continue: async (actor, threadId, input) => (
+        calls.push(
+          `continue ${actor.via} ${actor.userId} ${actor.botId} ${threadId} ${input.prompt}`,
+        ),
+        thread
+      ),
+      archive: async (actor, threadId, archived) => (
+        calls.push(`archive ${actor.userId} ${threadId} ${archived}`),
+        thread
+      ),
+      stop: async (actor, threadId) => (
+        calls.push(`stop ${actor.via} ${actor.userId} ${threadId}`),
         thread
       ),
     });
 
-    test("the person's own message may look, start, continue and archive, and an archive without a word archives", async () => {
+    test("the person's own message may look, start, continue, stop and archive, and an archive without a word archives", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ threads: keeper(calls) });
       const answering = run.replier.answer(input(() => undefined));
@@ -1263,15 +1289,17 @@ describe("RemoteBotReplier", () => {
       expect(await sink.thread(next)).toEqual(thread);
       expect(await sink.thread(archive)).toEqual(thread);
       expect(await sink.thread({ ...archive, archived: false })).toEqual(thread);
+      expect(await sink.thread(stop)).toEqual(thread);
       sink.end();
       await answering;
       expect(calls).toEqual([
         "list u1 true",
         `get u1 ${id}`,
-        "start u1 Fix the build",
-        `continue u1 ${id} Also the lint`,
+        "start u1 b1 Fix the build",
+        `continue person u1 b1 ${id} Also the lint`,
         `archive u1 ${id} true`,
         `archive u1 ${id} false`,
+        `stop person u1 ${id}`,
       ]);
     });
 
@@ -1291,16 +1319,58 @@ describe("RemoteBotReplier", () => {
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
-        for (const call of [start, next, archive]) {
+        await sink.thread({ replyId: "x", op: "get", id });
+        for (const call of [start, archive]) {
           await expect(sink.thread(call)).rejects.toThrow("only when the person asks you to");
+        }
+        // A note that is about no thread, as a schedule's, follows none up; nor does another bot.
+        for (const call of [next, stop]) {
+          await expect(sink.thread(call)).rejects.toThrow(
+            prompt.startsWith("[note]")
+              ? "This note is not about that thread"
+              : "only when the person asks you to",
+          );
         }
         sink.end();
         await answering;
       }
-      expect(calls.filter((call) => /^(start|continue|archive)/.test(call))).toEqual([]);
+      expect(calls.filter((call) => /^(start|continue|archive|stop)/.test(call))).toEqual([]);
     });
 
-    test("a reply starts or continues only so many threads, whatever a thread told it, and may still archive and look", async () => {
+    test("a note about a thread may continue or stop that thread once the bot looked at it, as a note, and no other (decision 0101)", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        prompt: "[note] The thread has not shown anything for 15 minutes",
+        onPersonsWord: false,
+        aboutThread: id,
+      });
+      await Bun.sleep(0);
+      const sink = run.only();
+      // Before looking, nothing.
+      await expect(sink.thread(stop)).rejects.toThrow("get_thread first");
+      await sink.thread({ replyId: "x", op: "get", id });
+      expect(await sink.thread(next)).toEqual(thread);
+      expect(await sink.thread(stop)).toEqual(thread);
+      // Another thread, even one it looked at, is not the note's.
+      const other = "77777777-7777-4777-8777-777777777777";
+      await sink.thread({ replyId: "x", op: "get", id: other });
+      await expect(sink.thread({ ...stop, id: other })).rejects.toThrow(
+        "This note is not about that thread",
+      );
+      await expect(sink.thread(archive)).rejects.toThrow("only when the person asks you to");
+      sink.end();
+      await answering;
+      expect(calls).toEqual([
+        `get u1 ${id}`,
+        `continue note u1 b1 ${id} Also the lint`,
+        `stop note u1 ${id}`,
+        `get u1 ${other}`,
+      ]);
+    });
+
+    test("a reply starts, continues or stops only so many threads, whatever a thread told it, and may still archive and look", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ threads: keeper(calls) });
       const answering = run.replier.answer(input(() => undefined));
@@ -1309,6 +1379,7 @@ describe("RemoteBotReplier", () => {
       for (let i = 0; i < BOT_THREAD_RUNS_PER_REPLY; i++) await sink.thread(start);
       await expect(sink.thread(start)).rejects.toThrow("threads 5 times in this reply");
       await expect(sink.thread(next)).rejects.toThrow("threads 5 times in this reply");
+      await expect(sink.thread(stop)).rejects.toThrow("threads 5 times in this reply");
       expect(await sink.thread({ replyId: "x", op: "list" })).toEqual([thread]);
       expect(await sink.thread(archive)).toEqual(thread);
       sink.end();
@@ -1517,6 +1588,58 @@ describe("RemoteBotReplier", () => {
       expect(calls).toEqual([]);
       sink.end();
       await answering;
+    });
+  });
+
+  describe("a bot's memory (decision 0102)", () => {
+    test("a reply has the bot's notes and its person's, and keeps them only on the person's word", async () => {
+      const asked: { writable: boolean; botId?: string; source: string }[] = [];
+      const run = fakeRunner({
+        notes: {
+          folders: async (owner) => [
+            { scope: "bot", notes: [{ name: owner.botId!, description: "" }] },
+          ],
+          run: async (caller) => {
+            asked.push({
+              writable: caller.writable,
+              botId: caller.owner.botId,
+              source: caller.actor.source,
+            });
+            return "ok";
+          },
+        },
+      });
+      // The person's word; a note; another bot's request that is not the person's word passed on.
+      const replies = [
+        { prompt: "remember I like tea", onPersonsWord: true },
+        { prompt: "[note] Scheduled task is due", onPersonsWord: false },
+        { prompt: "[from scout] remember this for me", onPersonsWord: false },
+      ];
+      for (const { prompt, onPersonsWord } of replies) {
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          prompt,
+          onPersonsWord,
+        });
+        await Bun.sleep(0);
+        const sink = [...run.sinks()].at(-1)!;
+        await sink.notes({ replyId: "x", command: { command: "view", path: "/memories" } });
+        sink.end();
+        await answering;
+      }
+      const folders: RunMemory["folders"] = [
+        { scope: "bot", notes: [{ name: "b1", description: "" }] },
+      ];
+      expect(run.started.map((reply) => reply.memory)).toEqual([
+        { folders, writable: true },
+        { folders, writable: false },
+        { folders, writable: false },
+      ]);
+      expect(asked).toEqual([
+        { writable: true, botId: "b1", source: "bot" },
+        { writable: false, botId: "b1", source: "bot" },
+        { writable: false, botId: "b1", source: "bot" },
+      ]);
     });
   });
 });

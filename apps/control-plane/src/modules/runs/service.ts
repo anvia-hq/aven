@@ -27,6 +27,8 @@ type ActiveRun = {
   cancelled: boolean;
   /** When the run was claimed (`Date.now()`), so a client that attaches late can say how long it has gone on. */
   startedAt: number;
+  /** When the run last had an event (`Date.now()`), so a run that shows nothing for long is noticed (decision 0101). */
+  lastEventAt: number;
   /** Settles once history has been loaded into `messages` (or failed to); never rejects. */
   ready: Promise<void>;
   /** What the person said during the run that the agent has not taken yet (decision 0098), by id. */
@@ -63,6 +65,16 @@ export type FailureStore = {
   read(threadId: string): Promise<string | null>;
 };
 
+/** How a run ended, for what follows it (decision 0101): a bot that sent it is told. */
+export type RunEnding =
+  | { outcome: "done" }
+  | { outcome: "failed"; error: string }
+  | { outcome: "question" }
+  | { outcome: "cancelled" };
+
+/** Which run ended: its start, which `activity` gave while it ran. */
+export type FinishedRun = { startedAt: number };
+
 export class RunBusyError extends ConflictError {
   constructor() {
     super("A run is already in progress for this thread");
@@ -77,7 +89,7 @@ export class RunManager {
   #channels = new Map<string, Channel>();
   #store: ConversationStore;
   #runtime: Runtime;
-  #onRunFinished: (thread: RunThread) => void | Promise<void>;
+  #onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
 
@@ -85,8 +97,11 @@ export class RunManager {
     store: ConversationStore;
     /** Where runs execute. */
     runtime: Runtime;
-    /** Called after every run, e.g. to bump the thread in the list. */
-    onRunFinished: (thread: RunThread) => void | Promise<void>;
+    /**
+     * Called after every run with how it ended and which run it was, e.g. to bump the thread in the
+     * list. Its first step runs before anything else does, so it can mark the run as ending.
+     */
+    onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
     /** Where a run that stopped on the agent's question waits for the answer. */
     continuations: ContinuationStore;
     /** Where why the latest run failed is kept for clients that come later. */
@@ -101,6 +116,12 @@ export class RunManager {
 
   isRunning(threadId: string) {
     return this.#channels.get(threadId)?.run !== undefined;
+  }
+
+  /** When the thread's run started and last had an event, while it has one. */
+  activity(threadId: string): { startedAt: number; lastEventAt: number } | undefined {
+    const run = this.#channels.get(threadId)?.run;
+    return run && { startedAt: run.startedAt, lastEventAt: run.lastEventAt };
   }
 
   // Starts a run on the thread. Throws RunBusyError if one is live, or the setup error (such as a
@@ -121,6 +142,7 @@ export class RunManager {
       env,
       identity,
       compact,
+      memory,
     }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
@@ -137,6 +159,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
       model: model ?? undefined,
     });
     const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
@@ -160,6 +183,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     const channel = this.#channel(thread);
@@ -182,6 +206,7 @@ export class RunManager {
       github,
       env,
       identity,
+      memory,
       model: model ?? undefined,
     });
     // Consumed: from here the question is answered, whatever becomes of the run.
@@ -205,6 +230,7 @@ export class RunManager {
       usage: usageFromHistory([]),
       cancelled: false,
       startedAt: Date.now(),
+      lastEventAt: Date.now(),
       ready: Promise.resolve(),
       steers: new Map(),
       steerIds: new Set(),
@@ -372,13 +398,17 @@ export class RunManager {
 
   #emit(channel: Channel, event: RunEvent) {
     const { run } = channel;
-    if (run) run.messages = applyEvent(run.messages, event);
+    if (run) {
+      run.messages = applyEvent(run.messages, event);
+      run.lastEventAt = Date.now();
+    }
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 
   async #consume(channel: Channel, run: ActiveRun) {
     let failure: string | undefined;
+    let asked = false;
     try {
       for await (const event of run.handle.events) {
         // A runner says the agent took a message by its id; the words are ours.
@@ -386,19 +416,16 @@ export class RunManager {
         else this.#emit(channel, event);
       }
       const outcome = await run.handle.result;
-      if (outcome.type === "interaction") await this.#suspend(channel.thread, outcome.continuation);
-      else if (outcome.type !== "response") {
+      if (outcome.type === "interaction") {
+        await this.#suspend(channel.thread, outcome.continuation);
+        asked = true;
+      } else if (outcome.type !== "response") {
         failure = `Run ended without a response (${outcome.type})`;
       }
     } catch (error) {
       failure = errorMessage(error);
     }
-    // A run the user cancelled ends quietly, whatever the runtime reported.
-    const ended: RunEvent =
-      failure === undefined || run.cancelled
-        ? { type: "done" }
-        : { type: "error", message: failure };
-    this.#finish(channel, run, ended);
+    this.#finish(channel, run, endingOf(run.cancelled, asked, failure));
   }
 
   // The agent asked a question: its run ends here, and what resumes it is kept until it is answered.
@@ -444,19 +471,31 @@ export class RunManager {
     });
   }
 
-  #finish(channel: Channel, run: ActiveRun, event: RunEvent) {
+  #finish(channel: Channel, run: ActiveRun, ending: RunEnding) {
     // Whatever the agent never took was not delivered; the person is told, with what they said.
     for (const id of run.steers.keys()) {
       this.#reject(channel, run, id, "The run ended before the agent read it");
     }
-    this.#emit(channel, event);
-    if (event.type === "error") this.#recordFailure(channel, event.message);
+    // A run the user cancelled ends quietly, whatever the runtime reported.
+    this.#emit(
+      channel,
+      ending.outcome === "failed" ? { type: "error", message: ending.error } : { type: "done" },
+    );
+    if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
     if (channel.run === run) channel.run = undefined;
     run.finished.resolve();
-    Promise.resolve(this.#onRunFinished(channel.thread)).catch((error) => {
+    const finished = { startedAt: run.startedAt };
+    Promise.resolve(this.#onRunFinished(channel.thread, ending, finished)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
   }
+}
+
+// A run the user cancelled is cancelled whatever the runtime reported; else it failed, asked or was done.
+function endingOf(cancelled: boolean, asked: boolean, failure: string | undefined): RunEnding {
+  if (cancelled) return { outcome: "cancelled" };
+  if (failure !== undefined) return { outcome: "failed", error: failure };
+  return asked ? { outcome: "question" } : { outcome: "done" };
 }
 
 function errorMessage(error: unknown) {
