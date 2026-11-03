@@ -35,7 +35,7 @@ export function DiffFileCard({ file, layout }: { file: DiffFile; layout: DiffLay
       </CollapsibleTrigger>
       <CollapsibleContent>
         {body ? (
-          <DiffLines hunks={file.hunks} layout={layout} />
+          <DiffLines hunks={file.hunks} path={file.path} layout={layout} />
         ) : (
           <p className="border-t px-3 py-2 text-xs text-muted-foreground">
             {file.binary ? "Binary file changed." : "Only the file's mode or name changed."}
