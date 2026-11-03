@@ -339,9 +339,17 @@ export class DurableRuns {
       if (run.exhaustion) return run.exhaustion.messages.slice(run.history.length);
       // The journal keeps a prompt as the message it became.
       const { messages, prompt } = run.input;
-      if (messages) return [...messages];
-      if (prompt === undefined) return [];
-      return [typeof prompt === "string" ? { role: "user", content: prompt } : prompt];
+      const asked: Message[] = [];
+      if (messages) asked.push(...messages);
+      else if (prompt !== undefined) {
+        asked.push(typeof prompt === "string" ? { role: "user", content: prompt } : prompt);
+      }
+      // What the person said during the run and the agent had taken (decision 0098) is theirs to
+      // keep: the thread showed it, and a reload must too.
+      const steered = Object.values(run.steering?.checkpoints ?? {}).flatMap((checkpoint) =>
+        checkpoint.entries.flatMap((entry) => entry.messages),
+      );
+      return [...asked, ...steered];
     } catch {
       // The journal is closing or has lost the run: the error that ended it is still reported.
       return [];

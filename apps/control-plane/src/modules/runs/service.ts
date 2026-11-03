@@ -31,6 +31,8 @@ type ActiveRun = {
   ready: Promise<void>;
   /** What the person said during the run that the agent has not taken yet (decision 0098), by id. */
   steers: Map<string, QueuedSteer>;
+  /** Every id a message of this run has had, taken or not: an id names one message. */
+  steerIds: Set<string>;
   /** Settles once the run is over and the thread has no run any more. */
   finished: PromiseWithResolvers<void>;
 };
@@ -186,6 +188,7 @@ export class RunManager {
       startedAt: Date.now(),
       ready: Promise.resolve(),
       steers: new Map(),
+      steerIds: new Set(),
       finished: Promise.withResolvers<void>(),
     };
     channel.run = run;
@@ -200,6 +203,7 @@ export class RunManager {
       await loaded;
     } catch (error) {
       channel.run = undefined;
+      run.finished.resolve();
       handle.cancel("history load failed");
       console.warn(`Could not load the history of thread ${thread.id}:`, error);
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
@@ -229,6 +233,8 @@ export class RunManager {
     const channel = this.#channels.get(thread.id);
     const run = channel?.run;
     if (!channel || !run) return "ended";
+    if (run.steerIds.has(message.id)) throw new ConflictError("That message was sent already");
+    run.steerIds.add(message.id);
     // Before the runner is asked, so that its word that the agent took it, which can come before
     // its answer, finds the message.
     run.steers.set(message.id, message);

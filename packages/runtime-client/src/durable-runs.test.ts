@@ -448,6 +448,53 @@ describe("steering a run that is going (decision 0098)", () => {
     expect(roles).toEqual(["user", "assistant", "tool", "user", "assistant"]);
   });
 
+  test("a message the agent took is filed with a run that is then cancelled", async () => {
+    const runs = await opened(journalPath());
+    const toolGate = Promise.withResolvers<void>();
+    const modelGate = Promise.withResolvers<void>();
+    const slow = createTool({
+      name: "slow",
+      description: "Takes a while",
+      inputSchema: z.object({}),
+      execute: async () => {
+        await toolGate.promise;
+        return "done";
+      },
+    });
+    const agent = new Agent({
+      id: "steered-cancelled",
+      instructions: "x",
+      tools: [slow],
+      model: scriptedModel([
+        [{ type: "tool-call", toolCallId: "c1", toolName: "slow", input: {} }],
+        // The model call after the message is taken never ends: the run is stopped there.
+        async () => {
+          await modelGate.promise;
+          return [text("never")];
+        },
+      ]),
+    });
+    const events: RunEvent[] = [];
+    const run = await runs.start("steer-3", "thread-u", "build it", { agent }, (e) =>
+      events.push(e),
+    );
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "tool_start"); i++)
+      await Bun.sleep(10);
+    expect(await runs.steer(run.durableId, "use the other API", "steer-c")).toBe(true);
+    toolGate.resolve();
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "steer_applied"); i++)
+      await Bun.sleep(10);
+    await run.cancel();
+    modelGate.resolve();
+    expect((await run.done).type).toBe("error");
+
+    // What the person said and the agent took is not lost with the rest of the run.
+    const filed = await runs.unfinishedMessages(run.durableId);
+    expect(filed.map((message) => message.role)).toEqual(["user", "user"]);
+    expect(JSON.stringify(filed)).toContain("build it");
+    expect(JSON.stringify(filed)).toContain("use the other API");
+  });
+
   test("a run that has ended takes no more", async () => {
     const runs = await opened(journalPath());
     const run = await runs.start(

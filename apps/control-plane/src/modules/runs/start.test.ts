@@ -116,6 +116,24 @@ describe("steering a run (decision 0098)", () => {
     ]);
   });
 
+  test("an id names one message: sent again, it is refused and the runner is not asked twice", async () => {
+    const { handle } = liveRun();
+    let asked = 0;
+    handle.steer = async () => {
+      asked++;
+      return { status: "queued" };
+    };
+    const manager = managerRunning(handle);
+    const thread = newThread();
+    await manager.start(thread, "one");
+
+    expect(await manager.steer(thread, message)).toBe("queued");
+    await expect(manager.steer(thread, { ...message, prompt: "something else" })).rejects.toThrow(
+      "sent already",
+    );
+    expect(asked).toBe(1);
+  });
+
   test("a runner that cannot be asked is unavailable, and nothing is left waiting", async () => {
     const { handle } = liveRun();
     handle.steer = async () => {
