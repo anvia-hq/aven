@@ -8,6 +8,7 @@ import {
   Sparkles,
   Terminal,
   Users,
+  BookmarkUser,
 } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
@@ -29,6 +30,7 @@ const groups = [
       { to: "/settings/bots", label: "Bots", icon: ChatDots },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
       { to: "/settings/mcp", label: "MCP servers", icon: Puzzle },
+      { to: "/settings/memory", label: "Memory", icon: BookmarkUser },
       { to: "/settings/environment-variables", label: "Environment variables", icon: Key },
     ],
   },
