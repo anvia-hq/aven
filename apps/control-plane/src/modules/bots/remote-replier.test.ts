@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { CockpitAccess } from "@aven/protocol/cockpit";
 import type { RunMemory } from "@aven/protocol/memory";
 import type { MemoryStore } from "@anvia/core";
 import type { ModelConfig } from "@aven/agents/model";
@@ -74,6 +75,7 @@ function fakeRunner(
     skills?: RunSkill[];
     mcp?: RunMcpServer[];
     memory?: RunMemory;
+    cockpit?: CockpitAccess;
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
