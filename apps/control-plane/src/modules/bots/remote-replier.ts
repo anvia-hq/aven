@@ -156,6 +156,8 @@ export class RemoteBotReplier implements BotReplier {
     let written = 0;
     let asked = false;
     let threadRuns = 0;
+    // The threads this reply looked at with get_thread: a note's follow-up acts only on one of them.
+    const inspected = new Set<string>();
     // As itself, whichever bot the runner might name, and only so many to a reply.
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -342,12 +344,33 @@ export class RemoteBotReplier implements BotReplier {
             archived: params.archived,
           });
         }
-        if (params.op === "get") return this.threads.get(userId, params.id);
-        if (!makesBotsOnTheirWord) {
+        if (params.op === "get") {
+          const seen = await this.threads.get(userId, params.id);
+          inspected.add(params.id);
+          return seen;
+        }
+        // A note about a thread this bot sent a run to may lead it to continue or stop that thread,
+        // once it has looked at it in this reply, a few times until the person's word (decision 0101).
+        const followsUp =
+          !makesBotsOnTheirWord && (params.op === "continue" || params.op === "stop");
+        if (followsUp) {
+          if (!note) {
+            throw new Error(
+              "Continue or stop a thread only when the person asks you to, in their own message",
+            );
+          }
+          if (!inspected.has(params.id)) {
+            throw new Error(
+              "Look at the thread with get_thread first, in this reply: act on where it is now, not on the note",
+            );
+          }
+          await this.threads.followUp(bot.id, params.id);
+        } else if (!makesBotsOnTheirWord) {
           throw new Error(
             "Start, continue or archive threads only when the person asks you to, in their own message",
           );
         }
+        if (params.op === "stop") return this.threads.stop(userId, params.id);
         if (params.op === "archive") {
           return this.threads.archive(userId, params.id, params.archived ?? true);
         }
@@ -360,7 +383,7 @@ export class RemoteBotReplier implements BotReplier {
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
         if (params.op === "continue") {
-          return this.threads.continue(userId, bot.id, params.id, choice);
+          return this.threads.continue(userId, bot.id, params.id, choice, !followsUp);
         }
         return this.threads.start(userId, bot.id, {
           ...choice,

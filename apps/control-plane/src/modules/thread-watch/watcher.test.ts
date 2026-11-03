@@ -158,4 +158,18 @@ run("createThreadWatcher (postgres)", async () => {
     await watcher.tick();
     expect(woken).toEqual([]);
   });
+
+  test("a bot follows up only a thread it watches, three times until the person's word", async () => {
+    const { thread } = await setup();
+    const other = await botsService.create(userId, { name: "Other", instruction: "x" });
+    expect(await threadWatchService.followUp(thread.id, other.id)).toBe("unwatched");
+    for (let i = 0; i < 3; i++)
+      expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("ok");
+    expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("spent");
+    // A follow-up's own run keeps the count; the person's word starts it again.
+    await threadWatchService.watch(thread.id, { botId: bot.id, userId }, false);
+    expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("spent");
+    await threadWatchService.watch(thread.id, { botId: bot.id, userId });
+    expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("ok");
+  });
 });

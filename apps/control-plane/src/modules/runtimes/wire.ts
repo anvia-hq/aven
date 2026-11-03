@@ -492,6 +492,7 @@ const botThreadParams = z.discriminatedUnion("op", [
     id: z.uuid(),
     archived: z.boolean().optional(),
   }),
+  z.object({ replyId, op: z.literal("stop"), id: z.uuid() }),
 ]);
 
 // A skill of a bot's reply, by its digest.

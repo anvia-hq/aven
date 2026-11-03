@@ -61,11 +61,18 @@ run("a bot's threads (postgres)", async () => {
   let running = new Set<string>();
   const botId = crypto.randomUUID();
   const watched: string[] = [];
+  let followUp: "ok" | "unwatched" | "spent" = "ok";
   const bot = createBotThreads({
-    runs: { isRunning: (id) => running.has(id), history: async () => transcript },
+    runs: {
+      isRunning: (id) => running.has(id),
+      history: async () => transcript,
+      cancel: (id) => running.delete(id),
+    },
     watch: {
-      watch: async (thread, watcher) => void watched.push(`watch ${thread} ${watcher.botId}`),
+      watch: async (thread, watcher, personsWord = true) =>
+        void watched.push(`watch ${thread} ${watcher.botId}${personsWord ? "" : " follow-up"}`),
       settle: async (thread) => void watched.push(`settle ${thread}`),
+      followUp: async () => followUp,
     },
     messages: {
       send: async (org, user, thread, body) => {
@@ -160,14 +167,13 @@ run("a bot's threads (postgres)", async () => {
     expect(JSON.stringify(seen)).not.toContain("SECRET");
   });
 
-  test("continuing sends the message to the person's own thread, and not while it works or waits for an answer", async () => {
+  test("continuing sends the message to the person's own thread, working or not, and not while it waits for an answer", async () => {
     const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Continue me" });
-    // A run is going on.
-    await expect(bot.continue(userId, botId, one.id, { prompt: "More" })).rejects.toThrow(
-      "still going on",
-    );
+    // A run is going on: the message steers it, as the person's composer does.
+    await bot.continue(userId, botId, one.id, { prompt: "Steer" }, true);
+    expect(sent.at(-1)).toMatchObject({ thread: one.id, body: { prompt: "Steer" } });
     running = new Set();
-    await bot.continue(userId, botId, one.id, { prompt: "More", reasoningEffort: "high" });
+    await bot.continue(userId, botId, one.id, { prompt: "More", reasoningEffort: "high" }, true);
     expect(sent.at(-1)).toEqual({
       org: orgA,
       userId,
@@ -177,7 +183,7 @@ run("a bot's threads (postgres)", async () => {
     // The agent asked a question.
     running = new Set();
     await threadsService.saveContinuation(one.id, { waiting: true });
-    await expect(bot.continue(userId, botId, one.id, { prompt: "Again" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, one.id, { prompt: "Again" }, true)).rejects.toThrow(
       "waits for the answer",
     );
     expect((await bot.get(userId, one.id)).awaitingAnswer).toBe(true);
@@ -200,7 +206,7 @@ run("a bot's threads (postgres)", async () => {
       false,
     );
 
-    await expect(bot.continue(userId, botId, theirs.id, { prompt: "Hi" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, theirs.id, { prompt: "Hi" }, true)).rejects.toThrow(
       "Thread not found",
     );
     await expect(bot.archive(userId, theirs.id, true)).rejects.toThrow("Thread not found");
@@ -213,7 +219,7 @@ run("a bot's threads (postgres)", async () => {
       title: "Elsewhere",
     });
     await expect(bot.get(userId, elsewhere.id)).rejects.toThrow("Thread not found");
-    await expect(bot.continue(userId, botId, elsewhere.id, { prompt: "Hi" })).rejects.toThrow(
+    await expect(bot.continue(userId, botId, elsewhere.id, { prompt: "Hi" }, true)).rejects.toThrow(
       "Thread not found",
     );
     await expect(bot.archive(userId, elsewhere.id, true)).rejects.toThrow("Thread not found");
@@ -224,7 +230,7 @@ run("a bot's threads (postgres)", async () => {
     running = new Set();
     const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Watch me" });
     running = new Set();
-    await bot.continue(userId, botId, one.id, { prompt: "And more" });
+    await bot.continue(userId, botId, one.id, { prompt: "And more" }, true);
     await bot.archive(userId, one.id, true);
     await bot.archive(userId, one.id, false);
     expect(watched.filter((line) => line.includes(one.id))).toEqual([
@@ -232,6 +238,28 @@ run("a bot's threads (postgres)", async () => {
       `watch ${one.id} ${botId}`,
       `settle ${one.id}`,
     ]);
+  });
+
+  test("stopping ends the run of the person's own thread and owes no note, and with no run says so", async () => {
+    running = new Set();
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Stop me" });
+    expect((await bot.stop(userId, one.id)).running).toBe(false);
+    expect(running.has(one.id)).toBe(false);
+    expect(watched.at(-1)).toBe(`settle ${one.id}`);
+    await expect(bot.stop(userId, one.id)).rejects.toThrow("No run is going on");
+  });
+
+  test("a follow-up keeps the count, and one not allowed says why", async () => {
+    running = new Set();
+    const one = await bot.start(userId, botId, { projectId: projectA.id, prompt: "Follow me" });
+    await bot.continue(userId, botId, one.id, { prompt: "Again" }, false);
+    expect(watched.at(-1)).toBe(`watch ${one.id} ${botId} follow-up`);
+    await bot.followUp(botId, one.id);
+    followUp = "unwatched";
+    await expect(bot.followUp(botId, one.id)).rejects.toThrow("You did not send this thread");
+    followUp = "spent";
+    await expect(bot.followUp(botId, one.id)).rejects.toThrow("Tell the person what it needs");
+    followUp = "ok";
   });
 
   test("a thread that could not be started is not watched", async () => {

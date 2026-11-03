@@ -13,6 +13,7 @@ export const GET_THREAD_TOOL_NAME = "get_thread";
 export const START_THREAD_TOOL_NAME = "start_thread";
 export const CONTINUE_THREAD_TOOL_NAME = "continue_thread";
 export const ARCHIVE_THREAD_TOOL_NAME = "archive_thread";
+export const STOP_THREAD_TOOL_NAME = "stop_thread";
 
 /**
  * What a bot may ask of the person's threads (decision 0088); whose word it takes, which threads
@@ -25,6 +26,7 @@ export type ThreadsHost = {
   start(input: StartThreadInput): Promise<BotThreadView>;
   continue(id: string, input: ContinueThreadInput): Promise<BotThreadView>;
   archive(id: string, archived: boolean): Promise<BotThreadView>;
+  stop(id: string): Promise<BotThreadView>;
 };
 
 const id = z.uuid().describe("The thread id from list_threads or start_thread.");
@@ -118,7 +120,7 @@ export function createThreadTools(host: ThreadsHost) {
   const next = createTool({
     name: CONTINUE_THREAD_TOOL_NAME,
     description:
-      "Send a message to one of the person's own threads, when they ask, and the thread's agent carries on from it as it would from the person typing. It fails while the agent is still working or when it waits for the person's answer to a question. Returns right away.",
+      "Send a message to one of the person's own threads, and the thread's agent carries on from it as it would from the person typing. While its agent is working, the message reaches it at its next step and steers it; otherwise it starts a new run. It fails when the thread waits for the person's answer to a question. Returns right away.",
     inputSchema: continueSchema,
     execute: async ({ id, ...input }) => ({
       thread: await host.continue(id, input),
@@ -135,5 +137,12 @@ export function createThreadTools(host: ThreadsHost) {
     }),
     execute: async ({ id, archived = true }) => ({ thread: await host.archive(id, archived) }),
   });
-  return [projects, list, get, start, next, archive];
+  const stop = createTool({
+    name: STOP_THREAD_TOOL_NAME,
+    description:
+      "Stop the run of one of the person's own threads, as their Stop button does: the agent stops at once and what it started in its sandbox, such as a dev server, is left running. What it did so far is kept, and continue_thread carries on from it. Look at the thread with get_thread first.",
+    inputSchema: z.object({ id }),
+    execute: async ({ id }) => ({ thread: await host.stop(id) }),
+  });
+  return [projects, list, get, start, next, archive, stop];
 }

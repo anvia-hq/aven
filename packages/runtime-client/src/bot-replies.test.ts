@@ -792,6 +792,9 @@ describe("BotReplies", () => {
           archive: async () => {
             throw new Error("not archived");
           },
+          stop: async () => {
+            throw new Error("not stopped");
+          },
         },
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
@@ -877,6 +880,7 @@ describe("BotReplies", () => {
         "start_thread",
         "continue_thread",
         "archive_thread",
+        "stop_thread",
       ]);
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
@@ -925,6 +929,7 @@ describe("BotReplies", () => {
         "start_thread",
         "continue_thread",
         "archive_thread",
+        "stop_thread",
       ]);
       expect(agent.instructions).toContain("<making-bots>");
       expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");

@@ -378,6 +378,8 @@ export class BotReplies {
           (await call("bot.thread", { replyId, op: "continue", id, ...input })) as BotThreadView,
         archive: async (id, archived) =>
           (await call("bot.thread", { replyId, op: "archive", id, archived })) as BotThreadView,
+        stop: async (id) =>
+          (await call("bot.thread", { replyId, op: "stop", id })) as BotThreadView,
       },
       // The control plane says whether this bot may, and holds to it whatever is asked here.
       createBot: bot.canCreateBots

@@ -539,6 +539,7 @@ export type BotThreadParams = { replyId: string } & (
   | ({ op: "start"; projectId: string; prompt: string; title?: string } & ThreadModelChoice)
   | ({ op: "continue"; id: string; prompt: string } & ThreadModelChoice)
   | { op: "archive"; id: string; archived?: boolean }
+  | { op: "stop"; id: string }
 );
 
 /** The projects for `projects`, threads for `list`, a thread with its latest turns for `get`, the thread acted on for the rest. */
@@ -692,4 +693,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 39;
+export const WIRE_VERSION = 40;

@@ -145,6 +145,7 @@ describe("a bot's reply with the person's threads (decision 0088)", () => {
         [toolCall("continue_thread", { id, prompt: "Also the lint" })],
         [toolCall("archive_thread", { id })],
         [toolCall("archive_thread", { id, archived: false })],
+        [toolCall("stop_thread", { id })],
         [toolCall("send_message", { text: "Done" })],
         [text("")],
       ]),
@@ -169,6 +170,7 @@ describe("a bot's reply with the person's threads (decision 0088)", () => {
       { replyId: "reply-1", op: "continue", id, prompt: "Also the lint" },
       { replyId: "reply-1", op: "archive", id, archived: true },
       { replyId: "reply-1", op: "archive", id, archived: false },
+      { replyId: "reply-1", op: "stop", id },
     ]);
   });
 

@@ -9,6 +9,7 @@ import {
   LIST_PROJECTS_TOOL_NAME,
   LIST_THREADS_TOOL_NAME,
   START_THREAD_TOOL_NAME,
+  STOP_THREAD_TOOL_NAME,
   type ThreadsHost,
 } from "./threads";
 
@@ -36,6 +37,7 @@ function host() {
     start: async (input) => (calls.push(["start", input]), thread),
     continue: async (id, input) => (calls.push(["continue", id, input]), thread),
     archive: async (id, archived) => (calls.push(["archive", id, archived]), thread),
+    stop: async (id) => (calls.push(["stop", id]), { ...thread, running: false }),
   };
   const tools = createThreadTools(hosted);
   // The tools come back as a list, each with its own input: tests call them with whatever a model might.
@@ -47,7 +49,7 @@ function host() {
 }
 
 describe("the thread tools", () => {
-  test("are six, named for what they do", () => {
+  test("are seven, named for what they do", () => {
     expect(host().tools.map((tool) => tool.name)).toEqual([
       LIST_PROJECTS_TOOL_NAME,
       LIST_THREADS_TOOL_NAME,
@@ -55,7 +57,15 @@ describe("the thread tools", () => {
       START_THREAD_TOOL_NAME,
       CONTINUE_THREAD_TOOL_NAME,
       ARCHIVE_THREAD_TOOL_NAME,
+      STOP_THREAD_TOOL_NAME,
     ]);
+  });
+
+  test("stopping hands the host the thread's id and gives the thread back", async () => {
+    const { calls, by } = host();
+    const result = (await by(STOP_THREAD_TOOL_NAME).call({ id: ID })) as { thread: BotThreadView };
+    expect(calls).toEqual([["stop", ID]]);
+    expect(result.thread.running).toBe(false);
   });
 
   test("starting hands the host the project, the prompt and the model chosen, and says where to find the thread", async () => {
