@@ -4,12 +4,22 @@
 type InlineLike = { text?: unknown; content?: unknown };
 type BlockLike = { content?: unknown; children?: unknown };
 
-/** The blocks of a body, or null for one that is text (or empty). */
+// A block as BlockNote writes one: an object with its type and its children.
+const isBlock = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { type?: unknown }).type === "string" &&
+  Array.isArray((value as BlockLike).children);
+
+/**
+ * The blocks of a body, or null for one that is text (or empty): text that happens to be a JSON
+ * array, as `[1, 2]` or `[]`, is text.
+ */
 export function blocksOf(body: string): unknown[] | null {
   if (!body.trimStart().startsWith("[")) return null;
   try {
     const parsed: unknown = JSON.parse(body);
-    return Array.isArray(parsed) ? parsed : null;
+    return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isBlock) ? parsed : null;
   } catch {
     return null;
   }
@@ -18,6 +28,7 @@ export function blocksOf(body: string): unknown[] | null {
 // A piece of inline content: text, a link (whose content is text) or a mention of some kind.
 function partText(part: InlineLike | string): string {
   if (typeof part === "string") return part;
+  if (typeof part !== "object" || part === null) return "";
   if (typeof part.text === "string") return part.text;
   return inlineText(part.content);
 }
@@ -27,14 +38,17 @@ function inlineText(content: unknown): string {
   if (!Array.isArray(content)) {
     // A table's content is rows of cells.
     const rows = (content as { rows?: { cells?: unknown[] }[] } | null)?.rows;
-    return rows ? rows.flatMap((row) => (row.cells ?? []).map(inlineText)).join(" ") : "";
+    // A cell is its content, or (as BlockNote 0.56 keeps it) a `tableCell` holding it.
+    const cellText = (cell: unknown) =>
+      inlineText(Array.isArray(cell) ? cell : (cell as InlineLike | null)?.content);
+    return rows ? rows.flatMap((row) => (row.cells ?? []).map(cellText)).join(" ") : "";
   }
   return content.map(partText).join("");
 }
 
 function blockLines(blocks: unknown[]): string[] {
   return blocks.flatMap((block) => {
-    const { content, children } = block as BlockLike;
+    const { content, children } = (block ?? {}) as BlockLike;
     const line = inlineText(content).trim();
     const nested = Array.isArray(children) ? blockLines(children) : [];
     return line ? [line, ...nested] : nested;

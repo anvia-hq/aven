@@ -60,6 +60,8 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
           size="sm"
           className="ml-auto text-muted-foreground"
           onClick={async () => {
+            saveTitle.cancel();
+            saveBody.cancel();
             if (await remove(item)) onClose();
           }}
         >
@@ -75,8 +77,12 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
             setTitle(event.target.value);
             saveTitle.schedule(event.target.value);
           }}
-          onBlur={saveTitle.flush}
-          className="h-auto border-0 px-0 text-xl font-semibold shadow-none focus-visible:ring-0 md:text-xl dark:bg-transparent"
+          onBlur={() => {
+            saveTitle.flush();
+            // A title cleared is not saved: the one kept comes back.
+            if (!title.trim()) setTitle(item.title);
+          }}
+          className="h-auto rounded-none border-0 border-b border-transparent px-0 text-xl font-semibold shadow-none focus-visible:border-ring focus-visible:ring-0 md:text-xl dark:bg-transparent"
         />
         <p className="text-xs text-muted-foreground">
           Captured {timeAgo(item.createdAt, true)}

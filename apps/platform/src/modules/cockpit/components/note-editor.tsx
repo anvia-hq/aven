@@ -66,6 +66,8 @@ export function NoteEditor({
           aria-label="Delete note"
           className="text-muted-foreground"
           onClick={async () => {
+            saveTitle.cancel();
+            saveBody.cancel();
             if (await remove(note)) onClose();
           }}
         >
@@ -82,8 +84,12 @@ export function NoteEditor({
           setTitle(event.target.value);
           saveTitle.schedule(event.target.value);
         }}
-        onBlur={saveTitle.flush}
-        className="h-auto border-0 px-0 text-2xl font-bold shadow-none focus-visible:ring-0 md:text-2xl dark:bg-transparent"
+        onBlur={() => {
+          saveTitle.flush();
+          // A title cleared is not saved: the one kept comes back.
+          if (!title.trim()) setTitle(note.title);
+        }}
+        className="h-auto rounded-none border-0 border-b border-transparent px-0 text-2xl font-bold shadow-none focus-visible:border-ring focus-visible:ring-0 md:text-2xl dark:bg-transparent"
       />
       <TagInput value={note.tags} onChange={(tags) => void update(note, { tags })} />
       <RichTextEditor

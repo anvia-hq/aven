@@ -44,6 +44,8 @@ export default function RichTextEditorView({
   const editor = useCreateBlockNote({
     initialContent: blocks && blocks.length > 0 ? (blocks as Block[]) : undefined,
     dictionary: { ...en, placeholders: { ...en.placeholders, emptyDocument: placeholder } },
+    // The name goes on the editable area itself, which is what a screen reader lands on.
+    domAttributes: { editor: { "aria-label": label } },
   });
   // Text written before the editor came is read in as markdown, once, without counting as a change.
   const loading = useRef(false);
@@ -61,7 +63,6 @@ export default function RichTextEditorView({
       editor={editor}
       editable={editable}
       theme={theme === "light" ? "light" : "dark"}
-      aria-label={label}
       className={className}
       onChange={() => {
         if (loading.current || !onChange) return;

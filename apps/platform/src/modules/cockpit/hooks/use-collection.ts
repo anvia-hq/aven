@@ -56,11 +56,34 @@ export function createCollection<T extends Item, Create, Update>(options: {
     return made ?? null;
   }
 
+  // A record's changes go to the server one after another, so a slow save cannot land after a later
+  // one; `waiting` counts a record's changes not answered yet.
+  const queues = new Map<string, Promise<unknown>>();
+  const waiting = new Map<string, number>();
+
+  function send(id: string, patch: Update, failure: string) {
+    const turn = (queues.get(id) ?? Promise.resolve()).then(() =>
+      attempt(failure, () => postJson<T>(`${path}/${id}`, patch, "PATCH")),
+    );
+    queues.set(id, turn);
+    void turn.then(() => {
+      if (queues.get(id) === turn) queues.delete(id);
+    });
+    return turn;
+  }
+
   async function update(item: T, patch: Update, failure: string) {
-    set((items) => items.map((each) => (each.id === item.id ? { ...each, ...patch } : each)));
-    const saved = await attempt(failure, () => postJson<T>(`${path}/${item.id}`, patch, "PATCH"));
+    const { id } = item;
+    set((items) => items.map((each) => (each.id === id ? { ...each, ...patch } : each)));
+    waiting.set(id, (waiting.get(id) ?? 0) + 1);
+    const saved = await send(id, patch, failure);
+    const left = (waiting.get(id) ?? 1) - 1;
+    if (left > 0) waiting.set(id, left);
+    else waiting.delete(id);
     if (saved) {
-      set((items) => items.map((each) => (each.id === item.id ? saved : each)));
+      // The server's record, once it has every change made here: until then it is older than
+      // what is shown.
+      if (left === 0) set((items) => items.map((each) => (each.id === id ? saved : each)));
       // Only a change of tags changes the tags' counts.
       if ((patch as { tags?: unknown }).tags !== undefined) refreshTags();
     } else {

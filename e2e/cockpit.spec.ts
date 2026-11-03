@@ -1,6 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
+
+// The server has answered a save whose body holds `text`: what a reload then shows is what it kept.
+const savedWith = (page: Page, text: string) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      Boolean(response.request().postData()?.includes(text)) &&
+      response.ok(),
+  );
 
 test.describe("Cockpit", () => {
   test("the rail opens the cockpit, and the inbox reads like mail: captured, opened, written in, done and deleted", async ({
@@ -21,6 +30,7 @@ test.describe("Cockpit", () => {
     await reader.getByLabel("Tags").fill("errand");
     await reader.getByLabel("Tags").press("Enter");
     const editor = reader.locator(".bn-editor");
+    const saved = savedWith(page, "card fee");
     await editor.click();
     await page.keyboard.type("Ask about the card fee.");
     await expect(page.getByRole("list", { name: "Open items" })).toContainText(
@@ -28,16 +38,44 @@ test.describe("Cockpit", () => {
     );
 
     // Saved: there after a reload.
+    await saved;
     await page.reload();
     await expect(reader.locator(".bn-editor")).toContainText("Ask about the card fee.");
     await expect(page.getByRole("list", { name: "Open items" })).toContainText("#errand");
 
+    // Written in and done at once, every save held back: the details' reply, which lands first,
+    // does not undo Done while Done's own is on its way, and both are kept.
+    await page.route("**/api/cockpit/inbox/*", async (route) => {
+      if (route.request().method() === "PATCH") await new Promise((done) => setTimeout(done, 800));
+      await route.continue();
+    });
+    await reader.locator(".bn-editor").click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" Before Friday.");
+    const details = savedWith(page, "Before Friday");
     await reader.getByRole("button", { name: "Done" }).click();
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
+    await details;
+    await page.waitForTimeout(200);
+    expect(await reader.getByRole("button", { name: "Move to inbox" }).isVisible()).toBe(true);
+    await savedWith(page, "done");
+    await page.unroute("**/api/cockpit/inbox/*");
+    await page.reload();
     await page.getByRole("tab", { name: "Done" }).click();
     await expect(page.getByRole("list", { name: "Done items" })).toContainText("Call the bank");
+    await expect(reader.locator(".bn-editor")).toContainText("Before Friday.");
+
+    // Deleted while a save waits: the save is dropped, not sent to a record that is gone.
+    const failed: string[] = [];
+    page.on("response", (response) => {
+      if (!response.ok()) failed.push(`${response.request().method()} ${response.status()}`);
+    });
+    await reader.locator(".bn-editor").click();
+    await page.keyboard.type(" Gone.");
     await reader.getByRole("button", { name: "Delete" }).click();
     await expect(page.getByText("Nothing done yet.")).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(failed).toEqual([]);
   });
 
   test("tasks are made, dragged across the board, changed in the list, and filtered by tag", async ({
@@ -139,6 +177,7 @@ test.describe("Cockpit", () => {
     await expect(title).toBeFocused();
     await page.keyboard.type("Release checklist");
     const note = page.getByRole("article", { name: /Release checklist|Untitled/ });
+    const saved = savedWith(page, "Tag it");
     await note.locator(".bn-editor").click();
     await page.keyboard.type("# Steps");
     await page.keyboard.press("Enter");
@@ -151,6 +190,7 @@ test.describe("Cockpit", () => {
     await expect(notes).toContainText("Steps Tag it");
     await expect(notes.getByRole("img", { name: "Pinned" })).toBeVisible();
 
+    await saved;
     await page.reload();
     await expect(
       page.getByRole("article", { name: "Release checklist" }).locator(".bn-editor h1"),

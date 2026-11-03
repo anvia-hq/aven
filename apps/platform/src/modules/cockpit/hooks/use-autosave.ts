@@ -26,6 +26,12 @@ export function useAutosave<T>(save: (value: T) => void, delayMs = 700) {
     [delayMs, flush],
   );
 
+  // What is waiting is dropped, as before the record is deleted.
+  const cancel = useCallback(() => {
+    clearTimeout(timer.current);
+    pending.current = null;
+  }, []);
+
   useEffect(() => flush, [flush]);
-  return { schedule, flush };
+  return { schedule, flush, cancel };
 }
