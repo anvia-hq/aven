@@ -417,6 +417,16 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
     --doc-gutter: 3.5rem;
   }
 }
+.cockpit-doc {
+  --doc-surface: var(--color-background);
+}
 .cockpit-doc .bn-shadcn .bn-editor {
   padding-inline: var(--doc-gutter);
+}
+/* Below 48rem the gutter cannot hold BlockNote's block handle, which would sit off the page: the
+   blocks are still made with '/' and Markdown. */
+@media (width < 48rem) {
+  .cockpit-doc .bn-side-menu {
+    display: none;
+  }
 }

@@ -2,8 +2,6 @@ import { Check, Tag } from "@mynaui/icons-react";
 import { normalizeTag, TAG_PATTERN } from "@aven/protocol/cockpit";
 import { useState, type FormEvent } from "react";
 
-import { cn } from "cn";
-
 import { Button } from "@/components/button";
 import { Form } from "@/components/form";
 import { Input } from "@/components/input";
@@ -66,7 +64,7 @@ function ColorPicker({ tag }: { tag: CockpitTag }) {
               variant="ghost"
               size="icon-sm"
               aria-label={COLOR_NAMES[index] ?? color}
-              aria-pressed={current === color}
+              aria-pressed={tag.color === color}
               style={tagStyle(color)}
               className="rounded-full bg-(--tag) text-(--tag-ink) hover:bg-(--tag) hover:text-(--tag-ink) hover:opacity-85"
               onClick={() => pick(color)}
@@ -129,7 +127,7 @@ export function TagsPage() {
           aria-label="New tag"
           placeholder="New tag"
           value={draft}
-          maxLength={40}
+          maxLength={32}
           onChange={(event) => setDraft(event.target.value)}
           className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
@@ -148,7 +146,7 @@ export function TagsPage() {
             <li
               key={tag.name}
               aria-label={tag.name}
-              className={cn("flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/60")}
+              className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/60"
             >
               <ColorPicker tag={tag} />
               <TagBadge tag={tag.name} />

@@ -63,7 +63,6 @@ function InboxPage() {
             shown={shown}
             tag={tag}
             selected={openId}
-            creating={creating}
             onShow={(next) => go({ show: next === "done" ? "done" : undefined })}
             onSelect={(id) => go({ item: id })}
             onNew={() => go({ item: NEW_ITEM })}

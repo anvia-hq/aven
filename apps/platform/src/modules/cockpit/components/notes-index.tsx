@@ -1,5 +1,5 @@
 import { FileText, Pin, Plus, Search } from "@mynaui/icons-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -56,9 +56,17 @@ export function NotesIndex({
       )
     : notes;
 
+  // One note a press, however fast the presses come.
+  const starting = useRef(false);
   async function startNote() {
-    const made = await create({ title: "Untitled", tags: tag ? [tag] : [] });
-    if (made) onOpen(made.id, true);
+    if (starting.current) return;
+    starting.current = true;
+    try {
+      const made = await create({ title: "Untitled", tags: tag ? [tag] : [] });
+      if (made) onOpen(made.id, true);
+    } finally {
+      starting.current = false;
+    }
   }
 
   return (

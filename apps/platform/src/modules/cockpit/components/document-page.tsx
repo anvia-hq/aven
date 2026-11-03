@@ -1,5 +1,5 @@
 import { ArrowLeft, Dots } from "@mynaui/icons-react";
-import { type ComponentType, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, type ComponentType, type KeyboardEvent, type ReactNode } from "react";
 
 import { cn } from "cn";
 
@@ -32,7 +32,7 @@ export function DocumentPage({
 }) {
   return (
     <article aria-label={label} className="cockpit-doc flex min-h-full flex-1 flex-col">
-      <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center gap-1 bg-background/90 px-3 backdrop-blur">
+      <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center gap-1 bg-(--doc-surface)/90 px-3 backdrop-blur">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -120,6 +120,7 @@ export function DocumentTitle({
   /** Just made: the title is chosen, ready to be typed over. */
   autoFocus?: boolean;
 }) {
+  const chosen = useRef(false);
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
     event.preventDefault();
@@ -134,7 +135,12 @@ export function DocumentTitle({
       value={value}
       maxLength={200}
       autoFocus={autoFocus}
-      onFocus={(event) => autoFocus && event.currentTarget.select()}
+      // Chosen the first time only, so coming back to it does not lose it to the next key.
+      onFocus={(event) => {
+        if (!autoFocus || chosen.current) return;
+        chosen.current = true;
+        event.currentTarget.select();
+      }}
       onChange={(event) => onChange(event.target.value.replace(/\n/g, " "))}
       onKeyDown={onKeyDown}
       onBlur={onCommit}

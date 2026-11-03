@@ -65,7 +65,7 @@ export function TagInput({
         )}
       >
         {value.map((tag) => (
-          // The × shows on hover, or when it has the keyboard's focus.
+          // The × shows on hover, when it has the keyboard's focus, and always on a touch screen.
           <TagBadge
             key={tag}
             tag={tag}
@@ -76,7 +76,7 @@ export function TagInput({
               type="button"
               variant="ghost"
               aria-label={`Remove ${tag}`}
-              className="h-3.5 w-0 min-w-0 overflow-hidden rounded-sm border-0 p-0 text-inherit opacity-0 group-hover/badge:w-3.5 group-hover/badge:opacity-70 hover:bg-transparent hover:text-inherit hover:opacity-100! focus-visible:w-3.5 focus-visible:opacity-100"
+              className="h-3.5 w-0 min-w-0 overflow-hidden rounded-sm border-0 p-0 text-inherit opacity-0 group-hover/badge:w-3.5 group-hover/badge:opacity-70 hover:bg-transparent hover:text-inherit hover:opacity-100! focus-visible:w-3.5 focus-visible:opacity-100 pointer-coarse:w-3.5 pointer-coarse:opacity-70"
               onClick={() => onChange(value.filter((each) => each !== tag))}
             >
               <X />

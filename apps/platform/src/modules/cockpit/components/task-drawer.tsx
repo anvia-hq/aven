@@ -1,5 +1,5 @@
 import { Calendar, CircleDashed, Flag, Tag, Trash, X } from "@mynaui/icons-react";
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/button";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/drawer";
@@ -38,6 +38,31 @@ type Fields = {
 // A field of the properties, quiet until hovered, as Notion's are.
 const QUIET =
   "h-8 w-auto border-0 bg-transparent px-1 shadow-none hover:bg-muted/60 dark:bg-transparent dark:hover:bg-muted/60";
+
+// A due day, typed or picked. What is typed passes through years such as 0002: the field shows
+// it, and only a whole date, or none, is kept.
+function DueInput({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  const [typed, setTyped] = useState(value ?? "");
+  return (
+    <Input
+      aria-label="Due date"
+      type="date"
+      value={typed}
+      onChange={(event) => {
+        const next = event.target.value;
+        setTyped(next);
+        if (next === "" || /^[1-9]\d{3}-\d{2}-\d{2}$/.test(next)) onChange(next || null);
+      }}
+      className={`${QUIET} text-sm md:text-sm`}
+    />
+  );
+}
 
 // A task's status, priority, due day and tags, label beside value.
 function TaskProperties({
@@ -96,13 +121,7 @@ function TaskProperties({
         </Select>
       </Property>
       <Property icon={Calendar} label="Due">
-        <Input
-          aria-label="Due date"
-          type="date"
-          value={value.dueDate ?? ""}
-          onChange={(event) => onChange({ dueDate: event.target.value || null })}
-          className={`${QUIET} text-sm md:text-sm`}
-        />
+        <DueInput value={value.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
       </Property>
       <Property icon={Tag} label="Tags">
         <TagInput bare value={value.tags} onChange={(tags) => onChange({ tags })} />
@@ -177,10 +196,23 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
 
 // A task being started: kept only when Create task (or ⌘/Ctrl+Enter) makes it, as an inbox item's
 // draft is.
-function NewTaskPage({ initial, onDone }: { initial: Partial<TaskInput>; onDone: () => void }) {
+function NewTaskPage({
+  initial,
+  onDone,
+  onWritten,
+}: {
+  initial: Partial<TaskInput>;
+  onDone: () => void;
+  /** Whether something is written in it, which a stray close must not throw away. */
+  onWritten: (written: boolean) => void;
+}) {
   const { create } = useTasks();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  useEffect(
+    () => onWritten(title.trim() !== "" || description !== ""),
+    [title, description, onWritten],
+  );
   const [fields, setFields] = useState<Fields>({
     status: initial.status ?? "todo",
     priority: initial.priority ?? "none",
@@ -259,8 +291,16 @@ const CloseButton = () => (
 
 // A task opened from the board or the table, or started, in a drawer from the right
 // (decision 0108), laid out as a cockpit page.
+// The ways a drawer closes by accident rather than by its Cancel or Close: a tap outside, a swipe,
+// Escape.
+const STRAY = new Set(["outside-press", "swipe", "escape-key", "close-watcher", "focus-out"]);
+
 export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: () => void }) {
   const { tasks } = useTasks();
+  const written = useRef(false);
+  const onWritten = useCallback((value: boolean) => {
+    written.current = value;
+  }, []);
   // What was open stays drawn while the drawer slides away.
   const last = useRef(open);
   if (open) last.current = open;
@@ -269,11 +309,26 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
   const isOpen = open !== null && (open.kind === "new" || task !== undefined);
 
   return (
-    <Drawer open={isOpen} onOpenChange={(next) => !next && onClose()} swipeDirection="right">
-      <DrawerContent className="data-[swipe-axis=x]:[--drawer-content-width:100%] data-[swipe-axis=x]:sm:[--drawer-content-width:min(44rem,90vw)]">
+    <Drawer
+      open={isOpen}
+      onOpenChange={(next, details) => {
+        if (next) return;
+        // A new task with something in it is not dropped by a stray close without asking.
+        const draft = shown?.kind === "new" && written.current;
+        if (draft && STRAY.has(details.reason) && !window.confirm("Discard this new task?")) {
+          return details.cancel();
+        }
+        written.current = false;
+        onClose();
+      }}
+      swipeDirection="right"
+    >
+      <DrawerContent className="[--doc-surface:var(--color-popover)] data-[swipe-axis=x]:[--drawer-content-width:100%] data-[swipe-axis=x]:sm:[--drawer-content-width:min(44rem,90vw)]">
         <DrawerTitle className="sr-only">{task ? taskKey(task) : "New task"}</DrawerTitle>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {shown?.kind === "new" && <NewTaskPage initial={shown.initial} onDone={onClose} />}
+          {shown?.kind === "new" && (
+            <NewTaskPage initial={shown.initial} onDone={onClose} onWritten={onWritten} />
+          )}
           {task && <TaskPage key={task.id} task={task} onClose={onClose} />}
         </div>
       </DrawerContent>

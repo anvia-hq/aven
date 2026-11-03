@@ -1,6 +1,7 @@
 import "@blocknote/shadcn/style.css";
 
 import type { Block } from "@blocknote/core";
+import { SuggestionMenu } from "@blocknote/core/extensions";
 import { en } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -58,16 +59,35 @@ export default function RichTextEditorView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
+  // Escape in a menu of the editor's (`/`, emoji) closes that menu and goes no further: in a
+  // drawer or a dialog it would otherwise close those too (decision 0108).
+  const frame = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const menu = editor.getExtension(SuggestionMenu);
+      if (event.key !== "Escape" || !menu?.shown()) return;
+      event.stopPropagation();
+      event.preventDefault();
+      menu.closeMenu();
+    };
+    element.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => element.removeEventListener("keydown", onKeyDown, { capture: true });
+  }, [editor]);
+
   return (
-    <BlockNoteView
-      editor={editor}
-      editable={editable}
-      theme={theme === "light" ? "light" : "dark"}
-      className={className}
-      onChange={() => {
-        if (loading.current || !onChange) return;
-        onChange(isEmpty(editor.document) ? "" : JSON.stringify(editor.document));
-      }}
-    />
+    <div ref={frame} className="contents">
+      <BlockNoteView
+        editor={editor}
+        editable={editable}
+        theme={theme === "light" ? "light" : "dark"}
+        className={className}
+        onChange={() => {
+          if (loading.current || !onChange) return;
+          onChange(isEmpty(editor.document) ? "" : JSON.stringify(editor.document));
+        }}
+      />
+    </div>
   );
 }

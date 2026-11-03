@@ -60,10 +60,14 @@ export function createCollection<T extends Item, Create, Update>(options: {
   // one; `waiting` counts a record's changes not answered yet.
   const queues = new Map<string, Promise<unknown>>();
   const waiting = new Map<string, number>();
+  // Records being deleted: a change of theirs still to be sent is not, since it would only fail.
+  const removing = new Set<string>();
 
   function send(id: string, patch: Update, failure: string) {
     const turn = (queues.get(id) ?? Promise.resolve()).then(() =>
-      attempt(failure, () => postJson<T>(`${path}/${id}`, patch, "PATCH")),
+      removing.has(id)
+        ? null
+        : attempt(failure, () => postJson<T>(`${path}/${id}`, patch, "PATCH")),
     );
     queues.set(id, turn);
     void turn.then(() => {
@@ -86,21 +90,30 @@ export function createCollection<T extends Item, Create, Update>(options: {
       if (left === 0) set((items) => items.map((each) => (each.id === id ? saved : each)));
       // Only a change of tags changes the tags' counts.
       if ((patch as { tags?: unknown }).tags !== undefined) refreshTags();
-    } else {
+    } else if (!removing.has(id)) {
       await list.refresh();
     }
     return Boolean(saved);
   }
 
+  // Deleted once the record's changes in flight are answered, so none of them lands on a record
+  // that is gone (as leaving a title just edited, to open its menu, sends one).
   async function remove(item: T, failure: string) {
-    set((items) => items.filter((each) => each.id !== item.id));
-    const removed = await attempt(failure, async () => {
-      await api<void>(`${path}/${item.id}`, { method: "DELETE" });
-      return true;
-    });
-    if (removed) refreshTags();
-    else await list.refresh();
-    return Boolean(removed);
+    const { id } = item;
+    removing.add(id);
+    set((items) => items.filter((each) => each.id !== id));
+    try {
+      await queues.get(id);
+      const removed = await attempt(failure, async () => {
+        await api<void>(`${path}/${id}`, { method: "DELETE" });
+        return true;
+      });
+      if (removed) refreshTags();
+      else await list.refresh();
+      return Boolean(removed);
+    } finally {
+      removing.delete(id);
+    }
   }
 
   function useItems() {

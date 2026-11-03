@@ -64,7 +64,6 @@ export function InboxPane({
   shown,
   tag,
   selected,
-  creating,
   onShow,
   onSelect,
   onNew,
@@ -73,8 +72,6 @@ export function InboxPane({
   shown: InboxShown;
   tag?: string;
   selected?: string;
-  /** A new item is open, not yet kept. */
-  creating: boolean;
   onShow: (shown: InboxShown) => void;
   onSelect: (id: string) => void;
   onNew: () => void;
@@ -90,7 +87,6 @@ export function InboxPane({
           variant="ghost"
           size="icon-sm"
           aria-label="New item"
-          aria-current={creating ? "true" : undefined}
           className="text-muted-foreground"
           onClick={onNew}
         >

@@ -1,5 +1,6 @@
 import { Tag } from "@mynaui/icons-react";
-import { useState, type KeyboardEvent } from "react";
+import { useBlocker } from "@tanstack/react-router";
+import { useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/button";
 
@@ -32,13 +33,27 @@ export function InboxDraft({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const ready = title.trim() !== "" && !busy;
+  // Leaving by another row or link asks first when something is written; adding it or Cancel
+  // are the person's own way out (`settled`).
+  const settled = useRef(false);
+  const written = title.trim() !== "" || body !== "";
+  useBlocker({
+    shouldBlockFn: () => written && !settled.current && !window.confirm("Discard this new item?"),
+    enableBeforeUnload: () => written && !settled.current,
+  });
+  const cancel = () => {
+    settled.current = true;
+    onCancel();
+  };
 
   async function add() {
     if (!ready) return;
     setBusy(true);
     try {
+      settled.current = true;
       const made = await capture({ title: title.trim(), body, tags });
       if (made) onAdded(made.id);
+      else settled.current = false;
     } finally {
       setBusy(false);
     }
@@ -54,17 +69,17 @@ export function InboxDraft({
   return (
     <DocumentPage
       label="New item"
-      onBack={onCancel}
+      onBack={cancel}
       backLabel="Back to the inbox"
       trail={
         <>
-          <Crumb onClick={onCancel}>Inbox</Crumb>
+          <Crumb onClick={cancel}>Inbox</Crumb>
           <CurrentCrumb>New</CurrentCrumb>
         </>
       }
       actions={
         <>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onCancel}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={cancel}>
             Cancel
           </Button>
           <Button size="sm" disabled={!ready} onClick={() => void add()}>

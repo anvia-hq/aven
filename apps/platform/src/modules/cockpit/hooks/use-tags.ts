@@ -28,7 +28,11 @@ export function useTags() {
       const made = await attempt("Could not add the tag", () =>
         postJson<CockpitTag>("/cockpit/tags", { name }),
       );
-      if (made) await refreshCockpitTags();
+      // The tag answered, put in at once: a list read before it was added would leave it out.
+      const before = store.get(cockpitTagsAtom);
+      if (made && before && !before.some((tag) => tag.name === made.name)) {
+        store.set(cockpitTagsAtom, [...before, made]);
+      }
       return made;
     },
     /** A color of `#rrggbb`, or null for the one the name picks. Shown at once. */
@@ -43,6 +47,14 @@ export function useTags() {
       const saved = await attempt("Could not change the color", () =>
         postJson<CockpitTag>(`/cockpit/tags/${encodeURIComponent(name)}`, { color }, "PATCH"),
       );
+      // What the server kept wins over a list read before the change.
+      const now = store.get(cockpitTagsAtom);
+      if (saved && now) {
+        store.set(
+          cockpitTagsAtom,
+          now.map((tag) => (tag.name === name ? { ...tag, color: saved.color } : tag)),
+        );
+      }
       if (!saved) await refreshCockpitTags();
       return Boolean(saved);
     },

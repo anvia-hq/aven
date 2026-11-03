@@ -290,4 +290,74 @@ test.describe("Cockpit", () => {
     const chip = page.getByRole("article").getByText("big-idea", { exact: true });
     await expect(chip).toHaveCSS("background-color", "rgb(0, 168, 79)");
   });
+
+  test("what is written is not lost by accident: Escape in a menu, a stray close, another row, a delete after an edit", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await registerUser(page, "cockpit", "Cockpit Person");
+    await page.goto("/cockpit/tasks");
+    const failed: string[] = [];
+    page.on("response", (response) => {
+      if (!response.ok() && response.url().includes("/cockpit/")) {
+        failed.push(`${response.request().method()} ${response.status()}`);
+      }
+    });
+
+    // Escape closes BlockNote's menu in the drawer, not the drawer.
+    await page.getByRole("button", { name: "New task", exact: true }).click();
+    const drawer = page.getByRole("article", { name: "New task" });
+    await page.keyboard.type("Keep me");
+    await drawer.locator(".bn-editor").click();
+    await page.keyboard.type("/");
+    await expect(page.locator(".bn-suggestion-menu")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".bn-suggestion-menu")).toHaveCount(0);
+    await expect(drawer).toBeVisible();
+
+    // A stray close of a written draft asks first: declined, the draft stays.
+    page.once("dialog", (dialog) => void dialog.dismiss());
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole("textbox", { name: "Title" })).toHaveValue("Keep me");
+    await drawer.getByRole("button", { name: "Create task" }).click();
+    await expect(drawer).toHaveCount(0);
+
+    // A title edited and the task deleted at once: nothing is sent to a task that is gone.
+    await page
+      .getByRole("button", { name: /T-1 Keep me/ })
+      .first()
+      .click();
+    const task = page.getByRole("article", { name: "T-1 Keep me" });
+    await task.getByRole("textbox", { name: "Title" }).fill("Keep me now");
+    await page.getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Delete task" }).click();
+    await expect(page.getByRole("article", { name: /T-1/ })).toHaveCount(0);
+    await page.waitForTimeout(1000);
+    expect(failed).toEqual([]);
+
+    // An inbox draft with words in it asks before another row opens in its place.
+    await page.goto("/cockpit/inbox");
+    const draft = page.getByRole("article", { name: "New item" });
+    await page.getByRole("button", { name: "New item" }).click();
+    await expect(draft.getByRole("textbox", { name: "Title" })).toBeFocused();
+    await page.keyboard.type("First");
+    await page
+      .getByRole("article", { name: "New item" })
+      .getByRole("button", { name: "Add to inbox" })
+      .click();
+    await expect(draft).toHaveCount(0);
+    await page.getByRole("button", { name: "New item" }).click();
+    await expect(draft.getByRole("textbox", { name: "Title" })).toBeFocused();
+    await page.keyboard.type("Half written");
+    page.once("dialog", (dialog) => void dialog.dismiss());
+    await page
+      .getByRole("list", { name: "Open items" })
+      .getByRole("button", { name: /First/ })
+      .click();
+    await expect(page.getByRole("article", { name: "New item" })).toBeVisible();
+    await expect(
+      page.getByRole("article", { name: "New item" }).getByRole("textbox", { name: "Title" }),
+    ).toHaveValue("Half written");
+  });
 });

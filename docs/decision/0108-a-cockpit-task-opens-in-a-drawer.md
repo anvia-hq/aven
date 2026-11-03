@@ -14,4 +14,4 @@ A task opened and was made in a centred dialog: a form of labelled fields, a bor
 
 ## Consequences
 
-- There is no Save button and no confirmation on closing an open task: nothing is waiting to be saved once the typing stops. Closing a new task with something written drops it.
+- There is no Save button and no confirmation on closing an open task: nothing is waiting to be saved once the typing stops. A new task with something written in it asks before a tap outside, a swipe or Escape drops it; Cancel and Close do not ask. Escape in the editor's own menus (`/`, emoji) closes only the menu.

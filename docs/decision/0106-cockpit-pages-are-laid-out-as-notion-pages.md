@@ -19,4 +19,6 @@ The first split views of 0105 put a boxed list and a boxed form side by side: a 
 ## Consequences
 
 - Moving between notes is through the index, the pinned notes or the browser's back, not a list kept beside the note.
-- The task dialog keeps its bordered editor: it is a form in a dialog, not a page.
+- A task opens in a drawer laid out as a page too (0108).
+- A draft with something written in it asks before another row, a link or leaving the page throws it away; Add to inbox and Cancel do not ask.
+- Below 48rem the editor's block handle is hidden, since the gutter cannot hold it; blocks are still made with `/` and markdown.
