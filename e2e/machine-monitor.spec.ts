@@ -61,13 +61,13 @@ test.describe("machine monitor", () => {
     expect(
       await rows.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual(["build-box", "hot-box", "old-box", "sleeping-box"]);
-    // Above Settings, and compact: a reporting row has its meters under the name, the rest one line.
+    // Above Settings, and every row as tall as one line of the menu.
     const settings = await page.getByRole("button", { name: "Settings" }).boundingBox();
     const last = await rows.last().boundingBox();
     expect(last!.y + last!.height).toBeLessThanOrEqual(settings!.y);
-    const heights = await Promise.all((await rows.all()).map((row) => row.boundingBox()));
-    expect(heights.map((box) => box!.height <= 50)).toEqual([true, true, true, true]);
-    expect(heights.slice(2).map((box) => box!.height <= 34)).toEqual([true, true]);
+    for (const box of await Promise.all((await rows.all()).map((row) => row.boundingBox()))) {
+      expect(box!.height).toBeLessThanOrEqual(34);
+    }
 
     // CPU, memory and disk of a runner that reports, each as a meter with its number.
     const build = machines.getByRole("listitem", { name: "build-box" });
@@ -83,9 +83,10 @@ test.describe("machine monitor", () => {
       "aria-valuenow",
       "76",
     );
-    await expect(build).toContainText("CPU58%");
-    await expect(build).toContainText("MEM38%");
-    await expect(build).toContainText("DSK76%");
+    // The numbers are read off the meters; the row has no room for a percent sign.
+    await expect(build).toContainText("CPU58");
+    await expect(build).toContainText("MEM38");
+    await expect(build).toContainText("DSK76");
     await expect(
       build.getByRole("meter", { name: "CPU of build-box" }).locator("[data-slot=meter-fill]"),
     ).toHaveCSS("width", /^\d/);

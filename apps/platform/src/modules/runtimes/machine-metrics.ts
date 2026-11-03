@@ -21,8 +21,19 @@ export const STATS_STALE_MS = 60_000;
 export const isStale = (stats: RuntimeStats, now = Date.now()) =>
   now - Date.parse(stats.reportedAt) > STATS_STALE_MS;
 
+/** A meter this full is busy, drawn orange rather than blue. */
+export const METER_BUSY = 60;
+
 /** A meter this full is a warning, drawn in the destructive colour. */
 export const METER_HIGH = 90;
+
+export type MeterLevel = "low" | "busy" | "high";
+
+/** How worried a meter's colour should look: blue, then orange, then red. */
+export function meterLevel(percent: number | null): MeterLevel {
+  if (percent === null || percent < METER_BUSY) return "low";
+  return percent >= METER_HIGH ? "high" : "busy";
+}
 
 const share = (used: number, total: number) =>
   total > 0 ? Math.round(Math.min(100, (used / total) * 100)) : null;

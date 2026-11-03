@@ -26,6 +26,7 @@
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
+  --meter-low: oklch(0.6 0.15 250);
   --meter: oklch(0.66 0.19 48);
   --graph-1: oklch(0.6 0.16 250);
   --graph-2: oklch(0.6 0.15 150);
@@ -67,6 +68,7 @@
   --accent-foreground: oklch(0.92 0.006 277);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
+  --meter-low: oklch(0.7 0.14 245);
   --meter: oklch(0.72 0.18 50);
   --graph-1: oklch(0.74 0.16 250);
   --graph-2: oklch(0.74 0.15 150);
@@ -121,6 +123,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-meter-low: var(--meter-low);
   --color-meter: var(--meter);
   --color-graph-1: var(--graph-1);
   --color-graph-2: var(--graph-2);
