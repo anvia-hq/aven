@@ -29,7 +29,10 @@ export default defineConfig({
     baseURL: WEB_URL,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { browserName: "chromium" } }],
+  // E2E_CHANNEL=chrome runs the tests in the system's Chrome instead of Playwright's own build.
+  projects: [
+    { name: "chromium", use: { browserName: "chromium", channel: process.env.E2E_CHANNEL } },
+  ],
   webServer: [
     {
       // Recreates the e2e database, applies migrations, then starts the backend.
