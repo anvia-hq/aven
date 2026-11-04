@@ -1,6 +1,6 @@
 # The shell is a framed panel beside a rail
 
-Status: accepted.
+Status: accepted. The rail's width and appearance are superseded by [0111](0111-the-navigation-rail-is-minimal.md).
 
 ## Context
 

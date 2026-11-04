@@ -1,11 +1,12 @@
 import { Cog, Search } from "@mynaui/icons-react";
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "cn";
 
 import { AvenMark } from "@/components/brand-icons";
 import { Button } from "@/components/button";
+import { RailLink } from "@/components/rail-link";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/sidebar";
+import { TooltipProvider } from "@/components/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
@@ -57,19 +59,26 @@ export function AppShell({ user, sidebar }: Props) {
       style={{ "--sidebar-width": `${sidebarSize.width}px` } as CSSProperties}
     >
       {/* The rail takes its own width in the row and stays in view; the sidebar sits beside it. */}
-      <aside className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center py-3 md:flex">
-        <Link
-          to="/threads"
+      <TooltipProvider delay={300}>
+        <nav
           aria-label="Aven"
-          className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+          className="sticky top-0 hidden h-svh w-14 shrink-0 flex-col items-center py-2.5 md:flex"
         >
-          <AvenMark className="w-4" />
-        </Link>
-        <div className="mt-3 flex flex-col items-center gap-2">
-          <BotRailLink />
-          <CockpitRailLink />
-        </div>
-      </aside>
+          <RailLink
+            to="/threads"
+            label="Aven"
+            tooltip="Aven · threads"
+            active={pathname.startsWith("/threads") || pathname.startsWith("/projects")}
+          >
+            <AvenMark className="w-5 text-primary" />
+          </RailLink>
+          <span aria-hidden="true" className="my-2.5 h-px w-4.5 bg-input" />
+          <div className="flex flex-col items-center gap-1.5">
+            <BotRailLink />
+            <CockpitRailLink />
+          </div>
+        </nav>
+      </TooltipProvider>
       {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
           border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
           which together look the same: both are drawn with real borders, so the content sits in the same
@@ -86,7 +95,7 @@ export function AppShell({ user, sidebar }: Props) {
         <Sidebar
           collapsible="icon"
           className={cn(
-            "text-sidebar-foreground/80 data-[side=left]:left-12 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
+            "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
             // Without the panel behind it, the sidebar's border would be drawn over the lighter
             // frame and show more than it does on a panel: give it the panel's surface to sit on,
             // and its top and bottom edges the frame's color, which the panel's two borders make
