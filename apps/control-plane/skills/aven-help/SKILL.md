@@ -43,6 +43,7 @@ When you cannot do something yourself, say so in a sentence and walk the person 
 - Bots, schedules and goals: `configure-bots`
 - GitHub, runners, `aven doctor` and `aven update`, and why Ship is off: `connect-github-and-runners`
 - Setting up a repository for threads: `setup-env`, then `setup-ship`
+- Reaching a cloud, a vault or a private network without a stored key (`aven id-token`): `use-identity-tokens`
 - Writing a new skill: `writing-skills`
 
 Read the one that fits with `cat` before you act.
