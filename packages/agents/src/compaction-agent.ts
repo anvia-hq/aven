@@ -78,7 +78,6 @@ export function createCompactionAgent(options: ModelSource & { id: string }) {
   const { model } = resolveAgentModel(options);
   const summarize = createSummaryMemoryCompactor({
     model,
-    temperature: null,
     maxTokens: outputLimitFor(options),
   });
   let spent = Usage.empty();
@@ -97,7 +96,6 @@ export function createCompactionAgent(options: ModelSource & { id: string }) {
     compaction: {
       trigger: { afterTokens: 1 },
       retention: { recentTurns: 0 },
-      // No temperature: Anvia sends 0 by default, which reasoning models refuse (bug 0004).
       compactor: async (input: Parameters<typeof summarize>[0]) => {
         const summary = await summarize(input);
         spent = summary.usage ?? spent;

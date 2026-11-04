@@ -15,7 +15,7 @@
     "db:studio": "bun --bun --env-file=../../.env run drizzle-kit studio"
   },
   "dependencies": {
-    "@anvia/core": "^1.17.2",
+    "@anvia/core": "^1.17.3",
     "@anvia/memory-drizzle": "^1.1.5",
     "drizzle-orm": "^0.45.4",
     "postgres": "^3.4.9"

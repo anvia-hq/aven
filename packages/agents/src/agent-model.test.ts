@@ -170,8 +170,7 @@ describe("compactionFor", () => {
     expect(compactionFor({ model }, model, 5_000)?.trigger).toEqual({ afterTokens: 5_000 });
   });
 
-  // Anvia's summary compactor sends `temperature: 0` unless told not to, and Azure's reasoning
-  // models answer `Unsupported parameter: 'temperature' is not supported with this model`.
+  // Reasoning models refuse temperature; Anvia 1.17.3 omits it by default (bug 0004).
   test("the summary request carries no temperature, which reasoning models refuse", async () => {
     const bodies: Record<string, unknown>[] = [];
     const server = Bun.serve({

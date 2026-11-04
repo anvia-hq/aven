@@ -1,6 +1,6 @@
 # Anvia's summary compactor sends `temperature: 0`, which reasoning models refuse
 
-Status: worked around in `packages/agents` (`compactionFor` in `agent-model.ts`).
+Status: fixed upstream in `@anvia/core` 1.17.3. The local workaround was removed when upgrading to it.
 
 ## Symptom
 
@@ -24,4 +24,8 @@ The chat keeps failing on every message, since each one tries to summarize again
 
 ## Workaround
 
-`compactionFor` passes `temperature: null`, which the compactor takes as "send none". The provider's default applies. `errorMessage` (`values.ts`) now adds the cause of a wrapping error to the message, so a failure like this one says why. Checked against a real conversation of 52 messages and 1.2 MB, mostly screenshots, on the model that failed.
+Before 1.17.3, `compactionFor` and the explicit compaction agent passed `temperature: null`, which the compactor takes as "send none". The provider's default applies. `errorMessage` (`values.ts`) adds the cause of a wrapping error to the message, so a failure like this one says why. Checked against a real conversation of 52 messages and 1.2 MB, mostly screenshots, on the model that failed.
+
+## Upstream fix
+
+Version 1.17.3 omits temperature unless explicitly supplied, bounds inline image and file data in token estimates, and includes the provider's message in a compaction failure. Both Aven compaction paths now use that default; the provider-request regression still checks that no temperature is sent. The independent error-cause formatter remains.
