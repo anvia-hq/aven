@@ -48,6 +48,8 @@ export function useThread(threadId: string) {
   const { all, loaded, setRunning: setThreadRunning, refresh } = useThreads();
   const { data: session, isPending } = authClient.useSession();
   const thread = all.find((candidate) => candidate.id === threadId);
+  // Driving an archived thread opens it again on the server; the sidebar is told at once.
+  const wasArchived = thread !== undefined && thread.state !== "open";
   // Only its creator drives a thread; anyone else it was shared with reads it (decision 0084).
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
 
@@ -179,9 +181,10 @@ export function useThread(threadId: string) {
         return result;
       });
       if (!sent?.steered) drop();
+      if (sent && wasArchived) void refresh();
       return sent !== null;
     },
-    [threadId, running, changeSteers],
+    [threadId, running, changeSteers, wasArchived, refresh],
   );
 
   // True once the answers are accepted; the run then continues, and the stream shows it.
@@ -191,9 +194,10 @@ export function useThread(threadId: string) {
         await postJson(`/threads/${threadId}/answer`, { answers, ...selection, ...secret });
         return true;
       });
+      if (sent && wasArchived) void refresh();
       return sent ?? false;
     },
-    [threadId],
+    [threadId, wasArchived, refresh],
   );
 
   const cancel = useCallback(async () => {

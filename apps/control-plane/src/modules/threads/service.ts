@@ -203,6 +203,13 @@ export const threadsService = {
     return thread ?? null;
   },
 
+  // A thread its creator drives is one of their open threads, whatever it was before (decision
+  // 0114). The project is live by now: `messages.ts` checks it before anything is sent.
+  async reopen(thread: { id: string; state: string }) {
+    if (thread.state === "open") return;
+    await db.update(threads).set({ state: "open" }).where(eq(threads.id, thread.id));
+  },
+
   // The run that stopped on the agent's question waits for the answer here (decision 0020).
   async saveContinuation(id: string, continuation: unknown) {
     await db.update(threads).set({ pendingContinuation: continuation }).where(eq(threads.id, id));

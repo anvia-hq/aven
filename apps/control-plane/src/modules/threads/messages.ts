@@ -110,6 +110,7 @@ export const createThreadMessages = (runs: RunManager) => {
     const sender = await senderExtras(userId);
     const scoped = await threadExtras(organizationId, thread, userId, onPersonsWord);
     await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
+    await threadsService.reopen(thread);
   }
 
   // A message to an agent that is working, for it to take at its next step (decision 0098). True
@@ -130,7 +131,9 @@ export const createThreadMessages = (runs: RunManager) => {
     }
     if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
     const message = { id: steerId ?? crypto.randomUUID(), prompt, mentions };
-    return (await runs.steer(thread, message)) === "queued";
+    const queued = (await runs.steer(thread, message)) === "queued";
+    if (queued) await threadsService.reopen(thread);
+    return queued;
   }
 
   return {
@@ -166,6 +169,7 @@ export const createThreadMessages = (runs: RunManager) => {
       if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
       const model = await resolveModel(userId, selection);
       await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
+      await threadsService.reopen(thread);
     },
 
     async answer(
@@ -193,6 +197,7 @@ export const createThreadMessages = (runs: RunManager) => {
       });
       const scoped = await threadExtras(organizationId, thread, userId);
       await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
+      await threadsService.reopen(thread);
     },
   };
 };
