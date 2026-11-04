@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { homeRepairArgs } from "./container-home";
 import { git } from "./git-clone";
+import { containerBaseArgs } from "./environment-setup";
 import { dockerRunArgs, runnerLabel, Sandboxes, type ThreadSandbox } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
 
@@ -45,6 +46,10 @@ describe("dockerRunArgs", () => {
     expect(args).toContain("ANVIA_SANDBOX_TOKEN=tok");
     expect(args.at(-1)).toBe("img:dev");
     expect(args).not.toContain("--user");
+  });
+
+  test("starts an init as PID 1 so abandoned children are reaped", () => {
+    expect(dockerRunArgs(input)).toContain("--init");
   });
 
   test("passes the platform to docker when one is set", () => {
@@ -967,6 +972,45 @@ live("signing a sandbox in to GitHub (real docker)", () => {
     expect((await run(box, "gh auth token")).exitCode).not.toBe(0);
     expect((await run(box, "git config --global user.email")).stdout.trim()).toBe("aven@localhost");
   }, 300_000);
+});
+
+// A killed process's children are left to PID 1, which has to reap them or they stay as zombies
+// that count against the pids limit (decision 0113).
+live("a container started with the runner's arguments (real docker)", () => {
+  const zombiesLeft = async (withInit: boolean) => {
+    const name = `aven-zombie-${crypto.randomUUID().slice(0, 8)}`;
+    const base = containerBaseArgs(
+      {
+        name,
+        label: "aven.test=1",
+        runner: "zombie-test",
+        memoryMb: 256,
+        cpus: 1,
+        pidsLimit: 64,
+      },
+      { afterLimits: [] },
+    ).filter((arg) => withInit || arg !== "--init");
+    // `sleep` as the command never waits on anything, as the sandbox daemon does not. The subshell
+    // exits at once and leaves `true` to PID 1, which is a zombie until PID 1 waits for it.
+    const script = "(true &); sleep 1; ps -eo stat | grep -c '^Z' || true";
+    const docker = async (args: string[]) => {
+      const child = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
+      const stdout = await new Response(child.stdout).text();
+      await child.exited;
+      return stdout.trim();
+    };
+    try {
+      await docker([...base, "--entrypoint", "sleep", image!, "60"]);
+      return Number(await docker(["exec", name, "sh", "-c", script]));
+    } finally {
+      await docker(["rm", "-f", name]);
+    }
+  };
+
+  test("leaves no zombies with an init, and does without one", async () => {
+    expect(await zombiesLeft(false)).toBeGreaterThan(0);
+    expect(await zombiesLeft(true)).toBe(0);
+  }, 120_000);
 });
 
 // A Linux runner starts the container as the host user so the workspace's files are theirs, and

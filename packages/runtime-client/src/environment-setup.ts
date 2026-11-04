@@ -80,6 +80,10 @@ export function containerBaseArgs(
     `aven.runner=${input.runner}`,
     "--label",
     input.label,
+    // Without an init the container's command is PID 1 and nothing reaps the children it is left
+    // with: every process the agent kills or abandons stays a zombie that counts against
+    // `--pids-limit`, until `fork` fails (decision 0113).
+    "--init",
     ...beforeLimits,
     "--memory",
     `${input.memoryMb}m`,
