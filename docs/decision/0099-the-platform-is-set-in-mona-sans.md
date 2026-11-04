@@ -1,6 +1,6 @@
 # The platform is set in Mona Sans
 
-Status: accepted.
+Status: accepted. The sans-serif part is superseded by decision 0110 (the system font); the code font still holds.
 
 ## Context
 

@@ -56,7 +56,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 - Icons: `@mynaui/icons-react` only (no lucide). After `shadcn add`, convert any `lucide-react` imports; mapping in `docs/rules/0003-ui-primitives-base-ui.md`.
 - Layout state (sidebar width, thread panel sizes, whether the overview and desktop are open) is kept in localStorage through `src/hooks/use-local-storage.ts`; decision 0017.
 - Dark mode is the default; theme state lives in `src/modules/theme` (`useTheme`, `ThemeSelector`).
-- Text is Mona Sans and code Geist Mono, both bundled from `@fontsource-variable` in `src/index.css` (decision 0099).
+- Text is the system font (`--font-sans` in `src/index.css`, decision 0110) and code Geist Mono, bundled from `@fontsource-variable` (decision 0099).
 - `src/components/` (vendored shadcn) is excluded from lint and formatting rules do not apply to hand edits there; prefer re-running the shadcn CLI over editing.
 - Non-feature singletons (auth client, api fetch helper) go in `src/lib/`.
 - Never edit `src/routeTree.gen.ts` (generated).
