@@ -13,7 +13,7 @@
     "@anvia/anthropic": "^1.2.1",
     "@anvia/azure": "^0.1.8",
     "@anvia/core": "^1.17.3",
-    "@anvia/openai": "^1.3.6",
+    "@anvia/openai": "^1.3.7",
     "@aven/protocol": "workspace:*",
     "zod": "^4.6.7"
   }
