@@ -1,0 +1,39 @@
+diff --git a/dist/index.js b/dist/index.js
+index 0a8e61eea0b48da0466a528474b91f8a2dd58d74..c06314bfca1483b7ff41438b522c8a532b7b97fa 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1786,6 +1786,11 @@ function registrations(values) {
+ 			version: registration.version
+ 		};
+ 		if (registration.stream !== void 0) normalized.stream = registration.stream;
++		if (registration.toolConcurrency !== void 0) {
++			if (!Number.isSafeInteger(registration.toolConcurrency) || registration.toolConcurrency < 1)
++				throw new TypeError("Durable toolConcurrency must be a positive integer.");
++			normalized.toolConcurrency = registration.toolConcurrency;
++		}
+ 		normalized.toolRecovery = { ...registration.toolRecovery };
+ 		if (compaction !== void 0) normalized.compaction = compaction;
+ 		if (registration.modelRetry !== void 0) normalized.modelRetry = modelRetrySchema.parse(registration.modelRetry);
+@@ -2425,7 +2430,8 @@ var DurableRuntime = class DurableRuntime {
+ 				...run.input,
+ 				trace,
+ 				abortSignal: signal,
+-				retries: false
++				retries: false,
++				toolConcurrency: registration.toolConcurrency
+ 			}, {
+ 				runId: id,
+ 				execution: createExecution(this.store, run, registration, signal)
+diff --git a/dist/task-protocol-De_u5_q-.d.ts b/dist/task-protocol-De_u5_q-.d.ts
+index 0a856d5ef19bb23f5390486899d26333c6447bda..678a1ffa20ddd7ffb906b11bef70f011192d7dc2 100644
+--- a/dist/task-protocol-De_u5_q-.d.ts
++++ b/dist/task-protocol-De_u5_q-.d.ts
+@@ -282,6 +282,8 @@ type DurableAgentRegistration = {
+   version: string;
+   /** Use agent.stream() and persist normalized generation deltas. Defaults to false. */
+   stream?: boolean;
++  /** How many tool calls of one model turn may run at once. Defaults to 1; core keeps 1 for an agent with a question or approval tool. */
++  toolConcurrency?: number;
+   /** Unlisted tools require reconciliation if interrupted after their intent was committed. */
+   toolRecovery?: Readonly<Record<string, ToolRecovery>>;
+   modelRetry?: DurableModelRetry;

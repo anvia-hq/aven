@@ -22,6 +22,7 @@ import { z } from "zod";
 import { DurableRuns, type RunInput } from "./durable-runs";
 import { goalSessionMarker } from "./goal-report";
 import { journalPath } from "./testing/journal-path";
+import { defaultCreateAgent } from "./runner";
 
 const question: ScriptStep = [
   {
@@ -56,6 +57,62 @@ const closed = async (runs: DurableRuns, release?: () => void) => {
   await closing;
   open.splice(open.indexOf(runs), 1);
 };
+
+describe("the default runtime agent's model retries", () => {
+  test.each(["thread", "subagent"] as const)(
+    "%s completes after a transient gateway failure under its own retry owner",
+    async (kind) => {
+      let attempts = 0;
+      const server = Bun.serve({
+        port: 0,
+        fetch() {
+          if (++attempts === 1)
+            return Response.json({ error: { message: "try again" } }, { status: 503 });
+          const chunk = (delta: Record<string, unknown>, finish: string | null) =>
+            `data: ${JSON.stringify({
+              id: "chatcmpl-retry",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "fake-model",
+              choices: [{ index: 0, delta, finish_reason: finish }],
+            })}\n\n`;
+          return new Response(
+            chunk({ role: "assistant", content: "done" }, null) +
+              chunk({}, "stop") +
+              "data: [DONE]\n\n",
+            { headers: { "content-type": "text/event-stream" } },
+          );
+        },
+      });
+      try {
+        const built = defaultCreateAgent(`http://localhost:${server.port}`)({
+          id: `retry-${kind}`,
+          thread: { id: "thread-1", organizationId: "org-1" },
+          attended: false,
+          tools: [],
+          role: kind === "subagent" ? "general" : undefined,
+          model: {
+            provider: "openai-compatible",
+            modelId: "fake-model",
+            gatewayPath: "/v1",
+            gatewayToken: "local-test-token",
+          },
+        });
+        const runThread = async () => {
+          const runs = await opened(journalPath());
+          const followed = await runs.start("retry-run", "thread-1", "go", built, () => {});
+          return followed.done;
+        };
+        const end =
+          kind === "thread" ? await runThread() : await built.agent.stream({ prompt: "go" }).result;
+        expect(end).toMatchObject({ type: "response" });
+        expect(attempts).toBe(2);
+      } finally {
+        await server.stop(true);
+      }
+    },
+  );
+});
 
 describe("DurableRuns after the process restarts", () => {
   test("a run parked on a question is answered by a process that never saw it", async () => {

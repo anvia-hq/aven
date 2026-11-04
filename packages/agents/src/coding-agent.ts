@@ -1,4 +1,4 @@
-import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
+import { Agent, createQuestionTool, type AnyTool, type RetrySetting } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
 import { environmentInstructions } from "./environment";
@@ -19,6 +19,8 @@ type CodingAgentOptions = ModelSource & {
   /** Give the agent `ask_user` and `request_secret`, which suspend the run until the user answers. Defaults to on. */
   questions?: boolean;
   maxTurns?: number;
+  /** Override the model retry policy when the host owns retries, as durable does. */
+  retries?: RetrySetting;
   /** The agent's id. A durable run registers one agent per run, so each needs its own. Defaults to "coding". */
   id?: string;
   /** What the agent is told instead of the coding agent's own instructions: a subagent has its own (decision 0057). */
@@ -44,6 +46,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
   const agentModel = resolveAgentModel(options);
   const agent = new Agent({
     ...agentModel,
+    retries: options.retries ?? agentModel.retries,
     id: options.id ?? "coding",
     instructions: [
       // A run with a person to answer to (`questions`) is the one that has `define_goal`.

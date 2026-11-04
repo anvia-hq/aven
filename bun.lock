@@ -123,7 +123,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@anvia/core": "^1.17.3",
-        "@anvia/durable": "^0.12.2",
+        "@anvia/durable": "^0.13.0",
         "@anvia/mcp": "1.2.6",
         "@anvia/sandbox": "1.3.2",
         "@aven/agents": "workspace:*",
@@ -136,7 +136,7 @@
     },
   },
   "patchedDependencies": {
-    "@anvia/durable@0.12.2": "patches/@anvia%2Fdurable@0.12.2.patch",
+    "@anvia/durable@0.13.0": "patches/@anvia%2Fdurable@0.13.0.patch",
   },
   "packages": {
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@1.3.0", "", { "dependencies": { "@opentelemetry/api": "^1.4.1", "json-schema-to-ts": "^3.1.1", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-k7z9BlLLPxfZH+ov7dS6EnaN/wiZeV8YNT1LZfrpAHIy7oY7pHr4UzirF9f2OlHtFEnRBOX+AZQ91Y5fK+TPTw=="],
@@ -151,7 +151,7 @@
 
     "@anvia/core": ["@anvia/core@1.17.3", "", { "dependencies": { "yaml": "^2.9.1" }, "peerDependencies": { "@valibot/to-json-schema": "^1.8.0", "zod": "^4.6.7" }, "optionalPeers": ["@valibot/to-json-schema"] }, "sha512-f3/8RDyE1BPTMi/ld2IawIxxPiQt90f3BRvLVVNYQZlRkPoDy0S378eHebTUgQLWe/2BLfm0WdBU0TVc30hS6w=="],
 
-    "@anvia/durable": ["@anvia/durable@0.12.2", "", { "peerDependencies": { "@anvia/core": "^1.17.2", "zod": "^4.6.7" } }, "sha512-r9Vlz+asDauuTur2C7oousE2nR2pF/Cro6TBT68hrpr5QjOoHjtskDqe5SWkocKrhoeQh2kn6GcqGpHdPkCCpw=="],
+    "@anvia/durable": ["@anvia/durable@0.13.0", "", { "peerDependencies": { "@anvia/core": "^1.17.3", "zod": "^4.6.7" } }, "sha512-1JiVZZrf9haLkDZaC9d6xUOdagk7v9FdZyC3sEvmaOTkbEt4eDZS5THg0R0kufNkqa8owmxdE7D1DZx6sRKtaQ=="],
 
     "@anvia/mcp": ["@anvia/mcp@1.2.6", "", { "dependencies": { "@modelcontextprotocol/client": "^2.4.0", "undici": "^8.12.3" }, "peerDependencies": { "@anvia/core": "^1.17.2" } }, "sha512-4CKhjw9wAzEtBgfnqoNw+CknFyz0ghaBDqCXqKzDqDHfJ7rePo/JPhO83G5o9nS1o7wZKQ/SRm+gKvGA+8a6Fw=="],
 

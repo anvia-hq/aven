@@ -8,7 +8,7 @@ Anvia runs the tool calls of one model turn one at a time unless a run says `too
 
 ## Decision
 
-- **A local patch of `@anvia/durable` 0.12.2**, kept with `bun patch` (`patches/@anvia%2Fdurable@0.12.2.patch`, `patchedDependencies` in the root `package.json`): an agent registration may carry `toolConcurrency`, a positive integer that is checked when the agent is registered and given to every run of that agent. Without it nothing changes. Durable starts an agent in one place, so runs, answered questions and goal sessions all get it.
+- **A local patch of `@anvia/durable`**, originally 0.12.2 and carried forward to 0.13.0, kept with `bun patch` (`patches/@anvia%2Fdurable@0.13.0.patch`, `patchedDependencies` in the root `package.json`): an agent registration may carry `toolConcurrency`, a positive integer that is checked when the agent is registered and given to every run of that agent. Without it nothing changes. Durable starts an agent in one place, so runs, answered questions and goal sessions all get it.
 - **Our registration sets it to 4** (`TOOL_CONCURRENCY` in `durable-runs.ts`), for the thread's agent. Subagents are not durable runs and keep Anvia's default of one.
 - **The agent's version is not bumped**: the tools and instructions are the same, and a bump would stop unfinished runs as "needs attention".
 - The change goes to Anvia upstream later; until then the patch is ours.

@@ -23,6 +23,6 @@
     "typescript": "^5"
   },
   "patchedDependencies": {
-    "@anvia/durable@0.12.2": "patches/@anvia%2Fdurable@0.12.2.patch"
+    "@anvia/durable@0.13.0": "patches/@anvia%2Fdurable@0.13.0.patch"
   }
 }

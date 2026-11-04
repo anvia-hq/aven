@@ -52,6 +52,8 @@ export const defaultCreateAgent =
     }
     return createCodingAgent({
       id,
+      // Durable journals model retries; subagents run outside it and keep their own policy.
+      retries: role ? undefined : false,
       questions: attended,
       instructions: role && subagentInstructions(role),
       maxTurns: role && SUBAGENT_MAX_TURNS,
