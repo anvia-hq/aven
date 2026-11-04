@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
+import {
+  addRunner,
+  connectGithub,
+  importRepository,
+  registerUser,
+  threadOnFakeRunner,
+} from "./helpers";
 
 async function createProject(page: Page, name: string) {
   await connectGithub(page);
@@ -75,6 +81,35 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads$/);
     await expect(page.getByText("Thread archived")).toBeVisible();
     await expect(item).toHaveCount(0);
+  });
+
+  test("sending to an archived thread puts it back in the sidebar", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_RUN_ENDS: "1" });
+    try {
+      // The thread is named after its project, and it is in the sidebar until it is archived.
+      const item = page.locator("[data-slot=sidebar-menu-item]", { hasText: "shiny-app" });
+      await page.goto(`/threads/${threadId}`);
+      await expect(item).toHaveCount(1);
+      const archived = await page.request.patch(`/api/threads/${threadId}`, {
+        data: { state: "archived" },
+      });
+      expect(archived.ok()).toBe(true);
+      await page.goto(`/threads/${threadId}`);
+      await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+      await expect(item).toHaveCount(0);
+
+      // Carrying on in it opens it again (decision 0114).
+      await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
+      await page.getByRole("button", { name: "Send" }).click();
+      await expect(item).toHaveCount(1);
+    } finally {
+      child.kill();
+    }
   });
 
   test("a prompt without choosing a project is refused and kept", async ({ page }) => {
