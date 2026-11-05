@@ -19,6 +19,8 @@ struct MessageView: View {
                     switch part {
                     case .text(let text):
                         Text(markdown(text)).textSelection(.enabled)
+                    case .reasoning(let text):
+                        Text(text).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
                     case .tool(let tool):
                         ToolView(tool: tool)
                     }

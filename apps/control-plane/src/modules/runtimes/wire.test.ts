@@ -45,6 +45,18 @@ describe("run events from a runtime", () => {
     });
   });
 
+  test("the model's reasoning is accepted, as the thread shows it (decision 0115)", () => {
+    const event = { type: "reasoning", delta: "The bug is in parsing." } as const;
+    expect(parseRuntimeFrame(frame(event))).toEqual({
+      type: "run.event",
+      runId: "r1",
+      seq: 1,
+      event,
+    });
+    expect(parseRuntimeFrame(frame({ type: "reasoning" }))).toBeNull();
+    expect(parseRuntimeFrame(frame({ type: "reasoning", delta: 7 }))).toBeNull();
+  });
+
   test("a usage event with nonsense numbers is refused", () => {
     expect(
       parseRuntimeFrame(frame({ type: "context", usedTokens: -1, contextWindow: 1000 })),

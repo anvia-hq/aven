@@ -12,29 +12,34 @@ import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { SubagentCard } from "./subagent-card";
-import { ToolGroup } from "./tool-group";
+import { ToolGroup, type ToolGroupEntry } from "./tool-group";
 
 type Block =
   | { type: "text"; text: string }
   | { type: "question"; tool: ToolPart }
   | { type: "image"; image: ToolImage }
   | { type: "subagents"; tool: ToolPart }
-  | { type: "tools"; tools: ToolPart[] };
+  | { type: "tools"; entries: ToolGroupEntry[] };
 
-// Consecutive tool calls become one block, so a burst of work reads as a single row. A question
-// stands apart: the user has to see it, not find it inside a collapsed group. So does an image the
-// agent showed, once it is done; while it is being kept it is a tool call like any other. So do
-// the subagents it handed tasks to: their work is something to follow, one card each.
+// Consecutive tool calls become one block, so a burst of work reads as a single row; the reasoning
+// between them goes to the same row (decision 0115). A question stands apart: the user has to see
+// it, not find it inside a collapsed group. So does an image the agent showed, once it is done;
+// while it is being kept it is a tool call like any other. So do the subagents it handed tasks to:
+// their work is something to follow, one card each.
 function blocks(parts: MessagePart[]) {
   const result: Block[] = [];
-  for (const part of parts) {
+  const group = (entry: ToolGroupEntry) => {
     const last = result.at(-1);
+    if (last?.type === "tools") last.entries.push(entry);
+    else result.push({ type: "tools", entries: [entry] });
+  };
+  for (const part of parts) {
     if (part.type === "text") result.push(part);
+    else if (part.type === "reasoning") group({ type: "reasoning", text: part.text });
     else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
     else if (part.tool.image) result.push({ type: "image", image: part.tool.image });
     else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
-    else if (last?.type === "tools") last.tools.push(part.tool);
-    else result.push({ type: "tools", tools: [part.tool] });
+    else group({ type: "tool", tool: part.tool });
   }
   return result;
 }
@@ -62,7 +67,7 @@ function AssistantBlock({
       </div>
     );
   }
-  return <ToolGroup tools={block.tools} />;
+  return <ToolGroup entries={block.entries} live={live} />;
 }
 
 // Memoized: while the agent streams, only the last message changes (the reducer keeps the others

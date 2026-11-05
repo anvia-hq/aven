@@ -1,4 +1,5 @@
 import type { AgentStreamEvent, AssistantContentPart, Message } from "@anvia/core";
+import { reasoningDisplayText } from "@anvia/core/completion";
 
 import {
   messageId,
@@ -17,11 +18,14 @@ import {
 import { contextOf, tokenUsageOf } from "./usage";
 
 // Only these run events ever reach a client. Turn events carry full history and the system prompt,
-// and reasoning/provider payloads are private, so they are dropped here.
+// and provider payloads are private, so they are dropped here. The model's reasoning goes to the
+// thread's tool group (decision 0115).
 export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefined {
   switch (event.type) {
     case "text_delta":
       return { type: "text", delta: event.delta };
+    case "reasoning_delta":
+      return { type: "reasoning", delta: event.delta };
     case "tool_call":
       return { type: "tool_start", tool: projectToolCall(event.toolCall) };
     case "tool_result":
@@ -72,6 +76,12 @@ function assistantParts(content: string | readonly AssistantContentPart[]): Mess
   const parts: MessagePart[] = [];
   for (const part of content) {
     if (part.type === "text" && part.text.trim()) parts.push({ type: "text", text: part.text });
+    // Reasoning is shown as the tool group shows it (decision 0115); one whose provider keeps it
+    // opaque (encrypted, redacted) has no text to show.
+    if (part.type === "reasoning") {
+      const text = reasoningDisplayText(part);
+      if (text.trim()) parts.push({ type: "reasoning", text });
+    }
     if (part.type === "tool-call") parts.push({ type: "tool", tool: projectToolCall(part) });
   }
   return parts;
