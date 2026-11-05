@@ -30,6 +30,15 @@ public struct Transcript: Equatable, Sendable {
                     parts.append(.text(delta))
                 }
             }
+        case .reasoning(let delta):
+            changeLastAssistant { parts in
+                if case .reasoning(let existing)? = parts.last {
+                    parts[parts.count - 1] = .reasoning(existing + delta)
+                } else if !delta.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // A blank delta opens nothing, as on the web: it would split the tool calls around it.
+                    parts.append(.reasoning(delta))
+                }
+            }
         case .toolStart(let tool):
             changeLastAssistant { $0.append(.tool(tool)) }
         case .toolEnd(let id, let status, let output):

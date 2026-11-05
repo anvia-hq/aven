@@ -110,7 +110,11 @@ export function applyUsage(
   };
 }
 
-export type MessagePart = { type: "text"; text: string } | { type: "tool"; tool: ToolPart };
+export type MessagePart =
+  | { type: "text"; text: string }
+  /** The model's reasoning on its way to what follows it, shown in the thread's tool group (decision 0115). */
+  | { type: "reasoning"; text: string }
+  | { type: "tool"; tool: ToolPart };
 
 /**
  * A file the user attached to a message (decision 0034). Every one is copied into the sandbox; an
@@ -189,6 +193,8 @@ export type RunEvent =
   /** A queued message was not delivered; `reason` is shown to the person, and none means it is sent another way. */
   | { type: "steer_rejected"; id: string; reason?: string }
   | { type: "text"; delta: string }
+  /** A piece of the model's reasoning, as it streams (decision 0115). */
+  | { type: "reasoning"; delta: string }
   | { type: "tool_start"; tool: ToolPart }
   | {
       type: "tool_end";
@@ -325,6 +331,16 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         // would split the tool calls around it into separate rows.
         if (event.delta.trim() === "") return parts;
         return [...parts, { type: "text", text: event.delta }];
+      });
+    case "reasoning":
+      return updateLastAssistant(messages, (parts) => {
+        const last = parts.at(-1);
+        if (last?.type === "reasoning") {
+          return [...parts.slice(0, -1), { type: "reasoning", text: last.text + event.delta }];
+        }
+        // A blank delta opens nothing, as with text: it would split the tool calls around it.
+        if (event.delta.trim() === "") return parts;
+        return [...parts, { type: "reasoning", text: event.delta }];
       });
     case "tool_start":
       return updateLastAssistant(messages, (parts) => [

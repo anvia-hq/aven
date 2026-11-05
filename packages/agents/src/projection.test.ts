@@ -11,7 +11,7 @@ import {
   type ChatMessage,
   type RunEvent,
 } from "@aven/protocol/events";
-import { scriptedModel, text, toolCall } from "./testing/scripted-model";
+import { reasoning, scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 import { createSpawnAgentTool } from "./tools/spawn-agent";
 import { usageFromHistory } from "./usage";
@@ -96,6 +96,70 @@ describe("projection", () => {
     expect((ends[0] as { output: string }).output).toBe("hello");
     // A failing tool is reported as an error the model can see, and does not end the run.
     expect(ends.find((end) => end.id === "c3")).toMatchObject({ status: "error" });
+  });
+
+  test("the model's reasoning is projected, and rebuilt from the stored history alike", async () => {
+    files.set("a.txt", "hello");
+    const { agent } = createCodingAgent({
+      tools: [readFile],
+      webSearch: false,
+      questions: false,
+      model: scriptedModel([
+        [reasoning("Need the file first."), toolCall("read_file", { path: "a.txt" }, "c1")],
+        [reasoning("It says hello."), text("Done.")],
+      ]),
+    });
+    const stream = agent.stream({ prompt: "go" });
+    const events: RunEvent[] = [];
+    for await (const event of stream) {
+      const projected = projectStreamEvent(event);
+      if (projected) events.push(projected);
+    }
+    expect(events.filter((event) => event.type !== "usage")).toEqual([
+      { type: "reasoning", delta: "Need the file first." },
+      { type: "tool_start", tool: expect.objectContaining({ id: "c1" }) },
+      { type: "tool_end", id: "c1", status: "done", output: "hello" },
+      { type: "reasoning", delta: "It says hello." },
+      { type: "text", delta: "Done." },
+    ]);
+    const live = [{ type: "run_start", prompt: "go" } as const, ...events].reduce<ChatMessage[]>(
+      applyEvent,
+      [],
+    );
+    expect(live[1]!.parts.map((part) => part.type)).toEqual([
+      "reasoning",
+      "tool",
+      "reasoning",
+      "text",
+    ]);
+    const stored = messagesToChat((await stream.result).messages);
+    expect(stored[1]).toEqual({ ...live[1]!, id: stored[1]!.id });
+  });
+
+  test("stored reasoning is shown by its display text; an opaque one has none", () => {
+    const chat = messagesToChat([
+      { role: "user", content: "go" },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "reasoning",
+            text: "",
+            details: [{ type: "encrypted", data: "c2lk" }],
+          },
+          {
+            type: "reasoning",
+            text: "",
+            details: [{ type: "summary", text: "Weighed the options." }],
+          },
+          { type: "reasoning", text: "Plain thought." },
+        ],
+      },
+    ]);
+    expect(chat[1]?.parts).toEqual([
+      { type: "reasoning", text: "Weighed the options." },
+      { type: "reasoning", text: "Plain thought." },
+    ]);
   });
 
   test("applying events rebuilds the same transcript as the stored history", async () => {

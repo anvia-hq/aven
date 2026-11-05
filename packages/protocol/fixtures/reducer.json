@@ -549,5 +549,118 @@
       ],
       "running": true
     }
+  },
+  {
+    "name": "reasoning gathers into parts between the tool calls",
+    "events": [
+      {
+        "type": "run_start",
+        "prompt": "fix it"
+      },
+      {
+        "type": "reasoning",
+        "delta": "The bug"
+      },
+      {
+        "type": "reasoning",
+        "delta": " is in parsing."
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t1",
+          "name": "read",
+          "target": "parse.ts",
+          "status": "running"
+        }
+      },
+      {
+        "type": "tool_end",
+        "id": "t1",
+        "status": "done",
+        "output": "..."
+      },
+      {
+        "type": "reasoning",
+        "delta": "\n\n"
+      },
+      {
+        "type": "reasoning",
+        "delta": "Now the fix."
+      },
+      {
+        "type": "tool_start",
+        "tool": {
+          "id": "t2",
+          "name": "edit",
+          "target": "parse.ts",
+          "status": "running"
+        }
+      },
+      {
+        "type": "tool_end",
+        "id": "t2",
+        "status": "done"
+      },
+      {
+        "type": "text",
+        "delta": "Fixed."
+      },
+      {
+        "type": "done"
+      }
+    ],
+    "expected": {
+      "messages": [
+        {
+          "id": "m-0",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "fix it"
+            }
+          ]
+        },
+        {
+          "id": "m-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "reasoning",
+              "text": "The bug is in parsing."
+            },
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t1",
+                "name": "read",
+                "target": "parse.ts",
+                "status": "done",
+                "output": "..."
+              }
+            },
+            {
+              "type": "reasoning",
+              "text": "Now the fix."
+            },
+            {
+              "type": "tool",
+              "tool": {
+                "id": "t2",
+                "name": "edit",
+                "target": "parse.ts",
+                "status": "done"
+              }
+            },
+            {
+              "type": "text",
+              "text": "Fixed."
+            }
+          ]
+        }
+      ],
+      "running": false
+    }
   }
 ]

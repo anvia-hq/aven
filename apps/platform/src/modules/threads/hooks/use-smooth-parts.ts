@@ -5,11 +5,14 @@ import type { ChatMessage, MessagePart } from "../types";
 
 type Item = { key: string; part: MessagePart };
 
+// Reasoning is paced like text (decision 0115): it streams in the same bursts.
+const paced = (part: MessagePart): part is Extract<MessagePart, { text: string }> =>
+  part.type === "text" || part.type === "reasoning";
+
 const adapter: SmoothStreamItemAdapter<Item> = {
   getKey: (item) => item.key,
-  getText: (item) => (item.part.type === "text" ? item.part.text : undefined),
-  withText: (item, text) =>
-    item.part.type === "text" ? { ...item, part: { ...item.part, text } } : item,
+  getText: (item) => (paced(item.part) ? item.part.text : undefined),
+  withText: (item, text) => (paced(item.part) ? { ...item, part: { ...item.part, text } } : item),
 };
 
 // A message's parts as the reader should see them while the agent writes it: text paced out at a

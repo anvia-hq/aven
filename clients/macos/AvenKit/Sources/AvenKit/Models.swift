@@ -21,6 +21,8 @@ public struct Tool: Codable, Equatable, Sendable, Identifiable {
 
 public enum Part: Equatable, Sendable, Codable {
     case text(String)
+    /// The model's reasoning on its way to what follows it (decision 0115).
+    case reasoning(String)
     case tool(Tool)
 
     private enum CodingKeys: String, CodingKey { case type, text, tool }
@@ -29,6 +31,7 @@ public enum Part: Equatable, Sendable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         switch try container.decode(String.self, forKey: .type) {
         case "text": self = .text(try container.decode(String.self, forKey: .text))
+        case "reasoning": self = .reasoning(try container.decode(String.self, forKey: .text))
         case "tool": self = .tool(try container.decode(Tool.self, forKey: .tool))
         case let other:
             throw DecodingError.dataCorruptedError(
@@ -41,6 +44,9 @@ public enum Part: Equatable, Sendable, Codable {
         switch self {
         case .text(let text):
             try container.encode("text", forKey: .type)
+            try container.encode(text, forKey: .text)
+        case .reasoning(let text):
+            try container.encode("reasoning", forKey: .type)
             try container.encode(text, forKey: .text)
         case .tool(let tool):
             try container.encode("tool", forKey: .type)
@@ -62,6 +68,7 @@ public enum RunEvent: Equatable, Sendable, Decodable {
     case snapshot(messages: [Message], running: Bool)
     case runStart(prompt: String)
     case text(delta: String)
+    case reasoning(delta: String)
     case toolStart(Tool)
     case toolEnd(id: String, status: Tool.Status, output: String?)
     case done
@@ -81,6 +88,7 @@ public enum RunEvent: Equatable, Sendable, Decodable {
                 running: try c.decode(Bool.self, forKey: .running))
         case "run_start": self = .runStart(prompt: try c.decode(String.self, forKey: .prompt))
         case "text": self = .text(delta: try c.decode(String.self, forKey: .delta))
+        case "reasoning": self = .reasoning(delta: try c.decode(String.self, forKey: .delta))
         case "tool_start": self = .toolStart(try c.decode(Tool.self, forKey: .tool))
         case "tool_end":
             self = .toolEnd(

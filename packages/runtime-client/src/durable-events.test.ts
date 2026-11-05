@@ -9,6 +9,17 @@ const started = event("tool_started", {
   input: { toolCall: { toolCallId: "c1", toolName: "exec_command", input: { command: "ls" } } },
 });
 
+test("the model's reasoning reaches the client; other deltas stay private", () => {
+  const { map } = createDurableEventMapper();
+  expect(
+    map(event("model_delta", { event: { type: "reasoning_delta", turn: 1, delta: "Hmm." } }))
+      .events,
+  ).toEqual([{ type: "reasoning", delta: "Hmm." }]);
+  expect(
+    map(event("model_delta", { event: { type: "tool_call_delta", turn: 1, id: "t1" } })).events,
+  ).toEqual([]);
+});
+
 test("a tool is announced when it starts, for models whose stream has no finished call", () => {
   const { map } = createDurableEventMapper();
   expect(map(started).events).toEqual([

@@ -18,8 +18,9 @@ export type DurableEnd =
   | { type: "interaction"; continuation: unknown; messages: AgentOutcome<unknown>["messages"] }
   | { type: "error"; error: string };
 
-// Only these deltas are of interest to a client; reasoning and provider payloads are private.
-const DELTAS = new Set(["text_delta", "tool_call"]);
+// Only these deltas are of interest to a client; provider payloads are private. Reasoning the
+// thread shows in its tool group (decision 0115).
+const DELTAS = new Set(["text_delta", "reasoning_delta", "tool_call"]);
 
 // Durable journals a run as events of its own. This turns them back into what a client sees:
 // the same run events the agent's stream used to project, plus how the run ended.

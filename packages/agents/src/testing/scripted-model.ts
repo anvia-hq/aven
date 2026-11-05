@@ -46,6 +46,7 @@ export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
       const response = await respond(request);
       for (const part of response.choice) {
         if (part.type === "text") yield { type: "text_delta", delta: part.text };
+        if (part.type === "reasoning") yield { type: "reasoning_delta", delta: part.text };
         if (part.type === "tool-call") yield { type: "tool_call", toolCall: part };
       }
       yield { type: "final", response };
@@ -54,6 +55,11 @@ export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
 }
 
 export const text = (value: string): AssistantContentPart => ({ type: "text", text: value });
+
+export const reasoning = (value: string): AssistantContentPart => ({
+  type: "reasoning",
+  text: value,
+});
 
 export const toolCall = (
   toolName: string,
