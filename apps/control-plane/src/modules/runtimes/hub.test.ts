@@ -704,11 +704,22 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         type: "run.event",
         runId: "run-ev",
         seq: 4,
+        event: { type: "reasoning", delta: "Hmm." },
+      }),
+    );
+    ws.send(
+      JSON.stringify({
+        type: "run.event",
+        runId: "run-ev",
+        seq: 5,
         event: { type: "text", delta: "ok" },
       }),
     );
-    await until(() => events.length > 0);
-    expect(events).toEqual([{ type: "text", delta: "ok" }]);
+    await until(() => events.length > 1);
+    expect(events).toEqual([
+      { type: "reasoning", delta: "Hmm." },
+      { type: "text", delta: "ok" },
+    ]);
     expect(ended).toEqual([]);
   });
 

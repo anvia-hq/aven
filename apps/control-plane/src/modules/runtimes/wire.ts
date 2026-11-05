@@ -132,6 +132,8 @@ const seq = z.number().int().positive();
 
 const runEvent = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), delta: z.string() }),
+  // The model's reasoning, as it streams; the thread shows it in its tool group (decision 0115).
+  z.object({ type: z.literal("reasoning"), delta: z.string() }),
   // The agent took a message the person sent while it worked; the control plane has the words (decision 0098).
   z.object({ type: z.literal("steer_applied"), id: z.string().min(1).max(100) }),
   z.object({ type: z.literal("tool_start"), tool: toolPart }),
