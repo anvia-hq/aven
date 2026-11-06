@@ -18,8 +18,8 @@ export const githubInstallations = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     /** GitHub's id for the installation. */
     installationId: bigint("installation_id", { mode: "number" }).notNull(),
-    /** The workspace's own app this is an installation of; null for the platform's (decision 0123). */
-    appId: uuid("app_id").references(() => githubApps.id, { onDelete: "restrict" }),
+    /** The workspace's own app this is an installation of; null for the platform's (decision 0123). No action on delete, checked at the end of the statement, so deleting a workspace removes the app and its installations together. */
+    appId: uuid("app_id").references(() => githubApps.id),
     /** The user or organization the app is installed on. */
     accountLogin: text("account_login").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

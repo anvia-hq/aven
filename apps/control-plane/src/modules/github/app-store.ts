@@ -4,6 +4,7 @@ import { platformSettings } from "@aven/db/schema/platform-settings";
 import { eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "../../crypto";
+import { ConflictError } from "../../errors";
 import type { GithubConfig } from "./client";
 import { githubUrlsFromEnv, type GithubUrls } from "./app-manifest";
 
@@ -53,19 +54,28 @@ export async function loadGithubApp(
   }
 }
 
-/** Keeps the app a workspace made for itself, replacing the one it had (decision 0123). Returns its id. */
+/**
+ * Keeps the app a workspace made for itself and returns its id (decision 0123). A workspace has
+ * one: a second one, as when two callbacks arrive together, is refused rather than replacing the
+ * first, which installations and people's connections already belong to.
+ */
 export async function saveOrganizationApp(
   organizationId: string,
   userId: string,
   config: GithubConfig,
 ) {
-  const values = { slug: config.slug, credentialsEncrypted: seal(config) };
   const [row] = await db
     .insert(githubApps)
-    .values({ organizationId, createdBy: userId, ...values })
-    .onConflictDoUpdate({ target: githubApps.organizationId, set: values })
+    .values({
+      organizationId,
+      createdBy: userId,
+      slug: config.slug,
+      credentialsEncrypted: seal(config),
+    })
+    .onConflictDoNothing({ target: githubApps.organizationId })
     .returning({ id: githubApps.id });
-  return row!.id;
+  if (!row) throw new ConflictError("This workspace already has its own GitHub App");
+  return row.id;
 }
 
 /** A workspace's own app and its id, or null when it has none or it cannot be read. */

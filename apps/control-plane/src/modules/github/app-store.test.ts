@@ -123,10 +123,11 @@ run("a workspace's own GitHub App (real postgres)", () => {
     expect(await loadOrganizationApp(orgB, urls)).toBeNull();
   });
 
-  test("a second app of the workspace replaces the first and keeps its id", async () => {
-    const first = (await loadOrganizationApp(orgA, urls))!.id;
-    const id = await saveOrganizationApp(orgA, userId, { ...app, slug: "aven-y" });
-    expect(id).toBe(first);
-    expect((await loadOrganizationApp(orgA, urls))?.config.slug).toBe("aven-y");
+  test("a second app of the workspace is refused and the first is kept", async () => {
+    const first = (await loadOrganizationApp(orgA, urls))!;
+    await expect(saveOrganizationApp(orgA, userId, { ...app, slug: "aven-y" })).rejects.toThrow(
+      "already has its own",
+    );
+    expect(await loadOrganizationApp(orgA, urls)).toEqual(first);
   });
 });
