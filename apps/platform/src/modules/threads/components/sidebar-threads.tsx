@@ -23,12 +23,11 @@ import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
-import { WorkingDots } from "./working-indicator";
 
 const RUNNING_REFRESH_MS = 5000;
 
-// The thread's project as a tile, with the working dots beside it while the thread runs. Until the
-// project is known the tile's place is kept, so a row does not show a question mark and then change.
+// The thread's project as a tile, which takes the project's colors and turns while the thread runs.
+// Until the project is known the tile's place is kept, so a row does not change when it arrives.
 function SidebarProjectTile({
   thread,
   project,
@@ -38,21 +37,8 @@ function SidebarProjectTile({
   project?: Project;
   palette?: number;
 }) {
-  const working = thread.running && <WorkingDots label="Working" />;
-  if (!project) {
-    return (
-      <>
-        <span className="size-4 shrink-0" aria-hidden />
-        {working}
-      </>
-    );
-  }
-  return (
-    <>
-      <ProjectTile projectId={project.id} palette={palette} name={project.name} />
-      {working}
-    </>
-  );
+  if (!project) return <span className="size-4 shrink-0" aria-hidden />;
+  return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
 }
 
 // When the thread last changed, in the place the Archive button takes at the row's end: centred on

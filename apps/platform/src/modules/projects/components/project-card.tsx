@@ -24,12 +24,7 @@ export function ProjectCard({ project, palette }: Props) {
       className="group/project flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-foreground/20 hover:bg-accent/40"
     >
       <div className="flex items-start gap-3 p-4">
-        <ProjectTile
-          projectId={project.id}
-          palette={palette}
-          name={project.name}
-          className="size-11 rounded-xl text-lg"
-        />
+        <ProjectTile projectId={project.id} palette={palette} className="size-11" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate font-medium">{project.name}</span>
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">

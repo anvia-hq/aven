@@ -47,11 +47,7 @@ export function CenterSidebar() {
                 isActive={selected === project.id}
                 tooltip={project.name}
               >
-                <ProjectTile
-                  projectId={project.id}
-                  palette={palettes.get(project.id)}
-                  name={project.name}
-                />
+                <ProjectTile projectId={project.id} palette={palettes.get(project.id)} />
                 <span className="truncate">{project.name}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>

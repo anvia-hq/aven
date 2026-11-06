@@ -14,12 +14,7 @@ export function ProjectTitle({ project }: { project: Project }) {
 
   return (
     <div className="flex items-center gap-3">
-      <ProjectTile
-        projectId={project.id}
-        palette={palette}
-        name={project.name}
-        className="size-12 rounded-xl text-xl"
-      />
+      <ProjectTile projectId={project.id} palette={palette} className="size-12" />
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="truncate text-xl font-semibold">{project.name}</h1>
         <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">

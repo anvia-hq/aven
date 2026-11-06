@@ -29,11 +29,7 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
                   screen reader. */}
               {project ? (
                 <span title={project.name} className="flex shrink-0">
-                  <ProjectTile
-                    projectId={project.id}
-                    palette={palettes.get(project.id)}
-                    name={project.name}
-                  />
+                  <ProjectTile projectId={project.id} palette={palettes.get(project.id)} />
                   <span className="sr-only">{project.name}</span>
                 </span>
               ) : (

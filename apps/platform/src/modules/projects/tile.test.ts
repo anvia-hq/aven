@@ -1,44 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { projectInitial, tilePalettes, tileStyle } from "./tile";
+import { tileColors, tilePalettes } from "./tile";
 
-describe("projectInitial", () => {
-  test("is the first letter or digit, in capitals", () => {
-    expect(projectInitial("aven")).toBe("A");
-    expect(projectInitial("  my-app")).toBe("M");
-    expect(projectInitial("-_-7up")).toBe("7");
-    expect(projectInitial("élan")).toBe("É");
-  });
-
-  test("is a question mark for a name with no letter or digit", () => {
-    expect(projectInitial("")).toBe("?");
-    expect(projectInitial("---")).toBe("?");
-  });
-});
-
-describe("tileStyle", () => {
+describe("tileColors", () => {
   test("is the same for a project every time", () => {
-    expect(tileStyle("project-1")).toEqual(tileStyle("project-1"));
+    expect(tileColors("project-1")).toEqual(tileColors("project-1"));
   });
 
-  test("blends a base color with three accents under a light from above", () => {
-    const style = tileStyle("project-1");
-    expect(style.backgroundColor).toMatch(/^#[0-9a-f]{6}$/);
-    const layers = style.backgroundImage.split(/, (?=linear|radial)/);
-    expect(layers.map((layer) => layer.split("(")[0])).toEqual([
-      "linear-gradient",
-      "radial-gradient",
-      "radial-gradient",
-      "radial-gradient",
-    ]);
-  });
-
-  test("gives projects different looks, not one for all", () => {
-    const seen = new Set(
-      Array.from({ length: 200 }, (_, index) => tileStyle(`id-${index}`).backgroundImage),
-    );
-    // Six palettes turned four ways: 24 looks, most of which 200 ids will have met.
-    expect(seen.size).toBeGreaterThan(18);
+  test("gives three colors", () => {
+    for (const color of tileColors("project-1")) expect(color).toMatch(/^#[0-9a-f]{6}$/);
   });
 });
 
@@ -47,7 +17,7 @@ describe("tilePalettes", () => {
   const twins = ["e10b6307-ab40-49eb-958f-929445d72a80", "8426ffae-0657-464f-95e8-e9a56327b4a6"];
 
   test("two ids that hash to one palette are given two", () => {
-    expect(tileStyle(twins[0]!).backgroundColor).toBe(tileStyle(twins[1]!).backgroundColor);
+    expect(tileColors(twins[0]!)).toEqual(tileColors(twins[1]!));
     const palettes = tilePalettes(twins);
     expect(palettes.get(twins[0]!)).not.toBe(palettes.get(twins[1]!));
   });
@@ -74,6 +44,6 @@ describe("tilePalettes", () => {
   });
 
   test("a palette given to the tile is the one drawn", () => {
-    expect(tileStyle("x", 0).backgroundColor).not.toBe(tileStyle("x", 1).backgroundColor);
+    expect(tileColors("x", 0)).not.toEqual(tileColors("x", 1));
   });
 });
