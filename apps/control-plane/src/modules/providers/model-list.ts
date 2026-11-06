@@ -28,6 +28,11 @@ function modelsRequest(source: ModelSource) {
       headers: { "api-key": requireApiKey(source) },
     };
   }
+  if (source.kind === "vertex") {
+    throw new ModelListError(
+      "Vertex AI has no model list: type the model id, such as google/gemini-2.5-flash",
+    );
+  }
   if (source.kind === "bedrock") {
     // Bedrock's own OpenAI-compatible list; `bedrock-runtime` has none. The key goes only to AWS.
     if (!source.baseUrl) throw new ModelListError("A region is needed to list models");
@@ -111,8 +116,8 @@ export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetc
 // The levels a model of a server the person runs says it accepts: a gateway lists them itself,
 // models.dev knows nothing of such a server.
 async function listedEfforts(source: ModelSource, modelId: string) {
-  // Bedrock lists no levels, and a model there may reject one it does not know.
-  if (source.kind === "bedrock") return null;
+  // Bedrock and Vertex AI list no levels, and a model there may reject one it does not know.
+  if (source.kind === "bedrock" || source.kind === "vertex") return null;
   if (source.kind === "openai-compatible") {
     if (!source.baseUrl) return null;
     return (await gatewayModel(source.baseUrl, source.apiKey, modelId)).effortLevels;

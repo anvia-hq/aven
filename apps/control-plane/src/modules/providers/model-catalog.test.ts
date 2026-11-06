@@ -231,3 +231,29 @@ describe("bedrock in the catalog", () => {
     expect(looksLikeChatModel("bedrock", "stability.stable-image-core")).toBe(false);
   });
 });
+
+describe("vertex in the catalog", () => {
+  test("finds a model by its name without the publisher", async () => {
+    const models = createModelCatalog(
+      serving({
+        ...catalog,
+        "google-vertex": {
+          models: {
+            "gemini-2.5-flash": {
+              tool_call: true,
+              modalities: { input: ["text", "image"], output: ["text"] },
+              limit: { context: 1048576 },
+            },
+            "gemini-live": { tool_call: false, modalities: { output: ["audio"] } },
+          },
+        },
+      }),
+      () => 0,
+      url,
+    );
+    expect(await models.contextWindow("vertex", "google/gemini-2.5-flash")).toBe(1048576);
+    expect(await models.canRun("vertex", "google/gemini-live")).toBe(false);
+    expect(await models.canRun("vertex", "meta/llama-4")).toBe(true);
+    expect(await models.efforts("vertex", "google/gemini-2.5-flash")).toBeNull();
+  });
+});

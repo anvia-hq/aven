@@ -13,6 +13,7 @@ describe("providerOptionsFor", () => {
     expect(providerOptionsFor("azure")).toBeUndefined();
     expect(providerOptionsFor("gemini")).toBeUndefined();
     expect(providerOptionsFor("bedrock")).toBeUndefined();
+    expect(providerOptionsFor("vertex")).toBeUndefined();
   });
 });
 
@@ -62,6 +63,33 @@ describe("createModel bedrock", () => {
     } finally {
       server.stop(true);
     }
+  });
+});
+
+describe("createModel vertex", () => {
+  const vertex = {
+    provider: "vertex",
+    baseUrl: "https://aiplatform.googleapis.com/v1/projects/p/locations/global/endpoints/openapi",
+  } as const;
+
+  test("needs an endpoint, a model and a credential", () => {
+    expect(() => createModel({ provider: "vertex", modelId: "m", apiKey: "k" })).toThrow(
+      "project endpoint",
+    );
+    expect(() => createModel({ ...vertex, apiKey: "k" })).toThrow("model id");
+    expect(() => createModel({ ...vertex, modelId: "m" })).toThrow("credential");
+    expect(
+      createModel({ ...vertex, modelId: "google/gemini-2.5-flash", apiKey: "k" }).modelId,
+    ).toBe("google/gemini-2.5-flash");
+  });
+
+  test("offers an effort control only from levels the host supplies", () => {
+    const config = { ...vertex, modelId: "google/gemini-2.5-flash" };
+    expect(reasoningControlsFor(config)).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: ["low", "high"] })?.options).toEqual([
+      "low",
+      "high",
+    ]);
   });
 });
 

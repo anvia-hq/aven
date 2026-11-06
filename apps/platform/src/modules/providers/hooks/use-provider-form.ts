@@ -1,4 +1,4 @@
-import { bedrockBaseUrl } from "@aven/protocol/providers";
+import { bedrockBaseUrl, vertexBaseUrl } from "@aven/protocol/providers";
 import { useRef, useState, type FormEvent } from "react";
 
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
@@ -21,16 +21,22 @@ export function useProviderForm(
   const compatible = kind === "openai-compatible";
   const azure = kind === "azure";
   const bedrock = kind === "bedrock";
+  const vertex = kind === "vertex";
 
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
 
   // The address the form stands for: typed for a server or an Azure resource, derived from the
-  // region for Bedrock.
+  // region for Bedrock and from the project and location for Vertex AI.
   function readBaseUrl() {
     if (bedrock) {
       const region = readTrimmedField("region");
       return region ? bedrockBaseUrl(region) : undefined;
+    }
+    if (vertex) {
+      const project = readTrimmedField("project");
+      const location = readTrimmedField("location");
+      return project && location ? vertexBaseUrl(project, location) : undefined;
     }
     return compatible || azure ? readTrimmedField("baseUrl") : undefined;
   }
@@ -79,6 +85,7 @@ export function useProviderForm(
     compatible,
     azure,
     bedrock,
+    vertex,
     models,
     modelId,
     loadingModels,

@@ -308,6 +308,56 @@ run("providersService (postgres)", async () => {
     await providersService.remove(alice, created.id);
   });
 
+  test("a Vertex AI provider keeps its project endpoint, takes a service account key and offers its model", async () => {
+    const endpoint =
+      "https://europe-west4-aiplatform.googleapis.com/v1/projects/my-project-123/locations/europe-west4/endpoints/openapi";
+    const account = JSON.stringify({
+      type: "service_account",
+      client_email: "a@my-project-123.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+      private_key_id: "0123456789abcdef",
+    });
+    const created = await providersService.create(alice, {
+      kind: "vertex",
+      name: "Vertex EU",
+      baseUrl: endpoint,
+      modelId: "google/gemini-2.5-flash",
+      apiKey: account,
+    });
+    expect(created).toMatchObject({
+      kind: "vertex",
+      baseUrl: endpoint,
+      hasKey: true,
+      keyHint: "cdef",
+    });
+    expect(JSON.stringify(created)).not.toContain("BEGIN PRIVATE KEY");
+    expect(await providersService.listModels(alice, created.id)).toMatchObject({
+      models: ["google/gemini-2.5-flash"],
+    });
+    // Only Google's own host, in the region the path says.
+    for (const baseUrl of [
+      "https://evil.example.com/v1/projects/my-project-123/locations/global/endpoints/openapi",
+      "https://us-central1-aiplatform.googleapis.com/v1/projects/my-project-123/locations/europe-west4/endpoints/openapi",
+      "https://aiplatform.googleapis.com.evil.com/v1/projects/my-project-123/locations/global/endpoints/openapi",
+    ]) {
+      await expect(providersService.update(alice, created.id, { baseUrl })).rejects.toThrow(
+        "Vertex AI endpoint",
+      );
+    }
+    await expect(
+      providersService.update(alice, created.id, { apiKey: "two words" }),
+    ).rejects.toThrow("service account");
+    await providersService.update(alice, created.id, { apiKey: "ya29.pasted-token" });
+    const config = await resolveModel(alice, { providerId: created.id });
+    expect(config).toMatchObject({
+      provider: "vertex",
+      baseUrl: endpoint,
+      modelId: "google/gemini-2.5-flash",
+      apiKey: "ya29.pasted-token",
+    });
+    await providersService.remove(alice, created.id);
+  });
+
   test("model efforts come from the SDK and leave out models without the control", async () => {
     expect(await effortsByModel({ kind: "openai" }, ["gpt-4o", "o3"])).toEqual({
       o3: { options: ["low", "medium", "high"], defaultValue: "medium" },

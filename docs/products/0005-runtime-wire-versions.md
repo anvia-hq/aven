@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **45**: a run can use the `vertex` provider (decision 0136), which an older runtime would build as an Anthropic client.
 - **44**: a run can use the `bedrock` provider (decision 0135), which an older runtime would build as an Anthropic client.
 - **43**: a run can use the `gemini` provider (decision 0134), which an older runtime would build as an Anthropic client.
 - **42**: a run and a bot's reply say what the agent may do in the person's cockpit (`cockpit` on `run.start`, `run.resume` and `bot.reply`: `read` for a thread's agent, `write` for a bot), and the agent works it with the calls `cockpit.read` and `bot.cockpit` (decision 0109).

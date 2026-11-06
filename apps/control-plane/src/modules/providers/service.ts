@@ -7,10 +7,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";
 import { readKey } from "./crypto";
+import { isGoogleCredential, parseServiceAccount } from "./google-auth";
 import { effortsByModel, listAgentModels, ModelListError, type ModelSource } from "./model-list";
 import {
   azureEndpoint,
   bedrockEndpoint,
+  vertexEndpoint,
   type CreateProviderBody,
   type KeylessProviderBody,
   type UpdateProviderBody,
@@ -24,8 +26,10 @@ type ProviderKind = ModelConfig["provider"];
 // since every server is its own.
 const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "gemini", "azure"]);
 
-const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "bedrock" | "openai-compatible" =>
-  kind === "openai-compatible" || kind === "azure" || kind === "bedrock";
+const hasBaseUrl = (
+  kind: ProviderKind,
+): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
+  kind === "openai-compatible" || kind === "azure" || kind === "bedrock" || kind === "vertex";
 
 // What the API returns: never the key itself, only a hint.
 export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
@@ -48,15 +52,28 @@ function bedrockEndpointOf(value: string) {
   return parsed.data;
 }
 
+// A changed Vertex AI endpoint is held to the same rules as a new one.
+function vertexEndpointOf(value: string) {
+  const parsed = vertexEndpoint.safeParse(value);
+  if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
+  return parsed.data;
+}
+
 // A new address, checked the way its kind's creation checks it.
 function changedBaseUrl(kind: ProviderKind, baseUrl: string | undefined) {
   if (baseUrl === undefined) return undefined;
   if (kind === "azure") return azureEndpointOf(baseUrl);
   if (kind === "bedrock") return bedrockEndpointOf(baseUrl);
+  if (kind === "vertex") return vertexEndpointOf(baseUrl);
   return baseUrl;
 }
 
-const hint = (apiKey: string) => apiKey.slice(-4);
+// What a person recognizes a key by: its last characters; for a service account's key, the end of its
+// key id, since the JSON ends in the same brace for everyone.
+function hint(apiKey: string) {
+  const account = parseServiceAccount(apiKey);
+  return account ? (account.private_key_id ?? "json").slice(-4) : apiKey.slice(-4);
+}
 
 // The stored form of an API key; empty when there is none to set, which leaves a stored one alone.
 const secretColumns = (apiKey: string | undefined) =>
@@ -119,10 +136,7 @@ export const providersService = {
           userId,
           kind: body.kind,
           name: body.name,
-          baseUrl:
-            body.kind === "openai-compatible" || body.kind === "azure" || body.kind === "bedrock"
-              ? body.baseUrl
-              : null,
+          baseUrl: hasBaseUrl(body.kind) && "baseUrl" in body ? body.baseUrl : null,
           modelId: body.modelId ?? null,
           ...secretColumns(body.apiKey),
           isDefault,
@@ -145,13 +159,23 @@ export const providersService = {
       if (!current) return null;
       if (body.baseUrl !== undefined && !hasBaseUrl(current.kind)) {
         throw new InvalidProviderError(
-          "Only Azure, Bedrock and OpenAI-compatible providers have a base URL",
+          "Only Azure, Bedrock, Vertex AI and OpenAI-compatible providers have a base URL",
         );
       }
       if (body.modelId === null && hasBaseUrl(current.kind)) {
         throw new InvalidProviderError("This provider needs a model id");
       }
       const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
+      if (body.apiKey !== undefined && current.kind !== "vertex" && body.apiKey.length > 500) {
+        throw new InvalidProviderError("An API key is at most 500 characters");
+      }
+      if (
+        body.apiKey !== undefined &&
+        current.kind === "vertex" &&
+        !isGoogleCredential(body.apiKey)
+      ) {
+        throw new InvalidProviderError("Give a service account's JSON key, or an access token");
+      }
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
       if (body.isDefault === true) {
         if (providerNeedsKey(current.kind) && !keyed) {
@@ -230,6 +254,8 @@ const sourceOf = (row: ProviderRow): ModelSource => ({
 // The models a saved provider offers: its listing. For Azure, the deployments of the resource, with
 // the one it was set up with first; that one stays on offer if the listing fails.
 async function modelsOf(row: ProviderRow, source: ModelSource) {
+  // Vertex AI's OpenAI-compatible API lists nothing, so the model it was set up with is the offer.
+  if (row.kind === "vertex") return row.modelId ? [row.modelId] : [];
   if (row.kind !== "azure") return listAgentModels(source);
   const listed = await listAgentModels(source).catch((error) => {
     if (error instanceof ModelListError) return [];

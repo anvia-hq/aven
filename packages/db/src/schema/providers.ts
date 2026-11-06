@@ -13,10 +13,10 @@ export const providers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     kind: text("kind", {
-      enum: ["openai", "anthropic", "gemini", "bedrock", "azure", "openai-compatible"],
+      enum: ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure", "openai-compatible"],
     }).notNull(),
     name: text("name").notNull(),
-    /** The server root for "openai-compatible", the resource URL for "azure", the regional endpoint for "bedrock". */
+    /** The server root for "openai-compatible", the resource URL for "azure", the regional endpoint for "bedrock", the project's endpoint for "vertex". */
     baseUrl: text("base_url"),
     modelId: text("model_id"),
     /** `iv.tag.ciphertext`, base64 parts. Null when a compatible endpoint needs no key. */

@@ -18,7 +18,7 @@ export type ModelConfig = {
   /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`. */
   apiKey?: string;
   /**
-   * Required for `openai-compatible`, `azure` and `bedrock`: the API root, e.g. http://localhost:11434/v1 or
+   * Required for `openai-compatible`, `azure`, `bedrock` and `vertex`: the API root, e.g. http://localhost:11434/v1 or
    * https://my-resource.openai.azure.com/openai/v1.
    * For the other providers it overrides the API root, which is how a runtime reaches the
    * control plane's gateway instead of the vendor.
@@ -83,6 +83,21 @@ export function createModel(config: ModelConfig) {
     if (!config.apiKey) throw new Error("A Bedrock provider needs an API key");
     // Bedrock's OpenAI-compatible endpoint takes the Bedrock API key as a bearer token. Its models
     // are served on chat completions; not every one is on the Responses API.
+    return new OpenAIClient({ apiKey: config.apiKey, baseUrl: config.baseUrl }).completionModel({
+      modelId: config.modelId,
+      api: "chat",
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
+  if (config.provider === "vertex") {
+    if (!config.baseUrl) throw new Error("A Vertex AI provider needs its project endpoint");
+    if (!config.modelId) throw new Error("A Vertex AI provider needs a model id");
+    if (!config.apiKey) throw new Error("A Vertex AI provider needs a credential");
+    // Vertex's OpenAI-compatible API takes a Google access token as the bearer token and serves
+    // chat completions. A runtime holds only a gateway token; the control plane makes the real
+    // access token from the provider's service account.
     return new OpenAIClient({ apiKey: config.apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId,
       api: "chat",
@@ -156,14 +171,16 @@ export function providerOptionsFor(provider: Provider) {
 export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
 
 // The reasoning effort levels a model accepts, read from the SDK's own per-model controls, or null
-// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server or Bedrock unless the
+// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server or Bedrock or Vertex AI unless the
 // host passes the levels the server itself lists, since it may reject a `reasoning_effort` it does
 // not know). Builds the model offline with a placeholder key, so nothing leaves the process.
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
 ): ReasoningControls | null {
   if (
-    (config.provider === "openai-compatible" || config.provider === "bedrock") &&
+    (config.provider === "openai-compatible" ||
+      config.provider === "bedrock" ||
+      config.provider === "vertex") &&
     (!config.effortLevels?.length || !config.modelId)
   ) {
     return null;

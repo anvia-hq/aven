@@ -5,6 +5,7 @@ import { errorMessage } from "@aven/agents/values";
 import type { RunModel } from "@aven/protocol/runtime-wire";
 
 import { defaultModelId } from "../providers/default-model";
+import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
 import { bearerToken } from "./bearer";
 
@@ -23,6 +24,7 @@ const SEGMENTS = {
   openai: "openai",
   gemini: "gemini",
   bedrock: "bedrock",
+  vertex: "vertex",
   azure: "azure",
   "openai-compatible": "compatible",
 } as const satisfies Record<Provider, string>;
@@ -35,6 +37,7 @@ const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   // Gemini names the model in the path, so its calls are matched by `GEMINI_PATH` instead.
   gemini: [],
   bedrock: ["/chat/completions"],
+  vertex: ["/chat/completions"],
   azure: ["/responses", "/chat/completions"],
   "openai-compatible": ["/chat/completions"],
 };
@@ -68,7 +71,11 @@ export class RunGateway {
   #grants = new Map<string, Grant>();
   #tokens = new Map<string, string>();
 
-  constructor(private upstreams: Upstreams = DEFAULT_UPSTREAMS) {}
+  // `accessToken` turns a Vertex AI provider's credential into the token Google takes.
+  constructor(
+    private upstreams: Upstreams = DEFAULT_UPSTREAMS,
+    private accessToken: (credential: string) => Promise<string> = googleAccessToken,
+  ) {}
 
   // The key the model is reached with: the provider's own, else the environment's. Throws when
   // there is none, so a person is told before anything starts.
@@ -80,6 +87,9 @@ export class RunGateway {
     }
     if (!key && config.provider === "bedrock") {
       throw new ModelUnavailableError("This Bedrock provider has no API key");
+    }
+    if (!key && config.provider === "vertex") {
+      throw new ModelUnavailableError("This Vertex AI provider has no credential");
     }
     if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
     return key;
@@ -138,10 +148,24 @@ export class RunGateway {
     if (typeof body !== "object" || body === null) return reject("Invalid JSON", 400);
     pin(body as Record<string, unknown>, grant.model, upstreamPath);
 
+    let credential = grant;
+    if (provider === "vertex" && grant.key) {
+      try {
+        credential = { ...grant, key: await this.accessToken(grant.key) };
+      } catch (error) {
+        const reason = error instanceof GoogleAuthError ? error.message : errorMessage(error);
+        console.warn(
+          `Model gateway: no Google access token for model ${grant.model.modelId}:`,
+          reason,
+        );
+        return reject(reason, 502);
+      }
+    }
+
     try {
       const upstream = await fetch(this.#upstreamUrl(grant.model, upstreamPath, request), {
         method: "POST",
-        headers: upstreamHeaders(request, grant),
+        headers: upstreamHeaders(request, credential),
         body: JSON.stringify(body),
         signal: request.signal,
       });

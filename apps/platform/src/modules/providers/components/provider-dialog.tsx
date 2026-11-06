@@ -1,4 +1,4 @@
-import { bedrockRegionOf } from "@aven/protocol/providers";
+import { bedrockRegionOf, vertexPartsOf } from "@aven/protocol/providers";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -28,8 +28,15 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   anthropic: "sk-ant-…",
   gemini: "AIza…",
   bedrock: "Amazon Bedrock API key",
+  vertex: "Service account JSON key, or an access token",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
+};
+
+// Azure and Vertex AI have no list to load: their model is typed.
+const typedModels: Partial<Record<ProviderKind, { label: string; placeholder: string }>> = {
+  azure: { label: "Deployment name", placeholder: "my-gpt-deployment" },
+  vertex: { label: "Model id", placeholder: "google/gemini-2.5-flash" },
 };
 
 const modelPlaceholders: Partial<Record<ProviderKind, string>> = {
@@ -48,7 +55,10 @@ type Props = {
 export function ProviderDialog({ kind, provider, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false));
-  const { compatible, azure, bedrock } = form;
+  const { compatible, azure, bedrock, vertex } = form;
+  const typedModel = typedModels[kind];
+  const keyLabel = (vertex && "Credential") || (compatible ? "API key (optional)" : "API key");
+  const vertexParts = vertexPartsOf(provider?.baseUrl);
   const editing = provider !== undefined;
 
   return (
@@ -70,7 +80,7 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
-          {(compatible || bedrock) && (
+          {(compatible || bedrock || vertex) && (
             <TextField
               label="Name"
               name="name"
@@ -100,8 +110,28 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               placeholder="us-east-1"
             />
           )}
+          {vertex && (
+            <>
+              <TextField
+                label="Project ID"
+                name="project"
+                required
+                pattern="[a-z][a-z0-9\-]{4,28}[a-z0-9]"
+                defaultValue={vertexParts?.project}
+                placeholder="my-project-123"
+              />
+              <TextField
+                label="Location"
+                name="location"
+                required
+                pattern="global|[a-z]+(-[a-z0-9]+)+"
+                defaultValue={vertexParts?.location ?? "global"}
+                placeholder="global"
+              />
+            </>
+          )}
           <TextField
-            label={compatible ? "API key (optional)" : "API key"}
+            label={keyLabel}
             name="apiKey"
             type="password"
             autoComplete="off"
@@ -112,14 +142,13 @@ export function ProviderDialog({ kind, provider, label }: Props) {
                 : keyPlaceholders[kind]
             }
           />
-          {azure ? (
-            // Azure names models by deployment, and has no list to load.
+          {typedModel ? (
             <TextField
-              label="Deployment name"
+              label={typedModel.label}
               name="modelId"
               required
               defaultValue={provider?.modelId ?? undefined}
-              placeholder="my-gpt-deployment"
+              placeholder={typedModel.placeholder}
             />
           ) : (
             <div className="flex items-end gap-2">

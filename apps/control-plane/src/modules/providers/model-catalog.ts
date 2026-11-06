@@ -18,7 +18,12 @@ type Entry = {
 const CATALOG_KEYS: Partial<Record<Provider, string>> = {
   gemini: "google",
   bedrock: "amazon-bedrock",
+  vertex: "google-vertex",
 };
+
+// Vertex names a model `<publisher>/<model>` (google/gemini-2.5-flash); models.dev has the model alone.
+const catalogId = (kind: Provider, id: string) =>
+  kind === "vertex" ? id.replace(/^google\//, "") : id;
 
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -71,6 +76,7 @@ const GEMINI_OTHER = /embedding|tts|image|live|audio|aqa|robotics|computer-use/;
 export function looksLikeChatModel(kind: Provider, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
   if (kind === "bedrock") return !BEDROCK_OTHER.test(id);
+  if (kind === "vertex") return true; // typed by hand, never listed
   if (kind === "gemini") return GEMINI_CHAT.test(id) && !GEMINI_OTHER.test(id);
   if (kind === "azure") return true; // a deployment's name is the owner's, not the model's
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
@@ -111,7 +117,7 @@ export function createModelCatalog(
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
       const next: Partial<Record<Provider, Map<string, Entry>>> = {};
-      for (const kind of ["openai", "anthropic", "gemini", "bedrock", "azure"] as const) {
+      for (const kind of ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure"] as const) {
         const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
         next[kind] = new Map(
           Object.entries(models)
@@ -163,14 +169,14 @@ export function createModelCatalog(
       if (kind === "openai-compatible") return ids;
       const known = await lookup(kind);
       return ids.filter((id) => {
-        const entry = known?.get(id);
+        const entry = known?.get(catalogId(kind, id));
         return entry ? entry.usable && !entry.deprecated : looksLikeChatModel(kind, id);
       });
     },
     // The reasoning levels the catalog lists for a model, or null. Only a fallback for models the
     // SDK does not know: the SDK's own list wins, because it rejects anything else.
     async efforts(kind: Provider, id: string) {
-      if (kind === "openai-compatible" || kind === "bedrock") return null;
+      if (kind === "openai-compatible" || kind === "bedrock" || kind === "vertex") return null;
       const levels = (await lookup(kind))?.get(id)?.efforts;
       return levels?.length ? levels : null;
     },
@@ -178,19 +184,19 @@ export function createModelCatalog(
     // one the agent cannot report how full the context is.
     async contextWindow(kind: Provider, id: string) {
       if (kind === "openai-compatible") return null;
-      const own = (await lookup(kind))?.get(id)?.contextWindow ?? null;
+      const own = (await lookup(kind))?.get(catalogId(kind, id))?.contextWindow ?? null;
       if (own !== null || kind !== "azure") return own;
       return commonWindow(windows.get(id.toLowerCase()));
     },
     // Whether a model takes images: false only when the catalog says it does not.
     async seesImages(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
-      return (await lookup(kind))?.get(id)?.images ?? true;
+      return (await lookup(kind))?.get(catalogId(kind, id))?.images ?? true;
     },
     // Whether a model a message names can run: refused only when the catalog says it cannot.
     async canRun(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
-      const entry = (await lookup(kind))?.get(id);
+      const entry = (await lookup(kind))?.get(catalogId(kind, id));
       return entry ? entry.usable : looksLikeChatModel(kind, id);
     },
   };

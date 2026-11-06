@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { createCodingAgent } from "@aven/agents/coding-agent";
 
+import { GoogleAuthError } from "../providers/google-auth";
 import { RunGateway } from "./gateway";
 
 type Seen = { path: string; search: string; headers: Headers; body: Record<string, unknown> };
@@ -204,6 +205,75 @@ describe("RunGateway", () => {
     expect(refused.status).toBe(404);
     gateway.revoke("r2i");
     expect(() => gateway.issue("r2j", { provider: "bedrock", modelId: "m" })).toThrow("no API key");
+  });
+
+  test("vertex: chat completions go to the project's endpoint with a token made from the credential", async () => {
+    const minted: string[] = [];
+    const vertex = new RunGateway({ anthropic: origin, openai: origin }, async (credential) => {
+      minted.push(credential);
+      return `token-for-${credential}`;
+    });
+    const front2 = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const [, , , segment, ...rest] = new URL(req.url).pathname.split("/");
+        return vertex.forward(req, segment!, rest.join("/"));
+      },
+    });
+    try {
+      const run = vertex.issue("r2k", {
+        provider: "vertex",
+        modelId: "google/gemini-2.5-flash",
+        baseUrl: `${origin}/v1/projects/p/locations/global/endpoints/openapi`,
+        apiKey: "the-credential",
+      });
+      expect(run.gatewayPath).toBe("/runtimes/gateway/vertex");
+      const before = seen.length;
+      const { agent } = createCodingAgent({
+        tools: [],
+        provider: "vertex",
+        modelId: "something-expensive",
+        apiKey: run.gatewayToken,
+        baseUrl: `http://localhost:${front2.port}${run.gatewayPath}`,
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      const call = seen[before]!;
+      expect(call.path).toBe("/v1/projects/p/locations/global/endpoints/openapi/chat/completions");
+      expect(call.headers.get("authorization")).toBe("Bearer token-for-the-credential");
+      expect(call.body.model).toBe("google/gemini-2.5-flash");
+      expect(minted).toEqual(["the-credential"]);
+      expect(() => vertex.issue("r2l", { provider: "vertex", modelId: "m" })).toThrow(
+        "no credential",
+      );
+
+      // A credential Google refuses is a 502 that says so, and nothing goes upstream.
+      const failing = new RunGateway({ anthropic: origin, openai: origin }, async () => {
+        throw new GoogleAuthError("Google refused the service account key (400)");
+      });
+      const token = failing.issue("r2m", {
+        provider: "vertex",
+        modelId: "m",
+        baseUrl: origin,
+        apiKey: "bad",
+      }).gatewayToken;
+      const count = seen.length;
+      const refused = await failing.forward(
+        new Request("http://x/runtimes/gateway/vertex/chat/completions", {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}` },
+          body: "{}",
+        }),
+        "vertex",
+        "chat/completions",
+      );
+      expect(refused.status).toBe(502);
+      expect(await refused.json()).toEqual({
+        error: "Google refused the service account key (400)",
+      });
+      expect(seen).toHaveLength(count);
+    } finally {
+      front2.stop(true);
+    }
   });
 
   test("an Azure provider without a key cannot start a run", () => {

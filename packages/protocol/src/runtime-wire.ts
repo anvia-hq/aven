@@ -23,6 +23,7 @@ export const PROVIDERS = [
   "anthropic",
   "gemini",
   "bedrock",
+  "vertex",
   "azure",
   "openai-compatible",
 ] as const;
@@ -752,4 +753,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 44;
+export const WIRE_VERSION = 45;

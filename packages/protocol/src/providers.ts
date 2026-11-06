@@ -29,6 +29,29 @@ export const BEDROCK_ENDPOINT =
 export const bedrockRegionOf = (baseUrl: string | null | undefined) =>
   (baseUrl && BEDROCK_ENDPOINT.exec(baseUrl)?.[1]) || null;
 
+/** Where Vertex AI's OpenAI-compatible API is for a project and a location (decision 0136). */
+export const vertexBaseUrl = (project: string, location: string) => {
+  const host = location === "global" ? "aiplatform" : `${location}-aiplatform`;
+  return `https://${host}.googleapis.com/v1/projects/${project}/locations/${location}/endpoints/openapi`;
+};
+
+const VERTEX_ENDPOINT =
+  /^https:\/\/(?:aiplatform|([a-z]+(?:-[a-z0-9]+)+)-aiplatform)\.googleapis\.com\/v1\/projects\/([a-z][a-z0-9-]{4,28}[a-z0-9])\/locations\/(global|[a-z]+(?:-[a-z0-9]+)+)\/endpoints\/openapi\/?$/;
+
+/** The project and location of a Vertex endpoint, or null when the address is not exactly one (the host's region must be the path's). */
+export function vertexPartsOf(baseUrl: string | null | undefined) {
+  const match = baseUrl ? VERTEX_ENDPOINT.exec(baseUrl) : null;
+  if (!match) return null;
+  const [, hostRegion, project, location] = match as unknown as [
+    string,
+    string | undefined,
+    string,
+    string,
+  ];
+  if ((hostRegion ?? "global") !== location) return null;
+  return { project, location };
+}
+
 /**
  * The question a bot asks to get a provider's key: its card is a masked field, and the answer is
  * saved to the provider, so it is in no message, no transcript and nothing the bot reads.

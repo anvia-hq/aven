@@ -9,9 +9,9 @@ import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
 
-// OpenAI, Anthropic, Gemini and Azure have one credential each; a server or a Bedrock region can be
-// added as often as the person has them.
-const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock"]);
+// OpenAI, Anthropic, Gemini and Azure have one credential each; a server, a Bedrock region or a Vertex
+// AI project can be added as often as the person has them.
+const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 
 const detail = (provider: Provider) =>
   [provider.baseUrl, provider.modelId, provider.keyHint && `…${provider.keyHint}`]
