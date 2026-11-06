@@ -27,6 +27,7 @@ import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
 import { CommandMenu } from "./command-menu";
+import { MobileAppLinks } from "./mobile-app-links";
 import { SidebarResizer } from "./sidebar-resizer";
 
 type Props = {
@@ -119,6 +120,7 @@ export function AppShell({ user, sidebar }: Props) {
                 </Button>
               </div>
             </div>
+            <MobileAppLinks />
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>

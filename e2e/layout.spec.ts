@@ -61,4 +61,18 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(rail).toBeHidden();
   await expect(page.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible();
+
+  // Without the rail, the sidebar that opens from the top bar goes to the bot and the cockpit too.
+  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+  const apps = page.getByRole("navigation", { name: "Apps" });
+  await expect(apps.getByRole("link", { name: "Threads" })).toBeVisible();
+  await apps.getByRole("link", { name: "Bot" }).click();
+  await expect(page).toHaveURL(/\/bot/);
+  await expect(apps).toBeHidden();
+  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+  await page
+    .getByRole("navigation", { name: "Apps" })
+    .getByRole("link", { name: "Cockpit" })
+    .click();
+  await expect(page).toHaveURL(/\/cockpit\/inbox$/);
 });
