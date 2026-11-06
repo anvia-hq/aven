@@ -1,4 +1,4 @@
-import { Grid } from "@mynaui/icons-react";
+import { GitBranch, Grid } from "@mynaui/icons-react";
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -37,7 +37,7 @@ function AppLink({
   );
 }
 
-// The rail's places (threads, the bot, the cockpit) for a phone, where the rail is not drawn: at the
+// The rail's places (threads, the bot, the cockpit, Center) for a phone, where the rail is not drawn: at the
 // head of the sidebar, which opens from the top bar. Choosing one closes it.
 export function MobileAppLinks() {
   const { main } = useBots();
@@ -62,6 +62,9 @@ export function MobileAppLinks() {
       </AppLink>
       <AppLink to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
         <Grid className="size-5" strokeWidth={1.7} />
+      </AppLink>
+      <AppLink to="/center" label="Center" active={pathname.startsWith("/center")}>
+        <GitBranch className="size-5" strokeWidth={1.7} />
       </AppLink>
     </nav>
   );

@@ -17,7 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
 import { timeAgo } from "@/lib/format";
 
 import { useProjectTracked } from "../hooks/use-project-tracked";
-import type { TrackedItem, TrackedKind, TrackedState } from "../types";
+import type { Project, TrackedItem, TrackedKind, TrackedState } from "../types";
 
 const isKind = (value: unknown): value is TrackedKind => value === "pull" || value === "issue";
 const isState = (value: unknown): value is TrackedState => value === "open" || value === "closed";
@@ -38,7 +38,17 @@ function StatusIcon({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
   return <Circle className="size-4 shrink-0" />;
 }
 
-function Item({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
+// A pull request or an issue as a row; `project` is given where rows of many projects are mixed
+// (Center), to show whose it is.
+export function TrackedRow({
+  item,
+  kind,
+  project,
+}: {
+  item: TrackedItem;
+  kind: TrackedKind;
+  project?: Project;
+}) {
   const { label, variant } = STATUS[item.status];
   return (
     <li className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50">
@@ -59,8 +69,8 @@ function Item({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
           <Badge variant={variant}>{label}</Badge>
         </div>
         <span className="truncate text-xs text-muted-foreground">
-          #{item.number} · {item.author ?? "Unknown author"} · updated{" "}
-          {timeAgo(item.updatedAt, true)}
+          {project ? `${project.name} · ` : ""}#{item.number} · {item.author ?? "Unknown author"} ·
+          updated {timeAgo(item.updatedAt, true)}
         </span>
       </div>
       {item.comments > 0 && (
@@ -141,7 +151,7 @@ export function RepoTracked({ projectId }: { projectId: string }) {
       {items && (
         <ul className="flex flex-col">
           {items.map((item) => (
-            <Item key={item.number} item={item} kind={kind} />
+            <TrackedRow key={item.number} item={item} kind={kind} />
           ))}
           {items.length === 0 && (
             <li className="px-4 py-3 text-sm text-muted-foreground">

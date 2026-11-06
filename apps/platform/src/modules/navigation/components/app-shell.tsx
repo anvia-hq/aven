@@ -20,6 +20,7 @@ import { TooltipProvider } from "@/components/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
+import { CenterRailLink } from "@/modules/center/components/center-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 import { ThemeSelector } from "@/modules/theme/components/theme-selector";
@@ -77,6 +78,7 @@ export function AppShell({ user, sidebar }: Props) {
           <div className="flex flex-col items-center gap-1.5">
             <BotRailLink />
             <CockpitRailLink />
+            <CenterRailLink />
           </div>
         </nav>
       </TooltipProvider>
