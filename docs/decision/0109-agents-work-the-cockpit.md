@@ -1,6 +1,6 @@
 # Agents work the cockpit
 
-Status: accepted. Adds to 0104 (the cockpit is the person's own, and no agent acted on it) and 0105 (a body is BlockNote's blocks, or text read in as markdown).
+Status: accepted; its rule on rewriting a record is superseded by 0120. Adds to 0104 (the cockpit is the person's own, and no agent acted on it) and 0105 (a body is BlockNote's blocks, or text read in as markdown).
 
 ## Context
 

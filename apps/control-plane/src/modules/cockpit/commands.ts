@@ -28,7 +28,7 @@ import { cockpitService } from "./service";
 
 /**
  * Whose cockpit an agent's command is answered in, and what it may do there (decision 0109): a
- * thread's agent reads, a bot adds and changes, and deletes or rewrites only on the person's own
+ * thread's agent reads, a bot adds and changes, and deletes only on the person's own
  * word.
  */
 export type CockpitCaller = { userId: string; access: CockpitAccess; onPersonsWord: boolean };
@@ -282,14 +282,7 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
       return `Created ${label(cmd.kind, made)} (id ${made.id}).`;
     }
     case "update": {
-      // Rewriting what a record says takes the person's word, as deleting does: an empty body is
-      // a delete by another name (decision 0109). Its status, tags and the like a bot may change.
-      const rewrites = cmd.fields.title !== undefined || cmd.fields.body !== undefined;
-      if (rewrites && !caller.onPersonsWord) {
-        throw new UnprocessableError(
-          "Change a record's title or body only when the person asks you to in their own message; add a new record instead.",
-        );
-      }
+      // Any reply may change a record, its title and body included (decision 0120).
       const record = await find(cmd.kind, userId, cmd.id);
       const changed = await update(userId, cmd.kind, record, cmd.fields);
       return `Updated ${label(cmd.kind, changed)}.`;

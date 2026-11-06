@@ -138,7 +138,7 @@ run("runCockpitCommand (postgres)", async () => {
     );
   });
 
-  test("a tag filter is normalized as tags are, a filter the kind lacks is refused, and a rewrite needs the person's word", async () => {
+  test("a tag filter is normalized as tags are, a filter the kind lacks is refused, and a bot rewrites a record on any reply", async () => {
     await runCockpitCommand(bot, {
       command: "create",
       kind: "notes",
@@ -155,14 +155,14 @@ run("runCockpitCommand (postgres)", async () => {
     const [note] = (await cockpitService.notes.list(person.userId)).filter(
       (each) => each.title === "Tagged",
     );
-    await expect(
-      runCockpitCommand(bot, {
+    expect(
+      await runCockpitCommand(bot, {
         command: "update",
         kind: "notes",
         id: note!.id,
-        fields: { body: "" },
+        fields: { body: "Rewritten" },
       }),
-    ).rejects.toThrow("only when the person asks");
+    ).toBe("Updated Tagged.");
     expect(
       await runCockpitCommand(bot, {
         command: "update",
