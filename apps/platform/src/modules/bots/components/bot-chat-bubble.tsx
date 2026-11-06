@@ -9,7 +9,7 @@ import { MentionedText } from "./mentioned-text";
 /** Whether a message is the person's own, which is drawn at the end of the row. */
 export const isPersons = (message: BotChatMessage) => message.role === "user";
 
-// One message of a bot's chat with the person. The person's is tinted, at the end, with the bots it
+// One message of a bot's chat with the person. The person's is drawn as in a thread, at the end, with the bots it
 // mentions drawn as chips; the bot's own shows its Markdown. Messages between bots are not bubbles
 // (`BotActivity`).
 export function BotChatBubble({
@@ -32,19 +32,22 @@ export function BotChatBubble({
           attachments={message.attachments}
         />
       ) : null}
-      {message.text && (
-        <Bubble variant={mine ? "tinted" : "muted"} align={mine ? "end" : "start"}>
-          <BubbleContent className="rounded-2xl">
-            {mine ? (
-              <span className="whitespace-pre-wrap">
-                <MentionedText text={message.text} bots={bots} />
-              </span>
-            ) : (
+      {message.text &&
+        (mine ? (
+          // The person's own message is drawn as it is in a thread: a plain block at the end.
+          <div
+            data-role="user"
+            className="w-fit max-w-[80%] self-end rounded-lg bg-accent px-3 py-2 text-sm whitespace-pre-wrap"
+          >
+            <MentionedText text={message.text} bots={bots} />
+          </div>
+        ) : (
+          <Bubble variant="muted" align="start">
+            <BubbleContent className="rounded-2xl">
               <Markdown>{message.text}</Markdown>
-            )}
-          </BubbleContent>
-        </Bubble>
-      )}
+            </BubbleContent>
+          </Bubble>
+        ))}
     </MessageContent>
   );
 }

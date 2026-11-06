@@ -11,7 +11,7 @@ const PIXEL =
 // A message in the conversation; the sidebar shows the bot's last words too.
 const bubble = (page: Page, text: string) =>
   page
-    .locator('[data-slot="bubble-content"]')
+    .locator('[data-slot="bubble-content"], [data-role="user"]')
     .filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
 
 // A person's main bot (decision 0058), on a pretend model that answers with two messages
@@ -284,7 +284,9 @@ test.describe("bots", () => {
     await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
 
     // The bot heard the words and was told where the runner put each file.
-    const heard = page.locator('[data-slot="bubble-content"]').filter({ hasText: "You said:" });
+    const heard = page
+      .locator('[data-slot="bubble-content"], [data-role="user"]')
+      .filter({ hasText: "You said:" });
     await expect(heard).toContainText("look at these");
     await expect(heard).toContainText("/uploads/notes.txt");
     await expect(heard).toContainText("/uploads/pixel.png");
@@ -327,7 +329,9 @@ test.describe("bots", () => {
     await send.click();
     await expect(page.getByText("plan.md", { exact: true })).toBeVisible();
     await expect(
-      page.locator('[data-slot="bubble-content"]').filter({ hasText: "/uploads/plan.md" }),
+      page
+        .locator('[data-slot="bubble-content"], [data-role="user"]')
+        .filter({ hasText: "/uploads/plan.md" }),
     ).toBeVisible();
   });
 
@@ -436,7 +440,7 @@ test.describe("bots", () => {
 
     // What was sent shows the bot as a chip, and the main bot says it asked.
     const sent = page
-      .locator('[data-slot="bubble-content"]')
+      .locator('[data-slot="bubble-content"], [data-role="user"]')
       .filter({ hasText: "to do A, B and C" });
     await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
     await expect(bubble(page, "I asked Scout")).toBeVisible();
