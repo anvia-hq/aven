@@ -166,6 +166,7 @@ run("projectsService (postgres)", async () => {
         "pull",
         "closed",
         2,
+        undefined,
       );
 
       // Another organization's project is not found, and GitHub is not asked.

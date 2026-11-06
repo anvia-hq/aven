@@ -191,7 +191,7 @@ export const projectsService = {
       kind,
       state,
       page,
-      ...(filters ? [filters] : []),
+      filters,
     );
     return { ...orNotFound(found, "Repository not found"), page };
   },

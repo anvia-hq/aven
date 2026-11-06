@@ -592,17 +592,14 @@ export class GithubClient {
     // Refused before a token is asked for when issues are not allowed.
     if (kind === "issue") await this.#requireIssues(installationId);
     const { token } = await this.installationToken(installationId);
-    const qualifiers = [
-      `repo:${fullName}`,
-      `is:${kind === "pull" ? "pr" : "issue"}`,
-      ...(state === "all" ? [] : [`is:${state}`]),
-      // Review, checks, draft and merged are pull request things.
-      ...trackedQualifiers(
-        kind === "pull"
-          ? filters
-          : { ...filters, review: undefined, checks: undefined, draft: undefined },
-      ),
-    ];
+    const qualifiers = [`repo:${fullName}`, `is:${kind === "pull" ? "pr" : "issue"}`];
+    if (state !== "all") qualifiers.push(`is:${state}`);
+    // Review, checks and draft are pull request things.
+    const applicable =
+      kind === "pull"
+        ? filters
+        : { ...filters, review: undefined, checks: undefined, draft: undefined };
+    qualifiers.push(...trackedQualifiers(applicable));
     const query = new URLSearchParams({
       q: qualifiers.join(" "),
       ...SORTS[filters.sort ?? "updated"],

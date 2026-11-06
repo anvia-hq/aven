@@ -44,10 +44,13 @@ export function TrackedRow({
   item,
   kind,
   project,
+  onLabel,
 }: {
   item: TrackedItem;
   kind: TrackedKind;
   project?: Project;
+  /** Given, a label is a button that asks for the pull requests with it. */
+  onLabel?: (label: string) => void;
 }) {
   const { label, variant } = STATUS[item.status];
   return (
@@ -67,6 +70,24 @@ export function TrackedRow({
             {item.title}
           </a>
           <Badge variant={variant}>{label}</Badge>
+          {item.labels.slice(0, 3).map((name) =>
+            onLabel ? (
+              <Button
+                key={name}
+                variant="outline"
+                size="xs"
+                title={`Only pull requests labelled ${name}`}
+                onClick={() => onLabel(name)}
+                className="h-5 max-w-28 rounded-full px-1.5 text-xs text-muted-foreground"
+              >
+                <span className="truncate">{name}</span>
+              </Button>
+            ) : (
+              <Badge key={name} variant="outline" className="max-w-28">
+                <span className="truncate">{name}</span>
+              </Badge>
+            ),
+          )}
         </div>
         <span className="truncate text-xs text-muted-foreground">
           {project ? `${project.name} · ` : ""}#{item.number} · {item.author ?? "Unknown author"} ·

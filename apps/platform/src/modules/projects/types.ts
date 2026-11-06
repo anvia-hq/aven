@@ -72,7 +72,7 @@ export type RepoCommit = {
 export type RepoCommitPage = { commits: RepoCommit[]; hasMore: boolean };
 
 export type TrackedKind = "pull" | "issue";
-export type TrackedState = "open" | "closed";
+export type TrackedState = "open" | "closed" | "merged" | "all";
 
 /** A pull request or an issue of a project's repository (`GET /projects/:id/pulls` and `/issues`; decision 0092). */
 export type TrackedItem = {
@@ -84,6 +84,7 @@ export type TrackedItem = {
   status: "open" | "draft" | "merged" | "closed";
   comments: number;
   updatedAt: string;
+  labels: string[];
 };
 
 /** One page of them, how many there are in all and whether there is a later page. */

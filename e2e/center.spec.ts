@@ -26,9 +26,34 @@ test.describe("Center", () => {
     const commits = page.getByRole("region", { name: "Commits" });
     await expect(commits.getByText("Change number 14").first()).toBeVisible();
 
-    // The closed ones, by the toggle.
-    await pulls.getByRole("button", { name: "Closed" }).click();
+    // A quick view is a set of filters, kept in the address.
+    await page.getByRole("button", { name: "Needs my review" }).click();
+    await expect(page).toHaveURL(/reviewRequested=me/);
+    await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
+    await expect(pulls.getByText("Open pull request 9")).toHaveCount(0);
+    await page.getByRole("button", { name: "Failing checks" }).click();
+    await expect(pulls.getByText("Open pull request 11").first()).toBeVisible();
+    await expect(pulls.getByText("Open pull request 12")).toHaveCount(0);
+
+    // A label on a row narrows to it, and can be taken off again.
+    await page.getByRole("button", { name: "All open" }).click();
+    await pulls.getByRole("button", { name: "bug" }).first().click();
+    await expect(page).toHaveURL(/label=bug/);
+    await expect(pulls.getByText("Open pull request 11")).toHaveCount(0);
+    await page.getByRole("button", { name: "Remove the label filter" }).click();
+    await expect(pulls.getByText("Open pull request 11").first()).toBeVisible();
+
+    // The state, and words of the title.
+    await page.getByRole("combobox", { name: "State" }).click();
+    await page.getByRole("option", { name: "Merged" }).click();
     await expect(pulls.getByText("Merged pull request").first()).toBeVisible();
+    await expect(pulls.getByText("Open pull request 12")).toHaveCount(0);
+    await page.goto("/center");
+    await page.getByRole("searchbox", { name: "Search titles" }).fill("request 7");
+    await expect(pulls.getByText("Open pull request 7").first()).toBeVisible();
+    await expect(pulls.getByText("Open pull request 12")).toHaveCount(0);
+    await page.getByRole("searchbox", { name: "Search titles" }).fill("");
+    await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
 
     // One project by itself: only its pull requests, and its commits as a graph with pages.
     await page

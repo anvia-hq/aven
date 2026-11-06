@@ -2,26 +2,19 @@ import { GitPullRequest } from "@mynaui/icons-react";
 
 import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
 import { TrackedRow } from "@/modules/projects/components/repo-tracked";
-import type { TrackedState } from "@/modules/projects/types";
 
 import type { PullEntry } from "../hooks/use-center-feed";
-
-const PRESSED = "aria-pressed:bg-secondary aria-pressed:text-secondary-foreground";
-const isState = (value: unknown): value is TrackedState => value === "open" || value === "closed";
 
 // The pull requests of the projects shown, the latest changed first, open or closed.
 export function CenterPulls({
   pulls,
   loading,
-  state,
-  onState,
+  onLabel,
 }: {
   pulls: PullEntry[] | undefined;
   loading: boolean;
-  state: TrackedState;
-  onState: (state: TrackedState) => void;
+  onLabel: (label: string) => void;
 }) {
   return (
     <SectionCard
@@ -30,24 +23,10 @@ export function CenterPulls({
         <>
           <GitPullRequest className="size-4 text-muted-foreground" />
           Pull requests
+          {pulls && (
+            <span className="text-xs font-normal text-muted-foreground">{pulls.length}</span>
+          )}
         </>
-      }
-      actions={
-        <ToggleGroup
-          value={[state]}
-          onValueChange={([next]) => isState(next) && onState(next)}
-          variant="outline"
-          size="sm"
-          spacing={0}
-          aria-label="State"
-        >
-          <ToggleGroupItem value="open" className={PRESSED}>
-            Open
-          </ToggleGroupItem>
-          <ToggleGroupItem value="closed" className={PRESSED}>
-            Closed
-          </ToggleGroupItem>
-        </ToggleGroup>
       }
     >
       {loading && (
@@ -65,10 +44,13 @@ export function CenterPulls({
               item={item}
               kind="pull"
               project={project}
+              onLabel={onLabel}
             />
           ))}
           {pulls.length === 0 && (
-            <li className="px-4 py-3 text-sm text-muted-foreground">No {state} pull requests.</li>
+            <li className="px-4 py-3 text-sm text-muted-foreground">
+              No pull requests match these filters.
+            </li>
           )}
         </ul>
       )}

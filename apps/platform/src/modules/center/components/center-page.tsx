@@ -1,28 +1,42 @@
 import { Refresh } from "@mynaui/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/button";
 import { RepoCommits } from "@/modules/projects/components/repo-commits";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
-import type { TrackedState } from "@/modules/projects/types";
+import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
 import { useCenterFeed } from "../hooks/use-center-feed";
+import { filtersOf, pullsQuery, QUICK_VIEWS, quickViewSearch, type CenterSearch } from "../filters";
 import { CenterCommits } from "./center-commits";
+import { CenterFilterBar } from "./center-filter-bar";
 import { CenterPulls } from "./center-pulls";
 
 // Center: the pull requests and commits of the person's projects on one screen, read from GitHub
 // like each project's own page. All the projects together, or one with its commit graph.
 export function CenterPage() {
-  const { project: selected } = useSearch({ from: "/_authed/center/" });
+  const search = useSearch({ from: "/_authed/center/" });
+  const { project: selected } = search;
+  const filters = useMemo(() => filtersOf(search), [search]);
+  const account = useGithubAccount();
+  const login = account?.data?.connected ? account.data.login : null;
+  const query = pullsQuery(filters, login);
   const navigate = useNavigate();
   const { projects, loaded } = useProjects();
-  const [state, setState] = useState<TrackedState>("open");
   const [refresh, setRefresh] = useState(0);
 
   const one = projects.find((project) => project.id === selected);
   const shown = one ? [one] : projects;
-  const { feed, loading } = useCenterFeed(shown, state, one === undefined, refresh);
+  const { feed, loading } = useCenterFeed(shown, query, filters.sort, one === undefined, refresh);
+
+  // A change to the filters is a change of the address, so the view can be kept and shared.
+  const change = (next: CenterSearch) =>
+    void navigate({
+      to: "/center",
+      search: (previous) => ({ ...previous, ...next }),
+      replace: true,
+    });
 
   // A project that is gone, or not the person's, shows all of them.
   if (loaded && selected !== undefined && !one) {
@@ -50,6 +64,17 @@ export function CenterPage() {
           Refresh
         </Button>
       </header>
+      {projects.length > 0 && (
+        <CenterFilterBar
+          filters={filters}
+          connected={login !== null}
+          onChange={change}
+          onQuickView={(id) => {
+            const view = QUICK_VIEWS.find((candidate) => candidate.id === id)!;
+            void navigate({ to: "/center", search: quickViewSearch(view, selected) });
+          }}
+        />
+      )}
       {loaded && projects.length === 0 && (
         <p className="text-sm text-muted-foreground">
           Import a repository to see its pull requests and commits here.
@@ -62,7 +87,11 @@ export function CenterPage() {
       )}
       {projects.length > 0 && (
         <div className="grid items-start gap-4 lg:grid-cols-2">
-          <CenterPulls pulls={feed?.pulls} loading={loading} state={state} onState={setState} />
+          <CenterPulls
+            pulls={feed?.pulls}
+            loading={loading}
+            onLabel={(label) => change({ label })}
+          />
           {one ? (
             <RepoCommits project={one} />
           ) : (

@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
+
+import type { CenterFilters } from "../filters";
 import type {
   Project,
   RepoCommit,
   RepoCommitPage,
   TrackedItem,
   TrackedPage,
-  TrackedState,
 } from "@/modules/projects/types";
+
+// The order of the pull requests is the query's own, so the lists of the projects are put together
+// by the one thing every sort has: the time they changed (or, for the oldest, the reverse).
+const PULL_ORDER: Record<CenterFilters["sort"], (a: PullEntry, b: PullEntry) => number> = {
+  updated: (a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt),
+  oldest: (a, b) => a.item.updatedAt.localeCompare(b.item.updatedAt),
+  created: (a, b) => b.item.number - a.item.number,
+  comments: (a, b) => b.item.comments - a.item.comments,
+};
 
 export type PullEntry = { project: Project; item: TrackedItem };
 export type CommitEntry = { project: Project; commit: RepoCommit };
@@ -26,11 +36,12 @@ type Feed = {
 // is shown instead.
 export function useCenterFeed(
   projects: Project[],
-  state: TrackedState,
+  pullsQuery: string | null,
+  sort: CenterFilters["sort"],
   withCommits: boolean,
   refresh: number,
 ) {
-  const key = `${projects.map((project) => project.id).join(",")}\n${state}\n${withCommits}\n${refresh}`;
+  const key = `${projects.map((project) => project.id).join(",")}\n${pullsQuery}\n${withCommits}\n${refresh}`;
   const [answer, setAnswer] = useState<{ key: string; feed: Feed }>();
 
   useEffect(() => {
@@ -41,7 +52,9 @@ export function useCenterFeed(
         projects.map(async (project) => {
           try {
             const [pulls, commits] = await Promise.all([
-              api<TrackedPage>(`/projects/${project.id}/pulls?state=${state}&page=1`),
+              pullsQuery === null
+                ? { items: [], total: 0, hasMore: false }
+                : api<TrackedPage>(`/projects/${project.id}/pulls?${pullsQuery}`),
               withCommits
                 ? api<RepoCommitPage>(`/projects/${project.id}/commits?page=1`)
                 : undefined,
@@ -53,14 +66,14 @@ export function useCenterFeed(
           }
         }),
       );
-      feed.pulls.sort((a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt));
+      feed.pulls.sort(PULL_ORDER[sort]);
       feed.commits.sort((a, b) => b.commit.date.localeCompare(a.commit.date));
       if (current) setAnswer({ key, feed });
     })();
     return () => {
       current = false;
     };
-    // `key` stands for the projects, the state and the rest.
+    // `key` stands for the projects, the query and the rest.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 

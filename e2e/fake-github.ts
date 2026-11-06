@@ -177,20 +177,51 @@ Bun.serve({
       const page = Number(params.get("page") ?? "1");
       const pulls = query.includes("is:pr");
       const open = query.includes("is:open");
-      const titles = searchTitles(pulls, open);
-      const items = titles.map((title, index) => ({
-        number: 100 - index,
-        title,
-        html_url: `https://github.com/acme/web/${pulls ? "pull" : "issues"}/${100 - index}`,
-        state: open ? "open" : "closed",
-        draft: pulls && open && index === 0,
-        comments: index === 0 ? 3 : 0,
-        updated_at: new Date(Date.now() - index * 3_600_000).toISOString(),
-        user: { login: "ada" },
-        pull_request: pulls
-          ? { merged_at: !open && index === 0 ? "2026-10-30T10:00:00Z" : null }
-          : undefined,
-      }));
+      const merged = query.includes("is:merged");
+      const titles = merged ? ["Merged pull request"] : searchTitles(pulls, open);
+      const qualifier = (name: string) =>
+        new RegExp(`${name}:("[^"]+"|\\S+)`).exec(query)?.[1]?.replaceAll('"', "");
+      // The qualifiers of the filters (decision 0132): every other pull request carries the label
+      // `bug`, the first three await a review from ada, the odd ones fail their checks, and every
+      // author is ada.
+      const words = query
+        .replace(/\S+:\S+/g, "")
+        .replace(/"[^"]*"/g, "")
+        .trim()
+        .toLowerCase();
+      let items = titles
+        .map((title, index) => ({ title, index }))
+        .filter(({ title, index }) => {
+          if (qualifier("author") && qualifier("author") !== "ada") return false;
+          if (
+            qualifier("review-requested") &&
+            (qualifier("review-requested") !== "ada" || index > 2)
+          )
+            return false;
+          if (qualifier("draft") === "true" && !(pulls && open && index === 0)) return false;
+          if (qualifier("draft") === "false" && pulls && open && index === 0) return false;
+          if (qualifier("label") && !(qualifier("label") === "bug" && index % 2 === 0))
+            return false;
+          if (qualifier("status") === "failure" && index % 2 === 0) return false;
+          if (qualifier("status") === "success" && index % 2 === 1) return false;
+          if (qualifier("review") === "approved" && index > 1) return false;
+          return !words || title.toLowerCase().includes(words.replace(" in", "").trim());
+        })
+        .map(({ title, index }) => ({
+          number: 100 - index,
+          title,
+          html_url: `https://github.com/acme/web/${pulls ? "pull" : "issues"}/${100 - index}`,
+          state: open ? "open" : "closed",
+          draft: pulls && open && index === 0,
+          comments: index === 0 ? 3 : 0,
+          labels: index % 2 === 0 ? [{ name: "bug" }] : [],
+          updated_at: new Date(Date.now() - index * 3_600_000).toISOString(),
+          user: { login: "ada" },
+          pull_request: pulls
+            ? { merged_at: merged || (!open && index === 0) ? "2026-10-30T10:00:00Z" : null }
+            : undefined,
+        }));
+      if (new URL(request.url).searchParams.get("order") === "asc") items = items.reverse();
       return Response.json({
         total_count: items.length,
         items: items.slice((page - 1) * 10, page * 10),
