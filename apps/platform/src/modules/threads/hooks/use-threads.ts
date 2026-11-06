@@ -54,6 +54,17 @@ export function useThreads() {
     [setThreads],
   );
 
+  // A thread's title as just changed, before the server's list is asked again.
+  const setTitle = useCallback(
+    (threadId: string, title: string) =>
+      setThreads(
+        (current) =>
+          current?.map((thread) => (thread.id === threadId ? { ...thread, title } : thread)) ??
+          current,
+      ),
+    [setThreads],
+  );
+
   const all = threads ?? [];
   return {
     threads: all.filter((thread) => thread.createdBy === me),
@@ -62,6 +73,7 @@ export function useThreads() {
     loaded: threads !== null,
     refresh: threadsStore.refresh,
     setRunning,
+    setTitle,
     add,
   };
 }

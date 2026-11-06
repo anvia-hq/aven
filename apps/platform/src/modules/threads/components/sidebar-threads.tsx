@@ -1,9 +1,10 @@
 import { Archive, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
+import { Input } from "@/components/input";
 import {
   SidebarMenu,
   SidebarMenuAction,
@@ -18,6 +19,7 @@ import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
 import { useArchiveThread } from "../hooks/use-archive-thread";
+import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
 import { WorkingDots } from "./working-indicator";
@@ -77,6 +79,60 @@ function SharedMark({ thread }: { thread: Thread }) {
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
+// The title of a thread of the person's own: a double click turns it into a field, Enter or leaving
+// it keeps the new title and Escape the old one.
+function ThreadTitle({
+  thread,
+  title,
+  editing,
+  onEdit,
+  onDone,
+}: {
+  thread: Thread;
+  title: string;
+  editing: boolean;
+  onEdit: () => void;
+  onDone: (title?: string) => void;
+}) {
+  const finished = useRef(false);
+  if (!editing) {
+    return (
+      <span
+        className="flex-1 truncate"
+        title={title}
+        onDoubleClick={(event) => {
+          event.preventDefault();
+          onEdit();
+        }}
+      >
+        {thread.title}
+      </span>
+    );
+  }
+  const finish = (value?: string) => {
+    if (finished.current) return;
+    finished.current = true;
+    onDone(value);
+  };
+  return (
+    <Input
+      autoFocus
+      aria-label="Thread title"
+      defaultValue={thread.title}
+      maxLength={200}
+      className="h-6 flex-1 px-1.5 text-sm"
+      onFocus={(event) => event.currentTarget.select()}
+      onClick={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") finish(event.currentTarget.value);
+        if (event.key === "Escape") finish();
+      }}
+      onBlur={(event) => finish(event.currentTarget.value)}
+    />
+  );
+}
+
 export function SidebarThreads() {
   const navigate = useNavigate();
   const { threads: own, shared: others, refresh } = useThreads();
@@ -87,6 +143,8 @@ export function SidebarThreads() {
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();
+  const rename = useRenameThread();
+  const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   // Only the open thread has a stream to hear its run end on. While a thread is shown as running,
@@ -129,9 +187,16 @@ export function SidebarThreads() {
                 palette={palettes.get(thread.projectId)}
               />
               <SharedMark thread={thread} />
-              <span className="flex-1 truncate" title={hostLabel(thread)}>
-                {thread.title}
-              </span>
+              <ThreadTitle
+                thread={thread}
+                title={hostLabel(thread)}
+                editing={editing === thread.id}
+                onEdit={() => setEditing(thread.id)}
+                onDone={(value) => {
+                  setEditing(null);
+                  if (value !== undefined) void rename(thread, value);
+                }}
+              />
             </SidebarMenuButton>
             <UpdatedAt thread={thread} yields />
             {/* Shown on hover or keyboard focus, not `showOnHover`: that also shows it while the
