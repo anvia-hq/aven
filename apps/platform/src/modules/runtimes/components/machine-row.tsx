@@ -1,6 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { cn } from "cn";
-
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
@@ -59,7 +57,8 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
   );
 }
 
-// One runner as a single card: whether it is online, its name, and CPU, memory and disk as three
+// One runner as a single card with no border or status dot (an offline one says so where its meters
+// would be): its name, and CPU, memory and disk as three
 // small upright meters, each with its label over its percent; the detail behind them is on hover,
 // and a click goes to the runtimes (decision 0091). Each row is a card of its own (decision 0103).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
@@ -75,17 +74,10 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
           render={
             <Link
               to="/settings/runtimes"
-              className="flex h-8 w-full items-center gap-1.5 rounded-lg border bg-card px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              className="flex h-8 w-full items-center gap-1.5 rounded-lg bg-card px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             />
           }
         >
-          <span
-            aria-hidden
-            className={cn(
-              "size-1.5 shrink-0 rounded-full",
-              runtime.online ? "bg-success" : "bg-muted-foreground/40",
-            )}
-          />
           <span className="min-w-0 flex-1 truncate">{runtime.name}</span>
           {stats ? (
             <span className="flex shrink-0 items-center gap-1.5">
