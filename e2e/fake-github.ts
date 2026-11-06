@@ -171,7 +171,7 @@ Bun.serve({
             date: new Date(Date.now() - index * 3_600_000).toISOString(),
           },
         },
-        author: { login: "ada" },
+        author: { login: "ada", avatar_url: "https://avatars.githubusercontent.com/u/1?v=4" },
         parents: parentsOf(14 - index).map((n) => ({ sha: sha(n) })),
       }));
       // The history's filters (decision 0132): the author is always ada, the branch

@@ -348,6 +348,7 @@ describe("GithubClient", () => {
         sha: "a1",
         message: "Fix the build",
         author: "Ada",
+        authorAvatar: null,
         date: "2026-11-01T10:00:00Z",
         parents: [],
         refs: [],

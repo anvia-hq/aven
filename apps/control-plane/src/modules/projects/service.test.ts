@@ -99,6 +99,7 @@ run("projectsService (postgres)", async () => {
       parents: ["a0"],
       refs: ["main"],
       tags: [],
+      authorAvatar: null,
     };
     const commits = spyOn(githubService, "commits").mockImplementation(async () => ({
       commits: [commit],

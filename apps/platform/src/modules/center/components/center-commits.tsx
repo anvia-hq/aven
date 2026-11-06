@@ -1,11 +1,11 @@
 import { GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
 import { useMemo, type ReactNode } from "react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import { Badge } from "@/components/badge";
 import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 import { timeAgo } from "@/lib/format";
-import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { commitUrl } from "@/modules/projects/repo-links";
 import type { Project } from "@/modules/projects/types";
 
@@ -64,7 +64,12 @@ export function CenterCommits({
                     key={`${project.id}:${commit.sha}`}
                     className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50"
                   >
-                    <ProjectTile projectId={project.id} name={project.name} />
+                    <Avatar className="size-7">
+                      {commit.authorAvatar && <AvatarImage src={commit.authorAvatar} alt="" />}
+                      <AvatarFallback className="text-xs">
+                        {(commit.author ?? "?").slice(0, 1).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <div className="flex min-w-0 items-center gap-2">
                         <a

@@ -61,6 +61,8 @@ export type RepoCommit = {
   sha: string;
   message: string;
   author: string | null;
+  /** Their picture on GitHub, if the commit is tied to an account. */
+  authorAvatar: string | null;
   date: string;
   /** The commits it follows, the first being the branch it was made on; the graph is drawn from them (decision 0090). */
   parents: string[];

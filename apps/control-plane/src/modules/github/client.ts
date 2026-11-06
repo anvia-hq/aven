@@ -187,6 +187,8 @@ export type GithubCommit = {
   message: string;
   /** Who wrote it: the name on the commit, else their GitHub login. */
   author: string | null;
+  /** The author's picture on GitHub, none when the commit is not tied to an account. */
+  authorAvatar: string | null;
   date: string;
   /** The commits it follows, the first being the branch it was made on; what the graph is drawn from (decision 0090). */
   parents: string[];
@@ -308,7 +310,7 @@ function pullStatus(pull: { merged?: boolean; state: string; draft?: boolean }) 
 type CommitPayload = {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
-  author: { login: string } | null;
+  author: { login: string; avatar_url?: string } | null;
   parents: { sha: string }[];
 };
 
@@ -613,6 +615,7 @@ export class GithubClient {
         sha,
         message: commit.message.split("\n")[0]!.trim().slice(0, COMMIT_MESSAGE_MAX),
         author: commit.author?.name ?? author?.login ?? null,
+        authorAvatar: author?.avatar_url ?? null,
         date: commit.author?.date ?? "",
         parents: parents.map((parent) => parent.sha),
         refs: refs.get(sha) ?? [],
