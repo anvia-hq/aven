@@ -181,6 +181,28 @@ test.describe("threads", () => {
     await expect(page.locator('[data-role="user"]')).toHaveCount(1);
   });
 
+  test("a click anywhere in the prompt box puts the cursor in it", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
+    await addRunner(page);
+    await createProject(page, "project");
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    const box = page.locator("div.bg-card", { has: prompt });
+    const area = await prompt.boundingBox();
+    const outer = await box.boundingBox();
+    expect(area && outer).toBeTruthy();
+
+    // The empty second line of the field, which only the first line of the editor used to take.
+    await page.mouse.click(area!.x + area!.width / 2, area!.y + area!.height - 6);
+    await expect(prompt).toBeFocused();
+    await page.keyboard.type("hello");
+    await expect(prompt).toContainText("hello");
+
+    // The padding of the box above the field.
+    await prompt.blur();
+    await page.mouse.click(outer!.x + 3, outer!.y + 3);
+    await expect(prompt).toBeFocused();
+  });
+
   test("a thread from another organization is not found", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     await page.goto("/threads/00000000-0000-4000-8000-000000000000");

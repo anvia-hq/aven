@@ -5,7 +5,7 @@ import {
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, StopSolid } from "@mynaui/icons-react";
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
 
@@ -104,11 +104,21 @@ function Composer({
     void submit();
   }
 
+  // A click on the box that is not on a control, its padding and the space beside the toolbar, puts
+  // the cursor in the field.
+  function focusOnBoxClick(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, [contenteditable], [role='menu'], [role='listbox']"))
+      return;
+    editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
+  }
+
   return (
     <div
-      className="relative flex flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      className="relative flex cursor-text flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       {...drop}
       onKeyDownCapture={handleKeyDown}
+      onClick={focusOnBoxClick}
     >
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
       <MentionMenu />
@@ -117,7 +127,8 @@ function Composer({
         aria-label="Prompt"
         placeholder={placeholder}
         renderEntity={renderEntity}
-        className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6"
+        // The editor is as tall as the field, so a click anywhere in it puts the cursor there.
+        className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6 [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
       <div className="flex items-center gap-2 pt-2">
         <AttachButton
