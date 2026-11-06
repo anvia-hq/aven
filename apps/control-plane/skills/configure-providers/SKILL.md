@@ -19,6 +19,21 @@ A provider is what runs the person's agents: it holds a kind, an API key and, fo
 | Azure OpenAI                                         | the resource URL, `https://<resource>.openai.azure.com` (https only, anything after the host is dropped)                                                                                                                                                    | the **deployment name** in that resource, which is not always the model's name               | required                               |
 | OpenAI-compatible (Ollama, vLLM, LiteLLM, a gateway) | the server's root, such as `https://gateway.example.com/v1`                                                                                                                                                                                                 | required                                                                                     | optional                               |
 
+### Presets for OpenAI-compatible services
+
+These have no kind of their own: they are `openai-compatible` providers with a known address. In Settings > Providers > **Add** under OpenAI-compatible, pressing the service's button under "Start from" fills the name and address. A bot gives the same address with `add_provider` (kind `openai-compatible`) and the name shown here.
+
+| Service    | Name       | Base URL                         | Key                                                                            |
+| ---------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| OpenRouter | OpenRouter | `https://openrouter.ai/api/v1`   | required                                                                       |
+| Groq       | Groq       | `https://api.groq.com/openai/v1` | required                                                                       |
+| DeepSeek   | DeepSeek   | `https://api.deepseek.com`       | required                                                                       |
+| Mistral    | Mistral    | `https://api.mistral.ai/v1`      | required                                                                       |
+| xAI        | xAI        | `https://api.x.ai/v1`            | required                                                                       |
+| Ollama     | Ollama     | `http://localhost:11434/v1`      | none (runs on your own machine, which the control plane must be able to reach) |
+
+The model is still required: with the key saved, the form's Load models button (or `list_provider_models`) lists what the service offers.
+
 OpenAI, Anthropic, Google Gemini and Azure can each be added once. Amazon Bedrock can be added once for each region, and Vertex AI once for each project and location. Bedrock takes only a Bedrock API key (not AWS access keys), reaches the models AWS serves on its `bedrock-mantle` `/v1` endpoint and offers no reasoning effort. Vertex AI takes a service account key (the account needs the Vertex AI User role): Aven trades it for a one-hour access token as each run needs one, so the key is the only thing to give. A pasted access token also works but stops after an hour. Vertex has no reasoning effort and no model list, so `list_provider_models` only shows the saved model. A Gemini key comes from Google AI Studio (https://aistudio.google.com/apikey) and is not a Vertex AI credential. An OpenAI-compatible server can be added many times, one for each server.
 
 ## 1. Find out what they want

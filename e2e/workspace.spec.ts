@@ -129,6 +129,70 @@ test.describe("settings", () => {
     ).toBeVisible();
   });
 
+  test("the kinds with an address make it from what the form asks, and a preset fills a compatible server", async ({
+    page,
+  }) => {
+    await registerUser(page, "ws", "Workspace User");
+    await page.goto("/settings/providers");
+    const connected = page.getByRole("list").first();
+
+    // Bedrock: a region becomes AWS's regional endpoint.
+    await page
+      .getByRole("listitem", { name: "Amazon Bedrock" })
+      .getByRole("button", { name: "Add" })
+      .click();
+    await page.getByLabel("Region").fill("us-west-2");
+    await page.getByLabel("API key").fill("bedrock-secret-4321");
+    await page.getByLabel("Model", { exact: true }).fill("openai.gpt-oss-120b");
+    await page.getByRole("button", { name: "Add provider" }).click();
+    await expect(
+      page.getByRole("listitem", { name: "Amazon Bedrock", exact: true }).first(),
+    ).toContainText("https://bedrock-mantle.us-west-2.api.aws/v1 · openai.gpt-oss-120b · …4321");
+
+    // Vertex AI: a project and a location become the project's endpoint.
+    await page
+      .getByRole("listitem", { name: "Google Vertex AI" })
+      .getByRole("button", { name: "Add" })
+      .click();
+    await page.getByLabel("Project ID").fill("my-project-123");
+    await page.getByLabel("Location").fill("global");
+    await page.getByLabel("Credential").fill("ya29.pasted-token-9876");
+    await page.getByLabel("Model id").fill("google/gemini-2.5-flash");
+    await page.getByRole("button", { name: "Add provider" }).click();
+    await expect(
+      page.getByText(
+        "https://aiplatform.googleapis.com/v1/projects/my-project-123/locations/global/endpoints/openapi · google/gemini-2.5-flash · …9876",
+      ),
+    ).toBeVisible();
+
+    // Gemini takes only a key, and is then connected.
+    const gemini = page.getByRole("listitem", { name: "Google Gemini" });
+    await gemini.getByRole("button", { name: "Set up" }).click();
+    await page.getByLabel("API key").fill("AIza-secret-5555");
+    await page.getByRole("button", { name: "Add provider" }).click();
+    await expect(gemini).toContainText("…5555");
+    await expect(gemini.getByRole("button", { name: "Set up" })).toHaveCount(0);
+    await expect(connected).toBeVisible();
+
+    // A preset fills the name and the address, and can be let go.
+    await page
+      .getByRole("listitem", { name: "OpenAI-compatible" })
+      .getByRole("button", { name: "Add" })
+      .click();
+    await page.getByRole("button", { name: "Groq" }).click();
+    await expect(page.getByLabel("Name")).toHaveValue("Groq");
+    await expect(page.getByLabel("Base URL")).toHaveValue("https://api.groq.com/openai/v1");
+    await expect(page.getByLabel("API key")).toHaveAttribute("required", "");
+    await page.getByRole("button", { name: "Ollama" }).click();
+    await expect(page.getByLabel("Base URL")).toHaveValue("http://localhost:11434/v1");
+    await expect(page.getByLabel("API key (optional)")).not.toHaveAttribute("required", "");
+    await page.getByLabel("Model", { exact: true }).fill("llama3.1");
+    await page.getByRole("button", { name: "Add provider" }).click();
+    await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText(
+      "http://localhost:11434/v1 · llama3.1",
+    );
+  });
+
   test("invite and remove a member", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/members");

@@ -15,7 +15,9 @@ import { Form } from "@/components/form";
 import { TextField } from "@/components/text-field";
 
 import { useProviderForm } from "../hooks/use-provider-form";
+import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
+import { CompatiblePresets } from "./compatible-presets";
 import { ModelField } from "./model-field";
 
 function loadModelsLabel(loading: boolean, loaded: boolean) {
@@ -54,10 +56,12 @@ type Props = {
 
 export function ProviderDialog({ kind, provider, label }: Props) {
   const [open, setOpen] = useState(false);
+  const [preset, setPreset] = useState<CompatiblePreset | null>(null);
   const form = useProviderForm(kind, provider, () => setOpen(false));
   const { compatible, azure, bedrock, vertex } = form;
   const typedModel = typedModels[kind];
-  const keyLabel = (vertex && "Credential") || (compatible ? "API key (optional)" : "API key");
+  const keyOptional = compatible && preset?.needsKey !== true;
+  const keyLabel = (vertex && "Credential") || (keyOptional ? "API key (optional)" : "API key");
   const vertexParts = vertexPartsOf(provider?.baseUrl);
   const editing = provider !== undefined;
 
@@ -66,7 +70,10 @@ export function ProviderDialog({ kind, provider, label }: Props) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) form.reset();
+        if (!next) {
+          form.reset();
+          setPreset(null);
+        }
       }}
     >
       <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
@@ -80,21 +87,25 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
+          {compatible && !editing && <CompatiblePresets selected={preset} onSelect={setPreset} />}
           {(compatible || bedrock || vertex) && (
             <TextField
+              // A preset replaces the name and the address, so the fields start again with its own.
+              key={`name-${preset?.id}`}
               label="Name"
               name="name"
-              defaultValue={provider?.name}
+              defaultValue={preset?.name ?? provider?.name}
               placeholder={PROVIDER_LABELS[kind]}
             />
           )}
           {(compatible || azure) && (
             <TextField
+              key={`url-${preset?.id}`}
               label={azure ? "Resource URL" : "Base URL"}
               name="baseUrl"
               type="url"
               required
-              defaultValue={provider?.baseUrl ?? undefined}
+              defaultValue={preset?.baseUrl ?? provider?.baseUrl ?? undefined}
               placeholder={
                 azure ? "https://my-resource.openai.azure.com" : "http://localhost:11434/v1"
               }
@@ -135,11 +146,11 @@ export function ProviderDialog({ kind, provider, label }: Props) {
             name="apiKey"
             type="password"
             autoComplete="off"
-            required={!compatible && !editing}
+            required={(!compatible || preset?.needsKey === true) && !editing}
             placeholder={
               editing && provider.keyHint
                 ? `Leave blank to keep …${provider.keyHint}`
-                : keyPlaceholders[kind]
+                : (preset?.keyPlaceholder ?? keyPlaceholders[kind])
             }
           />
           {typedModel ? (
@@ -159,7 +170,9 @@ export function ProviderDialog({ kind, provider, label }: Props) {
                   onChange={form.selectModel}
                   required={compatible || bedrock}
                   defaultValue={provider?.modelId ?? undefined}
-                  placeholder={modelPlaceholders[kind] ?? "Provider default"}
+                  placeholder={
+                    preset?.exampleModel ?? modelPlaceholders[kind] ?? "Provider default"
+                  }
                 />
               </div>
               <Button
