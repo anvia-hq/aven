@@ -152,6 +152,18 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
   description: repo.description,
 });
 
+import {
+  checksOf,
+  latestReviews,
+  shapeFiles,
+  TEXT_MAX_CHARS,
+  type CheckRunPayload,
+  type FilePayload,
+  type GithubCommitDetail,
+  type GithubPullDetail,
+  type ReviewPayload,
+} from "./detail";
+
 /** One entry of a folder of a repository, as the project page lists it (decision 0082). */
 export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
 
@@ -264,6 +276,12 @@ function trackedStatus(item: TrackedPayload): GithubTrackedItem["status"] {
   if (item.pull_request?.merged_at) return "merged";
   if (item.state !== "open") return "closed";
   return item.draft ? "draft" : "open";
+}
+
+function pullStatus(pull: { merged?: boolean; state: string; draft?: boolean }) {
+  if (pull.merged) return "merged";
+  if (pull.state !== "open") return "closed";
+  return pull.draft ? "draft" : "open";
 }
 
 type CommitPayload = {
@@ -630,6 +648,112 @@ export class GithubClient {
       total: found.total_count,
       hasMore: page * TRACKED_PER_PAGE < Math.min(found.total_count, SEARCH_MAX_RESULTS),
     };
+  }
+
+  /**
+   * A pull request opened: what it says, how it is reviewed and checked, and the files it changes
+   * (`FILES_LISTED` at most). Null when the installation cannot see it. Checks need the app's
+   * `checks` permission; an app without it has the pull request with no checks.
+   */
+  async pull(
+    installationId: number,
+    fullName: string,
+    number: number,
+  ): Promise<GithubPullDetail | null> {
+    const { token } = await this.installationToken(installationId);
+    const path = `${repoPath(fullName)}/pulls/${number}`;
+    try {
+      const pull = await this.#api<{
+        number: number;
+        title: string;
+        body: string | null;
+        html_url: string;
+        state: string;
+        draft?: boolean;
+        merged?: boolean;
+        user: { login: string } | null;
+        base: { ref: string };
+        head: { ref: string; sha: string };
+        additions: number;
+        deletions: number;
+        changed_files: number;
+        commits: number;
+        comments: number;
+        review_comments?: number;
+        created_at: string;
+        updated_at: string;
+        mergeable: boolean | null;
+        requested_reviewers?: { login: string }[];
+      }>(path, token);
+      const [files, reviews, runs] = await Promise.all([
+        this.#api<FilePayload[]>(`${path}/files?per_page=100`, token),
+        this.#api<ReviewPayload[]>(`${path}/reviews?per_page=100`, token).catch(() => []),
+        this.#api<{ check_runs: CheckRunPayload[] }>(
+          `${repoPath(fullName)}/commits/${pull.head.sha}/check-runs?per_page=100`,
+          token,
+        )
+          .then((found) => found.check_runs)
+          .catch(() => null),
+      ]);
+      return {
+        number: pull.number,
+        title: pull.title,
+        body: (pull.body ?? "").slice(0, TEXT_MAX_CHARS),
+        url: pull.html_url,
+        status: pullStatus(pull),
+        author: pull.user?.login ?? null,
+        base: pull.base.ref,
+        head: pull.head.ref,
+        additions: pull.additions,
+        deletions: pull.deletions,
+        changedFiles: pull.changed_files,
+        commits: pull.commits,
+        comments: pull.comments + (pull.review_comments ?? 0),
+        createdAt: pull.created_at,
+        updatedAt: pull.updated_at,
+        mergeable: pull.mergeable,
+        reviews: latestReviews(reviews),
+        requestedReviewers: (pull.requested_reviewers ?? []).map(({ login }) => login),
+        checks: checksOf(runs),
+        files: shapeFiles(files),
+        filesTruncated: pull.changed_files > files.length || files.length > 100,
+      };
+    } catch (error) {
+      return nullWhenNotFound(error);
+    }
+  }
+
+  /** A commit opened: its whole message and the files it changes; null when it cannot be seen. */
+  async commit(
+    installationId: number,
+    fullName: string,
+    sha: string,
+  ): Promise<GithubCommitDetail | null> {
+    const { token } = await this.installationToken(installationId);
+    try {
+      const found = await this.#api<
+        CommitPayload & {
+          html_url: string;
+          stats?: { additions: number; deletions: number };
+          files?: FilePayload[];
+        }
+      >(`${repoPath(fullName)}/commits/${encodeURIComponent(sha)}`, token);
+      const files = found.files ?? [];
+      return {
+        sha: found.sha,
+        message: found.commit.message.trim().slice(0, TEXT_MAX_CHARS),
+        author: found.commit.author?.name ?? found.author?.login ?? null,
+        date: found.commit.author?.date ?? "",
+        url: found.html_url,
+        parents: found.parents.map((parent) => parent.sha),
+        additions: found.stats?.additions ?? 0,
+        deletions: found.stats?.deletions ?? 0,
+        files: shapeFiles(files),
+        filesTruncated: files.length > 100,
+      };
+    } catch (error) {
+      return nullWhenNotFound(error);
+    }
   }
 
   async #requireIssues(installationId: number) {

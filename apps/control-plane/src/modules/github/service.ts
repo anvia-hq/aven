@@ -269,6 +269,17 @@ export function createGithubService(
       return client.tracked(installationId, fullName, kind, state, page, filters);
     },
 
+    // A pull request or a commit opened in Center, with the same token.
+    async pull(installationRowId: string, fullName: string, number: number) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.pull(installationId, fullName, number);
+    },
+
+    async commit(installationRowId: string, fullName: string, sha: string) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.commit(installationId, fullName, sha);
+    },
+
     // The pull requests the agent opened for a thread's branches, newest first (decisions 0044, 0069).
     async findPullRequests(installationRowId: string, fullName: string, branchPrefix: string) {
       const { client, installationId } = await acting(installationRowId);

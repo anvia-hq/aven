@@ -4,7 +4,9 @@ import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import type { PutAwayThread } from "../threads/put-away";
 import {
+  commitParams,
   commitsQuery,
+  pullParams,
   folderQuery,
   importProjectBody,
   projectParams,
@@ -75,6 +77,17 @@ export const projectsRouter = (putAway: PutAwayThread) =>
         return projectsService.tracked(organizationId, params.id, "pull", state, page, filters);
       },
       { auth: true, org: true, params: projectParams, query: trackedQuery },
+    )
+    .get(
+      "/:id/pulls/:number",
+      ({ params, organizationId }) =>
+        projectsService.pull(organizationId, params.id, params.number),
+      { auth: true, org: true, params: pullParams },
+    )
+    .get(
+      "/:id/commits/:sha",
+      ({ params, organizationId }) => projectsService.commit(organizationId, params.id, params.sha),
+      { auth: true, org: true, params: commitParams },
     )
     .get(
       "/:id/issues",

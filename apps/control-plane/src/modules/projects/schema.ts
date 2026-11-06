@@ -57,6 +57,14 @@ export const trackedQuery = z.object({
   sort: z.enum(["updated", "oldest", "created", "comments"]).optional(),
 });
 
+export const pullParams = z.object({
+  id: z.uuid(),
+  number: z.coerce.number().int().min(1).max(10_000_000),
+});
+
+// A commit by its full or abbreviated hash.
+export const commitParams = z.object({ id: z.uuid(), sha: z.string().regex(/^[0-9a-f]{7,40}$/) });
+
 // What may change on a project: the runner its new threads run on (decision 0093).
 export const updateProjectBody = z.object({ runtimeId: z.string().uuid() });
 

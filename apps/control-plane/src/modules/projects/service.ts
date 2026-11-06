@@ -196,6 +196,23 @@ export const projectsService = {
     return { ...orNotFound(found, "Repository not found"), page };
   },
 
+  // A pull request or a commit of the project's repository, opened in Center.
+  async pull(organizationId: string, id: string, number: number) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    return orNotFound(
+      await githubService.pull(project.githubInstallationId, project.repoFullName, number),
+      "Pull request not found",
+    );
+  },
+
+  async commit(organizationId: string, id: string, sha: string) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    return orNotFound(
+      await githubService.commit(project.githubInstallationId, project.repoFullName, sha),
+      "Commit not found",
+    );
+  },
+
   // What a runtime needs to clone the repository of a thread's project: the clone URL, the branch
   // and a short-lived read-only token (decision 0013).
   async repoAccess(threadId: string) {
