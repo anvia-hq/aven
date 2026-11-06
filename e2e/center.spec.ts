@@ -55,6 +55,33 @@ test.describe("Center", () => {
     await page.getByRole("searchbox", { name: "Search titles" }).fill("");
     await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
 
+    // A pull request opens beside the lists, with its checks, its reviewers and its files; its link
+    // is in the address.
+    await page.getByRole("link", { name: "Open pull request 12" }).first().click();
+    await expect(page).toHaveURL(/pr=/);
+    const drawer = page.getByRole("dialog");
+    await expect(drawer.getByRole("heading", { name: /Open pull request 12/ })).toBeVisible();
+    await expect(drawer.getByRole("region", { name: "Checks" })).toContainText("tests");
+    await expect(drawer.getByRole("region", { name: "Reviewers" })).toContainText(
+      "ada · Review requested",
+    );
+    await expect(drawer.getByRole("region", { name: "Description" })).toContainText(
+      "It makes the login faster.",
+    );
+    await expect(drawer.getByRole("region", { name: "Files changed" })).toContainText(
+      "src/login.ts",
+    );
+    await expect(drawer.getByText("const c = 4;")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page).not.toHaveURL(/pr=/);
+
+    // So does a commit, with its whole message.
+    await page.getByRole("link", { name: "Change number 14" }).first().click();
+    await expect(page).toHaveURL(/commit=/);
+    await expect(page.getByRole("dialog").getByText("Why it changed, in full.")).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page).not.toHaveURL(/commit=/);
+
     // One project by itself: only its pull requests, and its commits as a graph with pages.
     await page
       .getByRole("list", { name: "Projects" })

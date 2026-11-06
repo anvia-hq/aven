@@ -49,11 +49,13 @@ function Commit({
   commit,
   row,
   lanes,
+  onOpen,
 }: {
   project: Project;
   commit: RepoCommit;
   row: GraphRow;
   lanes: number;
+  onOpen?: () => void;
 }) {
   return (
     <li
@@ -63,9 +65,23 @@ function Commit({
       <CommitGraphRow row={row} lanes={lanes} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate" title={commit.message}>
-            {commit.message || "No message"}
-          </span>
+          {onOpen ? (
+            <a
+              href={commitUrl(project.repoFullName, commit.sha)}
+              title={commit.message}
+              onClick={(event) => {
+                event.preventDefault();
+                onOpen();
+              }}
+              className="truncate hover:underline"
+            >
+              {commit.message || "No message"}
+            </a>
+          ) : (
+            <span className="truncate" title={commit.message}>
+              {commit.message || "No message"}
+            </span>
+          )}
           <Branches refs={commit.refs} defaultBranch={project.defaultBranch} />
         </div>
         <span className="truncate text-xs text-muted-foreground">
@@ -89,7 +105,14 @@ function Commit({
 
 // The latest commits of the project's default branch, ten to a page, newest first, drawn as a graph
 // of the branches and merges among them (decision 0090).
-export function RepoCommits({ project }: { project: Project }) {
+export function RepoCommits({
+  project,
+  onOpenCommit,
+}: {
+  project: Project;
+  /** Given, a commit's message opens it where it is shown rather than on GitHub. */
+  onOpenCommit?: (sha: string) => void;
+}) {
   const [page, setPage] = useState(1);
   const { commits, hasMore, problem, loading } = useProjectCommits(project.id, page);
   const graph = useMemo(() => layoutGraph(commits ?? []), [commits]);
@@ -125,6 +148,7 @@ export function RepoCommits({ project }: { project: Project }) {
               commit={commit}
               row={graph.rows[index]!}
               lanes={graph.lanes}
+              onOpen={onOpenCommit && (() => onOpenCommit(commit.sha))}
             />
           ))}
           {commits.length === 0 && (

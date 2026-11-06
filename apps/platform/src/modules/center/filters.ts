@@ -22,6 +22,9 @@ export type CenterFilters = {
 
 export type CenterSearch = Partial<Omit<CenterFilters, "state" | "sort">> & {
   project?: string;
+  /** The pull request or commit open in the detail pane, as `<project id>:<number or hash>`. */
+  pr?: string;
+  commit?: string;
   state?: PullState;
   sort?: CenterFilters["sort"];
 };
@@ -31,11 +34,20 @@ const oneOf = <T extends string>(options: readonly T[], value: unknown): T | und
 const text = (value: unknown, max: number) =>
   typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
 
+// `<project id>:<what>`, where what is checked by `pattern`.
+function opened(value: unknown, pattern: RegExp) {
+  if (typeof value !== "string") return undefined;
+  const [project, what, ...more] = value.split(":");
+  return project && what && more.length === 0 && pattern.test(what) ? value : undefined;
+}
+
 // The address's search made safe to use: what is not one of the known values is left out.
 export function parseCenterSearch(search: Record<string, unknown>): CenterSearch {
   const stale = Number(search.stale);
   return {
     project: text(search.project, 64),
+    pr: opened(search.pr, /^\d{1,8}$/),
+    commit: opened(search.commit, /^[0-9a-f]{7,40}$/),
     state: oneOf(PULL_STATES, search.state),
     author: search.author === "me" ? "me" : undefined,
     reviewRequested: search.reviewRequested === "me" ? "me" : undefined,

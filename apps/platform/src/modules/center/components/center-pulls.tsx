@@ -3,6 +3,7 @@ import { GitPullRequest } from "@mynaui/icons-react";
 import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 import { TrackedRow } from "@/modules/projects/components/repo-tracked";
+import type { Project } from "@/modules/projects/types";
 
 import type { PullEntry } from "../hooks/use-center-feed";
 
@@ -11,10 +12,12 @@ export function CenterPulls({
   pulls,
   loading,
   onLabel,
+  onOpen,
 }: {
   pulls: PullEntry[] | undefined;
   loading: boolean;
   onLabel: (label: string) => void;
+  onOpen: (project: Project, number: number) => void;
 }) {
   return (
     <SectionCard
@@ -45,6 +48,7 @@ export function CenterPulls({
               kind="pull"
               project={project}
               onLabel={onLabel}
+              onOpen={() => onOpen(project, item.number)}
             />
           ))}
           {pulls.length === 0 && (

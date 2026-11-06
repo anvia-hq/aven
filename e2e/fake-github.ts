@@ -34,6 +34,18 @@ function searchTitles(pulls: boolean, open: boolean) {
   return open ? ["Open issue two", "Open issue one"] : ["Closed issue"];
 }
 
+// What a pull request and a commit change, as GitHub lists the files.
+const changedFiles = [
+  {
+    filename: "src/login.ts",
+    status: "modified",
+    additions: 2,
+    deletions: 1,
+    patch: "@@ -1,3 +1,4 @@\n const a = 1;\n-const b = 2;\n+const b = 3;\n+const c = 4;",
+  },
+  { filename: "logo.png", status: "added", additions: 0, deletions: 0 },
+];
+
 Bun.serve({
   port,
   async fetch(request) {
@@ -166,6 +178,72 @@ Bun.serve({
           page === 1
             ? { link: '<https://api.github.com/repositories/1/commits?page=2>; rel="next"' }
             : {},
+      });
+    }
+    // A pull request and a commit opened in Center (decision 0132): number 100 is a draft with a
+    // failing check and a review requested, any other is open and approved.
+    const opened = pathname.match(/^\/repos\/acme\/([\w.-]+)\/pulls\/(\d+)(\/files|\/reviews)?$/);
+    if (opened && repositories.includes(opened[1]!)) {
+      const number = Number(opened[2]);
+      if (opened[3] === "/files") return Response.json(changedFiles);
+      if (opened[3] === "/reviews") {
+        return Response.json(
+          number === 100
+            ? []
+            : [
+                {
+                  user: { login: "grace" },
+                  state: "APPROVED",
+                  submitted_at: "2026-11-01T10:00:00Z",
+                },
+              ],
+        );
+      }
+      return Response.json({
+        number,
+        title: `Open pull request ${12 - (100 - number)}`,
+        body: "## Why\n\nIt makes the login **faster**.",
+        html_url: `https://github.com/acme/${opened[1]}/pull/${number}`,
+        state: "open",
+        draft: number === 100,
+        merged: false,
+        user: { login: "ada" },
+        base: { ref: "main" },
+        head: { ref: "feature/login", sha: sha(10) },
+        additions: 3,
+        deletions: 1,
+        changed_files: changedFiles.length,
+        commits: 2,
+        comments: 1,
+        review_comments: 2,
+        created_at: new Date(Date.now() - 86_400_000).toISOString(),
+        updated_at: new Date().toISOString(),
+        mergeable: true,
+        requested_reviewers: number === 100 ? [{ login: "ada" }] : [],
+      });
+    }
+    const checkRuns = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits\/[0-9a-f]+\/check-runs$/);
+    if (checkRuns && repositories.includes(checkRuns[1]!)) {
+      return Response.json({
+        check_runs: [
+          { name: "build", status: "completed", conclusion: "success", html_url: null },
+          { name: "tests", status: "completed", conclusion: "failure", html_url: null },
+        ],
+      });
+    }
+    const one = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits\/([0-9a-f]{7,40})$/);
+    if (one && repositories.includes(one[1]!)) {
+      return Response.json({
+        sha: one[2],
+        html_url: `https://github.com/acme/${one[1]}/commit/${one[2]}`,
+        commit: {
+          message: "Change number 14\n\nWhy it changed, in full.",
+          author: { name: "Ada Lovelace", date: new Date().toISOString() },
+        },
+        author: { login: "ada" },
+        parents: [{ sha: sha(13) }],
+        stats: { additions: 3, deletions: 1 },
+        files: changedFiles,
       });
     }
     // Pull requests and issues on the project page (decision 0092), by GitHub's search: twelve open

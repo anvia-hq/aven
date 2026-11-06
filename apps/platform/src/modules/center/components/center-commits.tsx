@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/skeleton";
 import { timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { commitUrl } from "@/modules/projects/repo-links";
+import type { Project } from "@/modules/projects/types";
 
 import type { CommitEntry } from "../hooks/use-center-feed";
 
@@ -16,9 +17,11 @@ const LATEST_SHOWN = 30;
 export function CenterCommits({
   commits,
   loading,
+  onOpen,
 }: {
   commits: CommitEntry[] | undefined;
   loading: boolean;
+  onOpen: (project: Project, sha: string) => void;
 }) {
   return (
     <SectionCard
@@ -47,9 +50,17 @@ export function CenterCommits({
               <ProjectTile projectId={project.id} name={project.name} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate" title={commit.message}>
+                  <a
+                    href={commitUrl(project.repoFullName, commit.sha)}
+                    title={commit.message}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onOpen(project, commit.sha);
+                    }}
+                    className="truncate hover:underline"
+                  >
                     {commit.message || "No message"}
-                  </span>
+                  </a>
                   {commit.refs.slice(0, 1).map((name) => (
                     <Badge key={name} variant="outline" title={name} className="max-w-32">
                       <GitBranch />

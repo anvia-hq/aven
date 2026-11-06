@@ -5,11 +5,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/button";
 import { RepoCommits } from "@/modules/projects/components/repo-commits";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
+import type { Project } from "@/modules/projects/types";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
 import { useCenterFeed } from "../hooks/use-center-feed";
 import { filtersOf, pullsQuery, QUICK_VIEWS, quickViewSearch, type CenterSearch } from "../filters";
 import { CenterCommits } from "./center-commits";
+import { CenterDetail, openOf } from "./center-detail";
 import { CenterFilterBar } from "./center-filter-bar";
 import { CenterPulls } from "./center-pulls";
 
@@ -37,6 +39,12 @@ export function CenterPage() {
       search: (previous) => ({ ...previous, ...next }),
       replace: true,
     });
+
+  const detail = openOf(search);
+  const openPull = (project: Project, number: number) =>
+    change({ pr: `${project.id}:${number}`, commit: undefined });
+  const openCommit = (project: Project, sha: string) =>
+    change({ commit: `${project.id}:${sha}`, pr: undefined });
 
   // A project that is gone, or not the person's, shows all of them.
   if (loaded && selected !== undefined && !one) {
@@ -91,14 +99,16 @@ export function CenterPage() {
             pulls={feed?.pulls}
             loading={loading}
             onLabel={(label) => change({ label })}
+            onOpen={openPull}
           />
           {one ? (
-            <RepoCommits project={one} />
+            <RepoCommits project={one} onOpenCommit={(sha) => openCommit(one, sha)} />
           ) : (
-            <CenterCommits commits={feed?.commits} loading={loading} />
+            <CenterCommits commits={feed?.commits} loading={loading} onOpen={openCommit} />
           )}
         </div>
       )}
+      <CenterDetail open={detail} onClose={() => change({ pr: undefined, commit: undefined })} />
     </div>
   );
 }

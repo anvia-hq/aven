@@ -25,7 +25,7 @@ const isState = (value: unknown): value is TrackedState => value === "open" || v
 // The state shown is the one that stands out; the shared toggle's pressed tint is too faint on a card.
 const PRESSED = "aria-pressed:bg-secondary aria-pressed:text-secondary-foreground";
 
-const STATUS = {
+export const TRACKED_STATUS = {
   open: { label: "Open", variant: "secondary" },
   draft: { label: "Draft", variant: "outline" },
   merged: { label: "Merged", variant: "default" },
@@ -45,14 +45,17 @@ export function TrackedRow({
   kind,
   project,
   onLabel,
+  onOpen,
 }: {
   item: TrackedItem;
   kind: TrackedKind;
   project?: Project;
   /** Given, a label is a button that asks for the pull requests with it. */
   onLabel?: (label: string) => void;
+  /** Given, the title opens the pull request where it is shown rather than on GitHub. */
+  onOpen?: () => void;
 }) {
-  const { label, variant } = STATUS[item.status];
+  const { label, variant } = TRACKED_STATUS[item.status];
   return (
     <li className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50">
       <span className="text-muted-foreground">
@@ -65,6 +68,11 @@ export function TrackedRow({
             target="_blank"
             rel="noreferrer noopener"
             title={item.title}
+            onClick={(event) => {
+              if (!onOpen) return;
+              event.preventDefault();
+              onOpen();
+            }}
             className="truncate hover:underline"
           >
             {item.title}
