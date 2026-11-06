@@ -54,20 +54,20 @@
 
 /* Charcoal dark theme with a faint indigo tint (default). */
 .dark {
-  --background: oklch(0.175 0.014 277);
-  --foreground: oklch(0.9 0.006 277);
-  --card: oklch(0.2 0.014 277);
-  --card-foreground: oklch(0.9 0.006 277);
-  --popover: oklch(0.22 0.014 277);
-  --popover-foreground: oklch(0.9 0.006 277);
-  --primary: oklch(0.93 0.006 277);
-  --primary-foreground: oklch(0.18 0.006 277);
-  --secondary: oklch(0.24 0.014 277);
-  --secondary-foreground: oklch(0.9 0.006 277);
-  --muted: oklch(0.22 0.014 277);
-  --muted-foreground: oklch(0.62 0.006 277);
-  --accent: oklch(0.25 0.014 277);
-  --accent-foreground: oklch(0.92 0.006 277);
+  --background: oklch(0.175 0.02 160);
+  --foreground: oklch(0.9 0.006 160);
+  --card: oklch(0.2 0.02 160);
+  --card-foreground: oklch(0.9 0.006 160);
+  --popover: oklch(0.22 0.02 160);
+  --popover-foreground: oklch(0.9 0.006 160);
+  --primary: oklch(0.93 0.006 160);
+  --primary-foreground: oklch(0.18 0.006 160);
+  --secondary: oklch(0.24 0.02 160);
+  --secondary-foreground: oklch(0.9 0.006 160);
+  --muted: oklch(0.22 0.02 160);
+  --muted-foreground: oklch(0.62 0.006 160);
+  --accent: oklch(0.25 0.02 160);
+  --accent-foreground: oklch(0.92 0.006 160);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
   --meter-low: oklch(0.7 0.14 245);
@@ -80,18 +80,18 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.74 0.29 278);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.235 0.014 277);
+  --frame: oklch(0.235 0.02 160);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.5 0.03 277);
+  --ring: oklch(0.5 0.03 160);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.86 0.006 277);
-  --sidebar-primary: oklch(0.93 0.006 277);
-  --sidebar-primary-foreground: oklch(0.18 0.006 277);
-  --sidebar-accent: oklch(0.23 0.014 277);
-  --sidebar-accent-foreground: oklch(0.92 0.006 277);
+  --sidebar-foreground: oklch(0.86 0.006 160);
+  --sidebar-primary: oklch(0.93 0.006 160);
+  --sidebar-primary-foreground: oklch(0.18 0.006 160);
+  --sidebar-accent: oklch(0.23 0.02 160);
+  --sidebar-accent-foreground: oklch(0.92 0.006 160);
   --sidebar-border: oklch(1 0 0 / 3%);
-  --sidebar-ring: oklch(0.5 0.03 277);
+  --sidebar-ring: oklch(0.5 0.03 160);
 }
 
 /* The dots of the working indicator run from pale blue to indigo (modules/threads/components/working-indicator.tsx). */
