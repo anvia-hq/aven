@@ -99,7 +99,7 @@ export type RuntimeOptions = {
   callTimeoutMs?: number;
   /**
    * A thread with no run and no running process for this long gives up its sandbox (its files
-   * stay). Default 15 minutes.
+   * stay). Default 30 minutes.
    */
   idleReleaseMs?: number;
   /** How often the machine's load is told to the control plane (decision 0091). Default 15 seconds. */
@@ -111,7 +111,7 @@ const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 // About as long as the control plane holds a run for its runtime to come back.
 const DEFAULT_CALL_TIMEOUT_MS = 60_000;
-const DEFAULT_IDLE_RELEASE_MS = 15 * 60_000;
+const DEFAULT_IDLE_RELEASE_MS = 30 * 60_000;
 
 /**
  * Where the control plane's HTTP API is, from the URL the runner connects to: the same address with

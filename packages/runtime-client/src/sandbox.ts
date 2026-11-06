@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, realpath } from "node:fs/promises";
+import { access, mkdir, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
@@ -341,12 +341,19 @@ export class Sandboxes implements ThreadWorkspaces {
     };
     const eager = !(lazy && repo);
     const root = eager ? await this.#workspace(thread, repo) : undefined;
-    const start = eager ? () => this.#ensure(thread.id, root!) : startLazily;
+    const start = eager
+      ? () =>
+          this.#ensure(thread.id, root!).then(() => (repo ? undefined : this.#noteUsed(thread.id)))
+      : startLazily;
     // A thread's container is up before its run begins (a lazy one's first tool waits for it); a
     // bot's when something first needs it.
     const upWhenNeeded = <T extends object>(sandbox: T) =>
       repo && eager ? sandbox : startedOnUse(sandbox, start);
     if (repo && eager) await start();
+    // A bot that has used its computer before is likely to again: it is started now, in the
+    // background, so the first tool of the reply finds it up (decision 0130). One that never has, or
+    // that only talks, starts nothing.
+    if (!repo && (await this.#usedBefore(thread.id))) void start().catch(() => undefined);
     const runtime = withProjectEnv(
       upWhenNeeded(this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR })),
       () => this.#projectEnv.get(thread.id),
@@ -454,6 +461,24 @@ export class Sandboxes implements ThreadWorkspaces {
     if (await isCloned(root)) return root;
     await this.#environments.fill(thread, root, await repo());
     return root;
+  }
+
+  // Which bots have used their computers: a file for each in the runner's home, so it holds across
+  // restarts and costs nothing for a bot that never has.
+  #usedFile(id: string) {
+    return join(runtimeHome(this.#config.home), "bot-computers", id);
+  }
+
+  async #usedBefore(id: string) {
+    return access(this.#usedFile(id)).then(
+      () => true,
+      () => false,
+    );
+  }
+
+  async #noteUsed(id: string) {
+    await mkdir(join(runtimeHome(this.#config.home), "bot-computers"), { recursive: true });
+    await writeFile(this.#usedFile(id), "").catch(() => undefined);
   }
 
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {

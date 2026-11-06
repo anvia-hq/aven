@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -163,6 +163,31 @@ describe("Sandboxes starting a container", () => {
       expect(started()).toHaveLength(1);
       const mounted = started()[0]?.find((arg) => arg.endsWith(":/workspace"));
       expect(mounted).toBe(`${join(await realpath(home), "workspaces", "bot-1")}:/workspace`);
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    });
+
+    test("is started in the background when the bot has used its computer before (decision 0130)", async () => {
+      const { calls, docker } = fakeDocker();
+      const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+      await mkdir(join(home, "bot-computers"), { recursive: true });
+      await writeFile(join(home, "bot-computers", "bot-1"), "");
+      const sandboxes = await Sandboxes.start({
+        image: "img",
+        home,
+        docker,
+        git: fakeGit,
+        connectTimeoutMs: 200,
+      });
+
+      await sandboxes.acquire({ id: "bot-1" });
+      await sandboxes.acquire({ id: "bot-2" });
+      await Bun.sleep(100);
+
+      const started = calls.filter((args) => args[0] === "run");
+      // Only the bot that has used it: before the reply asked for anything.
+      expect(started).toHaveLength(1);
+      expect(started[0]?.some((arg) => arg.includes("bot-1"))).toBe(true);
       await sandboxes.dispose();
       await rm(home, { recursive: true, force: true });
     });
