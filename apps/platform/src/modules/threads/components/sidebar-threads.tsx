@@ -18,6 +18,7 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
+import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
@@ -144,6 +145,7 @@ export function SidebarThreads() {
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();
   const rename = useRenameThread();
+  useFinishedSound();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 

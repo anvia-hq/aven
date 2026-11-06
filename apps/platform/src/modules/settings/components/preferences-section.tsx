@@ -1,7 +1,10 @@
+import { useState } from "react";
+
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
 import { Switch } from "@/components/switch";
 
+import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 import { useTimezone } from "../hooks/use-timezone";
@@ -15,6 +18,7 @@ const zones = (current: string) => {
 export function PreferencesSection() {
   const { theme, setTheme } = useTheme();
   const { timezone, save } = useTimezone();
+  const [sound, setSound] = useState(finishedSoundOn);
 
   return (
     <>
@@ -24,6 +28,22 @@ export function PreferencesSection() {
             aria-label="Dark mode"
             checked={theme === "dark"}
             onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          />
+        </SettingsRow>
+      </SettingsSection>
+      <SettingsSection title="Sound" description="Only affects this device.">
+        <SettingsRow
+          title="Chime when a thread finishes"
+          description="A soft sound when an agent finishes while you are in another tab or window."
+        >
+          <Switch
+            aria-label="Chime when a thread finishes"
+            checked={sound}
+            onCheckedChange={(checked) => {
+              setSound(checked);
+              setFinishedSound(checked);
+              if (checked) playChime();
+            }}
           />
         </SettingsRow>
       </SettingsSection>
