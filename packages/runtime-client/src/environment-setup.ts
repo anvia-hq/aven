@@ -121,6 +121,10 @@ export function hostUser() {
 // Python environment and the Rust toolchain.
 const SANDBOX_USER_TREES = ["/home/node", "/opt/venv", "/usr/local/rustup", "/usr/local/cargo"];
 
+// The image's own user, which runs the setup script: the workspace is the host user's, and a script
+// that writes to it (an install makes `node_modules`) needs it to be this user's while it runs.
+const SANDBOX_USER = "node";
+
 const tail = (text: string, lines = 20) => text.trimEnd().split("\n").slice(-lines).join("\n");
 
 /**
@@ -143,6 +147,18 @@ export async function setupEnvironment(input: SetupInput) {
       );
     }
 
+    // On Linux the workspace belongs to the host user, whose id is not the image user's, so the
+    // script could not write in it (`mkdir node_modules: permission denied`): it is the image
+    // user's for the length of the script and handed back right after, whether it worked or not.
+    const handOver = (owner: string) =>
+      docker(["exec", "-u", "0", name, "chown", "-R", owner, WORKSPACE_DIR]);
+    if (input.hostUser) {
+      const lent = await handOver(SANDBOX_USER);
+      if (lent.code !== 0) {
+        throw new Error(`Could not open the workspace to the setup: ${lent.stderr.trim()}`);
+      }
+    }
+
     const timeoutMs = input.timeoutMs ?? SETUP_TIMEOUT_MS;
     const ran = await docker(
       ["exec", "-w", WORKSPACE_DIR, "-e", "CI=true", name, `./${SETUP_SCRIPT}`],
@@ -150,6 +166,7 @@ export async function setupEnvironment(input: SetupInput) {
         timeoutMs,
       },
     );
+    const handedBack = input.hostUser ? await handOver(input.hostUser) : undefined;
     await mkdir(dirname(input.logPath), { recursive: true });
     await writeFile(input.logPath, `${ran.stdout}${ran.stderr}`);
     if (ran.stderr.includes("timed out after")) {
@@ -164,21 +181,11 @@ export async function setupEnvironment(input: SetupInput) {
     }
 
     // What the script wrote should be the host user's to use, as the agent's files are: the
-    // workspace is theirs, and the home and toolchain folders, which the script wrote as the image's
-    // user, are writable by any user again (decision 0095).
+    // workspace is theirs again, and the home and toolchain folders, which the script wrote as the
+    // image's user, are writable by any user again (decision 0095).
     if (input.hostUser) {
-      const owned = await docker([
-        "exec",
-        "-u",
-        "0",
-        name,
-        "chown",
-        "-R",
-        input.hostUser,
-        WORKSPACE_DIR,
-      ]);
-      if (owned.code !== 0)
-        throw new Error(`Could not hand the workspace back: ${owned.stderr.trim()}`);
+      if (handedBack && handedBack.code !== 0)
+        throw new Error(`Could not hand the workspace back: ${handedBack.stderr.trim()}`);
       // Only what is not writable already: `chmod -R` over the toolchains touches every file, and
       // each one touched is copied into the container's layer and so into the snapshot (900 MB).
       const opened = await docker([

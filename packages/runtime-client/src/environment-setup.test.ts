@@ -120,20 +120,43 @@ describe("running a repository's setup", () => {
     expect(fake.verbs()).not.toContain("commit");
   });
 
-  test("hands the workspace to the host user when it is not the image's", async () => {
+  test("hands the workspace back to the host user when the script fails", async () => {
+    const fake = fakeDocker();
+    const docker: DockerRun = async (args, options) => {
+      const result = await fake.docker(args, options);
+      // Only the script fails; the ownership changes around it work.
+      return args.at(-1) === "./.aven/setup"
+        ? { ...result, code: 1, stderr: "mkdir failed" }
+        : result;
+    };
+
+    const error = await setupEnvironment(await input(docker, { hostUser: "1234:1234" })).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect((error as Error).message).toContain(".aven/setup failed (exit 1)");
+    const last = fake.calls.filter((call) => call.args.includes("chown")).at(-1)!;
+    expect(last.args).toContain("1234:1234");
+  });
+
+  test("lends the workspace to the image's user for the script and hands it to the host user after", async () => {
     const fake = fakeDocker();
 
     await setupEnvironment(await input(fake.docker, { hostUser: "1234:1234" }));
 
-    expect(fake.calls.find((call) => call.args.includes("chown"))!.args).toEqual([
+    const chowns = fake.calls.filter((call) => call.args.includes("chown"));
+    expect(chowns.map((call) => call.args)).toEqual([
+      ["exec", "-u", "0", "aven-setup-k1", "chown", "-R", "node", "/workspace"],
+      ["exec", "-u", "0", "aven-setup-k1", "chown", "-R", "1234:1234", "/workspace"],
+    ]);
+    // The script runs between them, so it can write in the workspace.
+    const order = fake.calls.map((call) =>
+      call.args.includes("chown") ? `chown ${call.args[6]}` : call.args[0],
+    );
+    expect(order.slice(order.indexOf("chown node"), order.indexOf("chown 1234:1234") + 1)).toEqual([
+      "chown node",
       "exec",
-      "-u",
-      "0",
-      "aven-setup-k1",
-      "chown",
-      "-R",
-      "1234:1234",
-      "/workspace",
+      "chown 1234:1234",
     ]);
     // What the script wrote in the home and the toolchains is writable by the host user as well.
     // Only the entries that are not already: touching them all would copy the toolchains into the
