@@ -11,6 +11,64 @@ describe("providerOptionsFor", () => {
     expect(providerOptionsFor("openai")).toBeUndefined();
     expect(providerOptionsFor("openai-compatible")).toBeUndefined();
     expect(providerOptionsFor("azure")).toBeUndefined();
+    expect(providerOptionsFor("gemini")).toBeUndefined();
+  });
+});
+
+describe("createModel gemini", () => {
+  const saved = process.env.GEMINI_API_KEY;
+  afterAll(() => {
+    if (saved === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = saved;
+  });
+
+  test("needs a key, from the config or GEMINI_API_KEY, and has a default model", () => {
+    delete process.env.GEMINI_API_KEY;
+    expect(() => createModel({ provider: "gemini" })).toThrow("GEMINI_API_KEY is not set");
+    const model = createModel({ provider: "gemini", apiKey: "k" });
+    expect(model.provider).toBe("gemini");
+    expect(model.modelId).toBe("gemini-2.5-pro");
+    process.env.GEMINI_API_KEY = "from-env";
+    expect(createModel({ provider: "gemini", modelId: "gemini-2.5-flash" }).modelId).toBe(
+      "gemini-2.5-flash",
+    );
+  });
+
+  test("reports the SDK's effort levels per model", () => {
+    expect(
+      reasoningControlsFor({ provider: "gemini", modelId: "gemini-2.5-pro" })?.options,
+    ).toEqual(["low", "medium", "high"]);
+    expect(reasoningControlsFor({ provider: "gemini", modelId: "gemini-2.0-flash" })).toBeNull();
+  });
+
+  test("a base URL is where the SDK sends its requests, with the key in x-goog-api-key", async () => {
+    const seen: { path: string; key: string | null }[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push({ path: new URL(req.url).pathname, key: req.headers.get("x-goog-api-key") });
+        return Response.json(
+          { error: { code: 400, message: "stop", status: "INVALID_ARGUMENT" } },
+          { status: 400 },
+        );
+      },
+    });
+    try {
+      const { agent } = createCodingAgent({
+        tools: [],
+        provider: "gemini",
+        modelId: "gemini-2.5-flash",
+        apiKey: "gw-token",
+        baseUrl: `http://localhost:${server.port}/prefix`,
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      expect(seen[0]).toEqual({
+        path: "/prefix/v1beta/models/gemini-2.5-flash:generateContent",
+        key: "gw-token",
+      });
+    } finally {
+      server.stop(true);
+    }
   });
 });
 

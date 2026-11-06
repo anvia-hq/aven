@@ -33,6 +33,12 @@ const anthropic = {
   modelId: providerModelId.optional(),
   isDefault,
 };
+const gemini = {
+  kind: z.literal("gemini"),
+  name: providerName,
+  modelId: providerModelId.optional(),
+  isDefault,
+};
 // Azure: the resource URL, and the name of a deployment in it (the model id Azure accepts).
 const azure = {
   kind: z.literal("azure"),
@@ -52,6 +58,7 @@ const compatible = {
 export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...openai, apiKey }),
   z.object({ ...anthropic, apiKey }),
+  z.object({ ...gemini, apiKey }),
   z.object({ ...azure, apiKey }),
   z.object({ ...compatible, apiKey: apiKey.optional() }),
 ]);
@@ -60,6 +67,7 @@ export const createProviderBody = z.discriminatedUnion("kind", [
 export const keylessProviderBody = z.discriminatedUnion("kind", [
   z.object(openai),
   z.object(anthropic),
+  z.object(gemini),
   z.object(azure),
   z.object(compatible),
 ]);

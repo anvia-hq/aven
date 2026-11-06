@@ -21,7 +21,7 @@ type ProviderKind = ModelConfig["provider"];
 
 // The vendors have one credential each; only an OpenAI-compatible server can be added many times,
 // since every server is its own.
-const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "azure"]);
+const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "gemini", "azure"]);
 
 const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "openai-compatible" =>
   kind === "openai-compatible" || kind === "azure";

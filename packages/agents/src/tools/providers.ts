@@ -43,12 +43,12 @@ const baseUrl = z
   .trim()
   .max(500)
   .describe(
-    "Azure: the resource URL, https://<resource>.openai.azure.com. An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai or anthropic.",
+    "Azure: the resource URL, https://<resource>.openai.azure.com. An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai, anthropic or gemini.",
   );
 const id = z.uuid().describe("The provider id from list_providers.");
 
 const addSchema = z.object({
-  kind: z.enum(PROVIDERS).describe("openai, anthropic, azure or openai-compatible."),
+  kind: z.enum(PROVIDERS).describe("openai, anthropic, gemini, azure or openai-compatible."),
   name,
   baseUrl: baseUrl.optional(),
   modelId: modelId.optional(),

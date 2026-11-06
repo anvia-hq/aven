@@ -228,6 +228,38 @@ run("providersService (postgres)", async () => {
     await providersService.create(alice, { ...compat, name: "C4" });
   });
 
+  test("a Gemini provider takes a key, runs the default model and is connected once", async () => {
+    const gemini = await providersService.create(alice, {
+      kind: "gemini",
+      name: "Gemini",
+      apiKey: "AIza-secret-wxyz",
+    });
+    expect(gemini).toMatchObject({ kind: "gemini", baseUrl: null, modelId: null, hasKey: true });
+    expect(JSON.stringify(gemini)).not.toContain("AIza-secret");
+    await expect(
+      providersService.create(alice, { kind: "gemini", name: "Again", apiKey: "k" }),
+    ).rejects.toThrow("already connected");
+    // A Gemini provider has no address of its own to change.
+    await expect(
+      providersService.update(alice, gemini.id, { baseUrl: "https://x.test" }),
+    ).rejects.toThrow("base URL");
+    await providersService.update(alice, gemini.id, {
+      isDefault: true,
+      modelId: "gemini-2.5-flash",
+    });
+    expect(await resolveModel(alice)).toEqual({
+      provider: "gemini",
+      modelId: "gemini-2.5-flash",
+      baseUrl: undefined,
+      apiKey: "AIza-secret-wxyz",
+      contextWindow: undefined,
+    });
+    // The first provider Alice added is the one her other tests expect as the default.
+    const [first] = await providersService.list(alice);
+    await providersService.update(alice, first!.id, { isDefault: true });
+    await providersService.remove(alice, gemini.id);
+  });
+
   test("model efforts come from the SDK and leave out models without the control", async () => {
     expect(await effortsByModel({ kind: "openai" }, ["gpt-4o", "o3"])).toEqual({
       o3: { options: ["low", "medium", "high"], defaultValue: "medium" },

@@ -1,6 +1,6 @@
 ---
 name: configure-providers
-description: Add, change, switch or remove the person's model providers (OpenAI, Anthropic, Azure OpenAI, an OpenAI-compatible server) and pick models. Use when the user wants to connect a provider, change a key or a model, make one the default, or says there is no model, a model is missing, or a provider does not work.
+description: Add, change, switch or remove the person's model providers (OpenAI, Anthropic, Google Gemini, Azure OpenAI, an OpenAI-compatible server) and pick models. Use when the user wants to connect a provider, change a key or a model, make one the default, or says there is no model, a model is missing, or a provider does not work.
 ---
 
 # Configuring model providers
@@ -13,10 +13,11 @@ A provider is what runs the person's agents: it holds a kind, an API key and, fo
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------- |
 | OpenAI                                               | none                                                                                                     | optional                                                                       | required |
 | Anthropic                                            | none                                                                                                     | optional                                                                       | required |
+| Google Gemini                                        | none                                                                                                     | optional                                                                       | required |
 | Azure OpenAI                                         | the resource URL, `https://<resource>.openai.azure.com` (https only, anything after the host is dropped) | the **deployment name** in that resource, which is not always the model's name | required |
 | OpenAI-compatible (Ollama, vLLM, LiteLLM, a gateway) | the server's root, such as `https://gateway.example.com/v1`                                              | required                                                                       | optional |
 
-OpenAI and Anthropic and Azure can each be added once. An OpenAI-compatible server can be added many times, one for each server.
+OpenAI, Anthropic, Google Gemini and Azure can each be added once. A Gemini key comes from Google AI Studio (https://aistudio.google.com/apikey) and is not a Vertex AI credential. An OpenAI-compatible server can be added many times, one for each server.
 
 ## 1. Find out what they want
 

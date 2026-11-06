@@ -4,7 +4,7 @@ import { createCodingAgent } from "@aven/agents/coding-agent";
 
 import { RunGateway } from "./gateway";
 
-type Seen = { path: string; headers: Headers; body: Record<string, unknown> };
+type Seen = { path: string; search: string; headers: Headers; body: Record<string, unknown> };
 
 describe("RunGateway", () => {
   const seen: Seen[] = [];
@@ -20,6 +20,7 @@ describe("RunGateway", () => {
     async fetch(req) {
       seen.push({
         path: new URL(req.url).pathname,
+        search: new URL(req.url).search,
         headers: req.headers,
         body: (await req.json()) as Record<string, unknown>,
       });
@@ -27,7 +28,7 @@ describe("RunGateway", () => {
     },
   });
   const origin = `http://localhost:${upstream.port}`;
-  const gateway = new RunGateway({ anthropic: origin, openai: `${origin}/v1` });
+  const gateway = new RunGateway({ anthropic: origin, openai: `${origin}/v1`, gemini: origin });
 
   // Stands in for the control plane's route: /runtimes/gateway/:segment/*.
   const front = Bun.serve({
@@ -139,6 +140,44 @@ describe("RunGateway", () => {
     }
   });
 
+  test("gemini: the SDK reaches the sender's model with the sender's key, whatever it names", async () => {
+    const run = gateway.issue("r2g", {
+      provider: "gemini",
+      modelId: "gemini-2.5-flash",
+      apiKey: "gemini-key",
+    });
+    expect(run.gatewayPath).toBe("/runtimes/gateway/gemini");
+    const before = seen.length;
+    const { agent } = createCodingAgent({
+      tools: [],
+      provider: "gemini",
+      modelId: "gemini-2.5-pro",
+      apiKey: run.gatewayToken,
+      baseUrl: `${base}${run.gatewayPath}`,
+    });
+    await agent.generate({ prompt: "hi" }).catch(() => undefined);
+
+    const call = seen[before]!;
+    expect(call.path).toBe("/v1beta/models/gemini-2.5-flash:generateContent");
+    expect(call.headers.get("x-goog-api-key")).toBe("gemini-key");
+    expect(call.headers.get("authorization")).toBeNull();
+    expect(call.body.model).toBeUndefined();
+    gateway.revoke("r2g");
+  });
+
+  test("gemini: only the generate calls pass, on the sender's model", async () => {
+    const run = gateway.issue("r2h", { provider: "gemini", modelId: "pinned", apiKey: "k" });
+    const send = (path: string) => post(`gemini/${path}`, run.gatewayToken, { contents: [] });
+    expect((await send("v1beta/models")).status).toBe(404);
+    expect((await send("v1beta/models/x:embedContent")).status).toBe(404);
+    expect((await send("v1beta/files")).status).toBe(404);
+    const before = seen.length;
+    await send("v1beta/models/expensive:streamGenerateContent?alt=sse");
+    expect(seen[before]!.path).toBe("/v1beta/models/pinned:streamGenerateContent");
+    expect(seen[before]!.search).toBe("?alt=sse");
+    gateway.revoke("r2h");
+  });
+
   test("an Azure provider without a key cannot start a run", () => {
     expect(() =>
       gateway.issue("r2b", { provider: "azure", modelId: "d", baseUrl: origin }),
@@ -246,6 +285,7 @@ describe("RunGateway", () => {
       );
       expect(() => gateway.check({ provider: "anthropic", apiKey: "k" })).not.toThrow();
       expect(() => gateway.check({ provider: "azure" })).toThrow("no API key");
+      expect(() => gateway.check({ provider: "gemini" })).toThrow("GEMINI_API_KEY is not set");
       // A compatible server needs no key.
       expect(() => gateway.check({ provider: "openai-compatible" })).not.toThrow();
     } finally {

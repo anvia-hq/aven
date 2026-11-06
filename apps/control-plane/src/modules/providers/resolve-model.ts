@@ -13,6 +13,7 @@ import { providersService } from "./service";
 export const ENV_KEYS: Partial<Record<Provider, string>> = {
   anthropic: "ANTHROPIC_API_KEY",
   openai: "OPENAI_API_KEY",
+  gemini: "GEMINI_API_KEY",
 };
 
 /** The model a run asked for cannot be used, such as a missing environment key. */
@@ -21,9 +22,9 @@ export class ModelUnavailableError extends UnavailableError {}
 // With no provider of their own, a sender runs on the environment's shared one.
 export function environmentModel(): ModelConfig {
   const provider = (process.env.AGENT_PROVIDER ?? "anthropic") as Provider;
-  if (provider !== "openai" && provider !== "anthropic") {
+  if (provider !== "openai" && provider !== "anthropic" && provider !== "gemini") {
     throw new ModelUnavailableError(
-      `AGENT_PROVIDER must be "openai" or "anthropic", got "${provider}"`,
+      `AGENT_PROVIDER must be "openai", "anthropic" or "gemini", got "${provider}"`,
     );
   }
   return { provider, modelId: process.env.AGENT_MODEL || undefined };

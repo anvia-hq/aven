@@ -14,6 +14,9 @@ type Entry = {
   images: boolean | null;
 };
 
+// The key models.dev files a provider's models under, where it is not our kind's name.
+const CATALOG_KEYS: Partial<Record<Provider, string>> = { gemini: "google" };
+
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
@@ -57,8 +60,12 @@ const OPENAI_CHAT = /^(gpt-|o\d|chatgpt-)/;
 const OPENAI_OTHER =
   /embedding|whisper|tts|audio|image|realtime|transcribe|moderation|search|dall-e|davinci|babbage|instruct/;
 
+const GEMINI_CHAT = /^gemini-/;
+const GEMINI_OTHER = /embedding|tts|image|live|audio|aqa|robotics|computer-use/;
+
 export function looksLikeChatModel(kind: Provider, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
+  if (kind === "gemini") return GEMINI_CHAT.test(id) && !GEMINI_OTHER.test(id);
   if (kind === "azure") return true; // a deployment's name is the owner's, not the model's
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
   return true;
@@ -98,8 +105,8 @@ export function createModelCatalog(
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
       const next: Partial<Record<Provider, Map<string, Entry>>> = {};
-      for (const kind of ["openai", "anthropic", "azure"] as const) {
-        const models = json[kind]?.models ?? {};
+      for (const kind of ["openai", "anthropic", "gemini", "azure"] as const) {
+        const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
         next[kind] = new Map(
           Object.entries(models)
             .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))

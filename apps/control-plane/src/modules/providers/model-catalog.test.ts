@@ -165,3 +165,40 @@ describe("contextWindow", () => {
     expect(await models.contextWindow("openai", "deepseek-v4.1-flash")).toBeNull();
   });
 });
+
+describe("gemini in the catalog", () => {
+  const google = {
+    ...catalog,
+    google: {
+      models: {
+        "gemini-2.5-pro": {
+          tool_call: true,
+          modalities: { input: ["text", "image"], output: ["text"] },
+          limit: { context: 1048576 },
+        },
+        "gemini-live-x": { tool_call: false, modalities: { output: ["audio"] } },
+      },
+    },
+  };
+
+  test("is read from models.dev's google entry", async () => {
+    const models = createModelCatalog(serving(google), () => 0, url);
+    expect(await models.chatModels("gemini", ["gemini-2.5-pro", "gemini-live-x"])).toEqual([
+      "gemini-2.5-pro",
+    ]);
+    expect(await models.contextWindow("gemini", "gemini-2.5-pro")).toBe(1048576);
+    expect(await models.canRun("gemini", "gemini-live-x")).toBe(false);
+  });
+
+  test("falls back to a name check for models it does not list", () => {
+    expect(looksLikeChatModel("gemini", "gemini-3.5-flash")).toBe(true);
+    for (const id of [
+      "gemini-embedding-001",
+      "gemini-2.5-flash-preview-tts",
+      "gemini-3-pro-image",
+    ]) {
+      expect(looksLikeChatModel("gemini", id)).toBe(false);
+    }
+    expect(looksLikeChatModel("gemini", "text-bison")).toBe(false);
+  });
+});

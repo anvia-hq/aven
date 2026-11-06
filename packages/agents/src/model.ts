@@ -1,8 +1,10 @@
 import { AnthropicClient } from "@anvia/anthropic";
 import { defineCompletionModelControls, type CompletionModelControls } from "@anvia/core";
 import { AzureOpenAIClient } from "@anvia/azure";
+import { GeminiClient } from "@anvia/gemini";
 import { OpenAIClient } from "@anvia/openai";
 import type { Provider } from "@aven/protocol/runtime-wire";
+import { GoogleGenAI } from "@google/genai";
 
 import { DEFAULT_MODEL_IDS } from "./model-defaults";
 import { nullFreeStream } from "./null-free-stream";
@@ -13,7 +15,7 @@ export type ModelConfig = {
   provider: Provider;
   /** Defaults per provider. For `azure` it is the deployment name, and has no default. */
   modelId?: string;
-  /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. */
+  /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`. */
   apiKey?: string;
   /**
    * Required for `openai-compatible` and `azure`: the API root, e.g. http://localhost:11434/v1 or
@@ -98,6 +100,22 @@ export function createModel(config: ModelConfig) {
     return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.openai,
       api: "responses",
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
+  if (config.provider === "gemini") {
+    const apiKey = config.apiKey ?? process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+    // The Gemini SDK takes no root of its own, so it is given a Google client that has one; a
+    // runtime points it at the control plane's gateway, which `httpOptions.baseUrl` makes it call.
+    const client = new GoogleGenAI({
+      apiKey,
+      httpOptions: config.baseUrl ? { baseUrl: config.baseUrl } : undefined,
+    });
+    return new GeminiClient({ client }).completionModel({
+      modelId: config.modelId ?? DEFAULT_MODEL_IDS.gemini,
       controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });

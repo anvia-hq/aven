@@ -32,6 +32,27 @@ describe("fetchModels", () => {
     expect(headers["anthropic-version"]).toBeDefined();
   });
 
+  test("gemini reads Google's list with its key header, keeping models that can generate", async () => {
+    let seen: { url: string; headers: Record<string, string> } | undefined;
+    const fetchFn = (async (url: string, init: RequestInit) => {
+      seen = { url, headers: init.headers as Record<string, string> };
+      return Response.json({
+        models: [
+          { name: "models/gemini-2.5-pro", supportedGenerationMethods: ["generateContent"] },
+          { name: "models/gemini-embedding-001", supportedGenerationMethods: ["embedContent"] },
+          { name: "models/gemini-2.5-flash", supportedGenerationMethods: ["generateContent"] },
+        ],
+      });
+    }) as unknown as typeof fetch;
+    expect(await fetchModels({ kind: "gemini", apiKey: "g-key" }, fetchFn)).toEqual([
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+    ]);
+    expect(seen?.url).toStartWith("https://generativelanguage.googleapis.com/v1beta/models");
+    expect(seen?.headers["x-goog-api-key"]).toBe("g-key");
+    await expect(fetchModels({ kind: "gemini" }, fetchFn)).rejects.toThrow("API key");
+  });
+
   test("maps failures to ModelListError", async () => {
     await expect(fetchModels({ kind: "openai" }, respond({}))).rejects.toBeInstanceOf(
       ModelListError,

@@ -25,6 +25,7 @@ function loadModelsLabel(loading: boolean, loaded: boolean) {
 const keyPlaceholders: Record<ProviderKind, string> = {
   openai: "sk-…",
   anthropic: "sk-ant-…",
+  gemini: "AIza…",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
 };
