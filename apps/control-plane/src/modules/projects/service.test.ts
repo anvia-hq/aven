@@ -144,6 +144,7 @@ run("projectsService (postgres)", async () => {
       status: "draft" as const,
       comments: 0,
       updatedAt: "2026-11-01T10:00:00Z",
+      labels: [],
     };
     const tracked = spyOn(githubService, "tracked").mockImplementation(async () => ({
       items: [item],

@@ -7,6 +7,7 @@ import { NotFoundError, UnprocessableError } from "../../errors";
 import {
   GithubNoPushAccessError,
   GithubWriteNotGrantedError,
+  type GithubTrackedFilters,
   type GithubTrackedKind,
   type GithubTrackedState,
 } from "./client";
@@ -262,9 +263,10 @@ export function createGithubService(
       kind: GithubTrackedKind,
       state: GithubTrackedState,
       page: number,
+      filters?: GithubTrackedFilters,
     ) {
       const { client, installationId } = await acting(installationRowId);
-      return client.tracked(installationId, fullName, kind, state, page);
+      return client.tracked(installationId, fullName, kind, state, page, filters);
     },
 
     // The pull requests the agent opened for a thread's branches, newest first (decisions 0044, 0069).

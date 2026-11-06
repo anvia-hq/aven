@@ -7,6 +7,7 @@ import {
   GithubNotConfiguredError,
   githubConfigFromEnv,
   README_MAX_CHARS,
+  trackedQualifiers,
 } from "./client";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -55,6 +56,44 @@ describe("githubConfigFromEnv", () => {
     const client = new GithubClient(null);
     expect(client.configured).toBe(false);
     await expect(client.listRepos(1)).rejects.toBeInstanceOf(GithubNotConfiguredError);
+  });
+});
+
+describe("trackedQualifiers", () => {
+  const now = Date.parse("2026-11-10T00:00:00Z");
+
+  test("turns each filter into one search qualifier", () => {
+    expect(
+      trackedQualifiers(
+        {
+          author: "ada",
+          reviewRequested: "grace",
+          review: "required",
+          checks: "failure",
+          label: "good first issue",
+          draft: false,
+          staleDays: 7,
+          text: "login",
+        },
+        now,
+      ),
+    ).toEqual([
+      "author:ada",
+      "review-requested:grace",
+      "review:required",
+      "status:failure",
+      'label:"good first issue"',
+      "draft:false",
+      "updated:<2026-11-03",
+      "login in:title",
+    ]);
+  });
+
+  test("lets no text or label make a qualifier of its own", () => {
+    expect(trackedQualifiers({ text: 'x repo:other/secret "y"', label: 'a" repo:o/p' })).toEqual([
+      'label:"a repo:o/p"',
+      "x repo other/secret  y in:title",
+    ]);
   });
 });
 
@@ -485,6 +524,7 @@ describe("GithubClient", () => {
         status: "open",
         comments: 2,
         updatedAt: "2026-11-01T10:00:00Z",
+        labels: [],
       });
       // The search is for this repository's pull requests that are open, the latest changed first.
       const search = new URL(calls.at(-1)!).searchParams;

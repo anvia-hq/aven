@@ -8,7 +8,7 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
-import type { GithubTrackedKind, GithubTrackedState } from "../github/client";
+import type { GithubTrackedFilters, GithubTrackedKind, GithubTrackedState } from "../github/client";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import type { ImportProjectBody, UpdateProjectBody } from "./schema";
@@ -182,6 +182,7 @@ export const projectsService = {
     kind: GithubTrackedKind,
     state: GithubTrackedState,
     page: number,
+    filters?: GithubTrackedFilters,
   ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     const found = await githubService.tracked(
@@ -190,6 +191,7 @@ export const projectsService = {
       kind,
       state,
       page,
+      ...(filters ? [filters] : []),
     );
     return { ...orNotFound(found, "Repository not found"), page };
   },

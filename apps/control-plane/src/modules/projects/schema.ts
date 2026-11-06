@@ -38,9 +38,23 @@ export const commitsQuery = z.object({
 
 // A page of the repository's pull requests or issues, open or closed, from the latest changed.
 // GitHub's search gives the first thousand matches, which is a hundred pages of ten.
+// Each filter is a GitHub search qualifier; logins and labels are one token, so none can add another.
+const login = z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/);
 export const trackedQuery = z.object({
-  state: z.enum(["open", "closed"]).default("open"),
+  state: z.enum(["open", "closed", "merged", "all"]).default("open"),
   page: z.coerce.number().int().min(1).max(100).default(1),
+  author: login.optional(),
+  reviewRequested: login.optional(),
+  review: z.enum(["required", "approved", "changes_requested"]).optional(),
+  checks: z.enum(["success", "failure", "pending"]).optional(),
+  label: z.string().trim().min(1).max(50).optional(),
+  draft: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
+  staleDays: z.coerce.number().int().min(1).max(365).optional(),
+  text: z.string().trim().min(1).max(100).optional(),
+  sort: z.enum(["updated", "oldest", "created", "comments"]).optional(),
 });
 
 // What may change on a project: the runner its new threads run on (decision 0093).

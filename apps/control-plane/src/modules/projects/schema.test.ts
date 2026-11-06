@@ -52,12 +52,45 @@ describe("trackedQuery", () => {
   });
 
   // Search stops at a thousand matches: a hundred pages of ten.
-  test.each([{ state: "all" }, { state: "merged" }, { page: "0" }, { page: "101" }, { page: "x" }])(
-    "refuses %p",
-    (query) => {
-      expect(trackedQuery.safeParse(query).success).toBe(false);
-    },
-  );
+  test.each([
+    { state: "gone" },
+    { author: "a b" },
+    { staleDays: "0" },
+    { page: "0" },
+    { page: "101" },
+    { page: "x" },
+  ])("refuses %p", (query) => {
+    expect(trackedQuery.safeParse(query).success).toBe(false);
+  });
+
+  test("takes the filters a pull request list can be narrowed by", () => {
+    expect(
+      trackedQuery.parse({
+        state: "merged",
+        author: "ada",
+        reviewRequested: "grace",
+        review: "approved",
+        checks: "failure",
+        label: "bug",
+        draft: "false",
+        staleDays: "7",
+        text: "login",
+        sort: "oldest",
+      }),
+    ).toEqual({
+      state: "merged",
+      page: 1,
+      author: "ada",
+      reviewRequested: "grace",
+      review: "approved",
+      checks: "failure",
+      label: "bug",
+      draft: false,
+      staleDays: 7,
+      text: "login",
+      sort: "oldest",
+    });
+  });
 
   test("accepts the last page search gives", () => {
     expect(trackedQuery.safeParse({ page: "100" }).success).toBe(true);

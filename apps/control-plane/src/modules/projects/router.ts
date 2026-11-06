@@ -70,8 +70,10 @@ export const projectsRouter = (putAway: PutAwayThread) =>
     )
     .get(
       "/:id/pulls",
-      ({ params, query, organizationId }) =>
-        projectsService.tracked(organizationId, params.id, "pull", query.state, query.page),
+      ({ params, query, organizationId }) => {
+        const { state, page, ...filters } = query;
+        return projectsService.tracked(organizationId, params.id, "pull", state, page, filters);
+      },
       { auth: true, org: true, params: projectParams, query: trackedQuery },
     )
     .get(

@@ -182,7 +182,23 @@ const COMMIT_MESSAGE_MAX = 200;
 
 /** Pull requests and issues of a repository, as the project page lists them (decision 0092). */
 export type GithubTrackedKind = "pull" | "issue";
-export type GithubTrackedState = "open" | "closed";
+// `closed` is every closed one, merged pull requests among them; `merged` only those.
+export type GithubTrackedState = "open" | "closed" | "merged" | "all";
+
+/** What narrows and orders a list of pull requests or issues; each is one of GitHub's search qualifiers. */
+export type GithubTrackedFilters = {
+  author?: string;
+  reviewRequested?: string;
+  review?: "required" | "approved" | "changes_requested";
+  checks?: "success" | "failure" | "pending";
+  label?: string;
+  draft?: boolean;
+  /** Not changed for this many days. */
+  staleDays?: number;
+  /** Words in the title. */
+  text?: string;
+  sort?: "updated" | "oldest" | "created" | "comments";
+};
 
 export type GithubTrackedItem = {
   number: number;
@@ -194,6 +210,7 @@ export type GithubTrackedItem = {
   status: "open" | "draft" | "merged" | "closed";
   comments: number;
   updatedAt: string;
+  labels: string[];
 };
 
 /** One page of them, how many there are in all, and whether GitHub has a later page. */
@@ -212,8 +229,36 @@ type TrackedPayload = {
   comments: number;
   updated_at: string;
   user: { login: string } | null;
+  labels?: { name: string }[];
   pull_request?: { merged_at: string | null };
 };
+
+const SORTS = {
+  updated: { sort: "updated", order: "desc" },
+  oldest: { sort: "updated", order: "asc" },
+  created: { sort: "created", order: "desc" },
+  comments: { sort: "comments", order: "desc" },
+} as const;
+
+// The search qualifiers of a filter, each value a single token: a login or a label is quoted, and the
+// words of a search lose what would make them a qualifier of their own (`repo:`, quotes).
+export function trackedQualifiers(filters: GithubTrackedFilters, now = Date.now()) {
+  const parts: string[] = [];
+  const quoted = (value: string) => `"${value.replaceAll('"', "")}"`;
+  if (filters.author) parts.push(`author:${filters.author}`);
+  if (filters.reviewRequested) parts.push(`review-requested:${filters.reviewRequested}`);
+  if (filters.review) parts.push(`review:${filters.review}`);
+  if (filters.checks) parts.push(`status:${filters.checks}`);
+  if (filters.label) parts.push(`label:${quoted(filters.label)}`);
+  if (filters.draft !== undefined) parts.push(`draft:${filters.draft}`);
+  if (filters.staleDays) {
+    const before = new Date(now - filters.staleDays * 86_400_000).toISOString().slice(0, 10);
+    parts.push(`updated:<${before}`);
+  }
+  const words = filters.text?.replace(/[:"\\]/g, " ").trim();
+  if (words) parts.push(`${words} in:title`);
+  return parts;
+}
 
 function trackedStatus(item: TrackedPayload): GithubTrackedItem["status"] {
   if (item.pull_request?.merged_at) return "merged";
@@ -542,14 +587,25 @@ export class GithubClient {
     kind: GithubTrackedKind,
     state: GithubTrackedState,
     page: number,
+    filters: GithubTrackedFilters = {},
   ): Promise<GithubTrackedPage | null> {
     // Refused before a token is asked for when issues are not allowed.
     if (kind === "issue") await this.#requireIssues(installationId);
     const { token } = await this.installationToken(installationId);
+    const qualifiers = [
+      `repo:${fullName}`,
+      `is:${kind === "pull" ? "pr" : "issue"}`,
+      ...(state === "all" ? [] : [`is:${state}`]),
+      // Review, checks, draft and merged are pull request things.
+      ...trackedQualifiers(
+        kind === "pull"
+          ? filters
+          : { ...filters, review: undefined, checks: undefined, draft: undefined },
+      ),
+    ];
     const query = new URLSearchParams({
-      q: `repo:${fullName} is:${kind === "pull" ? "pr" : "issue"} is:${state}`,
-      sort: "updated",
-      order: "desc",
+      q: qualifiers.join(" "),
+      ...SORTS[filters.sort ?? "updated"],
       per_page: String(TRACKED_PER_PAGE),
       page: String(page),
     });
@@ -572,6 +628,7 @@ export class GithubClient {
         status: trackedStatus(item),
         comments: item.comments,
         updatedAt: item.updated_at,
+        labels: (item.labels ?? []).map(({ name }) => name),
       })),
       total: found.total_count,
       hasMore: page * TRACKED_PER_PAGE < Math.min(found.total_count, SEARCH_MAX_RESULTS),
