@@ -361,6 +361,9 @@ export function createRunDriver(context: DriverContext) {
     // are connected while the workspace and the container are being got ready: one wait, not two
     // (decision 0119). The run waits for them where it builds its agent, which needs their tools.
     run.mcpGoing = connectMcp(run, runId, thread.id, message);
+    // Handled at once so a failure while the sandbox is still starting is not an unhandled rejection;
+    // the run still sees it where it awaits `mcpGoing`.
+    run.mcpGoing.catch(() => undefined);
     // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
     const box = await context.sandbox.acquire(thread, repoAccess);
     clock.mark("sandbox");
