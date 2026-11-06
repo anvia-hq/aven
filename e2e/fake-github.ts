@@ -318,6 +318,11 @@ Bun.serve({
         items: items.slice((page - 1) * 10, page * 10),
       });
     }
+    // Commit 12 is the release `v1.0` (decision 0132).
+    const tags = pathname.match(/^\/repos\/acme\/([\w.-]+)\/tags$/)?.[1];
+    if (tags && repositories.includes(tags)) {
+      return Response.json([{ name: "v1.0", commit: { sha: sha(12) } }]);
+    }
     const branches = pathname.match(/^\/repos\/acme\/([\w.-]+)\/branches$/)?.[1];
     if (branches && repositories.includes(branches)) {
       return Response.json([

@@ -192,6 +192,8 @@ export type GithubCommit = {
   parents: string[];
   /** The branches whose latest commit it is. */
   refs: string[];
+  /** The tags (releases among them) that name it. */
+  tags: string[];
 };
 
 /** One page of commits, and whether GitHub has an older one. */
@@ -593,6 +595,7 @@ export class GithubClient {
     const path = `${repoPath(fullName)}/commits?${query}`;
     // Asked together; the branch names only decorate the page, so they are not worth failing it for.
     const heads = this.#branchHeads(token, fullName, defaultBranch);
+    const tags = this.#tagHeads(token, fullName);
     let response: Response;
     try {
       response = await this.#get(path, token);
@@ -604,7 +607,7 @@ export class GithubClient {
       return nullWhenNotFound(error);
     }
     const listed = (await response.json()) as CommitPayload[];
-    const refs = await heads;
+    const [refs, tagged] = await Promise.all([heads, tags]);
     return {
       commits: listed.map(({ sha, commit, author, parents }) => ({
         sha,
@@ -613,6 +616,7 @@ export class GithubClient {
         date: commit.author?.date ?? "",
         parents: parents.map((parent) => parent.sha),
         refs: refs.get(sha) ?? [],
+        tags: tagged.get(sha) ?? [],
       })),
       hasMore: /rel="next"/.test(response.headers.get("link") ?? ""),
     };
@@ -859,6 +863,22 @@ export class GithubClient {
     if (!found.permissions?.issues) {
       throw new GithubIssuesNotGrantedError(found.account?.login ?? "the account");
     }
+  }
+
+  // The tags by the commit each names, like the branches: they only decorate a page, so a repository
+  // whose tags cannot be had shows none. The first hundred are asked for, GitHub's page maximum.
+  async #tagHeads(token: string, fullName: string) {
+    const listed = await this.#api<{ name: string; commit: { sha: string } }[]>(
+      `${repoPath(fullName)}/tags?per_page=${BRANCHES_LISTED}`,
+      token,
+    ).catch(() => []);
+    const heads = new Map<string, string[]>();
+    for (const { name, commit } of listed) {
+      const same = heads.get(commit.sha);
+      if (same) same.push(name);
+      else heads.set(commit.sha, [name]);
+    }
+    return heads;
   }
 
   // The branches by the commit each ends on, with the branches that end on the same one in a list.

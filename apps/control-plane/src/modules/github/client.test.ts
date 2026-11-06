@@ -292,11 +292,13 @@ describe("GithubClient", () => {
       branches: () => Response = () => Response.json([]),
       // One branch by name; by default found in the listing.
       branch?: (name: string) => Response,
+      tags: () => Response = () => Response.json([]),
     ) => {
       const calls: string[] = [];
       const fetch = async (url: string) => {
         calls.push(url);
         if (url.includes("/access_tokens")) return token.clone();
+        if (url.includes("/tags?")) return tags();
         const one = url.match(/\/branches\/([^?]+)$/)?.[1];
         if (one && branch) return branch(one);
         if (one) {
@@ -349,8 +351,9 @@ describe("GithubClient", () => {
         date: "2026-11-01T10:00:00Z",
         parents: [],
         refs: [],
+        tags: [],
       });
-      expect(calls.at(-1)).toBe("https://api.github.com/repos/acme/web/commits?per_page=10&page=2");
+      expect(calls).toContain("https://api.github.com/repos/acme/web/commits?per_page=10&page=2");
     });
 
     test("each commit says which commits it follows, and which branches end on it", async () => {
@@ -379,6 +382,33 @@ describe("GithubClient", () => {
         ["f3", ["a0"], ["feature/login"]],
       ]);
       expect(calls.some((url) => url.endsWith("/repos/acme/web/branches?per_page=100"))).toBe(true);
+    });
+
+    test("a commit says which tags name it, and a repository whose tags cannot be had shows none", async () => {
+      const tagged = github(
+        () => Response.json([commit("a1", "Release 1.0", { parents: [] })]),
+        () => Response.json([]),
+        undefined,
+        () =>
+          Response.json([
+            { name: "v1.0", commit: { sha: "a1" } },
+            { name: "latest", commit: { sha: "a1" } },
+          ]),
+      );
+      expect((await tagged.client.commits(7, "acme/web", 1, "main"))?.commits[0]?.tags).toEqual([
+        "v1.0",
+        "latest",
+      ]);
+
+      const failing = github(
+        () => Response.json([commit("a1", "Release 1.0", { parents: [] })]),
+        () => Response.json([]),
+        undefined,
+        () => new Response("boom", { status: 500 }),
+      );
+      expect((await failing.client.commits(7, "acme/web", 1, "main"))?.commits[0]?.tags).toEqual(
+        [],
+      );
     });
 
     test("the default branch is shown even when it is past the branches GitHub lists first", async () => {

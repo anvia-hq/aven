@@ -98,6 +98,7 @@ run("projectsService (postgres)", async () => {
       date: "2026-11-01T10:00:00Z",
       parents: ["a0"],
       refs: ["main"],
+      tags: [],
     };
     const commits = spyOn(githubService, "commits").mockImplementation(async () => ({
       commits: [commit],

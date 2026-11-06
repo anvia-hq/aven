@@ -1,5 +1,5 @@
 import { layoutGraph, type GraphRow } from "@aven/protocol/commit-graph";
-import { ChevronLeft, ChevronRight, GitBranch, GitCommit } from "@mynaui/icons-react";
+import { ChevronLeft, ChevronRight, GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/badge";
@@ -84,6 +84,12 @@ function Commit({
             </span>
           )}
           <Branches refs={commit.refs} defaultBranch={project.defaultBranch} />
+          {commit.tags.slice(0, 2).map((name) => (
+            <Badge key={name} variant="default" title={`Tag ${name}`} className="max-w-28">
+              <Tag />
+              <span className="truncate">{name}</span>
+            </Badge>
+          ))}
         </div>
         <span className="truncate text-xs text-muted-foreground">
           {commit.author ?? "Unknown author"}

@@ -66,6 +66,8 @@ export type RepoCommit = {
   parents: string[];
   /** The branches whose latest commit it is. */
   refs: string[];
+  /** The tags that name it, releases among them. */
+  tags: string[];
 };
 
 /** One page of a project's commit history, and whether there is an older one. */

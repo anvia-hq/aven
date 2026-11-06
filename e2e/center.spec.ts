@@ -25,6 +25,9 @@ test.describe("Center", () => {
     await expect(pulls).toContainText("shiny-app");
     const commits = page.getByRole("region", { name: "Commits" });
     await expect(commits.getByText("Change number 14").first()).toBeVisible();
+    // Under the day they were made in, with the release a commit is tagged as.
+    await expect(commits.getByRole("heading", { name: "Today" })).toBeVisible();
+    await expect(commits.getByTitle("Tag v1.0").first()).toBeVisible();
 
     // A quick view is a set of filters, kept in the address.
     await page.getByRole("button", { name: "Needs my review" }).click();
