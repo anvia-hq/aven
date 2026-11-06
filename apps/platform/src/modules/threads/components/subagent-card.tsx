@@ -1,7 +1,5 @@
-import { Check, DangerCircle } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 import { Markdown } from "@/components/markdown";
 
@@ -46,7 +44,13 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
         disabled={!expandable}
         className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <span
+          {...(status === "error" && { role: "img", "aria-label": "Failed" })}
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
+            status === "error" && "bg-destructive/10 text-destructive",
+          )}
+        >
           <Robot className="size-4" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -59,16 +63,12 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
               status === "running" && "shimmer",
             )}
           >
+            {type}
             {status === "running" && latest
-              ? latest.target
-              : tools.length > 0 && toolCount(tools.length)}
+              ? ` · ${latest.target}`
+              : tools.length > 0 && ` · ${toolCount(tools.length)}`}
           </span>
         </span>
-        <Badge variant="secondary">{type}</Badge>
-        {status === "done" && <Check className="size-4 shrink-0 text-muted-foreground" />}
-        {status === "error" && (
-          <DangerCircle className="size-4 shrink-0 text-destructive" aria-label="Failed" />
-        )}
       </CollapsibleTrigger>
       {expandable && (
         <CollapsibleContent>
