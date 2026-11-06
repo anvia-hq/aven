@@ -108,7 +108,7 @@ export function AppShell({ user, sidebar }: Props) {
               <div className="min-w-0 flex-1">
                 <UserCard name={user.name} onSignOut={signOut} />
               </div>
-              <div className="flex shrink-0 items-center group-data-[collapsible=icon]:flex-col">
+              <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <Button
                   variant="ghost"
                   size="icon-sm"

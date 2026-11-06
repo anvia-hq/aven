@@ -61,7 +61,7 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
       dateTime={thread.updatedAt}
       title={timeAgo(thread.updatedAt, true)}
       className={cn(
-        "pointer-events-none absolute inset-y-0 right-1 flex w-5 items-center justify-center text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
+        "pointer-events-none absolute inset-y-0 right-2 flex w-5 items-center justify-center text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
         yields &&
           "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 max-md:hidden",
       )}
@@ -105,7 +105,7 @@ export function SidebarThreads() {
 
   return (
     <>
-      <div className="flex items-center justify-between pr-2 pl-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+      <div className="flex items-center justify-between pr-3 pl-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
         <span>Threads</span>
         <Button
           variant="ghost"
@@ -137,7 +137,7 @@ export function SidebarThreads() {
             {/* Shown on hover or keyboard focus, not `showOnHover`: that also shows it while the
                 row's link keeps focus after a click, over the time. */}
             <SidebarMenuAction
-              className="peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
+              className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
               aria-label={`Archive ${thread.title}`}
               title="Archive"
               onClick={() => void archive(thread)}
