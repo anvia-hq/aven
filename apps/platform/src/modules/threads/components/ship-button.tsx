@@ -33,8 +33,11 @@ export function ShipButton({ thread, upToDate }: Props) {
   // Ship is not offered until the repository is set up to ship (decision 0129): the pull request a
   // thread already has stays linked.
   const notSetUp = gate.kind === "missing" || gate.kind === "checking";
-  const blocked = thread.running || shipping || (shipped && upToDate) || gate.kind !== "ready";
-  if (notSetUp) return latest ? <PullRequestLink pullRequest={latest} /> : null;
+  const blocked = thread.running || shipping || gate.kind !== "ready";
+  // Nor when nothing has changed: there is nothing to send, so only the pull request stays linked.
+  if (notSetUp || (upToDate && !shipping)) {
+    return latest ? <PullRequestLink pullRequest={latest} /> : null;
+  }
   // What is shipped is the person's own on GitHub, so their account has to be connected first.
   if (account?.data && !account.data.connected) {
     const next = encodeURIComponent(`/threads/${thread.id}`);
@@ -61,7 +64,6 @@ export function ShipButton({ thread, upToDate }: Props) {
         size="sm"
         className="shadow-md"
         disabled={blocked}
-        title={shipped && upToDate ? "Nothing new since the last push" : undefined}
         onClick={() => void ship()}
       >
         <Rocket />
