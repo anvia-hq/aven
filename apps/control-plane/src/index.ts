@@ -11,6 +11,7 @@ import {
   threadWatcher,
   shipService,
   threadMessages,
+  putAwayThread,
 } from "./composition";
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
@@ -61,7 +62,7 @@ const app = new Elysia()
   .use(githubRouter())
   .use(platformRouter)
   .use(preferencesRouter)
-  .use(projectsRouter(runsService))
+  .use(projectsRouter(putAwayThread))
   .use(providersRouter)
   .use(runtimesRouter(runtimeHub))
   .use(schedulesRouter)
@@ -69,7 +70,7 @@ const app = new Elysia()
   .use(mcpRouter)
   .use(memoryRouter)
   .use(terminalRouter(runtimeHub))
-  .use(threadsRouter(runsService, threadMessages))
+  .use(threadsRouter(runsService, threadMessages, putAwayThread))
   .use(variablesRouter)
   .use(projectVariablesRouter)
   .use(workloadIdentityRouter);

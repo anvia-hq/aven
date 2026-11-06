@@ -27,6 +27,7 @@ import { skillsService } from "./modules/skills/service";
 import { createBotThreads } from "./modules/threads/bot-access";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
+import { createPutAwayThread } from "./modules/threads/put-away";
 import { threadsService } from "./modules/threads/service";
 
 // The app's long-lived objects, made once here and handed to the routers that need them, so the
@@ -71,12 +72,20 @@ export const runsService = new RunManager({
 
 export const threadMessages = createThreadMessages(runsService);
 
+// Archiving a thread stops its run and frees its sandbox (decision 0118), for the person's own
+// routes and for a bot doing it on their word.
+export const putAwayThread = createPutAwayThread({
+  cancel: (threadId) => runsService.cancel(threadId),
+  hub: runtimeHub,
+});
+
 // What a bot may do with the person's threads (decision 0088): the same runs and messages the
 // platform's routes use, so a thread a bot starts is an ordinary one.
 const botThreads = createBotThreads({
   runs: runsService,
   messages: threadMessages,
   watch: threadWatchService,
+  putAway: putAwayThread,
 });
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });

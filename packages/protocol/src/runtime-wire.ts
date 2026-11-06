@@ -163,6 +163,17 @@ export type SteerResult =
   | { status: "closed" }
   | { status: "refused"; reason: string };
 
+/**
+ * What the control plane asks of a runner for a thread's sandbox itself: `sandbox.release` takes
+ * `{ threadId }` and frees the thread's container, its files kept, for a thread that was archived
+ * (decision 0118). It answers `{ released }`: false when no sandbox was up.
+ */
+type SandboxCallMethod = "sandbox.release";
+
+export type SandboxReleaseParams = { threadId: string };
+
+export type SandboxReleaseResult = { released: boolean };
+
 /** Everything the control plane can `call` a runner for. */
 export type RunnerCallMethod =
   | DesktopCallMethod
@@ -170,7 +181,8 @@ export type RunnerCallMethod =
   | FilesCallMethod
   | ArtifactsCallMethod
   | ProcessesCallMethod
-  | RunCallMethod;
+  | RunCallMethod
+  | SandboxCallMethod;
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {

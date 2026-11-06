@@ -43,9 +43,11 @@ run("a thread's access (real postgres)", async () => {
     answer: async () => {},
     compact: async () => {},
   } as unknown as ThreadMessages;
+  // The threads put away: archiving one stops its run and frees its sandbox (decision 0118).
+  const putAway: { id: string; runtimeId: string }[] = [];
   const server = new Elysia()
     .use(errorsRouter)
-    .use(threadsRouter(runs, messages))
+    .use(threadsRouter(runs, messages, (thread) => void putAway.push(thread)))
     .use(filesRouter(hub))
     .use(diffRouter(hub))
     .use(artifactsRouter(hub))
@@ -133,6 +135,21 @@ run("a thread's access (real postgres)", async () => {
       // The runner is offline and the project has no GitHub: anything but not found is past it.
       expect([method, path, response.status === 404]).toEqual([method, path, false]);
     }
+  });
+
+  test("archiving a thread puts it away; changing its title does not", async () => {
+    putAway.length = 0;
+    const titled = await call("PATCH", `/threads/${id}`, owner.token, { title: "renamed" });
+    expect(titled.status).toBe(200);
+    expect(putAway).toEqual([]);
+
+    const archived = await call("PATCH", `/threads/${id}`, owner.token, { state: "archived" });
+    expect(archived.status).toBe(200);
+    expect(putAway).toEqual([{ id, runtimeId: thread.runtimeId }]);
+
+    // Opening it again asks nothing of the runner.
+    await call("PATCH", `/threads/${id}`, owner.token, { state: "open" });
+    expect(putAway).toEqual([{ id, runtimeId: thread.runtimeId }]);
   });
 
   test("a shared thread can be read by a teammate and nothing more", async () => {

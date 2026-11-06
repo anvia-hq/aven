@@ -278,7 +278,7 @@ run("projectsService (postgres)", async () => {
     });
     const cancelled: string[] = [];
 
-    await projectsService.remove(orgA, userId, project.id, (id) => cancelled.push(id));
+    await projectsService.remove(orgA, userId, project.id, (thread) => cancelled.push(thread.id));
 
     // Hidden everywhere a project is looked up.
     expect(await projectsService.get(orgA, project.id)).toBeNull();

@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
+import type { PutAwayThread } from "../threads/put-away";
 import {
   commitsQuery,
   folderQuery,
@@ -12,8 +13,9 @@ import {
 } from "./schema";
 import { projectsService } from "./service";
 
-// Deleting a project stops the runs its threads have, which only the run manager can.
-export const projectsRouter = (runs: { cancel(threadId: string): boolean }) =>
+// Deleting a project puts its threads away: it stops the runs they have and frees their sandboxes,
+// which only the run manager and the runners can.
+export const projectsRouter = (putAway: PutAwayThread) =>
   new Elysia({ prefix: "/projects" })
     .use(authRouter)
     .get("/", ({ organizationId }) => projectsService.list(organizationId), {
@@ -40,7 +42,7 @@ export const projectsRouter = (runs: { cancel(threadId: string): boolean }) =>
     .delete(
       "/:id",
       async ({ params, organizationId, user }) => {
-        await projectsService.remove(organizationId, user.id, params.id, (id) => runs.cancel(id));
+        await projectsService.remove(organizationId, user.id, params.id, putAway);
         return { deleted: true };
       },
       { auth: true, org: true, params: projectParams },

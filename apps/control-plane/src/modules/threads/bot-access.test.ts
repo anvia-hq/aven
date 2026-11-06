@@ -66,6 +66,8 @@ run("a bot's threads (postgres)", async () => {
   const botId = crypto.randomUUID();
   const QUIET_AT = Date.parse("2026-11-03T10:00:00.000Z");
   const watched: string[] = [];
+  // Threads the bot put away on the person's word (decision 0118).
+  const putAway: string[] = [];
   let followUp: "ok" | "unwatched" | "spent" = "ok";
   const person = { userId, botId, via: "person" } as const;
   const noted = { userId, botId, via: "note" } as const;
@@ -94,6 +96,7 @@ run("a bot's threads (postgres)", async () => {
         return { steered: false };
       },
     },
+    putAway: (thread) => void putAway.push(thread.id),
   });
 
   test("lists the projects of the workspaces the person belongs to, and not another's", async () => {
@@ -153,6 +156,19 @@ run("a bot's threads (postgres)", async () => {
     expect((await bot.list(userId, { archived: true })).map((thread) => thread.title)).toContain(
       "Doomed",
     );
+  });
+
+  test("archiving one puts it away: the run stops and the sandbox is freed, as when the person says so", async () => {
+    const one = await bot.start(person, { projectId: projectA.id, prompt: "put me away" });
+    running.add(one.id);
+    putAway.length = 0;
+
+    await bot.archive(person, one.id, true);
+
+    expect(putAway).toEqual([one.id]);
+    // Opening it again asks nothing of the runner.
+    await bot.archive(person, one.id, false);
+    expect(putAway).toEqual([one.id]);
   });
 
   test("lists the open threads, narrowed to a project, and the archived ones apart", async () => {

@@ -12,10 +12,11 @@ import {
   updateThreadBody,
 } from "./schema";
 import type { ThreadMessages } from "./messages";
+import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
 
 // The runs and messages are given: they are made with the rest of the app in `composition.ts`.
-export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
+export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAway: PutAwayThread) =>
   new Elysia({ prefix: "/threads" })
     .use(threadAccess)
     .get(
@@ -48,11 +49,16 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages) =>
     )
     .patch(
       "/:id",
-      async ({ params, body, organizationId, user }) =>
-        orNotFound(
+      async ({ params, body, organizationId, user }) => {
+        const thread = orNotFound(
           await threadsService.update({ organizationId, userId: user.id }, params.id, body),
           "Thread not found",
-        ),
+        );
+        // Put away: its run stops and its sandbox is freed, the conversation and files staying
+        // (decision 0118).
+        if (body.state === "archived") putAway({ id: thread.id, runtimeId: thread.runtimeId });
+        return thread;
+      },
       { thread: "own", params: threadParams, body: updateThreadBody },
     )
     .post(

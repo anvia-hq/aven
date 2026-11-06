@@ -436,3 +436,57 @@ test.describe("a message sent to an idle agent", () => {
     await expect(prompt).toHaveText("please build it");
   });
 });
+
+// Archiving a thread puts it away (decision 0118): its run is stopped and its runner is told to
+// free the sandbox, whose conversation and files stay.
+test.describe("archiving a thread with a run going", () => {
+  let runner: ChildProcess | undefined;
+  test.afterEach(() => {
+    runner?.kill();
+    runner = undefined;
+  });
+
+  test("stops the run and frees the sandbox", async ({ page }) => {
+    await registerUser(page, "arc", "Archive Person");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    // The run goes on until the thread is put away.
+    const { child, events, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS_AFTER: "120000",
+    });
+    runner = child;
+    await page.goto(`/threads/${threadId}`);
+    const sent = await page.request.post(`/api/threads/${threadId}/messages`, {
+      data: { prompt: "long task" },
+    });
+    expect(sent.ok()).toBe(true);
+    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+
+    const archived = await page.request.patch(`/api/threads/${threadId}`, {
+      data: { state: "archived" },
+    });
+    expect(archived.ok()).toBe(true);
+
+    // The agent was stopped...
+    await expect
+      .poll(
+        async () => {
+          const threads = (await (await page.request.get("/api/threads")).json()) as {
+            id: string;
+            running: boolean;
+          }[];
+          return threads.find((thread) => thread.id === threadId)?.running;
+        },
+        { timeout: 8000 },
+      )
+      .toBe(false);
+    await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
+    // ...and the runner was asked to free its sandbox.
+    await expect
+      .poll(() => events.some((event) => event.type === "sandbox.release"), { timeout: 8000 })
+      .toBe(true);
+    expect(events.find((event) => event.type === "sandbox.release")?.threadId).toBe(threadId);
+  });
+});

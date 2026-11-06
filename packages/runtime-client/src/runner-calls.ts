@@ -12,6 +12,7 @@ import {
   filesCallParams,
   filesSearchParams,
   processesCallParams,
+  sandboxReleaseParams,
   steerParams,
   type SteerParams,
 } from "./call-params";
@@ -25,7 +26,7 @@ export type RunnerCallsContext = {
   sandbox: ThreadWorkspaces;
   boxes: Map<string, ThreadSandbox>;
   viewers: Pick<DesktopViewers, "call">;
-  idle: Pick<IdleRelease, "schedule" | "starting">;
+  idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
   /** What the person said to a run that is going (decision 0098). */
   steer(params: SteerParams): Promise<SteerResult>;
 };
@@ -106,6 +107,10 @@ export function createRunnerCalls({ sandbox, boxes, viewers, idle, steer }: Runn
     if (method === "files.search") return searchOf(params);
     if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
       return processesOf(method, params);
+    if (method === "sandbox.release") {
+      const { threadId } = sandboxReleaseParams(params);
+      return idle.releaseNow(threadId).then((released) => ({ released }));
+    }
     return viewers.call(method, params);
   };
 }

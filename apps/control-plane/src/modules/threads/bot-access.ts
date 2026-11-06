@@ -13,6 +13,7 @@ import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
 import type { WatchedRun, Watcher } from "../thread-watch/service";
 import type { ThreadMessages } from "./messages";
+import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
 
 /** The model a message may choose, as a person's composer does; without one their default runs. */
@@ -72,6 +73,7 @@ export function createBotThreads({
   runs,
   messages,
   watch,
+  putAway,
 }: {
   runs: Pick<RunManager, "isRunning" | "history" | "cancel" | "activity">;
   messages: Pick<ThreadMessages, "send">;
@@ -86,6 +88,8 @@ export function createBotThreads({
     followUp(threadId: string, botId: string): Promise<"ok" | "unwatched" | "spent">;
     giveBack(threadId: string, botId: string): Promise<void>;
   };
+  /** Stops a thread's run and frees its sandbox, when the person puts it away (decision 0118). */
+  putAway: PutAwayThread;
 }): BotThreads {
   const repositories = async (userId: string) =>
     new Map(
@@ -258,8 +262,12 @@ export function createBotThreads({
         { state: archived ? "archived" : "open" },
       );
       if (!changed) throw new UnprocessableError("This thread no longer exists");
-      // Put away by the bot, so it is not told of it again; another bot's note is its own.
-      if (archived) await watch.settle(id, actor.botId);
+      // Put away by the bot, so it is not told of it again; another bot's note is its own. The
+      // run stops and the sandbox is freed, as when the person archives it (decision 0118).
+      if (archived) {
+        await watch.settle(id, actor.botId);
+        putAway({ id: changed.id, runtimeId: changed.runtimeId });
+      }
       return view(actor.userId, changed);
     },
 

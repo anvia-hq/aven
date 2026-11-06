@@ -116,30 +116,29 @@ export const projectsService = {
 
   // Deletes a project (decision 0094): it is hidden, not removed. Its threads are archived, so they
   // leave the lists and stay for what counts them; its variables, which may be secrets, and its memory notes are wiped;
-  // and the repository can be imported again. A run in any of its threads is stopped once that is
-  // done (`cancelRun` is the run manager's). Threads and files on the runner are left as archiving
-  // leaves them.
+  // and the repository can be imported again. Once that is done each of its threads is put away, its
+  // run stopped and its sandbox freed, as archiving one leaves it (decision 0118; `putAway` is the
+  // run manager's and the runner's).
   async remove(
     organizationId: string,
     userId: string,
     id: string,
-    cancelRun: (threadId: string) => unknown,
+    putAway: (thread: { id: string; runtimeId: string }) => unknown,
   ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     await projectsService.requireManager(organizationId, userId, project);
-    const threadIds = await db.transaction(async (tx) => {
+    const archivedThreads = await db.transaction(async (tx) => {
       await tx.update(projects).set({ deletedAt: new Date() }).where(eq(projects.id, project.id));
       await tx.delete(environmentVariables).where(eq(environmentVariables.projectId, project.id));
       // Every person's notes of the project go with it (decision 0102).
       await tx.delete(memoryNotes).where(eq(memoryNotes.projectId, project.id));
-      const archived = await tx
+      return tx
         .update(threads)
         .set({ state: "archived" })
         .where(eq(threads.projectId, project.id))
-        .returning({ id: threads.id });
-      return archived.map((thread) => thread.id);
+        .returning({ id: threads.id, runtimeId: threads.runtimeId });
     });
-    for (const threadId of threadIds) cancelRun(threadId);
+    for (const thread of archivedThreads) putAway(thread);
   },
 
   // A folder of the project's repository, as GitHub has it on the default branch, and its README

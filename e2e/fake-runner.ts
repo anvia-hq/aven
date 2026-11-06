@@ -58,6 +58,8 @@ const send = (message: object) => ws.send(JSON.stringify(message));
 
 // A run's events and its end are numbered from 1 (the wire since version 9).
 const seqs = new Map<string, number>();
+// The runs that have ended, so a stopped one is not ended twice by its own clock.
+const ended = new Set<string>();
 const numbered = (runId: string) => {
   const seq = (seqs.get(runId) ?? 0) + 1;
   seqs.set(runId, seq);
@@ -121,6 +123,20 @@ ws.onmessage = ({ data }) => {
     terminals.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
+  } else if (message.type === "run.cancel") {
+    // A stopped run ends at once as cancelled, as a runner of this release stops one.
+    const { runId } = message;
+    ended.add(runId);
+    event({ type: "cancelled", runId });
+    // A cancelled run ends as an error, as a runner of this release ends one: the control plane
+    // knows it asked for the stop and tells clients it was cancelled (decision 0012).
+    send({
+      type: "run.end",
+      runId,
+      seq: numbered(runId),
+      outcome: "error",
+      error: "Cancelled by user",
+    });
   } else if (message.type === "run.start" && SUBAGENTS) {
     const { runId } = message;
     const say = (event: unknown) =>
@@ -181,6 +197,8 @@ ws.onmessage = ({ data }) => {
     });
     const finish = () => {
       const { runId } = message;
+      if (ended.has(runId)) return;
+      ended.add(runId);
       // With FAKE_RUN_FAILS the run ends with that error, as a model provider that keeps refusing does.
       if (process.env.FAKE_RUN_FAILS) {
         const error = process.env.FAKE_RUN_FAILS;
@@ -394,6 +412,13 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   if (call.method === "processes.logs") {
     const { processId } = call.params as { processId: string };
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
+  }
+  if (call.method === "sandbox.release") {
+    // The thread was put away (decision 0118): its sandbox goes, its files staying.
+    const { threadId } = call.params as { threadId: string };
+    event({ type: "sandbox.release", threadId });
+    sandboxRunning = false;
+    return reply({ released: true });
   }
   if (call.method === "desktop.wake") sandboxRunning = true;
   if (!sandboxRunning) return reply(null);

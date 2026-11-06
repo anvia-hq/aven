@@ -9,6 +9,7 @@ import {
   type FilesCallParams,
   type FilesSearchParams,
   type ProcessesCallParams,
+  type SandboxReleaseParams,
 } from "@aven/protocol/runtime-wire";
 
 // The params of the control plane's calls, checked: the control plane is trusted, but a call of the
@@ -48,6 +49,13 @@ export function processesCallParams(params: unknown): ProcessesCallParams {
   if (typeof threadId !== "string") throw invalid();
   if (processId !== undefined && typeof processId !== "string") throw invalid();
   return { threadId, processId };
+}
+
+/** What `sandbox.release` carries: the thread whose sandbox is freed (decision 0118). */
+export function sandboxReleaseParams(params: unknown): SandboxReleaseParams {
+  const { threadId } = asRecord(params);
+  if (typeof threadId !== "string") throw invalid();
+  return { threadId };
 }
 
 /** Anything but a string `holder`, a number `leaseMs`, `force: true` or `bot: true` is left out. */
