@@ -1,4 +1,5 @@
 import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
+import { timing } from "@aven/runtime-client/timing";
 
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
@@ -101,16 +102,25 @@ export const createThreadMessages = (runs: RunManager) => {
     { onPersonsWord = true }: { onPersonsWord?: boolean } = {},
   ) {
     const thread = await threadsService.owned({ organizationId, userId }, threadId);
+    // Off unless AVEN_TIMING is set: what stands between the person's message and the runner being
+    // told to run (decision 0119).
+    const clock = timing(`message ${threadId}`);
+    clock.mark("thread");
     await requireLiveProject(organizationId, thread.projectId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    clock.mark("model");
     const sender = await senderExtras(userId);
+    clock.mark("sender");
     const scoped = await threadExtras(organizationId, thread, userId, onPersonsWord);
+    clock.mark("thread extras");
     await runs.start(thread, prompt, model, { attachments, mentions, ...sender, ...scoped });
+    clock.mark("started");
     await threadsService.reopen(thread);
+    clock.mark("reopened");
   }
 
   // A message to an agent that is working, for it to take at its next step (decision 0098). True
