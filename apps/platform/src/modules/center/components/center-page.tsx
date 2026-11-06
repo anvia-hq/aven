@@ -1,6 +1,6 @@
 import { Refresh } from "@mynaui/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/button";
 import { RepoCommits } from "@/modules/projects/components/repo-commits";
@@ -85,9 +85,10 @@ export function CenterPage() {
   );
 
   // A project that is gone, or not the person's, shows all of them.
-  if (loaded && selected !== undefined && !one) {
-    void navigate({ to: "/center", search: {}, replace: true });
-  }
+  const gone = loaded && selected !== undefined && !one;
+  useEffect(() => {
+    if (gone) void navigate({ to: "/center", search: {}, replace: true });
+  }, [gone, navigate]);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 md:py-10">

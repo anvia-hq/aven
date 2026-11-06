@@ -14,7 +14,8 @@ All of it is read from GitHub with the installation's read-only token and the pe
 - **Opening one.** `GET /projects/:id/pulls/:number` and `/commits/:sha` answer a pull request's description, reviewers, checks (the app's `checks: read`; without it, none) and up to a hundred files with their patches cut, or a commit's whole message and files. They open in a drawer, the diff drawn by the thread's diff reader.
 - **History filters.** `GET /projects/:id/commits` takes `author`, `since`, `until`, `path` and `branch`, GitHub's own filters of a history, and the words of a message are found among the commits shown.
 - **Branches.** `GET /projects/:id/branches` lists the default branch and the thirty most recently active, each with commits ahead and behind, its last commit and its open pull request (a pull request from a fork is not for our branch), marked stale after thirty days with none. Each branch costs GitHub two calls, so they are asked when a project is chosen and by Refresh, six at a time. Choosing a branch shows its history.
-- **Tags** that name a commit are shown on it, and the commits of all the projects are grouped by the day they were made.
+- **One place for each control.** The quick views are the page's tabs; each list has one Filters popover and a search in its own header, with what is on shown as chips under it that take it off. A project's branches are the other tab of its pull requests card. Each list scrolls inside its card. A filter typed into a field is kept when typing pauses, on Enter, on Escape and on leaving the field.
+- **Tags** that name a commit are shown on it, and the commits of all the projects are grouped by the day they were made, each with its author's GitHub picture. A day filter is a date in UTC, so "Today" may start hours off the reader's own midnight.
 
 ## Consequences
 
