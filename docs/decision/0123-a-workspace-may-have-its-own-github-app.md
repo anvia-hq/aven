@@ -1,6 +1,6 @@
 # A workspace may have its own GitHub App
 
-Status: proposed. Extends 0074 (the GitHub App is created from the platform) and 0044 (the agent acts as the person on GitHub); 0074's app becomes the default a workspace falls back to.
+Status: accepted. Extends 0074 (the GitHub App is created from the platform) and 0044 (the agent acts as the person on GitHub); 0074's app becomes the default a workspace falls back to.
 
 ## Context
 
@@ -29,12 +29,10 @@ That is right for one team on one server, and awkward for a server with workspac
 - A migration adds `github_apps` and the two columns above; it only goes forward and is compatible with the previous release's code when the new columns are left null.
 - A person in several workspaces may have several GitHub connections, and the Ship button and Connect GitHub have to say which.
 
-## Order of work
+## What was built
 
-1. This decision.
-2. The client by app (`forOrganization`), with the platform's app as the only one, and every caller given the workspace. No behaviour change.
-3. The schema: `github_apps`, the installation's app, the user token's app. Reads still fall back to the platform's.
-4. Creating, showing and using a workspace's own app (settings, manifest flow and callbacks).
-5. Connect GitHub and Ship per app, then the docs (`AGENTS.md`, the cloud guide).
+1. The schema: `github_apps`, `github_installations.app_id` (null for the platform's) and `github_user_tokens.app_key` (`platform` or a `github_apps` id, unique with the person), as one forward-only migration, and the clients by app (`modules/github/clients.ts`: `forKey`, `forOrganization`, `forget`) with every caller given the app of the installation, the workspace or the project.
+2. A workspace's own app: the manifest flow takes `scope=workspace`, its `state` names the workspace, `GET /github/app/manifest` and `/app/callback` check an owner or an admin of that workspace, and the credentials are kept in `github_apps` (`app-store.ts`). `GET /github` says which app the workspace acts as (`appKey`, `own`) and whether the person may make one (`canSetUpWorkspace`).
+3. Connect GitHub and Ship per app: `GET /github/user` and `/github/connect` take `app`, a run and a ship use the connection for the app the project's installation is of, and `GET /threads/:id/ship` says which (`appKey`). Settings > GitHub shows and creates the workspace's app.
 
-Each step is its own commit and the server works after each.
+A user token that stops working for its app is dropped for that app only.
