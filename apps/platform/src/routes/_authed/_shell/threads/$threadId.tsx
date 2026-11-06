@@ -10,6 +10,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
+import { ProjectInfo } from "@/modules/projects/components/project-info";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
 import { SharedNotice } from "@/modules/threads/components/shared-notice";
@@ -140,6 +141,7 @@ function ThreadPage() {
                           // when its placeholder changes, which broke a message sent as a run began.
                           placeholder="Reply to the agent…"
                           onSubmit={send}
+                          tools={<ProjectInfo projectId={thread.projectId} />}
                         />
                       ))}
                   </div>
