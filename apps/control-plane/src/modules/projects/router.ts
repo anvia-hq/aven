@@ -66,8 +66,10 @@ export const projectsRouter = (putAway: PutAwayThread) =>
     )
     .get(
       "/:id/commits",
-      ({ params, query, organizationId }) =>
-        projectsService.commits(organizationId, params.id, query.page),
+      ({ params, query, organizationId }) => {
+        const { page, ...filters } = query;
+        return projectsService.commits(organizationId, params.id, page, filters);
+      },
       { auth: true, org: true, params: projectParams, query: commitsQuery },
     )
     .get(

@@ -116,6 +116,7 @@ run("projectsService (postgres)", async () => {
         project.repoFullName,
         2,
         project.defaultBranch,
+        undefined,
       );
 
       // Another organization's project is not found, and GitHub is not asked.

@@ -8,7 +8,12 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
-import type { GithubTrackedFilters, GithubTrackedKind, GithubTrackedState } from "../github/client";
+import type {
+  GithubCommitFilters,
+  GithubTrackedFilters,
+  GithubTrackedKind,
+  GithubTrackedState,
+} from "../github/client";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import type { ImportProjectBody, UpdateProjectBody } from "./schema";
@@ -163,13 +168,14 @@ export const projectsService = {
 
   // One page of the default branch's commits for the project page, read with the installation's
   // token like the files and the README. A repository the installation no longer sees is not found.
-  async commits(organizationId: string, id: string, page: number) {
+  async commits(organizationId: string, id: string, page: number, filters?: GithubCommitFilters) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     const found = await githubService.commits(
       project.githubInstallationId,
       project.repoFullName,
       page,
       project.defaultBranch,
+      filters,
     );
     return { ...orNotFound(found, "Repository not found"), page };
   },

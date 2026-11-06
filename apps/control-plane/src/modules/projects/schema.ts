@@ -32,8 +32,31 @@ export const folderQuery = z.object({
 });
 
 // A page of the commit history, from the newest; GitHub allows as many as the history has.
+// and, narrowed, by author, time, file or branch (the history's own filters on GitHub).
+const day = z.iso.date().transform((value) => `${value}T00:00:00Z`);
 export const commitsQuery = z.object({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
+  author: z
+    .string()
+    .regex(/^[\w.@+-]{1,100}$/)
+    .optional(),
+  since: day.optional(),
+  until: day.optional(),
+  path: z
+    .string()
+    .min(1)
+    .max(1024)
+    .refine(
+      (path) =>
+        !path.includes("\0") && path.split("/").every((part) => part !== "" && !/^\.+$/.test(part)),
+    )
+    .optional(),
+  // A branch name or a tag, as git allows them, no more.
+  branch: z
+    .string()
+    .regex(/^[\w./-]{1,200}$/)
+    .refine((name) => !name.includes(".."))
+    .optional(),
 });
 
 // A page of the repository's pull requests or issues, open or closed, from the latest changed.

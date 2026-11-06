@@ -189,6 +189,17 @@ export type GithubCommit = {
 /** One page of commits, and whether GitHub has an older one. */
 export type GithubCommitPage = { commits: GithubCommit[]; hasMore: boolean };
 
+/** What narrows a commit history: who wrote it, when, which file it touches and which branch it is read from. */
+export type GithubCommitFilters = {
+  author?: string;
+  /** ISO times; commits from `since` up to `until`. */
+  since?: string;
+  until?: string;
+  path?: string;
+  /** A branch, tag or commit to read the history of; the default branch when not given. */
+  branch?: string;
+};
+
 export const COMMITS_PER_PAGE = 10;
 const COMMIT_MESSAGE_MAX = 200;
 
@@ -562,9 +573,16 @@ export class GithubClient {
     fullName: string,
     page: number,
     defaultBranch: string,
+    filters: GithubCommitFilters = {},
   ): Promise<GithubCommitPage | null> {
     const { token } = await this.installationToken(installationId);
-    const path = `${repoPath(fullName)}/commits?per_page=${COMMITS_PER_PAGE}&page=${page}`;
+    const query = new URLSearchParams({ per_page: String(COMMITS_PER_PAGE), page: String(page) });
+    if (filters.author) query.set("author", filters.author);
+    if (filters.since) query.set("since", filters.since);
+    if (filters.until) query.set("until", filters.until);
+    if (filters.path) query.set("path", filters.path);
+    if (filters.branch) query.set("sha", filters.branch);
+    const path = `${repoPath(fullName)}/commits?${query}`;
     // Asked together; the branch names only decorate the page, so they are not worth failing it for.
     const heads = this.#branchHeads(token, fullName, defaultBranch);
     let response: Response;

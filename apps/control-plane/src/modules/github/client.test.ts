@@ -396,6 +396,29 @@ describe("GithubClient", () => {
       expect(calls.some((url) => url.endsWith("/repos/acme/web/branches/main"))).toBe(true);
     });
 
+    test("asks for the history of one author, time, file and branch when the filters say so", async () => {
+      const { calls, client } = github(() => Response.json([]));
+
+      await client.commits(7, "acme/web", 1, "main", {
+        author: "ada",
+        since: "2026-11-01T00:00:00Z",
+        until: "2026-11-09T00:00:00Z",
+        path: "src/a.ts",
+        branch: "feature/login",
+      });
+
+      const search = new URL(calls.find((url) => url.includes("/commits?"))!).searchParams;
+      expect(Object.fromEntries(search)).toEqual({
+        per_page: "10",
+        page: "1",
+        author: "ada",
+        since: "2026-11-01T00:00:00Z",
+        until: "2026-11-09T00:00:00Z",
+        path: "src/a.ts",
+        sha: "feature/login",
+      });
+    });
+
     test("branch names that cannot be had leave the page as it is, with none", async () => {
       const { client } = github(
         () => Response.json([commit("a1", "Fix", { parents: [{ sha: "a0" }] })]),

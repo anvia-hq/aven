@@ -42,6 +42,38 @@ describe("folderQuery", () => {
   );
 });
 
+describe("commitsQuery", () => {
+  test("takes the history's filters, a day becoming the start of it", () => {
+    expect(
+      commitsQuery.parse({
+        author: "ada",
+        since: "2026-11-01",
+        until: "2026-11-09",
+        path: "src/a.ts",
+        branch: "feature/login",
+      }),
+    ).toEqual({
+      page: 1,
+      author: "ada",
+      since: "2026-11-01T00:00:00Z",
+      until: "2026-11-09T00:00:00Z",
+      path: "src/a.ts",
+      branch: "feature/login",
+    });
+  });
+
+  test.each([
+    { since: "yesterday" },
+    { path: "../etc/passwd" },
+    { path: "a//b" },
+    { branch: "a..b" },
+    { branch: "x y" },
+    { author: "a b" },
+  ])("refuses %p", (query) => {
+    expect(commitsQuery.safeParse(query).success).toBe(false);
+  });
+});
+
 describe("trackedQuery", () => {
   test("is the first page of the open ones unless asked, and the query's page is a number", () => {
     expect(trackedQuery.parse({})).toEqual({ state: "open", page: 1 });

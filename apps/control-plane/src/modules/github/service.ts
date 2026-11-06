@@ -7,6 +7,7 @@ import { NotFoundError, UnprocessableError } from "../../errors";
 import {
   GithubNoPushAccessError,
   GithubWriteNotGrantedError,
+  type GithubCommitFilters,
   type GithubTrackedFilters,
   type GithubTrackedKind,
   type GithubTrackedState,
@@ -251,9 +252,10 @@ export function createGithubService(
       fullName: string,
       page: number,
       defaultBranch: string,
+      filters?: GithubCommitFilters,
     ) {
       const { client, installationId } = await acting(installationRowId);
-      return client.commits(installationId, fullName, page, defaultBranch);
+      return client.commits(installationId, fullName, page, defaultBranch, filters);
     },
 
     // One page of a project's pull requests or issues, with the same token (decision 0092).
