@@ -105,7 +105,8 @@ test.describe("shipping a thread", () => {
     page,
   }) => {
     await registerUser(page, "shp", "Ship User");
-    const { child, threadId } = await threadOnFakeRunner(page);
+    // Ship is only offered once the repository is set up (decision 0129).
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
     runner = child;
     // Asked for the app the thread's project is of (decision 0123).
     await page.route("**/api/github/user?*", (route) =>
@@ -122,8 +123,8 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("button", { name: "Ship", exact: true })).toHaveCount(0);
   });
 
-  // Ship waits for the repository to be set up (decision 0083): /setup-env's script and
-  // /setup-ship's way of shipping, in the thread's workspace.
+  // Ship is not offered until the repository is set up to ship (decisions 0083 and 0129): /setup-env's
+  // script and /setup-ship's way of shipping, in the thread's workspace.
   test.describe("a repository that is not set up to ship", () => {
     async function threadWith(page: Page, files: string) {
       await registerUser(page, "shp", "Ship User");
@@ -133,41 +134,28 @@ test.describe("shipping a thread", () => {
       return threadId;
     }
     const shipButton = (page: Page) => page.getByRole("button", { name: "Ship", exact: true });
-    // The button is disabled while the check is still on its way, and the tooltip comes with the
-    // answer: hover again until it shows.
-    const explanation = async (page: Page) => {
-      const tooltip = page.locator('[data-slot="tooltip-content"]');
-      await expect(async () => {
-        await page.mouse.move(0, 0);
-        await shipButton(page).locator("xpath=..").hover();
-        await expect(tooltip).toBeVisible({ timeout: 1_000 });
-      }).toPass({ timeout: 10_000 });
-      return tooltip;
+    // The readiness answer arrives a moment after the thread: the button is not there before it
+    // either, so what is checked is that it stays away once the answer is in.
+    const stillAbsent = async (page: Page) => {
+      await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
+      await page.waitForResponse((response) => response.url().includes("/ship") && response.ok());
+      await expect(shipButton(page)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Connect GitHub to ship" })).toHaveCount(0);
     };
 
-    test("cannot be shipped, and says which commands to run", async ({ page }) => {
+    test("shows no Ship button", async ({ page }) => {
       await threadWith(page, "");
-
-      await expect(shipButton(page)).toBeDisabled();
-      await expect(await explanation(page)).toContainText("run /setup-env and /setup-ship");
+      await stillAbsent(page);
     });
 
-    test("with only the environment, it asks for /setup-ship", async ({ page }) => {
+    test("with only the environment, still none", async ({ page }) => {
       await threadWith(page, "setup");
-
-      await expect(shipButton(page)).toBeDisabled();
-      const tooltip = await explanation(page);
-      await expect(tooltip).toContainText("run /setup-ship in this thread");
-      await expect(tooltip).not.toContainText("/setup-env");
+      await stillAbsent(page);
     });
 
-    test("with only the way of shipping, it asks for /setup-env", async ({ page }) => {
+    test("with only the way of shipping, still none", async ({ page }) => {
       await threadWith(page, "ship");
-
-      await expect(shipButton(page)).toBeDisabled();
-      const tooltip = await explanation(page);
-      await expect(tooltip).toContainText("run /setup-env in this thread");
-      await expect(tooltip).not.toContainText("/setup-ship");
+      await stillAbsent(page);
     });
 
     test("with both it can be shipped", async ({ page }) => {

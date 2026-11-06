@@ -30,7 +30,11 @@ export function ShipButton({ thread, upToDate }: Props) {
   const shipped = latest !== undefined;
   const canUpdate = latest?.state === "open";
   const label = shipLabel(latest);
+  // Ship is not offered until the repository is set up to ship (decision 0129): the pull request a
+  // thread already has stays linked.
+  const notSetUp = gate.kind === "missing" || gate.kind === "checking";
   const blocked = thread.running || shipping || (shipped && upToDate) || gate.kind !== "ready";
+  if (notSetUp) return latest ? <PullRequestLink pullRequest={latest} /> : null;
   // What is shipped is the person's own on GitHub, so their account has to be connected first.
   if (account?.data && !account.data.connected) {
     const next = encodeURIComponent(`/threads/${thread.id}`);
@@ -76,19 +80,7 @@ export function ShipButton({ thread, upToDate }: Props) {
   const explanation = gateMessage(gate);
   return (
     <>
-      {latest && (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="shadow-md"
-          nativeButton={false}
-          role="link"
-          render={<a href={latest.url} target="_blank" rel="noreferrer" />}
-        >
-          #{latest.number}
-          <ExternalLink />
-        </Button>
-      )}
+      {latest && <PullRequestLink pullRequest={latest} />}
       {explanation ? (
         // A disabled button says nothing on hover, so the tooltip hangs on what holds it.
         <Tooltip>
@@ -104,12 +96,25 @@ export function ShipButton({ thread, upToDate }: Props) {
   );
 }
 
-// Why Ship is not there yet, when it is not because of the thread: the repository has to be set up
-// to ship first (decision 0083).
+function PullRequestLink({ pullRequest }: { pullRequest: ThreadPullRequest }) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      className="shadow-md"
+      nativeButton={false}
+      role="link"
+      render={<a href={pullRequest.url} target="_blank" rel="noreferrer" />}
+    >
+      #{pullRequest.number}
+      <ExternalLink />
+    </Button>
+  );
+}
+
+// Why Ship is disabled when it is not because of the thread: the runner could not say whether the
+// repository is set up to ship (decision 0083).
 function gateMessage(gate: ShipGate) {
-  if (gate.kind === "missing") {
-    return `Ship is available once the repository is set up: run ${gate.commands.join(" and ")} in this thread first.`;
-  }
   if (gate.kind === "unknown") {
     return "Could not check whether the repository is set up to ship. Is its runner online?";
   }
