@@ -30,6 +30,7 @@ import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import type { RunOutbox, Source } from "./run-outbox";
 import { redactingTools, secretRedactor } from "./secret-redaction";
+import { awaitingReady } from "./late-bound-tools";
 import type { RunRecord, RunRecords } from "./run-records";
 import { toolsForRun } from "./run-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
@@ -364,32 +365,43 @@ export function createRunDriver(context: DriverContext) {
     // Handled at once so a failure while the sandbox is still starting is not an unhandled rejection;
     // the run still sees it where it awaits `mcpGoing`.
     run.mcpGoing.catch(() => undefined);
-    // Clones the repository and starts the thread's container on first use; a failure ends the run with a clear error.
-    const box = await context.sandbox.acquire(thread, repoAccess);
-    clock.mark("sandbox");
-    if (run.cancelReason) throw new Error(run.cancelReason);
+    // The thread's workspace (cloned, or restored from its snapshot, on first use) and its container
+    // are got ready beside the rest of the start-up, and the agent starts without waiting for them:
+    // its first words do not need them, and its tools wait for them (decision 0128). A sandbox that
+    // cannot be had ends the run with why, as it did when the run waited.
+    const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
     context.boxes.set(thread.id, box);
-    await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
-    clock.mark("sign-in");
+    const ready = (async () => {
+      await box.start?.();
+      clock.mark("sandbox");
+      if (run.cancelReason) throw new Error(run.cancelReason);
+      await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
+      clock.mark("sign-in");
+      // What this turn changes is measured from here; a run picked up again after a restart, or
+      // resumed with an answer, is still the same turn.
+      if (state.record.kind === "start" && !state.record.durableId) {
+        const root = await context.sandbox.workspace(thread.id);
+        if (root) await markTurn(root).catch(() => false);
+      }
+      clock.mark("turn");
+    })();
+    ready.catch((error: unknown) => {
+      run.cancelReason ??= errorMessage(error);
+      void run.followed?.cancel();
+    });
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
     if (run.cancelReason) throw new Error(run.cancelReason);
     // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     clock.mark("skills");
-    // What this turn changes is measured from here; a run picked up again after a restart, or
-    // resumed with an answer, is still the same turn.
-    if (state.record.kind === "start" && !state.record.durableId) {
-      const root = await context.sandbox.workspace(thread.id);
-      if (root) await markTurn(root).catch(() => false);
-    }
-    clock.mark("turn");
     const journaled = await context.journal;
     // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
     // What its tools give back hides this run's secrets, the goal's checks included (decision 0045).
     const redact = secretRedactor(env);
     const current = () => {
-      const tools = context.boxes.get(thread.id)?.tools;
+      const live = context.boxes.get(thread.id)?.tools;
+      const tools = live && awaitingReady(live, ready);
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
@@ -426,7 +438,7 @@ export function createRunDriver(context: DriverContext) {
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
-            tools: box.tools,
+            tools: awaitingReady(box.tools, ready),
             current,
             mcp: mcp && {
               tools: mcp.tools,

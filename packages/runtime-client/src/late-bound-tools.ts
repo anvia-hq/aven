@@ -31,3 +31,19 @@ export function lateBoundTools(
 // The same tools with what they return kept small. For a host that keeps what the tools returned,
 // such as a bot's conversation, rather than a journal.
 export const boundedTools = (tools: readonly AnyTool[]) => lateBoundTools(tools, () => tools);
+
+// The same tools, each of which first waits for `ready`: a run starts its agent while the thread's
+// sandbox is still being got ready, and a tool called before it is there waits for it (decision
+// 0128). A `ready` that fails fails the call with its error.
+export function awaitingReady(tools: readonly AnyTool[], ready: Promise<unknown>): AnyTool[] {
+  return tools.map((tool) => ({
+    name: tool.name,
+    requiresApproval: tool.requiresApproval,
+    definition: (prompt) => tool.definition(prompt),
+    parseInput: tool.parseInput && ((args) => tool.parseInput!(args)),
+    call: async (args, context) => {
+      await ready;
+      return tool.call(args, context);
+    },
+  }));
+}

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { RepoAccess } from "@aven/protocol/runtime-wire";
@@ -10,6 +10,7 @@ import {
   setupEnvironment,
   type DockerRun,
 } from "./environment-setup";
+import { fetchBranch } from "./fetch-branch";
 import { clearDirectory, cloneRepository, type Git } from "./git-clone";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { SnapshotStore } from "./snapshots";
@@ -30,7 +31,13 @@ export type EnvironmentsConfig = {
   home: string;
   docker: DockerRun;
   git: Git;
+  /** How long after a thread gets its workspace the next one's is prepared; default 5 seconds. */
+  spareDelayMs?: number;
 };
+
+// How many repositories keep a spare workspace at once, the least recently prepared going first.
+const SPARES_KEPT = 3;
+const DEFAULT_SPARE_DELAY_MS = 5_000;
 
 // The environments repositories set up for themselves (decision 0043): a thread's workspace filled
 // from a snapshot, or cloned and set up, one setup at a time per repository, and the image each
@@ -42,6 +49,8 @@ export class Environments {
   // The setup or restore of a repository's environment, one at a time, so a second thread on the
   // repository finds the snapshot the first made instead of running the setup again.
   #turns = new Map<string, Promise<unknown>>();
+  // Spares being prepared, so a test (or a stop) can wait for them.
+  #warming = new Set<Promise<unknown>>();
 
   constructor(config: EnvironmentsConfig) {
     this.#config = config;
@@ -57,6 +66,12 @@ export class Environments {
       return;
     }
     await this.#inTurn(environment.key, () => this.#fill(thread.id, root, access, environment));
+    this.#warmLater(environment, access);
+  }
+
+  /** Resolves when no spare workspace is being prepared. */
+  async settled() {
+    while (this.#warming.size > 0) await Promise.allSettled(this.#warming);
   }
 
   // Runs the repository's `.aven/setup` again in `root` and keeps what it makes as the snapshot.
@@ -120,7 +135,10 @@ export class Environments {
     const snapshot = await this.snapshots.valid(key, baseImageId);
     if (snapshot) {
       try {
-        await this.snapshots.restore(snapshot, root);
+        // A workspace prepared beforehand takes no copying: it is moved into place (decision 0128).
+        if (!(await this.#claimSpare(key, snapshot.createdAt, root))) {
+          await this.snapshots.restore(snapshot, root);
+        }
         await updateRestoredWorkspace(root, threadId, access, this.#config.git);
         await this.#pinImage(threadId, snapshot.image);
         return;
@@ -169,6 +187,8 @@ export class Environments {
       hostUser: hostUser(),
     });
     await this.snapshots.publish(key, { image, baseImageId, workspace: root });
+    // A spare was made from the snapshot this one replaces.
+    await rm(this.#spareDir(key), { recursive: true, force: true });
     await this.#pinImage(threadId, image);
     return { image };
   }
@@ -182,5 +202,109 @@ export class Environments {
   async #pinImage(threadId: string, image: string) {
     await mkdir(join(this.#config.home, "environments"), { recursive: true });
     await writeFile(this.#imageFile(threadId), image);
+  }
+
+  // The workspaces kept ready for the next thread of a repository (decision 0128): the snapshot's,
+  // already restored and fetched, in `<home>/spares/<key>/` with the snapshot it was made from. A
+  // thread that needs one takes it by moving it, so starting costs no copy of `node_modules`; the
+  // next is prepared in the background once that thread has got its own.
+  #spareDir(key: string) {
+    return join(this.#config.home, "spares", key);
+  }
+
+  async #claimSpare(key: string, snapshotCreatedAt: string, root: string) {
+    const dir = this.#spareDir(key);
+    try {
+      const meta = JSON.parse(await readFile(join(dir, "meta.json"), "utf8")) as {
+        snapshotCreatedAt?: string;
+      };
+      // One made from another snapshot is not what the repository's threads start from now.
+      if (meta.snapshotCreatedAt !== snapshotCreatedAt) {
+        await rm(dir, { recursive: true, force: true });
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    try {
+      // `root` is an empty directory made for the thread; the spare takes its place.
+      await rm(root, { recursive: true, force: true });
+      await rename(join(dir, "workspace"), root);
+      await rm(dir, { recursive: true, force: true });
+      return true;
+    } catch (error) {
+      console.warn(`Could not use the spare workspace of ${key}:`, error);
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+      await rm(root, { recursive: true, force: true }).catch(() => undefined);
+      await mkdir(root, { recursive: true });
+      return false;
+    }
+  }
+
+  // Prepares the repository's next workspace a moment after this one was made, so it does not
+  // compete with the thread that is starting. A failure is only logged: no spare is a slower start.
+  #warmLater(environment: { key: string; baseImageId: string }, access: RepoAccess) {
+    const delay = this.#config.spareDelayMs ?? DEFAULT_SPARE_DELAY_MS;
+    const warming: Promise<unknown> = new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, delay);
+      timer.unref?.();
+    })
+      .then(() => this.#inTurn(environment.key, () => this.#prepareSpare(environment, access)))
+      .catch((error: unknown) => {
+        console.warn(`Could not prepare a spare workspace of ${environment.key}:`, error);
+      })
+      .finally(() => this.#warming.delete(warming));
+    this.#warming.add(warming);
+  }
+
+  async #prepareSpare(
+    { key, baseImageId }: { key: string; baseImageId: string },
+    access: RepoAccess,
+  ) {
+    const snapshot = await this.snapshots.valid(key, baseImageId);
+    if (!snapshot) return;
+    const dir = this.#spareDir(key);
+    const kept = await readFile(join(dir, "meta.json"), "utf8")
+      .then((text) => (JSON.parse(text) as { snapshotCreatedAt?: string }).snapshotCreatedAt)
+      .catch(() => undefined);
+    if (kept === snapshot.createdAt) return;
+    const spares = join(this.#config.home, "spares");
+    await mkdir(spares, { recursive: true });
+    const building = `${dir}.building`;
+    await rm(building, { recursive: true, force: true });
+    try {
+      await this.snapshots.restore(snapshot, join(building, "workspace"));
+      // The default branch as it is now, so the thread that takes it has little left to fetch. A
+      // failure is not one of the spare: the thread fetches it itself.
+      await fetchBranch(
+        join(building, "workspace"),
+        access,
+        access.defaultBranch,
+        this.#config.git,
+      ).catch(() => undefined);
+      await writeFile(
+        join(building, "meta.json"),
+        JSON.stringify({ snapshotCreatedAt: snapshot.createdAt }),
+      );
+      await rm(dir, { recursive: true, force: true });
+      await rename(building, dir);
+    } catch (error) {
+      await rm(building, { recursive: true, force: true }).catch(() => undefined);
+      throw error;
+    }
+    await this.#evictSpares(spares, key);
+  }
+
+  // Keeps the spares of the few repositories used last: each is as large as a workspace.
+  async #evictSpares(spares: string, keep: string) {
+    const names = (await readdir(spares)).filter((name) => !name.endsWith(".building"));
+    if (names.length <= SPARES_KEPT) return;
+    const aged = await Promise.all(
+      names.map(async (name) => ({ name, at: (await stat(join(spares, name))).mtimeMs })),
+    );
+    aged.sort((a, b) => a.at - b.at);
+    for (const { name } of aged.slice(0, names.length - SPARES_KEPT)) {
+      if (name !== keep) await rm(join(spares, name), { recursive: true, force: true });
+    }
   }
 }

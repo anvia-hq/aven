@@ -86,6 +86,15 @@ export type SandboxConfig = {
   docker?: DockerRun;
 };
 
+export type AcquireOptions = {
+  /**
+   * Hand the sandbox back at once, with its workspace and container being got ready in the
+   * background: its tools wait for them, and `start` resolves when they are there (decision 0128).
+   * For a run, which can have its model answering while they are. Only with a repository.
+   */
+  lazy?: boolean;
+};
+
 export type ThreadSandbox = {
   /** What the agent can do in the thread's container: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
@@ -165,7 +174,11 @@ export interface ThreadWorkspaces {
    * that is kept between acquires, and the container is started by the first tool that needs it:
    * a bot's computer has no repository and mostly stays off (decision 0059).
    */
-  acquire(thread: ThreadRef, repo?: () => Promise<RepoAccess>): Promise<ThreadSandbox>;
+  acquire(
+    thread: ThreadRef,
+    repo?: () => Promise<RepoAccess>,
+    options?: AcquireOptions,
+  ): Promise<ThreadSandbox>;
   /** The desktop of the thread's sandbox while its container is running; never starts one. */
   desktop(threadId: string): SandboxDesktop | undefined;
   /**
@@ -307,13 +320,33 @@ export class Sandboxes implements ThreadWorkspaces {
     return sandboxes;
   }
 
-  async acquire(thread: ThreadRef, repo?: () => Promise<RepoAccess>): Promise<ThreadSandbox> {
-    const root = await this.#workspace(thread, repo);
-    const start = () => this.#ensure(thread.id, root);
-    // A thread's container is up before its run begins; a bot's when something first needs it.
+  async acquire(
+    thread: ThreadRef,
+    repo?: () => Promise<RepoAccess>,
+    { lazy = false }: AcquireOptions = {},
+  ): Promise<ThreadSandbox> {
+    // A lazy sandbox is made ready by its first `start`, and by whatever needs it before: both wait
+    // for the same preparation, and one that failed is tried again by the next.
+    let preparing: Promise<void> | undefined;
+    const prepare = async () => {
+      const root = await this.#workspace(thread, repo);
+      await this.#ensure(thread.id, root);
+    };
+    const startLazily = () => {
+      preparing ??= prepare().catch((error: unknown) => {
+        preparing = undefined;
+        throw error;
+      });
+      return preparing;
+    };
+    const eager = !(lazy && repo);
+    const root = eager ? await this.#workspace(thread, repo) : undefined;
+    const start = eager ? () => this.#ensure(thread.id, root!) : startLazily;
+    // A thread's container is up before its run begins (a lazy one's first tool waits for it); a
+    // bot's when something first needs it.
     const upWhenNeeded = <T extends object>(sandbox: T) =>
-      repo ? sandbox : startedOnUse(sandbox, start);
-    if (repo) await start();
+      repo && eager ? sandbox : startedOnUse(sandbox, start);
+    if (repo && eager) await start();
     const runtime = withProjectEnv(
       upWhenNeeded(this.#hub.runtime(thread.id, { workdir: WORKSPACE_DIR })),
       () => this.#projectEnv.get(thread.id),
