@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Image as ImageIcon, Refresh } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/dialog";
 
 import type { ToolImage } from "../types";
 
@@ -10,6 +11,7 @@ import type { ToolImage } from "../types";
 export function ImageBlock({ threadId, image }: { threadId: string; image: ToolImage }) {
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
+  const alt = image.caption ?? "Image shown by the agent";
   const src = `/api/threads/${threadId}/artifacts/${image.name}`;
 
   return (
@@ -33,15 +35,28 @@ export function ImageBlock({ threadId, image }: { threadId: string; image: ToolI
           </Button>
         </div>
       ) : (
-        <a href={src} target="_blank" rel="noreferrer" className="w-fit max-w-full">
-          <img
-            src={attempt === 0 ? src : `${src}?attempt=${attempt}`}
-            alt={image.caption ?? "Image shown by the agent"}
-            loading="lazy"
-            onError={() => setFailed(true)}
-            className="max-h-[32rem] max-w-full rounded-lg border bg-muted/30 object-contain"
-          />
-        </a>
+        <Dialog>
+          <DialogTrigger
+            aria-label="Open image"
+            className="w-fit max-w-full cursor-zoom-in rounded-lg text-left"
+          >
+            <img
+              src={attempt === 0 ? src : `${src}?attempt=${attempt}`}
+              alt={alt}
+              loading="lazy"
+              onError={() => setFailed(true)}
+              className="max-h-[32rem] max-w-full rounded-lg border bg-muted/30 object-contain"
+            />
+          </DialogTrigger>
+          <DialogContent className="w-fit max-w-[calc(100%-2rem)] gap-0 p-2 sm:max-w-[min(72rem,calc(100%-4rem))]">
+            <DialogTitle className="sr-only">{alt}</DialogTitle>
+            <img
+              src={src}
+              alt={alt}
+              className="max-h-[85vh] max-w-full rounded-lg object-contain"
+            />
+          </DialogContent>
+        </Dialog>
       )}
       {image.caption && (
         <figcaption className="text-xs text-muted-foreground">{image.caption}</figcaption>
