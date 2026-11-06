@@ -58,28 +58,6 @@ export function withOwnReasoning<T extends CompletionModel>(model: T, owns: Reas
   return withChatHistory(model, (history) => onlyOwn(history, owns));
 }
 
-// The Responses API names each tool call it replays with an item id that must begin `fc`, and
-// refuses what another provider issued: Anthropic's `toolu_…`, a chat-completions `call_…`. The call
-// and its result are matched by `call_id`, which may be anything, so the id it was issued under
-// becomes that, and the item gets an id of the kind this API takes. What the API issued itself, and
-// the results (which carry no item id), pass untouched.
-const ISSUED_BY_RESPONSES_API = /^fc/;
-
-function withResponsesItemIds(message: Message): Message {
-  if (message.role !== "assistant" || typeof message.content === "string") return message;
-  const content = message.content.map((part) =>
-    part.type !== "tool-call" || ISSUED_BY_RESPONSES_API.test(part.toolCallId)
-      ? part
-      : { ...part, callId: part.callId ?? part.toolCallId, toolCallId: `fc_${part.toolCallId}` },
-  );
-  return { ...message, content };
-}
-
-/** Tool calls another provider issued, given ids the Responses API takes back. */
-export function withResponsesToolCallIds<T extends CompletionModel>(model: T): T {
-  return withChatHistory(model, (history) => history.map(withResponsesItemIds));
-}
-
 /** Anthropic's thinking, only its own and only from the turn in progress. */
 export function withAnthropicReasoning<T extends CompletionModel>(model: T): T {
   return withChatHistory(model, (history) => onlyThisTurns(onlyOwn(history, ownedByAnthropic)));

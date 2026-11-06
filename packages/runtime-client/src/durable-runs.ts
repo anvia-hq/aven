@@ -54,6 +54,8 @@ const SAFE_TOOLS = new Set<string>([
 // Durable keeps a run's whole history as one payload and refuses one over a megabyte by default. A
 // coding agent's history holds screenshots (a base64 image each) and command output, and passes
 // that within a handful of steps, which ended the run with "Durable payload byte limit exceeded".
+// Durable 0.14 stores a single payload over 64 KiB as a blob, but a history of many smaller results
+// still passes the megabyte (a test in durable-runs.test.ts), so the budget stays.
 const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
 
 // Journals this process has open. Durable refuses a journal whose owner is a live process, and a

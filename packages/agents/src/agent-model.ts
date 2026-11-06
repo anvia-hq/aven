@@ -6,7 +6,6 @@ import {
   withAnthropicReasoning,
   withOwnReasoning,
   withoutEmptyAssistantText,
-  withResponsesToolCallIds,
 } from "./own-reasoning";
 import { withUniqueToolCallIds } from "./unique-tool-call-ids";
 
@@ -63,14 +62,14 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
   };
 }
 
-// What an agent's earlier runs left may be another provider's reasoning, or tool calls it issued,
-// which this one rejects.
+// What an agent's earlier runs left may be another provider's reasoning, which this one rejects. The
+// tool calls another provider issued are left to the provider package (bug 0003).
 function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
   if (config.provider === "anthropic") return withAnthropicReasoning(model);
   const responses =
     config.provider === "openai" ||
     (config.provider === "azure" && azureApiFor(config.modelId ?? "") === "responses");
-  return responses ? withResponsesToolCallIds(withOwnReasoning(model, ownedByResponsesApi)) : model;
+  return responses ? withOwnReasoning(model, ownedByResponsesApi) : model;
 }
 
 // A ready model carries no provider settings; a model config also picks the provider's options

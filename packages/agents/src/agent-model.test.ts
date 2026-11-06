@@ -97,7 +97,9 @@ describe("the output limit", () => {
 describe("history from another provider, sent to the Responses API", () => {
   // What OpenAI is sent for a chat that began on Claude: its tool call is `toolu_…`, which the
   // Responses API refused with `Invalid 'input[1].id'. Expected an ID that begins with 'fc'`.
-  test("a tool call another provider issued is sent with an id the API takes, matched to its result", async () => {
+  // `@anvia/openai` leaves the id out of a call whose stored origin is another provider (bug 0003),
+  // which every message a run stores carries, so this fails if an upgrade stops doing that.
+  test("a tool call another provider issued is sent without an item id, matched to its result", async () => {
     const bodies: { input: Record<string, unknown>[] }[] = [];
     const server = Bun.serve({
       port: 0,
@@ -127,6 +129,21 @@ describe("history from another provider, sent to the Responses API", () => {
                   input: { text: "hi" },
                 },
               ],
+              metadata: {
+                anvia: {
+                  generation: {
+                    provider: "anthropic",
+                    modelId: "claude",
+                    usage: {
+                      inputTokens: 1,
+                      outputTokens: 1,
+                      totalTokens: 2,
+                      cachedInputTokens: 0,
+                      cacheCreationInputTokens: 0,
+                    },
+                  },
+                },
+              },
             },
             {
               role: "tool",
@@ -152,7 +169,7 @@ describe("history from another provider, sent to the Responses API", () => {
     const items = bodies[0]!.input;
     const sentCall = items.find((item) => item.type === "function_call")!;
     const sentResult = items.find((item) => item.type === "function_call_output")!;
-    expect(String(sentCall.id)).toMatch(/^fc/);
+    expect(sentCall.id).toBeUndefined();
     expect(sentCall.call_id).toBe("toolu_014fPacb");
     expect(sentResult.call_id).toBe(sentCall.call_id);
   });

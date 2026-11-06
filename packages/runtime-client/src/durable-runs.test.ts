@@ -565,3 +565,35 @@ describe("steering a run that is going (decision 0098)", () => {
     expect(await runs.steer(run.durableId, "too late", "steer-b")).toBe(false);
   });
 });
+
+describe("a long run", () => {
+  // Durable 0.14 moves a payload over 64 KiB to a blob, but a history of many smaller results is
+  // still one payload against `maxPayloadBytes`, which passes durable's default megabyte after a
+  // few dozen steps. This ends with "Durable payload byte limit exceeded" without the budget set in
+  // `DurableRuns.open`.
+  test("of mid-size tool results keeps within the payload budget", async () => {
+    const output = "x".repeat(40 * 1024);
+    const run = createTool({
+      name: "run",
+      description: "A command",
+      inputSchema: z.object({}),
+      execute: async () => output,
+    });
+    const call = (index: number): ScriptStep => [
+      { type: "tool-call", toolCallId: `c${index}`, toolName: "run", input: {} },
+    ];
+    const agent = new Agent({
+      id: "long",
+      instructions: "x",
+      tools: [run],
+      maxTurns: 200,
+      model: scriptedModel([
+        ...Array.from({ length: 60 }, (_, index) => call(index)),
+        [text("done")],
+      ]),
+    });
+    const runs = await opened(journalPath());
+    const followed = await runs.start("long", "thread-long", "go", { agent }, () => {});
+    expect(await followed.done).toMatchObject({ type: "response" });
+  });
+});
