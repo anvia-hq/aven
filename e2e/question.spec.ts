@@ -34,9 +34,8 @@ test.describe("the agent's question", () => {
     await expect(form).toBeVisible();
     await expect(form).toContainText("Which color should it be?");
     await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
-    await expect(
-      page.getByRole("region", { name: "Question waiting for an answer" }),
-    ).toBeVisible();
+    // The question is in the form alone while it waits, not in the conversation as well.
+    await expect(page.getByRole("region", { name: "Answered questions" })).toHaveCount(0);
     const refused = await page.request.post(`/api/threads/${threadId}/messages`, {
       data: { prompt: "never mind" },
     });
