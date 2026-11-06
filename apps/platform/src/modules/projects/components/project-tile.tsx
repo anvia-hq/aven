@@ -1,8 +1,9 @@
 import { cn } from "cn";
 import { useEffect, useMemo, useRef } from "react";
 
-import { orbShape, paintOrb, type Rgb } from "../orb-art";
+import { orbShape, paintOrb } from "../orb-art";
 import { tileColors, tileSeed } from "../tile";
+import { onThemeChange, resolveInk } from "./project-ink";
 
 type Props = {
   /** Picks the shape and colors, so a project keeps its own. */
@@ -15,18 +16,6 @@ type Props = {
 };
 
 const COLOR_MS = 450;
-
-// What a color of the page is as red, green and blue: drawn on one pixel, since a token may be
-// written in a color space a canvas does not hand back as text.
-function resolveInk(element: Element): Rgb {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 1;
-  const context = canvas.getContext("2d", { willReadFrequently: true })!;
-  context.fillStyle = getComputedStyle(element).color;
-  context.fillRect(0, 0, 1, 1);
-  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-  return [r!, g!, b!];
-}
 
 // A project as a small glass ring, drawn on a canvas and in the page's muted ink until a thread of
 // the project works, when it fades into the project's colors and its inner rings turn. With reduced
@@ -47,30 +36,44 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
     const context = element?.getContext("2d");
     if (!element || !context) return;
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const size = Math.round(element.clientWidth * devicePixelRatio) || 32;
-    element.width = element.height = size;
+    let size = 0;
     let ink = resolveInk(element);
     const draw = () =>
       paintOrb(context, size, shape, {
         ink,
-        colors: [first!, second!, third!],
+        colors: [first, second, third],
         color: color.current,
         time: turned.current,
       });
-
-    // A change of theme changes the ink; a mark at rest is drawn again then.
+    // The canvas is as sharp as the pixels it is shown in, so it follows its size (and the screen's
+    // density), and is drawn again then, as it is with a change of theme: a mark at rest only
+    // changes for those, a working one every frame.
     let animating = false;
-    const theme = new MutationObserver(() => {
-      ink = resolveInk(element);
+    const redraw = () => {
       if (!animating) draw();
+    };
+    const measure = () => {
+      size = Math.max(Math.round(element.clientWidth * devicePixelRatio), 1);
+      element.width = element.height = size;
+      redraw();
+    };
+    const sized = new ResizeObserver(measure);
+    sized.observe(element);
+    const unthemed = onThemeChange(() => {
+      ink = resolveInk(element);
+      redraw();
     });
-    theme.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    const stop = () => {
+      sized.disconnect();
+      unthemed();
+    };
+    measure();
 
     const target = working ? 1 : 0;
     if (still || (!working && color.current === 0)) {
       color.current = target;
       draw();
-      return () => theme.disconnect();
+      return stop;
     }
 
     // Working turns the rings for as long as it lasts; stopping fades the colors out while they
@@ -92,7 +95,7 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
-      theme.disconnect();
+      stop();
     };
   }, [shape, first, second, third, working]);
 

@@ -89,7 +89,9 @@ export function paintOrb(
   shape: OrbShape,
   { ink, colors, color, time }: Paint,
 ) {
-  const [a, b, c] = colors.map((hex) => blend(ink, hexRgb(hex), color)) as [Rgb, Rgb, Rgb];
+  const a = blend(ink, hexRgb(colors[0]), color);
+  const b = blend(ink, hexRgb(colors[1]), color);
+  const c = blend(ink, hexRgb(colors[2]), color);
   const white: Rgb = blend(ink, [255, 255, 255], color);
   const centre = size / 2;
   // Room is left round the ring for the dust that drifts out of it.

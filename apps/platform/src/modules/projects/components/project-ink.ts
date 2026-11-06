@@ -1,0 +1,38 @@
+import type { Rgb } from "../orb-art";
+
+// What a color of the page is as red, green and blue: drawn on one pixel, since a token may be
+// written in a color space a canvas does not hand back as text. Asked of every tile in a list, so
+// each distinct color is worked out once.
+const known = new Map<string, Rgb>();
+const scratch = document.createElement("canvas");
+scratch.width = scratch.height = 1;
+
+export function resolveInk(element: Element): Rgb {
+  const css = getComputedStyle(element).color;
+  const cached = known.get(css);
+  if (cached) return cached;
+  const context = scratch.getContext("2d", { willReadFrequently: true })!;
+  context.clearRect(0, 0, 1, 1);
+  context.fillStyle = css;
+  context.fillRect(0, 0, 1, 1);
+  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+  const ink: Rgb = [r!, g!, b!];
+  known.set(css, ink);
+  return ink;
+}
+
+// One observer for every tile: the theme is a class of <html>, and each tile that is drawn is told
+// when it changes.
+const listeners = new Set<() => void>();
+const theme = new MutationObserver(() => listeners.forEach((listener) => listener()));
+
+export function onThemeChange(listener: () => void) {
+  if (listeners.size === 0) {
+    theme.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  }
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) theme.disconnect();
+  };
+}
