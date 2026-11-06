@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import { PACKAGE_STORES } from "./local-excludes";
 import { runCommand } from "./run-command";
@@ -34,9 +34,33 @@ const isMeta = (value: unknown): value is Meta => {
   );
 };
 
+// APFS copies a whole directory tree in one `clonefile` call, as the Finder does, where `cp -c` makes
+// one call for each of a project's tens of thousands of files in `node_modules` and takes seconds
+// (decision 0127). Only for a destination that does not exist, which is made again for the plain
+// copy when this cannot be done (another file system, or not macOS).
+async function cloneDirectory(from: string, to: string) {
+  if (process.platform !== "darwin") return false;
+  try {
+    await mkdir(dirname(to), { recursive: true });
+    // An empty directory is made as it was needed, and `clonefile` wants none; a full one stays and
+    // is left to the plain copy.
+    await rmdir(to).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    const { dlopen, FFIType } = await import("bun:ffi");
+    const { symbols } = dlopen("libSystem.B.dylib", {
+      clonefile: { args: [FFIType.cstring, FFIType.cstring, FFIType.u32], returns: FFIType.i32 },
+    });
+    return symbols.clonefile(Buffer.from(`${from}\0`), Buffer.from(`${to}\0`), 0) === 0;
+  } catch {
+    return false;
+  }
+}
+
 // A copy that shares the disk blocks where the file system can (APFS, btrfs, xfs), and a plain one
 // where it cannot: a project with a large `node_modules` should not be written twice.
 async function copyTree(from: string, to: string) {
+  if (await cloneDirectory(from, to)) return;
   await mkdir(to, { recursive: true });
   const attempts =
     process.platform === "darwin"
