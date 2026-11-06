@@ -30,15 +30,19 @@ export function BackgroundTasksCard({ threadId, running }: { threadId: string; r
       {!problem && loaded && rows.length === 0 && (
         <p className="text-muted-foreground">Nothing is running in the background.</p>
       )}
-      {rows.map((process) => (
-        <BackgroundProcess
-          key={process.id}
-          threadId={threadId}
-          process={process}
-          stopping={stopping.has(process.id)}
-          onStop={() => void stop(process.id)}
-        />
-      ))}
+      {rows.length > 0 && (
+        <div className="flex flex-col gap-0.5">
+          {rows.map((process) => (
+            <BackgroundProcess
+              key={process.id}
+              threadId={threadId}
+              process={process}
+              stopping={stopping.has(process.id)}
+              onStop={() => void stop(process.id)}
+            />
+          ))}
+        </div>
+      )}
     </OverviewCard>
   );
 }
