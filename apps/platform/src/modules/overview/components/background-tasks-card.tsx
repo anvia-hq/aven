@@ -1,7 +1,5 @@
 import type { ProcessView } from "@aven/protocol/runtime-wire";
 
-import { Skeleton } from "@/components/skeleton";
-
 import { useThreadProcesses } from "../hooks/use-thread-processes";
 import { BackgroundProcess } from "./background-process";
 import { OverviewCard } from "./overview-card";
@@ -18,18 +16,16 @@ function shown(processes: ProcessView[]) {
 }
 
 // The commands the agent has running in the thread's sandbox, or ran in the background, with a way
-// to stop each (decision 0071).
+// to stop each (decision 0071); shown only once there is one.
 export function BackgroundTasksCard({ threadId, running }: { threadId: string; running: boolean }) {
-  const { loaded, problem, processes, stopping, stop } = useThreadProcesses(threadId, running);
+  const { problem, processes, stopping, stop } = useThreadProcesses(threadId, running);
   const rows = shown(processes);
+  // There is no card until the agent has started something: an empty one says nothing.
+  if (!problem && rows.length === 0) return null;
 
   return (
     <OverviewCard title="Background tasks">
-      {!loaded && <Skeleton className="h-10 w-full" />}
       {problem && <p className="text-muted-foreground">Could not read the background tasks.</p>}
-      {!problem && loaded && rows.length === 0 && (
-        <p className="text-muted-foreground">Nothing is running in the background.</p>
-      )}
       {rows.length > 0 && (
         <div className="flex flex-col gap-0.5">
           {rows.map((process) => (

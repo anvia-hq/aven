@@ -45,7 +45,7 @@ test.describe("a thread's background tasks", () => {
     await expect(card.getByRole("button", { name: /^Stop/ })).toHaveCount(0);
   });
 
-  test("says so when nothing runs in the background", async ({ page }) => {
+  test("has no card while nothing has run in the background", async ({ page }) => {
     await registerUser(page, "bgt", "Background User");
     const { child, threadId } = await threadOnFakeRunner(page);
     runner = child;
@@ -53,8 +53,7 @@ test.describe("a thread's background tasks", () => {
 
     await page.goto(`/threads/${threadId}`);
 
-    await expect(page.getByRole("region", { name: "Background tasks" })).toContainText(
-      "Nothing is running in the background.",
-    );
+    await expect(page.getByRole("region", { name: "Environment" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Background tasks" })).toHaveCount(0);
   });
 });
