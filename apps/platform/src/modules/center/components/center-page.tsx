@@ -19,11 +19,12 @@ import {
 import { useCenterFeed } from "../hooks/use-center-feed";
 import { useProjectBranches } from "../hooks/use-project-branches";
 import { CenterBranches } from "./center-branches";
-import { CenterCommitFilters } from "./center-commit-filters";
 import { CenterCommits } from "./center-commits";
 import { CenterDetail, openOf } from "./center-detail";
-import { CenterFilterBar } from "./center-filter-bar";
-import { CenterPulls } from "./center-pulls";
+import { CenterPulls, type PullsView } from "./center-pulls";
+import { clearCommits, CommitFilters, commitChips, CommitSearch } from "./commit-filters";
+import { FilterChips } from "./filter-chips";
+import { QuickViews } from "./quick-views";
 
 // Center: the pull requests and commits of the person's projects on one screen, read from GitHub
 // like each project's own page. All the projects together, or one with its branches and its commit
@@ -37,6 +38,7 @@ export function CenterPage() {
   const navigate = useNavigate();
   const { projects, loaded } = useProjects();
   const [refresh, setRefresh] = useState(0);
+  const [view, setView] = useState<PullsView>("pulls");
 
   const one = projects.find((project) => project.id === selected);
   const shown = one ? [one] : projects;
@@ -65,6 +67,22 @@ export function CenterPage() {
     change({ pr: `${project.id}:${number}`, commit: undefined });
   const openCommit = (project: Project, sha: string) =>
     change({ commit: `${project.id}:${sha}`, pr: undefined });
+
+  const chips = commitChips(search, change);
+  const commitActions = (
+    <>
+      <CommitSearch value={search.grep} onChange={(grep) => change({ grep })} />
+      <CommitFilters
+        search={search}
+        branches={one ? (branches?.data?.branches ?? []) : undefined}
+        count={chips.filter((chip) => chip.key !== "grep").length}
+        onChange={change}
+      />
+    </>
+  );
+  const commitChipsRow = (
+    <FilterChips name="Active commit filters" chips={chips} onClear={() => change(clearCommits)} />
+  );
 
   // A project that is gone, or not the person's, shows all of them.
   if (loaded && selected !== undefined && !one) {
@@ -103,51 +121,61 @@ export function CenterPage() {
         </p>
       )}
       {projects.length > 0 && (
-        <div className="grid items-start gap-x-4 gap-y-6 lg:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-3">
-            <CenterFilterBar
-              filters={filters}
-              connected={login !== null}
-              onChange={change}
-              onQuickView={(id) => {
-                const view = QUICK_VIEWS.find((candidate) => candidate.id === id)!;
-                void navigate({ to: "/center", search: quickViewSearch(view, selected) });
-              }}
-            />
+        <>
+          <QuickViews
+            filters={filters}
+            connected={login !== null}
+            onPick={(id) => {
+              const quick = QUICK_VIEWS.find((candidate) => candidate.id === id)!;
+              setView("pulls");
+              void navigate({ to: "/center", search: quickViewSearch(quick, selected) });
+            }}
+          />
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <CenterPulls
               pulls={feed?.pulls}
               loading={loading}
-              onLabel={(label) => change({ label })}
-              onOpen={openPull}
-            />
-            {one && (
-              <CenterBranches
-                branches={branches}
-                selected={search.branch}
-                onSelect={(branch) => change({ branch })}
-                onOpenPull={(number) => openPull(one, number)}
-              />
-            )}
-          </div>
-          <div className="flex min-w-0 flex-col gap-3">
-            <CenterCommitFilters
-              search={search}
-              branches={one ? (branches?.data?.branches ?? []) : undefined}
+              filters={filters}
               onChange={change}
+              onOpen={openPull}
+              view={view}
+              onView={setView}
+              branches={
+                one
+                  ? {
+                      count: `${branches?.data?.branches.length ?? "…"}${branches?.data?.truncated ? "+" : ""}`,
+                      panel: (
+                        <CenterBranches
+                          branches={branches}
+                          selected={search.branch}
+                          onSelect={(branch) => change({ branch })}
+                          onOpenPull={(number) => openPull(one, number)}
+                        />
+                      ),
+                    }
+                  : undefined
+              }
             />
             {one ? (
               <RepoCommits
-                key={commitFilters}
                 project={one}
                 filters={commitFilters}
                 grep={search.grep}
                 onOpenCommit={(sha) => openCommit(one, sha)}
+                actions={commitActions}
+                chips={commitChipsRow}
               />
             ) : (
-              <CenterCommits commits={feed?.commits} loading={loading} onOpen={openCommit} />
+              <CenterCommits
+                commits={feed?.commits}
+                loading={loading}
+                onOpen={openCommit}
+                actions={commitActions}
+                chips={commitChipsRow}
+              />
             )}
           </div>
-        </div>
+        </>
       )}
       <CenterDetail open={detail} onClose={() => change({ pr: undefined, commit: undefined })} />
     </div>

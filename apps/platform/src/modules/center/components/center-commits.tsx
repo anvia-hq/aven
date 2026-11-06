@@ -1,5 +1,5 @@
 import { GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { Badge } from "@/components/badge";
 import { SectionCard } from "@/components/section-card";
@@ -20,7 +20,13 @@ export function CenterCommits({
   commits,
   loading,
   onOpen,
+  actions,
+  chips,
 }: {
+  /** Controls for the card's header, such as filters. */
+  actions?: ReactNode;
+  /** What shows under the header, such as the filters that are on. */
+  chips?: ReactNode;
   commits: CommitEntry[] | undefined;
   loading: boolean;
   onOpen: (project: Project, sha: string) => void;
@@ -35,7 +41,9 @@ export function CenterCommits({
           Latest commits
         </>
       }
+      actions={actions}
     >
+      {chips}
       {loading && (
         <div className="flex flex-col gap-3 p-4" aria-busy>
           {Array.from({ length: 5 }, (_, index) => (
@@ -44,7 +52,7 @@ export function CenterCommits({
         </div>
       )}
       {commits && (
-        <div className="flex flex-col">
+        <div className="flex flex-col lg:max-h-[calc(100svh-15rem)] lg:overflow-y-auto">
           {groups.map((group) => (
             <section key={group.key} aria-label={group.label}>
               <h3 className="border-b bg-muted/30 px-4 py-1 text-xs font-medium text-muted-foreground">

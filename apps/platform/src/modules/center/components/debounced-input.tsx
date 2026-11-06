@@ -25,5 +25,21 @@ export function DebouncedInput({ value, onCommit, ...props }: Props) {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
-  return <Input {...props} value={text} onChange={(event) => setText(event.target.value)} />;
+  // Enter, leaving the field and Escape (which may close what holds the field) keep what is typed at
+  // once, rather than leaving it to the wait.
+  const flush = () => {
+    if (text.trim() !== (value ?? "")) commit.current(text.trim() || undefined);
+  };
+
+  return (
+    <Input
+      {...props}
+      value={text}
+      onChange={(event) => setText(event.target.value)}
+      onBlur={flush}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === "Escape") flush();
+      }}
+    />
+  );
 }

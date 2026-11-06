@@ -1,8 +1,7 @@
-import { ArrowDown, ArrowUp, GitBranch, Lock } from "@mynaui/icons-react";
+import { ArrowDown, ArrowUp, Lock } from "@mynaui/icons-react";
 
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
-import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 import type { useRequest } from "@/hooks/use-request";
 import { timeAgo } from "@/lib/format";
@@ -26,26 +25,12 @@ type Props = {
   onOpenPull: (number: number) => void;
 };
 
-// A project's branches: how far each is from the default branch (commits ahead and behind), when
+// A project's branches (the body of the pull requests card's other tab): how far each is from the default branch (commits ahead and behind), when
 // it was last touched and its open pull request. Choosing one has the commits show its history.
 export function CenterBranches({ branches, selected, onSelect, onOpenPull }: Props) {
   const list = branches?.data;
   return (
-    <SectionCard
-      label="Branches"
-      title={
-        <>
-          <GitBranch className="size-4 text-muted-foreground" />
-          Branches
-          {list && (
-            <span className="text-xs font-normal text-muted-foreground">
-              {list.branches.length}
-              {list.truncated ? "+" : ""}
-            </span>
-          )}
-        </>
-      }
-    >
+    <section aria-label="Branches">
       {!branches && (
         <div className="flex flex-col gap-3 p-4" aria-busy>
           {Array.from({ length: 3 }, (_, index) => (
@@ -59,7 +44,7 @@ export function CenterBranches({ branches, selected, onSelect, onOpenPull }: Pro
         </p>
       )}
       {list && (
-        <ul className="flex flex-col">
+        <ul className="flex flex-col lg:max-h-[calc(100svh-15rem)] lg:overflow-y-auto">
           {list.branches.map((branch) => {
             const chosen = selected === branch.name;
             return (
@@ -128,6 +113,6 @@ export function CenterBranches({ branches, selected, onSelect, onOpenPull }: Pro
           })}
         </ul>
       )}
-    </SectionCard>
+    </section>
   );
 }

@@ -1,6 +1,6 @@
 import { layoutGraph, type GraphRow } from "@aven/protocol/commit-graph";
 import { ChevronLeft, ChevronRight, GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
@@ -117,8 +117,14 @@ export function RepoCommits({
   onOpenCommit,
   filters = "",
   grep,
+  actions,
+  chips,
 }: {
   project: Project;
+  /** Controls for the card's header, such as filters. */
+  actions?: ReactNode;
+  /** What shows under the header, such as the filters that are on. */
+  chips?: ReactNode;
   /** The query of the history's filters (author, time, file, branch), already encoded. */
   filters?: string;
   /** Words the messages shown must have; a page of commits is read, and those without are left out. */
@@ -126,7 +132,10 @@ export function RepoCommits({
   /** Given, a commit's message opens it where it is shown rather than on GitHub. */
   onOpenCommit?: (sha: string) => void;
 }) {
-  const [page, setPage] = useState(1);
+  // A page is of one set of filters: other filters start at the first page.
+  const [at, setAt] = useState({ filters, page: 1 });
+  const page = at.filters === filters ? at.page : 1;
+  const setPage = (next: number) => setAt({ filters, page: next });
   const { commits: read, hasMore, problem, loading } = useProjectCommits(project.id, page, filters);
   const commits = useMemo(
     () => read?.filter((commit) => !grep || hasWords(commit.message, grep)),
@@ -143,7 +152,9 @@ export function RepoCommits({
           Commits
         </>
       }
+      actions={actions}
     >
+      {chips}
       {loading && (
         <div className="flex flex-col gap-3 p-4" aria-busy>
           {Array.from({ length: 5 }, (_, index) => (

@@ -6,17 +6,21 @@ type Option<T extends string> = { value: T; label: string };
 // field's own name as its label, so the closed select reads as the field.
 export function FilterSelect<T extends string>({
   label,
+  anyLabel = label,
   value,
   options,
   onChange,
 }: {
+  /** The select's name for a screen reader. */
   label: string;
+  /** What the select says while no choice is made. */
+  anyLabel?: string;
   value: T | undefined;
   options: Option<T>[];
   onChange: (value: T | undefined) => void;
 }) {
   const ANY = "__any__";
-  const items = [{ value: ANY, label }, ...options];
+  const items = [{ value: ANY, label: anyLabel }, ...options];
   return (
     <Select
       items={items}
