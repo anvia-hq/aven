@@ -264,4 +264,36 @@ describe("RunGateway", () => {
       if (saved) process.env.ANTHROPIC_API_KEY = saved;
     }
   });
+
+  test("an upstream that cannot be reached is a 502, and is logged with the model but no secret", async () => {
+    const down = new RunGateway({
+      anthropic: "http://127.0.0.1:1",
+      openai: "http://127.0.0.1:1/v1",
+    });
+    const run = down.issue("r-down", {
+      provider: "openai",
+      modelId: "some-model",
+      apiKey: "sk-secret-key",
+    });
+    const warned: string[] = [];
+    const warn = console.warn;
+    console.warn = (...args: unknown[]) => void warned.push(args.join(" "));
+    try {
+      const response = await down.forward(
+        new Request("http://gateway.test/v1/chat/completions", {
+          method: "POST",
+          headers: { authorization: `Bearer ${run.gatewayToken}` },
+          body: JSON.stringify({ messages: [] }),
+        }),
+        "openai",
+        "chat/completions",
+      );
+      expect(response.status).toBe(502);
+    } finally {
+      console.warn = warn;
+    }
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toContain("openai model some-model");
+    expect(warned[0]).not.toContain("sk-secret-key");
+  });
 });

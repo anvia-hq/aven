@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 
 import type { ModelConfig, Provider } from "@aven/agents/model";
+import { errorMessage } from "@aven/agents/values";
 import type { RunModel } from "@aven/protocol/runtime-wire";
 
 import { defaultModelId } from "../providers/default-model";
@@ -128,7 +129,15 @@ export class RunGateway {
         status: upstream.status,
         headers: passHeaders(upstream.headers, PASS_RESPONSE_HEADERS),
       });
-    } catch {
+    } catch (error) {
+      // A runner that went away (the run was stopped) is not a failure; anything else is told, since
+      // the runner only sees a 502 and nothing says why the provider could not be reached.
+      if (!request.signal.aborted) {
+        console.warn(
+          `Model gateway: a request to ${provider} model ${grant.model.modelId} failed:`,
+          errorMessage(error),
+        );
+      }
       return reject("The model provider could not be reached", 502);
     }
   }
