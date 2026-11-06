@@ -12,19 +12,19 @@
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.2 0.009 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.009 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.009 250);
-  --primary: oklch(0.22 0.01 250);
-  --primary-foreground: oklch(0.98 0.003 250);
-  --secondary: oklch(0.955 0.0045 250);
-  --secondary-foreground: oklch(0.25 0.03 255);
-  --muted: oklch(0.955 0.0045 250);
-  --muted-foreground: oklch(0.5 0.009 250);
-  --accent: oklch(0.975 0 0);
+  --background: oklch(0.992 0.005 160);
+  --foreground: oklch(0.2 0.009 160);
+  --card: oklch(0.997 0.003 160);
+  --card-foreground: oklch(0.2 0.009 160);
+  --popover: oklch(0.997 0.003 160);
+  --popover-foreground: oklch(0.2 0.009 160);
+  --primary: oklch(0.22 0.01 160);
+  --primary-foreground: oklch(0.98 0.003 160);
+  --secondary: oklch(0.953 0.012 160);
+  --secondary-foreground: oklch(0.25 0.02 160);
+  --muted: oklch(0.953 0.012 160);
+  --muted-foreground: oklch(0.5 0.009 160);
+  --accent: oklch(0.968 0.012 160);
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -38,18 +38,18 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.5 0.27 280);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.965 0 0);
-  --border: oklch(0.91 0.0045 250);
-  --input: oklch(0.91 0.0045 250);
-  --ring: oklch(0.7 0.06 250);
+  --frame: oklch(0.958 0.011 160);
+  --border: oklch(0.905 0.012 160);
+  --input: oklch(0.905 0.012 160);
+  --ring: oklch(0.7 0.06 160);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.2 0.009 250);
-  --sidebar-primary: oklch(0.22 0.01 250);
-  --sidebar-primary-foreground: oklch(0.98 0.003 250);
-  --sidebar-accent: oklch(0.96 0 0);
+  --sidebar-foreground: oklch(0.2 0.009 160);
+  --sidebar-primary: oklch(0.22 0.01 160);
+  --sidebar-primary-foreground: oklch(0.98 0.003 160);
+  --sidebar-accent: oklch(0.95 0.013 160);
   --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.94 0.0036 250);
-  --sidebar-ring: oklch(0.7 0.06 250);
+  --sidebar-border: oklch(0.93 0.011 160);
+  --sidebar-ring: oklch(0.7 0.06 160);
 }
 
 /* Charcoal dark theme with a faint indigo tint (default). */
