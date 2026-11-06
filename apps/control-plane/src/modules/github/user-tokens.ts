@@ -1,10 +1,11 @@
 import { db } from "@aven/db/client";
 import { githubUserTokens, type GithubUserTokenRow } from "@aven/db/schema/github-user-tokens";
 import type { RunGithub } from "@aven/protocol/runtime-wire";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "../../crypto";
-import { github as defaultClient, type GithubClient, type GithubUserGrant } from "./client";
+import type { GithubUserGrant } from "./client";
+import { githubClients, PLATFORM_APP, type GithubClients } from "./clients";
 
 /** Who a connected GitHub account is: the commit identity of what the person ships (decision 0041). */
 export type GithubIdentity = { id: number; login: string; name: string | null };
@@ -26,18 +27,25 @@ const identityOf = (row: GithubUserTokenRow): GithubIdentity => ({
   name: row.name,
 });
 
-// The GitHub accounts people have connected (decision 0041). A user token lasts eight hours; it is
-// renewed when it is used. A refresh token works once, so one renewal runs at a time per person.
-export function createGithubUserTokens(
-  client: Pick<GithubClient, "refreshGrant" | "userProfile"> = defaultClient,
-) {
+const ofPerson = (userId: string, appKey: string) =>
+  and(eq(githubUserTokens.userId, userId), eq(githubUserTokens.appKey, appKey));
+
+// The GitHub accounts people have connected (decision 0041), one for each app, since a user token
+// is one app's (decision 0123). A user token lasts eight hours; it is renewed when it is used. A
+// refresh token works once, so one renewal runs at a time per person and app.
+export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = githubClients) {
   const renewing = new Map<string, Promise<GithubUserToken | null>>();
 
-  const remove = async (userId: string) => {
-    await db.delete(githubUserTokens).where(eq(githubUserTokens.userId, userId));
+  const remove = async (userId: string, appKey: string = PLATFORM_APP) => {
+    await db.delete(githubUserTokens).where(ofPerson(userId, appKey));
   };
 
-  const store = async (userId: string, grant: GithubUserGrant, identity: GithubIdentity) => {
+  const store = async (
+    userId: string,
+    appKey: string,
+    grant: GithubUserGrant,
+    identity: GithubIdentity,
+  ) => {
     const values = {
       githubUserId: identity.id,
       login: identity.login,
@@ -49,14 +57,17 @@ export function createGithubUserTokens(
     };
     await db
       .insert(githubUserTokens)
-      .values({ userId, ...values })
-      .onConflictDoUpdate({ target: githubUserTokens.userId, set: values });
+      .values({ userId, appKey, ...values })
+      .onConflictDoUpdate({
+        target: [githubUserTokens.userId, githubUserTokens.appKey],
+        set: values,
+      });
   };
 
   // A connection that cannot work any more is forgotten: the person connects again.
-  const drop = async (userId: string, reason: unknown) => {
-    console.warn(`The GitHub connection of user ${userId} was dropped:`, reason);
-    await remove(userId);
+  const drop = async (userId: string, appKey: string, reason: unknown) => {
+    console.warn(`The GitHub connection of user ${userId} (app ${appKey}) was dropped:`, reason);
+    await remove(userId, appKey);
     return null;
   };
 
@@ -64,31 +75,31 @@ export function createGithubUserTokens(
   // expired or one that cannot be read leaves the person not connected. Not reaching GitHub is
   // not a refusal: it throws and the connection stays, to be tried again.
   async function renew(row: GithubUserTokenRow) {
-    const { userId } = row;
+    const { userId, appKey } = row;
     const expired = row.refreshExpiresAt !== null && row.refreshExpiresAt.getTime() <= Date.now();
-    if (!row.refreshTokenEncrypted || expired) return drop(userId, "no usable refresh token");
+    if (!row.refreshTokenEncrypted || expired)
+      return drop(userId, appKey, "no usable refresh token");
     let refreshToken: string;
     try {
       refreshToken = decryptSecret(row.refreshTokenEncrypted);
     } catch (error) {
-      return drop(userId, error);
+      return drop(userId, appKey, error);
     }
-    const grant = await client.refreshGrant(refreshToken);
-    if (!grant) return drop(userId, "GitHub refused the refresh token");
-    await store(userId, grant, identityOf(row));
+    const grant = await (await clients.forKey(appKey)).refreshGrant(refreshToken);
+    if (!grant) return drop(userId, appKey, "GitHub refused the refresh token");
+    await store(userId, appKey, grant, identityOf(row));
     return { token: grant.accessToken, identity: identityOf(row) };
   }
 
-  // A token to act as the person with, renewed first if it has less than `minRemainingMs` left;
-  // null when they have not connected a GitHub account, or the connection no longer works.
+  // A token to act as the person with for an app, renewed first if it has less than
+  // `minRemainingMs` left; null when they have not connected a GitHub account for it, or the
+  // connection no longer works.
   async function use(
     userId: string,
+    appKey: string = PLATFORM_APP,
     minRemainingMs = REFRESH_MARGIN_MS,
   ): Promise<GithubUserToken | null> {
-    const [row] = await db
-      .select()
-      .from(githubUserTokens)
-      .where(eq(githubUserTokens.userId, userId));
+    const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId, appKey));
     if (!row) return null;
     const fresh =
       row.accessExpiresAt === null || row.accessExpiresAt.getTime() - Date.now() > minRemainingMs;
@@ -96,28 +107,29 @@ export function createGithubUserTokens(
       try {
         return { token: decryptSecret(row.accessTokenEncrypted), identity: identityOf(row) };
       } catch (error) {
-        return drop(userId, error);
+        return drop(userId, appKey, error);
       }
     }
-    const running = renewing.get(userId) ?? renew(row).finally(() => renewing.delete(userId));
-    renewing.set(userId, running);
+    const turn = `${userId}:${appKey}`;
+    const running = renewing.get(turn) ?? renew(row).finally(() => renewing.delete(turn));
+    renewing.set(turn, running);
     return running;
   }
 
   return {
     // Connects the account a grant belongs to, or reconnects it.
-    async connect(userId: string, grant: GithubUserGrant) {
-      const profile = await client.userProfile(grant.accessToken);
-      await store(userId, grant, profile);
+    async connect(userId: string, grant: GithubUserGrant, appKey: string = PLATFORM_APP) {
+      const profile = await (await clients.forKey(appKey)).userProfile(grant.accessToken);
+      await store(userId, appKey, grant, profile);
       return profile;
     },
 
-    /** The connected account's login, or null when the person has not connected one. */
-    async status(userId: string): Promise<{ login: string } | null> {
+    /** The connected account's login for an app, or null when the person has not connected one. */
+    async status(userId: string, appKey: string = PLATFORM_APP): Promise<{ login: string } | null> {
       const [row] = await db
         .select({ login: githubUserTokens.login })
         .from(githubUserTokens)
-        .where(eq(githubUserTokens.userId, userId));
+        .where(ofPerson(userId, appKey));
       return row ?? null;
     },
 
@@ -126,9 +138,9 @@ export function createGithubUserTokens(
     // What a run acts as (decision 0044): the person's token, with enough life left for a long run,
     // and who they are. A person who has not connected GitHub, or a GitHub that cannot be reached
     // just now, gives none: the run goes on without it rather than not at all.
-    async forRun(userId: string): Promise<RunGithub | undefined> {
+    async forRun(userId: string, appKey: string = PLATFORM_APP): Promise<RunGithub | undefined> {
       try {
-        const connection = await use(userId, RUN_MIN_REMAINING_MS);
+        const connection = await use(userId, appKey, RUN_MIN_REMAINING_MS);
         if (!connection) return undefined;
         const { id, login, name } = connection.identity;
         return { token: connection.token, id, login, name };

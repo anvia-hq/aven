@@ -19,7 +19,7 @@ export class GithubNotConnectedError extends ConflictError {
 }
 
 type ShipDeps = {
-  github: Pick<typeof githubService, "requireWritable" | "requirePush">;
+  github: Pick<typeof githubService, "requireWritable" | "requirePush" | "appKeyOf">;
   userTokens: Pick<typeof githubUserTokenService, "use">;
   /** The thread and its project, for a thread of the organization. */
   load: (
@@ -113,10 +113,18 @@ export function createShipService(
       { mode, ...selection }: ModelSelection & { mode?: "update" | "new" } = {},
     ) {
       const project = await load(organizationId, threadId);
-      const connection = await userTokens.use(userId);
+      // The person's GitHub connection has to be for the app the project's installation is of.
+      const connection = await userTokens.use(
+        userId,
+        await github.appKeyOf(project.githubInstallationId),
+      );
       if (!connection) throw new GithubNotConnectedError();
       await github.requireWritable(project.githubInstallationId);
-      await github.requirePush(connection.token, project.repoFullName);
+      await github.requirePush(
+        project.githubInstallationId,
+        connection.token,
+        project.repoFullName,
+      );
 
       const prompt = shipPrompt(await readShipFile(organizationId, threadId), {
         branch: threadBranch(threadId),

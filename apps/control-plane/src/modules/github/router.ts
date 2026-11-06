@@ -8,6 +8,7 @@ import {
   connectQuery,
   installationParams,
   manifestQuery,
+  userQuery,
 } from "./schema";
 import { githubService, InstallationNotAllowedError } from "./service";
 import { githubUserTokenService } from "./user-tokens";
@@ -22,10 +23,13 @@ export const githubRouter = (
     .get(
       "/",
       async ({ organizationId, user }) => {
-        const { configured } = service.status();
+        const { configured, appKey, own } = await service.status(organizationId);
         return {
           configured,
-          installUrl: configured ? service.installUrl(organizationId, user.id) : null,
+          // Which app the workspace acts as, and whether it is its own (decision 0123).
+          appKey,
+          own,
+          installUrl: configured ? await service.installUrl(organizationId, user.id) : null,
           // A platform owner can have the app created from the platform (decision 0074).
           canSetUp: await appSetup.canSetUp(user),
         };
@@ -35,17 +39,18 @@ export const githubRouter = (
     // Whether the person has connected their GitHub account, which shipping acts as (decision 0041).
     .get(
       "/user",
-      async ({ user }) => {
-        const connected = await userTokens.status(user.id);
-        return { connected: connected !== null, login: connected?.login ?? null };
+      async ({ query, user, organizationId }) => {
+        const appKey = query.app ?? (await service.status(organizationId)).appKey;
+        const connected = await userTokens.status(user.id, appKey);
+        return { connected: connected !== null, login: connected?.login ?? null, appKey };
       },
-      { auth: true },
+      { auth: true, org: true, query: userQuery },
     )
     // Sends the browser to GitHub to connect the person's account, then back to `next`.
     .get(
       "/connect",
-      ({ query, organizationId, user, redirect }) =>
-        redirect(service.connectUrl(organizationId, user.id, query.next)),
+      async ({ query, organizationId, user, redirect }) =>
+        redirect(await service.connectUrl(organizationId, user.id, query.next, query.app)),
       { auth: true, org: true, query: connectQuery },
     )
     // What the platform posts to GitHub to have the app created, for a platform owner (decision 0074).
@@ -59,7 +64,7 @@ export const githubRouter = (
       "/app/callback",
       async ({ query, user, organizationId, redirect }) => {
         await appSetup.complete(user, query);
-        return redirect(service.installUrl(organizationId, user.id));
+        return redirect(await service.installUrl(organizationId, user.id));
       },
       { auth: true, org: true, query: appCallbackQuery },
     )
@@ -84,7 +89,7 @@ export const githubRouter = (
           if (query.installation_id === undefined) {
             throw new InstallationNotAllowedError("The GitHub connection link is invalid");
           }
-          return redirect(service.claimUrl(organizationId, user.id, query.installation_id));
+          return redirect(await service.claimUrl(organizationId, user.id, query.installation_id));
         }
         const { next } = await service.connect(organizationId, user.id, {
           installationId: query.installation_id,

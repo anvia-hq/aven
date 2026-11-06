@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import type { GithubUserGrant } from "./client";
+import type { GithubClient, GithubUserGrant } from "./client";
+
+// The one app these tests connect for: whatever the key, the client is this one.
+const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => ({
+  forKey: async () => client as GithubClient,
+});
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -59,7 +64,7 @@ run("a person's GitHub connection (postgres)", async () => {
 
   test("is not connected until the person connects, and then is, with the tokens only encrypted", async () => {
     const id = await person("a");
-    const tokens = createGithubUserTokens(fakeClient(() => null).client);
+    const tokens = createGithubUserTokens(only(fakeClient(() => null).client));
     expect(await tokens.status(id)).toBeNull();
     expect(await tokens.use(id)).toBeNull();
 
@@ -74,7 +79,7 @@ run("a person's GitHub connection (postgres)", async () => {
 
   test("connecting again replaces the account", async () => {
     const id = await person("b");
-    const tokens = createGithubUserTokens(fakeClient(() => null).client);
+    const tokens = createGithubUserTokens(only(fakeClient(() => null).client));
     await tokens.connect(id, grant());
 
     await tokens.connect(id, grant({ accessToken: "ghu_two" }));
@@ -85,7 +90,7 @@ run("a person's GitHub connection (postgres)", async () => {
   test("a token about to expire is renewed once, however many ask at the same time", async () => {
     const id = await person("c");
     const github = fakeClient(() => grant({ accessToken: "ghu_new", refreshToken: "ghr_new" }));
-    const tokens = createGithubUserTokens(github.client);
+    const tokens = createGithubUserTokens(only(github.client));
     await tokens.connect(id, grant({ expiresAt: Date.now() + 5_000 }));
 
     const used = await Promise.all([tokens.use(id), tokens.use(id), tokens.use(id)]);
@@ -101,7 +106,7 @@ run("a person's GitHub connection (postgres)", async () => {
   test("a token that does not expire is never renewed", async () => {
     const id = await person("d");
     const github = fakeClient(() => null);
-    const tokens = createGithubUserTokens(github.client);
+    const tokens = createGithubUserTokens(only(github.client));
     await tokens.connect(
       id,
       grant({ expiresAt: null, refreshToken: null, refreshExpiresAt: null }),
@@ -114,7 +119,7 @@ run("a person's GitHub connection (postgres)", async () => {
   test("a refresh GitHub refuses, or a refresh token that has expired, leaves the person not connected", async () => {
     const refused = await person("e");
     const github = fakeClient(() => null);
-    const tokens = createGithubUserTokens(github.client);
+    const tokens = createGithubUserTokens(only(github.client));
     await tokens.connect(refused, grant({ expiresAt: Date.now() - 1000 }));
     expect(await tokens.use(refused)).toBeNull();
     expect(await tokens.status(refused)).toBeNull();
@@ -132,14 +137,16 @@ run("a person's GitHub connection (postgres)", async () => {
     const id = await person("h");
     let down = true;
     const refreshed: string[] = [];
-    const tokens = createGithubUserTokens({
-      userProfile: async () => profile,
-      refreshGrant: async (token) => {
-        refreshed.push(token);
-        if (down) throw new Error("GitHub is down");
-        return grant({ accessToken: "ghu_back", refreshToken: "ghr_back" });
-      },
-    });
+    const tokens = createGithubUserTokens(
+      only({
+        userProfile: async () => profile,
+        refreshGrant: async (token) => {
+          refreshed.push(token);
+          if (down) throw new Error("GitHub is down");
+          return grant({ accessToken: "ghu_back", refreshToken: "ghr_back" });
+        },
+      }),
+    );
     await tokens.connect(id, grant({ expiresAt: Date.now() + 5_000 }));
 
     await expect(tokens.use(id)).rejects.toThrow("GitHub is down");
@@ -153,7 +160,7 @@ run("a person's GitHub connection (postgres)", async () => {
   test("a token with minutes left is renewed before a ship that could outlast it", async () => {
     const id = await person("i");
     const github = fakeClient(() => grant({ accessToken: "ghu_new", refreshToken: "ghr_new" }));
-    const tokens = createGithubUserTokens(github.client);
+    const tokens = createGithubUserTokens(only(github.client));
     await tokens.connect(id, grant({ expiresAt: Date.now() + 5 * 60_000 }));
 
     expect((await tokens.use(id))?.token).toBe("ghu_new");
@@ -163,7 +170,7 @@ run("a person's GitHub connection (postgres)", async () => {
   test("a run acts as the person: their token and who they are, renewed first if it would not last", async () => {
     const id = await person("j");
     const github = fakeClient(() => grant({ accessToken: "ghu_long", refreshToken: "ghr_long" }));
-    const tokens = createGithubUserTokens(github.client);
+    const tokens = createGithubUserTokens(only(github.client));
     expect(await tokens.forRun(id)).toBeUndefined();
 
     // Plenty of life left: used as it is.
@@ -192,12 +199,14 @@ run("a person's GitHub connection (postgres)", async () => {
     const id = await person("k");
     const silenced = console.warn;
     console.warn = () => undefined;
-    const tokens = createGithubUserTokens({
-      userProfile: async () => profile,
-      refreshGrant: async () => {
-        throw new Error("GitHub is down");
-      },
-    });
+    const tokens = createGithubUserTokens(
+      only({
+        userProfile: async () => profile,
+        refreshGrant: async () => {
+          throw new Error("GitHub is down");
+        },
+      }),
+    );
     await tokens.connect(id, grant({ expiresAt: Date.now() + 3_600_000 }));
 
     expect(await tokens.forRun(id)).toBeUndefined();
@@ -208,7 +217,7 @@ run("a person's GitHub connection (postgres)", async () => {
 
   test("a token that cannot be read (the key changed) leaves the person not connected", async () => {
     const id = await person("g");
-    const tokens = createGithubUserTokens(fakeClient(() => null).client);
+    const tokens = createGithubUserTokens(only(fakeClient(() => null).client));
     await tokens.connect(id, grant());
 
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString("base64");

@@ -3,6 +3,7 @@ import { timing } from "@aven/runtime-client/timing";
 
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
+import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
@@ -36,10 +37,14 @@ async function runIdentity(
 
 // What a run carries for its sender: their skills, their MCP servers for thread agents and their
 // GitHub account.
-async function senderExtras(userId: string) {
+// The account is the one connected for the app the project's installation is of (decision 0123).
+async function senderExtras(userId: string, installationRowId: string) {
   const skills = await skillsService.forRun(userId);
   const mcp = await mcpService.forRun(userId, "threads");
-  const github = await githubUserTokenService.forRun(userId);
+  const github = await githubUserTokenService.forRun(
+    userId,
+    await githubService.appKeyOf(installationRowId),
+  );
   return { skills, mcp, github };
 }
 
@@ -82,9 +87,9 @@ async function runMemory(
 
 // A thread of a deleted project is kept, archived, but nobody drives it any more (decision 0094).
 async function requireLiveProject(organizationId: string, projectId: string) {
-  if (!(await projectsService.get(organizationId, projectId))) {
-    throw new ConflictError("This thread's project was deleted");
-  }
+  const project = await projectsService.get(organizationId, projectId);
+  if (!project) throw new ConflictError("This thread's project was deleted");
+  return project;
 }
 
 // What a user says to a thread's agent: a message, or the answer to its question. Either starts a
@@ -106,14 +111,14 @@ export const createThreadMessages = (runs: RunManager) => {
     // told to run (decision 0119).
     const clock = timing(`message ${threadId}`);
     clock.mark("thread");
-    await requireLiveProject(organizationId, thread.projectId);
+    const project = await requireLiveProject(organizationId, thread.projectId);
     // The agent is waiting on its question; a message would leave it unanswered in the history.
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
     const model = await resolveModel(userId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     clock.mark("model");
-    const sender = await senderExtras(userId);
+    const sender = await senderExtras(userId, project.githubInstallationId);
     clock.mark("sender");
     const scoped = await threadExtras(organizationId, thread, userId, onPersonsWord);
     clock.mark("thread extras");
@@ -189,11 +194,11 @@ export const createThreadMessages = (runs: RunManager) => {
       { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
     ) {
       const thread = await threadsService.owned({ organizationId, userId }, threadId);
-      await requireLiveProject(organizationId, thread.projectId);
+      const project = await requireLiveProject(organizationId, thread.projectId);
       const continuation = await threadsService.continuation(thread.id);
       if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
       const model = await resolveModel(userId, selection);
-      const sender = await senderExtras(userId);
+      const sender = await senderExtras(userId, project.githubInstallationId);
       // A request for a secret is stored here and the agent told only that it was (decision 0047),
       // before the run's variables are read, so the run that resumes has it.
       const kept = await keepSecretAnswers({

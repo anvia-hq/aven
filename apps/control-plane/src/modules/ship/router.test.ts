@@ -28,7 +28,11 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       use: async () =>
         connected ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } } : null,
     },
-    github: { requireWritable: async () => undefined, requirePush: async () => undefined },
+    github: {
+      appKeyOf: async () => "platform",
+      requireWritable: async () => undefined,
+      requirePush: async () => undefined,
+    },
     readShipFile: async () => null,
     hasFile: async (_org, _thread, path) => workspaceFiles.includes(path),
     send: async (_org, userId, threadId, body) => {

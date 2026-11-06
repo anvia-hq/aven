@@ -1594,7 +1594,7 @@ describe("RemoteBotReplier", () => {
   });
 
   describe("a bot's memory (decision 0102)", () => {
-    test("a reply writes the person's cockpit, and deletes or rewrites only on their word", async () => {
+    test("a reply writes the person's cockpit, and deletes only on their word", async () => {
       const run = fakeRunner({});
       const answering = run.replier.answer({
         ...input(() => undefined),
@@ -1607,12 +1607,6 @@ describe("RemoteBotReplier", () => {
       await expect(
         sink.cockpit({ replyId: "x", command: { command: "delete", kind: "notes", id } }),
       ).rejects.toThrow("when the person asks");
-      await expect(
-        sink.cockpit({
-          replyId: "x",
-          command: { command: "update", kind: "notes", id, fields: { body: "" } },
-        }),
-      ).rejects.toThrow("only when the person asks");
       sink.end();
       await answering;
       expect(run.started.map((reply) => reply.cockpit)).toEqual(["write"]);

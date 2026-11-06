@@ -52,15 +52,21 @@ function setup(
   const service = createShipService({} as RuntimeHub, {
     load: async () => ({ ...project, pullRequests: options.pullRequests ?? [] }),
     userTokens: {
-      use: async () =>
-        connected ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } } : null,
+      use: async (_userId, appKey) => {
+        checked.push(`connection for ${appKey}`);
+        return connected
+          ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } }
+          : null;
+      },
     },
     github: {
+      // The app the project's installation is of, which the person's connection must be for.
+      appKeyOf: async () => "app-1",
       requireWritable: async () => {
         checked.push("writable");
         if (!approved) throw new GithubWriteNotGrantedError("acme");
       },
-      requirePush: async (token, fullName) => {
+      requirePush: async (_installation, token, fullName) => {
         checked.push(`push ${token} ${fullName}`);
         if (!canPush) throw new GithubNoPushAccessError(fullName);
       },
@@ -126,7 +132,7 @@ describe("shipping a thread", () => {
 
     await service.ship("org-1", "user-1", threadId);
 
-    expect(checked).toEqual(["writable", "push ghu_a acme/app"]);
+    expect(checked).toEqual(["connection for app-1", "writable", "push ghu_a acme/app"]);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ organizationId: "org-1", userId: "user-1", threadId });
     // The branch the thread works on and the repository's own default branch.
@@ -167,7 +173,7 @@ describe("shipping a thread", () => {
     );
 
     expect(sent).toEqual([]);
-    expect(checked).toEqual([]);
+    expect(checked).toEqual(["connection for app-1"]);
   });
 
   test("an app that is not approved to write, or a person who cannot push, is a 409 and nothing is sent", async () => {

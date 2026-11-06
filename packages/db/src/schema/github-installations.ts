@@ -1,5 +1,6 @@
 import { bigint, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
+import { githubApps } from "./github-apps";
 import { organizations } from "./organizations";
 import { users } from "./users";
 
@@ -17,6 +18,8 @@ export const githubInstallations = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     /** GitHub's id for the installation. */
     installationId: bigint("installation_id", { mode: "number" }).notNull(),
+    /** The workspace's own app this is an installation of; null for the platform's (decision 0123). */
+    appId: uuid("app_id").references(() => githubApps.id, { onDelete: "restrict" }),
     /** The user or organization the app is installed on. */
     accountLogin: text("account_login").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

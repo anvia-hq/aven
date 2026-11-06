@@ -37,12 +37,19 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     userCanUse: async (_token: string, installationId: number) => installationId !== 999,
     installation: async (installationId: number) => ({ installationId, accountLogin: "acme" }),
   } as unknown as GithubClient;
-  const service = createGithubService(client, {
-    connect: async (userId, given) => {
-      kept.push({ userId, grant: given });
-      return { id: 42, login: "ada", name: null };
+  const service = createGithubService(
+    {
+      forKey: async () => client,
+      forOrganization: async () => ({ key: "platform", client }),
+      forget: () => undefined,
     },
-  });
+    {
+      connect: async (userId, given) => {
+        kept.push({ userId, grant: given });
+        return { id: 42, login: "ada", name: null };
+      },
+    },
+  );
   const setupCalls: { call: string; arg: unknown }[] = [];
   let setupRefused: Error | null = null;
   const appSetup = {
@@ -172,9 +179,17 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
 
   test("says whether the person has connected their account", async () => {
     reset();
-    expect(await (await get("/github/user")).json()).toEqual({ connected: false, login: null });
+    expect(await (await get("/github/user")).json()).toEqual({
+      connected: false,
+      login: null,
+      appKey: "platform",
+    });
     connectedLogin = "ada";
-    expect(await (await get("/github/user")).json()).toEqual({ connected: true, login: "ada" });
+    expect(await (await get("/github/user")).json()).toEqual({
+      connected: true,
+      login: "ada",
+      appKey: "platform",
+    });
     expect((await get("/github/user", "")).status).toBe(401);
   });
 
@@ -187,6 +202,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect(readState(state, owner.organizationId, owner.userId)).toEqual({
       next: "/threads/abc",
       installationId: null,
+      appKey: "platform",
     });
   });
 
@@ -228,6 +244,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect(readState(state, owner.organizationId, owner.userId)).toEqual({
       next: null,
       installationId: 123,
+      appKey: "platform",
     });
     // The code of a link nobody signed is never used, and nothing is attached yet.
     expect(exchanged).toEqual([]);

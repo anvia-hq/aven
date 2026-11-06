@@ -41,4 +41,11 @@ export const appCallbackQuery = z.object({
 export const connectQuery = z.object({
   /** A path on this site to come back to once GitHub has been connected. */
   next: z.string().refine(isLocalPath, "next must be a path on this site").optional(),
+  /** The app to connect for, when it is not the workspace's own: `platform` or a workspace's app id (decision 0123). */
+  app: z.string().min(1).max(64).optional(),
+});
+
+export const userQuery = z.object({
+  /** The app to ask about; the workspace's own, else the platform's, when left out. */
+  app: z.string().min(1).max(64).optional(),
 });
