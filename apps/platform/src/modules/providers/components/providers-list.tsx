@@ -1,6 +1,8 @@
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/badge";
+
 import { useProviders } from "../hooks/use-providers";
 import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
@@ -12,98 +14,86 @@ const detail = (provider: Provider) =>
     .filter(Boolean)
     .join(" · ");
 
-// A line of the list: the logo and name of a kind, then whatever follows on that line.
-function Row({ kind, children }: { kind: ProviderKind; children: ReactNode }) {
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section aria-label={PROVIDER_LABELS[kind]} className="border-b py-3">
-      {children}
+    <section className="flex flex-col gap-2.5">
+      <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+      <ul className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card/50">
+        {children}
+      </ul>
     </section>
   );
 }
 
-function Heading({ kind }: { kind: ProviderKind }) {
+function Tile({ kind }: { kind: ProviderKind }) {
   return (
-    <>
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
       <ProviderLogo kind={kind} />
-      <h2 className="text-sm font-medium">{PROVIDER_LABELS[kind]}</h2>
-    </>
+    </span>
   );
 }
 
-// OpenAI, Anthropic and Azure have one credential each, shown on the kind's own line; an
-// OpenAI-compatible server is one of many, so those are listed under theirs.
+// What is set up comes first, with what each one runs; below it, what can still be added. OpenAI,
+// Anthropic and Azure have one credential each; any number of OpenAI-compatible servers can be added.
 export function ProvidersList() {
   const { providers, loaded } = useProviders();
 
   if (!loaded) return null;
 
-  return (
-    <div className="flex flex-col border-t">
-      {PROVIDERS.map((kind) => {
-        const ofKind = providers.filter((provider) => provider.kind === kind);
-        return kind === "openai-compatible" ? (
-          <CompatibleRow key={kind} kind={kind} providers={ofKind} />
-        ) : (
-          <SingleRow key={kind} kind={kind} provider={ofKind[0]} />
-        );
-      })}
-    </div>
+  const available = PROVIDERS.filter(
+    (kind) => kind === "openai-compatible" || !providers.some((provider) => provider.kind === kind),
   );
-}
 
-// A kind with one credential: the provider when it is set up, else what setting it up gives.
-function SingleRow({ kind, provider }: { kind: ProviderKind; provider: Provider | undefined }) {
   return (
-    <Row kind={kind}>
-      <div className="flex items-center gap-2.5">
-        <Heading kind={kind} />
-        {provider ? (
-          <ProviderActions
-            provider={provider}
-            edit={<ProviderDialog kind={kind} provider={provider} label="Edit" />}
-          >
-            <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-              {detail(provider)}
-            </p>
-          </ProviderActions>
-        ) : (
-          <>
-            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-              {PROVIDER_DESCRIPTIONS[kind]}
-            </p>
-            <ProviderDialog kind={kind} label="Set up" />
-          </>
-        )}
-      </div>
-    </Row>
-  );
-}
-
-// OpenAI-compatible servers: any number, each on its own line under the kind's.
-function CompatibleRow({ kind, providers }: { kind: ProviderKind; providers: Provider[] }) {
-  return (
-    <Row kind={kind}>
-      <div className="flex items-center gap-2.5">
-        <Heading kind={kind} />
-        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {PROVIDER_DESCRIPTIONS[kind]}
-        </p>
-        <ProviderDialog kind={kind} label="Add" />
-      </div>
+    <div className="flex flex-col gap-8">
       {providers.length > 0 && (
-        <ul className="mt-1.5 flex flex-col pl-6.5">
+        <Group title="Connected">
           {providers.map((provider) => (
-            <li key={provider.id} className="flex items-center gap-2 py-1 text-xs">
-              <span className="font-medium">{provider.name}</span>
-              <ProviderActions provider={provider}>
-                <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
+            <li
+              key={provider.id}
+              aria-label={provider.name}
+              className="flex items-center gap-3.5 px-4 py-3.5"
+            >
+              <Tile kind={provider.kind} />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium">{provider.name}</span>
+                  {provider.isDefault && <Badge variant="secondary">Default</Badge>}
+                </div>
+                <p className="truncate font-mono text-xs text-muted-foreground">
                   {detail(provider)}
-                </span>
-              </ProviderActions>
+                </p>
+              </div>
+              <ProviderActions
+                provider={provider}
+                edit={
+                  provider.kind === "openai-compatible" ? undefined : (
+                    <ProviderDialog kind={provider.kind} provider={provider} label="Edit" />
+                  )
+                }
+              />
             </li>
           ))}
-        </ul>
+        </Group>
       )}
-    </Row>
+      <Group title={providers.length > 0 ? "Add a provider" : "Set up a provider"}>
+        {available.map((kind) => (
+          <li
+            key={kind}
+            aria-label={PROVIDER_LABELS[kind]}
+            className="flex items-center gap-3.5 px-4 py-3.5"
+          >
+            <Tile kind={kind} />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
+              <span className="text-sm font-medium">{PROVIDER_LABELS[kind]}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {PROVIDER_DESCRIPTIONS[kind]}
+              </span>
+            </div>
+            <ProviderDialog kind={kind} label={kind === "openai-compatible" ? "Add" : "Set up"} />
+          </li>
+        ))}
+      </Group>
+    </div>
   );
 }
