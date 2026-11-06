@@ -77,6 +77,8 @@ const reports = (plane: ReturnType<typeof fakeControlPlane>) =>
 // writes down what it was sent, and the runs that come with it.
 describe("a run with the person's MCP servers", () => {
   const calls: { authorization: string | null; note: string }[] = [];
+  // What the server has been sent: a run that reuses the thread's connections sends it nothing.
+  let requests = 0;
   const handler = createMcpHandler(({ requestInfo }) => {
     const server = new McpServer({ name: "notes", version: "1.0.0" });
     server.registerTool(
@@ -89,7 +91,13 @@ describe("a run with the person's MCP servers", () => {
     );
     return server;
   });
-  const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
+  const http = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      requests++;
+      return handler.fetch(request);
+    },
+  });
   afterAll(() => http.stop(true));
 
   const serverId = "11111111-1111-4111-8111-111111111111";
@@ -165,6 +173,72 @@ describe("a run with the person's MCP servers", () => {
     }
   });
 
+  test("a thread's servers are connected once, until what they are changes", async () => {
+    const before = requests;
+    const { plane, runtime } = connect(({ id, mcp: note }) => ({
+      agent: new Agent({
+        id,
+        instructions: "x",
+        // The note is in the agent's instructions, so a run that reconnected would say so.
+        tools: [],
+        // The run's tools come from the connection, which a run that reuses one still has.
+        model: scriptedModel([[text(note?.servers.length === 1 ? "connected" : "none")]]),
+      }),
+    }));
+    await runtime.ready;
+
+    plane.send({ ...runStart, mcp: mcp() });
+    await until(() => ended(plane).length === 1);
+    expect(requests - before).toBeGreaterThan(0);
+    const handshake = requests;
+
+    // The thread's connections outlive the run that made them: the next message uses them, and the
+    // server hears nothing at all.
+    plane.send({ type: "run.start", runId: "run-2", thread, prompt: "again", mcp: mcp() });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ runId: "run-2", outcome: "response" });
+    expect(requests).toBe(handshake);
+    // The agent of that run still had the server's tools.
+    expect(JSON.stringify(plane.received)).toContain("connected");
+
+    // Other servers are other connections, and the old ones are let go.
+    plane.send({
+      ...runStart,
+      runId: "run-3",
+      mcp: mcp({ headers: { authorization: "Bearer newer" } }),
+    });
+    await until(() => ended(plane).length === 3);
+    expect(requests).toBeGreaterThan(handshake);
+    expect(reports(plane).map((report) => report.runId)).toEqual(["run-1", "run-2", "run-3"]);
+  });
+
+  test("a server that was down is tried again on the next run", async () => {
+    const before = requests;
+    const { plane, runtime } = connect(({ id }) => ({
+      agent: new Agent({ id, instructions: "x", model: scriptedModel([[text("ok")]]) }),
+    }));
+    await runtime.ready;
+    const down = {
+      ...mcp()[0],
+      id: "22222222-2222-4222-8222-222222222222",
+      name: "Down",
+      url: "http://localhost:1/",
+    };
+
+    plane.send({ ...runStart, mcp: [...mcp(), down] });
+    await until(() => ended(plane).length === 1);
+    const results = reports(plane)[0]?.results ?? [];
+    expect(results.find((result) => result.id === serverId)?.error).toBeUndefined();
+    expect(results.find((result) => result.id === down.id)?.error).toEqual(expect.any(String));
+    const first = requests - before;
+
+    // A set that was not whole is not kept: the healthy server is handshaken again, in case the
+    // other one is back too.
+    plane.send({ ...runStart, runId: "run-2", mcp: [...mcp(), down] });
+    await until(() => ended(plane).length === 2);
+    expect(requests - before).toBeGreaterThan(first);
+  });
+
   test("a server that is down is reported and the run goes on without it", async () => {
     const told: (McpNote | undefined)[] = [];
     const { plane, runtime } = connect(({ id, mcp: note }) => {
@@ -211,7 +285,8 @@ describe("a run with the person's MCP servers", () => {
     const continuation = asked && "continuation" in asked ? asked.continuation : undefined;
     const before = calls.length;
 
-    // The asking run's connection ended with it; the answering run brings its own.
+    // The thread's connections outlive the asking run, which parked on the question: the run that
+    // answers takes them over rather than handshaking again.
     plane.send({
       type: "run.resume",
       runId: "run-2",
