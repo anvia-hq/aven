@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 
-import { messageBody } from "../message-body";
+import { handOverFirstPrompt } from "../first-prompt";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
@@ -14,26 +14,17 @@ const titleFrom = (prompt: string) => (prompt.length > 50 ? `${prompt.slice(0, 4
 const titleOf = ({ prompt, attachments }: OutgoingMessage) =>
   titleFrom(prompt || attachments[0]?.name || "New thread");
 
-// Creates a thread in a project, sends the first prompt and opens the thread. Resolves to whether
-// a thread was created, so the composer keeps the text when it was not. If only the prompt is
-// refused (say the runner is offline), the thread still opens, where the failure and a retry are.
+// Creates a thread in a project and opens it at once, with the first prompt shown as sent: the
+// thread's page sends it (decision 0126), so nothing waits on the message or on the list. Resolves
+// to whether a thread was created, so the composer keeps the text when it was not. If only the
+// prompt is refused (say the runner is offline), the thread is open already, where the failure is.
 export function useStartThread() {
   const navigate = useNavigate();
-  const { refresh } = useThreads();
+  const { add, refresh } = useThreads();
 
   function createThread(projectId: string, title: string) {
     return attempt("Could not start thread", () =>
       postJson<Thread>("/threads", { projectId, title }),
-    );
-  }
-
-  async function sendFirstPrompt(
-    thread: Thread,
-    message: OutgoingMessage,
-    selection: RunSelection,
-  ) {
-    await attempt("The agent did not start", () =>
-      postJson(`/threads/${thread.id}/messages`, messageBody(message, selection)),
     );
   }
 
@@ -50,9 +41,10 @@ export function useStartThread() {
     const thread = await createThread(projectId, titleOf(message));
     if (!thread) return false;
     rememberModelSelection(thread.id, selection);
-    await sendFirstPrompt(thread, message, selection);
-    await refresh();
+    add(thread);
+    handOverFirstPrompt(thread.id, message, selection);
     await navigate({ to: "/threads/$threadId", params: { threadId: thread.id } });
+    void refresh();
     return true;
   };
 }

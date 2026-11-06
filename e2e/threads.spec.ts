@@ -157,6 +157,30 @@ test.describe("threads", () => {
     await expect(page.getByRole("option", { name: "project" })).toBeVisible();
   });
 
+  test("a first prompt is shown in the thread at once, before the server has it (decision 0126)", async ({
+    page,
+  }) => {
+    await registerUser(page, "thr", "Thread User");
+    await addRunner(page);
+    await createProject(page, "project");
+    // The server takes the message late, as when a run is set up.
+    await page.route("**/api/threads/*/messages", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return route.continue();
+    });
+
+    await page.getByRole("textbox", { name: "Prompt" }).fill("Explain the project layout");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    // The thread is open, and says what was sent, well before the server answers.
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/, { timeout: 1500 });
+    await expect(page.locator('[data-role="user"]')).toContainText("Explain the project layout", {
+      timeout: 1500,
+    });
+    await expect(page.locator('[data-role="user"]')).toHaveCount(1);
+  });
+
   test("a thread from another organization is not found", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     await page.goto("/threads/00000000-0000-4000-8000-000000000000");

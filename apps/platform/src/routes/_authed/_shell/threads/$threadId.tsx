@@ -18,6 +18,7 @@ import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
+import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
@@ -44,6 +45,7 @@ function ThreadPage() {
     answer,
     cancel,
   } = useThread(threadId);
+  useFirstPrompt(threadId, send);
   const { compacting, compact } = useCompactThread(threadId);
   // Compacting is a run of its own: not while the agent works or waits on its question.
   const canCompact = owned && !running && !question;

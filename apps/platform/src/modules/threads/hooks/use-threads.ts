@@ -47,6 +47,13 @@ export function useThreads() {
     [setThreads],
   );
 
+  // A thread this browser just made, in the list before the server's list is asked again.
+  const add = useCallback(
+    (thread: Thread) =>
+      setThreads((current) => [thread, ...(current ?? []).filter(({ id }) => id !== thread.id)]),
+    [setThreads],
+  );
+
   const all = threads ?? [];
   return {
     threads: all.filter((thread) => thread.createdBy === me),
@@ -55,5 +62,6 @@ export function useThreads() {
     loaded: threads !== null,
     refresh: threadsStore.refresh,
     setRunning,
+    add,
   };
 }
