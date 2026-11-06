@@ -18,8 +18,8 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
-import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useArchiveThread } from "../hooks/use-archive-thread";
+import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import type { Thread } from "../types";
@@ -80,36 +80,10 @@ function SharedMark({ thread }: { thread: Thread }) {
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
-// The title of a thread of the person's own: a double click turns it into a field, Enter or leaving
-// it keeps the new title and Escape the old one.
-function ThreadTitle({
-  thread,
-  title,
-  editing,
-  onEdit,
-  onDone,
-}: {
-  thread: Thread;
-  title: string;
-  editing: boolean;
-  onEdit: () => void;
-  onDone: (title?: string) => void;
-}) {
+// The field a title is edited in: Enter or leaving it keeps the new title and Escape the old one.
+// It is made again for each edit, so each one is finished once.
+function TitleField({ title, onDone }: { title: string; onDone: (title?: string) => void }) {
   const finished = useRef(false);
-  if (!editing) {
-    return (
-      <span
-        className="flex-1 truncate"
-        title={title}
-        onDoubleClick={(event) => {
-          event.preventDefault();
-          onEdit();
-        }}
-      >
-        {thread.title}
-      </span>
-    );
-  }
   const finish = (value?: string) => {
     if (finished.current) return;
     finished.current = true;
@@ -119,7 +93,7 @@ function ThreadTitle({
     <Input
       autoFocus
       aria-label="Thread title"
-      defaultValue={thread.title}
+      defaultValue={title}
       maxLength={200}
       className="h-6 flex-1 px-1.5 text-sm"
       onFocus={(event) => event.currentTarget.select()}
@@ -131,6 +105,35 @@ function ThreadTitle({
       }}
       onBlur={(event) => finish(event.currentTarget.value)}
     />
+  );
+}
+
+// The title of a thread of the person's own: a double click turns it into a field.
+function ThreadTitle({
+  thread,
+  hint,
+  editing,
+  onEdit,
+  onDone,
+}: {
+  thread: Thread;
+  hint: string;
+  editing: boolean;
+  onEdit: () => void;
+  onDone: (title?: string) => void;
+}) {
+  if (editing) return <TitleField title={thread.title} onDone={onDone} />;
+  return (
+    <span
+      className="flex-1 truncate"
+      title={hint}
+      onDoubleClick={(event) => {
+        event.preventDefault();
+        onEdit();
+      }}
+    >
+      {thread.title}
+    </span>
   );
 }
 
@@ -191,7 +194,7 @@ export function SidebarThreads() {
               <SharedMark thread={thread} />
               <ThreadTitle
                 thread={thread}
-                title={hostLabel(thread)}
+                hint={hostLabel(thread)}
                 editing={editing === thread.id}
                 onEdit={() => setEditing(thread.id)}
                 onDone={(value) => {
