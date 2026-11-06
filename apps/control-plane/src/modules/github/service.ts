@@ -271,6 +271,12 @@ export function createGithubService(
       return client.tracked(installationId, fullName, kind, state, page, filters);
     },
 
+    // The branches of a project's repository, with the same token (Center).
+    async branches(installationRowId: string, fullName: string, defaultBranch: string) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.branches(installationId, fullName, defaultBranch);
+    },
+
     // A pull request or a commit opened in Center, with the same token.
     async pull(installationRowId: string, fullName: string, number: number) {
       const { client, installationId } = await acting(installationRowId);

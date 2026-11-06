@@ -153,6 +153,14 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
 });
 
 import {
+  BRANCH_CALLS_AT_ONCE,
+  BRANCHES_SUMMARIZED,
+  mapLimit,
+  pullsByBranch,
+  type GithubBranchSummary,
+  type OpenPullPayload,
+} from "./branches";
+import {
   checksOf,
   latestReviews,
   shapeFiles,
@@ -772,6 +780,75 @@ export class GithubClient {
     } catch (error) {
       return nullWhenNotFound(error);
     }
+  }
+
+  /**
+   * The repository's branches, the default one first and then the most recently active, each with
+   * how far it is from the default branch, its last commit and its open pull request. Null when the
+   * installation cannot see the repository. Only `BRANCHES_SUMMARIZED` are looked at, and the answer
+   * says when there were more.
+   */
+  async branches(
+    installationId: number,
+    fullName: string,
+    defaultBranch: string,
+  ): Promise<{ branches: GithubBranchSummary[]; truncated: boolean } | null> {
+    const { token } = await this.installationToken(installationId);
+    const repo = repoPath(fullName);
+    let listed: { name: string; protected: boolean }[];
+    try {
+      listed = await this.#api(`${repo}/branches?per_page=100`, token);
+    } catch (error) {
+      return nullWhenNotFound(error);
+    }
+    const pulls = await this.#api<OpenPullPayload[]>(
+      `${repo}/pulls?state=open&per_page=100`,
+      token,
+    ).catch(() => []);
+    const pullOf = pullsByBranch(pulls, fullName);
+
+    const ordered = [
+      ...listed.filter((branch) => branch.name === defaultBranch),
+      ...listed.filter((branch) => branch.name !== defaultBranch),
+    ];
+    const looked = ordered.slice(0, BRANCHES_SUMMARIZED);
+    const summaries = await mapLimit(looked, BRANCH_CALLS_AT_ONCE, async (branch) => {
+      const name = encodeURIComponent(branch.name);
+      const isDefault = branch.name === defaultBranch;
+      const [head, compared] = await Promise.all([
+        this.#api<CommitPayload>(`${repo}/commits/${name}`, token).catch(() => null),
+        isDefault
+          ? null
+          : this.#api<{ ahead_by: number; behind_by: number }>(
+              `${repo}/compare/${encodeURIComponent(defaultBranch)}...${name}?per_page=1`,
+              token,
+            ).catch(() => null),
+      ]);
+      return {
+        name: branch.name,
+        isDefault,
+        protected: branch.protected,
+        ahead: compared?.ahead_by ?? 0,
+        behind: compared?.behind_by ?? 0,
+        lastCommit: head
+          ? {
+              sha: head.sha,
+              message: head.commit.message.split("\n")[0]!.trim().slice(0, COMMIT_MESSAGE_MAX),
+              author: head.commit.author?.name ?? head.author?.login ?? null,
+              date: head.commit.author?.date ?? "",
+            }
+          : null,
+        pull: pullOf.get(branch.name) ?? null,
+      } satisfies GithubBranchSummary;
+    });
+    // The default branch stays first; the others go by what they did last.
+    const [first, ...others] = summaries;
+    const rest = first?.isDefault ? others : summaries;
+    rest.sort((a, b) => (b.lastCommit?.date ?? "").localeCompare(a.lastCommit?.date ?? ""));
+    return {
+      branches: first?.isDefault ? [first, ...rest] : rest,
+      truncated: listed.length > BRANCHES_SUMMARIZED,
+    };
   }
 
   async #requireIssues(installationId: number) {

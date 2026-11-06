@@ -211,6 +211,16 @@ export const projectsService = {
     );
   },
 
+  async branches(organizationId: string, id: string) {
+    const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const found = await githubService.branches(
+      project.githubInstallationId,
+      project.repoFullName,
+      project.defaultBranch,
+    );
+    return orNotFound(found, "Repository not found");
+  },
+
   async commit(organizationId: string, id: string, sha: string) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     return orNotFound(
