@@ -37,7 +37,7 @@ function SidebarProjectTile({
   project?: Project;
   palette?: number;
 }) {
-  if (!project) return <span className="size-4 shrink-0" aria-hidden />;
+  if (!project) return <span className="size-5 shrink-0" aria-hidden />;
   return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
 }
 

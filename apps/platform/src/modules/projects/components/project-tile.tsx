@@ -105,7 +105,7 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
       role={working ? "img" : undefined}
       aria-label={working ? "Working" : undefined}
       aria-hidden={working ? undefined : true}
-      className={cn("size-4 shrink-0 text-muted-foreground", className)}
+      className={cn("size-5 shrink-0 text-muted-foreground", className)}
     />
   );
 }

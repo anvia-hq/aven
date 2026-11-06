@@ -33,7 +33,7 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
                   <span className="sr-only">{project.name}</span>
                 </span>
               ) : (
-                <span className="size-4 shrink-0" aria-hidden />
+                <span className="size-5 shrink-0" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate text-sm">{thread.title}</span>
               {/* Someone else's, which the workspace shares to read (decision 0084). */}

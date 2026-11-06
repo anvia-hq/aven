@@ -30,7 +30,7 @@ function random(seed: number) {
   };
 }
 
-export const DOTS = 44;
+export const DOTS = 72;
 
 /** What a project's id decides, once; painting it is then only arithmetic. */
 export function orbShape(seed: number): OrbShape {
@@ -48,8 +48,8 @@ export function orbShape(seed: number): OrbShape {
     swirl: (next() - 0.3) * 1.1,
     phase: next(),
     speed: 0.07 + next() * 0.13,
-    size: 0.006 + next() * next() * 0.03,
-    alpha: 0.35 + next() * 0.6,
+    size: 0.02 + next() * next() * 0.05,
+    alpha: 0.85 + next() * 0.15,
     tone: Math.floor(next() * 4),
   }));
   return { light, rings, dots };
@@ -95,7 +95,7 @@ export function paintOrb(
   const white: Rgb = blend(ink, [255, 255, 255], color);
   const centre = size / 2;
   // Room is left round the ring for the dust that drifts out of it.
-  const radius = size * 0.33;
+  const radius = size * 0.35;
   // One stroke width for the ring and every ring inside it.
   const stroke = Math.max(size * 0.04, 1);
   const light = shape.light + time * 0.6;
@@ -150,17 +150,21 @@ export function paintOrb(
   const tones = [a, b, c, white];
   for (const dot of shape.dots) {
     const life = (dot.phase + time * dot.speed) % 1;
-    const distance = radius * (0.45 + life * 0.95);
+    const distance = radius * (0.45 + life * 0.85);
     const angle = dot.angle + life * dot.swirl;
-    context.fillStyle = rgba(tones[dot.tone]!, dot.alpha * Math.sin(life * Math.PI) ** 0.6);
+    // A soft glow of the speck's own color, so the dust reads as light and not as grain.
+    context.shadowColor = rgba(tones[dot.tone]!, 0.9);
+    context.shadowBlur = size * 0.06;
+    context.fillStyle = rgba(tones[dot.tone]!, dot.alpha * Math.sin(life * Math.PI) ** 0.25);
     context.beginPath();
     context.arc(
       centre + Math.cos(angle) * distance,
       centre + Math.sin(angle) * distance,
-      Math.max(size * dot.size * (1.15 - life * 0.5), 0.35),
+      Math.max(size * dot.size * (1.15 - life * 0.5), 0.8),
       0,
       Math.PI * 2,
     );
     context.fill();
   }
+  context.shadowBlur = 0;
 }
