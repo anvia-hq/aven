@@ -130,15 +130,20 @@ test.describe("shipping a thread", () => {
       await registerUser(page, "shp", "Ship User");
       const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: files });
       runner = child;
+      // Asked for before the page opens: the answer may be in before anything is waiting for it.
+      readiness = page.waitForResponse(
+        (response) => response.url().includes("/ship") && response.ok(),
+      );
       await page.goto(`/threads/${threadId}`);
       return threadId;
     }
+    let readiness: Promise<unknown>;
     const shipButton = (page: Page) => page.getByRole("button", { name: "Ship", exact: true });
     // The readiness answer arrives a moment after the thread: the button is not there before it
     // either, so what is checked is that it stays away once the answer is in.
     const stillAbsent = async (page: Page) => {
       await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
-      await page.waitForResponse((response) => response.url().includes("/ship") && response.ok());
+      await readiness;
       await expect(shipButton(page)).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Connect GitHub to ship" })).toHaveCount(0);
     };
