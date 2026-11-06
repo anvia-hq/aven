@@ -26,6 +26,7 @@ const tasks = createCollection<CockpitTask, TaskInput, TaskPatch>({
 });
 
 export const resetTasks = tasks.reset;
+export const refreshTasks = tasks.refreshLoaded;
 
 // The person's tasks, in their columns' order.
 export function useTasks() {

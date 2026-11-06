@@ -20,6 +20,7 @@ const notes = createCollection<CockpitNote, NoteInput, Partial<NoteInput>>({
 });
 
 export const resetNotes = notes.reset;
+export const refreshNotes = notes.refreshLoaded;
 
 // The person's notes.
 export function useNotes() {

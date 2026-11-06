@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/sidebar";
 
+import { useBotChanges } from "../hooks/use-bot-changes";
 import { useCockpitTags } from "../hooks/use-collection";
 import { useInbox } from "../hooks/use-inbox";
 import { useNotes } from "../hooks/use-notes";
@@ -33,6 +34,7 @@ function countOn(page: Filtered, tag: CockpitTag) {
 // What the sidebar lists in the cockpit (decision 0104): its three pages, with what is open in the
 // inbox and the tasks not finished, the notes pinned, as Notion's favourites, and the person's tags, which filter the page on screen.
 export function CockpitSidebar() {
+  useBotChanges();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const activeTag = useRouterState({
     select: (state) => (state.location.search as { tag?: string }).tag,

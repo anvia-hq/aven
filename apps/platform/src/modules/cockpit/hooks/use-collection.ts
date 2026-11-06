@@ -124,7 +124,15 @@ export function createCollection<T extends Item, Create, Update>(options: {
     return { items: items ?? [], loaded: items !== null };
   }
 
-  return { create, update, remove, useItems, reset: list.reset };
+  // Fetched again when something else may have changed the records, a bot at work for one; a list
+  // never loaded is left for its first load, and one with a change of the person's not yet saved is
+  // left as it is, since the server's copy would undo it on screen.
+  const refreshLoaded = () =>
+    store.get(atom) !== null && waiting.size === 0 && removing.size === 0
+      ? list.refresh()
+      : undefined;
+
+  return { create, update, remove, useItems, reset: list.reset, refreshLoaded };
 }
 
 export function resetCockpitTags() {
