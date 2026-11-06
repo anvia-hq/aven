@@ -54,9 +54,10 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
   let setupRefused: Error | null = null;
   const appSetup = {
     canSetUp: async (person: { email: string }) => person.email.startsWith("owner"),
-    manifest: (_person: unknown, options: unknown) => {
+    canSetUpWorkspace: async (person: { email: string }) => person.email.startsWith("owner"),
+    manifest: (_person: unknown, options: unknown, organizationId?: string) => {
       if (setupRefused) throw setupRefused;
-      setupCalls.push({ call: "manifest", arg: options });
+      setupCalls.push({ call: "manifest", arg: { ...(options as object), organizationId } });
       return {
         postUrl: "https://github.test/settings/apps/new?state=s",
         manifest: { name: "Aven" },
@@ -66,7 +67,10 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       if (setupRefused) throw setupRefused;
       setupCalls.push({ call: "complete", arg: input });
     },
-  } as unknown as Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete">;
+  } as unknown as Pick<
+    typeof githubAppSetup,
+    "canSetUp" | "canSetUpWorkspace" | "manifest" | "complete"
+  >;
   const server = new Elysia()
     .use(errorsRouter)
     .use(

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { ConflictError, ForbiddenError, UnprocessableError } from "../../errors";
-import { createSetupState } from "./app-manifest";
+import { createSetupState, readSetupState } from "./app-manifest";
 import { createGithubAppSetup } from "./app-setup";
 import type { GithubConfig } from "./client";
 
@@ -105,5 +105,78 @@ describe("completing the setup", () => {
     expect(converted).toEqual([]);
     expect(saved).toEqual([]);
     expect(configuredWith).toEqual([]);
+  });
+});
+
+// A workspace's own app (decision 0123): an owner or an admin of it, once, kept for it alone.
+function workspaceSetup(options: { hasApp?: boolean } = {}) {
+  const kept: { organizationId: string; userId: string; config: GithubConfig }[] = [];
+  const forgotten: string[] = [];
+  const admins = new Set(["u1:org-1"]);
+  const platform = setup(true);
+  const service = createGithubAppSetup({
+    client: platform.client,
+    urls,
+    origin: () => "https://aven.example.com",
+    saveOrganization: async (organizationId, userId, config) => {
+      kept.push({ organizationId, userId, config });
+      return "app-1";
+    },
+    convert: async () => created,
+    isOwner: async () => false,
+    isAdmin: async (organizationId, userId) => admins.has(`${userId}:${organizationId}`),
+    clients: {
+      forOrganization: async () => ({
+        key: options.hasApp ? "app-1" : "platform",
+        client: {} as never,
+      }),
+      forget: (organizationId) => void forgotten.push(organizationId),
+    },
+  });
+  return { service, kept, forgotten, platform };
+}
+
+describe("a workspace's own app", () => {
+  test("is offered to an admin of a workspace without one, and to nobody else", async () => {
+    expect(await workspaceSetup().service.canSetUpWorkspace(owner, "org-1")).toBe(true);
+    expect(await workspaceSetup().service.canSetUpWorkspace(stranger, "org-1")).toBe(false);
+    expect(await workspaceSetup().service.canSetUpWorkspace(owner, "org-2")).toBe(false);
+    expect(await workspaceSetup({ hasApp: true }).service.canSetUpWorkspace(owner, "org-1")).toBe(
+      false,
+    );
+  });
+
+  test("has a manifest for an admin, with a state that names the workspace, even beside the platform's app", async () => {
+    const { service } = workspaceSetup();
+    const { postUrl } = await service.manifest(owner, {}, "org-1");
+    const state = new URL(postUrl).searchParams.get("state")!;
+    expect(readSetupState(state, owner.id)).toEqual({ organizationId: "org-1" });
+    await expect(service.manifest(stranger, {}, "org-1")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      workspaceSetup({ hasApp: true }).service.manifest(owner, {}, "org-1"),
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  test("is kept for the workspace the state names, and the platform's app is left alone", async () => {
+    const { service, kept, forgotten, platform } = workspaceSetup();
+    const state = createSetupState(owner.id, Date.now(), "org-1");
+    await service.complete(owner, { code: "c0de", state }, "org-1");
+    expect(kept).toEqual([{ organizationId: "org-1", userId: owner.id, config: created }]);
+    expect(forgotten).toEqual(["org-1"]);
+    expect(platform.saved).toEqual([]);
+    expect(platform.configuredWith).toEqual([]);
+  });
+
+  test("is not kept for another workspace than the one the person is in, or for a non-admin", async () => {
+    const { service, kept } = workspaceSetup();
+    const state = createSetupState(owner.id, Date.now(), "org-1");
+    await expect(service.complete(owner, { code: "c", state }, "org-2")).rejects.toBeInstanceOf(
+      UnprocessableError,
+    );
+    const theirs = createSetupState(stranger.id, Date.now(), "org-1");
+    await expect(
+      service.complete(stranger, { code: "c", state: theirs }, "org-1"),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    expect(kept).toEqual([]);
   });
 });

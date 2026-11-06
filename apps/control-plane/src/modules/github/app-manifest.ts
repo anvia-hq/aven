@@ -55,29 +55,41 @@ function sign(payload: string) {
   return createHmac("sha256", secret).update(`github-app-setup:${payload}`).digest("base64url");
 }
 
-/** A `state` for the trip to GitHub and back, tied to the person who starts it. */
-export function createSetupState(userId: string, now = Date.now()) {
-  const payload = Buffer.from(JSON.stringify([userId, now])).toString("base64url");
+/**
+ * A `state` for the trip to GitHub and back, tied to the person who starts it and, for an app a
+ * workspace makes for itself (decision 0123), to that workspace.
+ */
+export function createSetupState(userId: string, now = Date.now(), organizationId?: string) {
+  const claims: unknown[] = [userId, now];
+  if (organizationId !== undefined) claims.push(organizationId);
+  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-/** Whether a `state` was made for this person, less than an hour ago. */
-export function readSetupState(state: string, userId: string, now = Date.now()) {
+/**
+ * What a `state` made for this person says, less than an hour ago: the workspace the app is for,
+ * or null for the platform's. Undefined when it is not theirs, not ours, or too old.
+ */
+export function readSetupState(
+  state: string,
+  userId: string,
+  now = Date.now(),
+): { organizationId: string | null } | undefined {
   const [payload, signature] = state.split(".");
-  if (!payload || !signature) return false;
+  if (!payload || !signature) return undefined;
   const expected = Buffer.from(sign(payload));
   const given = Buffer.from(signature);
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return false;
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return undefined;
   try {
-    const [user, issuedAt] = JSON.parse(Buffer.from(payload, "base64url").toString()) as unknown[];
-    return (
-      user === userId &&
-      typeof issuedAt === "number" &&
-      now - issuedAt >= 0 &&
-      now - issuedAt < STATE_TTL_MS
-    );
+    const [user, issuedAt, organizationId] = JSON.parse(
+      Buffer.from(payload, "base64url").toString(),
+    ) as unknown[];
+    const fresh =
+      typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
+    if (user !== userId || !fresh) return undefined;
+    return { organizationId: typeof organizationId === "string" ? organizationId : null };
   } catch {
-    return false;
+    return undefined;
   }
 }
 

@@ -16,6 +16,8 @@ export const callbackQuery = z.object({
 });
 
 export const manifestQuery = z.object({
+  /** Whose app: the platform's, for a platform owner, or the active workspace's own (decision 0123). */
+  scope: z.enum(["platform", "workspace"]).optional(),
   /** The app's name on GitHub, which has to be unique there (at most 34 characters). */
   name: z.string().trim().min(1).max(34).optional(),
   /** The GitHub organization that is to own the app, instead of the person. */

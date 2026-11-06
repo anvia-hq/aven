@@ -51,17 +51,25 @@ describe("newAppUrl", () => {
 describe("the setup state", () => {
   test("is good for the person it was made for, within the hour", () => {
     const state = createSetupState("u1", 1_000);
-    expect(readSetupState(state, "u1", 1_000 + 59 * 60_000)).toBe(true);
-    expect(readSetupState(state, "u1", 1_000 + 61 * 60_000)).toBe(false);
-    expect(readSetupState(state, "u2", 2_000)).toBe(false);
+    expect(readSetupState(state, "u1", 1_000 + 59 * 60_000)).toEqual({ organizationId: null });
+    expect(readSetupState(state, "u1", 1_000 + 61 * 60_000)).toBeUndefined();
+    expect(readSetupState(state, "u2", 2_000)).toBeUndefined();
+  });
+
+  test("names the workspace an app is for, and refuses a state changed to name another", () => {
+    const state = createSetupState("u1", 1_000, "org-1");
+    expect(readSetupState(state, "u1", 2_000)).toEqual({ organizationId: "org-1" });
+    const [, signature] = state.split(".");
+    const other = Buffer.from(JSON.stringify(["u1", 1_000, "org-2"])).toString("base64url");
+    expect(readSetupState(`${other}.${signature}`, "u1", 2_000)).toBeUndefined();
   });
 
   test("refuses a state that was changed or is not one", () => {
     const [payload, signature] = createSetupState("u1", 1_000).split(".");
     const other = Buffer.from(JSON.stringify(["u2", 1_000])).toString("base64url");
-    expect(readSetupState(`${other}.${signature}`, "u2", 2_000)).toBe(false);
-    expect(readSetupState(`${payload}.x`, "u1", 2_000)).toBe(false);
-    expect(readSetupState("nonsense", "u1", 2_000)).toBe(false);
+    expect(readSetupState(`${other}.${signature}`, "u2", 2_000)).toBeUndefined();
+    expect(readSetupState(`${payload}.x`, "u1", 2_000)).toBeUndefined();
+    expect(readSetupState("nonsense", "u1", 2_000)).toBeUndefined();
   });
 });
 

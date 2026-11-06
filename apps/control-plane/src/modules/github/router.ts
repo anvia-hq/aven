@@ -16,7 +16,10 @@ import { githubUserTokenService } from "./user-tokens";
 export const githubRouter = (
   service = githubService,
   userTokens: Pick<typeof githubUserTokenService, "status"> = githubUserTokenService,
-  appSetup: Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete"> = githubAppSetup,
+  appSetup: Pick<
+    typeof githubAppSetup,
+    "canSetUp" | "canSetUpWorkspace" | "manifest" | "complete"
+  > = githubAppSetup,
 ) =>
   new Elysia({ prefix: "/github" })
     .use(authRouter)
@@ -32,6 +35,8 @@ export const githubRouter = (
           installUrl: configured ? await service.installUrl(organizationId, user.id) : null,
           // A platform owner can have the app created from the platform (decision 0074).
           canSetUp: await appSetup.canSetUp(user),
+          // An owner or an admin of the workspace can have it make its own app (decision 0123).
+          canSetUpWorkspace: await appSetup.canSetUpWorkspace(user, organizationId),
         };
       },
       { auth: true, org: true },
@@ -54,16 +59,18 @@ export const githubRouter = (
       { auth: true, org: true, query: connectQuery },
     )
     // What the platform posts to GitHub to have the app created, for a platform owner (decision 0074).
-    .get("/app/manifest", ({ query, user }) => appSetup.manifest(user, query), {
-      auth: true,
-      query: manifestQuery,
-    })
+    .get(
+      "/app/manifest",
+      ({ query, user, organizationId }) =>
+        appSetup.manifest(user, query, query.scope === "workspace" ? organizationId : undefined),
+      { auth: true, org: true, query: manifestQuery },
+    )
     // GitHub made the app and sends the browser back here with its code: keep the app, then on to
     // installing it on the person's account.
     .get(
       "/app/callback",
       async ({ query, user, organizationId, redirect }) => {
-        await appSetup.complete(user, query);
+        await appSetup.complete(user, query, organizationId);
         return redirect(await service.installUrl(organizationId, user.id));
       },
       { auth: true, org: true, query: appCallbackQuery },
