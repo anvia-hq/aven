@@ -1,4 +1,4 @@
-import { useAtom } from "jotai";
+import { getDefaultStore, useAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 
 import { authClient } from "@/lib/auth-client";
@@ -29,6 +29,13 @@ export function useThreads() {
   useEffect(() => {
     if (threads === null) void threadsStore.refresh();
   }, [threads]);
+
+  // A list kept from before, as when the person was in the bot or the cockpit, whose sidebars do not
+  // follow the threads: a run in it may have ended since, so it is asked again at once rather than
+  // after the sidebar's first poll (decision 0122). Callers share the one request.
+  useEffect(() => {
+    if (getDefaultStore().get(threadsAtom) !== null) void threadsStore.refresh();
+  }, []);
 
   const setRunning = useCallback(
     (threadId: string, running: boolean) =>
