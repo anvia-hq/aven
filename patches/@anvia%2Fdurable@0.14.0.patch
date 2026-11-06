@@ -1,0 +1,39 @@
+diff --git a/dist/index.js b/dist/index.js
+index fb03e2e10fed54921cc1c0c6ca31e0e5482da0b0..48eb76ba9ef787b5755cfc49207b809bb578dcd9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -2362,6 +2362,11 @@ function registrations(values) {
+ 			version: registration.version
+ 		};
+ 		if (registration.stream !== void 0) normalized.stream = registration.stream;
++		if (registration.toolConcurrency !== void 0) {
++			if (!Number.isSafeInteger(registration.toolConcurrency) || registration.toolConcurrency < 1)
++				throw new TypeError("Durable toolConcurrency must be a positive integer.");
++			normalized.toolConcurrency = registration.toolConcurrency;
++		}
+ 		if (registration.lifecycle !== void 0) normalized.lifecycle = { mode: "observe" };
+ 		if (registration.middlewares !== void 0) normalized.middlewares = { mode: "pure" };
+ 		if (registration.guardrails !== void 0) normalized.guardrails = { mode: "record" };
+@@ -3112,7 +3117,8 @@ var DurableRuntime = class DurableRuntime {
+ 					...input,
+ 					trace,
+ 					abortSignal: signal,
+-					retries: false
++					retries: false,
++					toolConcurrency: registration.toolConcurrency
+ 				}, {
+ 					runId: id,
+ 					execution: createExecution(this.store, run, registration, signal),
+diff --git a/dist/task-protocol-DgaZ5ajH.d.ts b/dist/task-protocol-DgaZ5ajH.d.ts
+index f454ff1c69e400b63b7014da3940d59bbb2fd918..5f60f0543de296dc1fcdc916ebbf64818e47d26e 100644
+--- a/dist/task-protocol-DgaZ5ajH.d.ts
++++ b/dist/task-protocol-DgaZ5ajH.d.ts
+@@ -297,6 +297,8 @@ type DurableAgentRegistration = {
+   version: string;
+   /** Use agent.stream() and persist normalized generation deltas. Defaults to false. */
+   stream?: boolean;
++  /** How many tool calls of one model turn may run at once. Defaults to 1; core keeps 1 for an agent with a question or approval tool. */
++  toolConcurrency?: number;
+   /** Unlisted tools require reconciliation if interrupted after their intent was committed. */
+   toolRecovery?: Readonly<Record<string, ToolRecovery>>;
+   modelRetry?: DurableModelRetry;

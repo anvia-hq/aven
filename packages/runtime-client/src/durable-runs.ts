@@ -413,7 +413,7 @@ export class DurableRuns {
     if (after) this.#replay(run.id, after, mapper);
     const done = (async (): Promise<DurableEnd> => {
       for await (const event of run.stream({ after })) {
-        const { events, end } = mapper.map(event);
+        const { events, end } = mapper.map(await this.#withOutcome(run, event));
         for (const mapped of events) onEvent(mapped, { id: run.id, sequence: event.sequence });
         if (event.type === "status") await this.#resolveInterrupted(run, event);
         if (end) {
@@ -429,6 +429,16 @@ export class DurableRuns {
       // A run that is already over, or a journal that is closing, has nothing left to cancel.
       cancel: () => run.cancel().catch(() => undefined),
     };
+  }
+
+  // A status event no longer carries the run's outcome, which Anvia keeps once, on the run (durable
+  // 0.14); a run that ended is asked for it. Events of an older journal still carry it.
+  async #withOutcome(run: DurableRun, event: DurableEvent): Promise<DurableEvent> {
+    const data = asRecord(event.data);
+    if (event.type !== "status" || data.outcome !== undefined) return event;
+    if (data.status !== "completed" && data.status !== "waiting") return event;
+    const { run: record } = await run.snapshot({ operations: false });
+    return { ...event, data: { ...data, outcome: record.outcome } } as DurableEvent;
   }
 
   #replay(runId: string, upTo: number, mapper: ReturnType<typeof createDurableEventMapper>) {
