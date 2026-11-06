@@ -15,7 +15,7 @@ import type { ProvidersHost } from "@aven/agents/tools/providers";
 import type { ScheduleHost } from "@aven/agents/tools/schedules";
 import type { ThreadsHost } from "@aven/agents/tools/threads";
 import type { SendMessage } from "@aven/agents/tools/send-message";
-import { MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
+import { botNote, MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import type { BotGoalView } from "@aven/protocol/goals";
 import type { BotMcpView } from "@aven/protocol/mcp";
 import type { CockpitAccess } from "@aven/protocol/cockpit";
@@ -170,7 +170,12 @@ export type BotRepliesContext = {
   pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
 };
 
-type Reply = { botId: string; abort: AbortController };
+// What a bot is told when it answered a person without sending anything (decision 0125).
+const UNSENT_NOTE =
+  "You answered without sending anything: the person sees only what you send with send_message, and nothing of what you wrote outside it. Send your answer now with send_message, the way you would text it, and do not repeat what you did.";
+
+// `spoke`: the bot has said something in this reply: sent a message, or asked the person.
+type Reply = { botId: string; abort: AbortController; spoke: boolean };
 
 // Answers for the bots of the control plane (decision 0059): the bot's agent runs here, on the
 // bot's own computer, and what it says goes back one message at a time. The conversation is the
@@ -193,7 +198,7 @@ export class BotReplies {
 
   start(message: BotReplyMessage) {
     const abort = new AbortController();
-    this.#live.set(message.replyId, { botId: message.bot.id, abort });
+    this.#live.set(message.replyId, { botId: message.bot.id, abort, spoke: false });
     void this.#answer(message, abort);
   }
 
@@ -232,7 +237,14 @@ export class BotReplies {
         abort,
       );
       const asked = await this.#promptOf(bot.id, prompt, attachments);
-      await agent.generate({ prompt: asked, session: { sessionId: bot.id }, abortSignal: signal });
+      const session = { sessionId: bot.id };
+      await agent.generate({ prompt: asked, session, abortSignal: signal });
+      // The person sees only what the bot sends with `send_message`. A bot that answers a person in
+      // plain text instead, as some models do, would be met with silence: it is told once to send it.
+      const { from, note } = parseBotPrompt(prompt);
+      if (!this.#live.get(replyId)?.spoke && !note && from === undefined) {
+        await agent.generate({ prompt: botNote(UNSENT_NOTE), session, abortSignal: signal });
+      }
       send({ type: "bot.end", replyId });
     } catch (error) {
       send({ type: "bot.end", replyId, error: errorMessage(signal.reason ?? error) });
@@ -314,13 +326,21 @@ export class BotReplies {
     // is answering another bot, which has no chat with the person in front of it (decision 0086).
     const { from, note } = parseBotPrompt(prompt);
     const canAskPerson = !note && (bot.handle === MAIN_BOT_HANDLE || from === undefined);
+    const spoke = () => {
+      const reply = this.#live.get(replyId);
+      if (reply) reply.spoke = true;
+    };
     const send: SendMessage = async ({ to, text }, { abortSignal }) => {
       if (to !== USER_HANDLE) {
         const sent = await call("bot.send", { replyId, to, text });
+        spoke();
         return `Sent to ${sent.name} (${sent.handle}).`;
       }
       await this.#pause(typingDelay(text), abortSignal);
-      if (post({ type: "bot.say", replyId, text })) return "Sent to the person.";
+      if (post({ type: "bot.say", replyId, text })) {
+        spoke();
+        return "Sent to the person.";
+      }
       // A tool's error goes back to the model, which could try again; the reply is over instead.
       const lost = new Error("The connection to the control plane dropped");
       abort.abort(lost);
@@ -371,7 +391,10 @@ export class BotReplies {
       // A note wakes the bot with no one to answer; the control plane holds to that as well.
       askQuestion: parseBotPrompt(prompt).note
         ? undefined
-        : (questions) => call("bot.question", { replyId, questions }),
+        : (questions) => {
+            spoke();
+            return call("bot.question", { replyId, questions });
+          },
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       skills: skillListing,
       // The servers' tools are kept small as the computer's are, since the chat keeps what they return.
@@ -398,8 +421,10 @@ export class BotReplies {
         // The control plane holds to who may be asked, as for a question: not a note, and not a bot
         // that is answering another bot.
         askKey: canAskPerson
-          ? async (id) =>
-              (await call("bot.provider", { replyId, op: "askKey", id })) as ProviderKeyAsk
+          ? async (id) => {
+              spoke();
+              return (await call("bot.provider", { replyId, op: "askKey", id })) as ProviderKeyAsk;
+            }
           : undefined,
       },
       // What each call may do is the control plane's to say, and it holds to it whatever is asked here.

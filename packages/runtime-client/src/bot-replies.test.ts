@@ -7,6 +7,7 @@ import type { McpNote } from "@aven/agents/mcp";
 import type { SkillListing } from "@aven/agents/skills";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool, type CreateBot } from "@aven/agents/tools/create-bot";
+import { createAskQuestionTool } from "@aven/agents/tools/ask-question";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
 import type { RunAttachment, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
@@ -53,7 +54,9 @@ const agentThat =
   ({ send, computer, memory, createBot, updateSelf }) =>
     new Agent({
       id: "bot",
-      model: scriptedModel(steps),
+      // One more step than the script: a bot that answers a person in plain text is asked once to
+      // send it (decision 0125), and a script that ends in plain text has nothing left to say.
+      model: scriptedModel([...steps, [text("")]]),
       instructions: "x",
       memory,
       tools: [
@@ -366,6 +369,71 @@ describe("BotReplies", () => {
     expect(run.finished).toEqual(["bot-1"]);
   });
 
+  describe("an answer in plain text (decision 0125)", () => {
+    test("is sent back to the bot once, to be sent as a message, when a person was answered", async () => {
+      const run = harness(
+        agentThat(
+          [text("Done, the thread finished.")],
+          [toolCall("send_message", { text: "Done, the thread finished." })],
+          [text("")],
+        ),
+      );
+
+      run.replies.start(message);
+      await run.until();
+
+      expect(run.sent).toEqual([
+        { type: "bot.say", replyId: "r1", text: "Done, the thread finished." },
+        { type: "bot.end", replyId: "r1" },
+      ]);
+    });
+
+    test("is not asked for again, and ends the reply, when the bot still does not send", async () => {
+      const run = harness(agentThat([text("one")], [text("two")]));
+
+      run.replies.start(message);
+      await run.until();
+
+      expect(run.sent).toEqual([{ type: "bot.end", replyId: "r1" }]);
+    });
+
+    test("is left alone for a note, which has no one to answer, and for another bot", async () => {
+      for (const prompt of ["[note] A schedule is due", "[from scout] hi"]) {
+        const run = harness(agentThat([text("nothing to say")]));
+        run.replies.start({ ...message, prompt });
+        await run.until();
+        expect(run.sent).toEqual([{ type: "bot.end", replyId: "r1" }]);
+      }
+    });
+
+    test("is not asked for when the bot asked the person a question", async () => {
+      const run = harness(
+        ({ send, askQuestion, memory }) =>
+          new Agent({
+            id: "bot",
+            model: scriptedModel([
+              [
+                toolCall("ask_question", {
+                  questions: [
+                    { id: "q", text: "Which one?", options: [{ label: "A" }, { label: "B" }] },
+                  ],
+                }),
+              ],
+              [text("")],
+            ]),
+            instructions: "x",
+            memory,
+            tools: [createSendMessageTool(send), createAskQuestionTool(askQuestion!)],
+          }),
+      );
+
+      run.replies.start(message);
+      await run.until();
+
+      expect(run.sent).toEqual([{ type: "bot.end", replyId: "r1" }]);
+    });
+  });
+
   test("messages sent in one turn are typed one at a time, never together", async () => {
     let typing = 0;
     let most = 0;
@@ -550,7 +618,8 @@ describe("BotReplies", () => {
       };
     });
 
-    run.replies.start(message);
+    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
+    run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
     expect(timezone).toBe("Asia/Jakarta");
@@ -585,7 +654,8 @@ describe("BotReplies", () => {
       },
     }));
 
-    run.replies.start(message);
+    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
+    run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
     expect(run.calls.filter((call) => (call as { method: string }).method === "bot.goal")).toEqual([
@@ -632,7 +702,8 @@ describe("BotReplies", () => {
       },
     );
 
-    run.replies.start(message);
+    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
+    run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
     expect(ran).toEqual(["build", "test", "lint"]);
