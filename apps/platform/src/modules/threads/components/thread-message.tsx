@@ -1,4 +1,5 @@
 import { shipRequestOf } from "@aven/protocol/ship-request";
+import { cn } from "cn";
 import { memo } from "react";
 
 import { Markdown } from "@/components/markdown";
@@ -76,11 +77,14 @@ export const ThreadMessage = memo(function ThreadMessage({
   message,
   threadId,
   streaming = false,
+  sending = false,
 }: {
   message: ChatMessage;
   threadId: string;
   /** The agent is still writing this message: its last block is the one growing. */
   streaming?: boolean;
+  /** Sent from this browser and not yet shown by the server: drawn a little quieter meanwhile. */
+  sending?: boolean;
 }) {
   if (message.role === "user") {
     const isShipRequest =
@@ -90,7 +94,14 @@ export const ThreadMessage = memo(function ThreadMessage({
     if (isShipRequest) return <ShipRequestCard />;
     const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
-      <div className="my-12 ml-auto flex max-w-[80%] flex-col items-end gap-2" data-role="user">
+      <div
+        className={cn(
+          "my-12 ml-auto flex max-w-[80%] flex-col items-end gap-2",
+          sending && "opacity-60",
+        )}
+        data-role="user"
+        aria-busy={sending || undefined}
+      >
         {message.attachments?.length ? (
           <SentAttachments
             artifactsPath={`/api/threads/${threadId}/artifacts`}

@@ -79,37 +79,24 @@ export function useSendComposer({
       });
       return;
     }
-    // To an agent that is working the message shows at once as queued (decision 0098), so the
-    // composer is cleared at once too, ready for the next, and given the message back if it was not
-    // sent. Otherwise it is cleared when the message is taken.
+    // The composer is cleared at once, whatever the message does: one the agent takes shows at once
+    // as queued (decision 0098), and one that starts a run shows at once in the conversation
+    // (decision 0117), so a draft left behind would read as a second copy. It is given back if the
+    // message was not sent.
     const draft = { input: composer.input, entities: composer.entities };
+    composer.setInput("");
+    composer.setEntities([]);
+    // To an agent that is working the message is only queued, and the composer stays free for the
+    // next one meanwhile (decision 0098); one that starts a run is the run's own, so the next waits.
     const optimistic = running && attachments.files.length === 0;
-    if (optimistic) {
-      composer.setInput("");
-      composer.setEntities([]);
-    } else {
-      setSending(true);
-    }
+    if (!optimistic) setSending(true);
     try {
       const files = await attachments.encode();
       const sent = await onSubmit({ prompt, attachments: files, mentions }, selection);
-      if (sent) {
-        if (!optimistic) {
-          composer.setInput("");
-          composer.setEntities([]);
-        }
-        attachments.clear();
-      } else if (optimistic) {
-        // Not sent: back in the composer, unless the person has begun another message, which is
-        // not replaced; its words are in the notice instead.
-        if (latest.current.input.trim() === "") {
-          latest.current.setInput(draft.input);
-          latest.current.setEntities(draft.entities);
-        } else {
-          toast.add({ title: "Your message was not sent", description: prompt, type: "error" });
-        }
-      }
+      if (sent) attachments.clear();
+      else restore(draft, prompt);
     } catch (error) {
+      restore(draft, prompt);
       // A picked file can no longer be read, say it was moved; the message stays to send again.
       toast.add({
         title: "Could not read the attached files",
@@ -118,6 +105,20 @@ export function useSendComposer({
       });
     } finally {
       setSending(false);
+    }
+  }
+
+  // Not sent: back in the composer, unless the person has begun another message, which is not
+  // replaced; its words are in the notice instead.
+  function restore(draft: Draft, prompt: string) {
+    const current = latest.current.input;
+    // The composer was just cleared, and a render may not have reached `latest` yet: the draft's
+    // own words count as nothing new having been typed.
+    if (current.trim() === "" || current === draft.input) {
+      latest.current.setInput(draft.input);
+      latest.current.setEntities(draft.entities);
+    } else {
+      toast.add({ title: "Your message was not sent", description: prompt, type: "error" });
     }
   }
 

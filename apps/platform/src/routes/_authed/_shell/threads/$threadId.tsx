@@ -32,6 +32,7 @@ function ThreadPage() {
     owned,
     loaded,
     messages,
+    pending,
     steers,
     running,
     startedAt,
@@ -88,6 +89,7 @@ function ThreadPage() {
                 <ThreadMessages
                   threadId={thread.id}
                   messages={messages}
+                  pending={pending}
                   steers={steers}
                   running={running}
                   startedAt={startedAt}

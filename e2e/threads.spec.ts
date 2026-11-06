@@ -1,3 +1,5 @@
+import type { ChildProcess } from "node:child_process";
+
 import { expect, test, type Page } from "@playwright/test";
 
 import {
@@ -365,5 +367,72 @@ test.describe("threads", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await page.getByRole("button", { name: "Stop" }).click();
     await expect.poll(() => cancelled).toBe(true);
+  });
+});
+
+// A message that starts a run is in the conversation at once, before the server has it
+// (decision 0117): the words do not sit in the composer for the round trip.
+test.describe("a message sent to an idle agent", () => {
+  let runner: ChildProcess | undefined;
+  test.afterEach(() => {
+    runner?.kill();
+    runner = undefined;
+  });
+
+  async function idleThread(page: Page) {
+    await registerUser(page, "opt", "Optimistic Person");
+    // The run needs a model grant; the pretend runner never calls the model.
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_RUN_ENDS_AFTER: "60000" });
+    runner = child;
+    await page.goto(`/threads/${threadId}`);
+    return threadId;
+  }
+
+  test("shows at once, before the server has it, and settles to the server's own", async ({
+    page,
+  }) => {
+    await idleThread(page);
+    // The server answers late, as when a run takes a moment to be set up.
+    await page.route("**/api/threads/*/messages", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return route.continue();
+    });
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    const shown = page.locator('[data-role="user"]');
+    await prompt.fill("make the tests pass");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    // Within a fraction of the server's 1.5 seconds it is said, marked as not confirmed yet, and
+    // the composer is free again.
+    await expect(shown).toContainText("make the tests pass", { timeout: 500 });
+    await expect(shown).toHaveAttribute("aria-busy", "true");
+    await expect(prompt).toHaveText("");
+
+    // The server's own message takes its place: one message, not two, and no longer waiting.
+    await expect(shown).not.toHaveAttribute("aria-busy", "true", { timeout: 8000 });
+    await expect(shown).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+  });
+
+  test("a message the server refuses is taken back and the words return to the composer", async ({
+    page,
+  }) => {
+    await page.route("**/api/threads/*/messages", (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 409, contentType: "text/plain", body: "Not like that" });
+    });
+    await idleThread(page);
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    await prompt.fill("please build it");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    await expect(page.getByText("Not like that").first()).toBeVisible();
+    await expect(page.locator('[data-role="user"]')).toHaveCount(0);
+    await expect(prompt).toHaveText("please build it");
   });
 });

@@ -13,6 +13,12 @@ import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
+import {
+  pendingMessage,
+  settlePending,
+  withoutPending,
+  type PendingMessage,
+} from "../pending-messages";
 import type {
   ChatMessage,
   OutgoingMessage,
@@ -71,8 +77,18 @@ export function useThread(threadId: string) {
     setSteersState(steersRef.current);
   }, []);
 
+  // What this browser has sent that the server has not shown yet (decision 0117). Kept in a ref as
+  // well, so an event that settles one can be applied to the latest list.
+  const [pending, setPendingState] = useState<PendingMessage[]>([]);
+  const pendingRef = useRef<PendingMessage[]>([]);
+  const changePending = useCallback((change: (current: PendingMessage[]) => PendingMessage[]) => {
+    pendingRef.current = change(pendingRef.current);
+    setPendingState(pendingRef.current);
+  }, []);
+
   useEffect(() => {
     changeSteers(() => []);
+    changePending(() => []);
     setMessages([]);
     setRunning(false);
     setStartedAt(null);
@@ -86,6 +102,7 @@ export function useThread(threadId: string) {
       if (!event) return;
       setMessages((current) => applyEvent(current, event));
       setRunning((current) => isRunning(current, event));
+      changePending((current) => settlePending(current, event));
       switch (event.type) {
         case "steer_queued":
           // Shown already by the browser that sent it, which named it.
@@ -156,21 +173,25 @@ export function useThread(threadId: string) {
       void refresh();
     };
     return () => source.close();
-  }, [threadId, setThreadRunning, refresh, changeSteers]);
+  }, [threadId, setThreadRunning, refresh, changeSteers, changePending]);
 
-  // True once the message is accepted, so the composer knows it can clear. While the agent works
-  // the message goes to it, to be read at its next step (decision 0098): it shows at once, as
-  // waiting, and becomes the person's message when the agent takes it. It goes away again if it
-  // was not taken, or was sent as a message of its own because the run ended first.
+  // True once the message is accepted, so the composer knows it can clear. A message to an agent
+  // that works (decision 0098) is shown at once as waiting, and becomes the person's message when
+  // the agent takes it. One that starts a run is shown at once too, as sent (decision 0117), and
+  // given back to the composer if it was not.
   const send = useCallback(
     async (message: OutgoingMessage, selection: RunSelection = {}) => {
       const id = newSteerId();
-      const drop = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
-      if (running && message.attachments.length === 0) {
+      const dropSteer = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
+      const dropPending = () => changePending((current) => withoutPending(current, id));
+      const steering = running && message.attachments.length === 0;
+      if (steering) {
         changeSteers((current) => [
           ...current,
           { id, prompt: message.prompt, mentions: message.mentions },
         ]);
+      } else {
+        changePending((current) => [...current, pendingMessage(id, message)]);
       }
       const sent = await attempt("Could not send message", async () => {
         const result = await postJson<{ steered: boolean }>(`/threads/${threadId}/messages`, {
@@ -180,11 +201,16 @@ export function useThread(threadId: string) {
         rememberModelSelection(threadId, selection);
         return result;
       });
-      if (!sent?.steered) drop();
+      // The agent may have begun finishing after all, and taken it as a message of its own.
+      if (!sent?.steered) dropSteer();
+      // It was not sent, or the server shows it as a queued message (or as the person's message
+      // when it raced the run's end): the one shown from here goes. What starts a run stays until
+      // the event that brings it.
+      if (!sent || sent.steered || steering) dropPending();
       if (sent && wasArchived) void refresh();
       return sent !== null;
     },
-    [threadId, running, changeSteers, wasArchived, refresh],
+    [threadId, running, changeSteers, changePending, wasArchived, refresh],
   );
 
   // True once the answers are accepted; the run then continues, and the stream shows it.
@@ -214,6 +240,8 @@ export function useThread(threadId: string) {
     // regained focus) does not unknown it.
     loaded: loaded && (session != null || !isPending),
     messages,
+    // What this browser sent and the server has not shown yet, in the order it was sent.
+    pending: pending.map((item) => item.message),
     steers,
     running,
     startedAt,
