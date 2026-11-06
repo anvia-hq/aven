@@ -4,7 +4,7 @@ import { elapsed } from "@/lib/format";
 
 import { useWorkingWord } from "../hooks/use-working-word";
 
-// Three rows of three dots whose color runs from pale blue (top left) to indigo (bottom right), and
+// Three rows of three dots whose color runs from pale mint (top left) to green (bottom right), and
 // whose pulse crosses the grid diagonally, one step after another. The colors are the
 // `--working-from` and `--working-to` tokens of index.css. Also beside a running thread in the
 // sidebar, where `label` names it, as it is the only thing there that says the thread works.

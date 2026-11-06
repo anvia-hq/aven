@@ -94,10 +94,10 @@
   --sidebar-ring: oklch(0.5 0.02 160);
 }
 
-/* The dots of the working indicator run from pale blue to indigo (modules/threads/components/working-indicator.tsx). */
+/* The dots of the working indicator run from pale mint to green (modules/threads/components/working-indicator.tsx). */
 :root {
-  --working-from: oklch(0.82 0.08 235);
-  --working-to: oklch(0.58 0.2 277);
+  --working-from: oklch(0.88 0.1 160);
+  --working-to: oklch(0.62 0.17 152);
 }
 
 /* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
