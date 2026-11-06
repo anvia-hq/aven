@@ -22,6 +22,14 @@ export type CenterFilters = {
 
 export type CenterSearch = Partial<Omit<CenterFilters, "state" | "sort">> & {
   project?: string;
+  /** What narrows the commits; a file and a branch are a single project's. */
+  commitAuthor?: string;
+  since?: string;
+  until?: string;
+  path?: string;
+  branch?: string;
+  /** Words of the message, found among the commits that are shown. */
+  grep?: string;
   /** The pull request or commit open in the detail pane, as `<project id>:<number or hash>`. */
   pr?: string;
   commit?: string;
@@ -33,6 +41,9 @@ const oneOf = <T extends string>(options: readonly T[], value: unknown): T | und
   options.find((option) => option === value);
 const text = (value: unknown, max: number) =>
   typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
+
+const day = (value: unknown) =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 
 // `<project id>:<what>`, where what is checked by `pattern`.
 function opened(value: unknown, pattern: RegExp) {
@@ -46,6 +57,12 @@ export function parseCenterSearch(search: Record<string, unknown>): CenterSearch
   const stale = Number(search.stale);
   return {
     project: text(search.project, 64),
+    commitAuthor: text(search.commitAuthor, 100),
+    since: day(search.since),
+    until: day(search.until),
+    path: text(search.path, 300),
+    branch: text(search.branch, 200),
+    grep: text(search.grep, 100),
     pr: opened(search.pr, /^\d{1,8}$/),
     commit: opened(search.commit, /^[0-9a-f]{7,40}$/),
     state: oneOf(PULL_STATES, search.state),
@@ -129,5 +146,19 @@ export function pullsQuery(filters: CenterFilters, login: string | null): string
   if (filters.label) query.set("label", filters.label);
   if (filters.text) query.set("text", filters.text);
   if (filters.stale) query.set("staleDays", String(filters.stale));
+  return query.toString();
+}
+
+/**
+ * What the commit filters add to a `GET /projects/:id/commits` query, without its page; `one` is a
+ * single project's, which can also name a file and a branch.
+ */
+export function commitFilterQuery(search: CenterSearch, one: boolean) {
+  const query = new URLSearchParams();
+  if (search.commitAuthor) query.set("author", search.commitAuthor);
+  if (search.since) query.set("since", search.since);
+  if (search.until) query.set("until", search.until);
+  if (one && search.path) query.set("path", search.path);
+  if (one && search.branch) query.set("branch", search.branch);
   return query.toString();
 }

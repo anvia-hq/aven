@@ -161,6 +161,7 @@ Bun.serve({
         if (n === 11 || n === 10) return [9];
         return n === 1 ? [] : [n - 1];
       };
+      const asked = new URL(request.url).searchParams;
       const commits = Array.from({ length: 14 }, (_, index) => ({
         sha: sha(14 - index),
         commit: {
@@ -173,7 +174,19 @@ Bun.serve({
         author: { login: "ada" },
         parents: parentsOf(14 - index).map((n) => ({ sha: sha(n) })),
       }));
-      return Response.json(commits.slice((page - 1) * 10, page * 10), {
+      // The history's filters (decision 0132): the author is always ada, the branch
+      // `feature/login` ends at commit 10, and the even-numbered commits touch `src/login.ts`.
+      const wanted = commits.filter((entry, index) => {
+        const number = 14 - index;
+        if (asked.get("author") && !/ada/i.test(asked.get("author")!)) return false;
+        if (asked.get("sha") === "feature/login" && number > 10) return false;
+        if (asked.get("path") && !(asked.get("path") === "src/login.ts" && number % 2 === 0))
+          return false;
+        const since = asked.get("since");
+        if (since && Date.parse(entry.commit.author.date) < Date.parse(since)) return false;
+        return true;
+      });
+      return Response.json(wanted.slice((page - 1) * 10, page * 10), {
         headers:
           page === 1
             ? { link: '<https://api.github.com/repositories/1/commits?page=2>; rel="next"' }
@@ -308,9 +321,41 @@ Bun.serve({
     const branches = pathname.match(/^\/repos\/acme\/([\w.-]+)\/branches$/)?.[1];
     if (branches && repositories.includes(branches)) {
       return Response.json([
-        { name: "main", commit: { sha: sha(14) } },
-        { name: "feature/login", commit: { sha: sha(10) } },
+        { name: "main", protected: true, commit: { sha: sha(14) } },
+        { name: "feature/login", protected: false, commit: { sha: sha(10) } },
+        { name: "old/spike", protected: false, commit: { sha: sha(2) } },
       ]);
+    }
+    // A branch by name: its latest commit, and how far it is from `main` (decision 0132).
+    const tip = pathname.match(
+      /^\/repos\/acme\/([\w.-]+)\/commits\/(main|feature%2Flogin|old%2Fspike)$/,
+    );
+    if (tip && repositories.includes(tip[1]!)) {
+      const number = { main: 14, "feature%2Flogin": 10, "old%2Fspike": 2 }[tip[2]!]!;
+      return Response.json({
+        sha: sha(number),
+        commit: {
+          message: `Change number ${number}`,
+          author: {
+            name: "Ada Lovelace",
+            date: new Date(
+              Date.now() - (tip[2] === "old%2Fspike" ? 90 * 86_400_000 : 3_600_000),
+            ).toISOString(),
+          },
+        },
+        author: { login: "ada" },
+        parents: [],
+      });
+    }
+    const compare = pathname.match(
+      /^\/repos\/acme\/([\w.-]+)\/compare\/main\.\.\.(feature%2Flogin|old%2Fspike)$/,
+    );
+    if (compare && repositories.includes(compare[1]!)) {
+      return Response.json(
+        compare[2] === "old%2Fspike"
+          ? { ahead_by: 1, behind_by: 40 }
+          : { ahead_by: 3, behind_by: 2 },
+      );
     }
     const name = pathname.match(/^\/repos\/acme\/([\w.-]+)$/)?.[1];
     if (name && repositories.includes(name)) return Response.json(repo(name));

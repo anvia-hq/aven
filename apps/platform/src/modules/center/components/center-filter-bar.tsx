@@ -1,8 +1,5 @@
 import { X } from "@mynaui/icons-react";
-import { useEffect, useState } from "react";
-
 import { Button } from "@/components/button";
-import { Input } from "@/components/input";
 
 import {
   activeQuickView,
@@ -14,6 +11,7 @@ import {
   type CenterFilters,
   type CenterSearch,
 } from "../filters";
+import { DebouncedInput } from "./debounced-input";
 import { FilterSelect } from "./filter-select";
 
 const STATE_LABELS: Record<CenterFilters["state"], string> = {
@@ -54,17 +52,6 @@ type Props = {
 // address's search, so the bar only says what to change.
 export function CenterFilterBar({ filters, connected, onChange, onQuickView }: Props) {
   const active = activeQuickView(filters);
-  // Typed words are kept in the address once typing pauses.
-  const [text, setText] = useState(filters.text ?? "");
-  useEffect(() => setText(filters.text ?? ""), [filters.text]);
-  useEffect(() => {
-    if (text.trim() === (filters.text ?? "")) return;
-    const timer = setTimeout(() => onChange({ text: text.trim() || undefined }), 400);
-    return () => clearTimeout(timer);
-    // Only the typed words start the wait.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
-
   return (
     <div className="flex flex-col gap-3">
       <div role="group" aria-label="Quick views" className="flex flex-wrap gap-1.5">
@@ -87,12 +74,12 @@ export function CenterFilterBar({ filters, connected, onChange, onQuickView }: P
         })}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Input
+        <DebouncedInput
           type="search"
           aria-label="Search titles"
           placeholder="Search titles"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
+          value={filters.text}
+          onCommit={(text) => onChange({ text })}
           className="h-8 w-48"
         />
         <FilterSelect

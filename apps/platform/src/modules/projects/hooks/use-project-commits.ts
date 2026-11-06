@@ -8,19 +8,21 @@ type Answer = { key: string; page?: RepoCommitPage; problem?: string };
 
 // One page of the project's commit history on GitHub, from the newest, read again when the page
 // changes. Until the answer for this page is in, `loading` is true, never the last page's commits.
-export function useProjectCommits(projectId: string, page: number) {
+export function useProjectCommits(projectId: string, page: number, filters = "") {
   const [answer, setAnswer] = useState<Answer>();
-  const key = `${projectId}\n${page}`;
+  const key = `${projectId}\n${page}\n${filters}`;
 
   useEffect(() => {
     let current = true;
-    api<RepoCommitPage>(`/projects/${projectId}/commits?page=${page}`)
+    api<RepoCommitPage>(
+      `/projects/${projectId}/commits?page=${page}${filters ? `&${filters}` : ""}`,
+    )
       .then((found) => current && setAnswer({ key, page: found }))
       .catch((failure: unknown) => current && setAnswer({ key, problem: errorMessage(failure) }));
     return () => {
       current = false;
     };
-  }, [projectId, page, key]);
+  }, [projectId, page, filters, key]);
 
   const mine = answer?.key === key ? answer : undefined;
   return {

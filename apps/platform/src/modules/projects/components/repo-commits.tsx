@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/skeleton";
 import { timeAgo } from "@/lib/format";
 
 import { useProjectCommits } from "../hooks/use-project-commits";
+import { hasWords } from "@/lib/words";
 import { commitUrl } from "../repo-links";
 import type { Project, RepoCommit } from "../types";
 import { CommitGraphRow, ROW_HEIGHT } from "./commit-graph";
@@ -108,13 +109,23 @@ function Commit({
 export function RepoCommits({
   project,
   onOpenCommit,
+  filters = "",
+  grep,
 }: {
   project: Project;
+  /** The query of the history's filters (author, time, file, branch), already encoded. */
+  filters?: string;
+  /** Words the messages shown must have; a page of commits is read, and those without are left out. */
+  grep?: string;
   /** Given, a commit's message opens it where it is shown rather than on GitHub. */
   onOpenCommit?: (sha: string) => void;
 }) {
   const [page, setPage] = useState(1);
-  const { commits, hasMore, problem, loading } = useProjectCommits(project.id, page);
+  const { commits: read, hasMore, problem, loading } = useProjectCommits(project.id, page, filters);
+  const commits = useMemo(
+    () => read?.filter((commit) => !grep || hasWords(commit.message, grep)),
+    [read, grep],
+  );
   const graph = useMemo(() => layoutGraph(commits ?? []), [commits]);
 
   return (

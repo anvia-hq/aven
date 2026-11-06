@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 
+import { hasWords } from "@/lib/words";
+
 import type { CenterFilters } from "../filters";
 import type {
   Project,
@@ -32,16 +34,17 @@ type Feed = {
 
 // The pull requests and the latest commits of several projects, read from GitHub through each
 // project's own endpoints and put together, the latest first. A project that cannot be read is
-// listed, not allowed to empty the rest. `withCommits` is off where one project's own commit graph
+// listed, not allowed to empty the rest. `commitsQuery` is null where one project's own commit graph
 // is shown instead.
 export function useCenterFeed(
   projects: Project[],
   pullsQuery: string | null,
   sort: CenterFilters["sort"],
-  withCommits: boolean,
+  commitsQuery: string | null,
+  grep: string | undefined,
   refresh: number,
 ) {
-  const key = `${projects.map((project) => project.id).join(",")}\n${pullsQuery}\n${withCommits}\n${refresh}`;
+  const key = `${projects.map((project) => project.id).join(",")}\n${pullsQuery}\n${commitsQuery}\n${grep}\n${refresh}`;
   const [answer, setAnswer] = useState<{ key: string; feed: Feed }>();
 
   useEffect(() => {
@@ -55,12 +58,16 @@ export function useCenterFeed(
               pullsQuery === null
                 ? { items: [], total: 0, hasMore: false }
                 : api<TrackedPage>(`/projects/${project.id}/pulls?${pullsQuery}`),
-              withCommits
-                ? api<RepoCommitPage>(`/projects/${project.id}/commits?page=1`)
-                : undefined,
+              commitsQuery === null
+                ? undefined
+                : api<RepoCommitPage>(`/projects/${project.id}/commits?${commitsQuery}`),
             ]);
             feed.pulls.push(...pulls.items.map((item) => ({ project, item })));
-            feed.commits.push(...(commits?.commits ?? []).map((commit) => ({ project, commit })));
+            feed.commits.push(
+              ...(commits?.commits ?? [])
+                .filter((commit) => hasWords(commit.message, grep))
+                .map((commit) => ({ project, commit })),
+            );
           } catch {
             feed.unreadable.push(project);
           }

@@ -55,6 +55,16 @@ test.describe("Center", () => {
     await page.getByRole("searchbox", { name: "Search titles" }).fill("");
     await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
 
+    // Among all the projects, the commits are narrowed by author and by words too.
+    await page.getByRole("searchbox", { name: "Commit author" }).fill("bob");
+    await expect(commits.getByText("No commits yet.")).toBeVisible();
+    await page.getByRole("button", { name: "Clear" }).click();
+    await page.getByRole("searchbox", { name: "Search commit messages" }).fill("number 13");
+    await expect(commits.getByText("Change number 13").first()).toBeVisible();
+    await expect(commits.getByText("Change number 14")).toHaveCount(0);
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(commits.getByText("Change number 14").first()).toBeVisible();
+
     // A pull request opens beside the lists, with its checks, its reviewers and its files; its link
     // is in the address.
     await page.getByRole("link", { name: "Open pull request 12" }).first().click();
@@ -91,6 +101,36 @@ test.describe("Center", () => {
     await expect(page.getByRole("heading", { name: "shiny-app" })).toBeVisible();
     await expect(pulls).not.toContainText("docs-site");
     await expect(page.getByRole("navigation", { name: "Commit pages" })).toBeVisible();
+
+    // Its branches, how far each is from the default one, and which have gone quiet.
+    const branches = page.getByRole("region", { name: "Branches" });
+    await expect(branches.getByRole("button", { name: "feature/login" })).toBeVisible();
+    await expect(branches.getByTitle("3 ahead of and 2 behind the default branch")).toBeVisible();
+    await expect(branches.getByTitle("1 ahead of and 40 behind the default branch")).toBeVisible();
+    await expect(branches.getByText("Stale")).toHaveCount(1);
+    await expect(branches.getByLabel("Protected")).toHaveCount(1);
+
+    // Choosing a branch has the commits show its history, which ends at commit 10.
+    const history = page.getByRole("region", { name: "Commits" });
+    await expect(history.getByText("Change number 14").first()).toBeVisible();
+    await branches.getByRole("button", { name: "feature/login" }).click();
+    await expect(page).toHaveURL(/branch=feature%2Flogin/);
+    await expect(history.getByText("Change number 10").first()).toBeVisible();
+    await expect(history.getByText("Change number 14")).toHaveCount(0);
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(history.getByText("Change number 14").first()).toBeVisible();
+
+    // The commits of a file, by an author, and by the words of their message.
+    await page.getByRole("searchbox", { name: "Commits touching a file" }).fill("src/login.ts");
+    await expect(history.getByText("Change number 14").first()).toBeVisible();
+    await expect(history.getByText("Change number 13")).toHaveCount(0);
+    await page.getByRole("searchbox", { name: "Commit author" }).fill("bob");
+    await expect(history.getByText("No commits yet.")).toBeVisible();
+    await page.getByRole("button", { name: "Clear" }).click();
+    await page.getByRole("searchbox", { name: "Search commit messages" }).fill("number 12");
+    await expect(history.getByText("Change number 12").first()).toBeVisible();
+    await expect(history.getByText("Change number 14")).toHaveCount(0);
+    await page.getByRole("button", { name: "Clear" }).click();
 
     // And back to all of them.
     await page.getByRole("link", { name: "All projects" }).click();

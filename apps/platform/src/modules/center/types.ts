@@ -50,3 +50,16 @@ export type CommitDetail = {
   files: FileChange[];
   filesTruncated: boolean;
 };
+
+/** What `GET /projects/:id/branches` answers: where each branch stands against the default one. */
+export type BranchSummary = {
+  name: string;
+  isDefault: boolean;
+  protected: boolean;
+  ahead: number;
+  behind: number;
+  lastCommit: { sha: string; message: string; author: string | null; date: string } | null;
+  pull: { number: number; title: string } | null;
+};
+
+export type BranchList = { branches: BranchSummary[]; truncated: boolean };

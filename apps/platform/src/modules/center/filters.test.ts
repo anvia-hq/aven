@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   activeQuickView,
+  commitFilterQuery,
   filtersOf,
   parseCenterSearch,
   pullsQuery,
@@ -60,4 +61,24 @@ test("a quick view is its filters alone, and shows as chosen only while they are
   expect(activeQuickView(filtersOf({ ...search, label: "bug" }))).toBeUndefined();
   expect(activeQuickView(filtersOf({ ...search, state: "merged" }))).toBeUndefined();
   expect(activeQuickView(filtersOf({}))?.id).toBe("all");
+});
+
+test("asks for the commits the filters name, a file and a branch only for one project", () => {
+  const search = parseCenterSearch({
+    commitAuthor: "ada",
+    since: "2026-11-01",
+    until: "nonsense",
+    path: "src/a.ts",
+    branch: "feature/login",
+  });
+  expect(Object.fromEntries(new URLSearchParams(commitFilterQuery(search, true)))).toEqual({
+    author: "ada",
+    since: "2026-11-01",
+    path: "src/a.ts",
+    branch: "feature/login",
+  });
+  expect(Object.fromEntries(new URLSearchParams(commitFilterQuery(search, false)))).toEqual({
+    author: "ada",
+    since: "2026-11-01",
+  });
 });
