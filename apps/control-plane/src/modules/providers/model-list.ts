@@ -3,7 +3,7 @@ import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "
 import { UnprocessableError } from "../../errors";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
-import { azureEndpoint } from "./schema";
+import { azureEndpoint, bedrockEndpoint } from "./schema";
 
 export class ModelListError extends UnprocessableError {}
 
@@ -26,6 +26,16 @@ function modelsRequest(source: ModelSource) {
     return {
       url: `${origin.data}/openai/deployments?api-version=2022-12-01`,
       headers: { "api-key": requireApiKey(source) },
+    };
+  }
+  if (source.kind === "bedrock") {
+    // Bedrock's own OpenAI-compatible list; `bedrock-runtime` has none. The key goes only to AWS.
+    if (!source.baseUrl) throw new ModelListError("A region is needed to list models");
+    const endpoint = bedrockEndpoint.safeParse(source.baseUrl);
+    if (!endpoint.success) throw new ModelListError("Not a Bedrock endpoint");
+    return {
+      url: `${endpoint.data}/models`,
+      headers: { authorization: `Bearer ${requireApiKey(source)}` },
     };
   }
   if (source.kind === "anthropic") {
@@ -101,6 +111,8 @@ export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetc
 // The levels a model of a server the person runs says it accepts: a gateway lists them itself,
 // models.dev knows nothing of such a server.
 async function listedEfforts(source: ModelSource, modelId: string) {
+  // Bedrock lists no levels, and a model there may reject one it does not know.
+  if (source.kind === "bedrock") return null;
   if (source.kind === "openai-compatible") {
     if (!source.baseUrl) return null;
     return (await gatewayModel(source.baseUrl, source.apiKey, modelId)).effortLevels;

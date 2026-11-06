@@ -1,3 +1,4 @@
+import { bedrockBaseUrl } from "@aven/protocol/providers";
 import { useRef, useState, type FormEvent } from "react";
 
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
@@ -19,9 +20,20 @@ export function useProviderForm(
   const { create, update, listModels, listSavedModels } = useProviders();
   const compatible = kind === "openai-compatible";
   const azure = kind === "azure";
+  const bedrock = kind === "bedrock";
 
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
+
+  // The address the form stands for: typed for a server or an Azure resource, derived from the
+  // region for Bedrock.
+  function readBaseUrl() {
+    if (bedrock) {
+      const region = readTrimmedField("region");
+      return region ? bedrockBaseUrl(region) : undefined;
+    }
+    return compatible || azure ? readTrimmedField("baseUrl") : undefined;
+  }
 
   // A model list belongs to one key and URL, so closing the dialog drops it.
   function reset() {
@@ -37,7 +49,7 @@ export function useProviderForm(
     const list =
       provider && !apiKey
         ? await listSavedModels(provider)
-        : await listModels({ kind, apiKey, baseUrl: readTrimmedField("baseUrl") });
+        : await listModels({ kind, apiKey, baseUrl: readBaseUrl() });
     setLoadingModels(false);
     if (list) {
       setModels(list);
@@ -50,7 +62,7 @@ export function useProviderForm(
     setSubmitting(true);
     const chosenModel = (models ? modelId : readTrimmedField("modelId")) || undefined;
     const name = readTrimmedField("name") ?? provider?.name ?? PROVIDER_LABELS[kind];
-    const baseUrl = compatible || azure ? readTrimmedField("baseUrl") : undefined;
+    const baseUrl = readBaseUrl();
     const apiKey = readTrimmedField("apiKey");
     const done = provider
       ? await update(provider, { name, apiKey, baseUrl, modelId: chosenModel ?? null })
@@ -66,6 +78,7 @@ export function useProviderForm(
     formRef,
     compatible,
     azure,
+    bedrock,
     models,
     modelId,
     loadingModels,

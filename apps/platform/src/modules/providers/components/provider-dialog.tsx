@@ -1,3 +1,4 @@
+import { bedrockRegionOf } from "@aven/protocol/providers";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -26,8 +27,14 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   openai: "sk-…",
   anthropic: "sk-ant-…",
   gemini: "AIza…",
+  bedrock: "Amazon Bedrock API key",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
+};
+
+const modelPlaceholders: Partial<Record<ProviderKind, string>> = {
+  bedrock: "openai.gpt-oss-120b",
+  "openai-compatible": "llama3.1",
 };
 
 type Props = {
@@ -41,7 +48,7 @@ type Props = {
 export function ProviderDialog({ kind, provider, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false));
-  const { compatible, azure } = form;
+  const { compatible, azure, bedrock } = form;
   const editing = provider !== undefined;
 
   return (
@@ -63,7 +70,7 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
-          {compatible && (
+          {(compatible || bedrock) && (
             <TextField
               label="Name"
               name="name"
@@ -81,6 +88,16 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               placeholder={
                 azure ? "https://my-resource.openai.azure.com" : "http://localhost:11434/v1"
               }
+            />
+          )}
+          {bedrock && (
+            <TextField
+              label="Region"
+              name="region"
+              required
+              pattern="[a-z]{2}(-[a-z]+)+-[0-9]+"
+              defaultValue={bedrockRegionOf(provider?.baseUrl) ?? undefined}
+              placeholder="us-east-1"
             />
           )}
           <TextField
@@ -111,9 +128,9 @@ export function ProviderDialog({ kind, provider, label }: Props) {
                   models={form.models}
                   value={form.modelId}
                   onChange={form.selectModel}
-                  required={compatible}
+                  required={compatible || bedrock}
                   defaultValue={provider?.modelId ?? undefined}
-                  placeholder={compatible ? "llama3.1" : "Provider default"}
+                  placeholder={modelPlaceholders[kind] ?? "Provider default"}
                 />
               </div>
               <Button

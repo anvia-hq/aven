@@ -15,7 +15,10 @@ type Entry = {
 };
 
 // The key models.dev files a provider's models under, where it is not our kind's name.
-const CATALOG_KEYS: Partial<Record<Provider, string>> = { gemini: "google" };
+const CATALOG_KEYS: Partial<Record<Provider, string>> = {
+  gemini: "google",
+  bedrock: "amazon-bedrock",
+};
 
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -60,11 +63,14 @@ const OPENAI_CHAT = /^(gpt-|o\d|chatgpt-)/;
 const OPENAI_OTHER =
   /embedding|whisper|tts|audio|image|realtime|transcribe|moderation|search|dall-e|davinci|babbage|instruct/;
 
+// Bedrock serves embeddings, rerankers and image, video and speech models beside the chat ones.
+const BEDROCK_OTHER = /embed|rerank|image|video|speech|canvas|reel|sonic|stable-/i;
 const GEMINI_CHAT = /^gemini-/;
 const GEMINI_OTHER = /embedding|tts|image|live|audio|aqa|robotics|computer-use/;
 
 export function looksLikeChatModel(kind: Provider, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
+  if (kind === "bedrock") return !BEDROCK_OTHER.test(id);
   if (kind === "gemini") return GEMINI_CHAT.test(id) && !GEMINI_OTHER.test(id);
   if (kind === "azure") return true; // a deployment's name is the owner's, not the model's
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
@@ -105,7 +111,7 @@ export function createModelCatalog(
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
       const next: Partial<Record<Provider, Map<string, Entry>>> = {};
-      for (const kind of ["openai", "anthropic", "gemini", "azure"] as const) {
+      for (const kind of ["openai", "anthropic", "gemini", "bedrock", "azure"] as const) {
         const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
         next[kind] = new Map(
           Object.entries(models)
@@ -164,7 +170,7 @@ export function createModelCatalog(
     // The reasoning levels the catalog lists for a model, or null. Only a fallback for models the
     // SDK does not know: the SDK's own list wins, because it rejects anything else.
     async efforts(kind: Provider, id: string) {
-      if (kind === "openai-compatible") return null;
+      if (kind === "openai-compatible" || kind === "bedrock") return null;
       const levels = (await lookup(kind))?.get(id)?.efforts;
       return levels?.length ? levels : null;
     },

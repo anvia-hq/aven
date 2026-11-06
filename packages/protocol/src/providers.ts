@@ -18,6 +18,17 @@ export type BotProviderView = {
 /** Whether a provider of this kind cannot run without a key; a server of the person's own may need none. */
 export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
 
+/** Where Amazon Bedrock's OpenAI-compatible API is in a region (decision 0135). */
+export const bedrockBaseUrl = (region: string) => `https://bedrock-mantle.${region}.api.aws/v1`;
+
+/** A Bedrock endpoint, and so where a person's key may be sent: only AWS's own regional host. */
+export const BEDROCK_ENDPOINT =
+  /^https:\/\/bedrock-mantle\.([a-z]{2}(?:-[a-z]+)+-\d+)\.api\.aws\/v1\/?$/;
+
+/** The region of a Bedrock endpoint, or null when the address is not one. */
+export const bedrockRegionOf = (baseUrl: string | null | undefined) =>
+  (baseUrl && BEDROCK_ENDPOINT.exec(baseUrl)?.[1]) || null;
+
 /**
  * The question a bot asks to get a provider's key: its card is a masked field, and the answer is
  * saved to the provider, so it is in no message, no transcript and nothing the bot reads.

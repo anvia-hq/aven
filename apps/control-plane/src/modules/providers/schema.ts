@@ -1,3 +1,4 @@
+import { BEDROCK_ENDPOINT } from "@aven/protocol/providers";
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
@@ -17,6 +18,15 @@ export const azureEndpoint = z
   .url({ protocol: /^https$/ })
   .max(500)
   .transform((value) => new URL(value).origin);
+
+// Amazon Bedrock is addressed by its regional endpoint, `https://bedrock-mantle.<region>.api.aws/v1`
+// (`bedrockBaseUrl`). The control plane calls it with the user's key, so it must be exactly AWS's host.
+export const bedrockEndpoint = z
+  .string()
+  .trim()
+  .max(500)
+  .regex(BEDROCK_ENDPOINT, "A Bedrock endpoint is https://bedrock-mantle.<region>.api.aws/v1")
+  .transform((value) => value.replace(/\/+$/, ""));
 
 // What each kind is made of, apart from its key: the person's form adds one where the kind needs it,
 // and a bot's request has none (decision 0086), so both are built from these.
@@ -39,6 +49,14 @@ const gemini = {
   modelId: providerModelId.optional(),
   isDefault,
 };
+// Bedrock: the regional endpoint, and the id of a model it serves (listed from the endpoint).
+const bedrock = {
+  kind: z.literal("bedrock"),
+  name: providerName,
+  baseUrl: bedrockEndpoint,
+  modelId: providerModelId,
+  isDefault,
+};
 // Azure: the resource URL, and the name of a deployment in it (the model id Azure accepts).
 const azure = {
   kind: z.literal("azure"),
@@ -59,6 +77,7 @@ export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...openai, apiKey }),
   z.object({ ...anthropic, apiKey }),
   z.object({ ...gemini, apiKey }),
+  z.object({ ...bedrock, apiKey }),
   z.object({ ...azure, apiKey }),
   z.object({ ...compatible, apiKey: apiKey.optional() }),
 ]);
@@ -68,6 +87,7 @@ export const keylessProviderBody = z.discriminatedUnion("kind", [
   z.object(openai),
   z.object(anthropic),
   z.object(gemini),
+  z.object(bedrock),
   z.object(azure),
   z.object(compatible),
 ]);

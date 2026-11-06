@@ -18,7 +18,7 @@ export type ModelConfig = {
   /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`. */
   apiKey?: string;
   /**
-   * Required for `openai-compatible` and `azure`: the API root, e.g. http://localhost:11434/v1 or
+   * Required for `openai-compatible`, `azure` and `bedrock`: the API root, e.g. http://localhost:11434/v1 or
    * https://my-resource.openai.azure.com/openai/v1.
    * For the other providers it overrides the API root, which is how a runtime reaches the
    * control plane's gateway instead of the vendor.
@@ -72,6 +72,20 @@ export function createModel(config: ModelConfig) {
       modelId: config.modelId,
       api: "chat",
       // Only the levels the server itself lists (a gateway's `/model/info`): others may be rejected.
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
+  if (config.provider === "bedrock") {
+    if (!config.baseUrl) throw new Error("A Bedrock provider needs its regional endpoint");
+    if (!config.modelId) throw new Error("A Bedrock provider needs a model id");
+    if (!config.apiKey) throw new Error("A Bedrock provider needs an API key");
+    // Bedrock's OpenAI-compatible endpoint takes the Bedrock API key as a bearer token. Its models
+    // are served on chat completions; not every one is on the Responses API.
+    return new OpenAIClient({ apiKey: config.apiKey, baseUrl: config.baseUrl }).completionModel({
+      modelId: config.modelId,
+      api: "chat",
       controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });
@@ -142,14 +156,14 @@ export function providerOptionsFor(provider: Provider) {
 export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
 
 // The reasoning effort levels a model accepts, read from the SDK's own per-model controls, or null
-// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server unless the
+// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server or Bedrock unless the
 // host passes the levels the server itself lists, since it may reject a `reasoning_effort` it does
 // not know). Builds the model offline with a placeholder key, so nothing leaves the process.
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
 ): ReasoningControls | null {
   if (
-    config.provider === "openai-compatible" &&
+    (config.provider === "openai-compatible" || config.provider === "bedrock") &&
     (!config.effortLevels?.length || !config.modelId)
   ) {
     return null;

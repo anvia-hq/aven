@@ -10,6 +10,7 @@ import { readKey } from "./crypto";
 import { effortsByModel, listAgentModels, ModelListError, type ModelSource } from "./model-list";
 import {
   azureEndpoint,
+  bedrockEndpoint,
   type CreateProviderBody,
   type KeylessProviderBody,
   type UpdateProviderBody,
@@ -23,8 +24,8 @@ type ProviderKind = ModelConfig["provider"];
 // since every server is its own.
 const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "gemini", "azure"]);
 
-const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "openai-compatible" =>
-  kind === "openai-compatible" || kind === "azure";
+const hasBaseUrl = (kind: ProviderKind): kind is "azure" | "bedrock" | "openai-compatible" =>
+  kind === "openai-compatible" || kind === "azure" || kind === "bedrock";
 
 // What the API returns: never the key itself, only a hint.
 export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
@@ -38,6 +39,21 @@ function azureEndpointOf(value: string) {
   const parsed = azureEndpoint.safeParse(value);
   if (!parsed.success) throw new InvalidProviderError("An Azure resource URL must be https");
   return parsed.data;
+}
+
+// A changed Bedrock endpoint is held to the same rules as a new one.
+function bedrockEndpointOf(value: string) {
+  const parsed = bedrockEndpoint.safeParse(value);
+  if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
+  return parsed.data;
+}
+
+// A new address, checked the way its kind's creation checks it.
+function changedBaseUrl(kind: ProviderKind, baseUrl: string | undefined) {
+  if (baseUrl === undefined) return undefined;
+  if (kind === "azure") return azureEndpointOf(baseUrl);
+  if (kind === "bedrock") return bedrockEndpointOf(baseUrl);
+  return baseUrl;
 }
 
 const hint = (apiKey: string) => apiKey.slice(-4);
@@ -103,7 +119,10 @@ export const providersService = {
           userId,
           kind: body.kind,
           name: body.name,
-          baseUrl: body.kind === "openai-compatible" || body.kind === "azure" ? body.baseUrl : null,
+          baseUrl:
+            body.kind === "openai-compatible" || body.kind === "azure" || body.kind === "bedrock"
+              ? body.baseUrl
+              : null,
           modelId: body.modelId ?? null,
           ...secretColumns(body.apiKey),
           isDefault,
@@ -126,16 +145,13 @@ export const providersService = {
       if (!current) return null;
       if (body.baseUrl !== undefined && !hasBaseUrl(current.kind)) {
         throw new InvalidProviderError(
-          "Only Azure and OpenAI-compatible providers have a base URL",
+          "Only Azure, Bedrock and OpenAI-compatible providers have a base URL",
         );
       }
       if (body.modelId === null && hasBaseUrl(current.kind)) {
         throw new InvalidProviderError("This provider needs a model id");
       }
-      const baseUrl =
-        body.baseUrl !== undefined && current.kind === "azure"
-          ? azureEndpointOf(body.baseUrl)
-          : body.baseUrl;
+      const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
       if (body.isDefault === true) {
         if (providerNeedsKey(current.kind) && !keyed) {

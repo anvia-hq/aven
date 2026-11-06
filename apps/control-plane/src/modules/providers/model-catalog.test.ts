@@ -202,3 +202,32 @@ describe("gemini in the catalog", () => {
     expect(looksLikeChatModel("gemini", "text-bison")).toBe(false);
   });
 });
+
+describe("bedrock in the catalog", () => {
+  test("keeps chat models by name, takes windows from models.dev and offers no efforts", async () => {
+    const models = createModelCatalog(
+      serving({
+        ...catalog,
+        "amazon-bedrock": {
+          models: {
+            "openai.gpt-oss-120b-1:0": {
+              tool_call: true,
+              modalities: { output: ["text"] },
+              limit: { context: 128000 },
+              reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+            },
+          },
+        },
+      }),
+      () => 0,
+      url,
+    );
+    expect(await models.contextWindow("bedrock", "openai.gpt-oss-120b-1:0")).toBe(128000);
+    expect(await models.efforts("bedrock", "openai.gpt-oss-120b-1:0")).toBeNull();
+    expect(
+      await models.chatModels("bedrock", ["openai.gpt-oss-120b-1:0", "amazon.titan-embed-text-v2"]),
+    ).toEqual(["openai.gpt-oss-120b-1:0"]);
+    expect(looksLikeChatModel("bedrock", "us.anthropic.claude-sonnet-4-6")).toBe(true);
+    expect(looksLikeChatModel("bedrock", "stability.stable-image-core")).toBe(false);
+  });
+});

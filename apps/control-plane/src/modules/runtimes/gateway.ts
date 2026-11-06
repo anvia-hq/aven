@@ -22,6 +22,7 @@ const SEGMENTS = {
   anthropic: "anthropic",
   openai: "openai",
   gemini: "gemini",
+  bedrock: "bedrock",
   azure: "azure",
   "openai-compatible": "compatible",
 } as const satisfies Record<Provider, string>;
@@ -33,6 +34,7 @@ const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   openai: ["/responses", "/chat/completions"],
   // Gemini names the model in the path, so its calls are matched by `GEMINI_PATH` instead.
   gemini: [],
+  bedrock: ["/chat/completions"],
   azure: ["/responses", "/chat/completions"],
   "openai-compatible": ["/chat/completions"],
 };
@@ -75,6 +77,9 @@ export class RunGateway {
     const key = config.apiKey ?? (envKey && process.env[envKey]);
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
+    }
+    if (!key && config.provider === "bedrock") {
+      throw new ModelUnavailableError("This Bedrock provider has no API key");
     }
     if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
     return key;

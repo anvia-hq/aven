@@ -9,6 +9,10 @@ import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
 
+// OpenAI, Anthropic, Gemini and Azure have one credential each; a server or a Bedrock region can be
+// added as often as the person has them.
+const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock"]);
+
 const detail = (provider: Provider) =>
   [provider.baseUrl, provider.modelId, provider.keyHint && `…${provider.keyHint}`]
     .filter(Boolean)
@@ -34,14 +38,15 @@ function Tile({ kind }: { kind: ProviderKind }) {
 }
 
 // What is set up comes first, with what each one runs; below it, what can still be added. OpenAI,
-// Anthropic and Azure have one credential each; any number of OpenAI-compatible servers can be added.
+// Anthropic, Gemini and Azure have one credential each; any number of OpenAI-compatible servers and
+// Bedrock regions can be added.
 export function ProvidersList() {
   const { providers, loaded } = useProviders();
 
   if (!loaded) return null;
 
   const available = PROVIDERS.filter(
-    (kind) => kind === "openai-compatible" || !providers.some((provider) => provider.kind === kind),
+    (kind) => MANY.has(kind) || !providers.some((provider) => provider.kind === kind),
   );
 
   return (
@@ -90,7 +95,7 @@ export function ProvidersList() {
                 {PROVIDER_DESCRIPTIONS[kind]}
               </span>
             </div>
-            <ProviderDialog kind={kind} label={kind === "openai-compatible" ? "Add" : "Set up"} />
+            <ProviderDialog kind={kind} label={MANY.has(kind) ? "Add" : "Set up"} />
           </li>
         ))}
       </Group>

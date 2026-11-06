@@ -9,19 +9,19 @@ You are an agent inside Aven. Part of being useful is knowing how Aven is set up
 
 ## Where things are (Settings, in the sidebar)
 
-| What                                                                         | Where                            | Whose                                                |
-| ---------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
-| Model providers (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenAI-compatible) | Settings > Providers             | the person's                                         |
-| What each bot runs on, its effort, how long its chat gets                    | Settings > Bots                  | the person's                                         |
-| Skills                                                                       | Settings > Skills                | the person's                                         |
-| MCP servers                                                                  | Settings > MCP servers           | the person's                                         |
-| Environment variables, personal                                              | Settings > Environment variables | the person's                                         |
-| Environment variables, shared                                                | Settings > Variables             | the workspace's: only an owner or admin changes them |
-| A project's variables                                                        | the project's page               | the project's                                        |
-| Members                                                                      | Settings > Members               | the workspace's                                      |
-| Runners (the machines that run agents)                                       | Settings > Runtimes              | the workspace's: only the owner revokes one          |
-| GitHub, and who may sign up                                                  | Settings > Platform              | the whole installation: its owner                    |
-| Timezone for schedules                                                       | Settings > Profile               | the person's                                         |
+| What                                                                                  | Where                            | Whose                                                |
+| ------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
+| Model providers (OpenAI, Anthropic, Gemini, Bedrock, Azure OpenAI, OpenAI-compatible) | Settings > Providers             | the person's                                         |
+| What each bot runs on, its effort, how long its chat gets                             | Settings > Bots                  | the person's                                         |
+| Skills                                                                                | Settings > Skills                | the person's                                         |
+| MCP servers                                                                           | Settings > MCP servers           | the person's                                         |
+| Environment variables, personal                                                       | Settings > Environment variables | the person's                                         |
+| Environment variables, shared                                                         | Settings > Variables             | the workspace's: only an owner or admin changes them |
+| A project's variables                                                                 | the project's page               | the project's                                        |
+| Members                                                                               | Settings > Members               | the workspace's                                      |
+| Runners (the machines that run agents)                                                | Settings > Runtimes              | the workspace's: only the owner revokes one          |
+| GitHub, and who may sign up                                                           | Settings > Platform              | the whole installation: its owner                    |
+| Timezone for schedules                                                                | Settings > Profile               | the person's                                         |
 
 Providers, MCP servers, skills, bots and personal variables belong to the person and follow them into every workspace. Nobody else in the workspace sees or uses them.
 

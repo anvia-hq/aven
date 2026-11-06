@@ -43,12 +43,14 @@ const baseUrl = z
   .trim()
   .max(500)
   .describe(
-    "Azure: the resource URL, https://<resource>.openai.azure.com. An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai, anthropic or gemini.",
+    "Azure: the resource URL, https://<resource>.openai.azure.com. Amazon Bedrock: its regional endpoint, https://bedrock-mantle.<region>.api.aws/v1 (a change of region is a change of address, so the key is asked again). An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai, anthropic or gemini.",
   );
 const id = z.uuid().describe("The provider id from list_providers.");
 
 const addSchema = z.object({
-  kind: z.enum(PROVIDERS).describe("openai, anthropic, gemini, azure or openai-compatible."),
+  kind: z
+    .enum(PROVIDERS)
+    .describe("openai, anthropic, gemini, bedrock, azure or openai-compatible."),
   name,
   baseUrl: baseUrl.optional(),
   modelId: modelId.optional(),

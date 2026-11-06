@@ -12,6 +12,56 @@ describe("providerOptionsFor", () => {
     expect(providerOptionsFor("openai-compatible")).toBeUndefined();
     expect(providerOptionsFor("azure")).toBeUndefined();
     expect(providerOptionsFor("gemini")).toBeUndefined();
+    expect(providerOptionsFor("bedrock")).toBeUndefined();
+  });
+});
+
+describe("createModel bedrock", () => {
+  const bedrock = {
+    provider: "bedrock",
+    baseUrl: "https://bedrock-mantle.us-east-1.api.aws/v1",
+  } as const;
+
+  test("needs an endpoint, a model and a key", () => {
+    expect(() => createModel({ provider: "bedrock", modelId: "m", apiKey: "k" })).toThrow(
+      "regional endpoint",
+    );
+    expect(() => createModel({ ...bedrock, apiKey: "k" })).toThrow("model id");
+    expect(() => createModel({ ...bedrock, modelId: "m" })).toThrow("API key");
+    expect(createModel({ ...bedrock, modelId: "m", apiKey: "k" }).modelId).toBe("m");
+  });
+
+  test("offers an effort control only from levels the host supplies", () => {
+    const config = { ...bedrock, modelId: "openai.gpt-oss-120b" };
+    expect(reasoningControlsFor(config)).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: ["low", "high"] })?.options).toEqual([
+      "low",
+      "high",
+    ]);
+  });
+
+  test("sends chat completions to the endpoint with the key as a bearer token", async () => {
+    const seen: { path: string; auth: string | null }[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push({ path: new URL(req.url).pathname, auth: req.headers.get("authorization") });
+        return Response.json({ error: { message: "stop" } }, { status: 400 });
+      },
+    });
+    try {
+      const { agent } = createCodingAgent({
+        tools: [],
+        ...bedrock,
+        baseUrl: `http://localhost:${server.port}/v1`,
+        modelId: "openai.gpt-oss-120b",
+        apiKey: "bedrock-key",
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      expect(seen[0]).toEqual({ path: "/v1/chat/completions", auth: "Bearer bedrock-key" });
+    } finally {
+      server.stop(true);
+    }
   });
 });
 

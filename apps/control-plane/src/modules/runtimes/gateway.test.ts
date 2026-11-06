@@ -178,6 +178,34 @@ describe("RunGateway", () => {
     gateway.revoke("r2h");
   });
 
+  test("bedrock: chat completions go to the stored regional endpoint with the sender's key and model", async () => {
+    // The stored endpoint is AWS's; here a local server stands in for it.
+    const run = gateway.issue("r2i", {
+      provider: "bedrock",
+      modelId: "openai.gpt-oss-120b",
+      baseUrl: `${origin}/v1`,
+      apiKey: "bedrock-key",
+    });
+    expect(run.gatewayPath).toBe("/runtimes/gateway/bedrock");
+    const before = seen.length;
+    const { agent } = createCodingAgent({
+      tools: [],
+      provider: "bedrock",
+      modelId: "something-expensive",
+      apiKey: run.gatewayToken,
+      baseUrl: `${base}${run.gatewayPath}`,
+    });
+    await agent.generate({ prompt: "hi" }).catch(() => undefined);
+    const call = seen[before]!;
+    expect(call.path).toBe("/v1/chat/completions");
+    expect(call.headers.get("authorization")).toBe("Bearer bedrock-key");
+    expect(call.body.model).toBe("openai.gpt-oss-120b");
+    const refused = await post("bedrock/responses", run.gatewayToken, {});
+    expect(refused.status).toBe(404);
+    gateway.revoke("r2i");
+    expect(() => gateway.issue("r2j", { provider: "bedrock", modelId: "m" })).toThrow("no API key");
+  });
+
   test("an Azure provider without a key cannot start a run", () => {
     expect(() =>
       gateway.issue("r2b", { provider: "azure", modelId: "d", baseUrl: origin }),

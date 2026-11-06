@@ -9,6 +9,7 @@ run("providersService (postgres)", async () => {
   const { UnavailableError } = await import("../../errors");
   const { providersService } = await import("./service");
   const { effortsByModel } = await import("./model-list");
+  const { bedrockEndpoint } = await import("./schema");
   const { InvalidSelectionError, resolveModel } = await import("./resolve-model");
 
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -258,6 +259,53 @@ run("providersService (postgres)", async () => {
     const [first] = await providersService.list(alice);
     await providersService.update(alice, first!.id, { isDefault: true });
     await providersService.remove(alice, gemini.id);
+  });
+
+  test("a Bedrock provider keeps its regional endpoint, refuses any other host and can be added per region", async () => {
+    const east = "https://bedrock-mantle.us-east-1.api.aws/v1";
+    const body = {
+      kind: "bedrock",
+      modelId: "openai.gpt-oss-120b",
+      apiKey: "bedrock-key-4321",
+    } as const;
+    const created = await providersService.create(alice, {
+      ...body,
+      name: "Bedrock east",
+      baseUrl: bedrockEndpoint.parse(`${east}/`),
+    });
+    expect(created).toMatchObject({ kind: "bedrock", baseUrl: east, hasKey: true });
+    await providersService.create(alice, {
+      ...body,
+      name: "Bedrock west",
+      baseUrl: "https://bedrock-mantle.us-west-2.api.aws/v1",
+    });
+    // The key is only ever sent to AWS's own host.
+    for (const baseUrl of [
+      "https://evil.example.com/v1",
+      "https://bedrock-mantle.us-east-1.api.aws.evil.com/v1",
+      "http://bedrock-mantle.us-east-1.api.aws/v1",
+    ]) {
+      await expect(providersService.update(alice, created.id, { baseUrl })).rejects.toThrow(
+        "Bedrock endpoint",
+      );
+    }
+    await expect(providersService.update(alice, created.id, { modelId: null })).rejects.toThrow(
+      "model id",
+    );
+    expect(
+      await providersService.update(alice, created.id, {
+        baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1",
+        modelId: "openai.gpt-oss-20b",
+      }),
+    ).toMatchObject({ baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1" });
+    const config = await resolveModel(alice, { providerId: created.id });
+    expect(config).toMatchObject({
+      provider: "bedrock",
+      baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1",
+      modelId: "openai.gpt-oss-20b",
+      apiKey: "bedrock-key-4321",
+    });
+    await providersService.remove(alice, created.id);
   });
 
   test("model efforts come from the SDK and leave out models without the control", async () => {
