@@ -86,7 +86,10 @@ test.describe("prompt composer", () => {
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect.poll(() => sent).toBeDefined();
-    expect(sent).toEqual({
+    // Sent by the thread's page (decision 0126), which names the message as it names any other.
+    const { steerId, ...chosen } = sent as { steerId?: string };
+    expect(typeof steerId).toBe("string");
+    expect(chosen).toEqual({
       prompt: "hello",
       providerId: provider.id,
       modelId: "o3",
