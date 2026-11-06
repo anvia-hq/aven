@@ -87,6 +87,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: true,
       setup: true,
       ship: true,
+      appKey: "app-1",
     });
 
     const environment = setup({ has: [".aven/setup"] });
@@ -94,6 +95,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: false,
       setup: true,
       ship: false,
+      appKey: "app-1",
     });
 
     const shipping = setup({ has: [".aven/ship.md"] });
@@ -101,6 +103,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: false,
       setup: false,
       ship: true,
+      appKey: "app-1",
     });
 
     const neither = setup();
@@ -108,6 +111,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: false,
       setup: false,
       ship: false,
+      appKey: "app-1",
     });
   });
 

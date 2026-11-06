@@ -2,6 +2,7 @@ import {
   BookOpen,
   ChatDots,
   Cog,
+  Github,
   Key,
   Puzzle,
   Servers,
@@ -38,6 +39,7 @@ const groups = [
     label: "Workspace",
     items: [
       { to: "/settings/members", label: "Members", icon: Users },
+      { to: "/settings/github", label: "GitHub", icon: Github },
       { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
       { to: "/settings/workspace-variables", label: "Variables", icon: Key },
     ],

@@ -107,8 +107,9 @@ test.describe("shipping a thread", () => {
     await registerUser(page, "shp", "Ship User");
     const { child, threadId } = await threadOnFakeRunner(page);
     runner = child;
-    await page.route("**/api/github/user", (route) =>
-      route.fulfill({ json: { connected: false, login: null } }),
+    // Asked for the app the thread's project is of (decision 0123).
+    await page.route("**/api/github/user?*", (route) =>
+      route.fulfill({ json: { connected: false, login: null, appKey: "platform" } }),
     );
 
     await page.goto(`/threads/${threadId}`);
@@ -116,7 +117,7 @@ test.describe("shipping a thread", () => {
     const connect = page.getByRole("button", { name: "Connect GitHub to ship" });
     await expect(connect).toHaveAttribute(
       "href",
-      `/api/github/connect?next=${encodeURIComponent(`/threads/${threadId}`)}`,
+      `/api/github/connect?next=${encodeURIComponent(`/threads/${threadId}`)}&app=platform`,
     );
     await expect(page.getByRole("button", { name: "Ship", exact: true })).toHaveCount(0);
   });

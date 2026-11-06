@@ -47,14 +47,22 @@ test.describe("importing a repository", () => {
   }) => {
     await registerUser(page, "gh", "GitHub User");
     const before = await page.request.get("/api/github/user");
-    expect(await before.json()).toEqual({ connected: false, login: null });
+    expect(await before.json()).toEqual({
+      connected: false,
+      login: null,
+      appKey: "platform",
+    });
 
     // GitHub (the fake) sends the browser straight back with a code.
     await page.goto("/api/github/connect?next=/projects?back=here");
 
     await expect(page).toHaveURL(/\/projects\?back=here$/);
     const after = await page.request.get("/api/github/user");
-    expect(await after.json()).toEqual({ connected: true, login: "ada" });
+    expect(await after.json()).toEqual({
+      connected: true,
+      login: "ada",
+      appKey: "platform",
+    });
   });
 
   test("will not send a person back to another site after connecting", async ({ page }) => {
@@ -63,5 +71,23 @@ test.describe("importing a repository", () => {
       maxRedirects: 0,
     });
     expect(response.status()).toBe(422);
+  });
+});
+
+test.describe("a workspace's GitHub App (decision 0123)", () => {
+  test("shows the app the workspace uses, and lets its owner start one of its own", async ({
+    page,
+  }) => {
+    await registerUser(page, "gh", "GitHub User");
+    await page.goto("/settings/github");
+
+    await expect(page.getByText("This workspace uses the platform's GitHub App")).toBeVisible();
+    // The person who made the workspace is its owner, so they may make its own app; GitHub asks
+    // for the manifest as a form post, which the control plane describes here.
+    const manifest = await page.request.get("/api/github/app/manifest?scope=workspace");
+    expect(manifest.ok()).toBe(true);
+    const { postUrl } = (await manifest.json()) as { postUrl: string };
+    expect(postUrl).toContain("/settings/apps/new?state=");
+    await expect(page.getByRole("button", { name: "Create GitHub App" })).toBeVisible();
   });
 });

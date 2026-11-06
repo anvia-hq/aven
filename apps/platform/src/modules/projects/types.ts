@@ -26,10 +26,16 @@ export type GithubStatus = {
   installUrl: string | null;
   /** The person is a platform owner and there is no app yet: they can have it created from here. */
   canSetUp: boolean;
+  /** Which app the workspace acts as: `platform`, or the id of the one it made for itself (decision 0123). */
+  appKey: string;
+  /** The workspace has an app of its own. */
+  own: boolean;
+  /** The person is an owner or an admin of a workspace that has no app of its own yet. */
+  canSetUpWorkspace: boolean;
 };
 
 /** The person's own GitHub account, connected so that what they ship is theirs on GitHub. */
-export type GithubAccount = { connected: boolean; login: string | null };
+export type GithubAccount = { connected: boolean; login: string | null; appKey: string };
 
 export type GithubInstallation = {
   id: string;

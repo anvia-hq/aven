@@ -24,11 +24,15 @@ function postManifest({ postUrl, manifest }: AppManifest) {
 export function useCreateGithubApp() {
   const [working, setWorking] = useState(false);
 
-  async function create(options: { organization?: string; public?: boolean } = {}) {
+  async function create(
+    options: { organization?: string; public?: boolean; workspace?: boolean } = {},
+  ) {
     setWorking(true);
     const params = new URLSearchParams();
     if (options.organization) params.set("organization", options.organization);
     if (options.public) params.set("public", "true");
+    // The workspace's own app, not the platform's (decision 0123).
+    if (options.workspace) params.set("scope", "workspace");
     const query = params.size > 0 ? `?${params}` : "";
     const manifest = await attempt("Could not start the GitHub App setup", () =>
       api<AppManifest>(`/github/app/manifest${query}`),

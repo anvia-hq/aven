@@ -28,6 +28,7 @@ import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
+import { Route as AuthedSettingsGithubRouteImport } from './routes/_authed/settings/github'
 import { Route as AuthedSettingsMcpRouteImport } from './routes/_authed/settings/mcp'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsMemoryRouteImport } from './routes/_authed/settings/memory'
@@ -137,6 +138,11 @@ const AuthedSettingsEnvironmentVariablesRoute =
     path: '/environment-variables',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
+const AuthedSettingsGithubRoute = AuthedSettingsGithubRouteImport.update({
+  id: '/github',
+  path: '/github',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsMcpRoute = AuthedSettingsMcpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
+  '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
+  '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
+  '/_authed/settings/github': typeof AuthedSettingsGithubRoute
   '/_authed/settings/mcp': typeof AuthedSettingsMcpRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/memory': typeof AuthedSettingsMemoryRoute
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
+    | '/settings/github'
     | '/settings/mcp'
     | '/settings/members'
     | '/settings/memory'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/environment-variables'
+    | '/settings/github'
     | '/settings/mcp'
     | '/settings/members'
     | '/settings/memory'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
     | '/_authed/settings/environment-variables'
+    | '/_authed/settings/github'
     | '/_authed/settings/mcp'
     | '/_authed/settings/members'
     | '/_authed/settings/memory'
@@ -544,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsEnvironmentVariablesRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/github': {
+      id: '/_authed/settings/github'
+      path: '/github'
+      fullPath: '/settings/github'
+      preLoaderRoute: typeof AuthedSettingsGithubRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/mcp': {
       id: '/_authed/settings/mcp'
       path: '/mcp'
@@ -693,6 +712,7 @@ const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
 interface AuthedSettingsRouteChildren {
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
+  AuthedSettingsGithubRoute: typeof AuthedSettingsGithubRoute
   AuthedSettingsMcpRoute: typeof AuthedSettingsMcpRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
   AuthedSettingsMemoryRoute: typeof AuthedSettingsMemoryRoute
@@ -709,6 +729,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
   AuthedSettingsEnvironmentVariablesRoute:
     AuthedSettingsEnvironmentVariablesRoute,
+  AuthedSettingsGithubRoute: AuthedSettingsGithubRoute,
   AuthedSettingsMcpRoute: AuthedSettingsMcpRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
   AuthedSettingsMemoryRoute: AuthedSettingsMemoryRoute,

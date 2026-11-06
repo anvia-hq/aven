@@ -96,12 +96,14 @@ export function createShipService(
     // environment script and `/setup-ship` how it ships. Read from the thread's own workspace, so
     // the thread that wrote them can ship them before they are merged.
     async readiness(organizationId: string, threadId: string) {
-      await load(organizationId, threadId);
-      const [setup, ship] = await Promise.all([
+      const project = await load(organizationId, threadId);
+      const [setup, ship, appKey] = await Promise.all([
         hasFile(organizationId, threadId, SETUP_FILE),
         hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
+        // The GitHub App the project is of, which the person's connection to ship must be for.
+        github.appKeyOf(project.githubInstallationId),
       ]);
-      return { ready: setup && ship, setup, ship };
+      return { ready: setup && ship, setup, ship, appKey };
     },
 
     // `selection` is the model the thread is on; without it the person's default provider runs, which

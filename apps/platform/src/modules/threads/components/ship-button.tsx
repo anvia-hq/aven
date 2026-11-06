@@ -21,8 +21,10 @@ type Props = {
 // menu offers a separate pull request even while one is open (decision 0069).
 export function ShipButton({ thread, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
-  const account = useGithubAccount();
-  const gate = useShipReadiness(thread.id, thread.running);
+  const { gate, appKey } = useShipReadiness(thread.id, thread.running);
+  // The connection that counts is the one for the app the project is of (decision 0123); nothing
+  // is asked until the thread has said which.
+  const account = useGithubAccount(appKey);
   // The newest pull request is the one an update goes to.
   const [latest] = thread.pullRequests;
   const shipped = latest !== undefined;
@@ -37,7 +39,11 @@ export function ShipButton({ thread, upToDate }: Props) {
         size="sm"
         className="shadow-md"
         nativeButton={false}
-        render={<a href={`/api/github/connect?next=${next}`} />}
+        render={
+          <a
+            href={`/api/github/connect?next=${next}${appKey ? `&app=${encodeURIComponent(appKey)}` : ""}`}
+          />
+        }
       >
         <Github />
         Connect GitHub to ship
