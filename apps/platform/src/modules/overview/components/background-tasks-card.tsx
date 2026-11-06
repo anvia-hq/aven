@@ -18,14 +18,14 @@ function shown(processes: ProcessView[]) {
 // The commands the agent has running in the thread's sandbox, or ran in the background, with a way
 // to stop each (decision 0071); shown only once there is one.
 export function BackgroundTasksCard({ threadId, running }: { threadId: string; running: boolean }) {
-  const { problem, processes, stopping, stop } = useThreadProcesses(threadId, running);
+  const { processes, stopping, stop } = useThreadProcesses(threadId, running);
   const rows = shown(processes);
   // There is no card until the agent has started something: an empty one says nothing.
-  if (!problem && rows.length === 0) return null;
+  // (A list that cannot be read, as while the runner is offline, is the same: nothing to show.)
+  if (rows.length === 0) return null;
 
   return (
     <OverviewCard title="Background tasks">
-      {problem && <p className="text-muted-foreground">Could not read the background tasks.</p>}
       {rows.length > 0 && (
         <div className="flex flex-col gap-0.5">
           {rows.map((process) => (
