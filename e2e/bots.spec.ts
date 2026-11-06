@@ -176,7 +176,7 @@ test.describe("bots", () => {
 
     // Settings shows it, with the end of its key and nothing more.
     await page.goto("/settings/providers");
-    await expect(page.getByRole("region", { name: "Azure OpenAI" })).toContainText(
+    await expect(page.getByRole("listitem", { name: "Work Azure" })).toContainText(
       "https://work.openai.azure.com · gpt-5 · …1234",
     );
   });

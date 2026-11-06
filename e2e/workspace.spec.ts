@@ -102,7 +102,7 @@ test.describe("settings", () => {
   test("a provider with one credential is set up, edited and removed", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/providers");
-    const azure = page.getByRole("region", { name: "Azure OpenAI" });
+    const azure = page.getByRole("listitem", { name: "Azure OpenAI" });
 
     await azure.getByRole("button", { name: "Set up" }).click();
     await page.getByLabel("Resource URL").fill("https://my-resource.openai.azure.com/openai");
@@ -123,7 +123,9 @@ test.describe("settings", () => {
     await expect(azure.getByRole("button", { name: "Set up" })).toBeVisible();
     // Compatible servers stay many: Add is always there.
     await expect(
-      page.getByRole("region", { name: "OpenAI-compatible" }).getByRole("button", { name: "Add" }),
+      page
+        .getByRole("listitem", { name: "OpenAI-compatible" })
+        .getByRole("button", { name: "Add" }),
     ).toBeVisible();
   });
 
