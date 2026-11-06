@@ -5,6 +5,7 @@ import {
   ownedByResponsesApi,
   withAnthropicReasoning,
   withOwnReasoning,
+  withoutEmptyAssistantText,
   withResponsesToolCallIds,
 } from "./own-reasoning";
 import { withUniqueToolCallIds } from "./unique-tool-call-ids";
@@ -78,7 +79,9 @@ function resolveModel(source: ModelSource) {
   if ("model" in source)
     return { model: source.model, providerOptions: undefined, controls: undefined };
   return {
-    model: withUniqueToolCallIds(withHistoryItOwns(createModel(source), source)),
+    model: withUniqueToolCallIds(
+      withoutEmptyAssistantText(withHistoryItOwns(createModel(source), source)),
+    ),
     providerOptions: providerOptionsFor(source.provider),
     controls: source.reasoningEffort ? { reasoningEffort: source.reasoningEffort } : undefined,
   };

@@ -7,6 +7,7 @@ import {
   withAnthropicReasoning,
   withOwnReasoning,
   withResponsesToolCallIds,
+  withoutEmptyAssistantText,
 } from "./own-reasoning";
 import { scriptedModel } from "./testing/scripted-model";
 
@@ -129,5 +130,32 @@ describe("tool calls a provider takes back", () => {
     const stored = [assistant(call("toolu_1"))];
     await seen(stored, withResponsesToolCallIds);
     expect(ids(stored)).toEqual([{ id: "toolu_1", callId: undefined }]);
+  });
+});
+
+describe("an assistant turn of nothing", () => {
+  const user = (text: string): Message => ({ role: "user", content: text });
+  const none = (model: Model) => withoutEmptyAssistantText(model);
+
+  test("is not replayed, which Anthropic would refuse, and what else the turn said stays", async () => {
+    const asked = await seen(
+      [
+        user("hi"),
+        assistant({ type: "text", text: "" }),
+        user("again"),
+        assistant({ type: "text", text: "" }, { type: "text", text: "kept" }),
+        assistant(
+          { type: "text", text: "  " },
+          { type: "tool-call", toolCallId: "t", toolName: "x", input: {} },
+        ),
+      ],
+      none,
+    );
+    expect(asked).toEqual([
+      user("hi"),
+      user("again"),
+      assistant({ type: "text", text: "kept" }),
+      assistant({ type: "tool-call", toolCallId: "t", toolName: "x", input: {} }),
+    ]);
   });
 });

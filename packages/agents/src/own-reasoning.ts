@@ -84,3 +84,24 @@ export function withResponsesToolCallIds<T extends CompletionModel>(model: T): T
 export function withAnthropicReasoning<T extends CompletionModel>(model: T): T {
   return withChatHistory(model, (history) => onlyThisTurns(onlyOwn(history, ownedByAnthropic)));
 }
+
+// A turn in which the model said nothing, as after a tool whose message was the answer (a bot ends
+// its reply that way), is kept in the history as an assistant message of an empty text. Anthropic
+// refuses it with a 400 ("text content blocks must be non-empty") on every later request. The empty
+// text is left out of what is replayed, and a message of nothing else goes with it.
+function withoutEmptyText(history: Message[]): Message[] {
+  return history.flatMap((message): Message[] => {
+    if (message.role !== "assistant") return [message];
+    if (typeof message.content === "string") return message.content.trim() === "" ? [] : [message];
+    const content = message.content.filter(
+      (part) => part.type !== "text" || part.text.trim() !== "",
+    );
+    if (content.length === message.content.length) return [message];
+    return content.length > 0 ? [{ ...message, content }] : [];
+  });
+}
+
+/** What a request replays, without the empty text an assistant turn of nothing leaves behind. */
+export function withoutEmptyAssistantText<T extends CompletionModel>(model: T): T {
+  return withChatHistory(model, withoutEmptyText);
+}
