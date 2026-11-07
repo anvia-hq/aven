@@ -2,7 +2,7 @@ import type { AnyTool } from "@anvia/core";
 import { asRecord } from "@aven/agents/values";
 
 const BACKGROUND_DESCRIPTION =
-  "Run the command in the background: it starts and the call returns at once with a process id, instead of waiting for it to finish. Use it for a dev server, a watcher, or anything that keeps running. When it ends while your turn is over you are woken with a [process] message, so for a long job you can end your turn instead of waiting. Read what it prints with read_process_logs, look at it with list_processes and stop it with stop_process; the user sees it under Background tasks and can stop it too. timeoutMs and input do not apply to it.";
+  "Run the command in the background: it starts and the call returns at once with a process id, instead of waiting for it to finish. Use it for a dev server, a watcher, or anything that keeps running. You are told when it ends, with a [process] message that wakes you when your turn is over, so for a long job you can end your turn instead of waiting. Read what it prints with read_process_logs, look at it with list_processes and stop it with stop_process; the user sees it under Background tasks and can stop it too. timeoutMs and input do not apply to it.";
 
 const invalid = (message: string) => new Error(message);
 
@@ -48,7 +48,7 @@ export function withBackground(exec: AnyTool, start: AnyTool): AnyTool {
       if (background !== true) return exec.call(rest, context);
       const started = asRecord(await start.call(rest, context));
       const id = typeof started.id === "string" ? started.id : "unknown";
-      return `Started in the background as process ${id}. It keeps running after this call; if it ends while your turn is over you are woken with a [process] message. Read its output with read_process_logs, check on it with list_processes, stop it with stop_process. The user sees it under Background tasks.`;
+      return `Started in the background as process ${id}. It keeps running after this call; you are told with a [process] message when it ends. Read its output with read_process_logs, check on it with list_processes, stop it with stop_process. The user sees it under Background tasks.`;
     },
   };
 }

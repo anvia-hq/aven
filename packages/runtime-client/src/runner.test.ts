@@ -1015,7 +1015,8 @@ describe("startRuntime", () => {
         id: "p1",
         command: "bun test",
         status: "running",
-        startedAt: "2026-11-07T10:00:00.000Z",
+        // Started by the run, a moment after the watch began.
+        startedAt: new Date(Date.now() + 1000).toISOString(),
       },
     ];
     const acquire = sandbox.acquire.bind(sandbox);
@@ -1038,7 +1039,7 @@ describe("startRuntime", () => {
         ...list[0]!,
         status: "exited",
         exitCode: 0,
-        endedAt: "2026-11-07T10:00:10.000Z",
+        endedAt: new Date(Date.now() + 11_000).toISOString(),
       },
     ];
     await until(() => plane.received.some((message) => message.type === "process.ended"));
