@@ -4,14 +4,8 @@ import { api } from "@/lib/api";
 
 import { hasWords } from "@/lib/words";
 
-import type { CenterFilters } from "../filters";
-import type {
-  Project,
-  RepoCommit,
-  RepoCommitPage,
-  TrackedItem,
-  TrackedPage,
-} from "@/modules/projects/types";
+import type { Project, RepoCommitPage, TrackedPage } from "@/modules/projects/types";
+import type { CenterFilters, CommitEntry, PullEntry } from "../types";
 
 const PULL_ORDER: Record<CenterFilters["sort"], (a: PullEntry, b: PullEntry) => number> = {
   updated: (a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt),
@@ -19,9 +13,6 @@ const PULL_ORDER: Record<CenterFilters["sort"], (a: PullEntry, b: PullEntry) => 
   created: (a, b) => b.item.number - a.item.number,
   comments: (a, b) => b.item.comments - a.item.comments,
 };
-
-export type PullEntry = { project: Project; item: TrackedItem };
-export type CommitEntry = { project: Project; commit: RepoCommit };
 
 type Feed = {
   pulls: PullEntry[];

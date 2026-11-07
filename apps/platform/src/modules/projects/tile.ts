@@ -1,4 +1,4 @@
-import type { OrbColors } from "./orb-art";
+import type { OrbColors } from "./types";
 
 type Palette = OrbColors;
 

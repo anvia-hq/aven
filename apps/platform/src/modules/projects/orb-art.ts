@@ -1,23 +1,4 @@
-export type OrbColors = readonly [string, string, string];
-export type Rgb = readonly [number, number, number];
-
-type Ring = { across: number; turn: number; speed: number };
-type Dot = {
-  lobe: number;
-  spread: number;
-  start: number;
-  reach: number;
-  curl: number;
-  rate: number;
-  phase: number;
-  wobble: number;
-  wobblePhase: number;
-  twinkle: number;
-  size: number;
-  alpha: number;
-  tone: number;
-};
-export type OrbShape = { light: number; rings: Ring[]; dots: Dot[] };
+import type { OrbColors, OrbShape, Rgb } from "./types";
 
 function random(seed: number) {
   let state = seed >>> 0;

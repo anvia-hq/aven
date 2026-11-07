@@ -1,6 +1,6 @@
 import { LabeledSelect } from "@/components/labeled-select";
 
-import type { ModelsState } from "../hooks/use-provider-form";
+import type { ModelsState } from "../types";
 
 type Props = {
   label: string;

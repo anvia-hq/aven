@@ -9,15 +9,13 @@ import { Label } from "@/components/label";
 import { RadioGroup, RadioGroupItem } from "@/components/radio-group";
 
 import { useModelSelection } from "../hooks/use-model-selection";
-import type { QuestionAnswer, QuestionPrompt, RunSelection, ToolPart } from "../types";
+import type { Draft, QuestionAnswer, QuestionPrompt, RunSelection, ToolPart } from "../types";
 
 type Props = {
   tool: ToolPart;
   threadId: string;
   onSubmit: (answers: QuestionAnswer[], selection: RunSelection) => boolean | Promise<boolean>;
 };
-
-export type Draft = { choice: string; custom: string };
 
 export const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
 

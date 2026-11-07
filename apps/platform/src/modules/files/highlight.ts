@@ -1,5 +1,6 @@
-import { bundledLanguages, createHighlighter, type BundledLanguage, type ThemedToken } from "shiki";
+import { bundledLanguages, createHighlighter, type BundledLanguage } from "shiki";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import type { HighlightedLine } from "./types";
 
 const MAX_CHARS = 200_000;
 
@@ -22,8 +23,6 @@ const load = () =>
     langs: [],
     engine: createJavaScriptRegexEngine(),
   }));
-
-export type HighlightedLine = ThemedToken[];
 
 export async function highlight(text: string, path: string): Promise<HighlightedLine[] | null> {
   const lang = languageOf(path);

@@ -2,8 +2,7 @@ import { useState } from "react";
 
 import { useRequest } from "@/hooks/use-request";
 
-import type { Computer } from "../computer";
-import type { DesktopStatus } from "../types";
+import type { Computer, DesktopStatus } from "../types";
 
 const POLL_MS = 5_000;
 

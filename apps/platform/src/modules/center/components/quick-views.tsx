@@ -1,6 +1,7 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 
-import { activeQuickView, QUICK_VIEWS, type CenterFilters } from "../filters";
+import { activeQuickView, QUICK_VIEWS } from "../filters";
+import type { CenterFilters } from "../types";
 
 export function QuickViews({
   filters,

@@ -1,12 +1,4 @@
-export type CompatiblePreset = {
-  id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
-  name: string;
-  description: string;
-  baseUrl: string;
-  needsKey: boolean;
-  exampleModel: string;
-  keyPlaceholder: string;
-};
+import type { CompatiblePreset } from "./types";
 
 export const COMPATIBLE_PRESETS: readonly CompatiblePreset[] = [
   {

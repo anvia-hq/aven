@@ -6,10 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { shortTimeAgo } from "@/lib/format";
 
 import { plainTextOf } from "../rich-text";
-import type { InboxItem } from "../types";
+import type { InboxItem, InboxShown } from "../types";
 import { TagBadge } from "./tag-badge";
-
-export type InboxShown = "open" | "done";
 
 function InboxRow({
   item,

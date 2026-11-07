@@ -25,3 +25,15 @@ export type Runtime = {
 };
 
 export type CreatedRuntime = { runtime: Runtime; token: string };
+
+export type MachineMetricKey = "cpu" | "memory" | "disk";
+
+export type MachineMetric = {
+  key: MachineMetricKey;
+  label: string;
+  short: string;
+  percent: number | null;
+  detail: string;
+};
+
+export type MeterLevel = "low" | "busy" | "high";

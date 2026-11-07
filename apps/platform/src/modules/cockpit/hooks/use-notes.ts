@@ -1,10 +1,8 @@
 import { toast } from "@/components/toast";
 
 import { notesAtom } from "../atoms/cockpit-atoms";
-import type { CockpitNote } from "../types";
+import type { CockpitNote, NoteInput } from "../types";
 import { createCollection } from "./use-collection";
-
-export type NoteInput = { title: string; body?: string; tags?: string[]; pinned?: boolean };
 
 const pinnedFirst = (notes: CockpitNote[]) =>
   [...notes].sort(

@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
-import { isStale, machineMetrics, type MachineMetric } from "../machine-metrics";
-import type { Runtime } from "../types";
+import { isStale, machineMetrics } from "../machine-metrics";
+import type { MachineMetric, Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
 import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 

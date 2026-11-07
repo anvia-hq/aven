@@ -1,34 +1,9 @@
+import type { CenterFilters, CenterSearch } from "./types";
+
 export const PULL_STATES = ["open", "draft", "merged", "closed", "all"] as const;
-export type PullState = (typeof PULL_STATES)[number];
 export const REVIEWS = ["required", "approved", "changes_requested"] as const;
 export const CHECKS = ["success", "failure", "pending"] as const;
 export const SORTS = ["updated", "oldest", "created", "comments"] as const;
-
-export type CenterFilters = {
-  state: PullState;
-  author?: "me";
-  reviewRequested?: "me";
-  review?: (typeof REVIEWS)[number];
-  checks?: (typeof CHECKS)[number];
-  label?: string;
-  text?: string;
-  stale?: number;
-  sort: (typeof SORTS)[number];
-};
-
-export type CenterSearch = Partial<Omit<CenterFilters, "state" | "sort">> & {
-  project?: string;
-  commitAuthor?: string;
-  since?: string;
-  until?: string;
-  path?: string;
-  branch?: string;
-  grep?: string;
-  pr?: string;
-  commit?: string;
-  state?: PullState;
-  sort?: CenterFilters["sort"];
-};
 
 const oneOf = <T extends string>(options: readonly T[], value: unknown): T | undefined =>
   options.find((option) => option === value);

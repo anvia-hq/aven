@@ -1,6 +1,5 @@
 import { LabeledSelect } from "@/components/labeled-select";
-
-import type { ImportRepositoryState } from "../hooks/use-import-repository";
+import type { ImportRepositoryState } from "../types";
 
 type Props = {
   state: ImportRepositoryState;

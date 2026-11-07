@@ -7,14 +7,14 @@ import { Markdown } from "@/components/markdown";
 
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
-import type { ChatMessage, MessagePart, ToolArtifact, ToolPart } from "../types";
+import type { ChatMessage, MessagePart, ToolArtifact, ToolGroupEntry, ToolPart } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { SubagentCard } from "./subagent-card";
-import { ToolGroup, type ToolGroupEntry } from "./tool-group";
+import { ToolGroup } from "./tool-group";
 
 type Block =
   | { type: "text"; text: string }

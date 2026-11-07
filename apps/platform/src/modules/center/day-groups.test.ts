@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { groupByDay } from "./day-groups";
-import type { CommitEntry } from "./hooks/use-center-feed";
+import type { CommitEntry } from "./types";
 
 const entry = (sha: string, date: string) =>
   ({ project: { id: "p" }, commit: { sha, date } }) as unknown as CommitEntry;

@@ -1,14 +1,7 @@
-import {
-  CHECKS,
-  PULL_STATES,
-  REVIEWS,
-  SORTS,
-  type CenterFilters,
-  type CenterSearch,
-} from "../filters";
-import type { Chip } from "./filter-chips";
+import { CHECKS, PULL_STATES, REVIEWS, SORTS } from "../filters";
 import { Field, FilterPopover } from "./filter-popover";
 import { FilterSelect } from "./filter-select";
+import type { CenterFilters, CenterSearch, Chip } from "../types";
 
 const STATE_LABELS = {
   open: "Open",

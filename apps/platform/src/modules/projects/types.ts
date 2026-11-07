@@ -1,3 +1,5 @@
+import type { useImportRepository } from "./hooks/use-import-repository";
+
 export type Project = {
   id: string;
   name: string;
@@ -72,3 +74,29 @@ export type TrackedItem = {
 };
 
 export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };
+
+export type ImportRepositoryState = ReturnType<typeof useImportRepository>;
+
+export type OrbColors = readonly [string, string, string];
+
+export type Rgb = readonly [number, number, number];
+
+export type Ring = { across: number; turn: number; speed: number };
+
+export type Dot = {
+  lobe: number;
+  spread: number;
+  start: number;
+  reach: number;
+  curl: number;
+  rate: number;
+  phase: number;
+  wobble: number;
+  wobblePhase: number;
+  twinkle: number;
+  size: number;
+  alpha: number;
+  tone: number;
+};
+
+export type OrbShape = { light: number; rings: Ring[]; dots: Dot[] };

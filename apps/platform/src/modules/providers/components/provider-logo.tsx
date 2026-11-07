@@ -17,8 +17,8 @@ import {
   XaiMark,
 } from "@/components/brand-icons";
 
-import { presetOf, type CompatiblePreset } from "../presets";
-import type { ProviderKind } from "../types";
+import { presetOf } from "../presets";
+import type { CompatiblePreset, ProviderKind } from "../types";
 
 const LOGOS = {
   openai: OpenAiMark,

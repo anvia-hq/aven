@@ -1,16 +1,6 @@
 import { storageUsage } from "@/lib/format";
 
-import type { RuntimeStats } from "./types";
-
-export type MachineMetricKey = "cpu" | "memory" | "disk";
-
-export type MachineMetric = {
-  key: MachineMetricKey;
-  label: string;
-  short: string;
-  percent: number | null;
-  detail: string;
-};
+import type { MachineMetric, MeterLevel, RuntimeStats } from "./types";
 
 export const STATS_STALE_MS = 60_000;
 
@@ -20,8 +10,6 @@ export const isStale = (stats: RuntimeStats, now = Date.now()) =>
 export const METER_BUSY = 60;
 
 export const METER_HIGH = 90;
-
-export type MeterLevel = "low" | "busy" | "high";
 
 export function meterLevel(percent: number | null): MeterLevel {
   if (percent === null || percent < METER_BUSY) return "low";

@@ -1,10 +1,9 @@
 import { cn } from "cn";
 
-import type { HighlightedLine } from "@/modules/files/highlight";
-
 import { useHighlightedRows } from "../hooks/use-highlighted-rows";
 import { splitRows } from "../parse-patch";
 import type { DiffHunk, DiffLayout, DiffRow } from "../types";
+import type { HighlightedLine } from "@/modules/files/types";
 
 const tint: Record<DiffRow["kind"], string> = {
   add: "bg-success/10",

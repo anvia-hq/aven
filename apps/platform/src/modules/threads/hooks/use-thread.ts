@@ -13,17 +13,13 @@ import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
-import {
-  pendingMessage,
-  settlePending,
-  withoutPending,
-  type PendingMessage,
-} from "../pending-messages";
+import { pendingMessage, settlePending, withoutPending } from "../pending-messages";
 import type {
   ChatMessage,
   OutgoingMessage,
-  QueuedSteer,
+  PendingMessage,
   QuestionAnswer,
+  QueuedSteer,
   RunSelection,
   SecretChoice,
 } from "../types";
