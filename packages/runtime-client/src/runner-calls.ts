@@ -3,6 +3,7 @@ import type {
   FilesCallMethod,
   ProcessesCallMethod,
   RunnerCallMethod,
+  RunnerUpdateResult,
   SteerResult,
 } from "@aven/protocol/runtime-wire";
 
@@ -13,6 +14,7 @@ import {
   filesCallParams,
   filesSearchParams,
   processesCallParams,
+  runnerUpdateParams,
   sandboxReleaseParams,
   steerParams,
   type SteerParams,
@@ -28,11 +30,20 @@ export type RunnerCallsContext = {
   boxes: Map<string, ThreadSandbox>;
   viewers: Pick<DesktopViewers, "call">;
   idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
+  /** Updates the machine's `aven`, when this runner is one that can (decision 0146). */
+  update?: {
+    start(release: string | undefined): void;
+    /** Why now is not a moment to restart the runner, when it is not. */
+    busy(): string | undefined;
+  };
   /** Told that the person stopped a process themselves (decision 0144). */
   processEnds: Pick<ProcessEndWatch, "ignore">;
   /** What the person said to a run that is going (decision 0098). */
   steer(params: SteerParams): Promise<SteerResult>;
 };
+
+// How long the runner waits after agreeing to update, so its answer is sent first.
+const UPDATE_DELAY_MS = 1000;
 
 // What the control plane asks a runner about a thread: its changes, its files, an image the agent
 // showed, its processes, or its desktop. Returns what answers one call of the control plane's.
@@ -42,6 +53,7 @@ export function createRunnerCalls({
   viewers,
   idle,
   processEnds,
+  update,
   steer,
 }: RunnerCallsContext) {
   // A thread's changes; null when it has no workspace on this runner yet.
@@ -112,7 +124,18 @@ export function createRunnerCalls({
     return viewers.call("desktop.status", { threadId });
   }
 
+  // The answer goes back before the update starts: it restarts this runner (decision 0146).
+  async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
+    const { release } = runnerUpdateParams(params);
+    if (!update) return { status: "unsupported" };
+    const reason = update.busy();
+    if (reason) return { status: "busy", reason };
+    setTimeout(() => update.start(release), UPDATE_DELAY_MS);
+    return { status: "started" };
+  }
+
   return function callOf(method: RunnerCallMethod, params: unknown) {
+    if (method === "runner.update") return updateOf(params);
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);

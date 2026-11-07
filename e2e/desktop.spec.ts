@@ -86,6 +86,31 @@ test.describe("a thread's desktop", () => {
     await expect.poll(() => events.some((entry) => entry.type === "release")).toBe(true);
   });
 
+  test("a connection that ends while the person is in control says so, with no error from noVNC", async ({
+    page,
+  }) => {
+    await registerUser(page, "dskend", "Desktop End User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+    const errors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    await openDesktop(page, threadId);
+    const panel = page.getByRole("region", { name: "Desktop" });
+    await expect(panel.locator("canvas")).toBeVisible();
+    await panel.getByRole("button", { name: "Take over" }).click();
+    await expect(
+      panel.getByText("You are in control. The agent's inputs are paused."),
+    ).toBeVisible();
+
+    // The runner goes away, and the stream with it, while the person is in control.
+    child.kill();
+    await expect(panel.getByText("The desktop connection ended.")).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(errors.filter((text) => text.includes("disconnected RFB"))).toEqual([]);
+  });
+
   test("says when the thread's sandbox is not running", async ({ page }) => {
     await registerUser(page, "dsk", "Desktop User");
     const { child, threadId } = await threadOnFakeRunner(page, { NO_SANDBOX: "1" });

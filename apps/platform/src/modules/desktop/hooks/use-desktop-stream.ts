@@ -32,14 +32,18 @@ export function useDesktopStream({ path }: Computer, viewOnly: boolean, onEnded:
     rfb.resizeSession = false;
     rfb.background = "transparent";
     rfb.viewOnly = true;
+    // noVNC logs an error when `disconnect` is called on a client that has already ended, which a
+    // dropped connection followed by Reconnect or by closing the panel would do.
+    let over = false;
     rfb.addEventListener("connect", () => setPhase("connected"));
     rfb.addEventListener("disconnect", () => {
+      over = true;
       setPhase("ended");
       ended.current();
     });
     client.current = rfb;
     return () => {
-      rfb.disconnect();
+      if (!over) rfb.disconnect();
       client.current = null;
     };
   }, [path, attempt]);

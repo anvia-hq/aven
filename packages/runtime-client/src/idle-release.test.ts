@@ -11,7 +11,10 @@ function harness({ runUntil = 0, box = true } = {}) {
     sandbox: {
       release: async (threadId: string) => void released.push(threadId),
     } as unknown as Pick<ThreadWorkspaces, "release">,
-    boxes: new Map<string, ThreadSandbox>(box ? [["t-1", {} as ThreadSandbox]] : []),
+    // A sandbox with nothing running: the idle check this leaves scheduled (60 s on) asks it so.
+    boxes: new Map<string, ThreadSandbox>(
+      box ? [["t-1", { hasRunningProcesses: async () => false } as ThreadSandbox]] : [],
+    ),
     idleMs: 60_000,
     stopped: () => stopped,
     hasRun: () => runUntil > Date.now(),

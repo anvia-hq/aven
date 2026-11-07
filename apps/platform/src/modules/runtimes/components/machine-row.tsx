@@ -5,6 +5,7 @@ import { timeAgo } from "@/lib/format";
 import { isStale, machineMetrics, type MachineMetric } from "../machine-metrics";
 import type { Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
+import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
 const sandboxesLine = (count: number) =>
   `${count} ${count === 1 ? "sandbox" : "sandboxes"} running`;
@@ -26,7 +27,8 @@ function missing(runtime: Runtime) {
   if (runtime.outdated) {
     return {
       short: "Update runner",
-      reason: "No load reported: this runner is behind the server, run aven update on its machine.",
+      reason:
+        "No load reported: this runner is behind the server. Update it with the button, or run aven update on its machine.",
     };
   }
   return { short: "Waiting…", reason: "Waiting for the runner to report its load." };
@@ -68,13 +70,17 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
   const gap = missing(runtime);
 
   return (
-    <li data-slot="machine-row" aria-label={runtime.name}>
+    <li
+      data-slot="machine-row"
+      aria-label={runtime.name}
+      className="flex h-8 items-center gap-1 rounded-lg bg-card pr-1 hover:bg-sidebar-accent"
+    >
       <Tooltip>
         <TooltipTrigger
           render={
             <Link
               to="/settings/runtimes"
-              className="flex h-8 w-full items-center gap-1.5 rounded-lg bg-card px-2 text-xs outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              className="flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             />
           }
         >
@@ -108,6 +114,7 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
           </div>
         </TooltipContent>
       </Tooltip>
+      <UpdateRuntimeDialog runtime={runtime} compact />
     </li>
   );
 }

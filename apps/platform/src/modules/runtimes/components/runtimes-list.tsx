@@ -11,6 +11,7 @@ import { isStale, machineMetrics } from "../machine-metrics";
 import type { Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
+import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
 const head = "px-3 py-2 text-left text-xs font-medium text-muted-foreground";
 
@@ -75,7 +76,7 @@ export function RuntimesList() {
             <th className={head}>Version</th>
             <th className={head}>Load</th>
             <th className={head}>Last seen</th>
-            <th className={cn(head, "w-24")}>
+            <th className={cn(head, "w-40")}>
               <span className="sr-only">Actions</span>
             </th>
           </tr>
@@ -98,7 +99,10 @@ export function RuntimesList() {
                 <span className="flex items-center gap-2 font-mono text-xs">
                   {runtime.build ? `v${runtime.build}` : "–"}
                   {runtime.outdated && (
-                    <Badge variant="outline" title="Run `aven update` on that machine">
+                    <Badge
+                      variant="outline"
+                      title="Update it here, or run `aven update` on that machine"
+                    >
                       Update available
                     </Badge>
                   )}
@@ -111,7 +115,8 @@ export function RuntimesList() {
                 {runtime.lastSeenAt ? timeAgo(runtime.lastSeenAt, true) : "Never"}
               </td>
               <td className="px-3 py-3">
-                <span className="flex justify-end">
+                <span className="flex items-center justify-end gap-1">
+                  <UpdateRuntimeDialog runtime={runtime} />
                   {isOwnedByMe(runtime) && (
                     <>
                       <RotateRuntimeDialog runtime={runtime} />

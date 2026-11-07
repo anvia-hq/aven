@@ -73,6 +73,8 @@ test.describe("prompt composer", () => {
     await expect(effort).toHaveAttribute("aria-valuetext", "medium");
     await effort.focus();
     await page.keyboard.press("End");
+    // The choice is kept before the panel closes; a slow machine closes it first.
+    await expect(effort).toHaveAttribute("aria-valuetext", "high");
     await page.keyboard.press("Escape");
 
     // The choice survives a reload.

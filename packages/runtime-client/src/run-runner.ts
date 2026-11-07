@@ -17,11 +17,14 @@ export async function runRunner({
   base,
   token,
   build,
+  update,
 }: {
   base: string;
   token: string;
   /** The release of the `aven` running it, if it is one. */
   build?: string;
+  /** Starts the machine's `aven update` outside this process; given by an installed `aven` only. */
+  update?: (release: string | undefined) => void;
 }) {
   // Stopping works whichever comes first: a signal while still connecting, or a refusal.
   let runtime: ReturnType<typeof startRuntime> | undefined;
@@ -51,6 +54,7 @@ export async function runRunner({
     url: runtimeConnectUrl(base),
     token,
     build,
+    update,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
     onRefused: (reason) => {

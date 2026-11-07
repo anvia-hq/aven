@@ -87,6 +87,81 @@ function connect(
   return { plane, runtime };
 }
 
+describe("startRuntime updating itself (decision 0146)", () => {
+  const ask = async (
+    plane: ReturnType<typeof fakeControlPlane>,
+    id: string,
+    params: Record<string, unknown>,
+  ) => {
+    plane.send({ type: "call", id, method: "runner.update", params } as never);
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+    return plane.received.find((m) => m.type === "reply" && m.id === id);
+  };
+
+  test("says in hello that it can, only when it was given a way to", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const withUpdate = connect({ sandbox, update: () => undefined });
+    await withUpdate.runtime.ready;
+    await until(() => withUpdate.plane.received.some((m) => m.type === "hello"));
+    expect(withUpdate.plane.received.find((m) => m.type === "hello")).toMatchObject({
+      canUpdate: true,
+    });
+
+    const without = connect({ sandbox });
+    await without.runtime.ready;
+    await until(() => without.plane.received.some((m) => m.type === "hello"));
+    expect(
+      (without.plane.received.find((m) => m.type === "hello") as { canUpdate?: boolean }).canUpdate,
+    ).toBeUndefined();
+    expect(await ask(without.plane, "u0", {})).toMatchObject({
+      ok: true,
+      result: { status: "unsupported" },
+    });
+  });
+
+  test("agrees when it is quiet, answers before it starts, and starts with the release", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const started: (string | undefined)[] = [];
+    const { plane, runtime } = connect({ sandbox, update: (release) => started.push(release) });
+    await runtime.ready;
+
+    const reply = await ask(plane, "u1", { release: "1.2.3" });
+    expect(reply).toMatchObject({ ok: true, result: { status: "started" } });
+    // The answer is out before the update runs.
+    expect(started).toEqual([]);
+    await until(() => started.length > 0);
+    expect(started).toEqual(["1.2.3"]);
+
+    // Anything but a release number is not passed on to a command.
+    expect(await ask(plane, "u2", { release: "1.2.3; rm -rf /" })).toMatchObject({ ok: false });
+    await Bun.sleep(1200);
+    expect(started).toEqual(["1.2.3"]);
+  });
+
+  test("refuses while a run is going, and does not start", async () => {
+    const { sandbox, up } = slowSandbox();
+    const started: unknown[] = [];
+    const { plane, runtime } = connect({
+      sandbox,
+      update: (release) => started.push(release),
+      createAgent: agentThat([text("working")]),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    // The sandbox is still starting, so the run is going.
+    await Bun.sleep(100);
+    expect(await ask(plane, "u3", {})).toMatchObject({
+      ok: true,
+      result: { status: "busy", reason: expect.stringContaining("run is going") },
+    });
+    await Bun.sleep(1200);
+    expect(started).toEqual([]);
+    up();
+  });
+});
+
 describe("startRuntime processes", () => {
   test("lists, reads and stops the processes of a thread's sandbox, and never starts one", async () => {
     const workspaces = directoryWorkspaces();

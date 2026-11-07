@@ -27,6 +27,7 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: WEB_URL,
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
   },
   // E2E_CHANNEL=chrome runs the tests in the system's Chrome instead of Playwright's own build.
@@ -52,6 +53,8 @@ export default defineConfig({
         MODEL_CATALOG_URL: "",
         // No built-in runner: e2e must not start containers, and a project then needs a runner.
         AVEN_LOCAL_RUNNER: "off",
+        // A release, so a runner on an older one shows as behind (decision 0146).
+        AVEN_VERSION: "9.9.9",
         // The bots' computers are on the runner e2e/bot-runner.ts connects as.
         AVEN_BOT_RUNNER: BOT_RUNNER_ID,
         // GitHub is the fake one below, so importing a repository never reaches the real one.
@@ -86,7 +89,7 @@ export default defineConfig({
       env: { FAKE_MODEL_PORT: String(MODEL_PORT) },
     },
     {
-      command: "bun run --cwd apps/platform dev",
+      command: "bunx --cwd apps/platform vite build && bun run --cwd apps/platform preview",
       url: WEB_URL,
       reuseExistingServer: false,
       env: { WEB_PORT: String(WEB_PORT), API_URL },

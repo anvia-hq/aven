@@ -81,6 +81,12 @@ export type RuntimeOptions = {
   token: string;
   /** The release of the `aven` this runner is, told to the control plane in `hello`. */
   build?: string;
+  /**
+   * Starts the machine's `aven update` to a release (this server's, or the latest without one),
+   * outside this process, which the update restarts (decision 0146). Given only by an installed
+   * `aven`: without it the control plane is told the runner cannot update itself.
+   */
+  update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
   /** Builds the agent of a bot's reply (decision 0059). Replaced in tests. */
   createBotAgent?: CreateBotReplyAgent;
@@ -265,6 +271,14 @@ export function startRuntime(options: RuntimeOptions) {
     viewers,
     idle,
     processEnds,
+    update: options.update && {
+      start: options.update,
+      // An update restarts the runner, which ends what is going: it waits for a quiet moment.
+      busy: () =>
+        driver.live.size > 0 || bots.count > 0
+          ? "A run is going on this runner. Try again when it has finished."
+          : undefined,
+    },
     steer: (params) => driver.steer(params),
   });
 
@@ -350,7 +364,13 @@ export function startRuntime(options: RuntimeOptions) {
       backoff = RECONNECT_MIN_MS;
       // The control plane asks for each of these runs again, or says to forget it.
       outbox.detachAll();
-      send({ type: "hello", version: WIRE_VERSION, runs: outbox.ids(), build: options.build });
+      send({
+        type: "hello",
+        version: WIRE_VERSION,
+        runs: outbox.ids(),
+        build: options.build,
+        canUpdate: options.update ? true : undefined,
+      });
       resend();
       connected.resolve();
       clearInterval(statsTimer);

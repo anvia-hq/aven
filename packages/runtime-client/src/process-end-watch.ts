@@ -18,6 +18,12 @@ export type ProcessEndWatchContext = {
   pollMs?: number;
 };
 
+// The sandbox's processes, or nothing when it cannot say: a watch in the background never throws.
+const processesOf = (box: ThreadSandbox) =>
+  Promise.resolve()
+    .then(() => box.processes.list())
+    .catch(() => undefined);
+
 // Watches the processes the agent left running when its run ended, and tells the control plane when
 // one ends while the thread is idle, so the agent is woken and carries on (decision 0144). It
 // watches only an idle thread: a run sees its own processes, and a new run drops the watch, which
@@ -33,10 +39,8 @@ export class ProcessEndWatch {
     if (this.context.stopped()) return;
     const box = this.context.box(threadId);
     if (!box) return;
-    const running = await box.processes
-      .list()
-      .then((list) => list.filter((process) => process.status === "running"))
-      .catch(() => []);
+    const list = await processesOf(box);
+    const running = (list ?? []).filter((process) => process.status === "running");
     if (running.length === 0 || this.context.stopped() || this.context.hasRun(threadId)) return;
     this.disarm(threadId);
     const ids = new Set(running.map((process) => process.id));
@@ -72,7 +76,7 @@ export class ProcessEndWatch {
       this.disarm(threadId);
       return;
     }
-    const list = await box.processes.list().catch(() => undefined);
+    const list = await processesOf(box);
     if (!list) return;
     for (const id of watch.ids) {
       const process = list.find((candidate) => candidate.id === id);
@@ -83,8 +87,8 @@ export class ProcessEndWatch {
       }
       if (process.status === "running") continue;
       watch.ids.delete(id);
-      const logs = await box.processes
-        .logs(id)
+      const logs = await Promise.resolve()
+        .then(() => box.processes.logs(id))
         .catch(() => ({ stdout: "", stderr: "", truncated: false }));
       const started = Date.parse(process.startedAt);
       const ended = process.endedAt ? Date.parse(process.endedAt) : Date.now();
