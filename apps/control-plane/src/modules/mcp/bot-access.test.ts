@@ -77,6 +77,49 @@ run("a bot's use of the person's MCP servers (postgres)", async () => {
     expect(replaced.headerNames).toEqual(["X-Key"]);
   });
 
+  test("a bot's server is checked the way the API checks one: no credentials in the address, no reserved header", async () => {
+    const before = (await botMcp.list(alice)).length;
+    await expect(
+      botMcp.add(alice, { name: "Creds", url: "https://user:pass@example.com/mcp" }),
+    ).rejects.toThrow("no user name or password");
+    await expect(
+      botMcp.add(alice, {
+        name: "Reserved",
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "Host", value: "evil.example.com" }],
+      }),
+    ).rejects.toThrow("sets that header");
+    await expect(
+      botMcp.add(alice, {
+        name: "Newline",
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "Authorization", value: "Bearer a\nX-Injected: 1" }],
+      }),
+    ).rejects.toThrow("one line");
+    await expect(
+      botMcp.add(alice, { name: "Bad\u0000Name", url: "https://good.example.com/mcp" }),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    expect((await botMcp.list(alice)).length).toBe(before);
+
+    const server = await botMcp.add(alice, {
+      name: "Checked",
+      url: "https://good.example.com/mcp",
+    });
+    await expect(
+      botMcp.update(alice, server.id, { url: "ftp://files.example.com/mcp" }),
+    ).rejects.toThrow("http or https");
+    await expect(
+      botMcp.update(alice, server.id, {
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "mcp-session-id", value: "x" }],
+      }),
+    ).rejects.toThrow("sets that header");
+    expect((await botMcp.list(alice)).find((s) => s.id === server.id)?.url).toBe(
+      "https://good.example.com/mcp",
+    );
+    await botMcp.remove(alice, server.id);
+  });
+
   test("another person's servers are not found, changed or removed", async () => {
     const server = await botMcp.add(alice, { name: "Hers", url: "https://good.example.com/mcp" });
     expect(await botMcp.list(bob)).not.toContainEqual(expect.objectContaining({ id: server.id }));
