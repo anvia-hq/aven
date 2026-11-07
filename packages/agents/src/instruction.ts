@@ -58,6 +58,7 @@ ${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 - Every command starts in /workspace, and so does every process: do not begin one with cd /workspace. Use cwd, or cd, only for a subdirectory.
 - A command's output, and a file's content, is cut to its last 100,000 characters, with a note at the start saying so. Redirect or filter a command's output when you need the start, and read a long file in pages with startLine and lineCount, fewer lines at a time when they are long.
 - The sandbox is released after a while with nothing running and starts afresh on the next message: what you installed or wrote outside /workspace, in /tmp for instance, may be gone, so keep what matters in the workspace.
+- When the project needs a system package or a service that is not in the sandbox (a database, a library to build against), do not build it by hand in /tmp: you have no sudo here and it is gone when the sandbox is reset. Read the setup-env skill (cat /skills/setup-env/SKILL.md): it has you write .aven/setup, and .aven/resume to start a database, and save them with save_environment, so every new thread starts with it.
 </sandbox>
 
 <files>
