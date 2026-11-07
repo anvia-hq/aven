@@ -45,7 +45,7 @@ function WorkingWord() {
       <span role="status" className="sr-only">
         Working…
       </span>
-      <span className="relative inline-block" aria-hidden>
+      <span className="relative inline-block min-w-[12ch]" aria-hidden>
         {previous && (
           <span
             key={`out-${previous}`}
@@ -81,16 +81,20 @@ type Props = {
   startedAt?: number | null;
 };
 
-// Sits under the conversation while the agent works, whether it is writing, running a tool or
-// waiting for the model's first token. It is sticky at the offset the end of the conversation has
-// (the list's bottom padding), so while the text above grows and the scroll follows a frame behind,
-// it stays put in the viewport instead of bouncing with each delta.
-export function WorkingIndicator({ startedAt = null }: Props) {
+// The line above the composer while the agent works, whether it is writing, running a tool or
+// waiting for the model's first token. It is not part of the scrolling text: it stays in the same
+// place whatever the text does, and the conversation leaves room for it, so it never covers a
+// line. Its row is kept when nothing is running, so the composer does not move when a run starts.
+export function WorkingIndicator({ running, startedAt = null }: Props & { running: boolean }) {
   return (
-    <div className="sticky bottom-48 z-10 flex items-center gap-2 bg-background text-sm text-muted-foreground">
-      <WorkingDots />
-      <WorkingWord />
-      {startedAt !== null && <WorkingTime startedAt={startedAt} />}
+    <div className="flex h-7 items-center gap-2 px-1 text-sm text-muted-foreground">
+      {running && (
+        <>
+          <WorkingDots />
+          <WorkingWord />
+          {startedAt !== null && <WorkingTime startedAt={startedAt} />}
+        </>
+      )}
     </div>
   );
 }
