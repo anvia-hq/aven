@@ -126,21 +126,20 @@ export function createRunDriver(context: DriverContext) {
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
     const kept = mcpConnections.get(threadId);
-    let connected = kept && kept.results.every((result) => !result.error) ? kept : undefined;
-    if (connected && mcpKeys.get(threadId) === key) {
-      run.mcp = connected;
+    let connected: ConnectedMcp;
+    if (kept && mcpKeys.get(threadId) === key && kept.results.every((result) => !result.error)) {
+      connected = kept;
     } else {
-      const replaced = connected;
-      connected = undefined;
-      if (replaced) {
+      if (kept) {
         mcpConnections.delete(threadId);
-        await replaced.close().catch(() => undefined);
+        mcpKeys.delete(threadId);
+        await kept.close().catch(() => undefined);
       }
       connected = await connectMcpServers(configs);
       mcpConnections.set(threadId, connected);
       mcpKeys.set(threadId, key);
-      run.mcp = connected;
     }
+    run.mcp = connected;
     context.call("mcp.report", { runId, results: connected.results }).catch((error: unknown) => {
       console.warn(`Run ${runId} could not report on its MCP servers:`, errorMessage(error));
     });
