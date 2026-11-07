@@ -19,6 +19,7 @@ export class RunIdentities {
   constructor(private issuer: Pick<Issuer, "sign"> = defaultIssuer) {}
 
   issue(runId: string, identity: RunIdentity) {
+    this.revoke(runId);
     const credential = `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
     this.#grants.set(credential, identity);
     this.#credentials.set(runId, credential);
