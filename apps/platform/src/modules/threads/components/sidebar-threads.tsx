@@ -1,9 +1,8 @@
-import { Archive, Plus, Share } from "@mynaui/icons-react";
+import { Archive, GitBranch, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
 
-import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
@@ -69,12 +68,35 @@ function SharedMark({ thread }: { thread: Thread }) {
 }
 
 // Beside the title of a thread an agent forked from another (decision 0135), under that one.
-function ForkBadge({ thread }: { thread: Thread }) {
+function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
+  return <GitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
+}
+
+// The line that joins the forks to the thread above them: one vertical line down the middle of that
+// thread's tile, and an elbow into each fork. The first fork's line starts at the tile's foot, and
+// every fork but the last carries the line on to the next.
+function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
+  const line =
+    "pointer-events-none absolute left-[calc(1rem-0.5px)] group-data-[collapsible=icon]:hidden";
   return (
-    <Badge variant="outline" className="h-4 px-1 text-[10px]">
-      Fork
-    </Badge>
+    <>
+      <span
+        aria-hidden
+        data-slot="fork-elbow"
+        className={cn(
+          line,
+          "bottom-1/2 w-3 rounded-bl-md border-b border-l border-muted-foreground/40",
+          first ? "-top-2" : "top-0",
+        )}
+      />
+      {!last && (
+        <span
+          aria-hidden
+          className={cn(line, "top-1/2 bottom-0 border-l border-muted-foreground/40")}
+        />
+      )}
+    </>
   );
 }
 
@@ -178,12 +200,15 @@ export function SidebarThreads() {
         </Button>
       </div>
       <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
-        {nestForks(threads).map(({ thread, nested }) => (
+        {nestForks(threads).map(({ thread, nested }, index, rows) => (
           <SidebarMenuItem key={thread.id}>
+            {nested && (
+              <ForkElbow first={!rows[index - 1]?.nested} last={!rows[index + 1]?.nested} />
+            )}
             <SidebarMenuButton
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
-              className={cn(nested && "pl-6")}
+              className={cn(nested && "pl-8")}
             >
               <SidebarProjectTile
                 thread={thread}
@@ -191,7 +216,7 @@ export function SidebarThreads() {
                 palette={palettes.get(thread.projectId)}
               />
               <SharedMark thread={thread} />
-              <ForkBadge thread={thread} />
+              <ForkMark thread={thread} />
               <ThreadTitle
                 thread={thread}
                 hint={hostLabel(thread)}
