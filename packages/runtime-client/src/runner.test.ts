@@ -12,7 +12,7 @@ import { COMPACT_PROMPT, COMPACTED, createCompactionAgent } from "@aven/agents/c
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
-import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
+import { type ProcessView, type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import type { CreateBotReplyAgent } from "./bot-replies";
@@ -930,6 +930,49 @@ describe("startRuntime", () => {
 
     busy.now = false;
     await until(() => released.includes("thread-1"));
+  });
+
+  test("tells the control plane when a process the run left running ends while the thread is idle (decision 0144)", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    let list: ProcessView[] = [
+      {
+        id: "p1",
+        command: "bun test",
+        status: "running",
+        startedAt: "2026-11-07T10:00:00.000Z",
+      },
+    ];
+    const acquire = sandbox.acquire.bind(sandbox);
+    sandbox.acquire = async (...args) => ({
+      ...(await acquire(...args)),
+      processes: {
+        list: async () => list,
+        stop: async () => list,
+        logs: async () => ({ stdout: "7 pass", stderr: "", truncated: false }),
+      },
+    });
+    const { plane, runtime } = connect({ sandbox, createAgent: reply(), processPollMs: 20 });
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    expect(plane.received.some((message) => message.type === "process.ended")).toBe(false);
+
+    list = [
+      {
+        ...list[0]!,
+        status: "exited",
+        exitCode: 0,
+        endedAt: "2026-11-07T10:00:10.000Z",
+      },
+    ];
+    await until(() => plane.received.some((message) => message.type === "process.ended"));
+    expect(plane.received.find((message) => message.type === "process.ended")).toMatchObject({
+      threadId: "thread-1",
+      processId: "p1",
+      exitCode: 0,
+      stdout: "7 pass",
+    });
   });
 
   test("a run that starts while the idle check is asking keeps the sandbox", async () => {

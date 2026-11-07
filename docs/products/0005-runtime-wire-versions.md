@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **48**: a runner tells the control plane when a process the agent left running ends while no run of its thread is going, `process.ended`, and the control plane wakes the agent with a note (decision 0144). A runner that has not updated is refused until `aven update`.
 - **47**: a run can use the `vertex` provider (decision 0140), which an older runtime would build as an Anthropic client.
 - **46**: a run can use the `bedrock` provider (decision 0139), which an older runtime would build as an Anthropic client.
 - **45**: a run can use the `gemini` provider (decision 0138), which an older runtime would build as an Anthropic client.

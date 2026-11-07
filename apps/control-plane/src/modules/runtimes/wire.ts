@@ -212,6 +212,17 @@ const frame = z.discriminatedUnion("type", [
     build: z.string().max(64).optional(),
   }),
   z.object({ type: z.literal("host.stats"), stats: hostStats }),
+  z.object({
+    type: z.literal("process.ended"),
+    threadId: z.string().uuid(),
+    processId: z.string().min(1).max(200),
+    command: z.string().max(2_000),
+    status: z.string().max(40),
+    exitCode: z.number().int().nullable(),
+    ranSeconds: z.number().min(0),
+    stdout: z.string().max(20_000),
+    stderr: z.string().max(20_000),
+  }),
   z.object({ type: z.literal("run.event"), runId, seq, event: runEvent }),
   z.object({
     type: z.literal("run.end"),

@@ -22,6 +22,7 @@ import type {
 
 import { describeError, UnavailableError } from "../../errors";
 import type { ThreadForks } from "../threads/forks";
+import type { ProcessEnds } from "../threads/process-ends";
 import type { CockpitCaller } from "../cockpit/commands";
 import type { MemoryCaller } from "../memory/commands";
 import { PendingCalls } from "./pending-calls";
@@ -257,6 +258,9 @@ export class RuntimeConnection {
       case "host.stats":
         this.#stats = { ...message.stats, reportedAt: new Date().toISOString() };
         return;
+      case "process.ended":
+        await this.hub.processEnds.ended(this.runtimeId, message).catch(() => undefined);
+        return;
       case "bot.say":
         this.#botReplies.get(message.replyId)?.say(message.text);
         return;
@@ -376,6 +380,9 @@ export class RuntimeHub {
     status: () => Promise.reject(new Error("Forks are not available")),
     ended: async () => undefined,
   };
+
+  /** What happens when a process the agent left running ends (decision 0144); set with the forks. */
+  processEnds: ProcessEnds = { ended: async () => undefined };
 
   // A runtime that reconnects replaces its previous connection.
   attach(

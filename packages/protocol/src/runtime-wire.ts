@@ -403,6 +403,19 @@ export type HostStats = {
 /** What the control plane tells clients of a runner's load: the stats and when they were taken. */
 export type ReportedStats = HostStats & { reportedAt: string };
 
+/** How a process in a thread's sandbox ended, and the end of what it printed (decision 0144). */
+export type ProcessEnded = {
+  threadId: string;
+  processId: string;
+  command: string;
+  status: string;
+  exitCode: number | null;
+  /** How long it ran, in seconds. */
+  ranSeconds: number;
+  stdout: string;
+  stderr: string;
+};
+
 export type RuntimeToControlPlane =
   /**
    * `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged
@@ -416,6 +429,12 @@ export type RuntimeToControlPlane =
    * (decision 0091).
    */
   | { type: "host.stats"; stats: HostStats }
+  /**
+   * A process the agent left running in a thread's sandbox has ended while no run of the thread is
+   * going: the control plane wakes the agent with a note (decision 0144). Not a call: nothing is
+   * answered, and one sent while the link is down is lost.
+   */
+  | ({ type: "process.ended" } & ProcessEnded)
   /** Every event and the end of a run are numbered from 1, so a reconnect can say where it stopped. */
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }
   /** The run is over. `error` carries the message when `outcome` is "error"; `continuation` what resumes a run that is "interaction" (it waits for the user's answer). */
@@ -780,4 +799,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 47;
+export const WIRE_VERSION = 48;

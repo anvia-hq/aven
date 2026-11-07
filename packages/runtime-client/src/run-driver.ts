@@ -163,8 +163,11 @@ export type DriverContext = {
   boxes: Map<string, ThreadSandbox>;
   /** A run is about to use the thread's sandbox: it must not be released as idle. */
   starting(threadId: string): Promise<void>;
-  /** A run is over: the thread's sandbox may be released once it has been idle for a while. */
-  finished(threadId: string): void;
+  /**
+   * A run is over: the thread's sandbox may be released once it has been idle for a while. `ended`
+   * is how it ended when it ran to its end and was not cancelled.
+   */
+  finished(threadId: string, ended?: DurableEnd["type"]): void;
   /** The control plane's origin, which the sandbox's `aven` command calls to mint identity tokens. */
   controlPlane: string;
   /** The runner is shutting down: its state is closed, so nothing more is recorded. */
@@ -267,6 +270,7 @@ export function createRunDriver(context: DriverContext) {
     };
     const run: Live = { threadId: thread.id, save, steers: [] };
     live.set(runId, run);
+    let ended: DurableEnd["type"] | undefined;
     try {
       if (message?.type === "run.start" && message.attachments?.length) {
         save({
@@ -276,6 +280,7 @@ export function createRunDriver(context: DriverContext) {
       clock.mark("attachments");
       const scope = await acquire(initial, state, run, message, clock);
       const end = await phases(scope, message);
+      ended = run.cancelReason ? undefined : end.type;
       finish(runId, end, run.cancelReason);
     } catch (error) {
       finish(runId, { type: "error", error: errorMessage(error) });
@@ -286,7 +291,7 @@ export function createRunDriver(context: DriverContext) {
       if (run.mcpGoing) await run.mcpGoing.catch(() => undefined);
       // The connections are the thread's and outlive the run (decision 0119): they are ended when
       // other servers replace them, or once the thread's sandbox is gone.
-      context.finished(thread.id);
+      context.finished(thread.id, ended);
     }
   }
 

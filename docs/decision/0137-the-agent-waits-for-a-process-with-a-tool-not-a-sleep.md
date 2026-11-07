@@ -1,6 +1,6 @@
 # 0137: The agent waits for a background process with a tool, not a sleep
 
-Status: accepted. Builds on 0012 (the sandbox's tools) and 0071 (background tasks).
+Status: accepted. Builds on 0012 (the sandbox's tools) and 0071 (background tasks). Its advice to wait is now for short waits: decision 0144 wakes the agent when a process ends.
 
 ## Context
 

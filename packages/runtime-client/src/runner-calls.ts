@@ -1,3 +1,4 @@
+import type { ProcessEndWatch } from "./process-end-watch";
 import type {
   FilesCallMethod,
   ProcessesCallMethod,
@@ -27,13 +28,22 @@ export type RunnerCallsContext = {
   boxes: Map<string, ThreadSandbox>;
   viewers: Pick<DesktopViewers, "call">;
   idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
+  /** Told that the person stopped a process themselves (decision 0144). */
+  processEnds: Pick<ProcessEndWatch, "ignore">;
   /** What the person said to a run that is going (decision 0098). */
   steer(params: SteerParams): Promise<SteerResult>;
 };
 
 // What the control plane asks a runner about a thread: its changes, its files, an image the agent
 // showed, its processes, or its desktop. Returns what answers one call of the control plane's.
-export function createRunnerCalls({ sandbox, boxes, viewers, idle, steer }: RunnerCallsContext) {
+export function createRunnerCalls({
+  sandbox,
+  boxes,
+  viewers,
+  idle,
+  processEnds,
+  steer,
+}: RunnerCallsContext) {
   // A thread's changes; null when it has no workspace on this runner yet.
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
@@ -72,7 +82,11 @@ export function createRunnerCalls({ sandbox, boxes, viewers, idle, steer }: Runn
     const box = boxes.get(threadId);
     if (method === "processes.list") return { processes: (await box?.processes.list()) ?? [] };
     if (!box || !processId) throw new Error("No such process");
-    if (method === "processes.stop") return { processes: await box.processes.stop(processId) };
+    if (method === "processes.stop") {
+      // The person stopped it: the agent is not woken to hear of it (decision 0144).
+      processEnds.ignore(threadId, processId);
+      return { processes: await box.processes.stop(processId) };
+    }
     return box.processes.logs(processId);
   }
 

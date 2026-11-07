@@ -167,6 +167,12 @@ export const threadsService = {
     return found?.count ?? 0;
   },
 
+  // A thread by its id alone, for a runner that names one: the caller checks it is the runner's.
+  async byId(id: string) {
+    const [thread] = await db.select(columns).from(threads).where(eq(threads.id, id));
+    return thread ?? null;
+  },
+
   // The forks of a thread that are not archived, for telling its agent that they are all done.
   async liveForkList(parentThreadId: string) {
     return db

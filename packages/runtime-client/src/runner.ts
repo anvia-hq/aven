@@ -23,6 +23,7 @@ import { createControlPlaneCalls } from "./control-plane-calls";
 import { DesktopViewers, type ViewerLink } from "./desktop-viewers";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
+import { ProcessEndWatch } from "./process-end-watch";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
@@ -103,6 +104,8 @@ export type RuntimeOptions = {
    * stay). Default 30 minutes.
    */
   idleReleaseMs?: number;
+  /** How often a thread's idle processes are looked at for one that ended (decision 0144). */
+  processPollMs?: number;
   /** How often the machine's load is told to the control plane (decision 0091). Default 15 seconds. */
   statsIntervalMs?: number;
 };
@@ -203,6 +206,16 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
   });
 
+  // Tells the control plane when a process the agent left running ends while no run is going, so it
+  // wakes the agent (decision 0144).
+  const processEnds = new ProcessEndWatch({
+    box: (threadId) => boxes.get(threadId),
+    send,
+    hasRun: (threadId) => [...driver.live.values()].some((run) => run.threadId === threadId),
+    stopped: () => stopped,
+    pollMs: options.processPollMs,
+  });
+
   // Answers for the bots, each on its own computer (decision 0059).
   const bots = new BotReplies({
     sandbox: options.sandbox,
@@ -225,8 +238,15 @@ export function startRuntime(options: RuntimeOptions) {
     report,
     boxes,
     controlPlane: origin,
-    starting: (threadId) => idle.starting(threadId),
-    finished: (threadId) => idle.schedule(threadId),
+    starting: (threadId) => {
+      processEnds.disarm(threadId);
+      return idle.starting(threadId);
+    },
+    finished: (threadId, ended) => {
+      idle.schedule(threadId);
+      // A run that ran to its end leaves the agent idle: what it left running is watched.
+      if (ended === "response") void processEnds.arm(threadId);
+    },
     stopped: () => stopped,
   });
 
@@ -244,6 +264,7 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     viewers,
     idle,
+    processEnds,
     steer: (params) => driver.steer(params),
   });
 
@@ -385,6 +406,7 @@ export function startRuntime(options: RuntimeOptions) {
       clearTimeout(retry);
       clearInterval(statsTimer);
       idle.cancelAll();
+      processEnds.cancelAll();
       viewers.closeAll();
       terminals.closeAll();
       bots.abortAll("The runner is stopping");

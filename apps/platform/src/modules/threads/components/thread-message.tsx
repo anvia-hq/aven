@@ -1,4 +1,5 @@
 import { shipRequestOf } from "@aven/protocol/ship-request";
+import { systemNoteOf } from "@aven/protocol/system-notes";
 import { cn } from "cn";
 import { memo } from "react";
 
@@ -95,6 +96,17 @@ export const ThreadMessage = memo(function ThreadMessage({
         message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
       ) !== null;
     if (isShipRequest) return <ShipRequestCard />;
+    // Something that happened (a fork or a process ended), sent to the agent: one quiet line.
+    const note = systemNoteOf(
+      message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+    );
+    if (note) {
+      return (
+        <p className="my-6 text-center text-sm text-muted-foreground" data-role="note">
+          {note.line}
+        </p>
+      );
+    }
     const text = message.parts.some((part) => part.type === "text" && part.text);
     return (
       <div

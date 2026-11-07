@@ -838,6 +838,39 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(await listed()).toMatchObject({ stats: null });
   });
 
+  test("a process that ended is handed to the control plane with the runtime that said so, and a bad frame is not (decision 0144)", async () => {
+    const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "process-ends",
+    });
+    const told: { runtimeId: string; processId: string }[] = [];
+    const before = hub.processEnds;
+    hub.processEnds = {
+      ended: async (runtimeId, ended) => void told.push({ runtimeId, processId: ended.processId }),
+    };
+    try {
+      const ws = await open(full.server?.port, token, "/runtimes/connect");
+      await until(() => hub.isOnline(runtime.id));
+      const frame = {
+        type: "process.ended",
+        threadId: crypto.randomUUID(),
+        processId: "p1",
+        command: "bun test",
+        status: "exited",
+        exitCode: 0,
+        ranSeconds: 3,
+        stdout: "ok",
+        stderr: "",
+      };
+      ws.send(JSON.stringify({ ...frame, threadId: "not-a-uuid" }));
+      ws.send(JSON.stringify(frame));
+      await until(() => told.length > 0);
+      expect(told).toEqual([{ runtimeId: runtime.id, processId: "p1" }]);
+      ws.close();
+    } finally {
+      hub.processEnds = before;
+    }
+  });
+
   test("revoking cuts a connected runtime off and fails its live runs", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "x",
