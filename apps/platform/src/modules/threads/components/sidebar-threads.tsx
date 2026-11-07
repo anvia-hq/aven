@@ -46,7 +46,7 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
       dateTime={thread.updatedAt}
       title={timeAgo(thread.updatedAt, true)}
       className={cn(
-        "pointer-events-none absolute inset-y-0 right-2 flex w-5 items-center justify-center text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
+        "pointer-events-none absolute inset-y-0 right-2 flex items-center justify-end text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
         yields &&
           "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 max-md:hidden",
       )}
