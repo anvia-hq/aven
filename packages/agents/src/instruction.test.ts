@@ -74,11 +74,12 @@ test("the agent is told to show proof of its work, and a goal's session too", ()
   }
 });
 
-test("the agent is told to end its turn and be woken when a process ends, and never to sleep in a command", () => {
+test("the agent is told to end its turn and be woken when a process ends, and never to sleep in a command or wait with a tool", () => {
   const text = codingInstructions(200, true);
-  expect(text).toContain("you are woken with a message that starts with [process]");
+  expect(text).toContain("a message that starts with [process]");
   expect(text).toContain("end your turn");
   expect(text).toContain("Never wait with sleep in a command");
+  expect(text).not.toContain("wait_for_process");
 });
 
 test("the agent is told its commands already start in /workspace, so it does not cd there each time", () => {

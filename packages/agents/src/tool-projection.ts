@@ -20,7 +20,6 @@ import { EDIT_TOOL_NAME } from "./tools/edit";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
 import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
-import { WAIT_FOR_PROCESS_TOOL_NAME } from "./tools/wait-for-process";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
 
@@ -55,6 +54,8 @@ const PROCESS_TOOLS = new Set<string>([
   "stop_process",
 ] satisfies SandboxToolName[]);
 const PORT_TOOL: SandboxToolName = "wait_for_port";
+// A tool the agent no longer has (decision 0147), still drawn in the transcripts that used it.
+const WAIT_FOR_PROCESS_TOOL_NAME = "wait_for_process";
 // Tools whose JSON result carries a `summary` meant to be read as it is.
 const SUMMARISED_TOOLS = new Set<string>([
   GIT_FETCH_TOOL_NAME,

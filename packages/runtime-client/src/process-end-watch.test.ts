@@ -5,13 +5,20 @@ import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/runtime-
 import { ProcessEndWatch } from "./process-end-watch";
 import type { ThreadSandbox } from "./sandbox";
 
-const proc = (id: string, status: ProcessView["status"], exitCode?: number): ProcessView => ({
+// Started a moment after the watch began, as what the agent starts in a run is.
+const startedMs = Date.now() + 1000;
+const proc = (
+  id: string,
+  status: ProcessView["status"],
+  exitCode?: number,
+  startedAtMs = startedMs,
+): ProcessView => ({
   id,
   command: `cmd ${id}`,
   status,
   exitCode,
-  startedAt: "2026-11-07T10:00:00.000Z",
-  endedAt: status === "running" ? undefined : "2026-11-07T10:01:30.000Z",
+  startedAt: new Date(startedAtMs).toISOString(),
+  endedAt: status === "running" ? undefined : new Date(startedAtMs + 90_000).toISOString(),
 });
 
 function setup(initial: ProcessView[]) {
@@ -41,13 +48,16 @@ function setup(initial: ProcessView[]) {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
-describe("the end of a process the agent left running (decision 0144)", () => {
+const idsOf = (sent: RuntimeToControlPlane[]) =>
+  sent.map((m) => (m.type === "process.ended" ? m.processId : ""));
+
+describe("the end of a process the agent started (decisions 0144 and 0147)", () => {
   test("tells the control plane once when a watched process ends, with its end of output", async () => {
     const t = setup([proc("a", "running"), proc("b", "running")]);
-    await t.watch.arm("thread-1");
+    t.run(true);
+    t.watch.arm("thread-1");
     t.set([proc("a", "exited", 0), proc("b", "running")]);
     await tick();
-    t.set([proc("a", "exited", 0), proc("b", "running")]);
     await tick();
     expect(t.sent).toEqual([
       {
@@ -65,34 +75,57 @@ describe("the end of a process the agent left running (decision 0144)", () => {
     t.watch.cancelAll();
   });
 
-  test("watches nothing when nothing runs, and drops the watch when a run starts", async () => {
-    const none = setup([proc("a", "exited", 0)]);
-    await none.watch.arm("thread-1");
-    none.set([proc("a", "exited", 1)]);
-    await tick();
-    expect(none.sent).toEqual([]);
-
-    const t = setup([proc("a", "running")]);
-    await t.watch.arm("thread-1");
-    t.watch.disarm("thread-1");
-    t.set([proc("a", "exited", 0)]);
+  test("tells of one that ends while the run is going, so the run hears it at its next step", async () => {
+    const t = setup([]);
+    t.run(true);
+    t.watch.arm("thread-1");
+    t.set([proc("a", "running")]);
     await tick();
     expect(t.sent).toEqual([]);
+    t.set([proc("a", "exited", 0)]);
+    await tick();
+    expect(idsOf(t.sent)).toEqual(["a"]);
+    t.watch.cancelAll();
   });
 
-  test("says nothing while a run is going, or for a process the person stopped", async () => {
-    const t = setup([proc("a", "running"), proc("b", "running")]);
-    await t.watch.arm("thread-1");
-    t.watch.ignore("thread-1", "a");
-    t.set([proc("a", "stopped"), proc("b", "exited", 0)]);
+  test("tells of one that started and ended between two looks, once the run is over", async () => {
+    const t = setup([]);
+    t.run(true);
+    t.watch.arm("thread-1");
+    t.set([proc("quick", "exited", 0)]);
+    t.run(false);
+    t.watch.settle("thread-1");
     await tick();
-    expect(t.sent.map((m) => (m.type === "process.ended" ? m.processId : ""))).toEqual(["b"]);
+    expect(idsOf(t.sent)).toEqual(["quick"]);
+  });
 
-    const busy = setup([proc("a", "running")]);
-    await busy.watch.arm("thread-1");
-    busy.run(true);
-    busy.set([proc("a", "exited", 0)]);
+  test("leaves alone a process from before the watch began, and one the person stopped", async () => {
+    const t = setup([proc("old", "exited", 0, Date.now() - 60_000), proc("a", "running")]);
+    t.run(true);
+    t.watch.arm("thread-1");
+    t.watch.ignore("thread-1", "a");
+    t.set([proc("old", "exited", 0, Date.now() - 60_000), proc("a", "stopped")]);
     await tick();
-    expect(busy.sent).toEqual([]);
+    expect(t.sent).toEqual([]);
+    t.watch.cancelAll();
+  });
+
+  test("goes when the run is over and nothing it started is running, and tells nothing after a disarm", async () => {
+    const t = setup([proc("a", "exited", 0)]);
+    t.run(true);
+    t.watch.arm("thread-1");
+    t.watch.disarm("thread-1");
+    t.run(false);
+    await tick();
+    expect(t.sent).toEqual([]);
+
+    const idle = setup([]);
+    idle.run(true);
+    idle.watch.arm("thread-1");
+    idle.run(false);
+    await tick();
+    idle.set([proc("late", "exited", 0)]);
+    await tick();
+    expect(idle.sent).toEqual([]);
   });
 });

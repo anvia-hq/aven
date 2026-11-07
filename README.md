@@ -23,6 +23,12 @@ It installs what is missing (git and Docker, after asking), the `aven` command, 
 runner on this machine, and opens Aven in your browser. Then add a model provider in Settings, connect
 GitHub and start a thread. Update later with `aven update`.
 
+## Install with an agent
+
+Paste this to a coding agent (Claude Code, Codex) on the machine you want to set up:
+
+> Install Aven from https://github.com/anvia-hq/aven. **Control plane** (the server, plus a runner on this machine): run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash`, answer its prompts (for a server others can reach, add `--domain <host> --owner-email <email>`), then run `aven doctor` and fix anything not `ok`. **Runner only** (another machine that runs the agents): ask me for the server's address and a runner token (Settings > Runtimes > create a runner), then run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --runner --url <address>/api --token <token>` and `aven doctor`. Never print or commit the token, and stop and ask me if Docker or git cannot be installed.
+
 ## Docs
 
 - [Self-hosting](docs/guides/self-hosting.md): how it works, your own domain, more runners, updating, backup

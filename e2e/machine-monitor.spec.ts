@@ -139,6 +139,10 @@ test.describe("machine monitor", () => {
     await dialog.getByRole("button", { name: "Update", exact: true }).click();
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Updating…");
     await expect(machines.getByRole("button", { name: "Update old-box" })).toHaveCount(0);
+
+    // A refresh does not forget it: the row still says Updating.
+    await page.reload();
+    await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Updating…");
   });
 
   test("a runner that is busy says so and keeps its button", async ({ page }) => {

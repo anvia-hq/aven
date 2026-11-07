@@ -212,8 +212,8 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
   });
 
-  // Tells the control plane when a process the agent left running ends while no run is going, so it
-  // wakes the agent (decision 0144).
+  // Tells the control plane when a process the agent started ends, so it wakes the agent or tells
+  // its run (decisions 0144 and 0147).
   const processEnds = new ProcessEndWatch({
     box: (threadId) => boxes.get(threadId),
     send,
@@ -245,13 +245,15 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     controlPlane: origin,
     starting: (threadId) => {
-      processEnds.disarm(threadId);
+      processEnds.arm(threadId);
       return idle.starting(threadId);
     },
     finished: (threadId, ended) => {
       idle.schedule(threadId);
-      // A run that ran to its end leaves the agent idle: what it left running is watched.
-      if (ended === "response") void processEnds.arm(threadId);
+      // A run that ran to its end leaves the agent idle: what it started is still watched, and what
+      // ended during the run is told now. One stopped or failed tells nothing.
+      if (ended === "response") processEnds.settle(threadId);
+      else processEnds.disarm(threadId);
     },
     stopped: () => stopped,
   });
