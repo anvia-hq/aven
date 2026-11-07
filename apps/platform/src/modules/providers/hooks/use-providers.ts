@@ -50,11 +50,8 @@ export function useProviders() {
     return created;
   }
 
-  function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
-    return attempt("Could not load models", async () => {
-      const result = await postJson<{ models: string[] }>("/providers/models", input);
-      return result.models;
-    });
+  async function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
+    return (await postJson<{ models: string[] }>("/providers/models", input)).models;
   }
 
   async function update(provider: Provider, patch: ProviderPatch) {
@@ -66,11 +63,8 @@ export function useProviders() {
     return updated;
   }
 
-  function listSavedModels(provider: Provider) {
-    return attempt(
-      "Could not load models",
-      async () => (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models,
-    );
+  async function listSavedModels(provider: Provider) {
+    return (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models;
   }
 
   async function makeDefault(provider: Provider) {

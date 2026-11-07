@@ -76,12 +76,6 @@ describe("fetchModels", () => {
     ).rejects.toThrow("Not a Bedrock endpoint");
   });
 
-  test("vertex has no list to read", async () => {
-    await expect(
-      fetchModels({ kind: "vertex", apiKey: "k", baseUrl: "https://x.test" }, respond({})),
-    ).rejects.toThrow("no model list");
-  });
-
   test("maps failures to ModelListError", async () => {
     await expect(fetchModels({ kind: "openai" }, respond({}))).rejects.toBeInstanceOf(
       ModelListError,

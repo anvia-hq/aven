@@ -19,11 +19,6 @@ import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ModelField } from "./model-field";
 
-function loadModelsLabel(loading: boolean, loaded: boolean) {
-  if (loading) return "Loading…";
-  return loaded ? "Reload" : "Load models";
-}
-
 const keyPlaceholders: Record<ProviderKind, string> = {
   openai: "sk-…",
   anthropic: "sk-ant-…",
@@ -34,14 +29,14 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   "openai-compatible": "sk-…",
 };
 
-const typedModels: Partial<Record<ProviderKind, { label: string; placeholder: string }>> = {
-  azure: { label: "Deployment name", placeholder: "my-gpt-deployment" },
-  vertex: { label: "Model id", placeholder: "google/gemini-2.5-flash" },
-};
-
-const modelPlaceholders: Partial<Record<ProviderKind, string>> = {
-  bedrock: "openai.gpt-oss-120b",
-  "openai-compatible": "llama3.1",
+const modelWaiting: Record<ProviderKind, string> = {
+  openai: "Enter your API key to load models",
+  anthropic: "Enter your API key to load models",
+  gemini: "Enter your API key to load models",
+  bedrock: "Enter the region and key to load models",
+  vertex: "Enter the project, location and credential to load models",
+  azure: "Enter the resource URL and key to load deployments",
+  "openai-compatible": "Enter the base URL to load models",
 };
 
 type Props = {
@@ -55,10 +50,10 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false), preset);
   const { compatible, azure, bedrock, vertex } = form;
-  const typedModel = typedModels[kind];
   const keyOptional = compatible && preset?.needsKey !== true;
   const keyLabel = (vertex && "Credential") || (keyOptional ? "API key (optional)" : "API key");
   const vertexParts = vertexPartsOf(provider?.baseUrl);
+  const modelRequired = compatible || bedrock || azure || vertex;
   const editing = provider !== undefined;
 
   return (
@@ -66,6 +61,7 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+        form.loadOnOpen(next);
         if (!next) {
           form.reset();
         }
@@ -73,7 +69,12 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
     >
       <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
       <DialogContent>
-        <Form ref={form.formRef} onSubmit={form.submit} className="flex flex-col gap-4">
+        <Form
+          ref={form.formRef}
+          onSubmit={form.submit}
+          onChange={form.scheduleLoad}
+          className="flex flex-col gap-4"
+        >
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit" : label} {preset?.name ?? PROVIDER_LABELS[kind]}
@@ -144,40 +145,15 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
                 : (preset?.keyPlaceholder ?? keyPlaceholders[kind])
             }
           />
-          {typedModel ? (
-            <TextField
-              label={typedModel.label}
-              name="modelId"
-              required
-              defaultValue={provider?.modelId ?? undefined}
-              placeholder={typedModel.placeholder}
-            />
-          ) : (
-            <div className="flex items-end gap-2">
-              <div className="min-w-0 flex-1">
-                <ModelField
-                  models={form.models}
-                  value={form.modelId}
-                  onChange={form.selectModel}
-                  required={compatible || bedrock}
-                  defaultValue={provider?.modelId ?? undefined}
-                  placeholder={
-                    preset?.exampleModel ?? modelPlaceholders[kind] ?? "Provider default"
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={form.loadingModels}
-                onClick={form.loadModels}
-              >
-                {loadModelsLabel(form.loadingModels, form.models !== null)}
-              </Button>
-            </div>
-          )}
+          <ModelField
+            label={kind === "azure" ? "Deployment" : "Model"}
+            state={form.modelsState}
+            value={form.modelId}
+            onChange={form.selectModel}
+            waiting={modelWaiting[kind]}
+          />
           <DialogFooter>
-            <Button type="submit" disabled={form.submitting}>
+            <Button type="submit" disabled={form.submitting || (modelRequired && !form.modelId)}>
               {editing ? "Save changes" : "Add provider"}
             </Button>
           </DialogFooter>

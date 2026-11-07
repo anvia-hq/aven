@@ -1,9 +1,20 @@
 import { bedrockBaseUrl, vertexBaseUrl } from "@aven/protocol/providers";
 import { useRef, useState, type FormEvent } from "react";
 
+import { errorMessage } from "@/lib/api";
+
 import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { useProviders } from "./use-providers";
+
+export type ModelsState = {
+  status: "idle" | "loading" | "ready" | "error";
+  models: string[] | null;
+  error?: string;
+};
+
+const SOURCE_FIELDS = new Set(["apiKey", "baseUrl", "region", "project", "location"]);
+const AUTO_LOAD_DELAY_MS = 600;
 
 export function useProviderForm(
   kind: ProviderKind,
@@ -12,9 +23,10 @@ export function useProviderForm(
   preset?: CompatiblePreset,
 ) {
   const [submitting, setSubmitting] = useState(false);
-  const [models, setModels] = useState<string[] | null>(null);
+  const [modelsState, setModelsState] = useState<ModelsState>({ status: "idle", models: null });
   const [modelId, setModelId] = useState(provider?.modelId ?? "");
-  const [loadingModels, setLoadingModels] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const latest = useRef(0);
   const formRef = useRef<HTMLFormElement>(null);
   const { create, update, listModels, listSavedModels } = useProviders();
   const compatible = kind === "openai-compatible";
@@ -40,28 +52,59 @@ export function useProviderForm(
   }
 
   function reset() {
-    setModels(null);
+    clearTimeout(timer.current);
+    latest.current += 1;
+    setModelsState({ status: "idle", models: null });
     setModelId(provider?.modelId ?? "");
   }
 
   async function loadModels() {
-    setLoadingModels(true);
     const apiKey = readTrimmedField("apiKey");
-    const list =
-      provider && !apiKey
-        ? await listSavedModels(provider)
-        : await listModels({ kind, apiKey, baseUrl: readBaseUrl() });
-    setLoadingModels(false);
-    if (list) {
-      setModels(list);
-      setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
+    const baseUrl = readBaseUrl();
+    const saved = provider !== undefined && !apiKey;
+    const ready =
+      saved || ((apiKey || compatible) && (baseUrl || !(compatible || azure || bedrock || vertex)));
+    if (!ready) {
+      latest.current += 1;
+      setModelsState({ status: "idle", models: null });
+      return;
     }
+    const request = ++latest.current;
+    setModelsState((current) => ({ ...current, status: "loading", error: undefined }));
+    try {
+      const listed = saved
+        ? await listSavedModels(provider)
+        : await listModels({ kind, apiKey, baseUrl });
+      if (request !== latest.current) return;
+      const list = [...new Set([provider?.modelId ?? "", ...listed])].filter(Boolean).sort();
+      setModelsState({
+        status: list.length ? "ready" : "error",
+        models: list,
+        error: list.length ? undefined : "No models found",
+      });
+      setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
+    } catch (failure) {
+      if (request !== latest.current) return;
+      setModelsState((current) => ({ ...current, status: "error", error: errorMessage(failure) }));
+    }
+  }
+
+  function scheduleLoad(event: FormEvent<HTMLFormElement>) {
+    const name = (event.target as HTMLInputElement).name;
+    if (!SOURCE_FIELDS.has(name)) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => void loadModels(), AUTO_LOAD_DELAY_MS);
+  }
+
+  function loadOnOpen(open: boolean) {
+    if (!open) return;
+    timer.current = setTimeout(() => void loadModels(), 0);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    const chosenModel = (models ? modelId : readTrimmedField("modelId")) || undefined;
+    const chosenModel = modelId || undefined;
     const name =
       readTrimmedField("name") ?? provider?.name ?? preset?.name ?? PROVIDER_LABELS[kind];
     const baseUrl = readBaseUrl();
@@ -82,12 +125,12 @@ export function useProviderForm(
     azure,
     bedrock,
     vertex,
-    models,
+    modelsState,
     modelId,
-    loadingModels,
     submitting,
     selectModel: setModelId,
-    loadModels,
+    scheduleLoad,
+    loadOnOpen,
     reset,
     submit,
   };

@@ -33,3 +33,17 @@ test.describe("providers", () => {
     expect(asked).toBe(3);
   });
 });
+
+test("the model of a provider is picked from a list that loads by itself", async ({ page }) => {
+  await registerUser(page, "prm", "Model User");
+  await page.route("**/api/providers/models", (route) =>
+    route.fulfill({ json: { models: ["claude-haiku-5-5", "claude-sonnet-5"] } }),
+  );
+  await page.goto("/settings/providers");
+  await page.getByRole("button", { name: "Set up" }).nth(1).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Load models" })).toHaveCount(0);
+  await dialog.getByLabel("API key").fill("sk-ant-test-1234");
+  await expect(dialog.getByRole("combobox", { name: "Model" })).toContainText("claude-haiku-5-5");
+  await page.screenshot({ path: ".aven/proof/provider-models/after.png" });
+});

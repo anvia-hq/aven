@@ -230,8 +230,7 @@ const sourceOf = (row: ProviderRow): ModelSource => ({
 });
 
 async function modelsOf(row: ProviderRow, source: ModelSource) {
-  if (row.kind === "vertex") return row.modelId ? [row.modelId] : [];
-  if (row.kind !== "azure") return listAgentModels(source);
+  if (row.kind !== "azure" && row.kind !== "vertex") return listAgentModels(source);
   const listed = await listAgentModels(source).catch((error) => {
     if (error instanceof ModelListError) return [];
     throw error;
