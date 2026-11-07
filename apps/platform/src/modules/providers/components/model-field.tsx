@@ -1,40 +1,35 @@
 import { LabeledSelect } from "@/components/labeled-select";
-import { TextField } from "@/components/text-field";
+
+import type { ModelsState } from "../hooks/use-provider-form";
 
 type Props = {
-  models: string[] | null;
+  label: string;
+  state: ModelsState;
   value: string;
   onChange: (modelId: string) => void;
-  required: boolean;
-  placeholder: string;
-  defaultValue?: string;
+  waiting: string;
 };
 
-export function ModelField({
-  models,
-  value,
-  onChange,
-  required,
-  placeholder,
-  defaultValue,
-}: Props) {
-  if (models) {
-    return (
+export function ModelField({ label, state, value, onChange, waiting }: Props) {
+  const { status, models, error } = state;
+  let placeholder = waiting;
+  if (status === "loading") placeholder = "Loading models…";
+  if (status === "error") placeholder = error ?? "Could not load models";
+  return (
+    <div className="flex flex-col gap-1">
       <LabeledSelect
-        label="Model"
-        options={models.map((id) => ({ value: id, label: id }))}
+        label={label}
+        options={(models ?? []).map((id) => ({ value: id, label: id }))}
         value={value}
         onChange={onChange}
+        placeholder={placeholder}
+        disabled={models === null || models.length === 0}
       />
-    );
-  }
-  return (
-    <TextField
-      label={required ? "Model" : "Model (optional)"}
-      name="modelId"
-      defaultValue={defaultValue}
-      required={required}
-      placeholder={placeholder}
-    />
+      {status === "error" && (
+        <p role="alert" className="text-destructive text-xs">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
