@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { runtimesService } from "../runtimes/service";
 import { createBotThreads } from "./bot-access";
@@ -177,6 +177,22 @@ run("a bot's threads (postgres)", async () => {
     expect((await bot.list(userId, { archived: true })).map((thread) => thread.id)).toContain(
       one.id,
     );
+  });
+
+  test("open threads are found even when more than the listing's worth of newer archived threads come first", async () => {
+    const open = await bot.start(person, { projectId: projectA.id, prompt: "Still open" });
+    await db.execute(sql`
+      insert into threads (organization_id, project_id, created_by, runtime_id, title, state, updated_at)
+      select organization_id, project_id, created_by, runtime_id, 'Filler ' || g, 'archived', now() + interval '1 minute'
+      from threads, generate_series(1, 520) as g
+      where id = ${open.id}
+    `);
+    expect((await bot.list(userId, {})).map((thread) => thread.id)).toContain(open.id);
+    expect(
+      (await bot.list(userId, { projectId: projectA.id })).every(
+        (thread) => thread.state !== "archived",
+      ),
+    ).toBe(true);
   });
 
   test("looking at a thread gives its latest turns, with what the agent called and none of what it returned", async () => {

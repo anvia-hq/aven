@@ -85,7 +85,11 @@ export const threadsService = {
     return thread;
   },
 
-  listForPerson: (userId: string, limit: number) =>
+  listForPerson: (
+    userId: string,
+    limit: number,
+    narrow: { archived?: boolean; projectId?: string } = {},
+  ) =>
     db
       .select(columns)
       .from(threads)
@@ -93,6 +97,12 @@ export const threadsService = {
         and(
           inPersonsWorkspaces(userId),
           or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+          narrow.archived === undefined
+            ? undefined
+            : narrow.archived
+              ? eq(threads.state, "archived")
+              : ne(threads.state, "archived"),
+          narrow.projectId === undefined ? undefined : eq(threads.projectId, narrow.projectId),
         ),
       )
       .orderBy(desc(threads.updatedAt))
