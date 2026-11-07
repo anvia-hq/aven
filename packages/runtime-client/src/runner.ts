@@ -32,9 +32,6 @@ import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
-// Builds the agent for a run. The model is reached through the control plane's gateway with the
-// run's token; this process never holds a provider key. The conversation is durable's own, so the
-// agent has no memory store.
 export const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
   ({ id, attended, tools, skills, envNames, mcp, memory, forks, model, role, compact }) => {
@@ -53,7 +50,6 @@ export const defaultCreateAgent =
     }
     return createCodingAgent({
       id,
-      // Durable journals model retries; subagents run outside it and keep their own policy.
       retries: role ? undefined : false,
       questions: attended,
       instructions: role && subagentInstructions(role),
@@ -75,88 +71,48 @@ export const defaultCreateAgent =
   };
 
 export type RuntimeOptions = {
-  /** The control plane's WebSocket URL, e.g. ws://localhost:8000/runtimes/connect. */
   url: string;
-  /** The registration token shown once when the runtime was created. */
   token: string;
-  /** The release of the `aven` this runner is, told to the control plane in `hello`. */
   build?: string;
-  /**
-   * Starts the machine's `aven update` to a release (this server's, or the latest without one),
-   * outside this process, which the update restarts (decision 0146). Given only by an installed
-   * `aven`: without it the control plane is told the runner cannot update itself.
-   */
   update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
-  /** Builds the agent of a bot's reply (decision 0059). Replaced in tests. */
   createBotAgent?: CreateBotReplyAgent;
-  /** How long a bot's message "types" before it is sent. Replaced in tests. */
   typingPause?: BotRepliesContext["pause"];
-  /** Gives each thread its sandbox and workspace (decision 0010). */
   sandbox: ThreadWorkspaces;
-  /** The SQLite file runs are journaled in (decision 0021). Only one runner may use it at a time. */
   journalPath: string;
-  /** Where what a run told the control plane, and how far it got, is kept (decision 0024). Defaults to beside the journal. */
   statePath?: string;
-  /**
-   * The control plane refused this runtime for good (revoked, token rotated, or an incompatible
-   * version), so reconnecting would not help. `reason` says why.
-   */
   onRefused?: (reason: string) => void;
-  /** How long a call to the control plane may take, a dropped connection included. Default 60 seconds. */
   callTimeoutMs?: number;
-  /**
-   * A thread with no run and no running process for this long gives up its sandbox (its files
-   * stay). Default 30 minutes.
-   */
   idleReleaseMs?: number;
-  /** How often a thread's idle processes are looked at for one that ended (decision 0144). */
   processPollMs?: number;
-  /** How often the machine's load is told to the control plane (decision 0091). Default 15 seconds. */
   statsIntervalMs?: number;
 };
 
 const DEFAULT_STATS_INTERVAL_MS = 15_000;
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
-// About as long as the control plane holds a run for its runtime to come back.
 const DEFAULT_CALL_TIMEOUT_MS = 60_000;
 const DEFAULT_IDLE_RELEASE_MS = 30 * 60_000;
 
-/**
- * Where the control plane's HTTP API is, from the URL the runner connects to: the same address with
- * an http scheme and without `/runtimes/connect`. A control plane behind a prefix (the web entry
- * serves it at `/api`) keeps it: the gateway at `/runtimes/gateway` is under it too, and without it
- * the request reaches the web app, which answers 405.
- */
 export function controlPlaneBase(connectUrl: string) {
   const url = new URL(connectUrl.replace(/^ws/, "http"));
-  // The prefix is what comes before `/runtimes/connect`; an address that does not end so has none to keep.
   const prefix = /^(.*)\/runtimes\/connect\/?$/.exec(url.pathname)?.[1] ?? "";
   return `${url.origin}${prefix}`;
 }
 
-// Connects out to the control plane and runs whatever it is told to, until stopped. Reconnects
-// with backoff; runs in flight when the link drops are abandoned (the control plane ends them).
 export function startRuntime(options: RuntimeOptions) {
-  // The control plane's own address, for its model gateway: the WebSocket URL's, with an http scheme.
   const origin = controlPlaneBase(options.url);
   const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
-  // What each run has told the control plane, and how far it got, kept until the control plane has
-  // the end, so a dropped link or a restart loses nothing.
   const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
   const records = new RunRecords(state);
   const outbox = new RunOutbox(state);
-  // Opened once; a run waits for it, and a journal that will not open fails each run clearly. Runs
-  // a restart interrupted stay in it for the control plane to ask for again.
   const journal = DurableRuns.open(
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
   journal.catch(() => undefined);
-  // The sandbox each thread's latest run used; dropped when the thread gives its sandbox up.
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -164,7 +120,6 @@ export function startRuntime(options: RuntimeOptions) {
   let retry: Timer | undefined;
   const connected = Promise.withResolvers<void>();
 
-  // False when the link is down and the message went nowhere.
   const send = (message: RuntimeToControlPlane) => {
     if (socket?.readyState !== WebSocket.OPEN) return false;
     socket.send(JSON.stringify(message));
@@ -175,17 +130,14 @@ export function startRuntime(options: RuntimeOptions) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(frame);
   };
 
-  // How the desktops and terminals the control plane opens reach it.
   const viewerLink: ViewerLink = {
     send: (message) => void send(message),
     sendBinary,
     buffered: () => socket?.bufferedAmount ?? 0,
   };
 
-  // Streams thread desktops to the viewers the control plane opens (decision 0015).
   const viewers = new DesktopViewers(options.sandbox, viewerLink);
 
-  // Runs the shells of the terminals the control plane opens (decision 0053).
   const terminals = new TerminalSessions(options.sandbox, viewerLink);
 
   const sendOrWarn = (message: RuntimeToControlPlane) => {
@@ -194,14 +146,11 @@ export function startRuntime(options: RuntimeOptions) {
 
   const { call, resend, settle } = createControlPlaneCalls({ send, timeoutMs: callTimeoutMs });
 
-  // Tells the control plane something about a run. It is kept either way: if the link is down or
-  // the control plane has not asked for the run since it came back, it is sent on request.
   const report: DriverContext["report"] = (runId, make, source) => {
     const message = outbox.push(runId, make, source);
     if (message && outbox.attached(runId)) send(message);
   };
 
-  // Its checks reach the bots and the driver, which are made with it: hence the annotation.
   const idle: IdleRelease = new IdleRelease({
     sandbox: options.sandbox,
     boxes,
@@ -212,8 +161,6 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
   });
 
-  // Tells the control plane when a process the agent started ends, so it wakes the agent or tells
-  // its run (decisions 0144 and 0147).
   const processEnds = new ProcessEndWatch({
     box: (threadId) => boxes.get(threadId),
     send,
@@ -222,7 +169,6 @@ export function startRuntime(options: RuntimeOptions) {
     pollMs: options.processPollMs,
   });
 
-  // Answers for the bots, each on its own computer (decision 0059).
   const bots = new BotReplies({
     sandbox: options.sandbox,
     createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),
@@ -250,14 +196,12 @@ export function startRuntime(options: RuntimeOptions) {
     },
     finished: (threadId, ended) => {
       idle.schedule(threadId);
-      // A run that ran to its end leaves the agent idle: what it started is still watched, and what
       if (ended === "response") processEnds.settle(threadId);
       else processEnds.suspend(threadId);
     },
     stopped: () => stopped,
   });
 
-  // Answers a call of the control plane's with what `work` returns, or with why it failed.
   async function answer(id: string, work: () => Promise<unknown>) {
     try {
       sendOrWarn({ type: "reply", id, ok: true, result: await work() });
@@ -274,7 +218,6 @@ export function startRuntime(options: RuntimeOptions) {
     processEnds,
     update: options.update && {
       start: options.update,
-      // An update restarts the runner, which ends what is going: it waits for a quiet moment.
       busy: () =>
         driver.live.size > 0 || bots.count > 0
           ? "A run is going on this runner. Try again when it has finished."
@@ -300,7 +243,6 @@ export function startRuntime(options: RuntimeOptions) {
         return;
       case "run.attach":
         for (const missed of outbox.attach(message.runId, message.after)) send(missed);
-        // A run this process had before it restarted goes on from here.
         void driver.restore(message.runId);
         return;
       case "run.ack":
@@ -329,14 +271,11 @@ export function startRuntime(options: RuntimeOptions) {
         settle(message);
         return;
       default:
-        // Every type is handled above; a type this runner does not know yet is ignored.
         message satisfies never;
         return;
     }
   }
 
-  // The machine's load goes to the control plane while connected, for Settings to show. It is
-  // information only: a failed reading is skipped, never a reason to drop the connection.
   const cpu = cpuSampler();
   const statsEveryMs = options.statsIntervalMs ?? DEFAULT_STATS_INTERVAL_MS;
   let statsTimer: ReturnType<typeof setInterval> | undefined;
@@ -348,22 +287,17 @@ export function startRuntime(options: RuntimeOptions) {
         sandboxes: options.sandbox.running?.() ?? 0,
       });
       if (socket?.readyState === WebSocket.OPEN) send({ type: "host.stats", stats });
-    } catch {
-      // Tried again at the next interval.
-    }
+    } catch {}
   }
 
   function connect() {
     if (stopped) return;
-    // Bun's WebSocket takes request headers, which is how the token travels; the DOM typings
-    // here only know the protocols form.
     const init = { headers: { authorization: `Bearer ${options.token}` } };
     const ws = new WebSocket(options.url, init as unknown as string[]);
     ws.binaryType = "arraybuffer";
     socket = ws;
     ws.onopen = () => {
       backoff = RECONNECT_MIN_MS;
-      // The control plane asks for each of these runs again, or says to forget it.
       outbox.detachAll();
       send({
         type: "hello",
@@ -399,10 +333,8 @@ export function startRuntime(options: RuntimeOptions) {
     };
     ws.onclose = (event) => {
       clearInterval(statsTimer);
-      // Runs and calls carry on: the control plane holds them for a while and asks again on return.
       viewers.closeAll();
       terminals.closeAll();
-      // A bot's reply is not taken up again after a reconnect: the control plane ends it.
       bots.abortAll("The connection to the control plane dropped");
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
@@ -412,15 +344,12 @@ export function startRuntime(options: RuntimeOptions) {
       retry = setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
     };
-    ws.onerror = () => {
-      // `onclose` follows and schedules the reconnect.
-    };
+    ws.onerror = () => {};
   }
 
   connect();
 
   return {
-    /** Resolves once the first connection is open. */
     ready: connected.promise,
     async stop() {
       stopped = true;

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { timing } from "./timing";
 
-// Timing of a run's start-up (decision 0119): off unless asked for, and one line a step when it is.
 describe("the timing of a run's start-up", () => {
   const written: string[] = [];
   const real = console.log;

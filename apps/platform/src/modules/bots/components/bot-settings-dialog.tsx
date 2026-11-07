@@ -21,8 +21,6 @@ import { useBotForm } from "../hooks/use-bot-form";
 import type { Bot } from "../types";
 import { BotAvatarPicker } from "./bot-avatar-picker";
 
-// Where the person changes who the bot is: how it looks, its name, what it is for and what it is told
-// to be like. The bot can change its name, description and instruction itself (decision 0061).
 export function BotSettingsDialog({ bot }: { bot: Bot }) {
   const [open, setOpen] = useState(false);
 
@@ -31,7 +29,6 @@ export function BotSettingsDialog({ bot }: { bot: Bot }) {
       <DialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Bot settings" />}>
         <Cog />
       </DialogTrigger>
-      {/* The form is made when the dialog opens, so it always starts from the bot as it is now. */}
       <DialogContent>
         <BotSettingsForm bot={bot} onDone={() => setOpen(false)} />
       </DialogContent>

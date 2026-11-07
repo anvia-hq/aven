@@ -10,24 +10,18 @@ import type { BotReplier } from "../runner";
 
 type BotAgent = Pick<ReturnType<typeof createBotAgent>, "generate">;
 
-/** Makes the agent of one message. A test makes its own with a scripted model. */
 export type CreateBotAgent = (input: {
   bot: Bot;
   model: ModelConfig;
   send: SendMessage;
-  /** Asks the person to decide, as the chat shows it. */
   askQuestion: AskQuestion;
   memory: AgentMemoryOptions;
 }) => BotAgent;
 
-// FOR TESTS ONLY: answers in this process, with an agent a test made, where a bot is answered on a
-// runner in production (decision 0059). It is for what the chat does with replies: their order, the
-// events, what is kept. How a runner answers is tested with the runner.
 export function inProcessReplier(options: {
   store: MemoryStore;
   createAgent: CreateBotAgent;
   pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
-  /** What a bot writing to another bot does; without it, none can. */
   sendToBot?: (message: {
     from: Bot;
     userId: string;

@@ -57,7 +57,6 @@ describe("describeSignups", () => {
     const report = describeSignups(open, { AVEN_BIND: "0.0.0.0" }, true);
     expect(report.ok).toBe(false);
     expect(report.detail).toContain("first account");
-    // An install from before AVEN_BIND counts as reachable too.
     expect(describeSignups(open, {}, true).ok).toBe(false);
     expect(
       describeSignups(

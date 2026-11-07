@@ -8,7 +8,6 @@ import {
   type TokenUsage,
 } from "@aven/protocol/events";
 
-// Core's `inputTokens` already includes what was written to and read from the cache.
 export function tokenUsageOf(usage: Usage): TokenUsage {
   return {
     inputTokens: usage.inputTokens,
@@ -18,17 +17,14 @@ export function tokenUsageOf(usage: Usage): TokenUsage {
   };
 }
 
-// How much of the model's context a request used, as Anvia reports it.
 type ModelContextUsage = {
   usedTokens: number;
   model: { context: { contextWindow: number } };
 };
 
-// Only known when the model's context window is.
 export const contextOf = (usage: ModelContextUsage | undefined): ContextUsage | undefined =>
   usage && { usedTokens: usage.usedTokens, contextWindow: usage.model.context.contextWindow };
 
-// What a thread has used, read back from the generation metadata stored with its messages.
 export function usageFromHistory(messages: readonly Message[]): ThreadUsage {
   let totals = NO_USAGE;
   let context: ContextUsage | undefined;

@@ -61,7 +61,6 @@ function McpServerRow({ server }: { server: McpServer }) {
   );
 }
 
-// The user's MCP servers, which they add, edit, switch on and off and remove.
 export function McpServersList() {
   const { servers, loaded } = useMcpServers();
   if (!loaded) return null;

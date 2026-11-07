@@ -11,7 +11,6 @@ type Props = {
   installUrl: string | null;
 };
 
-// Why the import dialog has nothing to pick from yet, and what to do about it.
 export function ImportRepositoryNotice({ stage, installUrl }: Props) {
   switch (stage.kind) {
     case "failed":

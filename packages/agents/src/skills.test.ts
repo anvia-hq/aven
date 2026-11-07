@@ -36,7 +36,6 @@ test("the instructions list each skill with its path, and say nothing without an
     { name: "good", description: "A good one.", path: "/skills/good/SKILL.md" },
   ]);
   expect(text).toContain("- good: A good one. (/skills/good/SKILL.md)");
-  // read_file cannot reach /skills, so the agent is told to read a skill with a command.
   expect(text).toContain("cat /skills/<name>/SKILL.md");
   expect(text).toContain("read_file only reaches /workspace");
 });

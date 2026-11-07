@@ -9,12 +9,8 @@ const answer = z.discriminatedUnion("status", [
   z.object({ status: z.literal("unsupported") }),
 ]);
 
-/** How long a runner has to agree: it answers before it starts, so this is quick. */
 const AGREE_MS = 15_000;
 
-// Has an online runner update itself to `release`, the one its Update button shows (decisions 0146
-// and 0148). `shown` is the release the person saw, and a different one is refused. What the runner
-// answers is parsed; a refusal becomes a 409 that says why.
 export async function requestUpdate(
   hub: RuntimeHub,
   runtimeId: string,
@@ -32,7 +28,6 @@ export async function requestUpdate(
   if (shown && shown !== release) {
     throw new ConflictError(`The release to update to is now ${release}: reload and try again`);
   }
-  // A runner that does not answer, or answers with something else, is as good as offline.
   const result = await runner
     .call("runner.update", { release }, AGREE_MS)
     .then((reply) => answer.parse(reply))

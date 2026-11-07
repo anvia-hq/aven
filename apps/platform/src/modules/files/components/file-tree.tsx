@@ -60,7 +60,6 @@ function Nodes({ folder, depth, ...rest }: NodeProps) {
   );
 }
 
-// The workspace's folders as a tree; a folder's contents are read when it is first opened.
 export function FileTree(props: Props) {
   return <Nodes {...props} folder="" depth={0} />;
 }

@@ -15,8 +15,6 @@ import {
 } from "./schema";
 import { projectsService } from "./service";
 
-// Deleting a project puts its threads away: it stops the runs they have and frees their sandboxes,
-// which only the run manager and the runners can.
 export const projectsRouter = (putAway: PutAwayThread) =>
   new Elysia({ prefix: "/projects" })
     .use(authRouter)

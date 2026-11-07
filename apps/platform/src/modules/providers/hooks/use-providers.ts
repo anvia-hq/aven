@@ -15,20 +15,15 @@ const providersStore = createListStore<Provider>({
   label: "providers",
 });
 
-// Providers belong to the signed-in user, so drop them (and the model lists fetched with their
-// keys) on sign-out; the next user refetches.
 export function resetProviders() {
   providersStore.reset();
   getDefaultStore().set(providerModelsAtom, {});
 }
 
-// A bot may have added, changed or removed providers while the list was open (decision 0086): load it
-// again if it was ever loaded. One never loaded reads fresh on first use.
 export function refreshProviders() {
   if (getDefaultStore().get(providersAtom) !== null) void providersStore.refresh();
 }
 
-// The user's providers. Loads on first use; mutations refetch so defaults stay consistent.
 export function useProviders() {
   const [providers] = useAtom(providersAtom);
   const { refresh } = providersStore;
@@ -37,7 +32,6 @@ export function useProviders() {
     if (providers === null) void refresh();
   }, [providers, refresh]);
 
-  // Runs a request that changes a provider and reloads the list; false on failure (already toasted).
   async function change(failureTitle: string, request: () => Promise<unknown>) {
     const changed = await attempt(failureTitle, async () => {
       await request();
@@ -56,7 +50,6 @@ export function useProviders() {
     return created;
   }
 
-  // Asks the provider which models the key can use. Null on failure (already toasted).
   function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
     return attempt("Could not load models", async () => {
       const result = await postJson<{ models: string[] }>("/providers/models", input);
@@ -73,7 +66,6 @@ export function useProviders() {
     return updated;
   }
 
-  // The models a saved provider offers, asked of its stored key. Null on failure (already toasted).
   function listSavedModels(provider: Provider) {
     return attempt(
       "Could not load models",

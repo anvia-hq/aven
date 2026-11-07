@@ -17,15 +17,12 @@ import {
   type MemoryPlace,
 } from "./service";
 
-/** What an agent's memory call is answered for: whose it is, who acts, and whether it may write. */
 export type MemoryCaller = { owner: MemoryOwner; actor: MemoryActor; writable: boolean };
 
 type Path = { root: true } | { place: MemoryPlace; name?: string };
 
 const SCOPE_NAMES = new Set<string>(MEMORY_SCOPES);
 
-// A path the agent wrote, as one of its own folders or a note in one. Anything else, as another
-// scope or a path with `..`, is not there.
 function parsePath(owner: MemoryOwner, path: string): Path {
   const parts = path.trim().replace(/\/+$/, "").split("/");
   if (parts[0] !== "" || `/${parts[1] ?? ""}` !== MEMORY_ROOT) {
@@ -111,11 +108,6 @@ function insertAt(body: string, line: number, text: string, path: string) {
   return lines.join("\n");
 }
 
-/**
- * Answers an agent's memory command (decision 0102) in the words the model reads: a listing, a
- * note with numbered lines, or what was done. A mistake is thrown as an `UnprocessableError` the
- * model is told.
- */
 export async function runMemoryCommand(caller: MemoryCaller, command: MemoryCommand) {
   const { owner, actor, writable } = caller;
   if (!writable && (MEMORY_WRITES as readonly string[]).includes(command.command)) {

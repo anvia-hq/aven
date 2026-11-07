@@ -5,9 +5,7 @@ import { z } from "zod";
 
 export const EDIT_TOOL_NAME = "edit";
 
-/** The part of a sandbox runtime the edit tool needs; any `SandboxRuntime` has it. */
 export type EditableFiles = {
-  /** Absolute directory the sandbox treats as its workspace. */
   workdir: string;
   readTextFile(options: { path: string; abortSignal?: AbortSignal }): Promise<string>;
   writeTextFile(options: { path: string; text: string; abortSignal?: AbortSignal }): Promise<void>;
@@ -21,8 +19,6 @@ function countOccurrences(text: string, search: string) {
   return count;
 }
 
-// The workspace-relative form the sandbox expects, for a relative path or an absolute one inside
-// the workspace; anything that leaves it is refused.
 function workspacePath(workdir: string, input: string) {
   const normalized = posix.normalize(input.replaceAll("\\", "/"));
   const relative = posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) : normalized;
@@ -62,7 +58,6 @@ export function createEditTool(files: EditableFiles) {
         );
       }
 
-      // Split/join and slice avoid `$` replacement patterns that String.replace would interpret.
       const next = replaceAll
         ? text.split(oldString).join(newString)
         : text.slice(0, firstMatch) + newString + text.slice(firstMatch + oldString.length);

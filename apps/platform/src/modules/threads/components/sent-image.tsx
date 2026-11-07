@@ -3,10 +3,8 @@ import { useState } from "react";
 import type { MessageAttachment } from "../types";
 import { FileChip } from "./file-chip";
 
-// A just-sent image is in the transcript a moment before the runner has kept its copy.
 const RETRY_DELAYS_MS = [500, 1_500, 4_000];
 
-// An image sent with a message, from the copy the runner keeps; a chip when it cannot be loaded.
 export function SentImage({
   artifactsPath,
   file,

@@ -3,8 +3,6 @@ import type { DiffFile } from "@/modules/diff/types";
 
 import type { FileChange } from "./types";
 
-// GitHub gives each file's patch from its first hunk on; the diff reader wants what `git diff`
-// prints, so each file gets the header lines that say its name and what happened to it.
 export function patchOf(files: FileChange[]): string {
   return files
     .map((file) => {
@@ -27,8 +25,6 @@ export function patchOf(files: FileChange[]): string {
     .join("\n");
 }
 
-// The files as the diff reader draws them, the counts being GitHub's own, which stay right when a
-// patch was too large to be listed.
 export function diffFilesOf(files: FileChange[]): DiffFile[] {
   const parsed = parsePatch(patchOf(files));
   return parsed.map((file, index) => ({

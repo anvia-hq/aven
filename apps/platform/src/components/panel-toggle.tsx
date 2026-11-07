@@ -9,7 +9,6 @@ type Props = {
   onToggle: () => void;
 };
 
-// A button in a conversation's header that opens or closes one of the panels beside it.
 export function PanelToggle({ label, icon: Icon, open, onToggle }: Props) {
   return (
     <Button

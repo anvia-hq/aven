@@ -14,7 +14,6 @@ import { resetProviders } from "@/modules/providers/hooks/use-providers";
 import { resetSkills } from "@/modules/skills/hooks/use-skills";
 import { resetModelSelection } from "@/modules/threads/hooks/use-model-selection";
 
-// Signs out and forgets everything cached for that user, so the next one never sees it.
 export function useSignOut() {
   const navigate = useNavigate();
 

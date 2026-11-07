@@ -14,11 +14,8 @@ const projectsStore = createListStore<Project>({
   label: "projects",
 });
 
-// Projects are scoped to the active organization: drop them on a switch or sign-out so the next
-// read refetches for whoever is now active.
 export const resetProjects = projectsStore.reset;
 
-// All projects, most recently updated first. Loads on first use; call `refresh` after changes.
 export function useProjects() {
   const [projects, setProjects] = useAtom(projectsAtom);
 
@@ -40,7 +37,6 @@ export function useProjects() {
     return project;
   }
 
-  // Moves a project to another runner, for the threads started from now on (decision 0093).
   async function moveProject(project: Project, runtimeId: string) {
     const moved = await attempt("Could not change the runner", () =>
       postJson<Project>(`/projects/${project.id}`, { runtimeId }, "PATCH"),

@@ -13,8 +13,6 @@ import type {
   TrackedPage,
 } from "@/modules/projects/types";
 
-// The order of the pull requests is the query's own, so the lists of the projects are put together
-// by the one thing every sort has: the time they changed (or, for the oldest, the reverse).
 const PULL_ORDER: Record<CenterFilters["sort"], (a: PullEntry, b: PullEntry) => number> = {
   updated: (a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt),
   oldest: (a, b) => a.item.updatedAt.localeCompare(b.item.updatedAt),
@@ -28,14 +26,9 @@ export type CommitEntry = { project: Project; commit: RepoCommit };
 type Feed = {
   pulls: PullEntry[];
   commits: CommitEntry[];
-  /** Projects GitHub could not be asked about, so the page can say what is missing. */
   unreadable: Project[];
 };
 
-// The pull requests and the latest commits of several projects, read from GitHub through each
-// project's own endpoints and put together, the latest first. A project that cannot be read is
-// listed, not allowed to empty the rest. `commitsQuery` is null where one project's own commit graph
-// is shown instead.
 export function useCenterFeed(
   projects: Project[],
   pullsQuery: string | null,
@@ -80,7 +73,6 @@ export function useCenterFeed(
     return () => {
       current = false;
     };
-    // `key` stands for the projects, the query and the rest.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 

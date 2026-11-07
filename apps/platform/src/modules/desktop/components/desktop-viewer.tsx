@@ -8,13 +8,10 @@ import { useDesktopStream } from "../hooks/use-desktop-stream";
 
 type Props = {
   computer: Computer;
-  /** Watch only: nothing the person does reaches the desktop. */
   viewOnly: boolean;
-  /** The connection ended, so the caller can look again at why. */
   onEnded: () => void;
 };
 
-// A computer's desktop, drawn by noVNC, with what the connection is doing over it until it is up.
 export function DesktopViewer({ computer, viewOnly, onEnded }: Props) {
   const { target, phase, reconnect } = useDesktopStream(computer, viewOnly, onEnded);
 

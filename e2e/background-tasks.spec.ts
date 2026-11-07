@@ -4,8 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// The overview's Background tasks card (decision 0071), against the pretend runner's processes
-// (e2e/fake-runner.ts, FAKE_PROCESSES).
 test.describe("a thread's background tasks", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -28,10 +26,8 @@ test.describe("a thread's background tasks", () => {
     await expect(card).toContainText("Running for 3 minutes");
     await expect(card).toContainText("bun test");
     await expect(card).toContainText("Exited with code 1");
-    // Only what is running can be stopped.
     await expect(card.getByRole("button", { name: /^Stop/ })).toHaveCount(1);
 
-    // The output opens under its command.
     await card
       .getByRole("button", { name: /npm run dev/ })
       .first()

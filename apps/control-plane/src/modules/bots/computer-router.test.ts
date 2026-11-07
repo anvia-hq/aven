@@ -48,7 +48,6 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     }
   };
 
-  // The runner the bots are on: answers the calls about a desktop and opens its stream.
   const seen = { messages: [] as ControlPlaneToRuntime[] };
   const calls = () =>
     seen.messages.flatMap((message) => (message.type === "call" ? [message] : []));
@@ -128,7 +127,6 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     expect((await api(`/bots/${mine!.id}/desktop/takeover`, owner.token, "POST")).status).toBe(200);
     expect((await api(`/bots/${mine!.id}/desktop/release`, owner.token, "POST")).status).toBe(200);
 
-    // The runner is asked about the bot's id, and told that it is a bot's, which has no repository.
     const asked = calls().filter((call) => call.method.startsWith("desktop."));
     expect(asked.map((call) => call.method)).toEqual([
       "desktop.status",
@@ -219,7 +217,6 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     });
     await until(() => foreign.events.failed || foreign.events.closed !== undefined);
 
-    // Refused before the socket was upgraded, not opened and closed again.
     for (const refused of [others, anonymous, foreign]) expect(refused.events.opened).toBe(false);
     expect(opens()).toBe(before);
   });

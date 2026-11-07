@@ -22,8 +22,6 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
 });
 
-// A sandbox whose workspace and container are ready when the test says, as a restore and a
-// container start are some seconds after the run begins (decision 0128).
 function slowSandbox() {
   const events: string[] = [];
   let open!: () => void;
@@ -96,7 +94,6 @@ describe("a run whose sandbox is still being got ready (decision 0128)", () => {
     await runtime.ready;
     plane.send(runStart);
 
-    // The model has answered, with a call, while nothing of the sandbox is there.
     await until(() => heard(plane, "tool_start"));
     expect(sandbox.events).toEqual(["acquired lazily"]);
     expect(ended(plane)).toHaveLength(0);

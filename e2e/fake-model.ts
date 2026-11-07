@@ -1,7 +1,3 @@
-// A pretend OpenAI-compatible model for the bots' e2e (decisions 0058 and 0059): a bot answers on a
-// runner, whose model calls go through the control plane's gateway to the person's provider. Told
-// something, it sends two messages with `send_message`: a greeting and what it heard; given the
-// tool's results, it stops.
 const modelPort = Number(process.env.FAKE_MODEL_PORT ?? 8102);
 
 type ChatMessage = { role: string; content?: string | { type: string; text?: string }[] | null };
@@ -138,7 +134,6 @@ const toolCall = (id: string, name: string, args: object = {}) => ({
   function: { name, arguments: JSON.stringify(args) },
 });
 
-// What the bot says once the tool it called has answered.
 const SAID_AFTER: Record<string, string> = {
   create_bot: "Scout is ready",
   update_self: "I am Pip now",
@@ -150,7 +145,6 @@ const SAID_AFTER: Record<string, string> = {
   archive_thread: "Archived the thread",
 };
 
-// The thread a bot starts and then archives (decision 0088).
 const THREAD_PROMPT = "Fix the e2e build";
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
@@ -158,7 +152,6 @@ type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?:
 const calledTool = (message: Turn | undefined, name: string) =>
   message?.tool_calls?.some((call) => call.function.name === name) ?? false;
 
-// A bot has written to another when a `send_message` of its went to a handle, not the person.
 const askedABot = (message: Turn) =>
   (message.tool_calls ?? []).some(
     (call) =>
@@ -180,10 +173,7 @@ Bun.serve({
 
     const last = body.messages.at(-1);
     if (last?.role === "tool") {
-      // After a bot is made it is said; after anything else the model stops.
       const call = body.messages.findLast((message) => message.role === "assistant");
-      // A provider it has just added has no key: the bot shows the person the form for it
-      // (decision 0086) and stops, as the form asks.
       if (calledTool(call, "add_provider")) {
         const providerId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
         if (providerId) {
@@ -193,8 +183,6 @@ Bun.serve({
           );
         }
       }
-      // It has looked at the projects: it starts a thread in the first, with the prompt it was given
-      // (decision 0088). After looking at the threads it archives the one it started.
       if (calledTool(call, "list_projects")) {
         const projectId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
         if (projectId) {
@@ -219,19 +207,15 @@ Bun.serve({
       return reply({ content: null, tool_calls: [sendMessage("call_2", said)] }, "tool_calls");
     }
     const heard = textOf(last?.content);
-    // Asked for a bot, the main bot makes one (decision 0060) and says so once it is made.
     if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
       return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");
     }
-    // A bot just made is woken with a note from the app and says hello (decision 0063).
     if (heard.startsWith("[note] You were just created")) {
       return reply(
         { content: null, tool_calls: [sendMessage("call_1", "Hello, I am your new bot")] },
         "tool_calls",
       );
     }
-    // Asked to ask a bot, the main bot tells the person it did, and writes to the first bot of its
-    // list, by the handle its instructions give, as a model reads it (decision 0065).
     if (/ask @/i.test(heard) && !body.messages.some(askedABot)) {
       const everything = body.messages.map((message) => textOf(message.content)).join("\n");
       const peer = /- .+ \(handle: ([a-z0-9-]+)\)/.exec(everything)?.[1];
@@ -248,8 +232,6 @@ Bun.serve({
         );
       }
     }
-    // A bot written to by the main bot writes back to it, after a while, so that the person can see
-    // it at work (decision 0064); the main bot tells the person what it said.
     if (heard.startsWith("[from main]")) {
       await Bun.sleep(1500);
       return reply(
@@ -263,53 +245,45 @@ Bun.serve({
         "tool_calls",
       );
     }
-    // Needing a decision, a bot asks the person with a card (decision 0066) and stops.
     if (/need a decision/i.test(heard)) {
       return reply({ content: null, tool_calls: [askQuestion("call_1")] }, "tool_calls");
     }
-    // A round of a goal (decision 0068): the bot finishes the goal, and says so.
     if (heard.startsWith("[note] Goal round")) {
       if (body.messages.some((message) => calledTool(message, "update_goal"))) {
         return reply({ content: "ok" }, "stop");
       }
       return reply({ content: null, tool_calls: [completeGoal("call_1")] }, "tool_calls");
     }
-    // Asked for a goal, a bot starts one and says it is on it; the rounds follow by themselves.
     if (
       /start a goal/i.test(heard) &&
       !body.messages.some((message) => calledTool(message, "start_goal"))
     ) {
       return reply({ content: null, tool_calls: [startGoal("call_1")] }, "tool_calls");
     }
-    // Asked for something on a schedule, a bot sets it (decision 0067) and says so.
     if (
       /every morning/i.test(heard) &&
       !body.messages.some((message) => calledTool(message, "create_schedule"))
     ) {
       return reply({ content: null, tool_calls: [createSchedule("call_1")] }, "tool_calls");
     }
-    // Asked about its skills, a bot names the first its instructions list (decision 0081).
     if (/your skills/i.test(heard)) {
       const everything = body.messages.map((message) => textOf(message.content)).join("\n");
       const skill = /Available skills:\n- ([a-z0-9-]+):/.exec(everything)?.[1];
       const said = skill ? `I have the ${skill} skill` : "I have no skills";
       return reply({ content: null, tool_calls: [sendMessage("call_1", said)] }, "tool_calls");
     }
-    // Asked to connect an MCP server, a bot adds one (decision 0085) and says so.
     if (
       /connect .*mcp server/i.test(heard) &&
       !body.messages.some((message) => calledTool(message, "add_mcp_server"))
     ) {
       return reply({ content: null, tool_calls: [addMcpServer("call_1")] }, "tool_calls");
     }
-    // Asked for a provider, a bot adds one with no key (decision 0086); its form comes next.
     if (
       /add .*provider/i.test(heard) &&
       !body.messages.some((message) => calledTool(message, "add_provider"))
     ) {
       return reply({ content: null, tool_calls: [addProvider("call_1")] }, "tool_calls");
     }
-    // Asked to start a thread, or to archive it, a bot first looks (decision 0088).
     if (
       /start a thread/i.test(heard) &&
       !body.messages.some((m) => calledTool(m, "list_projects"))
@@ -328,14 +302,12 @@ Bun.serve({
         "tool_calls",
       );
     }
-    // Told that the key is saved, it says the provider is ready.
     if (/saved the api key/i.test(heard)) {
       return reply(
         { content: null, tool_calls: [sendMessage("call_1", "Work Azure is ready")] },
         "tool_calls",
       );
     }
-    // Asked to rename itself, any bot changes its own name and description.
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {
       return reply({ content: null, tool_calls: [updateSelf("call_1")] }, "tool_calls");
     }

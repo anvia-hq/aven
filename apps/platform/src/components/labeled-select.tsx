@@ -10,7 +10,6 @@ type Props = {
   placeholder?: string;
 };
 
-// A select with a visible label above it, for forms with a handful of options.
 export function LabeledSelect({ label, options, value, onChange, placeholder }: Props) {
   return (
     <div className="flex flex-col gap-1 text-sm">

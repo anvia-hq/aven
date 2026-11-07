@@ -44,13 +44,9 @@ import { z } from "zod";
 import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "../mcp/schema";
 import { providerBaseUrl, providerModelId, providerName } from "../providers/schema";
 
-// A runtime is not trusted, so every frame it sends is checked before anything acts on it.
-// `@aven/protocol` has the types and no runtime imports; the checking lives here.
-
 const runId = z.string().min(1);
 const replyId = z.string().min(1);
 
-// Listed by hand, since the protocol has only types; `satisfies` keeps each name one it knows.
 const outcomes = [
   "response",
   "blocked",
@@ -81,19 +77,14 @@ const callMethods = [
   "fork.status",
 ] as const satisfies readonly CallMethod[];
 
-// A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
 const BOT_SAY_MAX = 2000;
 
-// An image or video the agent showed: a name the runner gave it, so a client can only ask for it by that.
 const toolArtifact = z.object({
   name: z.string().regex(ARTIFACT_NAME),
   mediaType: z.enum(ARTIFACT_MEDIA_TYPES),
   caption: z.string().max(500).optional(),
 });
 
-// The events a runtime's agent projects. Anything else (a snapshot, `done`) is the control plane's
-// to send, so a runtime cannot forge a client's view of the conversation beyond its own run.
-// What a subagent's tool call shows: the call and what it acts on, no output.
 const subagentTool = z.object({
   id: z.string(),
   name: z.string(),
@@ -136,9 +127,7 @@ const seq = z.number().int().positive();
 
 const runEvent = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), delta: z.string() }),
-  // The model's reasoning, as it streams; the thread shows it in its tool group (decision 0115).
   z.object({ type: z.literal("reasoning"), delta: z.string() }),
-  // The agent took a message the person sent while it worked; the control plane has the words (decision 0098).
   z.object({ type: z.literal("steer_applied"), id: z.string().min(1).max(100) }),
   z.object({ type: z.literal("tool_start"), tool: toolPart }),
   z.object({
@@ -179,8 +168,6 @@ const runEvent = z.discriminatedUnion("type", [
   }),
 ]);
 
-// A machine's load as a runner measured it (decision 0091). The numbers are the runner's to report;
-// they are bounded here so a client never has to draw something absurd.
 const bytes = z
   .number()
   .int()
@@ -196,7 +183,6 @@ const hostStats = z
     diskTotalBytes: bytes,
     sandboxes: z.number().int().nonnegative().max(100_000),
   })
-  // More used than there is would only be drawn as a figure past full.
   .refine(
     (stats) =>
       stats.memoryUsedBytes <= stats.memoryTotalBytes &&
@@ -264,8 +250,6 @@ const frame = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reply"), id: z.string() }).loose(),
 ]);
 
-// Fails to compile when a checked frame is not the protocol's. A reply is checked only for its id,
-// the rest is read where it is answered, so it is left out; a call may leave out its `params`.
 type Assignable<T extends U, U> = T;
 type ParamsOptional<T> = T extends { type: "call" } ? Omit<T, "params"> & { params?: unknown } : T;
 type _CheckedFrame = Assignable<
@@ -273,7 +257,6 @@ type _CheckedFrame = Assignable<
   ParamsOptional<RuntimeToControlPlane>
 >;
 
-/** The frame a runtime sent, or null when it is not JSON or not a frame we know. */
 export function parseRuntimeFrame(raw: string): RuntimeToControlPlane | null {
   try {
     const parsed = frame.safeParse(JSON.parse(raw));
@@ -307,7 +290,6 @@ const botMemoryParams = z.discriminatedUnion("op", [
   }),
 ]);
 
-// The same limits as a person changing the bot in settings.
 const botCreateParams = z.object({
   replyId,
   name: z.string().trim().min(1).max(BOT_NAME_MAX),
@@ -315,14 +297,11 @@ const botCreateParams = z.object({
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
 });
 
-// A bot asks the person to decide, with the questions the tool takes.
 const botQuestionParams = z.object({
   replyId,
   questions: botQuestionsSchema.transform(toQuestions),
 });
 
-// A bot looks at its schedules, or makes, changes or deletes one. How it is for the cron to be
-// right, and the timezone, is for the schedules to say: here it is only shaped.
 const scheduleName = z.string().trim().min(1).max(SCHEDULE_NAME_MAX);
 const scheduleCron = z.string().trim().min(1).max(100);
 const scheduleTimezone = z.string().trim().min(1).max(64);
@@ -354,7 +333,6 @@ const botScheduleParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("delete"), id: scheduleId }),
 ]);
 
-// A bot looks at its goal, starts one or changes it. The goal is the reply's own bot's.
 const botGoalParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("get") }),
   z.object({
@@ -372,7 +350,6 @@ const botGoalParams = z.discriminatedUnion("op", [
   }),
 ]);
 
-// A bot writes to another of the person's bots, named by its handle.
 const botSendParams = z.object({
   replyId,
   to: z
@@ -382,7 +359,6 @@ const botSendParams = z.object({
   text: z.string().trim().min(1).max(BOT_MESSAGE_MAX),
 });
 
-// What a bot changes about itself: some of its name, description and instruction, never nothing.
 const botUpdateParams = z
   .object({
     replyId,
@@ -403,15 +379,12 @@ const appendParams = memoryParams.extend({
 
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
-// How the run's MCP servers connected: a reason is a line a person reads in Settings, so it is cut.
 const mcpReportParams = memoryParams.extend({
   results: z
     .array(z.object({ id: z.uuid(), error: z.string().trim().max(500).optional() }))
     .max(MCP_LIMIT),
 });
 
-// A bot's look at the person's MCP servers, or its change to one (decision 0085): what it may say is
-// what the person's own form takes, less what a bot may not set.
 const botMcpHeaders = z
   .array(z.object({ name: mcpHeaderName, value: mcpHeaderValue }))
   .max(MCP_MAX_HEADERS)
@@ -450,8 +423,6 @@ const botMcpParams = z.discriminatedUnion("op", [
   }),
 ]);
 
-// A bot's look at the person's providers, or its change to one (decision 0086): shaped here, and
-// held to each kind's own rules by the providers. There is no key in any of it.
 const botProviderParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("list") }),
   z.object({
@@ -477,16 +448,12 @@ const botProviderParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("askKey"), id: z.uuid() }),
 ]);
 
-// A bot's look at the person's threads, or what it does to one (decision 0088): shaped here, the
-// prompt held to what a person's own message may be, and the rest to the threads' own rules.
 const threadPrompt = z.string().trim().min(1).max(BOT_THREAD_PROMPT_MAX);
 const threadModel = {
   providerId: z.uuid().optional(),
   modelId: z.string().trim().min(1).max(200).optional(),
   reasoningEffort: z.string().trim().min(1).max(20).optional(),
 };
-// What an agent asks of its memory (decision 0102). Paths are checked against the owner's folders
-// when the command is answered; here only their size.
 const memoryPath = z.string().min(1).max(200);
 const memoryText = z.string().max(MEMORY_NOTE_MAX);
 const lineNumber = z.number().int().min(-1).max(100_000);
@@ -516,8 +483,6 @@ const memoryCommand = z.discriminatedUnion("command", [
 const memoryNotesParams = z.object({ runId, command: memoryCommand });
 const botNotesParams = z.object({ replyId, command: memoryCommand });
 
-// A cockpit command is checked in full where it is answered, against the cockpit's own rules
-// (`cockpit/commands.ts`); here only whose call it is (decision 0109).
 const cockpitReadParams = z.object({ runId, command: z.unknown() });
 const forkStartParams = z.object({
   runId,
@@ -561,13 +526,11 @@ const botThreadParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("stop"), id: z.uuid() }),
 ]);
 
-// A skill of a bot's reply, by its digest.
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });
 
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
   if (!parsed.success) {
-    // Said in words, since the runner's agent reads it and must know what to change.
     const issue = parsed.error.issues[0]!;
     throw new Error(`Invalid parameters: ${issue.path.join(".") || "params"} ${issue.message}`);
   }

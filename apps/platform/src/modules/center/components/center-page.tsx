@@ -26,9 +26,6 @@ import { clearCommits, CommitFilters, commitChips, CommitSearch } from "./commit
 import { FilterChips } from "./filter-chips";
 import { QuickViews } from "./quick-views";
 
-// Center: the pull requests and commits of the person's projects on one screen, read from GitHub
-// like each project's own page. All the projects together, or one with its branches and its commit
-// graph.
 export function CenterPage() {
   const search = useSearch({ from: "/_authed/center/" });
   const { project: selected } = search;
@@ -47,14 +44,12 @@ export function CenterPage() {
     shown,
     pullsQuery(filters, login),
     filters.sort,
-    // One project's commits are its graph's own, read by `RepoCommits`.
     one ? null : `page=1${commitFilters && `&${commitFilters}`}`,
     search.grep,
     refresh,
   );
   const branches = useProjectBranches(one?.id, refresh);
 
-  // A change to the filters is a change of the address, so the view can be kept and shared.
   const change = (next: CenterSearch) =>
     void navigate({
       to: "/center",
@@ -84,7 +79,6 @@ export function CenterPage() {
     <FilterChips name="Active commit filters" chips={chips} onClear={() => change(clearCommits)} />
   );
 
-  // A project that is gone, or not the person's, shows all of them.
   const gone = loaded && selected !== undefined && !one;
   useEffect(() => {
     if (gone) void navigate({ to: "/center", search: {}, replace: true });

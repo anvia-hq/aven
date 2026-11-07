@@ -13,7 +13,6 @@ test("the page has the logo as its favicon, served from the root", async ({ page
     ["apple-touch-icon", "/apple-touch-icon.png"],
   ]);
 
-  // Each is a file of its kind, not the app's index page that a missing file would fall back to.
   const kinds = {
     "/favicon.svg": "image/svg+xml",
     "/favicon-32.png": "image/png",

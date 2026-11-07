@@ -6,7 +6,6 @@ import type { RepoReadme } from "../types";
 
 type Answer = { projectId: string; readme: RepoReadme | null; problem?: string };
 
-// A project's README on GitHub (decision 0082): null once it is known to have none.
 export function useProjectReadme(projectId: string) {
   const [answer, setAnswer] = useState<Answer>();
 

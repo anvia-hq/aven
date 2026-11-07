@@ -13,9 +13,6 @@ import { projects } from "./projects";
 import { runtimes } from "./runtimes";
 import { users } from "./users";
 
-// A thread is one agent session, and always belongs to a project. Its conversation lives in the
-// agent memory tables, keyed by this id, and its sandbox (an empty workspace on the project's
-// runner) is keyed by it too.
 export const threads = pgTable(
   "threads",
   {
@@ -29,42 +26,21 @@ export const threads = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /**
-     * Who the thread's latest run was sent as. Its sandbox holds that person's GitHub sign-in and
-     * personal variables until the next run replaces them (decisions 0044, 0045); null until a run.
-     */
     lastRunBy: text("last_run_by").references(() => users.id, { onDelete: "set null" }),
-    /** The runner the thread's sandbox runs on, copied from the project when the thread is created. */
     runtimeId: uuid("runtime_id")
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
-    /**
-     * The thread this one was forked from: its agent made it to work apart, from a copy of its
-     * workspace (decision 0135). Null for every other thread; kept when the parent is archived.
-     */
     parentThreadId: uuid("parent_thread_id").references((): AnyPgColumn => threads.id, {
       onDelete: "set null",
     }),
-    /**
-     * Who may see the thread: only its creator (`private`), or every member of its organization,
-     * read-only (`workspace`; decision 0084).
-     */
     visibility: text("visibility", { enum: ["private", "workspace"] })
       .notNull()
       .default("private"),
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),
-    /**
-     * What resumes the run that stopped to ask the user a question (Anvia's continuation, opaque
-     * here; decision 0020). Set while the question is unanswered, otherwise null.
-     */
     pendingContinuation: jsonb("pending_continuation"),
-    /**
-     * Why the thread's latest run failed, such as a model provider that kept refusing, so a client
-     * that opens the thread later is told (decision 0100). Cleared when the next run starts.
-     */
     lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

@@ -48,14 +48,11 @@ const message: BotReplyMessage = {
 
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 
-// An agent that sends what a script says to, then stops.
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
   ({ send, computer, memory, createBot, updateSelf }) =>
     new Agent({
       id: "bot",
-      // One more step than the script: a bot that answers a person in plain text is asked once to
-      // send it (decision 0125), and a script that ends in plain text has nothing left to say.
       model: scriptedModel([...steps, [text("")]]),
       instructions: "x",
       memory,
@@ -67,7 +64,6 @@ const agentThat =
       ],
     });
 
-// What the bot's computer answers to a command: by default it ran and printed `ok`.
 type Exec = (command: string) => unknown;
 const exec = (
   run: Exec = () => ({ status: "exited", exitCode: 0, stdout: "ok", stderr: "" }),
@@ -99,7 +95,6 @@ const sandboxWith = (
   dispose: async () => undefined,
 });
 
-// The control plane's answer to a call about the bot's conversation: nothing said before.
 const memoryAnswer = (params: unknown) => ((params as { op?: string }).op === "load" ? [] : null);
 
 function harness(
@@ -109,7 +104,6 @@ function harness(
     failSend?: boolean;
     exec?: Exec;
     stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills">;
-    /** What `bot.skill` answers with, by digest; a skill not here cannot be had. */
     archives?: Map<string, Uint8Array>;
   } = {},
 ) {
@@ -173,7 +167,6 @@ describe("BotReplies", () => {
     const notes = { name: "notes", description: "Personal notes.", digest: "1".repeat(64) };
     const lint = { name: "lint", description: "Built-in lint.", digest: "2".repeat(64) };
 
-    // What the agent was made with, and whether the reply ended well.
     const answered = async (
       skills: BotReplyMessage["skills"],
       archives: Map<string, Uint8Array>,
@@ -204,7 +197,6 @@ describe("BotReplies", () => {
         { name: "lint", description: "Built-in lint.", path: "/skills/lint/SKILL.md" },
         { name: "notes", description: "Personal notes.", path: "/skills/notes/SKILL.md" },
       ]);
-      // Under the bot's id, the folder its container mounts read-only at /skills.
       const dir = await store.skills!.dir("bot-1");
       expect(await readFile(join(dir, "notes", "SKILL.md"), "utf8")).toContain("Personal notes.");
       expect(
@@ -273,7 +265,6 @@ describe("BotReplies", () => {
       data: new TextEncoder().encode("%PDF").toBase64(),
     };
 
-    // What was added to the bot's conversation for the first message of the reply.
     const appended = (calls: unknown[]) =>
       calls
         .filter((call) => (call as { method: string }).method === "bot.memory")
@@ -305,7 +296,6 @@ describe("BotReplies", () => {
       expect(note?.text).toContain("/uploads/report.pdf");
       expect(note?.text).toContain("shown to you below");
       expect(asked?.content.some((part) => part.type === "image")).toBe(true);
-      // The transcript keeps the message as it was sent.
       expect(asked?.metadata).toEqual({
         prompt: "what is this?",
         attachments: [
@@ -528,7 +518,6 @@ describe("BotReplies", () => {
       method: "bot.send",
       params: { replyId: "r1", to: "scout", text: "do A" },
     });
-    // Only what goes to the person is shown, and only that is typed.
     expect(run.sent).toEqual([
       { type: "bot.say", replyId: "r1", text: "I asked Scout" },
       { type: "bot.end", replyId: "r1" },
@@ -618,7 +607,6 @@ describe("BotReplies", () => {
       };
     });
 
-    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
     run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
@@ -654,7 +642,6 @@ describe("BotReplies", () => {
       },
     }));
 
-    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
     run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
@@ -702,7 +689,6 @@ describe("BotReplies", () => {
       },
     );
 
-    // A note: there is no person to answer, so the bot is not asked to send what it wrote.
     run.replies.start({ ...message, prompt: "[note] go" });
     await run.until();
 
@@ -804,7 +790,6 @@ describe("BotReplies", () => {
     expect(described).toBe("A pal.");
   });
 
-  // Through the real builder, not the test's own: what the agent is made with is what it can do.
   describe("the agent the runner builds", () => {
     const build = (
       canCreateBots: boolean,
@@ -943,7 +928,6 @@ describe("BotReplies", () => {
       expect(withComputer.instructions).toContain(
         "- notes: Personal notes. (/skills/notes/SKILL.md)",
       );
-      // None to tell, or no computer to read them on: no section.
       expect(build(false, false, [], [tool("exec_command")]).instructions).not.toContain(
         "<skills>",
       );
@@ -989,7 +973,6 @@ describe("BotReplies", () => {
       const agent = build(false, false, [], [], { tools: [tool("team_notes_search")], note });
       expect(agent.tools.map((each) => each.name)).toContain("team_notes_search");
       expect(agent.instructions).toContain("Connected: Team Notes (1 tool)");
-      // Looking after the servers is its own section, which every bot with the host has.
       expect(agent.instructions).toContain("<mcp-servers>");
       expect(agent.instructions).toContain("Change them only when the person's own message");
 
@@ -1147,7 +1130,6 @@ describe("BotReplies", () => {
     run.replies.start(message);
     for (let i = 0; i < 100 && run.replies.has("bot-1"); i++) await Bun.sleep(10);
 
-    // Nothing reached the control plane, and the second message was never tried.
     expect(run.sent).toEqual([]);
     expect(run.pauses).toHaveLength(1);
     expect(run.finished).toEqual(["bot-1"]);

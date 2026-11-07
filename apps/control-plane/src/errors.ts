@@ -1,31 +1,19 @@
 import { Elysia } from "elysia";
 
-// Services throw these for expected failures; `errorsRouter` turns each kind into its status once,
-// so routers do not repeat the same try/catch.
-
-/** What the request names does not exist (404). */
 export class NotFoundError extends Error {}
-/** The request is well-formed but cannot be done (422). */
 export class UnprocessableError extends Error {}
-/** Something the request depends on is not available right now (503). */
 export class UnavailableError extends Error {}
-/** The request clashes with the current state (409). */
 export class ConflictError extends Error {}
-/** The caller is known but may not do this (403). */
 export class ForbiddenError extends Error {}
 
-/** `value`, unless there is none: then what the request names does not exist (404). */
 export function orNotFound<T>(value: T | null | undefined, message: string): T {
   if (value === null || value === undefined) throw new NotFoundError(message);
   return value;
 }
 
-/** What went wrong, in words: an Error's message, or whatever else was thrown as text. */
 export const describeError = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
-// Global, so it covers every router mounted after it. Anything else is logged and answered
-// generically: an unexpected error's message must not reach the client.
 export const errorsRouter = new Elysia({ name: "errors" }).onError(
   { as: "global" },
   ({ code, error, status }) => {

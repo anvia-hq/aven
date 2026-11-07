@@ -2,13 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
-// A filter popover's field, opened from the card's Filters button.
 async function inPopover(page: Page, filters: string) {
   await page.getByRole("button", { name: filters }).click();
   return page.getByRole("dialog");
 }
 
-// Center: every project's pull requests and commits on one screen, from GitHub (the fake).
 test.describe("Center", () => {
   test("shows the pull requests and commits of all projects, and one project with its graph", async ({
     page,
@@ -20,7 +18,6 @@ test.describe("Center", () => {
     await importRepository(page, "docs-site");
     await importRepository(page, "shiny-app");
 
-    // It is in the rail, under the cockpit's.
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.getByRole("link", { name: "Center" }).click();
     await expect(page).toHaveURL(/\/center$/);
@@ -31,11 +28,9 @@ test.describe("Center", () => {
     await expect(pulls).toContainText("shiny-app");
     const commits = page.getByRole("region", { name: "Commits" });
     await expect(commits.getByText("Change number 14").first()).toBeVisible();
-    // Under the day they were made in, with the release a commit is tagged as.
     await expect(commits.getByRole("heading", { name: "Today" })).toBeVisible();
     await expect(commits.getByTitle("Tag v1.0").first()).toBeVisible();
 
-    // A quick view is a set of filters, kept in the address and shown as chips.
     await page.getByRole("tab", { name: "Needs my review" }).click();
     await expect(page).toHaveURL(/reviewRequested=me/);
     await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
@@ -47,7 +42,6 @@ test.describe("Center", () => {
     await expect(pulls.getByText("Open pull request 11").first()).toBeVisible();
     await expect(pulls.getByText("Open pull request 12")).toHaveCount(0);
 
-    // A label on a row narrows to it, and its chip takes it off again.
     await page.getByRole("tab", { name: "All open" }).click();
     await pulls.getByRole("button", { name: "bug" }).first().click();
     await expect(page).toHaveURL(/label=bug/);
@@ -55,7 +49,6 @@ test.describe("Center", () => {
     await page.getByRole("button", { name: "Remove the filter Label: bug" }).click();
     await expect(pulls.getByText("Open pull request 11").first()).toBeVisible();
 
-    // The state, from the filters, and words of the title.
     const filters = await inPopover(page, "Pull request filters");
     await filters.getByRole("combobox", { name: "State" }).click();
     await page.getByRole("option", { name: "Merged" }).click();
@@ -68,7 +61,6 @@ test.describe("Center", () => {
     await page.getByRole("button", { name: /^Remove the filter “request 7”/ }).click();
     await expect(pulls.getByText("Open pull request 12").first()).toBeVisible();
 
-    // Among all the projects, the commits are narrowed by author and by words too.
     const commitFilters = await inPopover(page, "Commit filters");
     await commitFilters.getByRole("searchbox", { name: "Commit author" }).fill("bob");
     await page.keyboard.press("Escape");
@@ -80,8 +72,6 @@ test.describe("Center", () => {
     await page.getByRole("button", { name: /^Remove the filter “number 13”/ }).click();
     await expect(commits.getByText("Change number 14").first()).toBeVisible();
 
-    // A pull request opens beside the lists, with its checks, its reviewers and its files; its link
-    // is in the address.
     await page.getByRole("link", { name: "Open pull request 12" }).first().click();
     await expect(page).toHaveURL(/pr=/);
     const drawer = page.getByRole("dialog");
@@ -100,14 +90,12 @@ test.describe("Center", () => {
     await page.keyboard.press("Escape");
     await expect(page).not.toHaveURL(/pr=/);
 
-    // So does a commit, with its whole message.
     await page.getByRole("link", { name: "Change number 14" }).first().click();
     await expect(page).toHaveURL(/commit=/);
     await expect(page.getByRole("dialog").getByText("Why it changed, in full.")).toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();
     await expect(page).not.toHaveURL(/commit=/);
 
-    // One project by itself: only its pull requests, and its commits as a graph with pages.
     await page
       .getByRole("list", { name: "Projects" })
       .getByRole("link", { name: "shiny-app" })
@@ -117,8 +105,6 @@ test.describe("Center", () => {
     await expect(pulls).not.toContainText("docs-site");
     await expect(page.getByRole("navigation", { name: "Commit pages" })).toBeVisible();
 
-    // Its branches are the other tab of the pull requests: how far each is from the default one,
-    // and which have gone quiet.
     await page.getByRole("tab", { name: /Branches/ }).click();
     const branches = page.getByRole("region", { name: "Branches" });
     await expect(branches.getByRole("button", { name: "feature/login" })).toBeVisible();
@@ -127,7 +113,6 @@ test.describe("Center", () => {
     await expect(branches.getByText("Stale")).toHaveCount(1);
     await expect(branches.getByLabel("Protected")).toHaveCount(1);
 
-    // Choosing a branch has the commits show its history, which ends at commit 10.
     const history = page.getByRole("region", { name: "Commits" });
     await expect(history.getByText("Change number 14").first()).toBeVisible();
     await branches.getByRole("button", { name: "feature/login" }).click();
@@ -137,7 +122,6 @@ test.describe("Center", () => {
     await page.getByRole("button", { name: "Remove the filter Branch: feature/login" }).click();
     await expect(history.getByText("Change number 14").first()).toBeVisible();
 
-    // The commits of a file, by an author, and by the words of their message.
     const one = await inPopover(page, "Commit filters");
     await one.getByRole("searchbox", { name: "Commits touching a file" }).fill("src/login.ts");
     await expect(history.getByText("Change number 14").first()).toBeVisible();
@@ -151,7 +135,6 @@ test.describe("Center", () => {
     await expect(history.getByText("Change number 14")).toHaveCount(0);
     await page.getByRole("button", { name: /^Remove the filter “number 12”/ }).click();
 
-    // And back to all of them.
     await page.getByRole("link", { name: "All projects" }).click();
     await expect(page.getByRole("heading", { name: "Center" })).toBeVisible();
   });

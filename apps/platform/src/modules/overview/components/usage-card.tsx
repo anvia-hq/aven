@@ -5,15 +5,11 @@ import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
 
-// Tokens added up over every model call of the thread. Each call sends the conversation again, so
-// this grows far past the context window. The cache figures are parts of the input; what is left
-// of it is the uncached part.
 export function UsageCard({
   totals,
   loading,
 }: {
   totals: TokenUsage | undefined;
-  /** The thread's usage is still on its way: the card is drawn with its loaded shape, empty. */
   loading: boolean;
 }) {
   if (loading) {

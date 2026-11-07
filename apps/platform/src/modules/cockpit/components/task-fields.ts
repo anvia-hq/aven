@@ -19,7 +19,6 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   none: "No priority",
 };
 
-/** The colour of a status's dot, from the theme's tokens. */
 export const STATUS_DOT: Record<TaskStatus, string> = {
   backlog: "border-muted-foreground/50 border-dashed",
   todo: "border-muted-foreground",
@@ -40,16 +39,13 @@ export const PRIORITY_TONE: Record<TaskPriority, string> = {
 export const STATUSES = TASK_STATUSES;
 export const PRIORITIES = TASK_PRIORITIES;
 
-/** A task's identifier, as it is shown. */
 export const taskKey = (task: { number: number }) => `T-${task.number}`;
 
-/** Whether a day (`YYYY-MM-DD`) is before today, for a task not finished by it. */
 export function isOverdue(dueDate: string | null, status: TaskStatus) {
   if (!dueDate || status === "done" || status === "cancelled") return false;
   return dueDate < new Date().toLocaleDateString("en-CA");
 }
 
-/** A day as a short date: "Nov 30". */
 export function shortDay(day: string) {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
     month: "short",

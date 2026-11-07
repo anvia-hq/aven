@@ -5,7 +5,6 @@ import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/runtime-
 import { ProcessEndWatch } from "./process-end-watch";
 import type { ThreadSandbox } from "./sandbox";
 
-// What the sandbox's own clock says: it need not agree with the host's, so the watch never reads it.
 const startedMs = Date.parse("2020-01-01T00:00:00.000Z");
 const proc = (id: string, status: ProcessView["status"], exitCode?: number): ProcessView => ({
   id,

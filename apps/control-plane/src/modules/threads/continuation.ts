@@ -14,25 +14,15 @@ import type { ThreadMessages } from "./messages";
 import type { SendMessageBody } from "./schema";
 import { threadsService, type Viewer } from "./service";
 
-/** The model the first run uses: the sender's choice, or else their default. */
 export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;
 
-/** The changes of a thread, as a patch, read through its runner; null when they cannot be had. */
 export type PatchOf = (
   organizationId: string,
   threadId: string,
 ) => Promise<{ patch: string; truncated: boolean } | null>;
 
-// A patch past this is not carried: a message's files add up to 10 MiB, and the base64 a patch is
-// sent in is a third larger, so this leaves room.
 const PATCH_MAX_BYTES = 4 * 1024 * 1024;
 
-/**
- * A thread that carries on another's work on a different runner (decision 0149). A thread's
- * workspace, journal and sandbox stay on the runner it began on, so nothing is moved: the new
- * thread, in the same project, starts from a fresh clone, gets the old thread's changes as a patch
- * (its commits and uncommitted work, read through the old runner) and a summary of what was said.
- */
 export function createThreadContinuation({
   runs,
   hub,

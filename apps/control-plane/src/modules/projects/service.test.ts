@@ -29,7 +29,6 @@ run("projectsService (postgres)", async () => {
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
   const { installation } = await seedProject(orgA, userId, runnerA.id, "seed");
 
-  // GitHub knows two repositories; any other is not visible to the installation.
   const known: Record<string, string> = {
     "acme/web": "main",
     "acme/api": "develop",
@@ -121,14 +120,12 @@ run("projectsService (postgres)", async () => {
         undefined,
       );
 
-      // Another organization's project is not found, and GitHub is not asked.
       commits.mockClear();
       await expect(projectsService.commits(orgB, project.id, 1)).rejects.toBeInstanceOf(
         NotFoundError,
       );
       expect(commits).not.toHaveBeenCalled();
 
-      // A repository the installation lost is not found either.
       commits.mockImplementation(async () => null);
       await expect(projectsService.commits(orgA, project.id, 1)).rejects.toBeInstanceOf(
         NotFoundError,
@@ -172,14 +169,12 @@ run("projectsService (postgres)", async () => {
         undefined,
       );
 
-      // Another organization's project is not found, and GitHub is not asked.
       tracked.mockClear();
       await expect(
         projectsService.tracked(orgB, project.id, "issue", "open", 1),
       ).rejects.toBeInstanceOf(NotFoundError);
       expect(tracked).not.toHaveBeenCalled();
 
-      // A repository the installation lost is not found either.
       tracked.mockImplementation(async () => null);
       await expect(
         projectsService.tracked(orgA, project.id, "issue", "open", 1),
@@ -207,7 +202,6 @@ run("projectsService (postgres)", async () => {
 
     expect(moved.runtimeId).toBe(second.id);
     expect((await projectsService.get(orgA, project.id))?.runtimeId).toBe(second.id);
-    // The thread's workspace and history are on the runner it began on.
     const [kept] = await db.select().from(threads).where(eq(threads.id, thread!.id));
     expect(kept?.runtimeId).toBe(runnerA.id);
   });
@@ -228,19 +222,15 @@ run("projectsService (postgres)", async () => {
     const move = (who: string, runtimeId: string) =>
       projectsService.update(orgA, who, project.id, { runtimeId });
 
-    // A member who did not import it is refused, and nothing changes.
     const plain = await person("member");
     await expect(move(plain, other.runtime.id)).rejects.toBeInstanceOf(ForbiddenError);
     expect((await projectsService.get(orgA, project.id))?.runtimeId).toBe(runnerA.id);
 
-    // An admin may, and a role that holds several still counts.
     const admin = await person("admin");
     expect((await move(admin, other.runtime.id)).runtimeId).toBe(other.runtime.id);
     const both = await person("member,owner");
     expect((await move(both, runnerA.id)).runtimeId).toBe(runnerA.id);
 
-    // Another organization's runner, one that does not exist and a revoked one are not runners to
-    // move to; another organization's project is not found.
     await expect(move(userId, runnerB.id)).rejects.toBeInstanceOf(RuntimeNotFoundError);
     await expect(move(userId, crypto.randomUUID())).rejects.toBeInstanceOf(RuntimeNotFoundError);
     await runtimesService.revoke(orgA, userId, other.runtime.id);
@@ -251,7 +241,6 @@ run("projectsService (postgres)", async () => {
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  // A person of the workspace in a role, as a member.
   const personIn = async (organizationId: string, role: string) => {
     const id = `u-${role.replace(/\W/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
     await db.insert(users).values({ id, name: role, email: `${id}@aven.test` });
@@ -285,7 +274,6 @@ run("projectsService (postgres)", async () => {
 
     await projectsService.remove(orgA, userId, project.id, (thread) => cancelled.push(thread.id));
 
-    // Hidden everywhere a project is looked up.
     expect(await projectsService.get(orgA, project.id)).toBeNull();
     expect((await projectsService.list(orgA)).map((row) => row.id)).not.toContain(project.id);
     expect((await projectsService.listForPerson(userId)).map((row) => row.id)).not.toContain(
@@ -297,21 +285,18 @@ run("projectsService (postgres)", async () => {
     await expect(projectsService.folder(orgA, project.id, "")).rejects.toBeInstanceOf(
       NotFoundError,
     );
-    // Its threads are still there, all archived, and every one had its run stopped.
     const kept = await db.select().from(threads).where(eq(threads.projectId, project.id));
     expect(kept.map((thread) => [thread.title, thread.state]).sort()).toEqual([
       ["archived", "archived"],
       ["open", "archived"],
     ]);
     expect(cancelled.sort()).toEqual([open!.id, archived!.id].sort());
-    // The variables, which may be secrets, are gone.
     expect(
       await db
         .select()
         .from(environmentVariables)
         .where(eq(environmentVariables.projectId, project.id)),
     ).toEqual([]);
-    // Nobody drives a thread of a deleted project, and its repository is no longer cloned for it.
     await expect(
       createThreadMessages({ isRunning: () => false, start: async () => {} } as never).send(
         orgA,
@@ -323,7 +308,6 @@ run("projectsService (postgres)", async () => {
       ),
     ).rejects.toBeInstanceOf(ConflictError);
     await expect(projectsService.repoAccess(open!.id)).rejects.toThrow("project was deleted");
-    // And it stays archived: reopening it is refused, archiving it again is not.
     const viewer = { organizationId: orgA, userId };
     await expect(threadsService.update(viewer, open!.id, { state: "open" })).rejects.toBeInstanceOf(
       ConflictError,
@@ -338,7 +322,6 @@ run("projectsService (postgres)", async () => {
 
   test("a deleted project lets its repository be imported again, as a project of its own", async () => {
     const first = await projectsService.import(orgA, userId, importInput("acme/web-again"));
-    // Imported twice, a repository is refused, until the first is deleted.
     await expect(
       projectsService.import(orgA, userId, importInput("acme/web-again")),
     ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
@@ -367,7 +350,6 @@ run("projectsService (postgres)", async () => {
 
     await projectsService.remove(orgA, await personIn(orgA, "admin"), project.id, cancel);
     expect(await projectsService.get(orgA, project.id)).toBeNull();
-    // Deleting it twice is not found, not an error of the second person's.
     await expect(projectsService.remove(orgA, userId, project.id, cancel)).rejects.toBeInstanceOf(
       NotFoundError,
     );
@@ -396,7 +378,6 @@ run("projectsService (postgres)", async () => {
       );
       expect((await projectsService.readme(orgA, project.id)).readme?.text).toBe("# Web");
 
-      // Another organization's project is not found, and GitHub is not asked.
       folder.mockClear();
       await expect(projectsService.folder(orgB, project.id, "")).rejects.toBeInstanceOf(
         NotFoundError,
@@ -404,7 +385,6 @@ run("projectsService (postgres)", async () => {
       await expect(projectsService.readme(orgB, project.id)).rejects.toBeInstanceOf(NotFoundError);
       expect(folder).not.toHaveBeenCalled();
 
-      // A path that is not a folder, or a repository the installation lost, is not found either.
       folder.mockImplementation(async () => null);
       await expect(projectsService.folder(orgA, project.id, "app.ts")).rejects.toBeInstanceOf(
         NotFoundError,

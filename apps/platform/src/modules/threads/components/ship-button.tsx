@@ -12,33 +12,22 @@ import { ShipMenu } from "./ship-menu";
 
 type Props = {
   thread: Thread;
-  /** Whether the pull request already has everything the thread changed; there is nothing to update. */
   upToDate: boolean;
 };
 
-// Ships the thread as a pull request, as the person; once there is one, it links to it and ships
-// again as an update while it is open, and as a new pull request once it is merged or closed. A
-// menu offers a separate pull request even while one is open (decision 0069).
 export function ShipButton({ thread, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
   const { gate, appKey } = useShipReadiness(thread.id, thread.running);
-  // The connection that counts is the one for the app the project is of (decision 0123); nothing
-  // is asked until the thread has said which.
   const account = useGithubAccount(appKey);
-  // The newest pull request is the one an update goes to.
   const [latest] = thread.pullRequests;
   const shipped = latest !== undefined;
   const canUpdate = latest?.state === "open";
   const label = shipLabel(latest);
-  // Ship is not offered until the repository is set up to ship (decision 0129): the pull request a
-  // thread already has stays linked.
   const notSetUp = gate.kind === "missing" || gate.kind === "checking";
   const blocked = thread.running || shipping || gate.kind !== "ready";
-  // Nor when nothing has changed: there is nothing to send, so only the pull request stays linked.
   if (notSetUp || (upToDate && !shipping)) {
     return latest ? <PullRequestLink pullRequest={latest} /> : null;
   }
-  // What is shipped is the person's own on GitHub, so their account has to be connected first.
   if (account?.data && !account.data.connected) {
     const next = encodeURIComponent(`/threads/${thread.id}`);
     return (
@@ -84,7 +73,6 @@ export function ShipButton({ thread, upToDate }: Props) {
     <>
       {latest && <PullRequestLink pullRequest={latest} />}
       {explanation ? (
-        // A disabled button says nothing on hover, so the tooltip hangs on what holds it.
         <Tooltip>
           <TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
             {group}
@@ -114,8 +102,6 @@ function PullRequestLink({ pullRequest }: { pullRequest: ThreadPullRequest }) {
   );
 }
 
-// Why Ship is disabled when it is not because of the thread: the runner could not say whether the
-// repository is set up to ship (decision 0083).
 function gateMessage(gate: ShipGate) {
   if (gate.kind === "unknown") {
     return "Could not check whether the repository is set up to ship. Is its runner online?";
@@ -123,7 +109,6 @@ function gateMessage(gate: ShipGate) {
   return undefined;
 }
 
-// Update while the newest pull request is open; otherwise the work goes into a new one.
 function shipLabel(latest: ThreadPullRequest | undefined) {
   if (!latest) return "Ship";
   return latest.state === "open" ? "Update PR" : "New PR";

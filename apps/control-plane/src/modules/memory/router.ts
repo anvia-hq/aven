@@ -4,7 +4,6 @@ import { authRouter } from "../auth/router";
 import { createNoteBody, noteParams, updateNoteBody } from "./schema";
 import { memoryService } from "./service";
 
-// A person's memory (decision 0102): theirs in every workspace, so no `org: true`, as for skills.
 export const memoryRouter = new Elysia({ prefix: "/memory" })
   .use(authRouter)
   .get("/", ({ user }) => memoryService.list(user.id), { auth: true })

@@ -29,7 +29,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     token: "t",
   };
   const GRACE_MS = 400;
-  // How MCP servers connected, as the hub was told.
   const reported: { id: string; error?: string }[] = [];
   const hub = new RuntimeHub(
     store,
@@ -64,7 +63,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await outsider.remove();
   });
 
-  // Connects and, like a real runtime, says hello the moment the socket opens.
   const open = (
     port: number | undefined,
     token: string,
@@ -91,7 +89,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     }
   };
 
-  // Collects what the control plane sends and lets the test answer its calls.
   const inbox = (ws: WebSocket) => {
     const received: ControlPlaneToRuntime[] = [];
     ws.onmessage = (event) => received.push(JSON.parse(String(event.data)));
@@ -146,7 +143,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(unknown.ok).toBe(false);
     expect(cloned).toEqual([]);
 
-    // A thread named by the runtime is ignored; the run's own thread is what counts.
     const given = await ask(ws, received, "repo.access", { runId: "run-git", threadId: "other" });
     expect(given).toMatchObject({ ok: true, result: repoAccess });
     expect(cloned).toEqual([thread.id]);
@@ -171,7 +167,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       digest: SKILL_DIGEST,
     });
     expect(given).toMatchObject({ ok: true, result: { data: SKILL_ARCHIVE.toBase64() } });
-    // The same digest through a run that was not given it, and a digest that is not one.
     const other = await ask(ws, received, "skills.get", {
       runId: "run-without",
       digest: SKILL_DIGEST,
@@ -228,7 +223,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const results = [{ id: given, error: "connection refused" }, { id: notGiven }];
     const answered = await ask(ws, received, "mcp.report", { runId: "run-mcp", results });
     expect(answered).toMatchObject({ ok: true, result: null });
-    // The server the run was given is kept, the one it was not given is dropped.
     expect(reported).toEqual([{ id: given, error: "connection refused" }]);
 
     reported.length = 0;
@@ -255,7 +249,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       timezone: "UTC",
     };
 
-    // A runner that is connected, a reply started on it, and what the reply heard.
     const replying = async (name: string, answerMemory = async (): Promise<unknown> => null) => {
       const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name });
       const ws = await open(server.server?.port, token);
@@ -538,7 +531,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     if (opened.type !== "terminal.open") throw new Error("unreachable");
     expect(opened).toMatchObject({ threadId: "t", cols: 100, rows: 30 });
 
-    // A resize before the shell has opened is dropped; a desktop's answer is not a terminal's.
     terminal.resize(80, 24);
     ws.send(JSON.stringify({ type: "desktop.opened", viewerId: opened.viewerId }));
     ws.send(JSON.stringify({ type: "terminal.opened", viewerId: opened.viewerId }));
@@ -582,7 +574,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       lost: () => undefined,
     });
 
-    // An unknown run id is refused, whatever scope the runtime claims.
     const unknown = await ask(ws, received, "memory.append", {
       runId: "someone-elses",
       turn: 0,
@@ -598,7 +589,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       scope: { sessionId: "other-thread", metadata: { organizationId: "other-org" } },
     });
     expect(appended.ok).toBe(true);
-    // It landed in the thread the control plane bound the run to.
     const loaded = await store.load({
       scope: { sessionId: thread.id, metadata: { organizationId: seed.orgA } },
     });
@@ -609,7 +599,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       }),
     ).toEqual([]);
 
-    // Once the run ends, the runtime can no longer write to it.
     ws.send(JSON.stringify({ type: "run.end", runId: "run-1", seq: 1, outcome: "response" }));
     await until(() => ended.length > 0);
     const late = await ask(ws, received, "memory.append", {
@@ -651,7 +640,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(badAppend.ok).toBe(false);
     expect(badAppend.error).toContain("Invalid parameters");
 
-    // The connection survived all of it, and the run is still live.
     expect(hub.isOnline(runtime.id)).toBe(true);
     expect(ended).toEqual([]);
     ws.send(JSON.stringify({ type: "run.end", runId: "run-bad", seq: 1, outcome: "response" }));
@@ -663,7 +651,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       name: "race",
     });
     const checked = await runtimesService.authenticate(token);
-    // The revoke lands after the token was checked and before the socket attached.
     await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
     const authenticate = runtimesService.authenticate;
     runtimesService.authenticate = async () => checked;
@@ -743,7 +730,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(hub.isOnline(other.runtime.id)).toBe(false);
   });
 
-  // Through the router, as the platform calls it: the row changes and the runtime is cut off.
   const asPerson = (method: string, path: string, token: string) =>
     fetch(`http://localhost:${full.server?.port}${path}`, {
       method,
@@ -774,7 +760,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect(await listed()).toMatchObject({ build: "0.2.0", outdated: true });
       process.env.AVEN_VERSION = "0.2.0";
       expect(await listed()).toMatchObject({ build: "0.2.0", outdated: false });
-      // A server that does not know its own release marks nobody.
       process.env.AVEN_VERSION = "latest";
       expect(await listed()).toMatchObject({ outdated: false });
     } finally {
@@ -803,7 +788,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     };
     const ws = await open(full.server?.port, token, "/runtimes/connect");
     await until(() => hub.isOnline(runtime.id));
-    // A runner that has not said has none, as an older runner never does.
     expect(await listed()).toMatchObject({ stats: null });
 
     ws.send(
@@ -825,13 +809,11 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       stats: { cpuPercent: 37, sandboxes: 2, memoryTotalBytes: 16, reportedAt: expect.any(String) },
     });
 
-    // A frame that is not stats changes nothing...
     ws.send(JSON.stringify({ type: "host.stats", stats: { cores: 0 } }));
     ws.send(JSON.stringify({ type: "hello", version: WIRE_VERSION, runs: [] }));
     await Bun.sleep(100);
     expect(hub.statsOf(runtime.id)).toMatchObject({ cpuPercent: 37, sandboxes: 2 });
 
-    // ...and once the runtime is gone so are its numbers.
     ws.close();
     await until(() => !hub.isOnline(runtime.id));
     expect(hub.statsOf(runtime.id)).toBeUndefined();
@@ -889,7 +871,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       ws.onclose = (event) => resolve(event.code);
     });
 
-    // Someone else's runtime is not found, and stays connected.
     expect((await asPerson("DELETE", `/runtimes/${runtime.id}`, outsider.token)).status).toBe(404);
     expect(hub.isOnline(runtime.id)).toBe(true);
 
@@ -943,7 +924,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const text = (runId: string, seq: number, delta: string) =>
       JSON.stringify({ type: "run.event", runId, seq, event: { type: "text", delta } });
 
-    // A runtime with a run going, whose connection then drops.
     const dropped = async (name: string, runId: string) => {
       const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name });
       const ws = await open(server.server?.port, token);
@@ -971,7 +951,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         after: 2,
       });
 
-      // The runtime replays from where it is asked, and may repeat what was already heard.
       back.send(text("run-keep", 2, "b"));
       back.send(text("run-keep", 3, "c"));
       back.send(

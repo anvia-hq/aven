@@ -30,8 +30,6 @@ import type {
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
-// A name for a message the agent has not taken yet, which the server and the other tabs use to tell
-// it from the others. `randomUUID` is only there on a secure origin, a plain-HTTP address has none.
 function newSteerId() {
   return (
     globalThis.crypto?.randomUUID?.() ??
@@ -47,29 +45,19 @@ function parseEvent(data: string): RunEvent | null {
   }
 }
 
-// A live view of one thread. The server owns the run: this attaches over server-sent events,
-// gets a snapshot of the transcript, then applies events as they arrive. Reloading or leaving the
-// page never stops the agent, and reattaching shows the run still in progress.
 export function useThread(threadId: string) {
   const { all, loaded, setRunning: setThreadRunning, refresh } = useThreads();
   const { data: session, isPending } = authClient.useSession();
   const thread = all.find((candidate) => candidate.id === threadId);
-  // Driving an archived thread opens it again on the server; the sidebar is told at once.
   const wasArchived = thread !== undefined && thread.state !== "open";
-  // Only its creator drives a thread; anyone else it was shared with reads it (decision 0084).
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [running, setRunning] = useState(false);
-  // When the run in progress started, by this browser's clock; null when none is.
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [usage, setUsage] = useState<ThreadUsage | null>(null);
-  // Whether the stream has given this thread's snapshot yet: until it has, `usage` is not known to
-  // be none, and what hangs on it should hold its place instead of showing nothing.
   const [synced, setSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // What was said while the agent worked and it has not taken yet (decision 0098). Kept in a ref as
-  // well, so an event that drops one can say what it was.
   const [steers, setSteersState] = useState<QueuedSteer[]>([]);
   const steersRef = useRef<QueuedSteer[]>([]);
   const changeSteers = useCallback((change: (current: QueuedSteer[]) => QueuedSteer[]) => {
@@ -77,8 +65,6 @@ export function useThread(threadId: string) {
     setSteersState(steersRef.current);
   }, []);
 
-  // What this browser has sent that the server has not shown yet (decision 0117). Kept in a ref as
-  // well, so an event that settles one can be applied to the latest list.
   const [pending, setPendingState] = useState<PendingMessage[]>([]);
   const pendingRef = useRef<PendingMessage[]>([]);
   const changePending = useCallback((change: (current: PendingMessage[]) => PendingMessage[]) => {
@@ -105,7 +91,6 @@ export function useThread(threadId: string) {
       changePending((current) => settlePending(current, event));
       switch (event.type) {
         case "steer_queued":
-          // Shown already by the browser that sent it, which named it.
           changeSteers((current) =>
             current.some(({ id }) => id === event.id)
               ? current
@@ -118,7 +103,6 @@ export function useThread(threadId: string) {
         case "steer_rejected": {
           const lost = steersRef.current.find(({ id }) => id === event.id);
           changeSteers((current) => current.filter(({ id }) => id !== event.id));
-          // With a reason the person has not been told: say what was lost, so it can be sent again.
           if (lost && event.reason) {
             toast.add({
               title: "A message was not delivered",
@@ -130,10 +114,7 @@ export function useThread(threadId: string) {
         }
         case "snapshot":
           changeSteers(() => event.steers ?? []);
-          // A run that failed while this page was not listening still says why (decision 0100).
           setError(event.error ?? null);
-          // What the sidebar shows of this thread is brought to what the server says now: a run
-          // may have ended while no stream was listening to it.
           setThreadRunning(threadId, event.running);
           setSynced(true);
           setUsage(event.usage ?? null);
@@ -156,29 +137,21 @@ export function useThread(threadId: string) {
         case "done":
           setStartedAt(null);
           setThreadRunning(threadId, false);
-          // What the server does once a run has ended, such as finding the pull request the agent
-          // opened, lands a moment after `done`: look now, and again shortly.
           void refresh();
           setTimeout(() => void refresh(), 2000);
           break;
       }
     };
     source.onerror = () => {
-      // The browser retries on its own; only a stream it has given up on leaves the run unknown.
       if (source.readyState !== EventSource.CLOSED) return;
       setRunning(false);
       setStartedAt(null);
       setError("Lost the connection to the server");
-      // Whether it still runs is not known from here: the list is asked.
       void refresh();
     };
     return () => source.close();
   }, [threadId, setThreadRunning, refresh, changeSteers, changePending]);
 
-  // True once the message is accepted, so the composer knows it can clear. A message to an agent
-  // that works (decision 0098) is shown at once as waiting, and becomes the person's message when
-  // the agent takes it. One that starts a run is shown at once too, as sent (decision 0117), and
-  // given back to the composer if it was not.
   const send = useCallback(
     async (message: OutgoingMessage, selection: RunSelection = {}) => {
       const id = newSteerId();
@@ -201,11 +174,7 @@ export function useThread(threadId: string) {
         rememberModelSelection(threadId, selection);
         return result;
       });
-      // The agent may have begun finishing after all, and taken it as a message of its own.
       if (!sent?.steered) dropSteer();
-      // It was not sent, or the server shows it as a queued message (or as the person's message
-      // when it raced the run's end): the one shown from here goes. What starts a run stays until
-      // the event that brings it.
       if (!sent || sent.steered || steering) dropPending();
       if (sent && wasArchived) void refresh();
       return sent !== null;
@@ -213,7 +182,6 @@ export function useThread(threadId: string) {
     [threadId, running, changeSteers, changePending, wasArchived, refresh],
   );
 
-  // True once the answers are accepted; the run then continues, and the stream shows it.
   const answer = useCallback(
     async (answers: QuestionAnswer[], selection: RunSelection = {}, secret?: SecretChoice) => {
       const sent = await attempt("Could not send answer", async () => {
@@ -230,17 +198,13 @@ export function useThread(threadId: string) {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  // The question the agent stopped on, until it is answered.
   const question = running ? undefined : pendingQuestion(messages);
 
   return {
     thread,
     owned,
-    // Whose it is is known once the session is; a session being looked up again (the window
-    // regained focus) does not unknown it.
     loaded: loaded && (session != null || !isPending),
     messages,
-    // What this browser sent and the server has not shown yet, in the order it was sent.
     pending: pending.map((item) => item.message),
     steers,
     running,

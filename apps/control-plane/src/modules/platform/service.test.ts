@@ -8,8 +8,6 @@ import { platformService, registrationDefault } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-// The first account of an installation is its platform owner (decision 0077). The two accounts here
-// are dated before anyone else's, so they are the first two whatever the database already holds.
 run("who owns the platform (real postgres)", () => {
   const tag = crypto.randomUUID().slice(0, 8);
   const first = { id: `first-${tag}`, email: `first-${tag}@aven.test` };

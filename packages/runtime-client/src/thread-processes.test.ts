@@ -17,7 +17,6 @@ describe("how a process is named", () => {
     expect(processView(info("sh", ["-c", "npm run dev"])).command).toBe("npm run dev");
     expect(processView(info("/bin/bash", ["-c", "tail -f log"])).command).toBe("tail -f log");
     expect(processView(info("npm", ["run", "dev"])).command).toBe("npm run dev");
-    // Not the `-c script` shape: shown as it is.
     expect(processView(info("sh", ["./run.sh", "-c"])).command).toBe("sh ./run.sh -c");
   });
 

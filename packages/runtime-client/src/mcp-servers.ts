@@ -8,34 +8,23 @@ import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire
 import { refusePrivateHost, type ResolveHost } from "./mcp-address";
 
 export type ConnectedMcp = {
-  /** The servers' tools as plain local tools: durable takes no `mcpServers`, and a bot's tools are kept small the same way. */
   tools: AnyTool[];
-  /** How each server connected, for the control plane to keep: the reason one did not. The run goes on without it. */
   results: McpConnectResult[];
-  /** What the agent is told of them. */
   note: McpNote;
   close(): Promise<void>;
 };
 
-/** How long a server has to answer, connecting and listing its tools. */
 export const MCP_CONNECT_TIMEOUT_MS = 15_000;
 
-// What a server may list: a runaway one cannot fill the agent's context with its own tools.
 const DISCOVERY_LIMITS = { maxTools: 100, maxBytes: 512 * 1024 };
 
-/** A tool name a model accepts: letters, digits, underscore and dash. */
 export const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
 
-// Anvia's adapted tool is a plain object that says where it came from in `mcp`, which an agent's
-// `tools` refuses and durable cannot checkpoint a server for. Without that mark it is a local tool
-// whose `call` still goes through the live connection.
 const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
   const { mcp: _origin, ...local } = tool;
   return local;
 };
 
-// Connects the servers a run was given, each by itself: one that is down is reported and left out,
-// it does not stop the others or the run. The connections are the run's: `close` ends them.
 export async function connectMcpServers(
   configs: readonly RunMcpServer[],
   options: { signal?: AbortSignal; resolve?: ResolveHost } = {},
@@ -53,8 +42,6 @@ export async function connectMcpServers(
 
   await Promise.all(
     configs.map(async (config) => {
-      // A server on the runner's own network is the person's to allow; a name that leads there is
-      // refused before anything is sent to it.
       if (!config.allowLocal) {
         try {
           await refusePrivateHost(config.url, resolve);
@@ -69,10 +56,8 @@ export async function connectMcpServers(
           type: "streamableHttp",
           url: config.url,
           headers: config.headers,
-          // Refused unless the person said the server is on their own network.
           ssrfProtection: config.allowLocal ? "disabled" : "strict",
         },
-        // A server on the 2025 protocol is as good as one on the newest.
         versionNegotiation: { mode: "auto" },
         tools: { prefix: mcpPrefix(config.name), discoveryLimits: DISCOVERY_LIMITS },
       });

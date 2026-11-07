@@ -84,7 +84,6 @@ export function CommandMenu() {
           {shared.length > 0 && (
             <>
               <CommandSeparator />
-              {/* What the workspace shares to read (decision 0084). */}
               <CommandGroup heading="Shared with workspace">
                 {shared.map((thread) => (
                   <CommandItem

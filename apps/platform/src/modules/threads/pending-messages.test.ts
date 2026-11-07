@@ -37,7 +37,6 @@ describe("pendingMessage", () => {
   test("keeps the files with their size, in bytes, from their base64", () => {
     const { message: shown } = sent("a", "Here", {
       attachments: [
-        // "hello" in base64 is 8 characters for 5 bytes, padding included.
         { name: "notes.txt", mediaType: "text/plain", data: "aGVsbG8=" },
         { name: "blob", data: "aGVsbG8h" },
       ],
@@ -95,7 +94,6 @@ describe("settlePending", () => {
       messages: [user("Fix the tests"), user("Something else")],
       running: true,
     };
-    // Its words are an older message of the thread, not the one sent now.
     expect(settlePending(one, event)).toEqual(one);
   });
 

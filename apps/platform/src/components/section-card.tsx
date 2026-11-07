@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
 
 type Props = {
-  /** What the card is, in its header; a string also names the region. */
   title: ReactNode;
-  /** The name of the region when the title is not a plain string. */
   label?: string;
-  /** Buttons at the end of the header. */
   actions?: ReactNode;
   children: ReactNode;
 };
 
-// A section as a card with a header bar, the way a repository page frames its parts: one look for
-// the files, the README and each of the side column's sections.
 export function SectionCard({ title, label, actions, children }: Props) {
   return (
     <section

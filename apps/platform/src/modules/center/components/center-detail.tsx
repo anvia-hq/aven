@@ -18,7 +18,6 @@ type Open =
   | { kind: "pr"; projectId: string; what: string }
   | { kind: "commit"; projectId: string; what: string };
 
-/** What the address says is open, if anything. */
 export function openOf(search: { pr?: string; commit?: string }): Open | undefined {
   const [kind, value] = search.pr
     ? (["pr", search.pr] as const)
@@ -232,8 +231,6 @@ const Problem = ({ text }: { text: string }) => (
   </div>
 );
 
-// A pull request or a commit opened beside the lists, in a drawer from the right, read from GitHub.
-// What is open is in the address, so a link to it can be shared.
 export function CenterDetail({ open, onClose }: { open: Open | undefined; onClose: () => void }) {
   return (
     <Drawer

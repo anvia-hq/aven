@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import type { GithubConfig } from "./client";
 
-/** Where GitHub's API and web side are: github.com unless the environment says another (Enterprise Server, a test double). */
 export const githubUrlsFromEnv = (env: Record<string, string | undefined> = process.env) => ({
   apiUrl: env.GITHUB_API_URL ?? "https://api.github.com",
   webUrl: env.GITHUB_WEB_URL ?? "https://github.com",
@@ -10,13 +9,6 @@ export const githubUrlsFromEnv = (env: Record<string, string | undefined> = proc
 
 export type GithubUrls = ReturnType<typeof githubUrlsFromEnv>;
 
-/**
- * The app GitHub is asked to create (decision 0074): the permissions the agent needs to clone, push
- * and open pull requests as the person and to read CI (0041, 0044), no webhook, and the user
- * authorization during installation that 0013 relies on. `origin` is where people open Aven.
- * A private app (the default) can be installed only by the account or organization that owns it;
- * a public one by any, which a team with several organizations needs.
- */
 export function appManifest(origin: string, name: string, isPublic = false) {
   const base = origin.replace(/\/$/, "");
   return {
@@ -39,7 +31,6 @@ export function appManifest(origin: string, name: string, isPublic = false) {
   };
 }
 
-/** Where the manifest is posted: the person's own settings, or an organization's. */
 export function newAppUrl(urls: GithubUrls, state: string, organization?: string) {
   const path = organization
     ? `organizations/${encodeURIComponent(organization)}/settings/apps/new`
@@ -55,10 +46,6 @@ function sign(payload: string) {
   return createHmac("sha256", secret).update(`github-app-setup:${payload}`).digest("base64url");
 }
 
-/**
- * A `state` for the trip to GitHub and back, tied to the person who starts it and, for an app a
- * workspace makes for itself (decision 0123), to that workspace.
- */
 export function createSetupState(userId: string, now = Date.now(), organizationId?: string) {
   const claims: unknown[] = [userId, now];
   if (organizationId !== undefined) claims.push(organizationId);
@@ -66,10 +53,6 @@ export function createSetupState(userId: string, now = Date.now(), organizationI
   return `${payload}.${sign(payload)}`;
 }
 
-/**
- * What a `state` made for this person says, less than an hour ago: the workspace the app is for,
- * or null for the platform's. Undefined when it is not theirs, not ours, or too old.
- */
 export function readSetupState(
   state: string,
   userId: string,
@@ -101,7 +84,6 @@ type Conversion = {
   pem: string;
 };
 
-/** Trades the code GitHub sent back for the credentials of the app it created. The code works once. */
 export async function convertManifest(
   code: string,
   urls: GithubUrls,

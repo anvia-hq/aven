@@ -6,7 +6,6 @@ import { activitySummary, peerBots, peerName } from "../activity";
 import type { Bot, BotChatMessage } from "../types";
 import { BotAvatar } from "./bot-avatar";
 
-// Who wrote a message to whom, by the names the bots have now.
 function route(message: BotChatMessage, self: Pick<Bot, "name">, bots: readonly Bot[]) {
   const { peer } = message;
   if (!peer) return "";
@@ -14,9 +13,6 @@ function route(message: BotChatMessage, self: Pick<Bot, "name">, bots: readonly 
   return peer.direction === "to" ? `${self.name} → ${other}` : `${other} → ${self.name}`;
 }
 
-// Messages between this bot and others as one line that opens, as in the Anvia harness (decision
-// 0063): Messaged, Heard from, or how many messages with whom; open, each message with who wrote it
-// to whom.
 export function BotActivity({
   messages,
   bots,

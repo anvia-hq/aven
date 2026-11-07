@@ -5,14 +5,10 @@ import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/proto
 import { git, type Git } from "./git-clone";
 import { hostGit } from "./host-git";
 
-// A listing past this many entries is cut; a folder that large is not browsed by eye.
 const MAX_ENTRIES = 2000;
 const MAX_FILE_BYTES = 512 * 1024;
 const SNIFF_BYTES = 8192;
 
-// The real path of `path` inside the workspace, or null when it is outside it, is the repository's
-// own `.git`, or does not exist. The agent works in a container and can make a symlink there that
-// points anywhere on this machine, so what a path resolves to is checked, not what it spells.
 async function inside(root: string, path: string) {
   if (path.includes("\0") || isAbsolute(path)) return null;
   const real = await realpath(join(root, path)).catch(() => null);
@@ -23,7 +19,6 @@ async function inside(root: string, path: string) {
   return first === ".git" ? null : real;
 }
 
-/** The entries of a folder of the workspace, folders first; empty when it is not there. */
 export async function listDirectory(root: string, path: string): Promise<FileEntry[]> {
   const top = await realpath(root);
   const real = await inside(top, path);
@@ -31,7 +26,6 @@ export async function listDirectory(root: string, path: string): Promise<FileEnt
   const names = await readdir(real, { withFileTypes: true }).catch(() => []);
   const entries: FileEntry[] = [];
   for (const entry of names) {
-    // The repository's own folder is not the project's files. A link is listed as a file; reading it is checked.
     if (entry.name === ".git" && real === top) continue;
     entries.push({ name: entry.name, type: entry.isDirectory() ? "directory" : "file" });
   }
@@ -43,7 +37,6 @@ export async function listDirectory(root: string, path: string): Promise<FileEnt
   return entries.slice(0, MAX_ENTRIES);
 }
 
-// The files git knows of: tracked and untracked, minus what it ignores and what was deleted.
 async function knownFiles(root: string, run: Git) {
   const list = async (...args: string[]) => {
     const { code, stdout } = await run(["ls-files", "-z", ...args], { cwd: root });
@@ -55,7 +48,6 @@ async function knownFiles(root: string, run: Git) {
   );
 }
 
-// How well a path matches: its name starting with the query, its name holding it, then its path.
 function rank(path: string, query: string) {
   const name = basename(path).toLowerCase();
   if (name.startsWith(query)) return 0;
@@ -63,11 +55,6 @@ function rank(path: string, query: string) {
   return path.toLowerCase().includes(query) ? 2 : undefined;
 }
 
-/**
- * The files of the workspace whose path holds `query`, best first, for the composer's `@`
- * (decision 0036). Only paths, from what git lists: an ignored folder such as `node_modules` is not
- * searched, and nothing is read. Empty when `root` holds no repository.
- */
 export async function searchWorkspace(root: string, query: string, run: Git = git) {
   const wanted = query.trim().toLowerCase();
   const found: { path: string; rank: number }[] = [];
@@ -81,7 +68,6 @@ export async function searchWorkspace(root: string, query: string, run: Git = gi
   return found.slice(0, FILE_SEARCH_LIMIT).map(({ path }) => path);
 }
 
-/** A file of the workspace as text, cut at 512 KiB; binary files and missing ones say so. */
 export async function readWorkspaceFile(root: string, path: string): Promise<FileContent> {
   const real = await inside(await realpath(root), path);
   if (!real || !(await lstat(real)).isFile()) return { kind: "missing" };

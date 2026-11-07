@@ -16,7 +16,6 @@ import { CommitGraphRow, ROW_HEIGHT } from "./commit-graph";
 
 const CHIPS_SHOWN = 2;
 
-// The branches that end on a commit, the default branch first; the rest are a count.
 function Branches({ refs, defaultBranch }: { refs: string[]; defaultBranch: string }) {
   const ordered = [...refs].sort(
     (a, b) => Number(b === defaultBranch) - Number(a === defaultBranch) || a.localeCompare(b),
@@ -96,7 +95,6 @@ function Commit({
           {commit.date ? ` · ${timeAgo(commit.date, true)}` : ""}
         </span>
       </div>
-      {/* The commit is read on GitHub: the app shows the history, not each change. */}
       <a
         href={commitUrl(project.repoFullName, commit.sha)}
         target="_blank"
@@ -110,8 +108,6 @@ function Commit({
   );
 }
 
-// The latest commits of the project's default branch, ten to a page, newest first, drawn as a graph
-// of the branches and merges among them (decision 0090).
 export function RepoCommits({
   project,
   onOpenCommit,
@@ -121,18 +117,12 @@ export function RepoCommits({
   chips,
 }: {
   project: Project;
-  /** Controls for the card's header, such as filters. */
   actions?: ReactNode;
-  /** What shows under the header, such as the filters that are on. */
   chips?: ReactNode;
-  /** The query of the history's filters (author, time, file, branch), already encoded. */
   filters?: string;
-  /** Words the messages shown must have; a page of commits is read, and those without are left out. */
   grep?: string;
-  /** Given, a commit's message opens it where it is shown rather than on GitHub. */
   onOpenCommit?: (sha: string) => void;
 }) {
-  // A page is of one set of filters: other filters start at the first page.
   const [at, setAt] = useState({ filters, page: 1 });
   const page = at.filters === filters ? at.page : 1;
   const setPage = (next: number) => setAt({ filters, page: next });

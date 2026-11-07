@@ -12,7 +12,6 @@ import { useTagColors, useTags } from "../hooks/use-tags";
 import type { CockpitTag } from "../types";
 import { TagBadge, tagStyle } from "./tag-badge";
 
-// The palette's colors by name, in its order, for the picker to say.
 const COLOR_NAMES = [
   "Pink",
   "Rose",
@@ -28,7 +27,6 @@ const COLOR_NAMES = [
   "Yellow",
 ];
 
-// What carries a tag, in a few words.
 function usedBy(tag: CockpitTag) {
   const parts = [
     [tag.inbox, "inbox item", "inbox items"],
@@ -39,7 +37,6 @@ function usedBy(tag: CockpitTag) {
   return used.length > 0 ? used.join(" · ") : "Not used yet";
 }
 
-// A tag's color, picked from the bots' palette or given back to the one its name picks.
 function ColorPicker({ tag }: { tag: CockpitTag }) {
   const { setColor } = useTags();
   const colorOf = useTagColors();
@@ -91,8 +88,6 @@ function ColorPicker({ tag }: { tag: CockpitTag }) {
   );
 }
 
-// The person's tags as a page (decision 0107): each with its color, which they change, and what
-// carries it, and a line that adds one before anything does.
 export function TagsPage() {
   const { tags, add } = useTags();
   const [draft, setDraft] = useState("");

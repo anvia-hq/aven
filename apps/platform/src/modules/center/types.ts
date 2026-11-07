@@ -1,4 +1,3 @@
-// What `GET /projects/:id/pulls/:number` and `/commits/:sha` answer (decision 0132).
 export type FileChange = {
   path: string;
   oldPath: string | null;
@@ -51,7 +50,6 @@ export type CommitDetail = {
   filesTruncated: boolean;
 };
 
-/** What `GET /projects/:id/branches` answers: where each branch stands against the default one. */
 export type BranchSummary = {
   name: string;
   isDefault: boolean;

@@ -8,8 +8,6 @@ export type DiffResult = Available<ThreadDiff>;
 
 const refusal = { logged: "The diff was refused:", message: "The changes could not be read" };
 
-// What a thread's workspace has changed, read through the runner that holds it (decision 0030).
-// The call starts from a thread of the caller's organization.
 export function createDiffService(hub: RuntimeHub) {
   const runner = runnerFor(hub);
   return {

@@ -44,7 +44,6 @@ import { projectVariablesRouter } from "./modules/variables/project-router";
 import { variablesRouter } from "./modules/variables/router";
 import { workloadIdentityRouter } from "./modules/workload-identity/router";
 
-// The GitHub App a platform owner created from the platform, unless the environment names one.
 await useStoredGithubApp(github);
 
 const app = new Elysia()
@@ -81,14 +80,9 @@ if (!Number.isInteger(port) || port <= 0)
   throw new Error(`PORT must be a port number, got "${process.env.PORT}"`);
 app.listen(port);
 
-// The control plane hosts sandboxes on its own machine too.
 const localRunner = await startLocalRunner(port);
 
-// The built-in runner's sandboxes are containers; stopping it removes them, including on
-// `bun --watch` restarts.
 const shutdown = async () => {
-  // The bots stop first: replies that end because their runner stopped are then a shutdown, which
-  // leaves a goal as it is for the next start, and not a failed round that blocks it.
   botRunner.dispose();
   await localRunner?.stop();
   await scheduler.close();

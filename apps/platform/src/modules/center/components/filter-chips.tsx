@@ -4,7 +4,6 @@ import { Button } from "@/components/button";
 
 export type Chip = { key: string; label: string; remove: () => void };
 
-// What narrows a list right now, each as a chip that takes it off, and a way to take them all off.
 export function FilterChips({
   chips,
   onClear,

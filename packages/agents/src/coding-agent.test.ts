@@ -173,7 +173,6 @@ describe("createModel", () => {
 });
 
 describe("history from earlier runs", () => {
-  // Reasoning the Responses API made, which Anthropic rejects.
   const reasoning = {
     type: "reasoning" as const,
     id: "rs_earlier",
@@ -189,7 +188,6 @@ describe("history from earlier runs", () => {
     { role: "user", content: "Thanks" },
   ];
 
-  // What the agent would send to the provider: a local server stands in for it and refuses.
   async function sentToAnthropic() {
     const bodies: unknown[] = [];
     const server = Bun.serve({

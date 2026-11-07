@@ -6,12 +6,9 @@ import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 import { describeError } from "../../errors";
 import { describeTime, nextRun } from "./cron";
 
-// A run that is this late is called late in the note it wakes the bot with.
 const LATE_MS = 2 * 60_000;
-// How many due schedules one tick takes, so a long outage is worked off over a few ticks.
 const TICK_LIMIT = 100;
 
-// What a bot is woken with when a schedule is due (decision 0067): the task, and that nobody is there.
 function scheduleNote(schedule: BotScheduleRow, due: Date, late: boolean) {
   return [
     `Scheduled task "${schedule.name}" (schedule id ${schedule.id}) is due now, set for ${describeTime(due, schedule.timezone)}.`,
@@ -25,10 +22,6 @@ function scheduleNote(schedule: BotScheduleRow, due: Date, late: boolean) {
     .join("\n\n");
 }
 
-/**
- * Wakes bots when their schedules are due (decision 0067). `fire` wakes the bot with a note and may
- * refuse (no model, computer offline): that is told in the schedule's status, and the next time goes on.
- */
 export function createScheduler(options: {
   fire(schedule: { userId: string; botId: string }, note: string): Promise<void>;
   isBusy(botId: string): boolean;
@@ -43,7 +36,6 @@ export function createScheduler(options: {
   async function handle(schedule: BotScheduleRow, now: Date) {
     const due = schedule.nextRunAt!;
     const lateness = now.getTime() - due.getTime();
-    // Claimed by moving its next time on, so a second control plane, or a slow tick, runs it once.
     const [claimed] = await db
       .update(botSchedules)
       .set({ nextRunAt: nextRun(schedule.cron, schedule.timezone, now) })
@@ -83,7 +75,6 @@ export function createScheduler(options: {
       )
       .orderBy(asc(botSchedules.nextRunAt))
       .limit(TICK_LIMIT);
-    // One that cannot be handled is told and left, and does not hold up those behind it.
     for (const schedule of due) {
       await handle(schedule, now).catch((error: unknown) => {
         console.warn(`Schedule ${schedule.id} could not be run:`, describeError(error));
@@ -91,7 +82,6 @@ export function createScheduler(options: {
     }
   }
 
-  // A tick that is still going is not started again on top of itself.
   const guarded = () => {
     ticking ??= tick()
       .catch((error: unknown) => console.warn("A schedule tick failed:", describeError(error)))

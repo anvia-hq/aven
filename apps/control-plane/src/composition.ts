@@ -34,9 +34,6 @@ import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
 import { threadsService } from "./modules/threads/service";
 
-// The app's long-lived objects, made once here and handed to the routers that need them, so the
-// modules they join (runtimes and projects, runs and threads) do not import each other.
-
 export const runtimeHub = new RuntimeHub(
   memoryStore,
   (threadId) => projectsService.repoAccess(threadId),
@@ -51,7 +48,6 @@ export const runsService = new RunManager({
   onRunFinished: async (thread, ending, run) => {
     const updated = (async () => {
       await threadsService.touch(thread.id);
-      // The agent may have opened the thread's pull request (decision 0044); the badge learns of it here.
       await syncPullRequest(thread).catch((error: unknown) => {
         console.warn(
           `Could not look for the pull request of thread ${thread.id}:`,
@@ -59,11 +55,8 @@ export const runsService = new RunManager({
         );
       });
     })();
-    // A bot that sent the run is told how it ended, pull request and all, once the thread is
-    // updated (decision 0101). `threadWatcher` is made below; this runs only when a run ends.
     await threadWatcher.ended(thread.id, run.startedAt, ending, updated);
     await updated;
-    // A thread's agent that forked this one, and is still working, is told (decision 0135).
     await runtimeHub.forks.ended(thread, ending);
   },
   continuations: {
@@ -78,13 +71,10 @@ export const runsService = new RunManager({
 
 export const threadMessages = createThreadMessages(runsService);
 
-// A thread's agent can fork its thread (decision 0135): the hub answers the runner's calls for it.
 runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessages });
 
-// A process the agent left running ends while it is idle: it is woken with a note (decision 0144).
 runtimeHub.processEnds = createProcessEnds({ messages: threadMessages });
 
-// A thread carried on to another runner reads the old one's changes through its runner (decision 0149).
 const diffService = createDiffService(runtimeHub);
 export const threadContinuation = createThreadContinuation({
   runs: runsService,
@@ -97,15 +87,11 @@ export const threadContinuation = createThreadContinuation({
   },
 });
 
-// Archiving a thread stops its run and frees its sandbox (decision 0118), for the person's own
-// routes and for a bot doing it on their word.
 export const putAwayThread = createPutAwayThread({
   cancel: (threadId) => runsService.cancel(threadId),
   hub: runtimeHub,
 });
 
-// What a bot may do with the person's threads (decision 0088): the same runs and messages the
-// platform's routes use, so a thread a bot starts is an ordinary one.
 const botThreads = createBotThreads({
   runs: runsService,
   messages: threadMessages,
@@ -115,12 +101,8 @@ const botThreads = createBotThreads({
 
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });
 
-// Every bot's computer is on one runner: the control plane's own, which every person has, or the one
-// `AVEN_BOT_RUNNER` names for a deployment that has turned its own off (decision 0059).
 export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
-// A bot's message to another bot is answered through the chats, which are made from the runner,
-// which is made from the replier: the replier reaches them when it is asked, not when it is made.
 export const botRunner = new BotRunner({
   store: botMemoryStore,
   replier: new RemoteBotReplier(
@@ -156,29 +138,23 @@ export const botRunner = new BotRunner({
       run: (caller, command) => runMemoryCommand(caller, command),
     },
   ),
-  // A reply that ends with nothing behind it starts the next round of its bot's goal (decision 0068).
   settled: (reply) => goalDriver.settled(reply),
 });
 
 export const botChats = createBotChats(botRunner);
 
-// Wakes a bot when one of its schedules is due (decision 0067), every half minute once started.
 export const scheduler = createScheduler({
   fire: ({ userId, botId }, note) => botChats.fire(userId, botId, note),
   isBusy: (botId) => botRunner.busy(botId),
   intervalMs: 30_000,
 });
 
-// Keeps the goals of bots going: a round after a round as replies end, and a tick for a goal
-// nothing is working on (decision 0068).
 export const goalDriver = createGoalDriver({
   wake: (userId, botId, note) => botChats.fire(userId, botId, note),
   isIdle: (botId) => botRunner.isIdle(botId),
   intervalMs: 30_000,
 });
 
-// Tells a bot how the run it sent a thread ended, at the run's end or, for one whose end was missed,
-// on a minute's tick (decision 0101).
 export const threadWatcher = createThreadWatcher({
   get: (userId, threadId) => botThreads.get(userId, threadId),
   lastError: (threadId) => threadsService.lastError(threadId),

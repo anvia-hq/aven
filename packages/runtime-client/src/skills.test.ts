@@ -55,7 +55,6 @@ test("puts a run's skills in the thread's folder, with the repository's, which w
   ]);
   const dir = await store.dir("t1");
   expect((await readdir(dir)).sort()).toEqual(["lint", "notes"]);
-  // Runnable whatever the archive said.
   expect((await stat(join(dir, "notes/scripts/go.sh"))).mode & 0o111).toBeTruthy();
 });
 

@@ -4,32 +4,25 @@ import type { RuntimeStats } from "./types";
 
 export type MachineMetricKey = "cpu" | "memory" | "disk";
 
-/** One meter of a machine: its name, how full it is (null when the machine cannot say) and what is behind the number. */
 export type MachineMetric = {
   key: MachineMetricKey;
   label: string;
-  /** Three letters, for a row with no room for the name. */
   short: string;
   percent: number | null;
   detail: string;
 };
 
-/** A runner reports every 15 seconds; numbers older than this are a runner that stopped, not a quiet machine. */
 export const STATS_STALE_MS = 60_000;
 
-/** Whether the numbers are too old to show as the machine's load now. */
 export const isStale = (stats: RuntimeStats, now = Date.now()) =>
   now - Date.parse(stats.reportedAt) > STATS_STALE_MS;
 
-/** A meter this full is busy, drawn orange rather than blue. */
 export const METER_BUSY = 60;
 
-/** A meter this full is a warning, drawn in the destructive colour. */
 export const METER_HIGH = 90;
 
 export type MeterLevel = "low" | "busy" | "high";
 
-/** How worried a meter's colour should look: blue, then orange, then red. */
 export function meterLevel(percent: number | null): MeterLevel {
   if (percent === null || percent < METER_BUSY) return "low";
   return percent >= METER_HIGH ? "high" : "busy";
@@ -38,7 +31,6 @@ export function meterLevel(percent: number | null): MeterLevel {
 const share = (used: number, total: number) =>
   total > 0 ? Math.round(Math.min(100, (used / total) * 100)) : null;
 
-// The three things worth watching on a machine that runs agents, in the order the arrows go.
 export function machineMetrics(stats: RuntimeStats): MachineMetric[] {
   return [
     {

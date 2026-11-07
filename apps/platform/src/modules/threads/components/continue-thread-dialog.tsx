@@ -17,9 +17,6 @@ import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useContinueThread } from "../hooks/use-continue-thread";
 import type { Thread } from "../types";
 
-// "Continue on another runner", for the thread's creator (decision 0149): a thread's workspace and
-// sandbox stay on the runner it began on, so this starts a new thread on another one, with this
-// thread's changes and a summary of what was said. Only runners that are online can take it.
 export function ContinueThreadDialog({ thread }: { thread: Thread }) {
   const [open, setOpen] = useState(false);
   const { runtimes } = useRuntimes({ poll: open });

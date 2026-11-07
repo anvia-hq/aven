@@ -11,7 +11,6 @@ import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 import { connectMcpServers, mcpPrefix } from "./mcp-servers";
 import { journalPath } from "./testing/journal-path";
 
-// A real MCP server over HTTP, which writes down what it was sent.
 const seen: { authorization: string | null; note: string }[] = [];
 const handler = createMcpHandler(({ requestInfo }) => {
   const server = new McpServer({ name: "notes", version: "1.0.0" });
@@ -25,7 +24,6 @@ const handler = createMcpHandler(({ requestInfo }) => {
   );
   return server;
 });
-// `fetch` takes an options argument that Bun's own `fetch` calls with its server instead.
 const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
 afterAll(() => http.stop(true));
 
@@ -81,7 +79,6 @@ describe("connectMcpServers", () => {
     const before = seen.length;
     const connected = await connectMcpServers(
       [notes({ allowLocal: false, url: "https://internal.example.com/mcp" })],
-      // The name resolves to the address the test server is on; no request may reach it.
       { resolve: async () => ["127.0.0.1"] },
     );
     open.push(connected);
@@ -89,7 +86,6 @@ describe("connectMcpServers", () => {
     expect(connected.results[0]?.error).toContain("private network");
     expect(seen.length).toBe(before);
 
-    // The person's own switch lets it through, as it does an address on their network.
     const allowed = await connectMcpServers([notes()], { resolve: async () => ["127.0.0.1"] });
     open.push(allowed);
     expect(allowed.tools).toHaveLength(1);

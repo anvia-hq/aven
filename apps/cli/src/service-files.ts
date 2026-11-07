@@ -1,18 +1,13 @@
 export type ServiceDefinition = {
-  /** The service's name: a launchd label or a systemd unit's name. */
   label: string;
-  /** The program and its arguments. */
   command: string[];
-  /** The environment the service starts with; a service manager gives it almost none of its own. */
   env: Record<string, string>;
-  /** Where its output goes. */
   logFile: string;
 };
 
 const xml = (text: string) =>
   text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
-/** A launchd agent that starts at login and is started again when it exits. */
 export function launchdPlist(def: ServiceDefinition) {
   const args = def.command.map((word) => `    <string>${xml(word)}</string>`).join("\n");
   const env = Object.entries(def.env)
@@ -47,11 +42,9 @@ ${env}
 `;
 }
 
-// systemd reads a word in double quotes literally except for \ " and the % specifiers.
 const quote = (text: string) =>
   `"${text.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("%", "%%")}"`;
 
-/** A systemd user unit that starts with the user's session and is restarted when it exits. */
 export function systemdUnit(def: ServiceDefinition) {
   const env = Object.entries(def.env)
     .map(([key, value]) => `Environment=${quote(`${key}=${value}`)}`)

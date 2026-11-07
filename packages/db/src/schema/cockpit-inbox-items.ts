@@ -3,7 +3,6 @@ import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-c
 
 import { users } from "./users";
 
-// A thing the person captured to deal with later, in their cockpit's inbox (decision 0104).
 export const cockpitInboxItems = pgTable(
   "cockpit_inbox_items",
   {

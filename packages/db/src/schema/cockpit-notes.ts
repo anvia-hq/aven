@@ -3,7 +3,6 @@ import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-c
 
 import { users } from "./users";
 
-// A note the person keeps in their cockpit (decision 0104), in markdown.
 export const cockpitNotes = pgTable(
   "cockpit_notes",
   {

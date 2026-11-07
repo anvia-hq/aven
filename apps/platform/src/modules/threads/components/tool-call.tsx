@@ -19,7 +19,6 @@ import { DiffBlock } from "./diff-block";
 
 type Meta = { icon: typeof Eye; running: string; done: string };
 
-// The agent's tools: the sandbox's own (@anvia/sandbox), our edit, web search, images and git_fetch.
 const meta: Record<string, Meta> = {
   read_file: { icon: Eye, running: "Reading", done: "Read" },
   write_file: { icon: Edit, running: "Writing", done: "Wrote" },
@@ -36,7 +35,6 @@ const meta: Record<string, Meta> = {
   list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
   web_search: { icon: Search, running: "Searching", done: "Searched" },
   show_artifact: { icon: ImageIcon, running: "Showing", done: "Showed" },
-  // The tool that showed one image before show_artifact: a thread may still hold its calls.
   show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
   git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
   save_environment: {
@@ -46,7 +44,6 @@ const meta: Record<string, Meta> = {
   },
 };
 
-// The desktop tools are `desktop_<action>`; anything else unknown is shown by its name.
 const fallback = (name: string): Meta => {
   if (!name.startsWith("desktop_")) {
     return { icon: Terminal, running: `Running ${name}`, done: `Ran ${name}` };

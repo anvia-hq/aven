@@ -3,18 +3,13 @@ import { z } from "zod";
 
 export const GIT_FETCH_TOOL_NAME = "git_fetch";
 
-/** What a fetch did: where `origin/<branch>` is now and where it was (null if it was not there). */
 type FetchedBranch = { branch: string; commit: string; previous: string | null };
 
-/** Fetches a branch of the thread's repository into its workspace as `origin/<branch>`. */
 export type FetchRemote = (
   branch: string | undefined,
   abortSignal?: AbortSignal,
 ) => Promise<FetchedBranch>;
 
-// Brings a branch from GitHub into the workspace, for an agent that is not signed in to GitHub
-// because its person has not connected their account (decisions 0042 and 0044). What fetches is the
-// host; this only says what the agent can ask for and what to do with the answer.
 export function createGitFetchTool(fetchRemote: FetchRemote) {
   return createTool({
     name: GIT_FETCH_TOOL_NAME,
@@ -37,7 +32,6 @@ export function createGitFetchTool(fetchRemote: FetchRemote) {
         ref,
         commit: fetched.commit,
         updated,
-        // Said in words so the agent does not have to work out what changed.
         summary: updated
           ? `${ref} is now at ${fetched.commit.slice(0, 7)}${fetched.previous ? ` (was ${fetched.previous.slice(0, 7)})` : ""}.`
           : `${ref} was already up to date at ${fetched.commit.slice(0, 7)}.`,

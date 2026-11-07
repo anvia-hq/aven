@@ -8,9 +8,6 @@ type Answer = { key: string; page?: TrackedPage; problem?: string };
 
 const PATH: Record<TrackedKind, string> = { pull: "pulls", issue: "issues" };
 
-// One page of the project's pull requests or issues on GitHub, open or closed, read again when any
-// of them changes. Until the answer for this very page is in, `loading` is true, never another
-// page's items (decision 0092).
 export function useProjectTracked(
   projectId: string,
   kind: TrackedKind,

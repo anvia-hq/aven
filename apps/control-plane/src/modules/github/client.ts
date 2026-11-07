@@ -4,16 +4,11 @@ import { ConflictError, UnavailableError } from "../../errors";
 
 export type GithubConfig = {
   appId: string;
-  /** PEM. Literal `\n` sequences (as in a one-line .env value) are accepted. */
   privateKey: string;
-  /** The app's URL name, github.com/apps/<slug>. */
   slug: string;
-  /** For checking that the user installing the app may use the installation. */
   clientId: string;
   clientSecret: string;
-  /** GitHub's REST API; only differs for GitHub Enterprise or a test double. */
   apiUrl: string;
-  /** Where GitHub's web side (the OAuth token exchange) lives. */
   webUrl: string;
 };
 
@@ -32,7 +27,6 @@ export class GithubNotConfiguredError extends UnavailableError {
   }
 }
 
-/** The app has not been approved to write for the installation's account, which Ship needs (decision 0044). */
 export class GithubWriteNotGrantedError extends ConflictError {
   constructor(accountLogin: string) {
     super(
@@ -41,7 +35,6 @@ export class GithubWriteNotGrantedError extends ConflictError {
   }
 }
 
-/** The app has not been approved to read issues for the installation's account (decision 0092). */
 export class GithubIssuesNotGrantedError extends ConflictError {
   constructor(accountLogin: string) {
     super(
@@ -50,7 +43,6 @@ export class GithubIssuesNotGrantedError extends ConflictError {
   }
 }
 
-/** The person cannot push to the repository, so they cannot ship to it (decision 0041). */
 export class GithubNoPushAccessError extends ConflictError {
   constructor(fullName: string) {
     super(`You do not have write access to ${fullName} on GitHub`);
@@ -60,7 +52,6 @@ export class GithubNoPushAccessError extends ConflictError {
 class GithubApiError extends UnavailableError {
   constructor(
     message: string,
-    /** The status GitHub answered with. */
     readonly status: number,
   ) {
     super(message);
@@ -90,17 +81,14 @@ export function githubConfigFromEnv(env: Record<string, string | undefined> = pr
   } satisfies GithubConfig;
 }
 
-// A listing is read this many entries at a time, and no further than so many pages.
 const PAGE_SIZE = 100;
 const MAX_PAGES = 5;
-// A token is renewed this long before GitHub would expire it.
 const TOKEN_MARGIN_MS = 5 * 60_000;
 
 export type GithubPullRequest = {
   number: number;
   url: string;
   title: string;
-  /** The head branch. */
   branch: string;
   state: "open" | "closed" | "merged";
 };
@@ -119,10 +107,6 @@ function pullState(pull: PullPayload): GithubPullRequest["state"] {
   return pull.state === "open" ? "open" : "closed";
 }
 
-/**
- * A person's GitHub user access token and when it expires, with the token that renews it and when
- * that expires (milliseconds since the epoch). An app whose user tokens do not expire has neither.
- */
 export type GithubUserGrant = {
   accessToken: string;
   expiresAt: number | null;
@@ -172,55 +156,39 @@ import {
   type ReviewPayload,
 } from "./detail";
 
-/** One entry of a folder of a repository, as the project page lists it (decision 0082). */
 export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
 
-/** A repository's README as text, cut to `README_MAX_CHARS`. */
 export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };
 
 export const README_MAX_CHARS = 200_000;
 
-/** One commit of the repository's default branch, as the project page lists it. */
 export type GithubCommit = {
   sha: string;
-  /** The first line of the message. */
   message: string;
-  /** Who wrote it: the name on the commit, else their GitHub login. */
   author: string | null;
-  /** The author's picture on GitHub, none when the commit is not tied to an account. */
   authorAvatar: string | null;
   date: string;
-  /** The commits it follows, the first being the branch it was made on; what the graph is drawn from (decision 0090). */
   parents: string[];
-  /** The branches whose latest commit it is. */
   refs: string[];
-  /** The tags (releases among them) that name it. */
   tags: string[];
 };
 
-/** One page of commits, and whether GitHub has an older one. */
 export type GithubCommitPage = { commits: GithubCommit[]; hasMore: boolean };
 
-/** What narrows a commit history: who wrote it, when, which file it touches and which branch it is read from. */
 export type GithubCommitFilters = {
   author?: string;
-  /** ISO times; commits from `since` up to `until`. */
   since?: string;
   until?: string;
   path?: string;
-  /** A branch, tag or commit to read the history of; the default branch when not given. */
   branch?: string;
 };
 
 export const COMMITS_PER_PAGE = 10;
 const COMMIT_MESSAGE_MAX = 200;
 
-/** Pull requests and issues of a repository, as the project page lists them (decision 0092). */
 export type GithubTrackedKind = "pull" | "issue";
-// `closed` is every closed one, merged pull requests among them; `merged` only those.
 export type GithubTrackedState = "open" | "closed" | "merged" | "all";
 
-/** What narrows and orders a list of pull requests or issues; each is one of GitHub's search qualifiers. */
 export type GithubTrackedFilters = {
   author?: string;
   reviewRequested?: string;
@@ -228,9 +196,7 @@ export type GithubTrackedFilters = {
   checks?: "success" | "failure" | "pending";
   label?: string;
   draft?: boolean;
-  /** Not changed for this many days. */
   staleDays?: number;
-  /** Words in the title. */
   text?: string;
   sort?: "updated" | "oldest" | "created" | "comments";
 };
@@ -239,20 +205,16 @@ export type GithubTrackedItem = {
   number: number;
   title: string;
   url: string;
-  /** The author's GitHub login, none for a user GitHub no longer has. */
   author: string | null;
-  /** A pull request is `draft` while open as one and `merged` when closed by merging; an issue is open or closed. */
   status: "open" | "draft" | "merged" | "closed";
   comments: number;
   updatedAt: string;
   labels: string[];
 };
 
-/** One page of them, how many there are in all, and whether GitHub has a later page. */
 export type GithubTrackedPage = { items: GithubTrackedItem[]; total: number; hasMore: boolean };
 
 export const TRACKED_PER_PAGE = 10;
-// GitHub's search answers the first thousand matches only.
 const SEARCH_MAX_RESULTS = 1000;
 
 type TrackedPayload = {
@@ -275,8 +237,6 @@ const SORTS = {
   comments: { sort: "comments", order: "desc" },
 } as const;
 
-// The search qualifiers of a filter, each value a single token: a login or a label is quoted, and the
-// words of a search lose what would make them a qualifier of their own (`repo:`, quotes).
 export function trackedQualifiers(filters: GithubTrackedFilters, now = Date.now()) {
   const parts: string[] = [];
   const quoted = (value: string) => `"${value.replaceAll('"', "")}"`;
@@ -316,11 +276,8 @@ type CommitPayload = {
 
 type Branch = { name: string; commit: { sha: string } };
 
-// How many branches are asked for, to say which commits are where one ends: GitHub's page maximum.
 const BRANCHES_LISTED = 100;
 
-// A path inside a repository, put into a GitHub API path one segment at a time: dot-only segments
-// are refused by the callers' schema, so the path cannot climb out of `/contents/`.
 const contentsPath = (path: string) =>
   path === "" ? "" : `/${path.split("/").map(encodeURIComponent).join("/")}`;
 
@@ -331,15 +288,11 @@ const repoPath = (fullName: string) => {
   return `/repos/${owner}/${name}`;
 };
 
-// A repository the token cannot see is not an error to the caller, only absent.
 const nullWhenNotFound = (error: unknown) => {
   if (error instanceof GithubApiError && error.status === 404) return null;
   throw error;
 };
 
-// Talks to GitHub as the app (a signed JWT) or as one installation (a short-lived token). The
-// tokens for listing and cloning are read-only (decision 0013); writing is done as the person, with
-// their own user access token (decision 0041). `fetch` is injectable so tests never hit GitHub.
 export class GithubClient {
   #tokens = new Map<number, { token: string; expiresAt: number }>();
 
@@ -352,7 +305,6 @@ export class GithubClient {
     return this.config !== null;
   }
 
-  /** Replaces the app the client acts as (decision 0074). Installation tokens of the old one are forgotten. */
   configure(config: GithubConfig | null) {
     this.config = config;
     this.#tokens.clear();
@@ -371,7 +323,6 @@ export class GithubClient {
     const { appId, privateKey } = this.#config();
     const now = Math.floor(Date.now() / 1000);
     const head = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-    // Issued a minute in the past to tolerate clock drift; GitHub allows ten minutes at most.
     const body = base64url(JSON.stringify({ iat: now - 60, exp: now + 9 * 60, iss: appId }));
     const signature = createSign("RSA-SHA256").update(`${head}.${body}`).sign(privateKey);
     return `${head}.${body}.${base64url(signature)}`;
@@ -399,8 +350,6 @@ export class GithubClient {
     return response;
   }
 
-  // The entries of a paged listing, page by page until a short one or MAX_PAGES. A caller that
-  // stops early asks for no further page.
   async *#pages<P, T>(path: string, auth: string, entriesOf: (page: P) => T[]) {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const entries = entriesOf(
@@ -411,7 +360,6 @@ export class GithubClient {
     }
   }
 
-  /** The account an installation belongs to; fails when the app is not installed with that id. */
   async installation(installationId: number) {
     const found = await this.#api<{ id: number; account: { login: string } | null }>(
       `/app/installations/${installationId}`,
@@ -420,7 +368,6 @@ export class GithubClient {
     return { installationId: found.id, accountLogin: found.account?.login ?? "unknown" };
   }
 
-  /** A read-only token for the installation's repositories, valid for about an hour. */
   async installationToken(installationId: number) {
     const cached = this.#tokens.get(installationId);
     if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return cached;
@@ -437,20 +384,11 @@ export class GithubClient {
     return entry;
   }
 
-  /** The page where a person lets the app act as their GitHub account; GitHub comes back to the app's Callback URL. */
   authorizeUrl(state: string) {
     const { clientId, webUrl } = this.#config();
     return `${webUrl}/login/oauth/authorize?${new URLSearchParams({ client_id: clientId, state })}`;
   }
 
-  /**
-   * The latest pull requests of `fullName`, open or not, newest first, whose head branch is
-   * `branchPrefix` or starts with it and is in the repository itself, not a fork: what the agent
-   * opened with `gh` for a thread (decisions 0044 and 0069). GitHub cannot filter by a prefix, so
-   * the newest hundred are read and filtered here. Read with a token for that repository that may
-   * only read pull requests, minted for the call; an installation that cannot give one (the
-   * permission is not approved) just has none.
-   */
   async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
     const [, name] = fullName.split("/") as [string, string];
     let token: string;
@@ -493,7 +431,6 @@ export class GithubClient {
       }));
   }
 
-  /** Whether the installation has been approved to write contents and pull requests. */
   async canWrite(installationId: number) {
     const found = await this.#api<{ permissions?: Record<string, string> }>(
       `/app/installations/${installationId}`,
@@ -502,7 +439,6 @@ export class GithubClient {
     return found.permissions?.contents === "write" && found.permissions?.pull_requests === "write";
   }
 
-  /** Whether the person's token may push to the repository; false when it cannot even see it. */
   async canPush(userToken: string, fullName: string) {
     const found = await this.#api<{ permissions?: { push?: boolean } }>(
       repoPath(fullName),
@@ -523,24 +459,18 @@ export class GithubClient {
     return repos;
   }
 
-  /** One repository, if the installation can see it. */
   async repo(installationId: number, fullName: string) {
     const { token } = await this.installationToken(installationId);
     const payload = await this.#api<RepoPayload>(repoPath(fullName), token).catch(nullWhenNotFound);
     return payload ? toRepo(payload) : null;
   }
 
-  /**
-   * The entries of a folder of the repository's default branch, folders first, or null when the
-   * installation cannot see the repository or the path is not a folder there (decision 0082).
-   */
   async folder(installationId: number, fullName: string, path: string) {
     const { token } = await this.installationToken(installationId);
     const listed = await this.#api<{ name: string; path: string; type: string }[] | object>(
       `${repoPath(fullName)}/contents${contentsPath(path)}`,
       token,
     ).catch(nullWhenNotFound);
-    // A file answers with one object, not a list.
     if (!Array.isArray(listed)) return null;
     const entries = listed.map(({ name, path: entryPath, type }): GithubTreeEntry => ({
       name,
@@ -554,7 +484,6 @@ export class GithubClient {
     );
   }
 
-  /** The README of the repository's default branch as text, or null when it has none or cannot be seen. */
   async readme(installationId: number, fullName: string): Promise<GithubReadme | null> {
     const { token } = await this.installationToken(installationId);
     const found = await this.#api<{
@@ -563,7 +492,6 @@ export class GithubClient {
       content?: string;
       encoding?: string;
     }>(`${repoPath(fullName)}/readme`, token).catch(nullWhenNotFound);
-    // A file past what GitHub inlines comes with no content.
     if (!found?.content || found.encoding !== "base64") return null;
     const text = Buffer.from(found.content, "base64").toString("utf8");
     return {
@@ -574,12 +502,6 @@ export class GithubClient {
     };
   }
 
-  /**
-   * One page of the default branch's commits, newest first, or null when the installation cannot
-   * see the repository. A repository with no commit yet has an empty page. Whether there is an
-   * older page is GitHub's own word, its `next` link, so a last page that is exactly full does not
-   * offer an empty one.
-   */
   async commits(
     installationId: number,
     fullName: string,
@@ -595,14 +517,12 @@ export class GithubClient {
     if (filters.path) query.set("path", filters.path);
     if (filters.branch) query.set("sha", filters.branch);
     const path = `${repoPath(fullName)}/commits?${query}`;
-    // Asked together; the branch names only decorate the page, so they are not worth failing it for.
     const heads = this.#branchHeads(token, fullName, defaultBranch);
     const tags = this.#tagHeads(token, fullName);
     let response: Response;
     try {
       response = await this.#get(path, token);
     } catch (error) {
-      // GitHub answers 409 for a repository that has no commit.
       if (error instanceof GithubApiError && error.status === 409) {
         return { commits: [], hasMore: false };
       }
@@ -625,13 +545,6 @@ export class GithubClient {
     };
   }
 
-  /**
-   * One page of a repository's pull requests or issues, the latest changed first, or null when the
-   * installation cannot see the repository. It is GitHub's search, so the page and the total are
-   * exact for pull requests and issues apart (the listing endpoint mixes them). Issues need the
-   * app's `issues` permission, which an app made before decision 0092 lacks, and search answers
-   * nothing, not an error, without it: so the installation's permissions are asked first.
-   */
   async tracked(
     installationId: number,
     fullName: string,
@@ -640,12 +553,10 @@ export class GithubClient {
     page: number,
     filters: GithubTrackedFilters = {},
   ): Promise<GithubTrackedPage | null> {
-    // Refused before a token is asked for when issues are not allowed.
     if (kind === "issue") await this.#requireIssues(installationId);
     const { token } = await this.installationToken(installationId);
     const qualifiers = [`repo:${fullName}`, `is:${kind === "pull" ? "pr" : "issue"}`];
     if (state !== "all") qualifiers.push(`is:${state}`);
-    // Review, checks and draft are pull request things.
     const applicable =
       kind === "pull"
         ? filters
@@ -661,7 +572,6 @@ export class GithubClient {
     try {
       found = await this.#api(`/search/issues?${query}`, token);
     } catch (error) {
-      // Search answers 422 for a repository the token cannot see, or for a page past the thousandth match.
       if (error instanceof GithubApiError && error.status === 422) {
         return page > 1 ? { items: [], total: 0, hasMore: false } : null;
       }
@@ -683,11 +593,6 @@ export class GithubClient {
     };
   }
 
-  /**
-   * A pull request opened: what it says, how it is reviewed and checked, and the files it changes
-   * (`FILES_LISTED` at most). Null when the installation cannot see it. Checks need the app's
-   * `checks` permission; an app without it has the pull request with no checks.
-   */
   async pull(
     installationId: number,
     fullName: string,
@@ -756,7 +661,6 @@ export class GithubClient {
     }
   }
 
-  /** A commit opened: its whole message and the files it changes; null when it cannot be seen. */
   async commit(
     installationId: number,
     fullName: string,
@@ -789,12 +693,6 @@ export class GithubClient {
     }
   }
 
-  /**
-   * The repository's branches, the default one first and then the most recently active, each with
-   * how far it is from the default branch, its last commit and its open pull request. Null when the
-   * installation cannot see the repository. Only `BRANCHES_SUMMARIZED` are looked at, and the answer
-   * says when there were more.
-   */
   async branches(
     installationId: number,
     fullName: string,
@@ -848,7 +746,6 @@ export class GithubClient {
         pull: pullOf.get(branch.name) ?? null,
       } satisfies GithubBranchSummary;
     });
-    // The default branch stays first; the others go by what they did last.
     const [first, ...others] = summaries;
     const rest = first?.isDefault ? others : summaries;
     rest.sort((a, b) => (b.lastCommit?.date ?? "").localeCompare(a.lastCommit?.date ?? ""));
@@ -868,8 +765,6 @@ export class GithubClient {
     }
   }
 
-  // The tags by the commit each names, like the branches: they only decorate a page, so a repository
-  // whose tags cannot be had shows none. The first hundred are asked for, GitHub's page maximum.
   async #tagHeads(token: string, fullName: string) {
     const listed = await this.#api<{ name: string; commit: { sha: string } }[]>(
       `${repoPath(fullName)}/tags?per_page=${BRANCHES_LISTED}`,
@@ -884,9 +779,6 @@ export class GithubClient {
     return heads;
   }
 
-  // The branches by the commit each ends on, with the branches that end on the same one in a list.
-  // GitHub lists them by name and a repository may have more than a page of them, so the default
-  // branch, which the page must show, is asked for by itself too.
   async #branchHeads(token: string, fullName: string, defaultBranch: string) {
     const [listed, main] = await Promise.all([
       this.#api<Branch[]>(
@@ -909,8 +801,6 @@ export class GithubClient {
     return heads;
   }
 
-  // Whether GitHub lists `installationId` among the installations the person's token can use: they
-  // authorised the app during installation, so it is theirs to connect.
   async userCanUse(userToken: string, installationId: number) {
     const installations = this.#pages(
       "/user/installations",
@@ -921,12 +811,10 @@ export class GithubClient {
     return false;
   }
 
-  /** The person's token for an OAuth `code`, or null when GitHub does not grant one. */
   exchangeCode(code: string) {
     return this.#grant({ code });
   }
 
-  /** A new token for a refresh token; null when GitHub refuses it (expired, used or revoked). */
   refreshGrant(refreshToken: string) {
     return this.#grant({ grant_type: "refresh_token", refresh_token: refreshToken });
   }
@@ -939,8 +827,6 @@ export class GithubClient {
     return { id: user.id, login: user.login, name: user.name };
   }
 
-  // GitHub answers a refused code or refresh token with a 200 (or a 4xx) and an `error`, so a grant
-  // is what has an access token in it.
   async #grant(params: Record<string, string>): Promise<GithubUserGrant | null> {
     const { clientId, clientSecret, webUrl } = this.#config();
     const exchange = await this.fetchImpl(`${webUrl}/login/oauth/access_token`, {
@@ -950,7 +836,6 @@ export class GithubClient {
     }).catch(() => {
       throw new UnavailableError("Could not reach GitHub");
     });
-    // A GitHub that is down has not refused anything: the caller must not take it for a refusal.
     if (exchange.status >= 500) {
       throw new GithubApiError(
         `GitHub answered ${exchange.status} for POST /login/oauth/access_token`,

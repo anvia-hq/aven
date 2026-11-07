@@ -22,7 +22,6 @@ describe("a runner asked to update (decision 0146)", () => {
     expect(updateEnd(asked, online("0.5.7"), 2_000)).toBe("done");
     expect(updateEnd(asked, online("0.5.6"), 2_000)).toBeNull();
     expect(updateEnd(asked, online("0.5.6"), 1_001 + UPDATE_WAIT_MS)).toBe("failed");
-    // Still offline after the wait: not said to have failed, there is no release to compare.
     expect(updateEnd(asked, { online: false, build: null }, 1_001 + UPDATE_WAIT_MS)).toBeNull();
     expect(updateEnd(undefined, online("0.5.6"), 2_000)).toBeNull();
   });

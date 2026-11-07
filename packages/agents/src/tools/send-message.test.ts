@@ -6,7 +6,6 @@ import {
   type SendMessageInput,
 } from "./send-message";
 
-// What the model sends may leave `to` out, which the tool's parsing fills in.
 const input = (message: { to?: string; text: string }) => message as SendMessageInput;
 
 describe("send_message", () => {

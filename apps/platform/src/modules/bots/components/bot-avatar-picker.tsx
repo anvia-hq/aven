@@ -17,25 +17,18 @@ import {
 import { BotAvatar } from "./bot-avatar";
 
 const VARIANTS = 15;
-// The avatars in the picker stand still: about thirty bobbing at once is a distraction and a cost.
 const CHOICE = "size-11 rounded-full p-0.5 [&_.bot-body]:animate-none";
 
 const newSeeds = () => Array.from({ length: VARIANTS }, randomSeed);
 
 type PickerProps = {
   botId: string;
-  /** The bot's avatar as it is kept; empty is the character its id draws. */
   value: string;
   onChange(avatar: string): void;
 };
 
-// Where the person changes how the bot looks (decision 0062), from the avatar itself: Bot picks one
-// of the shapes and one of the colors, Generate shows random characters to choose from and can
-// draw more, and Reset goes back to the character the bot's id draws. The choices show how each
-// would look on the bot as it is now.
 export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
   const [seeds, setSeeds] = useState(newSeeds);
-  // What the person chose, as far as it is a setting: a text from before characters is not one.
   const setting = parseAvatarSetting(value) ?? {};
   const current = avatarFor(botId, setting);
   const choose = (change: AvatarSetting) =>

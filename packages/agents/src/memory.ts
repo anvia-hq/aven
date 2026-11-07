@@ -6,14 +6,8 @@ const FOLDER_FOR: Record<MemoryScope, string> = {
   bot: "yours as this bot",
 };
 
-// A name or description is the agent's own words, in the instructions: kept from closing the tag.
 const plain = (text: string) => text.replace(/[<>]/g, "");
 
-/**
- * What the agent is told of its memory (decision 0102): what it is for, what to keep and what not,
- * that a note is information and not the person's word, and the index of its notes. Empty for a run
- * without memory.
- */
 export function memoryInstructions(memory: RunMemory | undefined) {
   if (!memory) return "";
   const lines = [

@@ -9,9 +9,6 @@ function headline(tool: ToolPart, count: number) {
   return `You answered ${count === 1 ? "a question" : `${count} questions`}`;
 }
 
-// The agent's question in the conversation: what it asked, and what was answered or that it waits.
-// Answering happens in the composer's place (`QuestionForm`), not here, and while it waits the form
-// has the question, so nothing is drawn twice.
 export function QuestionBlock({ tool }: { tool: ToolPart }) {
   const answers = new Map(questionAnswers(tool).map((answer) => [answer.questionId, answer.value]));
   const prompts = tool.questions ?? [];

@@ -12,9 +12,6 @@ import {
 import { bots } from "./bots";
 import { users } from "./users";
 
-// A long task a bot works on in rounds, with no one watching (decision 0068): after each reply the
-// control plane wakes the bot again with a note, until it says it is done, it is blocked, or the
-// rounds run out. A bot has one goal; starting another replaces a finished one.
 export const botGoals = pgTable(
   "bot_goals",
   {
@@ -25,11 +22,8 @@ export const botGoals = pgTable(
     botId: uuid("bot_id")
       .notNull()
       .references(() => bots.id, { onDelete: "cascade" }),
-    /** The outcome, with all a later round needs: each round starts from the bot's notes and files. */
     objective: text("objective").notNull(),
-    /** Shell commands the bot's computer runs when it says it is done; they must all pass. */
     checks: jsonb("checks").$type<string[]>().notNull(),
-    /** `active`, `paused`, `blocked`, `complete` or `cleared`. */
     phase: text("phase").notNull(),
     blockedReason: text("blocked_reason"),
     roundsStarted: integer("rounds_started").notNull().default(0),

@@ -9,9 +9,7 @@ import { useProjects } from "./use-projects";
 type StageInput = {
   failure: string | null;
   configured: boolean | undefined;
-  /** Undefined until the installations have loaded. */
   installationCount: number | undefined;
-  /** Undefined until the runners have loaded. */
   runnerCount: number | undefined;
 };
 
@@ -23,8 +21,6 @@ function stageOf({ failure, configured, installationCount, runnerCount }: StageI
   return { kind: "ready" };
 }
 
-// The import dialog's state: whether it is open, what is picked, what GitHub and the runners
-// offer, and the submit that imports the repository.
 export function useImportRepository(onImported?: (project: Project) => void) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -48,13 +44,11 @@ export function useImportRepository(onImported?: (project: Project) => void) {
     installationCount: installationList?.data?.length,
     runnerCount: loaded ? runtimes.length : undefined,
   });
-  // Until one is picked, offer the default runner.
   const chosenRunner = runtimeId || (defaultRunner?.id ?? "");
   const canSubmit = Boolean(installationId && repository && chosenRunner);
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
-    // A runner may have been added or have come online since the list was last loaded.
     if (next) void refreshRuntimes();
     if (!next) {
       setInstallation("");
@@ -79,7 +73,6 @@ export function useImportRepository(onImported?: (project: Project) => void) {
     }
   }
 
-  // Another account has other repositories.
   function chooseInstallation(next: string) {
     setInstallation(next);
     setRepository("");

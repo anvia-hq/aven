@@ -26,7 +26,6 @@ describe("newSecrets", () => {
     expect(Buffer.from(s.PROVIDER_ENCRYPTION_KEY, "base64")).toHaveLength(32);
     expect(Buffer.from(s.BETTER_AUTH_SECRET, "base64")).toHaveLength(32);
     expect(s.AVEN_LOCAL_RUNNER_TOKEN).toMatch(/^avrt_[0-9a-f]{48}$/);
-    // The identity key is one line, and with its \n turned back into line breaks a usable key.
     expect(s.WORKLOAD_IDENTITY_PRIVATE_KEY).not.toContain("\n");
     const key = createPrivateKey(s.WORKLOAD_IDENTITY_PRIVATE_KEY.replaceAll("\\n", "\n"));
     expect(key.asymmetricKeyDetails?.namedCurve).toBe("prime256v1");
@@ -90,7 +89,6 @@ describe("the address the web port is published on", () => {
   });
 
   test("an install from before the setting keeps behaving as it did: every address", () => {
-    // The template says loopback, for a new install; an old one must not be moved by an update.
     const updated = addMissingKeys("AVEN_PORT=3000\n", template);
     expect(parseEnv(updated).AVEN_BIND).toBe("");
     expect(parseEnv(updated).AVEN_PORT).toBe("3000");
@@ -111,6 +109,5 @@ test("a new server env says whether sign-ups start closed", () => {
     parseEnv(newServerEnv(template, { ...base, registration: "closed" })).AVEN_REGISTRATION,
   ).toBe("closed");
   expect(parseEnv(newServerEnv(template, base)).AVEN_REGISTRATION).toBe("open");
-  // An install from before the setting is open, and the template's value says so.
   expect(parseEnv(addMissingKeys("A=1\n", template)).AVEN_REGISTRATION).toBe("open");
 });

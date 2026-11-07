@@ -110,7 +110,6 @@ function NoteForm({
   );
 }
 
-// The button that adds a note, and the form it opens.
 export function AddNoteDialog({ folders }: { folders: FolderChoice[] }) {
   const [open, setOpen] = useState(false);
   return (
@@ -125,7 +124,6 @@ export function AddNoteDialog({ folders }: { folders: FolderChoice[] }) {
   );
 }
 
-// The same form for a note that is there already, opened from its row.
 export function EditNoteDialog({
   note,
   open,

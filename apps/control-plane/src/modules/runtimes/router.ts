@@ -28,20 +28,15 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
             return {
               ...runtime,
               online: hub.isOnline(runtime.id),
-              // The release the runner says it is, and whether it is behind this server's.
               build,
               outdated: isBehind(build ?? undefined, server),
-              // The release its Update button would take it to: the server's, or for the control
-              // plane's own runner a newer one on GitHub.
               isControlPlane: runtime.id === LOCAL_RUNTIME_ID,
               updateTo: await updateTarget(
                 { build: build ?? undefined, isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
                 server,
                 latest,
               ),
-              // An installed `aven` that can update itself when asked (decision 0146).
               canUpdate: hub.canUpdateOf(runtime.id),
-              // How loaded its machine was when it last said; null while offline or if it never does.
               stats: hub.statsOf(runtime.id) ?? null,
             };
           }),
@@ -49,20 +44,16 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       },
       { auth: true, org: true },
     )
-    // The response carries the connection token. It is shown once and cannot be read again.
     .post(
       "/",
       ({ body, organizationId, user }) => runtimesService.create(organizationId, user.id, body),
       { auth: true, org: true, body: createRuntimeBody },
     )
-    // Where a run's model calls go; authenticated by the run's own token, not a session.
     .all(
       "/gateway/:segment/*",
       ({ request, params }) => runGateway.forward(request, params.segment, params["*"]),
       { parse: "none" },
     )
-    // Owner only. The old token stops working immediately and the runtime is cut off; the
-    // response carries the new one once.
     .post(
       "/:id/rotate",
       async ({ params, organizationId, user }) => {
@@ -75,8 +66,6 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       },
       { auth: true, org: true, params: runtimeParams },
     )
-    // An owner or an admin has the runner update itself to this server's release (decision 0146).
-    // Answered when the runner has agreed, before it starts: the update restarts it.
     .post(
       "/:id/update",
       async ({ params, body, organizationId, user, set }) => {

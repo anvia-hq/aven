@@ -3,8 +3,6 @@ import type { DiffFile, DiffHunk, DiffRow, SplitRow } from "./types";
 const FILE_HEADER = /^diff --git a\/(.*) b\/(.*)$/;
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
-// What `git diff` prints, as files with their hunks. A hunk's header says how many lines it has,
-// so a deleted line that reads `-- x` is not mistaken for the start of the next file.
 export function parsePatch(patch: string): DiffFile[] {
   const files: DiffFile[] = [];
   let file: DiffFile | undefined;
@@ -31,7 +29,6 @@ export function parsePatch(patch: string): DiffFile[] {
         if (file && row.kind === "del") file.deletions++;
         continue;
       }
-      // "\ No newline at end of file" belongs to the line before it.
       if (line.startsWith("\\")) continue;
     }
 
@@ -82,13 +79,10 @@ function rowOf(line: string, oldNo: number, newNo: number): DiffRow | null {
     case " ":
       return { kind: "ctx", oldNo, newNo, text };
     default:
-      // An empty line inside a hunk is a context line whose space an editor stripped.
       return line === "" ? { kind: "ctx", oldNo, newNo, text: "" } : null;
   }
 }
 
-// Pairs a run of deleted lines with the added lines that follow it, so a changed line sits beside
-// what it replaced; whatever has no partner stands alone.
 export function splitRows(rows: DiffRow[]): SplitRow[] {
   const split: SplitRow[] = [];
   let removed: DiffRow[] = [];
@@ -102,7 +96,6 @@ export function splitRows(rows: DiffRow[]): SplitRow[] {
   };
   for (const row of rows) {
     if (row.kind === "del") {
-      // Deletions after additions start a new block.
       if (added.length > 0) flush();
       removed.push(row);
     } else if (row.kind === "add") added.push(row);

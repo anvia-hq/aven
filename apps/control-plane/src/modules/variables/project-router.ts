@@ -11,7 +11,6 @@ const inProject = (organizationId: string, projectId: string, actorId: string): 
   actorId,
 });
 
-// A project's variables (decision 0046), on its page.
 export const projectVariablesRouter = new Elysia({ prefix: "/projects/:id/variables" })
   .use(authRouter)
   .get(

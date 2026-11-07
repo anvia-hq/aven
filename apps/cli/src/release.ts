@@ -3,11 +3,9 @@ import { dirname, join } from "node:path";
 
 import { exec } from "./compose";
 
-/** Where releases live. `AVEN_RELEASES_URL` points a fork, or a test, somewhere else. */
 const releasesUrl = () =>
   (process.env.AVEN_RELEASES_URL ?? "https://github.com/anvia-hq/aven/releases").replace(/\/$/, "");
 
-/** The name the release gives this machine's build: darwin-arm64, darwin-amd64, linux-amd64 or linux-arm64. */
 export function platformName(os: string = process.platform, arch: string = process.arch) {
   const names: Record<string, string> = { x64: "amd64", arm64: "arm64" };
   if ((os !== "darwin" && os !== "linux") || !names[arch])
@@ -21,10 +19,6 @@ export const assetName = (version: string, platform: string) =>
 const downloadUrl = (version: string, file: string) =>
   `${releasesUrl()}/download/v${version}/${file}`;
 
-/**
- * The newest release that is not a prerelease. GitHub answers `/releases/latest` with a redirect to
- * the tag's page; reading that avoids the API and its rate limit for people who are not signed in.
- */
 export async function latestVersion(fetchFn: typeof fetch = fetch) {
   const response = await fetchFn(`${releasesUrl()}/latest`, { redirect: "manual" });
   const tag = /\/tag\/v?([^/?#]+)$/.exec(response.headers.get("location") ?? "")?.[1];
@@ -32,7 +26,6 @@ export async function latestVersion(fetchFn: typeof fetch = fetch) {
   return tag;
 }
 
-/** The hash of each file in a `sha256sum` listing. */
 export function parseChecksums(text: string) {
   const hashes: Record<string, string> = {};
   for (const line of text.split("\n")) {
@@ -44,7 +37,6 @@ export function parseChecksums(text: string) {
 
 const sha256 = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
-/** Downloads this machine's build of a release and checks it against the release's checksums. */
 export async function downloadVerified(
   version: string,
   platform: string,
@@ -67,7 +59,6 @@ export async function downloadVerified(
   return archive;
 }
 
-/** Replaces the program at `target` with the `aven` inside a release archive. The new file is made beside it, so the swap is one rename and a running copy is not disturbed. */
 export async function installBinary(archive: Uint8Array, target: string) {
   let work: string | undefined;
   try {

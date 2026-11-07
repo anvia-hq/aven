@@ -2,7 +2,6 @@ import type { ProviderRow } from "@aven/db/schema/providers";
 
 import { decryptOrUnavailable } from "../../crypto";
 
-// A key that cannot be decrypted is an unavailable provider: the owner enters the key again.
 export function readKey(row: ProviderRow) {
   if (!row.apiKeyEncrypted) return undefined;
   return decryptOrUnavailable(row.apiKeyEncrypted, {

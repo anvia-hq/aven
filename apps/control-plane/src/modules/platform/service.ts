@@ -6,7 +6,6 @@ import { and, asc, eq, gt, sql } from "drizzle-orm";
 
 const REGISTRATION_KEY = "registration_enabled";
 
-// Platform owners are listed in PLATFORM_OWNER_EMAILS (comma separated).
 function ownerEmails() {
   return (process.env.PLATFORM_OWNER_EMAILS ?? "")
     .split(",")
@@ -16,9 +15,6 @@ function ownerEmails() {
 
 const isListedOwner = (email: string) => ownerEmails().includes(email.toLowerCase());
 
-// The first account made on an installation is its platform owner, with nothing to configure. It is
-// read from the accounts, not stored, so an installation that already has people needs no backfill
-// and two sign-ups at once cannot both claim it (decision 0077).
 async function firstUserId() {
   const [first] = await db
     .select({ id: users.id })
@@ -28,21 +24,15 @@ async function firstUserId() {
   return first?.id;
 }
 
-/**
- * Whether registration is open when no owner has chosen: `AVEN_REGISTRATION=closed` starts it
- * closed (an install that others can reach is made so, decision 0079), anything else open.
- */
 export function registrationDefault(env: Record<string, string | undefined> = process.env) {
   return env.AVEN_REGISTRATION?.trim().toLowerCase() !== "closed";
 }
 
 export const platformService = {
-  /** The first account, or anyone listed in PLATFORM_OWNER_EMAILS. */
   async isOwner(person: { id: string; email: string }) {
     return isListedOwner(person.email) || (await firstUserId()) === person.id;
   },
 
-  // An owner's choice wins; until they make one, the install's own (`registrationDefault`).
   async isRegistrationEnabled() {
     const [row] = await db
       .select({ value: platformSettings.value })
@@ -59,7 +49,6 @@ export const platformService = {
       .onConflictDoUpdate({ target: platformSettings.key, set: { value } });
   },
 
-  // Closed registration still admits owners and people holding a pending, unexpired invitation.
   async canRegister(email: string) {
     if (isListedOwner(email) || (await this.isRegistrationEnabled())) return true;
     const [invitation] = await db

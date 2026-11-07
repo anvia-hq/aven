@@ -127,12 +127,10 @@ run("a thread's forks (postgres)", async () => {
     const second = await forks.start(main, input);
     const ofParent = (id: string) => ({ id, organizationId: orgA, parentThreadId: main.id });
 
-    // Idle, with another fork still going: nothing yet.
     running = new Set([second.id]);
     await forks.ended(ofParent(first.id), { outcome: "done" });
     expect(told).toEqual([]);
 
-    // Idle, and the last one ends: one note naming every fork.
     running = new Set();
     await forks.ended(ofParent(second.id), { outcome: "done" });
     expect(told).toHaveLength(1);
@@ -140,7 +138,6 @@ run("a thread's forks (postgres)", async () => {
     expect(told[0]?.prompt).toContain(first.id);
     expect(told[0]?.prompt).toContain(second.id);
 
-    // Working: told of that fork at its next step, whatever the others do.
     told.length = 0;
     running = new Set([main.id, first.id]);
     await forks.ended(ofParent(second.id), { outcome: "done" });

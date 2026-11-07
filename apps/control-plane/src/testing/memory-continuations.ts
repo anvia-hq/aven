@@ -1,6 +1,5 @@
 import type { ContinuationStore, FailureStore } from "../modules/runs/service";
 
-// Where a suspended run's continuation waits, without a database.
 export function memoryContinuations() {
   const saved = new Map<string, unknown>();
   const store: ContinuationStore = {
@@ -10,7 +9,6 @@ export function memoryContinuations() {
   return { store, saved };
 }
 
-// The failures of runs in memory, as the threads table keeps them (decision 0100).
 export function memoryFailures() {
   const saved = new Map<string, string>();
   const store: FailureStore = {

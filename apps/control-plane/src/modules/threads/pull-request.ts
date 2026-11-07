@@ -18,11 +18,6 @@ type Deps = {
   save: (threadId: string, pullRequests: ThreadPullRequest[]) => Promise<void>;
 };
 
-// The agent opens a thread's pull requests itself, with `gh` (decision 0044), so Aven learns of
-// them by asking GitHub for the pull requests whose head is the thread's branch or one that starts
-// with it (decision 0069), once a run has ended. It asks after every run, since a thread can ship
-// again, and since a pull request's state changes (merged, closed). A failure is the caller's to
-// log: it must not matter to the run that just ended.
 export function createPullRequestSync(deps: Deps) {
   return async (thread: { id: string; organizationId: string }) => {
     const row = await deps.thread(thread.organizationId, thread.id);
@@ -39,7 +34,6 @@ export function createPullRequestSync(deps: Deps) {
   };
 }
 
-/** The sync with Aven's own services. */
 export const syncPullRequest = createPullRequestSync({
   thread: (organizationId, id) => threadsService.get(organizationId, id),
   project: (organizationId, projectId) => projectsService.get(organizationId, projectId),

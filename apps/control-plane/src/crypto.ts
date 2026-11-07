@@ -2,10 +2,6 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 import { UnavailableError } from "./errors";
 
-// Secrets kept in the database: providers' keys, GitHub tokens, environment variables. All are
-// encrypted with PROVIDER_ENCRYPTION_KEY, named for the first of them.
-
-// AES-256-GCM. The stored form is `iv.tag.ciphertext`, each part base64.
 function key() {
   const raw = process.env.PROVIDER_ENCRYPTION_KEY;
   const bytes = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
@@ -30,11 +26,6 @@ export function decryptSecret(stored: string) {
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
 }
 
-/**
- * Decrypts a secret the person entered. One that cannot be decrypted (a rotated
- * PROVIDER_ENCRYPTION_KEY, a damaged row) is unavailable, not a server bug: the reason is logged
- * after `logged`, and the client is told `message`, which says to enter it again.
- */
 export function decryptOrUnavailable(stored: string, failure: { logged: string; message: string }) {
   try {
     return decryptSecret(stored);

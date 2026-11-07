@@ -12,8 +12,6 @@ import {
 import { useShareThread } from "../hooks/use-share-thread";
 import type { Thread, ThreadVisibility } from "../types";
 
-// In the header of a thread the person made: who can see it. Shared with the workspace, every
-// member can read the conversation, its files and its changes, and nothing more (decision 0084).
 export function ThreadShare({ thread }: { thread: Thread }) {
   const share = useShareThread();
   const shared = thread.visibility === "workspace";

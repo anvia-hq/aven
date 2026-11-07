@@ -5,9 +5,6 @@ import { toast } from "@/components/toast";
 import { isReservedName, type Variable, type VariableScope } from "../types";
 import { useVariables } from "./use-variables";
 
-// The state behind the variable dialog: whether the value is a secret, and submitting, which adds
-// a variable or, given one, replaces its value. Text fields are uncontrolled; they are read from
-// the form when needed.
 export function useVariableForm(
   scope: VariableScope,
   variable: Variable | undefined,

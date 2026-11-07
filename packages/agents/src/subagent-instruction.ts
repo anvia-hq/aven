@@ -42,6 +42,5 @@ const GENERAL = `<workflow>
 Your last message is all the sender gets. Make it stand on its own: what you did and what you found, the files you changed (with paths), how you checked it, and anything you could not verify or that needs a decision. No narration of your steps.
 </output>`;
 
-/** What a subagent of this type is told: its own role, the safety rules, and how to report. */
 export const subagentInstructions = (type: SubagentType) =>
   `${COMMON}\n\n${type === "explore" ? EXPLORE : GENERAL}`;

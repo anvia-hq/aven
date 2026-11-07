@@ -52,7 +52,6 @@ const store: MemoryStore = {
   clear: async () => undefined,
 };
 
-// A connection that remembers what it was asked and lets a test play the runner.
 function fakeRunner(
   options: {
     online?: boolean;
@@ -217,15 +216,12 @@ const input = (say: (text: string) => void, signal = new AbortController().signa
   model: { provider: "openai" as const },
   prompt: "ahoy",
   hops: 0,
-  // What a test answers is the person's own word unless it says otherwise.
   onPersonsWord: true,
   say,
   ask: () => undefined,
   signal,
 });
 
-// What the runner says of a prompt that reaches a bot: the person's own, or the main bot's passing
-// it on, is the person's word; a note, or another bot's message, is not.
 const personsWord = (prompt: string) =>
   !prompt.startsWith("[note]") &&
   !(prompt.startsWith("[from ") && !prompt.startsWith("[from main]"));
@@ -298,7 +294,6 @@ describe("RemoteBotReplier", () => {
       prompt: "ahoy",
       model: runModel,
     });
-    // The grant lasts as long as the reply.
     expect(run.grants.revoked).toEqual([]);
     run.only().end();
     await answering;
@@ -365,7 +360,6 @@ describe("RemoteBotReplier", () => {
       expect(await run.only().skill({ replyId: "r", digest: notes.digest })).toEqual({
         data: archive.toBase64(),
       });
-      // Another person's skill, or any digest the runner makes up, is not given out.
       await expect(run.only().skill({ replyId: "r", digest: other })).rejects.toThrow(
         "no such skill",
       );
@@ -499,7 +493,6 @@ describe("RemoteBotReplier", () => {
       const answering = run.replier.answer(input(() => undefined));
       await Bun.sleep(0);
 
-      // A hello that never ends does not hold up the main bot's tool call.
       expect(await run.only().create(wanted)).toEqual({ id: "b2", name: "Scout", handle: "scout" });
       expect(greeted).toEqual([{ userId: "u1", botId: "b2" }]);
       run.only().end();
@@ -1007,7 +1000,6 @@ describe("RemoteBotReplier", () => {
     const change = { replyId: "x", op: "update", id: given.id, enabled: false } as const;
     const remove = { replyId: "x", op: "remove", id: given.id } as const;
 
-    // A person's servers that says what was asked of it.
     const keeper = (calls: string[]): Partial<BotMcp> => ({
       forRun: async (userId) => (calls.push(`forRun ${userId}`), [given]),
       list: async () => (calls.push("list"), [view]),
@@ -1120,7 +1112,6 @@ describe("RemoteBotReplier", () => {
     const change = { replyId: "x", op: "update", id, modelId: "gpt-5-mini" } as const;
     const remove = { replyId: "x", op: "remove", id } as const;
 
-    // The person's providers, saying what was asked of them.
     const keeper = (calls: string[]): Partial<BotProviders> => ({
       list: async () => (calls.push("list"), [view]),
       add: async (userId, input) => (calls.push(`add ${userId} ${input.name}`), view),
@@ -1248,7 +1239,6 @@ describe("RemoteBotReplier", () => {
     const archive = { replyId: "x", op: "archive", id } as const;
     const stop = { replyId: "x", op: "stop", id } as const;
 
-    // The person's threads, saying what was asked of them and on whose word.
     const keeper = (calls: string[]): Partial<BotThreads> => ({
       projects: async () => [
         { id: projectId, name: "app", repository: "acme/app", defaultBranch: "main" },
@@ -1325,7 +1315,6 @@ describe("RemoteBotReplier", () => {
         for (const call of [start, archive]) {
           await expect(sink.thread(call)).rejects.toThrow("only when the person asks you to");
         }
-        // A note that is about no thread, as a schedule's, follows none up; nor does another bot.
         for (const call of [next, stop]) {
           await expect(sink.thread(call)).rejects.toThrow(
             prompt.startsWith("[note]")
@@ -1350,12 +1339,10 @@ describe("RemoteBotReplier", () => {
       });
       await Bun.sleep(0);
       const sink = run.only();
-      // Before looking, nothing.
       await expect(sink.thread(stop)).rejects.toThrow("get_thread first");
       await sink.thread({ replyId: "x", op: "get", id });
       expect(await sink.thread(next)).toEqual(thread);
       expect(await sink.thread(stop)).toEqual(thread);
-      // Another thread, even one it looked at, is not the note's.
       const other = "77777777-7777-4777-8777-777777777777";
       await sink.thread({ replyId: "x", op: "get", id: other });
       await expect(sink.thread({ ...stop, id: other })).rejects.toThrow(
@@ -1419,7 +1406,6 @@ describe("RemoteBotReplier", () => {
     };
     const start = { replyId: "x", op: "start", objective: "Port the parser", checks: ["bun test"] };
 
-    // A keeper that says what was asked of the goal, for the bot the reply is for.
     const keeper = (calls: string[]): Partial<BotKeeper> => ({
       goals: {
         get: async (botId) => (calls.push(`get ${botId}`), goal),
@@ -1452,7 +1438,6 @@ describe("RemoteBotReplier", () => {
         if (prompt === "do the port") {
           expect(await sink.goal({ ...start, maxRounds: 5 } as never)).toEqual(goal);
         } else {
-          // A request passed on by a bot is not the person's own message, which a page may have written.
           await expect(sink.goal(start as never)).rejects.toThrow("Start a goal only when");
         }
         sink.end();
@@ -1629,7 +1614,6 @@ describe("RemoteBotReplier", () => {
           },
         },
       });
-      // The person's word; a note; another bot's request that is not the person's word passed on.
       const replies = [
         { prompt: "remember I like tea", onPersonsWord: true },
         { prompt: "[note] Scheduled task is due", onPersonsWord: false },

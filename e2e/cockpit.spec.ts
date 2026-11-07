@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
-// The server has answered a save whose body holds `text`: what a reload then shows is what it kept.
 const savedWith = (page: Page, text: string) =>
   page.waitForResponse(
     (response) =>
@@ -21,7 +20,6 @@ test.describe("Cockpit", () => {
     await expect(page).toHaveURL(/\/cockpit\/inbox/);
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
 
-    // A new item cancelled is gone, nothing of it sent.
     const posts: string[] = [];
     page.on("request", (request) => {
       if (request.method() === "POST" && request.url().includes("/cockpit/inbox")) {
@@ -37,7 +35,6 @@ test.describe("Cockpit", () => {
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
     expect(posts).toEqual([]);
 
-    // A new item added: kept, with its tags, and opened beside the list.
     await page.getByRole("button", { name: "New item" }).click();
     await expect(draft.getByRole("button", { name: "Add to inbox" })).toBeDisabled();
     await page.keyboard.type("Call the bank");
@@ -56,14 +53,11 @@ test.describe("Cockpit", () => {
       "Ask about the card fee.",
     );
 
-    // Saved: there after a reload.
     await saved;
     await page.reload();
     await expect(reader.locator(".bn-editor")).toContainText("Ask about the card fee.");
     await expect(page.getByRole("list", { name: "Open items" })).toContainText("errand");
 
-    // Written in and done at once, every save held back: the details' reply, which lands first,
-    // does not undo Done while Done's own is on its way, and both are kept.
     await page.route("**/api/cockpit/inbox/*", async (route) => {
       if (route.request().method() === "PATCH") await new Promise((done) => setTimeout(done, 800));
       await route.continue();
@@ -84,10 +78,8 @@ test.describe("Cockpit", () => {
     await expect(page.getByRole("list", { name: "Done items" })).toContainText("Call the bank");
     await expect(reader.locator(".bn-editor")).toContainText("Before Friday.");
 
-    // Deleted while a save waits: the save is dropped, not sent to a record that is gone.
     const failed: string[] = [];
     page.on("response", (response) => {
-      // A 304 is the browser's cache answering, not a failure.
       if (response.status() >= 400)
         failed.push(`${response.request().method()} ${response.status()}`);
     });
@@ -108,7 +100,6 @@ test.describe("Cockpit", () => {
 
     const make = async (title: string, tag?: string) => {
       await page.getByRole("button", { name: "New task", exact: true }).click();
-      // A drawer from the right, its title ready to be typed in.
       const drawer = page.getByRole("article", { name: "New task" });
       await expect(drawer.getByRole("textbox", { name: "Title" })).toBeFocused();
       await page.keyboard.type(title);
@@ -129,7 +120,6 @@ test.describe("Cockpit", () => {
 
     await todo.getByRole("listitem", { name: "T-1 Write the plan" }).dragTo(doing);
     await expect(doing.getByRole("listitem", { name: "T-1 Write the plan" })).toBeVisible();
-    // Saved: still there after a reload.
     await page.reload();
     await expect(
       page
@@ -153,7 +143,6 @@ test.describe("Cockpit", () => {
     await expect(table).toContainText("Write the plan");
     await expect(table).not.toContainText("Buy milk");
 
-    // Opened in the drawer, a task saves each change as it is made.
     await table.getByRole("button", { name: "Write the plan" }).click();
     const task = page.getByRole("article", { name: "T-1 Write the plan" });
     const titled = savedWith(page, "Write the plan today");
@@ -183,13 +172,11 @@ test.describe("Cockpit", () => {
     await page.goto("/cockpit/tasks");
     const todo = page.getByRole("region", { name: "Todo" });
     const order = () => todo.getByRole("listitem").filter({ hasText: "T-" }).allInnerTexts();
-    // A new task goes to the top: Third, Second, First.
     await expect
       .poll(async () => (await order()).map((text) => text.split("\n")[1]))
       .toEqual(["Third", "Second", "First"]);
     const card = (name: string) => todo.getByRole("listitem", { name });
 
-    // Dropped on its own lower half: nothing is saved.
     const saves: string[] = [];
     page.on("request", (request) => {
       if (request.method() === "PATCH") saves.push(request.url());
@@ -198,7 +185,6 @@ test.describe("Cockpit", () => {
     await page.waitForTimeout(300);
     expect(saves).toEqual([]);
 
-    // First, dragged onto the top half of Third, goes first.
     await card("T-1 First").dragTo(card("T-3 Third"), { targetPosition: { x: 20, y: 5 } });
     await expect.poll(() => saves.length).toBe(1);
     await page.reload();
@@ -211,11 +197,9 @@ test.describe("Cockpit", () => {
     await registerUser(page, "cockpit", "Cockpit Person");
     await page.goto("/cockpit/notes");
     await page.getByRole("button", { name: "New note" }).click();
-    // Its title is ready to be typed over.
     const title = page.getByRole("textbox", { name: "Title" });
     await expect(title).toBeFocused();
     await page.keyboard.type("Release checklist");
-    // Enter goes on from the title to the document, as in Notion, once the editor has loaded.
     const note = page.getByRole("article", { name: /Release checklist|Untitled/ });
     await expect(note.locator(".bn-editor")).toBeVisible();
     await page.keyboard.press("Enter");
@@ -226,7 +210,6 @@ test.describe("Cockpit", () => {
     await page.keyboard.type("Tag it");
     await expect(note.locator(".bn-editor h1")).toHaveText("Steps");
     await note.getByRole("button", { name: "Pin" }).click();
-    // Pinned, it is in the sidebar.
     await expect(page.getByRole("list", { name: "Pinned notes" })).toContainText(
       "Release checklist",
     );
@@ -237,7 +220,6 @@ test.describe("Cockpit", () => {
       page.getByRole("article", { name: "Release checklist" }).locator(".bn-editor h1"),
     ).toHaveText("Steps");
 
-    // Back to the notes, a page that lists them.
     await page
       .getByRole("navigation", { name: "Breadcrumb" })
       .getByRole("button", { name: "Notes" })
@@ -283,7 +265,6 @@ test.describe("Cockpit", () => {
     );
     await page.keyboard.press("Escape");
 
-    // A note given the tag draws it in that color.
     await page.goto("/cockpit/notes");
     await page.getByRole("button", { name: "New note" }).click();
     const tags = page.getByRole("article").getByRole("textbox", { name: "Tags" });
@@ -301,7 +282,6 @@ test.describe("Cockpit", () => {
     await page.goto("/cockpit/tasks");
     const failed: string[] = [];
     page.on("response", (response) => {
-      // A 304 is the browser's cache answering, not a failure.
       if (response.status() >= 400 && response.url().includes("/cockpit/")) {
         failed.push(
           `${response.request().method()} ${response.status()} ${new URL(response.url()).pathname}`,
@@ -309,7 +289,6 @@ test.describe("Cockpit", () => {
       }
     });
 
-    // Escape closes BlockNote's menu in the drawer, not the drawer.
     await page.getByRole("button", { name: "New task", exact: true }).click();
     const drawer = page.getByRole("article", { name: "New task" });
     await page.keyboard.type("Keep me");
@@ -320,7 +299,6 @@ test.describe("Cockpit", () => {
     await expect(page.locator(".bn-suggestion-menu")).toHaveCount(0);
     await expect(drawer).toBeVisible();
 
-    // A stray close of a written draft asks first: declined, the draft stays.
     page.once("dialog", (dialog) => void dialog.dismiss());
     await page.keyboard.press("Escape");
     await expect(drawer).toBeVisible();
@@ -328,7 +306,6 @@ test.describe("Cockpit", () => {
     await drawer.getByRole("button", { name: "Create task" }).click();
     await expect(drawer).toHaveCount(0);
 
-    // A title edited and the task deleted at once: nothing is sent to a task that is gone.
     await page
       .getByRole("button", { name: /T-1 Keep me/ })
       .first()
@@ -341,7 +318,6 @@ test.describe("Cockpit", () => {
     await page.waitForTimeout(1000);
     expect(failed).toEqual([]);
 
-    // An inbox draft with words in it asks before another row opens in its place.
     await page.goto("/cockpit/inbox");
     const draft = page.getByRole("article", { name: "New item" });
     await page.getByRole("button", { name: "New item" }).click();

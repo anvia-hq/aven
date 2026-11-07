@@ -6,8 +6,6 @@ import { registerUser, threadOnFakeRunner } from "./helpers";
 
 const SECRET = "sk_test_super_secret_value_1234";
 
-// The agent's request for a secret (decision 0047) on a runner that asks for one and stops, and
-// finishes once it is answered (e2e/fake-runner.ts, FAKE_SECRET).
 test.describe("the agent asks for a secret", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -17,7 +15,6 @@ test.describe("the agent asks for a secret", () => {
 
   async function startRequest(page: Page) {
     await registerUser(page, "secret", "Secret User");
-    // The run needs a model grant; the pretend runner never calls the model.
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
@@ -40,7 +37,6 @@ test.describe("the agent asks for a secret", () => {
     await expect(form).toBeVisible();
     await expect(form).toContainText("What is the Stripe test key?");
     await expect(form).toContainText("STRIPE_API_KEY");
-    // A message cannot go around it, and nothing is sent until there is a value.
     await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
     await expect(form.getByRole("button", { name: "Store and continue" })).toBeDisabled();
 
@@ -55,8 +51,6 @@ test.describe("the agent asks for a secret", () => {
     await expect(answered).toContainText("stored as STRIPE_API_KEY");
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
 
-    // The runner was told it was stored, never the value; it has the value as a secret variable
-    // for the run that resumed, which is how its commands get it.
     await expect(async () => {
       expect(events.find((entry) => entry.type === "answered")).toMatchObject({
         response: {
@@ -69,8 +63,6 @@ test.describe("the agent asks for a secret", () => {
     const answeredEvent = events.find((entry) => entry.type === "answered")!;
     expect(JSON.stringify(answeredEvent.response)).not.toContain(SECRET);
 
-    // The value is nowhere a person or the agent could read it: not the page, not the thread's
-    // history, not the API.
     expect(await page.content()).not.toContain(SECRET);
     const variables = await page.request.get(`/api/projects/${projectId}/variables`);
     expect(await variables.json()).toEqual([
@@ -80,7 +72,6 @@ test.describe("the agent asks for a secret", () => {
     const personal = await page.request.get("/api/variables/personal");
     expect(await personal.json()).toEqual([]);
 
-    // The project's history says it was asked for by the agent, and holds no value.
     await page.goto(`/projects/${projectId}`);
     await page
       .getByRole("region", { name: "Environment variables" })

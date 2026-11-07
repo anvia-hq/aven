@@ -8,10 +8,8 @@ import { UnprocessableError } from "./errors";
 
 const MB = 1024 * 1024;
 
-// A file sent with a message, its bytes in base64; sizes are checked once decoded (decision 0034).
 export const attachmentBody = z.object({
   name: z.string().trim().min(1).max(255),
-  // What the browser says the file is; an image's type is read from its bytes instead.
   mediaType: z
     .string()
     .regex(/^[\w.+-]+\/[\w.+-]+$/)
@@ -22,10 +20,6 @@ export const attachmentBody = z.object({
 
 export type AttachmentBody = z.infer<typeof attachmentBody>;
 
-// The files sent with a message to a thread or a bot, checked and named for the runner (decisions
-// 0034 and 0080). A file whose bytes are a PNG, JPEG, GIF or WebP image is shown to the model as
-// well, so it gets the name the runner keeps its copy under; anything else, an SVG included, only
-// goes to the sandbox.
 export function prepareAttachments(files: readonly AttachmentBody[]): RunAttachment[] {
   let total = 0;
   return files.map(({ name, mediaType, data }) => {
@@ -50,7 +44,6 @@ export function prepareAttachments(files: readonly AttachmentBody[]): RunAttachm
   });
 }
 
-/** What a message's file is to a client: its name, type and size, and its image's name, without the bytes. */
 export function withoutBytes({ name, mediaType, size, image }: RunAttachment): MessageAttachment {
   return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }

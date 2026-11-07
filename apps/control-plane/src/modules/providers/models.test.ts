@@ -120,7 +120,6 @@ describe("the efforts of a gateway's models", () => {
     },
   });
   afterAll(() => gateway.stop(true));
-  // A port of its own per test run, so no other test's answer is cached for it.
   const source = {
     kind: "openai-compatible",
     baseUrl: `http://localhost:${gateway.port}/v1`,
@@ -131,7 +130,6 @@ describe("the efforts of a gateway's models", () => {
     expect(await effortsByModel(source, ["muse", "plain", "unlisted"])).toEqual({
       muse: { options: levels, defaultValue: null },
     });
-    // One request answered for every model, with the provider's own key.
     expect(asked).toEqual(["Bearer gw-key"]);
   });
 

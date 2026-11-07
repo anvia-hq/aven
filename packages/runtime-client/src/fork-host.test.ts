@@ -56,7 +56,6 @@ describe("createForkHost", () => {
     expect(taken.files).toEqual(["b.txt"]);
     const patch = await readFile(join(parent, ".git", "aven-forks", "abcdef12.patch"), "utf8");
     expect(patch).toContain("+new");
-    // It is not a change of the parent's own.
     expect((await git(["status", "--porcelain"], { cwd: parent })).stdout.trim()).toBe("");
   });
 

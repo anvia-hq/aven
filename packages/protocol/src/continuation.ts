@@ -1,26 +1,16 @@
 import type { BotThreadTurn } from "./threads";
 
-/** What became of the old thread's changes, for the prompt the new thread starts with. */
-export type ContinuationPatch =
-  /** Attached as `/uploads/previous-thread.patch`. */
-  | "attached"
-  /** The old thread changed nothing. */
-  | "none"
-  /** The old thread's runner could not be asked, or its changes are too large to carry. */
-  | "unavailable";
+export type ContinuationPatch = "attached" | "none" | "unavailable";
 
 export const CONTINUATION_PATCH_NAME = "previous-thread.patch";
-// The prompt stays well inside a message's 20,000 characters: the latest turns, newest kept first.
 const BUDGET = 14_000;
 const TURN_MAX = 2_000;
 
-// What was said is data: its angle brackets are replaced so it cannot close the fence it sits in.
 const cut = (text: string) => {
   const safe = text.replaceAll("<", "‹");
   return safe.length > TURN_MAX ? `${safe.slice(0, TURN_MAX)}… (cut)` : safe;
 };
 
-/** The latest turns that fit, oldest first, and how many earlier ones were left out. */
 export function turnsThatFit(turns: readonly BotThreadTurn[], earlier: number) {
   const kept: string[] = [];
   let used = 0;
@@ -35,11 +25,6 @@ export function turnsThatFit(turns: readonly BotThreadTurn[], earlier: number) {
   return { text: kept.reverse().join("\n\n"), earlier: earlier + left };
 }
 
-/**
- * The first message of a thread that continues another on a different runner (decision 0149). Its
- * first line is `[continued]`, the whole story for a person; the rest is for the agent: where the
- * work stood, and how to bring the old thread's changes over.
- */
 export function continuationPrompt(input: {
   oldTitle: string;
   oldBranch: string;

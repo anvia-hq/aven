@@ -26,8 +26,6 @@ import { join } from "node:path";
 
 import { BUILTIN_SKILLS_DIR } from "./builtins";
 
-// A built-in skill that does not validate is only logged and left out when the app runs, so a typo
-// in one (a colon in a description, a name that is not its folder's) would go unnoticed.
 describe("the built-in skills", () => {
   test("every folder is a valid skill, and these are the ones there are", async () => {
     const { skills, problems } = await readSkillFolders(BUILTIN_SKILLS_DIR);
@@ -51,8 +49,6 @@ describe("the built-in skills", () => {
     }
   });
 
-  // The skills tell an agent which tools to reach for: a tool renamed in the code must not leave a
-  // skill naming one that is gone.
   const text = (name: string) => Bun.file(join(BUILTIN_SKILLS_DIR, name, "SKILL.md")).text();
 
   test("the provider and MCP skills name the tools a bot has", async () => {
@@ -98,7 +94,6 @@ describe("the built-in skills", () => {
     const help = await text("aven-help");
     const pointed = [...help.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)]
       .map((match) => match[1]!)
-      // Tool names have underscores and never match; what is left with a dash is a skill.
       .filter((name) => !name.includes("_"));
     expect(pointed.length).toBeGreaterThan(0);
     for (const name of pointed) expect(names.has(name)).toBe(true);

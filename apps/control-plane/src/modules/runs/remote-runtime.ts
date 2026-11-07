@@ -22,18 +22,14 @@ import type {
   StartRunInput,
 } from "./runtime";
 
-// How long a runner has to say whether it took a message sent to a run: it is a call to a process
-// that answers at once, so a runner that does not is as good as gone.
 const STEER_TIMEOUT_MS = 10_000;
 
-// What a runner answers to `run.steer` (decision 0098); anything else is as good as offline.
 const steerResult = z.discriminatedUnion("status", [
   z.object({ status: z.literal("queued") }),
   z.object({ status: z.literal("closed") }),
   z.object({ status: z.literal("refused"), reason: z.string().max(500) }),
 ]);
 
-// A minimal async queue: `events` for a run is fed by the connection and consumed by RunManager.
 class EventQueue implements AsyncIterable<RunEvent> {
   #items: RunEvent[] = [];
   #waiting: (() => void) | undefined;
@@ -76,7 +72,6 @@ class EventQueue implements AsyncIterable<RunEvent> {
   }
 }
 
-// Runs the agent on a runtime that is connected to this control plane (decision 0008).
 export class RemoteRuntime implements Runtime {
   constructor(
     private hub: RuntimeHub,
@@ -168,11 +163,9 @@ export class RemoteRuntime implements Runtime {
   ): RuntimeRun {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
-    // Throws before anything starts if the model cannot be used (no key); the runtime gets a token, not the key.
     const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
-    // A run nobody awaits (cancelled early) must not surface as an unhandled rejection.
     result.promise.catch(() => undefined);
 
     connection.startRun(
@@ -212,8 +205,6 @@ export class RemoteRuntime implements Runtime {
     return connection;
   }
 
-  // What the connection reports back: events feed the queue, and the run's end (or loss) settles
-  // the result and ends the model grant.
   #sink(runId: string, queue: EventQueue, result: PromiseWithResolvers<RunResult>) {
     return {
       event: (event: RunEvent) => queue.push(event),
@@ -247,7 +238,6 @@ export class RemoteRuntime implements Runtime {
   }
 }
 
-// What the runner is told of a run's thread, with the thread it was forked from (decision 0135).
 function forkable(thread: RunThread): RunThreadInfo {
   return {
     id: thread.id,

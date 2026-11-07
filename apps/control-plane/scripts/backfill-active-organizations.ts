@@ -4,9 +4,6 @@ import { eq, isNull } from "drizzle-orm";
 
 import { ensurePersonalOrganization } from "../src/modules/auth/service";
 
-// One-off fix for sessions created before `session.create.before` started setting
-// `activeOrganizationId` (or created in the gap before a user's personal organization existed):
-// they're otherwise stuck with no active organization until they sign out and back in.
 const stale = await db
   .select({ id: sessions.id, userId: sessions.userId })
   .from(sessions)
@@ -25,7 +22,6 @@ for (const session of stale) {
     console.log(`  session ${session.id} (user ${session.userId}) -> ${organizationId}`);
     fixed += 1;
   } catch (error) {
-    // Don't let one bad row (e.g. a user deleted out from under its session) abort the batch.
     console.error(`  session ${session.id} (user ${session.userId}): skipped —`, error);
   }
 }

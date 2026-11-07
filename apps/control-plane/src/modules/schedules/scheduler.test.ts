@@ -15,7 +15,6 @@ run("createScheduler (postgres)", async () => {
   const alice = `u-tick-${suffix}`;
   const HOUR = 3_600_000;
   const CREATED = new Date("2026-10-18T10:00:00Z");
-  // `0 7 * * *` in UTC is due at 07:00 the next morning.
   const DUE = new Date("2026-10-19T07:00:00Z");
   let botId = "";
 

@@ -9,7 +9,7 @@ import { threadsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-run("a thread continued on another runner (postgres, decision 0149)", async () => {
+run("a thread continued on another runner (postgres, decision 0150)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();

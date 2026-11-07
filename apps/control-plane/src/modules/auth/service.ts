@@ -17,10 +17,6 @@ import { platformService } from "../platform/service";
 const secret = process.env.BETTER_AUTH_SECRET;
 if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
 
-// Every user owns a personal organization, and new sessions start in it. The org id is derived
-// from the user id and inserts do nothing on conflict, so concurrent sign-ins create only one.
-// This runs in `session.create.before` rather than `user.create.after`: Better Auth runs `after`
-// hooks once the transaction ends, which is after the sign-up session has been created.
 export async function ensurePersonalOrganization(userId: string) {
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
   if (!user) throw new Error(`Cannot create an organization: user ${userId} does not exist`);
@@ -38,9 +34,6 @@ export async function ensurePersonalOrganization(userId: string) {
   return organizationId;
 }
 
-// The backend is reached through the platform's `/api` proxy, which strips the prefix,
-// so Better Auth lives at `/auth` here and `/api/auth` in the browser.
-/** Origins a browser may call from: the ones Better Auth trusts, also checked on sockets. */
 export const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "http://localhost:5173").split(",");
 
 export const auth = betterAuth({
@@ -61,8 +54,6 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: { enabled: true },
-  // `bearer` lets a native client (no cookie jar) send its session token as `Authorization: Bearer`;
-  // sign-in returns it in the `set-auth-token` header.
   plugins: [organization(), bearer()],
   databaseHooks: {
     user: {

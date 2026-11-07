@@ -15,9 +15,6 @@ import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
 
-// What each tool call of an assistant message was answered with, by the call's id, read from the
-// tool results that follow it. A provider may reuse an id from one turn to the next, so the results
-// are read from the next message only.
 function resultsAfter(messages: readonly Message[], at: number) {
   const results = new Map<string, ToolResultOutput>();
   const answers = messages[at + 1];
@@ -28,11 +25,9 @@ function resultsAfter(messages: readonly Message[], at: number) {
   return results;
 }
 
-// A call that failed was refused, so what it carried was never sent or shown.
 const failed = (output: ToolResultOutput | undefined) =>
   output?.type === "error-text" || output?.type === "error-json";
 
-// What a call to `ask_question` was answered with: asked of the person, or of the main bot.
 function relayedBy(output: ToolResultOutput | undefined) {
   if (output?.type !== "json") return undefined;
   const { relayed } = output.value as { relayed?: { handle?: unknown; text?: unknown } };
@@ -40,8 +35,6 @@ function relayedBy(output: ToolResultOutput | undefined) {
   return { handle: relayed.handle, text: relayed.text };
 }
 
-// The provider a key card was shown for, read from what the call to `ask_provider_key` returned: the
-// card is in the chat only if it was shown.
 function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | undefined {
   if (output?.type !== "json") return undefined;
   const { provider } = output.value as { provider?: { providerId?: unknown; name?: unknown } };
@@ -51,10 +44,6 @@ function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | und
   return { providerId: provider.providerId, name: provider.name };
 }
 
-// Rebuilds a bot's chat from its stored memory: what the person said, each message the bot sent
-// with `send_message`, and, between bots (decision 0065), what another bot wrote to it and what it
-// wrote to another, if it was sent. Whatever else the bot wrote or did is not part of the chat, nor is a note from
-// the app. A bot is known by its handle here; the name is the platform's to find.
 export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[] {
   const chat: BotChatMessage[] = [];
   const add = (
@@ -73,8 +62,6 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
 
   for (const [at, message] of messages.entries()) {
     if (message.role === "user") {
-      // What the person sent as they sent it: with files, the text is in the message's metadata, not
-      // in the note the bot was given about them (decision 0080).
       const sent = sentMessage(message);
       const { from, note, text } = parseBotPrompt(sent.text.trim());
       if (note || (!text && !sent.attachments?.length)) continue;

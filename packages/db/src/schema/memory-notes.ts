@@ -4,9 +4,6 @@ import { bots } from "./bots";
 import { projects } from "./projects";
 import { users } from "./users";
 
-// A note an agent keeps of what it learnt (decision 0102): the person's own, in one scope. A
-// `personal` note has neither `projectId` nor `botId`, a `project` note the project and a `bot`
-// note the bot; it goes with either.
 export const memoryNotes = pgTable(
   "memory_notes",
   {
@@ -26,7 +23,6 @@ export const memoryNotes = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // One note of a name in a scope; a missing project or bot counts as the same.
     unique("memory_notes_name_unique")
       .on(table.userId, table.scope, table.projectId, table.botId, table.name)
       .nullsNotDistinct(),

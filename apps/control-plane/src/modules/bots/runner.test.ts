@@ -45,7 +45,6 @@ function fakeStore(): MemoryStore {
   };
 }
 
-// The agent of each message in turn plays the next script.
 function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAgent {
   let next = 0;
   return ({ bot, send, memory }) =>
@@ -61,7 +60,6 @@ function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAg
     });
 }
 
-// A runner whose bot answers in this process, with the agent a test made.
 const runnerWith = (options: {
   store: MemoryStore;
   createAgent?: CreateBotAgent;
@@ -83,7 +81,6 @@ const until = async (condition: () => boolean) => {
   }
 };
 
-// A client attached to the bot's events, stopped by `stop` or by `close`.
 async function watch(runner: BotRunner, stop: (events: BotEvent[]) => boolean = () => false) {
   const controller = new AbortController();
   const events: BotEvent[] = [];
@@ -222,11 +219,9 @@ describe("BotRunner", () => {
     await runner.send(bot, USER, "first", model);
     await until(() => gates.length === 1);
     await runner.send(bot, USER, "second", model);
-    // The person's second message is in the chat at once; the bot has said nothing yet.
     await until(() => client.events.length === 4);
     expect(typed(client.events)).toEqual(["snapshot", "user: first", "typing", "user: second"]);
 
-    // Its reply has not begun: the bot is still on the first.
     await Bun.sleep(5);
     expect(gates.length).toBe(1);
 
@@ -236,11 +231,9 @@ describe("BotRunner", () => {
     await client.done;
 
     expect(typed(client.events).slice(4)).toEqual(["bot: one", "bot: two", "stopped"]);
-    // What the bot remembers is in the order it was said.
     const history = botMessagesToChat(await store.load({ scope: { sessionId: bot.id } }));
     expect(history.map((message) => message.text)).toEqual(["first", "one", "second", "two"]);
 
-    // A client that comes later, and a runner started afresh, both find the chat from the store.
     const later = runnerWith({ store });
     const fresh = await watch(later);
     fresh.close();
@@ -323,7 +316,6 @@ describe("BotRunner", () => {
     for (let sent = 0; sent < 5; sent++) await runner.send(bot, USER, `message ${sent}`, model);
     await expect(runner.send(bot, USER, "one more", model)).rejects.toBeInstanceOf(ConflictError);
     await until(() => client.events.length === 7);
-    // The refused message is not in the chat.
     expect(typed(client.events).filter((entry) => entry.startsWith("user:"))).toHaveLength(5);
     client.close();
   });
@@ -354,7 +346,6 @@ describe("BotRunner", () => {
     const client = await watch(runner);
     await runner.send(bot, USER, "hello", model);
     await until(() => gates.length === 1);
-    // The client leaves while the bot is still at work; the reply goes on without it.
     client.close();
     await client.done;
     gates[0]!();
@@ -386,7 +377,6 @@ describe("BotRunner", () => {
   });
 
   describe("a reply that settles (decision 0068)", () => {
-    // A runner whose replies are given by `answer`, and that tells what settled and when.
     function settling(answer: (prompt: string) => Promise<void>) {
       const settled: { prompt: string; ok: boolean; idle: boolean }[] = [];
       const runner: BotRunner = new BotRunner({
@@ -463,7 +453,6 @@ describe("BotRunner", () => {
     const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("never shown")], [text("")]]),
-      // The bot is "typing" until the shutdown reaches it.
       pause: (_ms, signal) =>
         new Promise<void>((_resolve, reject) =>
           signal?.addEventListener("abort", () => reject(signal.reason)),
@@ -479,7 +468,6 @@ describe("BotRunner", () => {
 
   describe("messages between bots (decision 0065)", () => {
     const aven = { id: "main", name: "Aven", handle: "main" };
-    // Each message as the chat shows it: who said it, and to or from which bot if it was a bot.
     const shown = (events: BotEvent[]) =>
       events.flatMap((event) =>
         event.type === "message"
@@ -520,7 +508,6 @@ describe("BotRunner", () => {
       expect(client.events.find((event) => event.type === "message")).toMatchObject({
         message: { peer: { id: "main", name: "Aven", handle: "main", direction: "from" } },
       });
-      // The bot was told who wrote, by handle, and the chat read back from what it remembers is the same.
       const remembered = await store.load({ scope: { sessionId: bot.id, userId: USER } });
       expect(JSON.stringify(remembered[0])).toContain("[from main] do A and B");
       expect(
@@ -675,7 +662,6 @@ describe("BotRunner", () => {
   });
 
   describe("which bots are at work (decision 0064)", () => {
-    // What a person is told as it changes, until `stop` says it has been told enough.
     async function follow(runner: BotRunner, userId: string) {
       const controller = new AbortController();
       const told: string[][] = [];

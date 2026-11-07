@@ -7,7 +7,6 @@ import { builtinSkills } from "./builtins";
 import { packSkill, skillFolder } from "./package";
 import type { UploadSkillBody } from "./schema";
 
-// What the API returns: never the archive.
 export type SkillView = Omit<SkillRow, "archive" | "userId">;
 
 function view({ archive: _archive, userId: _userId, ...row }: SkillRow): SkillView {
@@ -34,7 +33,6 @@ const asRunSkill = ({ name, description, digest }: RunSkill): RunSkill => ({
   digest,
 });
 
-// Skills belong to a user, like providers (decision 0035); built-in ones to everybody.
 export const skillsService = {
   list(userId: string) {
     return db
@@ -48,7 +46,6 @@ export const skillsService = {
     return (await builtinSkills()).map(({ name, description }) => ({ name, description }));
   },
 
-  // A skill with a name the user already has replaces it: uploading again is how a skill changes.
   async upload(userId: string, body: UploadSkillBody) {
     const packed = await packSkill(skillFolder(body.files));
     const values = {
@@ -88,7 +85,6 @@ export const skillsService = {
     return deleted.length > 0;
   },
 
-  /** The skills a run of this user has: the built-in ones, and their own enabled ones, which win on a name. */
   async forRun(userId: string): Promise<RunSkill[]> {
     const personal = await db
       .select({ name: skills.name, description: skills.description, digest: skills.digest })
@@ -100,7 +96,6 @@ export const skillsService = {
     return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  /** A skill's archive by its digest. Whoever asks must already know the run has it. */
   async archive(digest: string) {
     const builtIn = (await builtinSkills()).find((skill) => skill.digest === digest);
     if (builtIn) return builtIn.archive;

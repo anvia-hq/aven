@@ -1,17 +1,11 @@
 import type { Bot } from "./types";
 
-/** A message's text cut where it mentions a bot: `@Name`, the name of one of the person's bots. */
 export type MentionPart =
   | { type: "text"; text: string }
   | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> };
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/**
- * Cuts `text` at each `@Name` that is a bot's. A name can hold spaces, so the names are what is
- * looked for, the longest first so `@Data Analyst` is not read as `@Data`; a mention stands at the
- * start of the text or after a space, and ends where the name does, not in the middle of a word.
- */
 export function splitBotMentions(text: string, bots: readonly Bot[]): MentionPart[] {
   const byName = new Map<string, Bot>();
   for (const bot of bots)
@@ -30,7 +24,6 @@ export function splitBotMentions(text: string, bots: readonly Bot[]): MentionPar
     parts.push({ type: "mention", bot });
     last = start + 1 + match[2]!.length;
   }
-  // Whatever is left, and the text itself when it has no mention, even an empty one.
   if (last < text.length || parts.length === 0)
     parts.push({ type: "text", text: text.slice(last) });
   return parts;

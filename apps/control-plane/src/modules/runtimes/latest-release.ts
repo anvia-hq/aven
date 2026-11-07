@@ -5,12 +5,6 @@ const ASK_MS = 5_000;
 
 export type LatestRelease = { get(): Promise<string | undefined> };
 
-/**
- * The newest release that is not a prerelease, as `aven update` finds it: GitHub answers
- * `/releases/latest` with a redirect to the tag's page, which needs no API and has no rate limit to
- * speak of (decision 0148). Asked at most once an hour, and again after five minutes when it could
- * not be asked; never throws, since the list of runners must not wait on GitHub.
- */
 export function createLatestRelease({
   fetchFn = fetch,
   now = Date.now,

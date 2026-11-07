@@ -1,9 +1,6 @@
 import type { MemoryCompactionMessage, MemoryScope, MemoryStore, Message } from "@anvia/core";
 import type { BotMemoryParams } from "@aven/protocol/runtime-wire";
 
-// What a runner asks of a bot's conversation, answered from the store for one bot and its owner.
-// The scope is the control plane's own record of the reply, never the runner's: whatever the
-// runner names, it reads and adds to that bot's conversation and no other's (decision 0059).
 export function answerBotMemory(store: MemoryStore, scope: MemoryScope) {
   return async (params: BotMemoryParams): Promise<unknown> => {
     switch (params.op) {

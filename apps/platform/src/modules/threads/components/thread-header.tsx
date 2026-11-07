@@ -8,7 +8,6 @@ import { ThreadShare } from "./thread-share";
 type Props = {
   thread: Thread;
   panels: ThreadPanels;
-  /** The person made the thread. Anyone else reads it: no Desktop or Terminal, and no sharing. */
   owned: boolean;
 };
 

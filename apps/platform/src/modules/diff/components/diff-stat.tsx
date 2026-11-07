@@ -1,11 +1,9 @@
 type Props = {
   additions: number;
   deletions: number;
-  /** Leave out a count that is zero. */
   hideZeros?: boolean;
 };
 
-// Lines added and removed, as "+3 -1".
 export function DiffStat({ additions, deletions, hideZeros = false }: Props) {
   if (hideZeros) {
     return (

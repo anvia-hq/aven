@@ -5,7 +5,6 @@ import { createGitFetchTool, type FetchRemote } from "./git-fetch";
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);
 
-// A fetch that answers with `answer` and records the branches it was asked for.
 function setup(answer: { branch: string; commit: string; previous: string | null }) {
   const asked: (string | undefined)[] = [];
   const fetchRemote: FetchRemote = async (branch) => {

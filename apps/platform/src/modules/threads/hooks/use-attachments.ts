@@ -7,10 +7,8 @@ import { fileSize } from "@/lib/format";
 
 import type { AttachmentUpload } from "../types";
 
-/** A file the composer will send; `preview` is an object URL for an image. */
 export type PendingFile = { id: string; file: File; preview?: string };
 
-// The images a model is shown; anything else, an SVG included, only goes to the sandbox.
 const MODEL_IMAGES = new Set<string>(ARTIFACT_MEDIA_TYPES);
 
 function readBase64(file: File) {
@@ -25,7 +23,6 @@ function readBase64(file: File) {
   });
 }
 
-// Why a file cannot join the ones already picked, or undefined when it can.
 function refusal(file: File, count: number, total: number) {
   if (count >= ATTACHMENT_LIMITS.count) {
     return `A message can carry ${ATTACHMENT_LIMITS.count} files`;
@@ -39,11 +36,8 @@ function refusal(file: File, count: number, total: number) {
   return undefined;
 }
 
-// The files the composer sends with its message (decision 0034). The limits are checked as a file
-// is added, so one that cannot go is refused then and not on send; the control plane checks again.
 export function useAttachments() {
   const [files, setFiles] = useState<PendingFile[]>([]);
-  // Every preview made, freed when the composer goes.
   const previews = useRef(new Set<string>());
   useEffect(() => {
     const made = previews.current;
@@ -86,7 +80,6 @@ export function useAttachments() {
     setFiles([]);
   }
 
-  // The files as the message sends them.
   const encode = () =>
     Promise.all(
       files.map(async ({ file }): Promise<AttachmentUpload> => ({

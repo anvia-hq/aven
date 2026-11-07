@@ -12,7 +12,6 @@ async function exec() {
   return { tool, sandbox: workspaces.sandboxes.get("t1")! };
 }
 
-// What a run does with a call: parse the model's arguments, then call with what that gave.
 const run = (tool: AnyTool, args: Record<string, unknown>) =>
   tool.call(tool.parseInput!(args as never));
 

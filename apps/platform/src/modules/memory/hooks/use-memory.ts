@@ -14,19 +14,14 @@ const memoryStore = createListStore<MemoryNote>({
   label: "memory",
 });
 
-// Notes belong to the signed-in user, so drop them on sign-out; the next user refetches.
 export function resetMemory() {
   memoryStore.reset();
 }
 
-// An agent may have kept or changed a note while the list was open (decision 0102): load it again
-// if it was ever loaded.
 export function refreshMemory() {
   if (getDefaultStore().get(memoryNotesAtom) !== null) void memoryStore.refresh();
 }
 
-// The user's memory notes. Loads on first use; changes refetch. `fresh` loads them again when the
-// caller mounts, for a page that shows them: a thread's agent may have changed them since.
 export function useMemory({ fresh = false } = {}) {
   const [notes] = useAtom(memoryNotesAtom);
   const { refresh } = memoryStore;

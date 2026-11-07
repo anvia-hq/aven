@@ -15,8 +15,6 @@ export type FolderResult = Available<{ entries: FileEntry[] }>;
 export type FileResult = Available<FileContent>;
 export type SearchResult = Available<{ paths: string[] }>;
 
-// The files of a thread's workspace, read through the runner that holds it (decision 0031). Every
-// call starts from a thread of the caller's organization.
 export function createFilesService(hub: RuntimeHub) {
   const runner = runnerFor(hub);
 

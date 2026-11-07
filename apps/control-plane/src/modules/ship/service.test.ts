@@ -27,14 +27,12 @@ const pull = (number: number, state: "open" | "closed" | "merged") => ({
   state,
 });
 
-// A ship with what it asks of faked: who is connected, what GitHub allows, the runner's file.
 function setup(
   options: {
     connected?: boolean;
     approved?: boolean;
     canPush?: boolean;
     file?: () => Promise<FileContent | null>;
-    /** The files the thread's workspace has, for `readiness`. */
     has?: string[];
     pullRequests?: (typeof project)["pullRequests"];
   } = {},
@@ -60,7 +58,6 @@ function setup(
       },
     },
     github: {
-      // The app the project's installation is of, which the person's connection must be for.
       appKeyOf: async () => "app-1",
       requireWritable: async () => {
         checked.push("writable");
@@ -139,7 +136,6 @@ describe("shipping a thread", () => {
     expect(checked).toEqual(["connection for app-1", "writable", "push ghu_a acme/app"]);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ organizationId: "org-1", userId: "user-1", threadId });
-    // The branch the thread works on and the repository's own default branch.
     expect(sent[0]!.prompt).toContain("git fetch origin develop");
     expect(sent[0]!.prompt).toContain("This thread's branch is aven/abcdef12");
   });
@@ -219,7 +215,6 @@ describe("shipping a thread", () => {
 
     expect(sent[0]!.prompt).toContain("updated by the push: do not open another");
     expect(sent[1]!.prompt).toContain("git switch -c aven/abcdef12-<short-slug> origin/develop");
-    // The mode is for the prompt; the rest is the model the thread is on.
     expect(sent[1]).toMatchObject({ providerId: "p", modelId: "m" });
     expect(sent[1]).not.toHaveProperty("mode");
   });

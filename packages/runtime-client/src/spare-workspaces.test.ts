@@ -18,8 +18,6 @@ const exists = (path: string) =>
     () => false,
   );
 
-// A repository with a snapshot of its environment, and the runner's `Environments` over it: Docker
-// only has to name the sandbox image, and the git is the real one over a local remote.
 async function setup() {
   const fixture = await gitFixture();
   const home = await mkdtemp(join(tmpdir(), "aven-spares-"));
@@ -37,7 +35,6 @@ async function setup() {
   });
   const thread = (id: string) => ({ id, organizationId: "org-1" });
   const key = environments.snapshots.keyFor("org-1", fixture.access.cloneUrl);
-  // What a setup left: dependencies, which git ignores.
   await writeFile(join(fixture.root, ".gitignore"), "node_modules/\n");
   await mkdir(join(fixture.root, "node_modules"));
   await writeFile(join(fixture.root, "node_modules", "dep.js"), "x\n");
@@ -68,17 +65,14 @@ describe("a spare workspace (decision 0128)", () => {
     await environments.settled();
     expect(await exists(join(spare, "workspace", "node_modules", "dep.js"))).toBe(true);
 
-    // A mark inside the spare's `.git`, which a restore would not have: the second thread has it.
     await writeFile(join(spare, "workspace", ".git", "spare-mark"), "mine");
     const second = await empty();
     await environments.fill(thread("22222222-bbbb"), second, access);
 
     expect(await readFile(join(second, ".git", "spare-mark"), "utf8")).toBe("mine");
     expect(await Bun.file(join(second, "node_modules", "dep.js")).exists()).toBe(true);
-    // It is the thread's own now: on its branch, brought up to date, and no longer spare.
     expect(await sh(second, "rev-parse", "--abbrev-ref", "HEAD")).toBe("aven/22222222");
     expect(await sh(second, "status", "--porcelain")).toBe("");
-    // The next thread's is prepared after that one's.
     await environments.settled();
     expect(await exists(join(spare, "workspace"))).toBe(true);
     expect(await exists(join(spare, "workspace", ".git", "spare-mark"))).toBe(false);

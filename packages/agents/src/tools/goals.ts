@@ -15,16 +15,10 @@ export const GET_GOAL_TOOL_NAME = "get_goal";
 export const START_GOAL_TOOL_NAME = "start_goal";
 export const UPDATE_GOAL_TOOL_NAME = "update_goal";
 
-/** What a bot may ask of its goal (decision 0068); who may, and how many rounds, are the host's. */
 export type GoalHost = {
   get(): Promise<BotGoalView | null>;
   start(input: { objective: string; checks: string[]; maxRounds?: number }): Promise<BotGoalView>;
   update(action: GoalAction, reason?: string): Promise<BotGoalView | null>;
-  /**
-   * Runs the goal's checks on the bot's computer and answers with what failed, one entry for each
-   * check that did not pass, with its command, how it ended and the end of its output; it stops
-   * when `signal` aborts. Without it the bot has no computer to check on.
-   */
   check?(checks: readonly string[], signal?: AbortSignal): Promise<string[]>;
 };
 
@@ -58,9 +52,6 @@ const updateSchema = z.object({
   reason: z.string().trim().max(GOAL_REASON_MAX).optional().describe("For blocked."),
 });
 
-// How a bot works on something too big for one reply (decision 0068): it starts a goal, and the app
-// wakes it for round after round until its checks pass and it says so, it is blocked, or the rounds
-// run out. The host holds to who may start or stop one.
 export function createGoalTools(host: GoalHost) {
   const get = createTool({
     name: GET_GOAL_TOOL_NAME,

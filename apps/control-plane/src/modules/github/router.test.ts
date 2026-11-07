@@ -250,7 +250,6 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       installationId: 123,
       appKey: "platform",
     });
-    // The code of a link nobody signed is never used, and nothing is attached yet.
     expect(exchanged).toEqual([]);
     expect(kept).toEqual([]);
     expect(await (await get("/github/installations")).json()).toEqual([]);

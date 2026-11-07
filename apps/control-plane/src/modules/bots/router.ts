@@ -6,7 +6,6 @@ import type { BotChats } from "./chats";
 import { botParams, sendBotMessageBody, updateBotBody } from "./schema";
 import { botsService } from "./service";
 
-// Bots belong to the signed-in user, not to the active organization, so no `org: true`.
 export const botsRouter = (chats: BotChats) =>
   new Elysia({ prefix: "/bots" })
     .use(authRouter)
@@ -17,7 +16,6 @@ export const botsRouter = (chats: BotChats) =>
         orNotFound(await botsService.update(user.id, params.id, body), "Bot not found"),
       { auth: true, params: botParams, body: updateBotBody },
     )
-    // Which of the person's bots are at work, now and each time that changes (decision 0064).
     .get(
       "/working",
       async function* ({ user, request }) {
@@ -27,7 +25,6 @@ export const botsRouter = (chats: BotChats) =>
       },
       { auth: true },
     )
-    // The person says something; the bot's reply comes through the events.
     .post(
       "/:id/messages",
       async ({ params, body, user }) => {
@@ -36,7 +33,6 @@ export const botsRouter = (chats: BotChats) =>
       },
       { auth: true, params: botParams, body: sendBotMessageBody },
     )
-    // Server-sent events: the chat first, then live events. Closing the connection never stops a reply.
     .get(
       "/:id/events",
       async function* ({ params, user, request }) {

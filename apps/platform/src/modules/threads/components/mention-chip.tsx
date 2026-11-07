@@ -2,7 +2,6 @@ import { BookOpen, File, Terminal } from "@mynaui/icons-react";
 
 import type { Mentionable } from "../mentions";
 
-/** A file or a skill the user mentioned, as its token is shown in the composer and the thread. */
 export function MentionChip({ type, name }: Mentionable) {
   const Icon = type === "file" ? File : BookOpen;
   return (
@@ -17,7 +16,6 @@ export function MentionChip({ type, name }: Mentionable) {
   );
 }
 
-/** A command picked from the `/` menu, as it is shown in the composer until it is sent (decision 0097). */
 export function CommandChip({ name }: { name: string }) {
   return (
     <span

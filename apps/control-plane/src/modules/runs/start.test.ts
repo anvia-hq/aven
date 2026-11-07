@@ -8,7 +8,6 @@ import { memoryContinuations, memoryFailures } from "../../testing/memory-contin
 import type { Runtime, RunResult, RunThread, RuntimeRun } from "./runtime";
 import { RunBusyError, RunManager } from "./service";
 
-// A run that stays live until `finish`.
 function liveRun() {
   const done = Promise.withResolvers<RunResult>();
   const handle: RuntimeRun = {
@@ -102,7 +101,6 @@ describe("steering a run (decision 0098)", () => {
     let outcome: string | undefined;
     const steering = manager.steer(thread, message).then((result) => (outcome = result));
     await Bun.sleep(30);
-    // It waits for the run to be over, so the caller can start the next without being refused.
     expect(outcome).toBeUndefined();
     finish();
     await steering;

@@ -2,8 +2,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type Option<T extends string> = { value: T; label: string };
 
-// One of the filter bar's choices, as a small select; `any` stands for "no filter" and has the
-// field's own name as its label, so the closed select reads as the field.
 export function FilterSelect<T extends string>({
   label,
   anyLabel = label,
@@ -11,9 +9,7 @@ export function FilterSelect<T extends string>({
   options,
   onChange,
 }: {
-  /** The select's name for a screen reader. */
   label: string;
-  /** What the select says while no choice is made. */
   anyLabel?: string;
   value: T | undefined;
   options: Option<T>[];

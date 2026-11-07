@@ -17,7 +17,6 @@ afterEach(async () => {
 
 type Call = { args: string[]; timeoutMs?: number };
 
-// A Docker that records what it was asked and answers from `answers`, by the first word of the command.
 function fakeDocker(
   answers: Record<string, { code?: number; stdout?: string; stderr?: string }> = {},
 ) {
@@ -71,7 +70,6 @@ describe("running a repository's setup", () => {
     expect(run.slice(-2)).toEqual(["sleep", "infinity"]);
     expect(run).toContain(`${given.root}:/workspace`);
     expect(run).toContain("aven.setup=k1");
-    // The point of a setup container: `sudo` must work, which `no-new-privileges` forbids.
     expect(run).not.toContain("no-new-privileges");
     expect(fake.calls[3]!.args).toEqual([
       "exec",
@@ -124,7 +122,6 @@ describe("running a repository's setup", () => {
     const fake = fakeDocker();
     const docker: DockerRun = async (args, options) => {
       const result = await fake.docker(args, options);
-      // Only the script fails; the ownership changes around it work.
       return args.at(-1) === "./.aven/setup"
         ? { ...result, code: 1, stderr: "mkdir failed" }
         : result;
@@ -149,7 +146,6 @@ describe("running a repository's setup", () => {
       ["exec", "-u", "0", "aven-setup-k1", "chown", "-R", "node", "/workspace"],
       ["exec", "-u", "0", "aven-setup-k1", "chown", "-R", "1234:1234", "/workspace"],
     ]);
-    // The script runs between them, so it can write in the workspace.
     const order = fake.calls.map((call) =>
       call.args.includes("chown") ? `chown ${call.args[6]}` : call.args[0],
     );
@@ -158,9 +154,6 @@ describe("running a repository's setup", () => {
       "exec",
       "chown 1234:1234",
     ]);
-    // What the script wrote in the home and the toolchains is writable by the host user as well.
-    // Only the entries that are not already: touching them all would copy the toolchains into the
-    // snapshot.
     expect(fake.calls.find((call) => call.args.includes("chmod"))!.args).toEqual([
       "exec",
       "-u",
@@ -187,7 +180,6 @@ describe("running a repository's setup", () => {
       "{}",
       "+",
     ]);
-    // Before the commit, so the snapshot's workspace copy is the host user's too.
     const lastExec = fake.verbs().lastIndexOf("exec");
     expect(lastExec).toBeLessThan(fake.verbs().indexOf("commit"));
   });

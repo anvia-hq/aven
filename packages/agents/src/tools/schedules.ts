@@ -11,7 +11,6 @@ export const LIST_SCHEDULES_TOOL_NAME = "list_schedules";
 export const UPDATE_SCHEDULE_TOOL_NAME = "update_schedule";
 export const DELETE_SCHEDULE_TOOL_NAME = "delete_schedule";
 
-/** What a bot may ask of the person's schedules (decision 0067); what each takes and may refuse is the host's. */
 export type ScheduleHost = {
   list(): Promise<BotScheduleView[]>;
   create(input: ScheduleInput): Promise<BotScheduleView>;
@@ -68,8 +67,6 @@ const updateSchema = z.object({
 export type ScheduleInput = z.infer<typeof createSchema>;
 export type SchedulePatch = Omit<z.infer<typeof updateSchema>, "id">;
 
-// How a bot sets a task to run again and again, like cron (decision 0067): four tools over the
-// person's schedules. The host holds to who may change them and how many there may be.
 export function createScheduleTools(host: ScheduleHost) {
   const create = createTool({
     name: CREATE_SCHEDULE_TOOL_NAME,

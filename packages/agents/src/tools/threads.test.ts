@@ -40,7 +40,6 @@ function host() {
     stop: async (id) => (calls.push(["stop", id]), { ...thread, running: false }),
   };
   const tools = createThreadTools(hosted);
-  // The tools come back as a list, each with its own input: tests call them with whatever a model might.
   const by = (name: string) =>
     tools.find((tool) => tool.name === name) as unknown as {
       call(input: Record<string, unknown>): Promise<unknown>;
@@ -74,7 +73,6 @@ describe("the thread tools", () => {
       projectId: PROJECT,
       prompt: "  Fix the build  ",
       modelId: "gpt-5",
-      // Not a field of the tool: it must not reach the host.
       createdBy: "someone-else",
     })) as { thread: BotThreadView; note: string };
     expect(calls).toEqual([

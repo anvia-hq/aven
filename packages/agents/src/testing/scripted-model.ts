@@ -11,8 +11,6 @@ export type ScriptStep =
   | AssistantContentPart[]
   | ((request: CompletionRequest) => AssistantContentPart[] | Promise<AssistantContentPart[]>);
 
-// A model that replays a fixed script, one step per completion call, for tests that must not
-// reach a provider. Fails loudly if the agent asks for more steps than were scripted.
 export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
   let next = 0;
   const respond = async (request: CompletionRequest): Promise<CompletionResponse> => {
@@ -35,7 +33,6 @@ export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
       streaming: true,
       tools: true,
       toolChoice: true,
-      // Takes the images users attach (decision 0034), as every provider the agent runs on does.
       imageInput: true,
       documentInput: false,
       outputSchema: false,

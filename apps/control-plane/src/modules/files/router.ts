@@ -6,8 +6,6 @@ import { threadParams } from "../threads/schema";
 import { filesQuery, searchQuery } from "./schema";
 import { createFilesService } from "./service";
 
-// The files of a thread's workspace, for reading (decision 0031) and for the composer's `@` to
-// find (decision 0036). Nothing is written.
 export const filesRouter = (hub: RuntimeHub) => {
   const service = createFilesService(hub);
   const options = { thread: "read", params: threadParams, query: filesQuery } as const;

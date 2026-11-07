@@ -30,7 +30,6 @@ describe("avatarFor", () => {
   test("keeps what was chosen, and draws the rest from the seed it is given instead of the id", () => {
     const chosen = avatarFor("bot", { family: "hexagon", color: "#ff7a00" });
     expect(chosen).toMatchObject({ family: "hexagon", color: "#ff7a00" });
-    // A shape or color picked on its own leaves the face and the bob to the same seed as before.
     expect(chosen.face).toBe(avatarFor("bot").face);
     expect(chosen.delay).toBe(avatarFor("bot").delay);
 

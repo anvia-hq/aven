@@ -5,8 +5,6 @@ import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 
-// The filters of a list behind one button, with how many are on: the list keeps its room for what
-// it lists, and what is on shows as chips under its header (`FilterChips`).
 export function FilterPopover({
   label,
   count,
@@ -30,7 +28,6 @@ export function FilterPopover({
   );
 }
 
-// A labelled field of the popover.
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">

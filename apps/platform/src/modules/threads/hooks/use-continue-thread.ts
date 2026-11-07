@@ -8,9 +8,6 @@ import type { Thread } from "../types";
 import { useModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
-// Carries a thread's work on to another runner (decision 0149): the control plane makes a new
-// thread there, with the old one's changes and a summary, and it is opened at once. The old thread
-// stays as it is. True once the new thread exists.
 export function useContinueThread(thread: Thread) {
   const navigate = useNavigate();
   const { refresh } = useThreads();

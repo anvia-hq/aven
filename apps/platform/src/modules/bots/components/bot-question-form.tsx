@@ -9,8 +9,6 @@ import { Question, valueOf, type Draft } from "@/modules/threads/components/ques
 import { answerText } from "../questions";
 import type { BotQuestion } from "../types";
 
-// What a bot asks, as a card in the chat, one question at a time (decision 0066). The person's
-// answer is sent as their next message, which is what the bot waits for.
 export function BotQuestionForm({
   botName,
   questions,
@@ -18,7 +16,6 @@ export function BotQuestionForm({
 }: {
   botName: string;
   questions: readonly BotQuestion[];
-  // Resolves to whether the answer was taken, like the composer's `onSend`.
   onSubmit: (text: string) => boolean | Promise<boolean>;
 }) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -35,7 +32,6 @@ export function BotQuestionForm({
     const values = Object.fromEntries(
       questions.map((question) => [question.id, valueOf(drafts[question.id])]),
     );
-    // Taken, the answer spends the card; refused, it can be sent again.
     if (!(await onSubmit(answerText(questions, values)))) setSending(false);
   }
 

@@ -6,8 +6,6 @@ import type { BotPanels } from "../hooks/use-bot-panels";
 import type { Bot } from "../types";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
-// The bar over the bot's chat: its name and what it is for, its settings when the sidebar has no tile
-// for it, and the button that opens its computer's desktop beside the chat.
 export function BotHeader({ bot, panels }: { bot: Bot; panels: BotPanels }) {
   return (
     <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">

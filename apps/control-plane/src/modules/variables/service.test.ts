@@ -146,7 +146,6 @@ run("variablesService (postgres)", async () => {
     const otherId = `u-other-${crypto.randomUUID().slice(0, 8)}`;
     beforeAll(async () => {
       await db.insert(users).values({ id: otherId, name: "O", email: `${otherId}@aven.test` });
-      // The test user owns both organizations; the other person is a plain member of the first.
       await db.insert(members).values([
         { id: `m-a-${userId}`, organizationId: orgA, userId, role: "owner" },
         { id: `m-b-${userId}`, organizationId: orgB, userId, role: "owner" },
@@ -183,7 +182,6 @@ run("variablesService (postgres)", async () => {
       expect(await valueOf(inProject(orgA, scoped.id), "REGION")).toBe("project");
       expect(await valueOf(personal(orgA, userId), "REGION")).toBe("mine");
       expect(await valueOf(personal(orgA, otherId), "REGION")).toBe("theirs");
-      // Another organization has none of them.
       expect(await variablesService.list(workspace(orgB))).toEqual([]);
       expect(await variablesService.list(personal(orgB, userId))).toEqual([]);
     });
@@ -219,7 +217,6 @@ run("variablesService (postgres)", async () => {
       await expect(
         variablesService.set(workspace(orgB), "ONE_MORE", { value: "1", secret: false }),
       ).rejects.toBeInstanceOf(TooManyVariablesError);
-      // The person's own list in the same organization is a different one.
       await variablesService.set(personal(orgB, userId), "ONE_MORE", { value: "1", secret: false });
     });
 
@@ -239,7 +236,6 @@ run("variablesService (postgres)", async () => {
       await set(personal(orgA, userId), "M_OVER_PERSONAL", "mine");
       await set(personal(orgA, otherId), "M_THEIRS", "theirs");
       await set(personal(orgA, userId), "S_MINE_SECRET", "my-secret-value");
-      // Another organization's workspace is not in this run, however it got there.
       await db.insert(environmentVariables).values({
         organizationId: orgB,
         name: "M_OTHER_ORG",
@@ -260,11 +256,9 @@ run("variablesService (postgres)", async () => {
         M_OVER_PERSONAL: "mine",
         S_MINE_SECRET: "my-secret-value",
       });
-      // The secret flag is the winner's, and a name appears once.
       expect(given.find((v) => v.name === "S_MINE_SECRET")?.secret).toBe(true);
       expect(given.filter((v) => v.name === "M_OVER_PERSONAL")).toHaveLength(1);
 
-      // Another person's run in the same project gets the project's, not mine.
       const theirs = await variablesService.forRun({
         organizationId: orgA,
         projectId: merged.id,
@@ -286,14 +280,11 @@ run("variablesService (postgres)", async () => {
         ForbiddenError,
       );
       expect(await valueOf(asMember, "ADMIN_SET")).toBe("1");
-      // Not a member of the organization at all.
       await expect(
         variablesService.set(workspace(orgB, otherId), "X", { value: "1", secret: false }),
       ).rejects.toBeInstanceOf(ForbiddenError);
 
-      // A person's own values are theirs whatever their role.
       await variablesService.set(personal(orgA, otherId), "MINE", { value: "1", secret: false });
-      // A role can hold several.
       await db
         .update(members)
         .set({ role: "member, admin" })
@@ -424,7 +415,6 @@ run("variablesService (postgres)", async () => {
         expect(mine).not.toContain("HIST_THEIRS");
         expect(theirs).toContain("HIST_THEIRS");
         expect(theirs).not.toContain("HIST_MINE");
-        // Neither shows in the workspace's, nor in another organization's.
         const shared = (await variablesService.history(workspace(orgA))).map((e) => e.name);
         expect(shared).not.toContain("HIST_MINE");
         expect(await variablesService.history(workspace(orgB))).toEqual([]);
@@ -454,7 +444,6 @@ run("variablesService (postgres)", async () => {
         const history = await variablesService.history(inProject(orgA, busy.id));
 
         expect(history).toHaveLength(100);
-        // Newest first: the last inserted is the first read, the five oldest are cut.
         expect(history[0]!.name).toBe("BUSY_104");
         expect(history.map((event) => event.name)).not.toContain("BUSY_0");
       });

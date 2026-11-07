@@ -38,7 +38,6 @@ describe("toolsForRun", () => {
     });
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("memory");
-    // The cockpit is read only for a thread's agent (decision 0109): no write is offered.
     const cockpit = tools.find((tool) => tool.name === "cockpit") as AnyTool & {
       call(input: unknown): Promise<unknown>;
     };

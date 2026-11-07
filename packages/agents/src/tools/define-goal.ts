@@ -30,7 +30,6 @@ export const goalRequestSchema = z.object({
 
 export type GoalRequest = z.infer<typeof goalRequestSchema>;
 
-// Hands the goal to the host and returns at once; the host runs it after this turn ends.
 export function createDefineGoalTool(onDefine: (goal: GoalRequest) => void) {
   return createTool({
     name: DEFINE_GOAL_TOOL_NAME,

@@ -12,7 +12,6 @@ import { keepSecretAnswers } from "./secret-answers";
 const run =
   process.env.DATABASE_URL && process.env.PROVIDER_ENCRYPTION_KEY ? describe : describe.skip;
 
-// What a run that stopped on a question leaves: the tool, and the questions it asked.
 const continuation = (toolName: string, questionIds: string[]) => ({
   version: 1,
   agentId: "coding",
@@ -62,7 +61,6 @@ run("keepSecretAnswers (postgres)", async () => {
     expect(JSON.stringify(kept)).not.toContain("never_in_history");
     const [stored] = await variablesService.list(inProject);
     expect(stored).toMatchObject({ name: "STRIPE_API_KEY", secret: true, value: null });
-    // It is in the run that resumes, and is a secret there, so its output is hidden.
     const given = await variablesService.forRun({
       organizationId: orgA,
       projectId: project.id,
@@ -131,11 +129,9 @@ run("keepSecretAnswers (postgres)", async () => {
     const asked = continuation("request_secret", ["GITHUB_TOKEN"]);
     const answers = [{ questionId: "GITHUB_TOKEN", value: "ghp_never_stored" }];
 
-    // Giving it is refused, as the name is reserved (the sign-in is Aven's to make)...
     await expect(keepSecretAnswers(input({ continuation: asked, answers }))).rejects.toThrow(
       "GITHUB_TOKEN cannot be a variable name",
     );
-    // ...and declining it gets the agent its answer, with nothing stored.
     expect(await keepSecretAnswers(input({ continuation: asked, answers, skip: true }))).toEqual([
       { questionId: "GITHUB_TOKEN", value: "not provided" },
     ]);

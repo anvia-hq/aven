@@ -45,7 +45,6 @@ describe("the prompt a Ship sends", () => {
       ),
     ).toBe(true);
     expect(prompt).not.toContain("gh pr create --draft");
-    // The first pull request needs no note: it is what the prompt was written for.
     expect(prompt).not.toContain("This ship");
   });
 

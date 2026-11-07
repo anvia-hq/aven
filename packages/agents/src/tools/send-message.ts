@@ -25,17 +25,11 @@ export const sendMessageSchema = z.object({
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
-/**
- * What the host does with a message: shows it to the person, once it has been "typed", or hands it
- * to another bot; it says what became of it.
- */
 export type SendMessage = (
   message: SendMessageInput,
   context: { abortSignal?: AbortSignal },
 ) => Promise<string>;
 
-// The only way a bot speaks (decisions 0058 and 0065). What sending takes, such as the pause that
-// makes a message to the person look typed, or finding the other bot, is the host's.
 export function createSendMessageTool(send: SendMessage) {
   return createTool({
     name: SEND_MESSAGE_TOOL_NAME,

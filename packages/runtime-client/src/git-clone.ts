@@ -19,16 +19,12 @@ export const git: Git = (args, { cwd, env, timeoutMs }) =>
     timeoutMs,
   });
 
-// The header is limited to the clone URL's own origin, so a redirect elsewhere never sees the token.
-// A path (a local test remote) has no origin and gets the unscoped key.
 function headerKey(cloneUrl: string) {
   return URL.canParse(cloneUrl)
     ? `http.${new URL(cloneUrl).origin}/.extraHeader`
     : "http.extraHeader";
 }
 
-// The token travels in git's environment configuration, so it is neither in the process's
-// arguments nor written to .git/config (decision 0013).
 export function authEnv({ token, cloneUrl }: Pick<RepoAccess, "token" | "cloneUrl">) {
   const basic = Buffer.from(`x-access-token:${token}`).toString("base64");
   return {
@@ -38,12 +34,10 @@ export function authEnv({ token, cloneUrl }: Pick<RepoAccess, "token" | "cloneUr
   };
 }
 
-/** Whether `dir` already holds a clone. */
 export async function isCloned(dir: string) {
   return (await readdir(dir).catch(() => [] as string[])).includes(".git");
 }
 
-/** Empties `dir`, dotfiles included, so a failed attempt leaves nothing for the next run to trip on. */
 export async function clearDirectory(dir: string) {
   await Promise.all(
     (await readdir(dir).catch(() => [] as string[])).map((entry) =>
@@ -52,8 +46,6 @@ export async function clearDirectory(dir: string) {
   );
 }
 
-// Clones the repository's default branch into the empty `dir` and moves onto the thread's own
-// branch. A failed clone leaves `dir` empty again, so the next run tries afresh.
 export async function cloneRepository(
   dir: string,
   threadId: string,

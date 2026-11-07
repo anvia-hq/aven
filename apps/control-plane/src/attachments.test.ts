@@ -25,7 +25,6 @@ describe("prepareAttachments", () => {
     expect(ARTIFACT_NAME.test(image?.image ?? "")).toBe(true);
     expect(pdf).toMatchObject({ name: "spec.pdf", mediaType: "application/pdf", size: 4 });
     expect(pdf?.image).toBeUndefined();
-    // An SVG can carry script, so it is never shown back: only the sandbox gets it.
     expect(svg?.image).toBeUndefined();
   });
 
@@ -37,7 +36,6 @@ describe("prepareAttachments", () => {
   test("refuses an image larger than a model takes, and files that add up to too much", () => {
     const big = { name: "big.png", data: sized(ATTACHMENT_LIMITS.imageBytes + 1, PNG) };
     expect(() => prepareAttachments([big])).toThrow(UnprocessableError);
-    // A file that is not an image may be that large.
     const doc = { name: "big.pdf", data: sized(ATTACHMENT_LIMITS.imageBytes + 1) };
     expect(prepareAttachments([doc])).toHaveLength(1);
     expect(() => prepareAttachments([doc, doc])).toThrow("can add up to 10 MB");

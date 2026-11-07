@@ -26,7 +26,6 @@ run("goalsService (postgres)", async () => {
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
-  // A bot of its own for each test, so goals do not meet.
   const botFor = async (userId: string) =>
     (
       await botsService.create(userId, {
@@ -110,7 +109,6 @@ run("goalsService (postgres)", async () => {
     });
     expect(await goalsService.update(id, "resume")).toMatchObject({ phase: "active" });
     expect(await goalsService.update(id, "complete")).toMatchObject({ phase: "complete" });
-    // Done twice is done; anything else of a finished goal is refused.
     expect(await goalsService.update(id, "complete")).toMatchObject({ phase: "complete" });
     await expect(goalsService.update(id, "pause")).rejects.toThrow("so you cannot pause");
     expect(await goalsService.update(id, "clear")).toBeNull();

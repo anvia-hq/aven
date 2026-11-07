@@ -25,7 +25,6 @@ import { PriorityFlag, StatusDot } from "./task-badges";
 import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
 import { TagInput } from "./tag-input";
 
-/** What the drawer has open: a task being started, or one there is. */
 export type TaskOpen = { kind: "new"; initial: Partial<TaskInput> } | { kind: "task"; id: string };
 
 type Fields = {
@@ -35,12 +34,9 @@ type Fields = {
   tags: string[];
 };
 
-// A field of the properties, quiet until hovered, as Notion's are.
 const QUIET =
   "h-8 w-auto border-0 bg-transparent px-1 shadow-none hover:bg-muted/60 dark:bg-transparent dark:hover:bg-muted/60";
 
-// A due day, typed or picked. What is typed passes through years such as 0002: the field shows
-// it, and only a whole date, or none, is kept.
 function DueInput({
   value,
   onChange,
@@ -64,7 +60,6 @@ function DueInput({
   );
 }
 
-// A task's status, priority, due day and tags, label beside value.
 function TaskProperties({
   value,
   onChange,
@@ -130,7 +125,6 @@ function TaskProperties({
   );
 }
 
-// A task there is, as a page: every change saved as it is made, as a note's are.
 function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void }) {
   const { update, remove } = useTasks();
   const [title, setTitle] = useState(task.title);
@@ -194,8 +188,6 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
   );
 }
 
-// A task being started: kept only when Create task (or ⌘/Ctrl+Enter) makes it, as an inbox item's
-// draft is.
 function NewTaskPage({
   initial,
   onDone,
@@ -203,7 +195,6 @@ function NewTaskPage({
 }: {
   initial: Partial<TaskInput>;
   onDone: () => void;
-  /** Whether something is written in it, which a stray close must not throw away. */
   onWritten: (written: boolean) => void;
 }) {
   const { create } = useTasks();
@@ -289,10 +280,6 @@ const CloseButton = () => (
   </DrawerClose>
 );
 
-// A task opened from the board or the table, or started, in a drawer from the right
-// (decision 0108), laid out as a cockpit page.
-// The ways a drawer closes by accident rather than by its Cancel or Close: a tap outside, a swipe,
-// Escape.
 const STRAY = new Set(["outside-press", "swipe", "escape-key", "close-watcher", "focus-out"]);
 
 export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: () => void }) {
@@ -301,7 +288,6 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
   const onWritten = useCallback((value: boolean) => {
     written.current = value;
   }, []);
-  // What was open stays drawn while the drawer slides away.
   const last = useRef(open);
   if (open) last.current = open;
   const shown = open ?? last.current;
@@ -313,7 +299,6 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
       open={isOpen}
       onOpenChange={(next, details) => {
         if (next) return;
-        // A new task with something in it is not dropped by a stray close without asking.
         const draft = shown?.kind === "new" && written.current;
         if (draft && STRAY.has(details.reason) && !window.confirm("Discard this new task?")) {
           return details.cancel();

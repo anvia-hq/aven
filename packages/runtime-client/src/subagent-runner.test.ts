@@ -18,7 +18,6 @@ const parentTools = ["read_file", "write_file", "exec_command", "ask_user", "spa
   named,
 );
 
-// A subagent whose model says what is scripted for its id, and a record of what it was given.
 function scripted(steps: Record<string, AssistantContentPart[][]>) {
   const made: { id: string; tools: string[] }[] = [];
   const create: CreateSubagent = ({ id, tools }) => {
@@ -190,7 +189,6 @@ describe("the agent of a subagent", () => {
     defaultCreateAgent("http://localhost:8000")({
       thread,
       id: "a",
-      // A run's agent has a person to ask; a subagent never does.
       attended: !role,
       tools: [],
       model,

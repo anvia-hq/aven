@@ -4,7 +4,6 @@ import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire
 import { UnprocessableError } from "../../errors";
 import { mcpService, type McpServerView } from "./service";
 
-/** What a bot's reply does with the person's MCP servers (decision 0085). */
 export type BotMcp = {
   forRun(userId: string): Promise<RunMcpServer[]>;
   list(userId: string): Promise<BotMcpView[]>;
@@ -32,8 +31,6 @@ export type BotMcp = {
   record(results: McpConnectResult[]): Promise<void>;
 };
 
-// What a bot sees of a server: no header's value, and not the person's own switch for a server on
-// the runner's network.
 const seenByBot = ({
   id,
   name,
@@ -46,11 +43,6 @@ const seenByBot = ({
 
 const NOT_FOUND = "There is no MCP server with that id. Use list_mcp_servers.";
 
-// The person's MCP servers as a bot may use them. A bot may add, change and remove a server and set
-// its headers, but it may not read a header's value, set a server that is on the runner's own
-// network (the person does that), and a saved header never goes to an address the bot changes: a
-// bot that moves a server must give the headers again, or the server has none. Whether it may change
-// anything at all is the replier's to say.
 export const botMcp: BotMcp = {
   forRun: (userId) => mcpService.forRun(userId, "bots"),
 
@@ -80,7 +72,6 @@ export const botMcp: BotMcp = {
       url,
       target,
       enabled,
-      // Headers the bot sends replace the set; moving the server without them leaves it with none.
       headers: headers ?? (moved ? [] : undefined),
     });
     if (!changed) throw new UnprocessableError(NOT_FOUND);

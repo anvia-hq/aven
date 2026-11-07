@@ -4,17 +4,13 @@ import type { ComponentType, ReactNode } from "react";
 import { Button } from "@/components/button";
 
 type Props = {
-  /** Names the panel: its heading, its landmark and its close button ("Close <title>"). */
   title: string;
   icon: ComponentType<{ className?: string }>;
-  /** What the header holds between the title and the close button. */
   actions?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 };
 
-// A panel beside a thread's conversation, drawn as a card of its own: a header with its name, its
-// own actions and a close button, over the panel's body.
 export function SidePanel({ title, icon: Icon, actions, onClose, children }: Props) {
   return (
     <section

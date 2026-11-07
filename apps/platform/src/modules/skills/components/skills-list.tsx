@@ -11,10 +11,8 @@ import { fileSize } from "@/lib/format";
 import { useSkills } from "../hooks/use-skills";
 import type { Skill } from "../types";
 
-// Not in React's types: lets a file input pick a whole folder, its files with their paths.
 const folderPicker = { webkitdirectory: "" } as Record<string, string>;
 
-// Picks a folder or a .zip, or takes a .zip dropped on it.
 function UploadSkill() {
   const { upload } = useSkills();
   const folder = useRef<HTMLInputElement>(null);
@@ -122,7 +120,6 @@ function PersonalSkill({ skill }: { skill: Skill }) {
   );
 }
 
-// The user's own skills, which they upload and switch on and off, then the built-in ones.
 export function SkillsList() {
   const { builtIn, personal, loaded } = useSkills();
   if (!loaded) return null;

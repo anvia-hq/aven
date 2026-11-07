@@ -6,11 +6,6 @@ import { composeCommand, run } from "../compose";
 import { avenHome, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
 
-/**
- * Removes the runner's service and the server's containers. The database, the settings and the
- * sandboxes' files stay, so installing again picks up where it was; `--purge` deletes all of it,
- * which asks first because the database holds every thread.
- */
 export async function uninstall(args: Args) {
   const purge = Boolean(args.flags.purge);
   if (purge && !args.flags.yes) {

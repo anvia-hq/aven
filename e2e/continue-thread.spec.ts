@@ -11,7 +11,7 @@ test.afterEach(() => {
   for (const child of children.splice(0)) child.kill();
 });
 
-test.describe("continuing a thread on another runner (decision 0149)", () => {
+test.describe("continuing a thread on another runner (decision 0150)", () => {
   test("starts a thread on the other runner, shown as one quiet line, and leaves the old one", async ({
     page,
   }) => {

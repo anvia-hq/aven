@@ -4,8 +4,6 @@ import { authRouter } from "../auth/router";
 import { nameParams, setVariableBody } from "./schema";
 import { variablesService, type Scope } from "./service";
 
-// The organization's variables and a person's own (decision 0046): each answers with that scope's
-// values only, and the merge a run gets exists nowhere in the API.
 function scopeRoutes(kind: "workspace" | "personal") {
   const scopeOf = (organizationId: string, userId: string): Scope =>
     kind === "workspace"

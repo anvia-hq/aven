@@ -5,7 +5,6 @@ import { authRouter } from "../auth/router";
 import { skillParams, updateSkillBody, uploadSkillBody } from "./schema";
 import { skillsService } from "./service";
 
-// Skills belong to the signed-in user, not to the active organization, so no `org: true`.
 export const skillsRouter = new Elysia({ prefix: "/skills" })
   .use(authRouter)
   .get("/", ({ user }) => skillsService.list(user.id), { auth: true })

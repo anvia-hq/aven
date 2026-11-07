@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 
 import { TagBadge } from "./tag-badge";
 
-// A record's tags, each a link that shows only what carries it on this page.
 export function TagList({
   tags,
   to,

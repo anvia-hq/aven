@@ -5,8 +5,6 @@ import { useHighlightedLines } from "@/modules/files/hooks/use-highlighted-lines
 
 import type { DiffHunk, DiffRow } from "../types";
 
-// Where each row sits in the old side's text (context and deleted lines) and the new side's
-// (context and added lines), so a side is coloured as one piece and a row finds its tokens.
 function sides(hunks: DiffHunk[]) {
   const oldLines: string[] = [];
   const newLines: string[] = [];
@@ -26,9 +24,6 @@ function sides(hunks: DiffHunk[]) {
   return { oldText: oldLines.join("\n"), newText: newLines.join("\n"), at };
 }
 
-// A file's changed lines coloured by its language: each side is highlighted as the file it is part
-// of, with the Files panel's highlighter. Until the colours arrive, and for a file with no known
-// grammar, a row has none and is shown plain.
 export function useHighlightedRows(
   hunks: DiffHunk[],
   path: string,

@@ -3,7 +3,6 @@ import { File as FileIcon, X } from "@mynaui/icons-react";
 import { Button } from "@/components/button";
 import { fileSize } from "@/lib/format";
 
-// A file attached to a message, by its name and size, with a remove button while it is pending.
 export function FileChip({
   name,
   size,

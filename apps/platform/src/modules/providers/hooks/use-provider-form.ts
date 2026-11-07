@@ -5,9 +5,6 @@ import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { useProviders } from "./use-providers";
 
-// The state behind the provider dialog for one kind: the model list loaded for it, and
-// submitting, which adds a provider or, given one, changes it. Text fields are uncontrolled; they
-// are read from the form when needed.
 export function useProviderForm(
   kind: ProviderKind,
   provider: Provider | undefined,
@@ -28,8 +25,6 @@ export function useProviderForm(
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
 
-  // The address the form stands for: typed for a server or an Azure resource, derived from the
-  // region for Bedrock and from the project and location for Vertex AI.
   function readBaseUrl() {
     if (bedrock) {
       const region = readTrimmedField("region");
@@ -44,14 +39,11 @@ export function useProviderForm(
     return compatible || azure ? readTrimmedField("baseUrl") : undefined;
   }
 
-  // A model list belongs to one key and URL, so closing the dialog drops it.
   function reset() {
     setModels(null);
     setModelId(provider?.modelId ?? "");
   }
 
-  // Fetches `<provider>/models` with whatever key and URL are typed so far; an edit with no new
-  // key asks with the stored one.
   async function loadModels() {
     setLoadingModels(true);
     const apiKey = readTrimmedField("apiKey");

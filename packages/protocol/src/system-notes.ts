@@ -1,6 +1,3 @@
-// A message the control plane sends an agent for something that happened, not something the person
-// said: a fork that ended, a process that ended, a thread continued on another runner (decisions 0142, 0144 and 0149). Its first line is the
-// whole story for a person; the rest is for the agent.
 const NOTE = /^\[(process|fork|continued)\] ([^\n]+)/;
 
 export function systemNoteOf(

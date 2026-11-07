@@ -15,17 +15,13 @@ import type {
   SteerResult,
 } from "@aven/protocol/runtime-wire";
 
-/** What a run needs to know about its thread. The workspace is the runner's own business. */
 export type RunThread = {
   id: string;
   organizationId: string;
-  /** The runner the thread's sandbox runs on. */
   runtimeId: string;
-  /** The thread this one was forked from (decision 0135). */
   parentThreadId?: string | null;
 };
 
-/** What can come with a run's prompt. */
 export type RunExtras = Pick<
   StartRunInput,
   | "attachments"
@@ -40,38 +36,24 @@ export type RunExtras = Pick<
   | "cockpit"
 >;
 
-/**
- * The agent's memory for a run (decision 0102): whose it is, which the control plane holds to when
- * the runner asks, and the folders the run is told of.
- */
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
 
 export type StartRunInput = {
   thread: RunThread;
   prompt: string;
-  /** Only summarize the thread's history: no sandbox, no tools (decision 0097). */
   compact?: boolean;
-  /** The files sent with the prompt, for the runner to copy into the sandbox (decision 0034). */
   attachments?: RunAttachment[];
-  /** The files and skills the prompt mentions (decision 0036). */
   mentions?: MessageMention[];
-  /** The sender's skills and the built-in ones (decision 0035). */
   skills?: RunSkill[];
-  /** The sender's MCP servers for thread agents, which the runner connects (decision 0085). */
   mcp?: RunMcpServer[];
-  /** The GitHub account the run acts as: the sender's own (decision 0044). */
   github?: RunGithub;
-  /** The project's environment variables, for the agent's commands (decision 0045). */
   env?: RunEnvVar[];
-  /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
   memory?: RunMemoryInput;
-  /** The sender's cockpit, which a thread's agent reads (decision 0109). */
   cockpit?: CockpitCaller;
   model?: ModelConfig;
 };
 
-/** A run that suspended on the agent's question, resumed with the user's answers. Both are opaque Anvia values. */
 export type ResumeRunInput = {
   thread: RunThread;
   continuation: unknown;
@@ -79,42 +61,24 @@ export type ResumeRunInput = {
   skills?: RunSkill[];
   mcp?: RunMcpServer[];
   github?: RunGithub;
-  /** The project's environment variables, for the agent's commands (decision 0045). */
   env?: RunEnvVar[];
-  /** Who the run is, for the identity tokens it can mint (decision 0049). */
   identity?: RunIdentity;
   memory?: RunMemoryInput;
-  /** The sender's cockpit, which a thread's agent reads (decision 0109). */
   cockpit?: CockpitCaller;
   model?: ModelConfig;
 };
 
-/** How a run ended: `response` for a normal finish, `interaction` when it waits for the user's answer (with the `continuation` to resume it). */
 export type RunResult = { type: RunOutcome; continuation?: unknown };
 
-// One agent run as the control plane sees it. Everything a run needs from the machine it runs on
-// (the agent loop, its tools, the sandbox) stays behind this handle (decisions 0008 and 0010).
 export type RuntimeRun = {
-  /** The run's progress as protocol events; ends when the run does. */
   events: AsyncIterable<RunEvent>;
-  /** How the run ended. */
   result: Promise<RunResult>;
   cancel(reason: string): void;
-  /**
-   * Hands the run a message from the person, for the agent to take at its next safe step; the
-   * runner's `steer_applied` event says when it has (decision 0098). Rejects when the runner cannot be asked.
-   */
   steer(message: QueuedSteer): Promise<SteerResult>;
 };
 
 export interface Runtime {
-  /**
-   * Starts a run. Throws synchronously on a setup error (the runner is offline, or the model
-   * cannot be used) before anything is persisted. `model` is the sender's provider; undefined
-   * means the environment's.
-   */
   start(input: StartRunInput): RuntimeRun;
-  /** Continues a run that ended as "interaction". Throws like `start`. */
   resume(input: ResumeRunInput): RuntimeRun;
   dispose(): void;
 }

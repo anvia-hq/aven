@@ -59,7 +59,6 @@ describe("browsing a workspace", () => {
     expect(await listDirectory(root, "..")).toEqual([]);
     expect(await readWorkspaceFile(root, ".git/config")).toEqual({ kind: "missing" });
     expect(await listDirectory(root, ".git")).toEqual([]);
-    // The top of the workspace, spelled another way, still has no `.git`.
     expect(await listDirectory(root, ".")).toEqual(await listDirectory(root, ""));
     expect(await listDirectory(root, "src/..")).toEqual(await listDirectory(root, ""));
   });
@@ -76,7 +75,6 @@ describe("browsing a workspace", () => {
 });
 
 describe("searching a workspace", () => {
-  // A real repository: a tracked file, a deleted one, an untracked one and an ignored folder.
   async function repository() {
     const base = await mkdtemp(join(tmpdir(), "aven-search-"));
     dirs.push(base);

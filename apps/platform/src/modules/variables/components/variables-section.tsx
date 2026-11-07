@@ -12,7 +12,6 @@ import { MAX_VARIABLES, type Variable, type VariableScope } from "../types";
 import { VariableDialog } from "./variable-dialog";
 import { VariableHistoryDialog } from "./variable-history-dialog";
 
-// What a variable shows in place of its value: a plain one's own, a secret only as its end.
 const shown = (variable: Variable) =>
   variable.secret ? `••••••${variable.valueHint ?? ""}` : (variable.value ?? "");
 
@@ -53,14 +52,10 @@ function VariableRow({
 type Props = {
   scope: VariableScope;
   title: string;
-  /** What to say when there are none. */
   empty: string;
-  /** Drawn as a card with a header bar, as on a project's page, instead of a plain section. */
   framed?: boolean;
 };
 
-// One scope's environment variables: a project's, the workspace's or the person's own (decision
-// 0046). Changing them is offered only to who may.
 export function VariablesSection({ scope, title, empty, framed = false }: Props) {
   const { variables, loaded } = useVariables(scope);
   const canChange = useCanChangeVariables(scope);

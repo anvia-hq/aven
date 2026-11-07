@@ -6,11 +6,6 @@ import { version } from "../version";
 import { runnerUpgrade } from "./runner";
 import { serverUpgrade } from "./server";
 
-/**
- * Updates this machine: the `aven` binary first, then, with the new binary, whatever is installed
- * here (the server, the runner), because the compose file and the sandbox image of a release are
- * the ones that release's binary carries.
- */
 export async function update(args: Args) {
   if (args.flags.finish) return finish();
   if (version === "dev")
@@ -28,7 +23,6 @@ export async function update(args: Args) {
   if (code !== 0) process.exit(code);
 }
 
-/** Brings what is installed here to this binary's own release. */
 export async function finish() {
   const server = await serverUpgrade(version);
   const runner = await runnerUpgrade(version);

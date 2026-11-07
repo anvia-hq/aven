@@ -1,6 +1,5 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-// Better Auth core table. Keep the column set in sync with Better Auth's schema.
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

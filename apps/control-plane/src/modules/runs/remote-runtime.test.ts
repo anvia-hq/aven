@@ -19,7 +19,6 @@ const identity = {
 };
 const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" };
 
-// A runtime connection that keeps what it was sent.
 function runtime({ failPost = false } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
   const revoked: string[] = [];

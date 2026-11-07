@@ -5,8 +5,6 @@ import { BotCompactionRow } from "./bot-compaction-row";
 import { BotEffortRow } from "./bot-effort-row";
 import { BotModelSelect } from "./bot-model-select";
 
-// The person's bots, each with the settings of how it thinks: its model, how hard it reasons and
-// when its chat is summarized.
 export function BotsSettingsList() {
   const { bots, loaded } = useBots();
 

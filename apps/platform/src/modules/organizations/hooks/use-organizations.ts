@@ -5,8 +5,6 @@ import { resetRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { resetThreads } from "@/modules/threads/hooks/use-threads";
 import { resetVariables } from "@/modules/variables/hooks/use-variables";
 
-// These lists are scoped to the active organization: drop them (and any request still in flight
-// for the previous one) so the next read refetches cleanly.
 export function resetOrganizationData() {
   resetProjects();
   resetThreads();

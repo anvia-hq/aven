@@ -17,7 +17,6 @@ import type { ThreadMessages } from "./messages";
 import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
 
-// The runs and messages are given: they are made with the rest of the app in `composition.ts`.
 export const threadsRouter = (
   runs: RunManager,
   messages: ThreadMessages,
@@ -61,8 +60,6 @@ export const threadsRouter = (
           await threadsService.update({ organizationId, userId: user.id }, params.id, body),
           "Thread not found",
         );
-        // Put away: its run stops and its sandbox is freed, the conversation and files staying
-        // (decision 0118).
         if (body.state === "archived") putAway({ id: thread.id, runtimeId: thread.runtimeId });
         return thread;
       },
@@ -109,8 +106,6 @@ export const threadsRouter = (
       thread: "own",
       params: threadParams,
     })
-    // Server-sent events: a snapshot first, then live run events. Closing the connection never
-    // affects a running agent.
     .get(
       "/:id/events",
       async function* ({ params, organizationId, user, request }) {

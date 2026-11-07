@@ -4,8 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// The agent's question (decision 0020) on a runner that asks one and stops, and finishes once it
-// is answered (e2e/fake-runner.ts, FAKE_QUESTION).
 test.describe("the agent's question", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -17,7 +15,6 @@ test.describe("the agent's question", () => {
     page,
   }) => {
     await registerUser(page, "ask", "Ask User");
-    // The run needs a model grant; the pretend runner never calls the model.
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
@@ -29,19 +26,16 @@ test.describe("the agent's question", () => {
     await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
     await page.getByRole("button", { name: "Send" }).click();
 
-    // The form takes the composer's place, and a message cannot go around it.
     const form = page.getByRole("form", { name: "Answer the agent" });
     await expect(form).toBeVisible();
     await expect(form).toContainText("Which color should it be?");
     await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
-    // The question is in the form alone while it waits, not in the conversation as well.
     await expect(page.getByRole("region", { name: "Answered questions" })).toHaveCount(0);
     const refused = await page.request.post(`/api/threads/${threadId}/messages`, {
       data: { prompt: "never mind" },
     });
     expect(refused.status()).toBe(409);
 
-    // Nothing is sent until every question has an answer.
     await expect(form.getByRole("button", { name: "Send answer" })).toBeDisabled();
     await form.getByRole("radio", { name: "Blue" }).click();
     await form.getByRole("button", { name: "Send answer" }).click();
@@ -58,7 +52,6 @@ test.describe("the agent's question", () => {
       });
     }).toPass({ timeout: 5000 });
 
-    // The answer is used once.
     const again = await page.request.post(`/api/threads/${threadId}/answer`, {
       data: { answers: [{ questionId: "color", value: "red" }] },
     });
@@ -79,7 +72,6 @@ test.describe("the agent's question", () => {
 
     const form = page.getByRole("form", { name: "Answer the agent" });
     await form.getByRole("radio", { name: "Red" }).click();
-    // Writing their own answer replaces the pick.
     await form.getByLabel("Which color should it be? (your own answer)").fill("teal");
     await expect(form.getByRole("radio", { name: "Red" })).not.toBeChecked();
     await form.getByRole("button", { name: "Send answer" }).click();

@@ -1,12 +1,5 @@
 import { git, type Git } from "./git-clone";
 
-/**
- * The remote's default branch as a workspace knows it, to see where a thread's branch left it:
- * `origin/HEAD` when there is one. A clone made with `--branch` has none (git sets it only when it
- * picks the branch itself), but it holds that one remote branch alone, so the only one is it; the
- * branch the workspace is on, once pushed, is another remote branch and does not count. Null when
- * there is no way to tell.
- */
 export async function remoteBase(root: string, run: Git = git) {
   const head = await run(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root });
   if (head.code === 0) return "origin/HEAD";

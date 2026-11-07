@@ -6,7 +6,6 @@ type Props = {
   state: ImportRepositoryState;
 };
 
-// What to import once there is something to pick from: the account, its repository and the runner.
 export function ImportRepositoryFields({ state }: Props) {
   const { installations, installationId, repos, installUrl } = state;
   return (

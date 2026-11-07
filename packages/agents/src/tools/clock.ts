@@ -1,4 +1,3 @@
-/** The longest one wait call holds: a model's tool call is not meant to hold for minutes on end. */
 export const MAX_WAIT_SECONDS = 240;
 
 export type Clock = {

@@ -75,7 +75,6 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
     }
   };
 
-  // A thread on a connected runner whose shell echoes what it is sent, as an uppercase line.
   async function setup() {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "r",
@@ -185,8 +184,6 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
     expect(seen.messages.some((message) => message.type === "terminal.open")).toBe(false);
   });
 
-  // The sandbox holds the GitHub sign-in and personal variables of whoever the latest run was sent
-  // as (decisions 0044 and 0045); only that person gets a shell in it.
   test("is for the person the thread last ran as, and the creator before any run", async () => {
     const { thread, seen } = await setup();
     await threadsService.markRunBy(thread.id, outsider.userId);
