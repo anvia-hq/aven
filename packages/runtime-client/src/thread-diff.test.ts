@@ -42,6 +42,7 @@ describe("a thread's changes", () => {
 
   test("the whole branch shows committed work too, in a clone made as Aven makes it (no origin/HEAD)", async () => {
     const { root, sh } = await workspace({ branchClone: true });
+    await sh(root, "remote", "set-head", "origin", "-d");
     expect(
       await git(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root }),
     ).toMatchObject({ code: 1 });
