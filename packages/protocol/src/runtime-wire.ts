@@ -2,6 +2,7 @@
 // WebSocket that the runtime opens. Either side can send a one-way message, or a `call` that the
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
+import type { ForkView } from "./forks";
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
@@ -433,6 +434,12 @@ export type MemoryCallMethod = "memory.append" | "memory.notes";
 /** The runtime works the sender's cockpit for a run's agent, read only (decision 0109). */
 export type CockpitCallMethod = "cockpit.read";
 
+/**
+ * The agent of a run forks the run's thread, or looks at one of its forks (decision 0135). The thread
+ * and who acts come from the control plane's record of the run, never from the params.
+ */
+export type ForkCallMethod = "fork.start" | "fork.status";
+
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
 
@@ -468,6 +475,7 @@ export type McpReportCallMethod = "mcp.report";
 export type CallMethod =
   | MemoryCallMethod
   | CockpitCallMethod
+  | ForkCallMethod
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
@@ -597,6 +605,12 @@ export type BotNotesParams = { replyId: string; command: MemoryCommand };
 
 /** A command of a run's agent in the sender's cockpit (decision 0109). */
 export type CockpitReadParams = { runId: string; command: CockpitCommand };
+
+/** The agent hands a task to a new thread forked from the run's own: `context` is what it knows that the task needs. */
+export type ForkStartParams = { runId: string; task: string; context: string; title?: string };
+
+/** A fork of the run's thread, by its id. */
+export type ForkStatusParams = { runId: string; id: string };
 
 /** A command of a bot in its owner's cockpit (decision 0109). */
 export type BotCockpitParams = { replyId: string; command: CockpitCommand };
@@ -730,6 +744,8 @@ export type RuntimeCalls = {
   "memory.notes": { params: MemoryNotesParams; result: string };
   "bot.cockpit": { params: BotCockpitParams; result: string };
   "cockpit.read": { params: CockpitReadParams; result: string };
+  "fork.start": { params: ForkStartParams; result: { id: string; title: string } };
+  "fork.status": { params: ForkStatusParams; result: ForkView };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -747,4 +763,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 42;
+export const WIRE_VERSION = 43;

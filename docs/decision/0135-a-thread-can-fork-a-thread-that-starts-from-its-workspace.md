@@ -29,7 +29,7 @@ the parent's workspace, in a sandbox of its own, and works on a task the parent 
   The agent knows its own context best, so it writes the summary instead of a second model run, and
   the tool requires it.
 - **Same runner.** The workspace is copied on the runner, so the fork runs on the parent's runner. If the
-  parent's workspace is gone when the child starts, the child gets a fresh clone and its brief says so.
+  parent's workspace is gone when the child starts, the child gets a fresh clone and is told to say so in its report.
 - **Taking the work back.** The parent's agent reads a fork with `fork_status` (state, last message,
   files changed) and takes its changes with `take_fork_changes`: the runner writes the child's whole
   change (commits and uncommitted work, against the point it forked from) as a patch in the parent's

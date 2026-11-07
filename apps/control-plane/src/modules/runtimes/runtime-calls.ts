@@ -28,6 +28,7 @@ import type {
   RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 
+import type { ThreadForks } from "../threads/forks";
 import { runCockpitCommand, type CockpitCaller } from "../cockpit/commands";
 import { runMemoryCommand, type MemoryCaller } from "../memory/commands";
 import {
@@ -49,6 +50,8 @@ import {
   parseMemoryParams,
   parseBotCockpitParams,
   parseCockpitReadParams,
+  parseForkStartParams,
+  parseForkStatusParams,
   parseSkillsGetParams,
 } from "./wire";
 
@@ -98,6 +101,8 @@ export type CallBotReply = {
 };
 
 export type RuntimeCallContext = {
+  /** The forks the agent of a run makes of its thread (decision 0135). */
+  forks: ThreadForks;
   /** A live run of the connection the call came over. */
   findRun(runId: string): CallRun | undefined;
   /** A live bot reply of the connection the call came over. */
@@ -137,7 +142,7 @@ function answerBotCall<Params extends { replyId: string }, Result>(
 export async function answerRuntimeCall(
   method: CallMethod,
   params: unknown,
-  { findRun, findBotReply, store, repoAccess, skillArchive, mcpReport }: RuntimeCallContext,
+  { findRun, findBotReply, store, repoAccess, skillArchive, mcpReport, forks }: RuntimeCallContext,
 ) {
   if (method === "bot.memory") {
     return answerBotCall(params, parseBotMemoryParams, findBotReply, (reply, call) =>
@@ -227,6 +232,8 @@ export async function answerRuntimeCall(
     if (!run.cockpit) throw new Error("This run has no cockpit");
     return runCockpitCommand(run.cockpit, parseCockpitReadParams(params).command);
   }
+  if (method === "fork.start") return forks.start(run.thread, parseForkStartParams(params));
+  if (method === "fork.status") return forks.status(run.thread, parseForkStatusParams(params).id);
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {
     sessionId: run.thread.id,

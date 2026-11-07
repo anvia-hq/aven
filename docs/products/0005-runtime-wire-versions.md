@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **43**: the agent of a thread forks it, `fork.start`, and looks at a fork, `fork.status`, and `run.start` can say `forkOf`, the thread whose workspace the new thread starts as a copy of (decision 0135). A runner that has not updated is refused until `aven update`.
 - **42**: a run and a bot's reply say what the agent may do in the person's cockpit (`cockpit` on `run.start`, `run.resume` and `bot.reply`: `read` for a thread's agent, `write` for a bot), and the agent works it with the calls `cockpit.read` and `bot.cockpit` (decision 0109).
 - **41**: a run and a bot's reply carry the agent's memory (`memory` on `run.start`, `run.resume` and `bot.reply`), and the agent works its notes with the calls `memory.notes` and `bot.notes` (decision 0102).
 - **40**: a bot can stop a thread's run, `bot.thread` `stop` (decision 0101). A runner that has not updated is refused until `aven update`.

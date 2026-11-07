@@ -25,6 +25,7 @@ import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
 import { skillsService } from "./modules/skills/service";
 import { createBotThreads } from "./modules/threads/bot-access";
+import { createThreadForks } from "./modules/threads/forks";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
@@ -71,6 +72,9 @@ export const runsService = new RunManager({
 });
 
 export const threadMessages = createThreadMessages(runsService);
+
+// A thread's agent can fork its thread (decision 0135): the hub answers the runner's calls for it.
+runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessages });
 
 // Archiving a thread stops its run and frees its sandbox (decision 0118), for the person's own
 // routes and for a bot doing it on their word.
