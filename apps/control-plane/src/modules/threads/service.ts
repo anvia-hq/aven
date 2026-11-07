@@ -167,6 +167,14 @@ export const threadsService = {
     return found?.count ?? 0;
   },
 
+  // The forks of a thread that are not archived, for telling its agent that they are all done.
+  async liveForkList(parentThreadId: string) {
+    return db
+      .select({ id: threads.id, title: threads.title })
+      .from(threads)
+      .where(and(eq(threads.parentThreadId, parentThreadId), ne(threads.state, "archived")));
+  },
+
   // A run was sent as this person: their credentials are what the thread's sandbox now holds.
   async markRunBy(threadId: string, userId: string) {
     await db.update(threads).set({ lastRunBy: userId }).where(eq(threads.id, threadId));

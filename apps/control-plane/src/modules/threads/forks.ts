@@ -18,8 +18,9 @@ export type ThreadForks = {
   /** Looks at one of the run's thread's forks. */
   status(thread: RunThreadInfo, id: string): Promise<ForkView>;
   /**
-   * A run of `fork` ended. A parent that is working is told, so it can look; one that is idle is
-   * left alone, since nobody asked it to do anything (decision 0135).
+   * A run of `fork` ended. A parent that is working is told, so it can look. One that is idle is
+   * woken once, when its last fork that is going has ended: the person asked for the forks, so
+   * someone must collect them (decision 0138).
    */
   ended(
     fork: { id: string; organizationId: string; parentThreadId?: string | null },
@@ -95,7 +96,10 @@ export function createThreadForks({
 
     async ended(fork, ending) {
       if (!fork.parentThreadId || ending.outcome === "cancelled") return;
-      if (!runs.isRunning(fork.parentThreadId)) return;
+      const parentWorking = runs.isRunning(fork.parentThreadId);
+      const siblings = await threadsService.liveForkList(fork.parentThreadId);
+      // An idle parent waits for the forks that are still going: one note for the batch.
+      if (!parentWorking && siblings.some((other) => runs.isRunning(other.id))) return;
       const parent = await threadsService.get(fork.organizationId, fork.parentThreadId);
       const forked = await threadsService.get(fork.organizationId, fork.id);
       if (!parent || !forked) return;
@@ -104,9 +108,10 @@ export function createThreadForks({
         failed: "failed",
         question: "stopped to ask the person a question",
       }[ending.outcome];
-      const prompt = `[fork] Your fork "${forked.title}" (${forked.id}) ${how}. Look at it with fork_status, and take its changes with take_fork_changes when you want them.`;
-      // The parent is working for the person already: this reaches it at its next step. Should it
-      // have finished in the moment since, the note starts a run of its own, which only looks.
+      const prompt = parentWorking
+        ? `[fork] Your fork "${forked.title}" (${forked.id}) ${how}. Look at it with fork_status, and take its changes with take_fork_changes when you want them.`
+        : `[fork] Your fork "${forked.title}" (${forked.id}) ${how}, and none of your forks is going now: ${siblings.map((other) => `"${other.title}" (${other.id})`).join(", ")}. Look at each with fork_status. If the person asked you to take their work or open pull requests, do that now, checking each change first; otherwise tell them the forks are done and ask what they want taken.`;
+      // A working parent gets this at its next step; an idle one starts a run of its own with it.
       await messages
         .send(
           parent.organizationId,

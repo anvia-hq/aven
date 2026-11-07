@@ -121,24 +121,36 @@ run("a thread's forks (postgres)", async () => {
     ).rejects.toThrow();
   });
 
-  test("tells a parent that is working when a fork ends, and leaves an idle one alone (decision 0135)", async () => {
+  test("tells a working parent at once, and wakes an idle one when its last fork has ended (decision 0142)", async () => {
     const main = await parent();
-    const made = await forks.start(main, input);
-    const fork = { id: made.id, organizationId: orgA, parentThreadId: main.id };
+    const first = await forks.start(main, input);
+    const second = await forks.start(main, input);
+    const ofParent = (id: string) => ({ id, organizationId: orgA, parentThreadId: main.id });
 
-    await forks.ended(fork, { outcome: "done" });
+    // Idle, with another fork still going: nothing yet.
+    running = new Set([second.id]);
+    await forks.ended(ofParent(first.id), { outcome: "done" });
     expect(told).toEqual([]);
 
-    running = new Set([main.id]);
-    await forks.ended(fork, { outcome: "done" });
+    // Idle, and the last one ends: one note naming every fork.
+    running = new Set();
+    await forks.ended(ofParent(second.id), { outcome: "done" });
     expect(told).toHaveLength(1);
     expect(told[0]).toMatchObject({ thread: main.id, onWord: false });
-    expect(told[0]?.prompt).toContain(made.id);
+    expect(told[0]?.prompt).toContain(first.id);
+    expect(told[0]?.prompt).toContain(second.id);
+
+    // Working: told of that fork at its next step, whatever the others do.
+    told.length = 0;
+    running = new Set([main.id, first.id]);
+    await forks.ended(ofParent(second.id), { outcome: "done" });
+    expect(told).toHaveLength(1);
     expect(told[0]?.prompt).toContain("is done");
 
-    await forks.ended(fork, { outcome: "cancelled" });
-    await forks.ended({ ...fork, parentThreadId: null }, { outcome: "done" });
-    expect(told).toHaveLength(1);
+    told.length = 0;
+    await forks.ended(ofParent(second.id), { outcome: "cancelled" });
+    await forks.ended({ ...ofParent(second.id), parentThreadId: null }, { outcome: "done" });
+    expect(told).toEqual([]);
     running = new Set();
   });
 

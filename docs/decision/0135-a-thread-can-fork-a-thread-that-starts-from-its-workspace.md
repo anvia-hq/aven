@@ -1,6 +1,6 @@
 # 0135: A thread's agent can fork a thread that starts from its workspace
 
-Status: accepted
+Status: accepted. One rule changed by decision 0142 (an idle parent is woken when its forks are done).
 
 ## Context
 
