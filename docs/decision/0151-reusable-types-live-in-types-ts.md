@@ -1,4 +1,4 @@
-# 0150: Reusable types live in types.ts
+# 0151: Reusable types live in types.ts
 
 Status: accepted.
 
