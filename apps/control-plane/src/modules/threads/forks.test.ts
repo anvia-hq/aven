@@ -141,4 +141,15 @@ run("a thread's forks (postgres)", async () => {
     expect(told).toHaveLength(1);
     running = new Set();
   });
+
+  test("keeps to the limit when the agent forks several times at once", async () => {
+    const main = await parent();
+    const results = await Promise.allSettled(
+      Array.from({ length: FORKS_PER_THREAD + 2 }, () => forks.start(main, input)),
+    );
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(
+      FORKS_PER_THREAD,
+    );
+    expect(await threadsService.liveForks(main.id)).toBe(FORKS_PER_THREAD);
+  });
 });

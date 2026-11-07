@@ -41,6 +41,10 @@ the parent's workspace, in a sandbox of its own, and works on a task the parent 
   to act unasked is what this decision avoids. The person tells it to take the fork's work.
 - **The fork runs on the person's default model**, as a bot's thread does, not on the parent's choice.
 
+- **The copy is made when the fork's run starts**, a moment after `fork_thread` returns, not at the
+  call: changes the parent makes in that moment may be in the copy. The fork's changes are measured
+  from the copy, so they are never confused with the parent's.
+
 ## Consequences
 
 - A fork costs a container (4 CPUs, 8 GB by default) and a copy of the workspace: `node_modules`

@@ -43,42 +43,55 @@ export function createThreadForks({
     return fork;
   };
 
+  // The agent may call fork_thread several times at once, and each call counts the forks before it
+  // makes one: one thread's forks are made one at a time, so the limit holds.
+  const turns = new Map<string, Promise<unknown>>();
+  const inTurn = <T>(parentId: string, work: () => Promise<T>) => {
+    const turn = (turns.get(parentId) ?? Promise.resolve()).catch(() => undefined).then(work);
+    turns.set(parentId, turn);
+    return turn.finally(() => {
+      if (turns.get(parentId) === turn) turns.delete(parentId);
+    });
+  };
+
+  const start: ThreadForks["start"] = async (thread, { task, context, title }) => {
+    const parent = await threadsService.require(thread.organizationId, thread.id);
+    if (parent.parentThreadId) {
+      throw new UnprocessableError(
+        "A fork cannot fork: do the work in this thread or tell the person.",
+      );
+    }
+    if ((await threadsService.liveForks(parent.id)) >= FORKS_PER_THREAD) {
+      throw new UnprocessableError(
+        `This thread has ${FORKS_PER_THREAD} forks that are not archived. Wait for one to finish and have the person archive it.`,
+      );
+    }
+    // The thread is its creator's alone to drive, so a fork is theirs too.
+    const userId = parent.createdBy;
+    const fork = await threadsService.create(
+      parent.organizationId,
+      userId,
+      { projectId: parent.projectId, title: title ?? threadTitleFrom(task) },
+      { parentThreadId: parent.id, runtimeId: parent.runtimeId },
+    );
+    const prompt = forkPrompt(
+      { task, context },
+      { branch: threadBranch(fork.id), parentTitle: parent.title },
+    );
+    try {
+      await messages.start(parent.organizationId, userId, fork.id, { prompt });
+    } catch (error) {
+      // A fork that never ran would only sit in the person's list.
+      await threadsService
+        .update({ organizationId: parent.organizationId, userId }, fork.id, { state: "archived" })
+        .catch(() => undefined);
+      throw error;
+    }
+    return { id: fork.id, title: fork.title };
+  };
+
   return {
-    async start(thread, { task, context, title }) {
-      const parent = await threadsService.require(thread.organizationId, thread.id);
-      if (parent.parentThreadId) {
-        throw new UnprocessableError(
-          "A fork cannot fork: do the work in this thread or tell the person.",
-        );
-      }
-      if ((await threadsService.liveForks(parent.id)) >= FORKS_PER_THREAD) {
-        throw new UnprocessableError(
-          `This thread has ${FORKS_PER_THREAD} forks that are not archived. Wait for one to finish and have the person archive it.`,
-        );
-      }
-      // The thread is its creator's alone to drive, so a fork is theirs too.
-      const userId = parent.createdBy;
-      const fork = await threadsService.create(
-        parent.organizationId,
-        userId,
-        { projectId: parent.projectId, title: title ?? threadTitleFrom(task) },
-        { parentThreadId: parent.id, runtimeId: parent.runtimeId },
-      );
-      const prompt = forkPrompt(
-        { task, context },
-        { branch: threadBranch(fork.id), parentTitle: parent.title },
-      );
-      try {
-        await messages.start(parent.organizationId, userId, fork.id, { prompt });
-      } catch (error) {
-        // A fork that never ran would only sit in the person's list.
-        await threadsService
-          .update({ organizationId: parent.organizationId, userId }, fork.id, { state: "archived" })
-          .catch(() => undefined);
-        throw error;
-      }
-      return { id: fork.id, title: fork.title };
-    },
+    start: (thread, input) => inTurn(thread.id, () => start(thread, input)),
 
     async ended(fork, ending) {
       if (!fork.parentThreadId || ending.outcome === "cancelled") return;
