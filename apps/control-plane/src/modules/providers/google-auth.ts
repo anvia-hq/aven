@@ -1,6 +1,6 @@
 import { createHash, createSign } from "node:crypto";
 
-// What a Vertex AI provider's credential is (decision 0136): a service account's JSON key, which the
+// What a Vertex AI provider's credential is (decision 0140): a service account's JSON key, which the
 // control plane trades for a one-hour access token, or an access token the person pasted, which is
 // used as it is until Google refuses it.
 

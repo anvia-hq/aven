@@ -2,7 +2,7 @@ import type { AnyTool } from "@anvia/core";
 import {
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
-  SHOW_IMAGE_TOOL_NAME,
+  SHOW_ARTIFACT_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 
@@ -22,13 +22,13 @@ export const SUBAGENT_MAX_TURNS = 200;
 export const MAX_PARALLEL_SUBAGENTS = 6;
 
 // What no subagent has, whatever it is handed: it cannot ask anyone, take on a goal, set the
-// environment up, show the user an image or start subagents of its own. The parent does those.
+// environment up, show the user files or start subagents of its own. The parent does those.
 const PARENT_ONLY = new Set<string>([
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
   DEFINE_GOAL_TOOL_NAME,
   SAVE_ENVIRONMENT_TOOL_NAME,
-  SHOW_IMAGE_TOOL_NAME,
+  SHOW_ARTIFACT_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
 ]);
 

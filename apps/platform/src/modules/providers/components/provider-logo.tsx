@@ -29,7 +29,7 @@ const LOGOS = {
   vertex: VertexMark,
 } as const;
 
-// The services with a panel of their own (decision 0137) have their own marks.
+// The services with a panel of their own (decision 0141) have their own marks.
 const PRESET_LOGOS = {
   openrouter: OpenRouterMark,
   groq: GroqMark,

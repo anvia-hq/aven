@@ -286,6 +286,84 @@ test.describe("threads", () => {
     ).toBeVisible();
   });
 
+  test("files the agent showed in one call are a grid, its images open in a viewer and a video that cannot load says so (decision 0136)", async ({
+    page,
+  }) => {
+    const names = [1, 2, 3].map((n) => `00000000-0000-4000-8000-00000000000${n}.png`);
+    const video = "00000000-0000-4000-8000-000000000004.mp4";
+    const artifacts = [
+      ...names.map((name, index) => ({
+        name,
+        mediaType: "image/png",
+        caption: `Page ${index + 1}`,
+      })),
+      { name: video, mediaType: "video/mp4", caption: "The flow" },
+    ];
+    const events = [
+      {
+        type: "snapshot",
+        running: false,
+        messages: [
+          { id: "m-0", role: "user", parts: [{ type: "text", text: "Show your work" }] },
+          {
+            id: "m-1",
+            role: "assistant",
+            parts: [
+              { type: "text", text: "Here is the proof." },
+              {
+                type: "tool",
+                tool: {
+                  id: "c1",
+                  name: "show_artifact",
+                  target: "a.png, b.png, c.png, flow.mp4",
+                  status: "done",
+                  output: "Showed 4",
+                  artifacts,
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { type: "done" },
+    ];
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\n${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}`,
+      }),
+    );
+    const PIXEL = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    await page.route("**/api/threads/*/artifacts/*", (route) =>
+      route.request().url().endsWith(".mp4")
+        ? route.fulfill({ status: 404, body: "" })
+        : route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }),
+    );
+
+    await registerUser(page, "art", "Artifact User");
+    await startThread(page, "Show your work");
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    // One grid for the call: three images with their captions, and the video that did not load.
+    await expect(page.getByRole("button", { name: /^Open Page \d$/ })).toHaveCount(3);
+    await expect(page.getByText("Video unavailable.")).toBeVisible();
+    await expect(page.getByText("The flow")).toBeVisible();
+
+    // An image opens full size, and the arrow keys go between the images.
+    await page.getByRole("button", { name: "Open Page 1" }).click();
+    const viewer = page.getByRole("dialog");
+    await expect(viewer.getByText("1 of 3")).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await expect(viewer.getByText("2 of 3")).toBeVisible();
+    await viewer.getByRole("button", { name: "Previous" }).click();
+    await viewer.getByRole("button", { name: "Previous" }).click();
+    await expect(viewer.getByText("3 of 3")).toBeVisible();
+  });
+
   test("the thread view renders a streamed run: tool calls, a diff, an error and the reply", async ({
     page,
   }) => {

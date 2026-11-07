@@ -2,6 +2,7 @@
 // WebSocket that the runtime opens. Either side can send a one-way message, or a `call` that the
 // other answers with a `reply` carrying the same id. No runtime imports, so any client can bundle it.
 
+import type { ForkView } from "./forks";
 import type { BotQuestion } from "./bots";
 import type { BotGoalView, GoalAction } from "./goals";
 import type { BotMcpView, McpTarget } from "./mcp";
@@ -15,6 +16,8 @@ import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 export type RunThreadInfo = {
   id: string;
   organizationId: string;
+  /** The thread this one was forked from: its workspace starts as a copy of that thread's (decision 0135). */
+  forkOf?: string;
 };
 
 /** The kinds of model provider, in the order a client lists them. */
@@ -110,14 +113,21 @@ export type FileContent =
   | { kind: "binary"; size: number }
   | { kind: "missing" };
 
-/** What the control plane asks of a runner for an image the agent showed (decision 0033); params are `{ threadId, name }`. */
+/** What the control plane asks of a runner for an image or video the agent showed (decisions 0033 and 0136); params are `{ threadId, name }`. */
 type ArtifactsCallMethod = "artifacts.read";
 
 /** An image a runner keeps, its bytes in base64; null on the wire when there is no such image. */
 export type ArtifactContent = { mediaType: string; data: string };
 
-/** The types of image a runner keeps; SVG is not one, since it can carry script. */
-export const ARTIFACT_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+/** The types of image and video a runner keeps; SVG is not one, since it can carry script. */
+export const ARTIFACT_MEDIA_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+] as const;
 
 /** The extension a kept image's name ends in, by its type. */
 export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
@@ -125,11 +135,13 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
   "image/jpeg": "jpg",
   "image/gif": "gif",
   "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 /** The names a runner gives the images it keeps: a uuid and the extension of its type. */
 export const ARTIFACT_NAME =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm)$/;
 
 /**
  * What the control plane asks of a runner about the processes the agent left running in a thread's
@@ -439,6 +451,12 @@ export type MemoryCallMethod = "memory.append" | "memory.notes";
 /** The runtime works the sender's cockpit for a run's agent, read only (decision 0109). */
 export type CockpitCallMethod = "cockpit.read";
 
+/**
+ * The agent of a run forks the run's thread, or looks at one of its forks (decision 0135). The thread
+ * and who acts come from the control plane's record of the run, never from the params.
+ */
+export type ForkCallMethod = "fork.start" | "fork.status";
+
 /** The runtime asks how to clone the thread's repository (decision 0013); params are `{ runId }`. */
 export type RepoCallMethod = "repo.access";
 
@@ -474,6 +492,7 @@ export type McpReportCallMethod = "mcp.report";
 export type CallMethod =
   | MemoryCallMethod
   | CockpitCallMethod
+  | ForkCallMethod
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
@@ -603,6 +622,12 @@ export type BotNotesParams = { replyId: string; command: MemoryCommand };
 
 /** A command of a run's agent in the sender's cockpit (decision 0109). */
 export type CockpitReadParams = { runId: string; command: CockpitCommand };
+
+/** The agent hands a task to a new thread forked from the run's own: `context` is what it knows that the task needs. */
+export type ForkStartParams = { runId: string; task: string; context: string; title?: string };
+
+/** A fork of the run's thread, by its id. */
+export type ForkStatusParams = { runId: string; id: string };
 
 /** A command of a bot in its owner's cockpit (decision 0109). */
 export type BotCockpitParams = { replyId: string; command: CockpitCommand };
@@ -736,6 +761,8 @@ export type RuntimeCalls = {
   "memory.notes": { params: MemoryNotesParams; result: string };
   "bot.cockpit": { params: BotCockpitParams; result: string };
   "cockpit.read": { params: CockpitReadParams; result: string };
+  "fork.start": { params: ForkStartParams; result: { id: string; title: string } };
+  "fork.status": { params: ForkStatusParams; result: ForkView };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
@@ -753,4 +780,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 45;
+export const WIRE_VERSION = 47;

@@ -7,6 +7,8 @@ import {
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
 } from "@aven/protocol/goals";
+import { MAX_ARTIFACTS_PER_CALL } from "@aven/protocol/events";
+import { FORK_TEXT_MAX } from "@aven/protocol/forks";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { MEMORY_NOTE_MAX, type MemoryCommand } from "@aven/protocol/memory";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
@@ -75,13 +77,15 @@ const callMethods = [
   "memory.notes",
   "bot.cockpit",
   "cockpit.read",
+  "fork.start",
+  "fork.status",
 ] as const satisfies readonly CallMethod[];
 
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
 const BOT_SAY_MAX = 2000;
 
-// An image the agent showed: a name the runner gave it, so a client can only ask for it by that.
-const toolImage = z.object({
+// An image or video the agent showed: a name the runner gave it, so a client can only ask for it by that.
+const toolArtifact = z.object({
   name: z.string().regex(ARTIFACT_NAME),
   mediaType: z.enum(ARTIFACT_MEDIA_TYPES),
   caption: z.string().max(500).optional(),
@@ -123,7 +127,7 @@ const toolPart = z.object({
       }),
     )
     .optional(),
-  image: toolImage.optional(),
+  artifacts: z.array(toolArtifact).max(MAX_ARTIFACTS_PER_CALL).optional(),
   subagents: z.array(subagentPart).optional(),
 });
 
@@ -142,7 +146,7 @@ const runEvent = z.discriminatedUnion("type", [
     id: z.string(),
     status: z.enum(["done", "error"]),
     output: z.string().optional(),
-    image: toolImage.optional(),
+    artifacts: z.array(toolArtifact).max(MAX_ARTIFACTS_PER_CALL).optional(),
   }),
   z.object({
     type: z.literal("subagent"),
@@ -503,6 +507,13 @@ const botNotesParams = z.object({ replyId, command: memoryCommand });
 // A cockpit command is checked in full where it is answered, against the cockpit's own rules
 // (`cockpit/commands.ts`); here only whose call it is (decision 0109).
 const cockpitReadParams = z.object({ runId, command: z.unknown() });
+const forkStartParams = z.object({
+  runId,
+  task: z.string().trim().min(1).max(FORK_TEXT_MAX),
+  context: z.string().trim().min(1).max(FORK_TEXT_MAX),
+  title: z.string().trim().min(1).max(120).optional(),
+});
+const forkStatusParams = z.object({ runId, id: z.string().uuid() });
 const botCockpitParams = z.object({ replyId, command: z.unknown() });
 
 const botThreadParams = z.discriminatedUnion("op", [
@@ -577,6 +588,8 @@ export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, 
 export const parseMemoryNotesParams = (params: unknown) => parseParams(memoryNotesParams, params);
 export const parseBotNotesParams = (params: unknown) => parseParams(botNotesParams, params);
 export const parseCockpitReadParams = (params: unknown) => parseParams(cockpitReadParams, params);
+export const parseForkStartParams = (params: unknown) => parseParams(forkStartParams, params);
+export const parseForkStatusParams = (params: unknown) => parseParams(forkStatusParams, params);
 export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

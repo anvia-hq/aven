@@ -21,6 +21,8 @@ export type RunThread = {
   organizationId: string;
   /** The runner the thread's sandbox runs on. */
   runtimeId: string;
+  /** The thread this one was forked from (decision 0135). */
+  parentThreadId?: string | null;
 };
 
 /** What can come with a run's prompt. */

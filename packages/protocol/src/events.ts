@@ -20,13 +20,20 @@ export const QUESTION_TOOL_NAME = "ask_user";
 /** The agent asks for a secret (decision 0047): a question whose answer is stored, never shown to the agent. */
 export const SECRET_TOOL_NAME = "request_secret";
 
+/** The agent shows images and videos, several at once (decision 0136). */
+export const SHOW_ARTIFACT_TOOL_NAME = "show_artifact";
+
+/** The tool that showed one image before `show_artifact` did: a transcript may still hold its calls (decision 0033). */
 export const SHOW_IMAGE_TOOL_NAME = "show_image";
+
+/** How many files one `show_artifact` call may show. */
+export const MAX_ARTIFACTS_PER_CALL = 12;
 
 /** The agent hands tasks to subagents (decision 0057): its result is theirs, in the order asked. */
 export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";
 
-/** An image the agent showed the user (decision 0033). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
-export type ToolImage = { name: string; mediaType: string; caption?: string };
+/** An image or a video the agent showed the user (decisions 0033 and 0136). `name` is what `GET /threads/:id/artifacts/:name` serves it by. */
+export type ToolArtifact = { name: string; mediaType: string; caption?: string };
 
 /**
  * One subagent of a `spawn_agent` call (decision 0057): a task the agent handed over, by its place
@@ -57,8 +64,8 @@ export type ToolPart = {
   output?: string;
   /** Set on the agent's question tool: what it asks. While `status` is "running" and no run is live, it awaits an answer. */
   questions?: QuestionPrompt[];
-  /** Set on the image tool once it is done: the image to show. */
-  image?: ToolImage;
+  /** Set on the tool that shows files once it is done: what to show, in order. */
+  artifacts?: ToolArtifact[];
   /** Set on `spawn_agent`: its tasks, as they go. */
   subagents?: SubagentPart[];
 };
@@ -201,7 +208,7 @@ export type RunEvent =
       id: string;
       status: "done" | "error";
       output?: string;
-      image?: ToolImage;
+      artifacts?: ToolArtifact[];
     }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   /**
@@ -352,7 +359,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts.map((part) => {
           if (part.type !== "tool" || part.tool.id !== event.id) return part;
           const tool: ToolPart = { ...part.tool, status: event.status, output: event.output };
-          if (event.image) tool.image = event.image;
+          if (event.artifacts) tool.artifacts = event.artifacts;
           // A subagent still working when its call ends (the call failed) is not working any more.
           if (tool.subagents)
             tool.subagents = tool.subagents.map((subagent) =>

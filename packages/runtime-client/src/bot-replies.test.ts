@@ -88,7 +88,7 @@ const sandboxWith = (
   async acquire(thread, repo) {
     acquired.push({ id: thread.id, repo });
     return {
-      tools: [exec(run), tool("show_image")],
+      tools: [exec(run), tool("show_artifact")],
       hasRunningProcesses: async () => false,
       processes: noProcesses,
     };

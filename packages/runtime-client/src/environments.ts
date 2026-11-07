@@ -11,12 +11,13 @@ import {
   type DockerRun,
 } from "./environment-setup";
 import { fetchBranch } from "./fetch-branch";
+import { forkWorkspace } from "./fork-workspace";
 import { clearDirectory, cloneRepository, type Git } from "./git-clone";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { SnapshotStore } from "./snapshots";
 
 /** The thread a workspace or an environment is for. */
-export type ThreadRef = { id: string; organizationId?: string };
+export type ThreadRef = { id: string; organizationId?: string; forkOf?: string };
 
 export type EnvironmentsConfig = {
   /** The sandbox image setups start from and threads without a snapshot run. */
@@ -67,6 +68,14 @@ export class Environments {
     }
     await this.#inTurn(environment.key, () => this.#fill(thread.id, root, access, environment));
     this.#warmLater(environment, access);
+  }
+
+  // A thread forked from another (decision 0135): the parent's workspace copied into `root`, and the
+  // image the parent keeps, so the fork's container has the dependencies the parent's has.
+  async fork(thread: ThreadRef, parentRoot: string, parentId: string, root: string) {
+    await forkWorkspace(parentRoot, root, thread.id, this.#config.git);
+    const pinned = (await readFile(this.#imageFile(parentId), "utf8").catch(() => "")).trim();
+    if (pinned) await this.#pinImage(thread.id, pinned);
   }
 
   /** Resolves when no spare workspace is being prepared. */

@@ -3,7 +3,7 @@ import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
-import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
@@ -158,6 +158,15 @@ export const threadsService = {
     return thread ?? null;
   },
 
+  // The forks of a thread that are still in use: the number a thread may have going (decision 0135).
+  async liveForks(parentThreadId: string) {
+    const [found] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(threads)
+      .where(and(eq(threads.parentThreadId, parentThreadId), ne(threads.state, "archived")));
+    return found?.count ?? 0;
+  },
+
   // A run was sent as this person: their credentials are what the thread's sandbox now holds.
   async markRunBy(threadId: string, userId: string) {
     await db.update(threads).set({ lastRunBy: userId }).where(eq(threads.id, threadId));
@@ -170,7 +179,13 @@ export const threadsService = {
     return thread;
   },
 
-  async create(organizationId: string, userId: string, body: CreateThreadBody) {
+  // `fork` makes a thread of a thread's agent: the parent's runner, and the parent it came from (decision 0135).
+  async create(
+    organizationId: string,
+    userId: string,
+    body: CreateThreadBody,
+    fork?: { parentThreadId: string; runtimeId: string },
+  ) {
     const project = await projectsService.get(organizationId, body.projectId);
     if (!project) throw new ProjectNotFoundError("Project not found");
     const [thread] = await db
@@ -179,7 +194,8 @@ export const threadsService = {
         organizationId,
         projectId: project.id,
         createdBy: userId,
-        runtimeId: project.runtimeId,
+        runtimeId: fork?.runtimeId ?? project.runtimeId,
+        parentThreadId: fork?.parentThreadId,
         title: body.title ?? project.name,
       })
       .returning(columns);

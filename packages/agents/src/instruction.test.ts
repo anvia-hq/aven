@@ -47,3 +47,35 @@ test("an agent that can hand a task to a goal is told how", () => {
   expect(text).toContain("for each message of the user");
   expect(text).toContain("hand it to define_goal");
 });
+
+test("a goal's own session is told to work in tool calls and report a major step in one paragraph", () => {
+  const text = codingInstructions(200, false);
+  const section = text.split("<reporting>")[1]!.split("</reporting>")[0]!;
+  expect(section).toContain("spend your turns on tool calls");
+  expect(section).toContain("only when something major or important has happened");
+  expect(section).toContain("one paragraph of two to four full sentences");
+  // Its tags are still closed and named once with the new section among them.
+  const opens = [...text.matchAll(/^<([a-z_]+)>$/gm)].map((match) => match[1]);
+  const closes = [...text.matchAll(/^<\/([a-z_]+)>$/gm)].map((match) => match[1]);
+  expect(closes).toEqual(opens);
+  expect(new Set(opens).size).toBe(opens.length);
+});
+
+test("an agent that talks to a person is not told to keep quiet between tool calls", () => {
+  expect(codingInstructions(200, true)).not.toContain("<reporting>");
+});
+
+test("the agent is told to show proof of its work, and a goal's session too", () => {
+  for (const canHandOff of [true, false]) {
+    const text = codingInstructions(200, canHandOff);
+    expect(text).toContain("<proof>");
+    expect(text).toContain("show proof that it works");
+    expect(text).toContain("show_artifact");
+  }
+});
+
+test("the agent is told to wait for a process with wait_for_process and never to sleep in a command", () => {
+  const text = codingInstructions(200, true);
+  expect(text).toContain("call wait_for_process");
+  expect(text).toContain("Never wait with sleep in a command");
+});

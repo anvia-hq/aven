@@ -23,7 +23,7 @@ import type { RunMemory } from "@aven/protocol/memory";
 import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import type { BotScheduleView } from "@aven/protocol/schedules";
 import type { BotProjectView, BotThreadDetail, BotThreadView } from "@aven/protocol/threads";
-import { SHOW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
+import { SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
 import type {
   BotPeer,
   BotReplyInfo,
@@ -346,7 +346,9 @@ export class BotReplies {
       abort.abort(lost);
       throw lost;
     };
-    const computer = boundedTools(box.tools.filter((tool) => tool.name !== SHOW_IMAGE_TOOL_NAME));
+    const computer = boundedTools(
+      box.tools.filter((tool) => tool.name !== SHOW_ARTIFACT_TOOL_NAME),
+    );
     const exec = computer.find((tool) => tool.name === "exec_command");
     return createAgent({
       bot,

@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
 
+import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
@@ -18,6 +19,7 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
+import { nestForks } from "../fork-nesting";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
@@ -64,6 +66,16 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
 function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace") return null;
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
+}
+
+// Beside the title of a thread an agent forked from another (decision 0135), under that one.
+function ForkBadge({ thread }: { thread: Thread }) {
+  if (!thread.parentThreadId) return null;
+  return (
+    <Badge variant="outline" className="h-4 px-1 text-[10px]">
+      Fork
+    </Badge>
+  );
 }
 
 // The field a title is edited in: Enter or leaving it keeps the new title and Escape the old one.
@@ -166,11 +178,12 @@ export function SidebarThreads() {
         </Button>
       </div>
       <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
-        {threads.map((thread) => (
+        {nestForks(threads).map(({ thread, nested }) => (
           <SidebarMenuItem key={thread.id}>
             <SidebarMenuButton
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
+              className={cn(nested && "pl-6")}
             >
               <SidebarProjectTile
                 thread={thread}
@@ -178,6 +191,7 @@ export function SidebarThreads() {
                 palette={palettes.get(thread.projectId)}
               />
               <SharedMark thread={thread} />
+              <ForkBadge thread={thread} />
               <ThreadTitle
                 thread={thread}
                 hint={hostLabel(thread)}

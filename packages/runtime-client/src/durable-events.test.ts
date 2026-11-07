@@ -132,22 +132,33 @@ test("several calls of a turn are announced in the order the model made them", (
   ]);
 });
 
-test("an image the agent showed reaches the client with its tool's end", () => {
+test("what the agent showed reaches the client with its tool's end", () => {
   const { map } = createDurableEventMapper();
-  const image = { name: "00000000-0000-4000-8000-000000000001.png", mediaType: "image/png" };
+  const artifacts = [
+    { name: "00000000-0000-4000-8000-000000000001.png", mediaType: "image/png" },
+    { name: "00000000-0000-4000-8000-000000000002.mp4", mediaType: "video/mp4", caption: "Run" },
+  ];
   map(
     event("tool_started", {
       operationId: "op2",
-      input: { toolCall: { toolCallId: "c2", toolName: "show_image", input: { path: "a.png" } } },
+      input: {
+        toolCall: {
+          toolCallId: "c2",
+          toolName: "show_artifact",
+          input: { items: [{ path: "a.png" }, { path: "b.mp4" }] },
+        },
+      },
     }),
   );
   const completed = map(
     event("tool_completed", {
       operationId: "op2",
-      result: { output: { type: "json", value: { image, path: "a.png" } } },
+      result: {
+        output: { type: "json", value: { artifacts, paths: ["a.png", "b.mp4"], failed: [] } },
+      },
     }),
   );
   expect(completed.events).toEqual([
-    { type: "tool_end", id: "c2", status: "done", output: "Showed a.png", image },
+    { type: "tool_end", id: "c2", status: "done", output: "Showed 2", artifacts },
   ]);
 });

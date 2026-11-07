@@ -1,6 +1,7 @@
 import { Agent, createQuestionTool, type AnyTool, type RetrySetting } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
+import { forkInstructions } from "./fork-instruction";
 import { environmentInstructions } from "./environment";
 import { mcpInstructions, type McpNote } from "./mcp";
 import { memoryInstructions } from "./memory";
@@ -31,6 +32,8 @@ type CodingAgentOptions = ModelSource & {
   envNames?: readonly string[];
   /** The person's MCP servers this run has and the ones it could not reach, which the instructions say (decision 0085). */
   mcp?: McpNote;
+  /** Tell the agent how it may fork its thread; the host gives the fork tools (decision 0135). */
+  forks?: boolean;
   /** The person's memory, listed in the instructions; the host gives the `memory` tool (decision 0102). */
   memory?: RunMemory;
 };
@@ -55,6 +58,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
       environmentInstructions(options.envNames ?? []),
       mcpInstructions(options.mcp),
       memoryInstructions(options.memory),
+      options.forks ? forkInstructions() : "",
     ]
       .filter(Boolean)
       .join("\n\n"),

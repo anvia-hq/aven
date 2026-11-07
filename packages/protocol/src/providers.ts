@@ -18,7 +18,7 @@ export type BotProviderView = {
 /** Whether a provider of this kind cannot run without a key; a server of the person's own may need none. */
 export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
 
-/** Where Amazon Bedrock's OpenAI-compatible API is in a region (decision 0135). */
+/** Where Amazon Bedrock's OpenAI-compatible API is in a region (decision 0139). */
 export const bedrockBaseUrl = (region: string) => `https://bedrock-mantle.${region}.api.aws/v1`;
 
 /** A Bedrock endpoint, and so where a person's key may be sent: only AWS's own regional host. */
@@ -29,7 +29,7 @@ export const BEDROCK_ENDPOINT =
 export const bedrockRegionOf = (baseUrl: string | null | undefined) =>
   (baseUrl && BEDROCK_ENDPOINT.exec(baseUrl)?.[1]) || null;
 
-/** Where Vertex AI's OpenAI-compatible API is for a project and a location (decision 0136). */
+/** Where Vertex AI's OpenAI-compatible API is for a project and a location (decision 0140). */
 export const vertexBaseUrl = (project: string, location: string) => {
   const host = location === "global" ? "aiplatform" : `${location}-aiplatform`;
   return `https://${host}.googleapis.com/v1/projects/${project}/locations/${location}/endpoints/openapi`;

@@ -4,7 +4,7 @@ Status: accepted.
 
 ## Context
 
-Vertex AI has an OpenAI-compatible API for Gemini and other models: `POST https://<location>-aiplatform.googleapis.com/v1/projects/<project>/locations/<location>/endpoints/openapi/chat/completions` (`https://aiplatform.googleapis.com/...` for the `global` location), with models named `<publisher>/<model>` such as `google/gemini-2.5-flash`. It takes only Google Cloud auth: an OAuth access token as the bearer token, which lives for one hour. It has no `GET /models`. `@anvia/openai` takes a base URL, so no new SDK is needed (the Gemini API key kind, decision 0134, is a different product with a different credential).
+Vertex AI has an OpenAI-compatible API for Gemini and other models: `POST https://<location>-aiplatform.googleapis.com/v1/projects/<project>/locations/<location>/endpoints/openapi/chat/completions` (`https://aiplatform.googleapis.com/...` for the `global` location), with models named `<publisher>/<model>` such as `google/gemini-2.5-flash`. It takes only Google Cloud auth: an OAuth access token as the bearer token, which lives for one hour. It has no `GET /models`. `@anvia/openai` takes a base URL, so no new SDK is needed (the Gemini API key kind, decision 0138, is a different product with a different credential).
 
 ## Decision
 
