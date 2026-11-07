@@ -21,6 +21,3 @@ export const invitations = pgTable("invitations", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type Invitation = typeof invitations.$inferSelect;
-export type NewInvitation = typeof invitations.$inferInsert;

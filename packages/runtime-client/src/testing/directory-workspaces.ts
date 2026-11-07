@@ -13,9 +13,9 @@ import type {
 import { ArtifactStore } from "../artifacts";
 import { SkillStore } from "../skills";
 import { UploadStore } from "../uploads";
-import type { ThreadSandbox, ThreadWorkspaces } from "../sandbox";
 import { threadProcesses } from "../thread-processes";
 import { hasRunningProcesses, sandboxTools } from "../thread-tools";
+import type { ThreadSandbox, ThreadWorkspaces } from "../types";
 
 const encoder = new TextEncoder();
 

@@ -1,4 +1,4 @@
-export type InvitationSearch = { invitation?: string };
+import type { InvitationSearch } from "./types";
 
 export function validateInvitationSearch(search: Record<string, unknown>): InvitationSearch {
   const result: InvitationSearch = {};

@@ -1,13 +1,13 @@
 import { db } from "@aven/db/client";
-import { skills, type SkillRow } from "@aven/db/schema/skills";
-import type { RunSkill } from "@aven/protocol/runtime-wire";
+import { skills } from "@aven/db/schema/skills";
 import { and, asc, eq } from "drizzle-orm";
 
 import { builtinSkills } from "./builtins";
 import { packSkill, skillFolder } from "./package";
 import type { UploadSkillBody } from "./schema";
-
-export type SkillView = Omit<SkillRow, "archive" | "userId">;
+import type { SkillView } from "./types";
+import type { SkillRow } from "@aven/db/schema/types";
+import type { RunSkill } from "@aven/protocol/types";
 
 function view({ archive: _archive, userId: _userId, ...row }: SkillRow): SkillView {
   return row;

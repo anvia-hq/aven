@@ -1,6 +1,5 @@
 import { atomWithStorage } from "jotai/utils";
-
-export type SavedSelection = { providerId: string; modelId?: string; effort?: string };
+import type { SavedSelection } from "../types";
 
 export const modelSelectionAtom = atomWithStorage<SavedSelection | null>(
   "aven.model-selection",

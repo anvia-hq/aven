@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 
 import { toast } from "@/components/toast";
 import { api, attempt, errorMessage } from "@/lib/api";
-
-import type { Computer } from "../computer";
+import type { Computer } from "../types";
 
 const RENEW_MS = 20_000;
 

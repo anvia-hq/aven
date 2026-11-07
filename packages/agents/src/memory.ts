@@ -1,4 +1,5 @@
-import { MEMORY_ROOT, type MemoryScope, type RunMemory } from "@aven/protocol/memory";
+import { MEMORY_ROOT } from "@aven/protocol/memory";
+import type { MemoryScope, RunMemory } from "@aven/protocol/types";
 
 const FOLDER_FOR: Record<MemoryScope, string> = {
   personal: "about the person, kept for every project and every bot of theirs",

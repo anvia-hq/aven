@@ -5,8 +5,8 @@ import { cn } from "cn";
 
 import { Button } from "@/components/button";
 
-import { useTasks, type TaskInput } from "../hooks/use-tasks";
-import type { CockpitTask, TaskStatus } from "../types";
+import { useTasks } from "../hooks/use-tasks";
+import type { CockpitTask, TaskInput, TaskStatus } from "../types";
 import { DueDate, PriorityFlag, StatusDot } from "./task-badges";
 import { STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
 import { TagList } from "./tag-list";

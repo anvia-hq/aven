@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const SUBJECT_SCOPES = ["thread", "project", "organization"] as const;
+export const SUBJECT_SCOPES = ["thread", "project", "organization"] as const;
 
 const DEFAULT_LIFETIME_SECONDS = 600;
 
@@ -11,4 +11,3 @@ export const mintTokenBody = z.object({
 });
 
 export type MintTokenBody = z.infer<typeof mintTokenBody>;
-export type SubjectScope = (typeof SUBJECT_SCOPES)[number];

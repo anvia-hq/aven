@@ -1,4 +1,4 @@
-import type { Rgb } from "../orb-art";
+import type { Rgb } from "../types";
 
 const known = new Map<string, Rgb>();
 const scratch = document.createElement("canvas");

@@ -1,22 +1,12 @@
 import type { SandboxDesktop } from "@anvia/sandbox";
 import { errorMessage } from "@aven/agents/values";
-import {
-  type DesktopCallMethod,
-  type DesktopInfo,
-  type RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
 import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { desktopCallParams } from "./call-params";
-import type { ThreadWorkspaces } from "./sandbox";
+import type { DesktopCallMethod, DesktopInfo } from "@aven/protocol/types";
+import type { ThreadWorkspaces, ViewerLink } from "./types";
 
 type Tunnel = Awaited<ReturnType<SandboxDesktop["openViewer"]>>;
-
-export type ViewerLink = {
-  send(message: RuntimeToControlPlane): void;
-  sendBinary(frame: Uint8Array): void;
-  buffered(): number;
-};
 
 type Viewer = {
   threadId: string;

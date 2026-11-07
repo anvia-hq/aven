@@ -1,4 +1,4 @@
-import { parseArgs, type Args } from "./args";
+import { parseArgs } from "./args";
 import {
   serverInstall,
   serverLogs,
@@ -22,6 +22,7 @@ import { install } from "./commands/install";
 import { uninstall } from "./commands/uninstall";
 import { update } from "./commands/update";
 import { version } from "./version";
+import type { Args } from "./types";
 
 const usage = `aven ${version}
 

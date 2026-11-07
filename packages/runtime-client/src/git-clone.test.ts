@@ -5,8 +5,9 @@ import { join } from "node:path";
 
 import { threadBranch } from "@aven/protocol/thread-branch";
 
-import { cloneRepository, git, isCloned, type Git } from "./git-clone";
+import { cloneRepository, git, isCloned } from "./git-clone";
 import { createRemoteRepo } from "./testing/remote-repo";
+import type { Git } from "./types";
 
 const emptyDir = () => mkdtemp(join(tmpdir(), "aven-clone-"));
 

@@ -1,11 +1,10 @@
-import type { ContextUsage } from "@aven/protocol/events";
-
 import { Button } from "@/components/button";
 import { Progress } from "@/components/progress";
 import { Skeleton } from "@/components/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
+import type { ContextUsage } from "@aven/protocol/types";
 
 const COMPACT_FROM_PERCENT = 25;
 

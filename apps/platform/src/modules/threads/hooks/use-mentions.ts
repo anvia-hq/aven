@@ -6,7 +6,8 @@ import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
 import { useSkills } from "@/modules/skills/hooks/use-skills";
 
-import { COMPACT_COMMAND, type Mentionable } from "../mentions";
+import { COMPACT_COMMAND } from "../mentions";
+import type { Mentionable } from "../types";
 
 const REPO_SKILLS = ".aven/skills";
 const SEARCH_DELAY_MS = 120;

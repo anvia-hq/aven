@@ -1,6 +1,4 @@
-import type { BotThreadTurn } from "./threads";
-
-export type ContinuationPatch = "attached" | "none" | "unavailable";
+import type { BotThreadTurn, ContinuationPatch } from "./types";
 
 export const CONTINUATION_PATCH_NAME = "previous-thread.patch";
 const BUDGET = 14_000;

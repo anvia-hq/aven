@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import type { BotGoalView } from "@aven/protocol/goals";
 
 import {
   createGoalTools,
   GET_GOAL_TOOL_NAME,
   START_GOAL_TOOL_NAME,
   UPDATE_GOAL_TOOL_NAME,
-  type GoalHost,
 } from "./goals";
+import type { GoalHost } from "./types";
+import type { BotGoalView } from "@aven/protocol/types";
 
 const goal: BotGoalView = {
   objective: "Port the parser",

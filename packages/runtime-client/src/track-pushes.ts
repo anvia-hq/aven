@@ -1,4 +1,4 @@
-import type { Git } from "./git-clone";
+import type { Git } from "./types";
 
 const REFSPEC = "+refs/heads/aven/*:refs/remotes/origin/aven/*";
 

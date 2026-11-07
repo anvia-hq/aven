@@ -1,10 +1,11 @@
 import { imageType } from "@aven/agents/image-type";
-import { ATTACHMENT_LIMITS, type MessageAttachment } from "@aven/protocol/events";
-import { ARTIFACT_EXTENSIONS, type RunAttachment } from "@aven/protocol/runtime-wire";
+import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
+import { ARTIFACT_EXTENSIONS } from "@aven/protocol/runtime-wire";
 
 import { z } from "zod";
 
 import { UnprocessableError } from "./errors";
+import type { MessageAttachment, RunAttachment } from "@aven/protocol/types";
 
 const MB = 1024 * 1024;
 

@@ -1,18 +1,9 @@
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import type { IdleReleaseContext } from "./types";
 
 const RELEASE_WAIT_MS = 20_000;
 const RELEASE_WAIT_STEP_MS = 200;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-export type IdleReleaseContext = {
-  sandbox: Pick<ThreadWorkspaces, "release">;
-  boxes: Map<string, ThreadSandbox>;
-  idleMs: number;
-  stopped(): boolean;
-  hasRun(threadId: string): boolean;
-  isWatched(threadId: string): boolean;
-};
 
 export class IdleRelease {
   #timers = new Map<string, Timer>();

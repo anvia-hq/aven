@@ -1,6 +1,4 @@
-import type { BranchSummary } from "../types";
-import type { CenterSearch } from "../filters";
-import type { Chip } from "./filter-chips";
+import type { BranchSummary, CenterSearch, Chip } from "../types";
 import { DebouncedInput } from "./debounced-input";
 import { Field, FilterPopover } from "./filter-popover";
 import { FilterSelect } from "./filter-select";

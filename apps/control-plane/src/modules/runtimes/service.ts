@@ -1,10 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
-import { runtimes, type RuntimeRow } from "@aven/db/schema/runtimes";
+import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
 import type { CreateRuntimeBody } from "./schema";
+import type { RuntimeRow } from "@aven/db/schema/types";
 
 const TOKEN_PREFIX = "avrt_";
 

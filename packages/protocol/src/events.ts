@@ -1,15 +1,16 @@
-export type DiffLine = { type: "add" | "del" | "ctx"; text: string };
-
-type QuestionChoice = { label: string; value: string };
-
-export type QuestionPrompt = {
-  id: string;
-  text: string;
-  choices?: QuestionChoice[];
-  allowCustom?: boolean;
-};
-
-export type QuestionAnswer = { questionId: string; value: string };
+import type {
+  ChatMessage,
+  ContextUsage,
+  MessageMention,
+  MessagePart,
+  QuestionAnswer,
+  RunEvent,
+  SubagentEvent,
+  SubagentPart,
+  ThreadUsage,
+  TokenUsage,
+  ToolPart,
+} from "./types";
 
 export const QUESTION_TOOL_NAME = "ask_user";
 
@@ -23,46 +24,7 @@ export const MAX_ARTIFACTS_PER_CALL = 12;
 
 export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";
 
-export type ToolArtifact = { name: string; mediaType: string; caption?: string };
-
-export type SubagentPart = {
-  index: number;
-  description: string;
-  type: string;
-  status: "running" | "done" | "error";
-  tools: ToolPart[];
-  output?: string;
-};
-
 export const SUBAGENT_TOOLS_KEPT = 50;
-
-export type ToolPart = {
-  id: string;
-  name: string;
-  target: string;
-  status: "running" | "done" | "error";
-  diff?: DiffLine[];
-  output?: string;
-  questions?: QuestionPrompt[];
-  artifacts?: ToolArtifact[];
-  subagents?: SubagentPart[];
-};
-
-export type SubagentEvent =
-  | { type: "tool_start"; tool: Pick<ToolPart, "id" | "name" | "target" | "status"> }
-  | { type: "tool_end"; id: string; status: "done" | "error" }
-  | { type: "end"; status: "done" | "error"; output?: string };
-
-export type ContextUsage = { usedTokens: number; contextWindow: number };
-
-export type TokenUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  cacheWriteTokens: number;
-  cacheReadTokens: number;
-};
-
-export type ThreadUsage = { totals: TokenUsage; context?: ContextUsage };
 
 export const NO_USAGE: TokenUsage = {
   inputTokens: 0,
@@ -90,71 +52,16 @@ export function applyUsage(
   };
 }
 
-export type MessagePart =
-  | { type: "text"; text: string }
-  | { type: "reasoning"; text: string }
-  | { type: "tool"; tool: ToolPart };
-
-export type MessageAttachment = { name: string; mediaType: string; size: number; image?: string };
-
 export const ATTACHMENT_LIMITS = {
   count: 10,
   totalBytes: 10 * 1024 * 1024,
   imageBytes: 5 * 1024 * 1024,
 } as const;
 
-export type MessageMention = { type: "file" | "skill"; name: string; from: number; to: number };
-
 export const MENTION_LIMIT = 20;
 
 export const mentionToken = ({ type, name }: Pick<MessageMention, "type" | "name">) =>
   `${type === "file" ? "@" : "/"}${name}`;
-
-export type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  parts: MessagePart[];
-  attachments?: MessageAttachment[];
-  mentions?: MessageMention[];
-};
-
-export type QueuedSteer = { id: string; prompt: string; mentions?: MessageMention[] };
-
-export type RunEvent =
-  | {
-      type: "snapshot";
-      messages: ChatMessage[];
-      running: boolean;
-      usage?: ThreadUsage;
-      runningMs?: number;
-      steers?: QueuedSteer[];
-      error?: string;
-    }
-  | {
-      type: "run_start";
-      prompt: string;
-      attachments?: MessageAttachment[];
-      mentions?: MessageMention[];
-    }
-  | { type: "run_resume" }
-  | ({ type: "steer_queued" } & QueuedSteer)
-  | ({ type: "steer" } & QueuedSteer)
-  | { type: "steer_applied"; id: string }
-  | { type: "steer_rejected"; id: string; reason?: string }
-  | { type: "text"; delta: string }
-  | { type: "reasoning"; delta: string }
-  | { type: "tool_start"; tool: ToolPart }
-  | {
-      type: "tool_end";
-      id: string;
-      status: "done" | "error";
-      output?: string;
-      artifacts?: ToolArtifact[];
-    }
-  | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
-  | { type: "subagent"; index: number; event: SubagentEvent }
-  | { type: "done" }
-  | { type: "error"; message: string };
 
 export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | undefined {
   const part = messages.at(-1)?.parts.at(-1);

@@ -1,5 +1,6 @@
-import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/protocol/runtime-wire";
+import { FILE_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
+import type { FileContent, FileEntry } from "@aven/protocol/types";
 
 export const filesQuery = z.object({
   path: z

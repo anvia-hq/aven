@@ -3,14 +3,14 @@ import type { MemoryStore, Message } from "@anvia/core";
 import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
-import type { ModelConfig } from "@aven/agents/model";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
-import type { Bot, BotEvent } from "@aven/protocol/bots";
-import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import { BotRunner, type BotReplier, type BotReplyInput } from "./runner";
-import { inProcessReplier, type CreateBotAgent } from "./testing/in-process-replier";
+import { BotRunner } from "./runner";
+import { inProcessReplier } from "./testing/in-process-replier";
+import type { BotReplier, BotReplyInput, CreateBotAgent } from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type { Bot, BotEvent, RunAttachment } from "@aven/protocol/types";
 
 const USER = "u1";
 const model: ModelConfig = { provider: "openai" };

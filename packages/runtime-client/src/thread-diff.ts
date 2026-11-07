@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
 
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
 import { hostGit } from "./host-git";
 import { remoteBase } from "./remote-base";
 import { trackPushes } from "./track-pushes";
+import type { DiffScope, ThreadDiff } from "@aven/protocol/types";
+import type { Git } from "./types";
 
 const TURN_REF = "refs/aven/turn";
 const FORK_REF = "refs/aven/fork-base";

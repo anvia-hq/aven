@@ -9,3 +9,8 @@ export type DesktopStatus =
       heldByMe: boolean;
       expiresAt?: string;
     };
+
+export type Computer = {
+  path: string;
+  asleep: string;
+};

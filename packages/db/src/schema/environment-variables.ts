@@ -50,6 +50,3 @@ export const environmentVariables = pgTable(
     ),
   ],
 );
-
-export type EnvironmentVariableRow = typeof environmentVariables.$inferSelect;
-export type NewEnvironmentVariableRow = typeof environmentVariables.$inferInsert;

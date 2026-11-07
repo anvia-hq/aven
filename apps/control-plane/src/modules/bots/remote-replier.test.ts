@@ -1,32 +1,28 @@
 import { describe, expect, test } from "bun:test";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
 import type { MemoryStore } from "@anvia/core";
-import type { ModelConfig } from "@aven/agents/model";
-import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, type Bot } from "@aven/protocol/bots";
+import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY } from "@aven/protocol/bots";
 import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
-import type { BotGoalView } from "@aven/protocol/goals";
+
+import { ModelUnavailableError } from "../providers/resolve-model";
+import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import { RemoteBotReplier } from "./remote-replier";
+import type { BotKeeper, BotLetter, BotMemoryNotes, BotSkills, NewBot } from "./types";
+import type { BotMcp } from "../mcp/types";
+import type { BotProviders } from "../providers/types";
+import type { BotReplySink } from "../runtimes/types";
+import type { BotThreads } from "../threads/types";
+import type { ModelConfig } from "@aven/agents/types";
 import type {
+  Bot,
+  BotGoalView,
   BotReplyInfo,
+  CockpitAccess,
   RunAttachment,
   RunMcpServer,
+  RunMemory,
   RunModel,
   RunSkill,
-} from "@aven/protocol/runtime-wire";
-
-import type { BotMcp } from "../mcp/bot-access";
-import type { BotProviders } from "../providers/bot-access";
-import { ModelUnavailableError } from "../providers/resolve-model";
-import type { BotThreads } from "../threads/bot-access";
-import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
-import type { BotLetter } from "./chats";
-import {
-  RemoteBotReplier,
-  type BotKeeper,
-  type BotMemoryNotes,
-  type BotSkills,
-} from "./remote-replier";
-import type { NewBot } from "./service";
+} from "@aven/protocol/types";
 
 const bot: Bot = {
   id: "b1",

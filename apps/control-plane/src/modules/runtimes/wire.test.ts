@@ -6,7 +6,6 @@ import {
   BOT_MESSAGE_MAX,
   BOT_NAME_MAX,
 } from "@aven/protocol/bots";
-import type { RunEvent } from "@aven/protocol/events";
 
 import {
   parseBotCreateParams,
@@ -18,6 +17,7 @@ import {
   parseBotUpdateParams,
   parseRuntimeFrame,
 } from "./wire";
+import type { RunEvent } from "@aven/protocol/types";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 

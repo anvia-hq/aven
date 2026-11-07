@@ -1,44 +1,13 @@
 import { pendingQuestion } from "@aven/protocol/events";
-import {
-  BOT_THREADS_LISTED,
-  threadTitleFrom,
-  threadTurns,
-  type BotProjectView,
-  type BotThreadDetail,
-  type BotThreadView,
-} from "@aven/protocol/threads";
+import { BOT_THREADS_LISTED, threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
 import { UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
-import type { WatchedRun, Watcher } from "../thread-watch/service";
-import type { ThreadMessages } from "./messages";
-import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
-
-export type ThreadModelChoice = { providerId?: string; modelId?: string; reasoningEffort?: string };
-
-export type BotActor = { userId: string; botId: string; via: "person" | "note" };
-
-export type BotThreads = {
-  projects(userId: string): Promise<BotProjectView[]>;
-  list(
-    userId: string,
-    filter: { projectId?: string; archived?: boolean },
-  ): Promise<BotThreadView[]>;
-  get(userId: string, id: string): Promise<BotThreadDetail>;
-  start(
-    actor: BotActor,
-    input: { projectId: string; prompt: string; title?: string } & ThreadModelChoice,
-  ): Promise<BotThreadView>;
-  continue(
-    actor: BotActor,
-    id: string,
-    input: { prompt: string } & ThreadModelChoice,
-  ): Promise<BotThreadView>;
-  archive(actor: BotActor, id: string, archived: boolean): Promise<BotThreadView>;
-  stop(actor: BotActor, id: string): Promise<BotThreadView>;
-};
+import type { WatchedRun, Watcher } from "../thread-watch/types";
+import type { BotActor, BotThreads, PutAwayThread, ThreadMessages } from "./types";
+import type { BotThreadView } from "@aven/protocol/types";
 
 type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
 

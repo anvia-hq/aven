@@ -1,33 +1,34 @@
-import type { Agent, AgentPrompt, Message } from "@anvia/core";
+import type { AgentPrompt, Message } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import {
   DurableConflictError,
   DurableRuntime,
   type DefinedGoal,
-  type DurableAgentRegistration,
   type DurableEvent,
   type DurableRun,
 } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { projectToolEnd } from "@aven/agents/tool-projection";
-import type { SandboxToolName } from "@aven/agents/sandbox-tools";
 import { asRecord } from "@aven/agents/values";
-import type { RunEvent } from "@aven/protocol/events";
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname } from "node:path";
 
-import { createDurableEventMapper, type DurableEnd } from "./durable-events";
-import {
-  defineAvenGoal,
-  startGoal,
-  type FollowedGoal,
-  type GoalContext,
-  type GoalJournal,
-  type GoalSpec,
-} from "./durable-goals";
-import type { Source } from "./run-outbox";
+import { createDurableEventMapper } from "./durable-events";
+import { defineAvenGoal, startGoal } from "./durable-goals";
+import type { SandboxToolName } from "@aven/agents/types";
+import type {
+  DurableEnd,
+  Emit,
+  FollowedGoal,
+  FollowedRun,
+  FollowOptions,
+  GoalContext,
+  GoalJournal,
+  GoalSpec,
+  RunInput,
+} from "./types";
 
 const AGENT_VERSION = "2";
 
@@ -65,27 +66,7 @@ function releaseOwnLease(databasePath: string) {
 const INTERRUPTED =
   "The runner restarted while this tool call was running, so its outcome is unknown: it may have finished, partly finished, or not started. Check the current state (files, git status, running processes) before repeating it, and do not assume it succeeded.";
 
-export type Emit = (event: RunEvent, source?: Source) => void;
-
 const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 };
-
-export type RunInput = {
-  agent: Agent<unknown>;
-  compaction?: DurableAgentRegistration["compaction"];
-  contextWindow?: number;
-};
-
-export type FollowOptions = {
-  agentId?: string;
-  after?: number;
-  keepAgent?: boolean;
-};
-
-export type FollowedRun = {
-  durableId: string;
-  done: Promise<DurableEnd>;
-  cancel(): Promise<void>;
-};
 
 export class DurableRuns {
   #runtime: DurableRuntime;

@@ -1,13 +1,14 @@
 import { createHmac, randomBytes } from "node:crypto";
 
-import type { ModelConfig, Provider } from "@aven/agents/model";
+import type { Provider } from "@aven/agents/model";
 import { errorMessage } from "@aven/agents/values";
-import type { RunModel } from "@aven/protocol/runtime-wire";
 
 import { defaultModelId } from "../providers/default-model";
 import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
 import { bearerToken } from "./bearer";
+import type { ModelConfig } from "@aven/agents/types";
+import type { RunModel } from "@aven/protocol/types";
 
 const TOKEN_PREFIX = "avgw_";
 

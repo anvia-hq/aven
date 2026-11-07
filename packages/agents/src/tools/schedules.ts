@@ -1,22 +1,12 @@
 import { createTool } from "@anvia/core";
-import {
-  SCHEDULE_NAME_MAX,
-  SCHEDULE_PROMPT_MAX,
-  type BotScheduleView,
-} from "@aven/protocol/schedules";
+import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import { z } from "zod";
+import type { ScheduleHost } from "./types";
 
 export const CREATE_SCHEDULE_TOOL_NAME = "create_schedule";
 export const LIST_SCHEDULES_TOOL_NAME = "list_schedules";
 export const UPDATE_SCHEDULE_TOOL_NAME = "update_schedule";
 export const DELETE_SCHEDULE_TOOL_NAME = "delete_schedule";
-
-export type ScheduleHost = {
-  list(): Promise<BotScheduleView[]>;
-  create(input: ScheduleInput): Promise<BotScheduleView>;
-  update(id: string, patch: SchedulePatch): Promise<BotScheduleView>;
-  remove(id: string): Promise<void>;
-};
 
 const name = z.string().trim().min(1).max(SCHEDULE_NAME_MAX).describe("A short label.");
 const cron = z

@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { BotProviderView } from "@aven/protocol/providers";
 
 import {
   ADD_PROVIDER_TOOL_NAME,
@@ -9,8 +8,9 @@ import {
   LIST_PROVIDERS_TOOL_NAME,
   REMOVE_PROVIDER_TOOL_NAME,
   UPDATE_PROVIDER_TOOL_NAME,
-  type ProvidersHost,
 } from "./providers";
+import type { ProvidersHost } from "./types";
+import type { BotProviderView } from "@aven/protocol/types";
 
 const ID = "11111111-2222-4333-8444-555555555555";
 const view: BotProviderView = {

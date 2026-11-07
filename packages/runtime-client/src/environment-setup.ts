@@ -1,13 +1,7 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
-
-import type { CommandOutput } from "./run-command";
-
-export type DockerRun = (
-  args: string[],
-  options?: { timeoutMs?: number },
-) => Promise<CommandOutput>;
+import type { ContainerBase, SetupInput } from "./types";
 
 export const SETUP_SCRIPT = ".aven/setup";
 export const RESUME_SCRIPT = ".aven/resume";
@@ -19,34 +13,6 @@ export async function scriptState(root: string, script: string) {
   if (!found?.isFile()) return "missing" as const;
   return found.mode & 0o111 ? ("ready" as const) : ("not-executable" as const);
 }
-
-export type SetupInput = {
-  docker: DockerRun;
-  key: string;
-  baseImage: string;
-  image: string;
-  root: string;
-  logPath: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  platform?: string;
-  runtime?: string;
-  hostUser?: string;
-  timeoutMs?: number;
-};
-
-export type ContainerBase = {
-  name: string;
-  label: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  platform?: string;
-  runtime?: string;
-};
 
 export function containerBaseArgs(
   input: ContainerBase,

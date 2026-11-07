@@ -1,6 +1,5 @@
 import { BookOpen, File, Terminal } from "@mynaui/icons-react";
-
-import type { Mentionable } from "../mentions";
+import type { Mentionable } from "../types";
 
 export function MentionChip({ type, name }: Mentionable) {
   const Icon = type === "file" ? File : BookOpen;

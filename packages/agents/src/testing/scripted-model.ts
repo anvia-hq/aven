@@ -6,10 +6,7 @@ import {
   type JsonValue,
 } from "@anvia/core";
 import type { StreamingCompletionModel } from "@anvia/core/completion";
-
-export type ScriptStep =
-  | AssistantContentPart[]
-  | ((request: CompletionRequest) => AssistantContentPart[] | Promise<AssistantContentPart[]>);
+import type { ScriptStep } from "../types";
 
 export function scriptedModel(steps: ScriptStep[]): StreamingCompletionModel {
   let next = 0;

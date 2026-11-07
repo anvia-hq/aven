@@ -5,8 +5,8 @@ import { eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "../../crypto";
 import { ConflictError } from "../../errors";
-import type { GithubConfig } from "./client";
-import { githubUrlsFromEnv, type GithubUrls } from "./app-manifest";
+import { githubUrlsFromEnv } from "./app-manifest";
+import type { GithubConfig, GithubUrls } from "./types";
 
 const KEY = "github_app";
 

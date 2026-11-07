@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-
-import type { HighlightedLine } from "../highlight";
+import type { HighlightedLine } from "../types";
 
 const KEPT = 50;
 

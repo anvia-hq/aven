@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { FileContent } from "@aven/protocol/runtime-wire";
 import { shipRequestOf } from "@aven/protocol/ship-request";
 
 import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "../github/client";
 import type { RuntimeHub } from "../runtimes/hub";
 import { createShipService, GithubNotConnectedError, shipMode } from "./service";
+import type { FileContent } from "@aven/protocol/types";
 
 const threadId = "abcdef12-0000-4000-8000-000000000000";
 const project = {

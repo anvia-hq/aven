@@ -1,6 +1,7 @@
 import { cn } from "cn";
 
-import { meterLevel, type MeterLevel } from "../machine-metrics";
+import { meterLevel } from "../machine-metrics";
+import type { MeterLevel } from "../types";
 
 const fill: Record<MeterLevel, string> = {
   low: "bg-meter-low",

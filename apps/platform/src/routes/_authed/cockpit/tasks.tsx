@@ -6,10 +6,10 @@ import { Button } from "@/components/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { CockpitPage, withTag } from "@/modules/cockpit/components/cockpit-page";
 import { TaskBoard } from "@/modules/cockpit/components/task-board";
-import { TaskDrawer, type TaskOpen } from "@/modules/cockpit/components/task-drawer";
+import { TaskDrawer } from "@/modules/cockpit/components/task-drawer";
 import { TaskTable } from "@/modules/cockpit/components/task-table";
 import { useTasks } from "@/modules/cockpit/hooks/use-tasks";
-import type { TaskView } from "@/modules/cockpit/types";
+import type { TaskOpen, TaskView } from "@/modules/cockpit/types";
 
 export const Route = createFileRoute("/_authed/cockpit/tasks")({
   validateSearch: (search: Record<string, unknown>): { tag?: string; view?: TaskView } => ({

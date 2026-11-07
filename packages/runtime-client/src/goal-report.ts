@@ -1,6 +1,5 @@
 import type { Message } from "@anvia/core";
-
-import type { GoalEnd } from "./durable-goals";
+import type { GoalEnd } from "./types";
 
 export const goalSessionMarker = (session: number) =>
   `\n\n---\n\n**Goal · session ${session}**\n\n`;

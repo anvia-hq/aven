@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
 import { db } from "@aven/db/client";
-import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
 import { errorsRouter } from "../../errors";
 import { createMemoryStore } from "../../memory-store";
@@ -13,6 +13,7 @@ import { connectRouter } from "./connect";
 import { RuntimeHub } from "./hub";
 import { threadCockpit } from "../cockpit/commands";
 import { runtimesService } from "./service";
+import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

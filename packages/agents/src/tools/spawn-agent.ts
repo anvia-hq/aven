@@ -2,8 +2,9 @@ import { createTool } from "@anvia/core";
 import { SPAWN_AGENT_TOOL_NAME } from "@aven/protocol/events";
 import { z } from "zod";
 
-import { MAX_PARALLEL_SUBAGENTS, SUBAGENT_TYPES, type SubagentType } from "../subagents";
+import { MAX_PARALLEL_SUBAGENTS, SUBAGENT_TYPES } from "../subagents";
 import { errorMessage } from "../values";
+import type { RunSubagent, SubagentResult } from "./types";
 
 export const subagentTaskSchema = z.object({
   description: z
@@ -37,19 +38,6 @@ export const spawnAgentSchema = z.object({
       `Up to ${MAX_PARALLEL_SUBAGENTS} tasks. All of them start at once, and you get every result back together.`,
     ),
 });
-
-export type RunSubagent = (
-  task: SubagentTask,
-  context: {
-    index: number;
-    abortSignal?: AbortSignal;
-  },
-) => Promise<string>;
-
-export type SubagentResult = {
-  description: string;
-  type: SubagentType;
-} & ({ status: "done"; output: string } | { status: "error"; error: string });
 
 const NOTHING = "The subagent finished without saying anything.";
 

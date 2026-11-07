@@ -1,6 +1,6 @@
 import { createSummaryMemoryCompactor, type CompletionModel } from "@anvia/core";
 
-import { azureApiFor, createModel, providerOptionsFor, type ModelConfig } from "./model";
+import { azureApiFor, createModel, providerOptionsFor } from "./model";
 import {
   ownedByResponsesApi,
   withAnthropicReasoning,
@@ -8,8 +8,7 @@ import {
   withoutEmptyAssistantText,
 } from "./own-reasoning";
 import { withUniqueToolCallIds } from "./unique-tool-call-ids";
-
-export type ModelSource = ModelConfig | { model: CompletionModel };
+import type { ModelConfig, ModelSource } from "./types";
 
 const MODEL_REQUEST_ATTEMPTS = 5;
 

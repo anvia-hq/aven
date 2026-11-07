@@ -4,7 +4,8 @@ import { SECRET_TOOL_NAME } from "@aven/protocol/events";
 import { describeError, UnprocessableError } from "../../errors";
 import { parseSaved } from "../runs/continuation";
 import { variableName } from "../variables/schema";
-import { variablesService, type Scope } from "../variables/service";
+import { variablesService } from "../variables/service";
+import type { Scope } from "../variables/types";
 
 type Answer = { questionId: string; value: string };
 

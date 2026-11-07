@@ -1,24 +1,34 @@
 import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
-import type { BotPeer } from "@aven/protocol/runtime-wire";
 
-import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
+import { compactionFor, resolveAgentModel } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
-import { type McpNote } from "./mcp";
-import type { SkillListing } from "./skills";
-import { createAskQuestionTool, type AskQuestion } from "./tools/ask-question";
-import { createCreateBotTool, type CreateBot } from "./tools/create-bot";
-import { createGoalTools, type GoalHost } from "./tools/goals";
+import { createAskQuestionTool } from "./tools/ask-question";
+import { createCreateBotTool } from "./tools/create-bot";
+import { createGoalTools } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
-import { createMcpServerTools, type McpServersHost } from "./tools/mcp-servers";
-import { createProviderTools, type ProvidersHost } from "./tools/providers";
-import { createThreadTools, type ThreadsHost } from "./tools/threads";
-import { createCockpitTool, type CockpitHost } from "./tools/cockpit";
-import { createMemoryTool, type MemoryHost } from "./tools/memory";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
-import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
-import { createSendMessageTool, type SendMessage } from "./tools/send-message";
-import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
+import { createMcpServerTools } from "./tools/mcp-servers";
+import { createProviderTools } from "./tools/providers";
+import { createThreadTools } from "./tools/threads";
+import { createCockpitTool } from "./tools/cockpit";
+import { createMemoryTool } from "./tools/memory";
+import { createScheduleTools } from "./tools/schedules";
+import { createSendMessageTool } from "./tools/send-message";
+import { createUpdateSelfTool } from "./tools/update-self";
+import type { McpNote, ModelSource, SkillListing } from "./types";
+import type {
+  AskQuestion,
+  CockpitHost,
+  CreateBot,
+  GoalHost,
+  McpServersHost,
+  MemoryHost,
+  ProvidersHost,
+  ScheduleHost,
+  SendMessage,
+  ThreadsHost,
+  UpdateSelf,
+} from "./tools/types";
+import type { BotPeer, CockpitAccess, RunMemory } from "@aven/protocol/types";
 
 export const BOT_MAX_TURNS = 8;
 

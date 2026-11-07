@@ -1,6 +1,4 @@
-export type Timing = {
-  mark(step: string): void;
-};
+import type { Timing } from "./types";
 
 const quiet: Timing = { mark: () => undefined };
 

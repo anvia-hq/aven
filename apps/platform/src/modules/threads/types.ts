@@ -1,16 +1,17 @@
+import type { useThreadPanels } from "./hooks/use-thread-panels";
 import type {
   ChatMessage,
   DiffLine,
   MessageAttachment,
   MessageMention,
   MessagePart,
-  QueuedSteer,
   QuestionAnswer,
   QuestionPrompt,
+  QueuedSteer,
   SubagentPart,
   ToolArtifact,
   ToolPart,
-} from "@aven/protocol/events";
+} from "@aven/protocol/types";
 
 export type {
   ChatMessage,
@@ -65,3 +66,25 @@ export type Thread = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SavedSelection = { providerId: string; modelId?: string; effort?: string };
+
+export type Draft = { choice: string; custom: string };
+
+export type ToolGroupEntry = { type: "tool"; tool: ToolPart } | { type: "reasoning"; text: string };
+
+export type NestedThread = { thread: Thread; nested: boolean };
+
+export type PendingFile = { id: string; file: File; preview?: string };
+
+export type ShipGate =
+  | { kind: "checking" }
+  | { kind: "ready" }
+  | { kind: "unknown" }
+  | { kind: "missing"; commands: string[] };
+
+export type ThreadPanels = ReturnType<typeof useThreadPanels>;
+
+export type Mentionable = Pick<MessageMention, "type" | "name">;
+
+export type PendingMessage = { id: string; message: ChatMessage };

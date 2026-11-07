@@ -1,60 +1,24 @@
 import type { Message } from "@anvia/core";
-import {
-  defineGoal,
-  type DefinedGoal,
-  type DurableRun,
-  type DurableRuntime,
-  type DurableTaskHandle,
-  type GoalResult,
-} from "@anvia/durable";
+import { defineGoal, type DurableTaskHandle, type GoalResult } from "@anvia/durable";
 import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
-import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { asRecord } from "@aven/agents/values";
 
-import type { DurableEnd } from "./durable-events";
-import type { Emit, FollowOptions, FollowedRun, RunInput } from "./durable-runs";
-import { assessGoal, type CommandResult } from "./goal-assessment";
+import { assessGoal } from "./goal-assessment";
 import { goalSessionMarker } from "./goal-report";
+import type {
+  Emit,
+  FollowedGoal,
+  GoalContext,
+  GoalEnd,
+  GoalJournal,
+  GoalSpec,
+  GoalState,
+  RunInput,
+} from "./types";
 
 const DEFAULT_GOAL_SESSIONS = 20;
 const TURNS_PER_SESSION = CODING_MAX_TURNS;
 const NO_PROGRESS_SESSIONS = 3;
-
-export type GoalEnd =
-  | { type: "complete"; summary: string; evidence: string[] }
-  | { type: "paused"; reason: string; summary: string; next: string }
-  | { type: "error"; error: string };
-
-export type GoalState = {
-  taskId?: string;
-  sessions: Record<string, { number: number; filed: boolean }>;
-};
-
-export type FollowedGoal = { done: Promise<GoalEnd>; cancel(): Promise<void> };
-
-export type GoalContext = { verify: () => Promise<CommandResult[]> };
-
-export type GoalSpec = {
-  runId: string;
-  request: GoalRequest;
-  input: RunInput;
-  verify: () => Promise<CommandResult[]>;
-  onEvent: Emit;
-  onSession: (session: number, messages: Message[]) => Promise<void>;
-  state?: GoalState;
-  saveState?: (state: GoalState) => void;
-  cursorOf?: (durableId: string) => number;
-};
-
-export type GoalJournal = {
-  runtime: DurableRuntime;
-  goal: DefinedGoal;
-  contexts: Map<string, GoalContext>;
-  registerOrKeep(input: RunInput): void;
-  follow(run: DurableRun, input: RunInput, onEvent: Emit, options?: FollowOptions): FollowedRun;
-  release(agentId: string, end: DurableEnd): void;
-  revive(agentIds: readonly string[]): Promise<void>;
-};
 
 type GoalTracker = {
   state: GoalState;

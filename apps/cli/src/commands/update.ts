@@ -1,10 +1,11 @@
-import { stringFlag, type Args } from "../args";
+import { stringFlag } from "../args";
 import { run } from "../compose";
 import { downloadVerified, installBinary, latestVersion, platformName } from "../release";
 import { removeStaleImages } from "../prune-images";
 import { version } from "../version";
 import { runnerUpgrade } from "./runner";
 import { serverUpgrade } from "./server";
+import type { Args } from "../types";
 
 export async function update(args: Args) {
   if (args.flags.finish) return finish();

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import type { ChatMessage } from "@aven/protocol/events";
+import type { ChatMessage } from "@aven/protocol/types";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { runtimesService } from "../runtimes/service";

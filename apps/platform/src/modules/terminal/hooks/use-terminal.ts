@@ -3,8 +3,8 @@ import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 
 import { wsUrl } from "@/lib/api";
-import type { Computer } from "@/modules/desktop/computer";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
+import type { Computer } from "@/modules/desktop/types";
 
 type TerminalPhase = "connecting" | "connected" | "ended";
 

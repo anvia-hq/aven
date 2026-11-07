@@ -21,5 +21,3 @@ export const sessions = pgTable("sessions", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type Session = typeof sessions.$inferSelect;

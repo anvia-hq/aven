@@ -4,9 +4,9 @@ import { Refresh } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
-import type { Computer } from "@/modules/desktop/computer";
 
 import { useTerminal } from "../hooks/use-terminal";
+import type { Computer } from "@/modules/desktop/types";
 
 type Props = {
   computer: Computer;

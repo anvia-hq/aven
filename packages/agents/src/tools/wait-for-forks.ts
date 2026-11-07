@@ -1,8 +1,9 @@
 import { createTool } from "@anvia/core";
-import type { ForkView } from "@aven/protocol/forks";
 import { z } from "zod";
 
-import { MAX_WAIT_SECONDS, realClock, type Clock } from "./clock";
+import { MAX_WAIT_SECONDS, realClock } from "./clock";
+import type { Clock } from "./types";
+import type { ForkView } from "@aven/protocol/types";
 
 export const WAIT_FOR_FORKS_TOOL_NAME = "wait_for_forks";
 

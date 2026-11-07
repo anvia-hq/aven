@@ -1,4 +1,4 @@
-import type { RunIdentityCredential } from "@aven/protocol/runtime-wire";
+import type { RunIdentityCredential } from "@aven/protocol/types";
 
 const SIGN_IN = `set -e
 umask 077

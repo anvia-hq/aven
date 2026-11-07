@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-
-import type { InvitationSearch } from "../invitation-search";
+import type { InvitationSearch } from "../types";
 
 export function useContinueAfterAuth({ invitation }: InvitationSearch) {
   const navigate = useNavigate();

@@ -32,5 +32,3 @@ export const mcpServers = pgTable(
     index("mcp_servers_user_idx").on(table.userId),
   ],
 );
-
-export type McpServerRow = typeof mcpServers.$inferSelect;

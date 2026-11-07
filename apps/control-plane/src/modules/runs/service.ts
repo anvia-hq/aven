@@ -1,22 +1,30 @@
 import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
-import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
 import { usageFromHistory } from "@aven/agents/usage";
-import {
-  applyEvent,
-  applyUsage,
-  type ChatMessage,
-  type QueuedSteer,
-  type QuestionAnswer,
-  type RunEvent,
-  type ThreadUsage,
-} from "@aven/protocol/events";
+import { applyEvent, applyUsage } from "@aven/protocol/events";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
-import type { ConversationStore } from "../../memory-store";
 import { parseSaved } from "./continuation";
-import type { RunExtras, Runtime, RunThread, RuntimeRun } from "./runtime";
+import type { ConversationStore } from "../../types";
+import type {
+  ContinuationStore,
+  FailureStore,
+  FinishedRun,
+  RunEnding,
+  RunExtras,
+  RunThread,
+  Runtime,
+  RuntimeRun,
+} from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type {
+  ChatMessage,
+  QuestionAnswer,
+  QueuedSteer,
+  RunEvent,
+  ThreadUsage,
+} from "@aven/protocol/types";
 
 type ActiveRun = {
   handle: RuntimeRun;
@@ -37,24 +45,6 @@ type Channel = {
   run?: ActiveRun;
   failure?: string | null;
 };
-
-export type ContinuationStore = {
-  save(threadId: string, continuation: unknown): Promise<void>;
-  clear(threadId: string): Promise<void>;
-};
-
-export type FailureStore = {
-  record(threadId: string, message: string | null): Promise<void>;
-  read(threadId: string): Promise<string | null>;
-};
-
-export type RunEnding =
-  | { outcome: "done" }
-  | { outcome: "failed"; error: string }
-  | { outcome: "question" }
-  | { outcome: "cancelled" };
-
-export type FinishedRun = { startedAt: number };
 
 export class RunBusyError extends ConflictError {
   constructor() {

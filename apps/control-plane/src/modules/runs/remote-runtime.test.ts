@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/runtime-wire";
 
 import type { RuntimeHub } from "../runtimes/hub";
 import { RemoteRuntime } from "./remote-runtime";
+import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
 
 const thread = { id: "t1", organizationId: "org-1", runtimeId: "rt-1" };
 const model: RunModel = {

@@ -1,6 +1,5 @@
-import type { ProviderRow } from "@aven/db/schema/providers";
-
 import { decryptOrUnavailable } from "../../crypto";
+import type { ProviderRow } from "@aven/db/schema/types";
 
 export function readKey(row: ProviderRow) {
   if (!row.apiKeyEncrypted) return undefined;

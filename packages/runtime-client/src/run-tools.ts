@@ -1,34 +1,16 @@
 import type { AnyTool } from "@anvia/core";
-import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
-import { createForkTools, type ForkHost } from "@aven/agents/tools/forks";
+import { createDefineGoalTool } from "@aven/agents/tools/define-goal";
+import { createForkTools } from "@aven/agents/tools/forks";
 import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
-import { createCockpitTool, type CockpitHost } from "@aven/agents/tools/cockpit";
-import { createMemoryTool, type MemoryHost } from "@aven/agents/tools/memory";
+import { createCockpitTool } from "@aven/agents/tools/cockpit";
+import { createMemoryTool } from "@aven/agents/tools/memory";
 import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
-import type { RunEvent } from "@aven/protocol/events";
-import type { RepoAccess, RunThreadInfo } from "@aven/protocol/runtime-wire";
 
 import { fetchBranch } from "./fetch-branch";
 import { lateBoundTools } from "./late-bound-tools";
-import type { ThreadWorkspaces } from "./sandbox";
-import { subagentRunner, type CreateSubagent } from "./subagent-runner";
-
-export type RunToolsInput = {
-  sandbox: ThreadWorkspaces;
-  thread: RunThreadInfo;
-  tools: readonly AnyTool[];
-  current: () => readonly AnyTool[] | undefined;
-  mcp?: { tools: readonly AnyTool[]; current: () => readonly AnyTool[] | undefined };
-  attended: boolean;
-  repoAccess: () => Promise<RepoAccess>;
-  defineGoal: (goal: GoalRequest) => void;
-  createSubagent: CreateSubagent;
-  emit: (event: RunEvent) => void;
-  memory?: MemoryHost;
-  forks?: ForkHost;
-  cockpit?: CockpitHost;
-};
+import { subagentRunner } from "./subagent-runner";
+import type { RunToolsInput } from "./types";
 
 export function toolsForRun({
   sandbox,

@@ -1,7 +1,7 @@
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
-
-import { authEnv, git, type Git } from "./git-clone";
+import { authEnv, git } from "./git-clone";
 import { gitFailure, hostGit } from "./host-git";
+import type { RepoAccess } from "@aven/protocol/types";
+import type { Fetched, Git } from "./types";
 
 const FETCH_TIMEOUT_MS = 2 * 60_000;
 
@@ -16,8 +16,6 @@ export function isBranchName(name: string) {
     name !== "HEAD"
   );
 }
-
-export type Fetched = { branch: string; commit: string; previous: string | null };
 
 export async function fetchBranch(
   root: string,

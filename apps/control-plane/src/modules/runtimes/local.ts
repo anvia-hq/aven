@@ -4,10 +4,9 @@ import { sandboxConfigFromEnv } from "@aven/runtime-client/sandbox-config";
 
 import { describeError } from "../../errors";
 import { runtimesService } from "./service";
+import type { LocalRunnerMode } from "./types";
 
-const MODES = ["on", "off", "host"] as const;
-export type LocalRunnerMode = (typeof MODES)[number];
-
+export const MODES = ["on", "off", "host"] as const;
 export function localRunnerMode(env: string | undefined): LocalRunnerMode {
   const mode = env || "on";
   if (!MODES.includes(mode as LocalRunnerMode))

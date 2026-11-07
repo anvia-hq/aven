@@ -25,5 +25,3 @@ export const githubUserTokens = pgTable(
   },
   (table) => [unique("github_user_tokens_user_app_unique").on(table.userId, table.appKey)],
 );
-
-export type GithubUserTokenRow = typeof githubUserTokens.$inferSelect;

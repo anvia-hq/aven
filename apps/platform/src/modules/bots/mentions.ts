@@ -1,8 +1,4 @@
-import type { Bot } from "./types";
-
-export type MentionPart =
-  | { type: "text"; text: string }
-  | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> };
+import type { Bot, MentionPart } from "./types";
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

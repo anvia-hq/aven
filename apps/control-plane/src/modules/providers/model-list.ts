@@ -1,15 +1,13 @@
-import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "@aven/agents/model";
+import { reasoningControlsFor } from "@aven/agents/model";
 
 import { UnprocessableError } from "../../errors";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, bedrockEndpoint } from "./schema";
+import type { ModelSource } from "./types";
+import type { ReasoningControls } from "@aven/agents/types";
 
 export class ModelListError extends UnprocessableError {}
-
-type ProviderKind = ModelConfig["provider"];
-
-export type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: string };
 
 function requireApiKey({ apiKey }: ModelSource) {
   if (!apiKey) throw new ModelListError("An API key is needed to list models");

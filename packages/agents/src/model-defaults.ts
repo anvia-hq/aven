@@ -1,4 +1,4 @@
-import type { Provider } from "@aven/protocol/runtime-wire";
+import type { Provider } from "@aven/protocol/types";
 
 export const DEFAULT_MODEL_IDS = {
   openai: "gpt-5.6",

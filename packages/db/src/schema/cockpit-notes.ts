@@ -25,5 +25,3 @@ export const cockpitNotes = pgTable(
   },
   (table) => [index("cockpit_notes_user_idx").on(table.userId, table.updatedAt)],
 );
-
-export type CockpitNoteRow = typeof cockpitNotes.$inferSelect;

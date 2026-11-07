@@ -27,6 +27,3 @@ export const githubInstallations = pgTable(
     ),
   ],
 );
-
-export type GithubInstallation = typeof githubInstallations.$inferSelect;
-export type NewGithubInstallation = typeof githubInstallations.$inferInsert;

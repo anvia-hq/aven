@@ -5,7 +5,7 @@ import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
-import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import { eq } from "drizzle-orm";
 
 import { errorsRouter } from "../../errors";
@@ -14,6 +14,7 @@ import { auth, authService } from "../auth/service";
 import { RuntimeHub } from "./hub";
 import { runtimesRouter } from "./router";
 import { runtimesService } from "./service";
+import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

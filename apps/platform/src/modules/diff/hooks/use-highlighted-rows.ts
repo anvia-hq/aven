@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 
-import type { HighlightedLine } from "@/modules/files/highlight";
 import { useHighlightedLines } from "@/modules/files/hooks/use-highlighted-lines";
 
 import type { DiffHunk, DiffRow } from "../types";
+import type { HighlightedLine } from "@/modules/files/types";
 
 function sides(hunks: DiffHunk[]) {
   const oldLines: string[] = [];

@@ -3,12 +3,8 @@ import { getDefaultStore, useAtomValue } from "jotai";
 import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";
 import type { ModelChoice } from "@/modules/providers/types";
 
-import {
-  modelSelectionAtom,
-  threadModelSelectionsAtom,
-  type SavedSelection,
-} from "../atoms/model-selection-atom";
-import type { RunSelection } from "../types";
+import { modelSelectionAtom, threadModelSelectionsAtom } from "../atoms/model-selection-atom";
+import type { RunSelection, SavedSelection } from "../types";
 
 const MAX_THREADS = 200;
 

@@ -6,13 +6,13 @@ import {
   SKILLS_DIR,
   readSkillFolder,
   readSkillFolders,
-  type SkillListing,
 } from "@aven/agents/skills";
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { errorMessage } from "@aven/agents/values";
-import { SKILL_DIGEST, type RunSkill } from "@aven/protocol/runtime-wire";
-
-export type FetchSkill = (digest: string) => Promise<Uint8Array>;
+import { SKILL_DIGEST } from "@aven/protocol/runtime-wire";
+import type { SkillListing } from "@aven/agents/types";
+import type { RunSkill } from "@aven/protocol/types";
+import type { FetchSkill } from "./types";
 
 const exists = (path: string) =>
   stat(path).then(

@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
-import type { PutAwayThread } from "../threads/put-away";
 import {
   commitParams,
   commitsQuery,
@@ -14,6 +13,7 @@ import {
   updateProjectBody,
 } from "./schema";
 import { projectsService } from "./service";
+import type { PutAwayThread } from "../threads/types";
 
 export const projectsRouter = (putAway: PutAwayThread) =>
   new Elysia({ prefix: "/projects" })

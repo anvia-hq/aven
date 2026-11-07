@@ -44,5 +44,3 @@ export const bots = pgTable(
       .where(sql`${table.isMain}`),
   ],
 );
-
-export type BotRow = typeof bots.$inferSelect;

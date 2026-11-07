@@ -1,5 +1,5 @@
 import { isBehind } from "./build";
-import type { LatestRelease } from "./latest-release";
+import type { LatestRelease } from "./types";
 
 export async function updateTarget(
   runner: { build: string | undefined; isControlPlane: boolean },

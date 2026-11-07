@@ -8,15 +8,15 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
+import { githubService } from "../github/service";
+import { runtimesService } from "../runtimes/service";
+import type { ImportProjectBody, UpdateProjectBody } from "./schema";
 import type {
   GithubCommitFilters,
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedState,
-} from "../github/client";
-import { githubService } from "../github/service";
-import { runtimesService } from "../runtimes/service";
-import type { ImportProjectBody, UpdateProjectBody } from "./schema";
+} from "../github/types";
 
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryNotFoundError extends UnprocessableError {}

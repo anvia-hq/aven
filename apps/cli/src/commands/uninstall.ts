@@ -1,10 +1,10 @@
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { Args } from "../args";
 import { composeCommand, run } from "../compose";
 import { avenHome, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
+import type { Args } from "../types";
 
 export async function uninstall(args: Args) {
   const purge = Boolean(args.flags.purge);

@@ -1,13 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import type { GithubConfig } from "./client";
+import type { GithubConfig, GithubUrls } from "./types";
 
 export const githubUrlsFromEnv = (env: Record<string, string | undefined> = process.env) => ({
   apiUrl: env.GITHUB_API_URL ?? "https://api.github.com",
   webUrl: env.GITHUB_WEB_URL ?? "https://github.com",
 });
-
-export type GithubUrls = ReturnType<typeof githubUrlsFromEnv>;
 
 export function appManifest(origin: string, name: string, isPublic = false) {
   const base = origin.replace(/\/$/, "");

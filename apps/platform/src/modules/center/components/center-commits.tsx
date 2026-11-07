@@ -10,7 +10,7 @@ import { commitUrl } from "@/modules/projects/repo-links";
 import type { Project } from "@/modules/projects/types";
 
 import { groupByDay } from "../day-groups";
-import type { CommitEntry } from "../hooks/use-center-feed";
+import type { CommitEntry } from "../types";
 
 const LATEST_SHOWN = 40;
 

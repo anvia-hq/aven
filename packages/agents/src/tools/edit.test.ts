@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { createEditTool, type EditableFiles } from "./edit";
+import { createEditTool } from "./edit";
+import type { EditableFiles } from "./types";
 
 let files: Map<string, string>;
 let edit: ReturnType<typeof createEditTool>;

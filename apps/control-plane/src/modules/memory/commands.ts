@@ -1,23 +1,9 @@
-import {
-  MEMORY_ROOT,
-  MEMORY_SCOPES,
-  MEMORY_WRITES,
-  noteDescription,
-  type MemoryCommand,
-  type MemoryScope,
-} from "@aven/protocol/memory";
+import { MEMORY_ROOT, MEMORY_SCOPES, MEMORY_WRITES, noteDescription } from "@aven/protocol/memory";
 
 import { UnprocessableError } from "../../errors";
-import {
-  checkName,
-  memoryService,
-  placesOf,
-  type MemoryActor,
-  type MemoryOwner,
-  type MemoryPlace,
-} from "./service";
-
-export type MemoryCaller = { owner: MemoryOwner; actor: MemoryActor; writable: boolean };
+import { checkName, memoryService, placesOf } from "./service";
+import type { MemoryCaller, MemoryOwner, MemoryPlace } from "./types";
+import type { MemoryCommand, MemoryScope } from "@aven/protocol/types";
 
 type Path = { root: true } | { place: MemoryPlace; name?: string };
 

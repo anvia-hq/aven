@@ -2,23 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Agent, createQuestionTool, createTool, type CompletionRequest } from "@anvia/core";
-import {
-  scriptedModel,
-  text,
-  toolCall,
-  type ScriptStep,
-} from "@aven/agents/testing/scripted-model";
+import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { COMPACT_PROMPT, COMPACTED, createCompactionAgent } from "@aven/agents/compaction-agent";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
-import { type ProcessView, type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
-import type { CreateBotReplyAgent } from "./bot-replies";
-import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { noProcesses } from "./thread-processes";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { fakeDesktop } from "./testing/fake-desktop";
@@ -26,6 +17,14 @@ import { goalSessionMarker } from "./goal-report";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { gitFixture, sh } from "./testing/git-fixture";
 import { journalPath } from "./testing/journal-path";
+import type { ScriptStep } from "@aven/agents/types";
+import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/types";
+import type {
+  CreateBotReplyAgent,
+  CreateRuntimeAgent,
+  ThreadSandbox,
+  ThreadWorkspaces,
+} from "./types";
 
 const thread = { id: "thread-1", organizationId: "org-1" };
 const runStart = { type: "run.start", runId: "run-1", thread, prompt: "hi" };

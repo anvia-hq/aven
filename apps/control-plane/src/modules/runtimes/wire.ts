@@ -10,7 +10,7 @@ import {
 import { MAX_ARTIFACTS_PER_CALL } from "@aven/protocol/events";
 import { FORK_TEXT_MAX } from "@aven/protocol/forks";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
-import { MEMORY_NOTE_MAX, type MemoryCommand } from "@aven/protocol/memory";
+import { MEMORY_NOTE_MAX } from "@aven/protocol/memory";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
 import {
@@ -23,26 +23,29 @@ import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   SKILL_DIGEST,
-  type BotQuestionParams,
-  type BotGoalParams,
-  type BotScheduleParams,
-  type BotSendParams,
-  type BotCreateParams,
-  type BotMcpParams,
-  type BotProviderParams,
-  type BotThreadParams,
-  type BotMemoryParams,
-  type BotSkillParams,
-  type BotUpdateParams,
-  type CallMethod,
   PROVIDERS,
-  type RunOutcome,
-  type RuntimeToControlPlane,
 } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "../mcp/schema";
 import { providerBaseUrl, providerModelId, providerName } from "../providers/schema";
+import type {
+  BotCreateParams,
+  BotGoalParams,
+  BotMcpParams,
+  BotMemoryParams,
+  BotProviderParams,
+  BotQuestionParams,
+  BotScheduleParams,
+  BotSendParams,
+  BotSkillParams,
+  BotThreadParams,
+  BotUpdateParams,
+  CallMethod,
+  MemoryCommand,
+  RunOutcome,
+  RuntimeToControlPlane,
+} from "@aven/protocol/types";
 
 const runId = z.string().min(1);
 const replyId = z.string().min(1);

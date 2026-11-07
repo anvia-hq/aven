@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { BotThreadView } from "@aven/protocol/threads";
 
 import {
   ARCHIVE_THREAD_TOOL_NAME,
@@ -10,8 +9,9 @@ import {
   LIST_THREADS_TOOL_NAME,
   START_THREAD_TOOL_NAME,
   STOP_THREAD_TOOL_NAME,
-  type ThreadsHost,
 } from "./threads";
+import type { ThreadsHost } from "./types";
+import type { BotThreadView } from "@aven/protocol/types";
 
 const ID = "11111111-2222-4333-8444-555555555555";
 const PROJECT = "66666666-7777-4888-8999-000000000000";

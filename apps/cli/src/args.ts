@@ -1,7 +1,4 @@
-export type Args = {
-  positionals: string[];
-  flags: Record<string, string | true>;
-};
+import type { Args } from "./types";
 
 export function parseArgs(argv: string[], valued: string[] = []): Args {
   const args: Args = { positionals: [], flags: {} };

@@ -1,9 +1,9 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { git } from "../git-clone";
+import type { RepoAccess } from "@aven/protocol/types";
 
 export async function createRemoteRepo(token = "test-token") {
   const dir = await mkdtemp(join(tmpdir(), "aven-remote-"));

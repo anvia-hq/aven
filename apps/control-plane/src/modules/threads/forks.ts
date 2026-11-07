@@ -1,24 +1,12 @@
-import { FORKS_PER_THREAD, forkPrompt, type ForkView } from "@aven/protocol/forks";
-import type { RunThreadInfo } from "@aven/protocol/runtime-wire";
+import { FORKS_PER_THREAD, forkPrompt } from "@aven/protocol/forks";
 import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
 import { UnprocessableError } from "../../errors";
-import type { RunEnding, RunManager } from "../runs/service";
-import type { ThreadMessages } from "./messages";
+import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
-
-export type ThreadForks = {
-  start(
-    thread: RunThreadInfo,
-    input: { task: string; context: string; title?: string },
-  ): Promise<{ id: string; title: string }>;
-  status(thread: RunThreadInfo, id: string): Promise<ForkView>;
-  ended(
-    fork: { id: string; organizationId: string; parentThreadId?: string | null },
-    ending: RunEnding,
-  ): Promise<void>;
-};
+import type { ThreadForks, ThreadMessages } from "./types";
+import type { RunThreadInfo } from "@aven/protocol/types";
 
 export function createThreadForks({
   runs,

@@ -1,4 +1,4 @@
-import type { McpTarget } from "@aven/protocol/mcp";
+import type { McpTarget } from "@aven/protocol/types";
 
 export type { McpTarget };
 

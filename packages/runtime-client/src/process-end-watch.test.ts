@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
-
 import { ProcessEndWatch } from "./process-end-watch";
-import type { ThreadSandbox } from "./sandbox";
+import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/types";
+import type { ThreadSandbox } from "./types";
 
 const startedMs = Date.parse("2020-01-01T00:00:00.000Z");
 const proc = (id: string, status: ProcessView["status"], exitCode?: number): ProcessView => ({

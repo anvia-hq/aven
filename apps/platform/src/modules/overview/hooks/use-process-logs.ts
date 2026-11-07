@@ -1,6 +1,5 @@
-import type { ProcessLogs } from "@aven/protocol/runtime-wire";
-
 import { useRequest } from "@/hooks/use-request";
+import type { ProcessLogs } from "@aven/protocol/types";
 
 const POLL_MS = 3_000;
 

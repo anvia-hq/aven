@@ -1,9 +1,5 @@
 import { asRecord } from "@aven/agents/values";
-
-import type { DockerRun } from "./environment-setup";
-import type { Git } from "./git-clone";
-
-export type PreflightConfig = { image: string; platform?: string; runtime?: string };
+import type { HostCommands, PreflightConfig } from "./types";
 
 const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
 const RUNTIME_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
@@ -15,8 +11,6 @@ function safeJson(text: string): Record<string, unknown> {
     return {};
   }
 }
-
-export type HostCommands = { docker: DockerRun; git: Git };
 
 export async function preflight(
   config: PreflightConfig,

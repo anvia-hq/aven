@@ -1,8 +1,7 @@
-import type { ProcessView } from "@aven/protocol/runtime-wire";
-
 import { useThreadProcesses } from "../hooks/use-thread-processes";
 import { BackgroundProcess } from "./background-process";
 import { OverviewCard } from "./overview-card";
+import type { ProcessView } from "@aven/protocol/types";
 
 const ENDED_SHOWN = 5;
 

@@ -1,12 +1,7 @@
 import type { AgentStreamEvent, AssistantContentPart, Message } from "@anvia/core";
 import { reasoningDisplayText } from "@anvia/core/completion";
 
-import {
-  messageId,
-  type ChatMessage,
-  type MessagePart,
-  type RunEvent,
-} from "@aven/protocol/events";
+import { messageId } from "@aven/protocol/events";
 
 import { sentMessage } from "./attachments";
 import {
@@ -16,6 +11,7 @@ import {
   withSubagentResults,
 } from "./tool-projection";
 import { contextOf, tokenUsageOf } from "./usage";
+import type { ChatMessage, MessagePart, RunEvent } from "@aven/protocol/types";
 
 export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefined {
   switch (event.type) {

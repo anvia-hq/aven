@@ -1,25 +1,15 @@
-import {
-  continuationPrompt,
-  CONTINUATION_PATCH_NAME,
-  type ContinuationPatch,
-} from "@aven/protocol/continuation";
+import { continuationPrompt, CONTINUATION_PATCH_NAME } from "@aven/protocol/continuation";
 import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTurns } from "@aven/protocol/threads";
+import type { ContinuationPatch } from "@aven/protocol/types";
 
 import { ConflictError, UnprocessableError } from "../../errors";
 import type { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import type { RunManager } from "../runs/service";
-import type { ThreadMessages } from "./messages";
 import type { SendMessageBody } from "./schema";
-import { threadsService, type Viewer } from "./service";
-
-export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;
-
-export type PatchOf = (
-  organizationId: string,
-  threadId: string,
-) => Promise<{ patch: string; truncated: boolean } | null>;
+import { threadsService } from "./service";
+import type { ModelSelection, PatchOf, ThreadMessages, Viewer } from "./types";
 
 const PATCH_MAX_BYTES = 4 * 1024 * 1024;
 
@@ -100,5 +90,3 @@ export function createThreadContinuation({
     },
   };
 }
-
-export type ThreadContinuation = ReturnType<typeof createThreadContinuation>;

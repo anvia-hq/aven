@@ -1,6 +1,8 @@
 import { createTool } from "@anvia/core";
-import { MEMORY_NOTE_MAX, MEMORY_ROOT, type MemoryCommand } from "@aven/protocol/memory";
+import { MEMORY_NOTE_MAX, MEMORY_ROOT } from "@aven/protocol/memory";
 import { z } from "zod";
+import type { MemoryHost } from "./types";
+import type { MemoryCommand } from "@aven/protocol/types";
 
 export const MEMORY_TOOL_NAME = "memory";
 
@@ -39,8 +41,6 @@ export const memorySchema = z.object({
 });
 
 type MemoryInput = z.infer<typeof memorySchema>;
-
-export type MemoryHost = (command: MemoryCommand) => Promise<string>;
 
 function required<K extends keyof MemoryInput>(input: MemoryInput, key: K) {
   const value = input[key];

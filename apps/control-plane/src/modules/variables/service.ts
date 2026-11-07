@@ -1,11 +1,7 @@
 import { db } from "@aven/db/client";
-import {
-  environmentVariables as variables,
-  type EnvironmentVariableRow,
-} from "@aven/db/schema/environment-variables";
+import { environmentVariables as variables } from "@aven/db/schema/environment-variables";
 import { users } from "@aven/db/schema/users";
-import { variableEvents, type NewVariableEventRow } from "@aven/db/schema/variable-events";
-import type { RunEnvVar } from "@aven/protocol/runtime-wire";
+import { variableEvents } from "@aven/db/schema/variable-events";
 import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
@@ -13,24 +9,13 @@ import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { isOwnerOrAdmin } from "../auth/members";
 import { projectsService } from "../projects/service";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";
+import type { Scope } from "./types";
+import type { EnvironmentVariableRow, NewVariableEventRow } from "@aven/db/schema/types";
+import type { RunEnvVar } from "@aven/protocol/types";
 
 const HINT_MIN_LENGTH = 12;
 
 export class TooManyVariablesError extends UnprocessableError {}
-
-export type Scope =
-  | {
-      kind: "workspace";
-      organizationId: string;
-      actorId: string;
-    }
-  | {
-      kind: "project";
-      organizationId: string;
-      projectId: string;
-      actorId: string;
-    }
-  | { kind: "personal"; organizationId: string; userId: string };
 
 const SCOPE_LABEL = { workspace: "workspace", project: "project", personal: "person" } as const;
 

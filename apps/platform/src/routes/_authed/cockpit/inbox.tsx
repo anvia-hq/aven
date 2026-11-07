@@ -2,11 +2,12 @@ import { Inbox } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { withTag } from "@/modules/cockpit/components/cockpit-page";
-import { InboxPane, type InboxShown } from "@/modules/cockpit/components/inbox-pane";
+import { InboxPane } from "@/modules/cockpit/components/inbox-pane";
 import { InboxDraft } from "@/modules/cockpit/components/inbox-draft";
 import { InboxReader } from "@/modules/cockpit/components/inbox-reader";
 import { NothingOpen, SplitView } from "@/modules/cockpit/components/split-view";
 import { useInbox } from "@/modules/cockpit/hooks/use-inbox";
+import type { InboxShown } from "@/modules/cockpit/types";
 
 const NEW_ITEM = "new";
 

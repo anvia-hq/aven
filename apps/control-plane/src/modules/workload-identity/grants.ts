@@ -1,17 +1,10 @@
 import { randomBytes } from "node:crypto";
 
 import { issuer as defaultIssuer, type Issuer } from "./issuer";
-import type { MintTokenBody, SubjectScope } from "./schema";
+import type { MintTokenBody } from "./schema";
+import type { RunIdentity, SubjectScope } from "./types";
 
 const TOKEN_PREFIX = "avid_";
-
-export type RunIdentity = {
-  organizationId: string;
-  projectId: string;
-  threadId: string;
-  userId: string;
-  email: string;
-};
 
 const SUBJECTS: Record<SubjectScope, (identity: RunIdentity) => string> = {
   thread: (identity) => `thread:${identity.threadId}`,

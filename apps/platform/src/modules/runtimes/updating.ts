@@ -1,6 +1,4 @@
-import type { Runtime } from "./types";
-
-export type UpdateAsked = { from: string | null; at: number };
+import type { Runtime, UpdateAsked } from "./types";
 
 export const UPDATE_WAIT_MS = 5 * 60_000;
 

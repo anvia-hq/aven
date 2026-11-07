@@ -1,12 +1,4 @@
-export type AvatarSetting = { seed?: string; family?: string; color?: string };
-
-export type Part =
-  | { kind: "circle"; cx: number; cy: number; r: number }
-  | { kind: "rect"; x: number; y: number; width: number; height: number; r: number }
-  | { kind: "path"; d: string }
-  | { kind: "polygon"; points: string };
-
-export type Point = { x: number; y: number };
+import type { Avatar, AvatarSetting, Part, Point } from "./types";
 
 type Family = {
   name: string;
@@ -98,18 +90,6 @@ export const colors: readonly string[] = [
 ];
 
 export const faces = ["smile", "grin", "curious", "glance"] as const;
-type Face = (typeof faces)[number];
-
-export type Avatar = {
-  family: string;
-  color: string;
-  face: Face;
-  parts: readonly Part[];
-  center: Point;
-  reach: number;
-  delay: number;
-};
-
 function hash(seed: string) {
   let value = 0x811c9dc5;
   for (let index = 0; index < seed.length; index++) {

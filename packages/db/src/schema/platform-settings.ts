@@ -9,6 +9,3 @@ export const platformSettings = pgTable("platform_settings", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type PlatformSetting = typeof platformSettings.$inferSelect;
-export type NewPlatformSetting = typeof platformSettings.$inferInsert;

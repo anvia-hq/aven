@@ -1,16 +1,12 @@
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { errorMessage } from "@aven/agents/values";
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
-import { runCommand, type CommandOutput } from "./run-command";
+import { runCommand } from "./run-command";
 import { trackPushes } from "./track-pushes";
-
-export type Git = (
-  args: string[],
-  options: { cwd: string; env?: Record<string, string>; timeoutMs?: number },
-) => Promise<CommandOutput>;
+import type { RepoAccess } from "@aven/protocol/types";
+import type { Git } from "./types";
 
 export const git: Git = (args, { cwd, env, timeoutMs }) =>
   runCommand(["git", ...args], {

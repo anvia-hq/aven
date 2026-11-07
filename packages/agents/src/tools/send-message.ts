@@ -1,6 +1,7 @@
 import { createTool } from "@anvia/core";
 import { USER_HANDLE } from "@aven/protocol/bots";
 import { z } from "zod";
+import type { SendMessage } from "./types";
 
 export const SEND_MESSAGE_TOOL_NAME = "send_message";
 
@@ -24,11 +25,6 @@ export const sendMessageSchema = z.object({
 });
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
-
-export type SendMessage = (
-  message: SendMessageInput,
-  context: { abortSignal?: AbortSignal },
-) => Promise<string>;
 
 export function createSendMessageTool(send: SendMessage) {
   return createTool({

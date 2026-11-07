@@ -1,4 +1,4 @@
-import type { ContinuationStore, FailureStore } from "../modules/runs/service";
+import type { ContinuationStore, FailureStore } from "../modules/runs/types";
 
 export function memoryContinuations() {
   const saved = new Map<string, unknown>();

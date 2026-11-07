@@ -4,10 +4,10 @@ import { bytesOf } from "../../bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
 import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";
-import type { TerminalHandle } from "../runtimes/viewer-streams";
 import { threadParams } from "../threads/schema";
 import { terminalControl, terminalSize } from "./schema";
 import { createTerminalService } from "./service";
+import type { TerminalHandle } from "../runtimes/types";
 
 export const terminalRouter = (hub: RuntimeHub) => {
   const service = createTerminalService(hub);

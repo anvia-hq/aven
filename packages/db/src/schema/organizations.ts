@@ -12,6 +12,3 @@ export const organizations = pgTable("organizations", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type Organization = typeof organizations.$inferSelect;
-export type NewOrganization = typeof organizations.$inferInsert;

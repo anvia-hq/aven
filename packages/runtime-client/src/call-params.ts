@@ -1,17 +1,18 @@
 import { asRecord } from "@aven/agents/values";
-import type { MessageMention } from "@aven/protocol/events";
-import {
-  DIFF_SCOPES,
-  type ArtifactsReadParams,
-  type DesktopCallParams,
-  type DiffGetParams,
-  type DiffScope,
-  type FilesCallParams,
-  type FilesSearchParams,
-  type ProcessesCallParams,
-  type RunnerUpdateParams,
-  type SandboxReleaseParams,
-} from "@aven/protocol/runtime-wire";
+import { DIFF_SCOPES } from "@aven/protocol/runtime-wire";
+import type {
+  ArtifactsReadParams,
+  DesktopCallParams,
+  DiffGetParams,
+  DiffScope,
+  FilesCallParams,
+  FilesSearchParams,
+  MessageMention,
+  ProcessesCallParams,
+  RunnerUpdateParams,
+  SandboxReleaseParams,
+} from "@aven/protocol/types";
+import type { SteerParams } from "./types";
 
 const invalid = () => new Error("Invalid parameters");
 
@@ -75,13 +76,6 @@ export function desktopCallParams(
     bot: bot === true,
   };
 }
-
-export type SteerParams = {
-  runId: string;
-  steerId: string;
-  prompt: string;
-  mentions?: MessageMention[];
-};
 
 export function steerParams(params: unknown): SteerParams {
   const { runId, steerId, prompt, mentions } = asRecord(params);

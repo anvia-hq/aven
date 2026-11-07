@@ -1,10 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  ARTIFACT_EXTENSIONS,
-  ARTIFACT_NAME,
-  type ArtifactContent,
-} from "@aven/protocol/runtime-wire";
+import { ARTIFACT_EXTENSIONS, ARTIFACT_NAME } from "@aven/protocol/runtime-wire";
+import type { ArtifactContent } from "@aven/protocol/types";
 
 const EXTENSIONS: Record<string, string> = ARTIFACT_EXTENSIONS;
 const MEDIA_TYPES = Object.fromEntries(

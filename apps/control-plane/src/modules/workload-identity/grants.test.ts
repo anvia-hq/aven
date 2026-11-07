@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { RunIdentities, type RunIdentity } from "./grants";
+import { RunIdentities } from "./grants";
 import { Issuer } from "./issuer";
 import { mintTokenBody } from "./schema";
+import type { RunIdentity } from "./types";
 
 const identity: RunIdentity = {
   organizationId: "org-1",

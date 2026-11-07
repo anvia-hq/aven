@@ -4,17 +4,12 @@ import { z } from "zod";
 
 import { createCodingAgent } from "./coding-agent";
 import { messagesToChat, projectStreamEvent, projectSubagentEvent } from "./projection";
-import {
-  applyEvent,
-  pendingQuestion,
-  questionAnswers,
-  type ChatMessage,
-  type RunEvent,
-} from "@aven/protocol/events";
+import { applyEvent, pendingQuestion, questionAnswers } from "@aven/protocol/events";
 import { reasoning, scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 import { createSpawnAgentTool } from "./tools/spawn-agent";
 import { usageFromHistory } from "./usage";
+import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
 const files = new Map([["a.txt", "hello"]]);
 

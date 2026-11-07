@@ -1,16 +1,11 @@
-import type { Agent, AnyTool } from "@anvia/core";
+import type { AnyTool } from "@anvia/core";
 import { projectSubagentEvent } from "@aven/agents/projection";
-import { subagentTools, type SubagentType } from "@aven/agents/subagents";
+import { subagentTools } from "@aven/agents/subagents";
 import { clip } from "@aven/agents/tool-projection";
-import type { RunSubagent } from "@aven/agents/tools/spawn-agent";
 import { errorMessage } from "@aven/agents/values";
-import type { RunEvent } from "@aven/protocol/events";
-
-export type CreateSubagent = (input: {
-  type: SubagentType;
-  id: string;
-  tools: AnyTool[];
-}) => Agent<unknown>;
+import type { RunSubagent } from "@aven/agents/tools/types";
+import type { RunEvent } from "@aven/protocol/types";
+import type { CreateSubagent } from "./types";
 
 export function subagentRunner(
   tools: readonly AnyTool[],

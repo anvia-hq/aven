@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import type { GithubClient, GithubUserGrant } from "./client";
+import type { GithubClient } from "./client";
+import type { GithubUserGrant } from "./types";
 
 const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => ({
   forKey: async () => client as GithubClient,

@@ -2,12 +2,7 @@ import type { AnyTool, Message } from "@anvia/core";
 import type { GoalAssessment, GoalDecision } from "@anvia/durable";
 import { asRecord } from "@aven/agents/values";
 import { createHash } from "node:crypto";
-
-export type CommandResult = {
-  command: string;
-  exitCode: number | null;
-  output: string;
-};
+import type { CommandResult } from "./types";
 
 const COMMAND_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_CHARS = 1_500;

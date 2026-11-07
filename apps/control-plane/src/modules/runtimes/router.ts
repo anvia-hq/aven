@@ -5,13 +5,14 @@ import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
 import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
-import { createLatestRelease, type LatestRelease } from "./latest-release";
+import { createLatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
 import { createRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
+import type { LatestRelease } from "./types";
 
 export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) =>
   new Elysia({ prefix: "/runtimes" })

@@ -1,6 +1,7 @@
 import { CheckCircle } from "@mynaui/icons-react";
 
-import { questionAnswers, SECRET_TOOL_NAME, type ToolPart } from "@aven/protocol/events";
+import { questionAnswers, SECRET_TOOL_NAME } from "@aven/protocol/events";
+import type { ToolPart } from "@aven/protocol/types";
 
 function headline(tool: ToolPart, count: number) {
   if (tool.name === SECRET_TOOL_NAME) {

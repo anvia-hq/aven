@@ -3,15 +3,14 @@ import { useRef, useState, type FormEvent } from "react";
 
 import { errorMessage } from "@/lib/api";
 
-import type { CompatiblePreset } from "../presets";
-import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
+import {
+  PROVIDER_LABELS,
+  type CompatiblePreset,
+  type ModelsState,
+  type Provider,
+  type ProviderKind,
+} from "../types";
 import { useProviders } from "./use-providers";
-
-export type ModelsState = {
-  status: "idle" | "loading" | "ready" | "error";
-  models: string[] | null;
-  error?: string;
-};
 
 const SOURCE_FIELDS = new Set(["apiKey", "baseUrl", "region", "project", "location"]);
 const AUTO_LOAD_DELAY_MS = 600;

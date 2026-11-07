@@ -1,9 +1,6 @@
-export const MAX_WAIT_SECONDS = 240;
+import type { Clock } from "./types";
 
-export type Clock = {
-  now(): number;
-  sleep(ms: number, abortSignal?: AbortSignal): Promise<void>;
-};
+export const MAX_WAIT_SECONDS = 240;
 
 export const realClock: Clock = {
   now: () => Date.now(),

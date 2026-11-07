@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { timeAgo } from "@/lib/format";
 
 import { useAutosave } from "../hooks/use-autosave";
-import { useTasks, type TaskInput } from "../hooks/use-tasks";
-import type { CockpitTask, TaskPriority, TaskStatus } from "../types";
+import { useTasks } from "../hooks/use-tasks";
+import type { CockpitTask, TaskInput, TaskOpen, TaskPriority, TaskStatus } from "../types";
 import {
   Crumb,
   CurrentCrumb,
@@ -24,8 +24,6 @@ import {
 import { PriorityFlag, StatusDot } from "./task-badges";
 import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
 import { TagInput } from "./tag-input";
-
-export type TaskOpen = { kind: "new"; initial: Partial<TaskInput> } | { kind: "task"; id: string };
 
 type Fields = {
   status: TaskStatus;

@@ -1,60 +1,38 @@
-import type { Agent, AgentPrompt, AnyTool, Message } from "@anvia/core";
+import type { AgentPrompt, AnyTool, Message } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
-import type { DurableAgentRegistration } from "@anvia/durable";
-import type { RunMemory } from "@aven/protocol/memory";
 import { sentPrompt } from "@aven/agents/attachments";
-import type { McpNote } from "@aven/agents/mcp";
-import type { SkillListing } from "@aven/agents/skills";
-import type { SubagentType } from "@aven/agents/subagents";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
-import type {
-  ControlPlaneToRuntime,
-  RunMcpServer,
-  RunModel,
-  RunThreadInfo,
-  RuntimeCalls,
-  RuntimeToControlPlane,
-  SteerResult,
-} from "@aven/protocol/runtime-wire";
 
 import { keepAttachments, promptOf } from "./attachments";
-import type { SteerParams } from "./call-params";
-import type { GoalEnd } from "./durable-goals";
-import { DurableRuns, type Emit, type FollowedRun, type RunInput } from "./durable-runs";
-import type { DurableEnd } from "./durable-events";
+import { DurableRuns } from "./durable-runs";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
-import type { RunOutbox, Source } from "./run-outbox";
 import { redactingTools, secretRedactor } from "./secret-redaction";
 import { awaitingReady } from "./late-bound-tools";
-import type { RunRecord, RunRecords } from "./run-records";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-import { connectMcpServers, type ConnectedMcp } from "./mcp-servers";
+import { connectMcpServers } from "./mcp-servers";
 import { markTurn } from "./thread-diff";
-import { timing, type Timing } from "./timing";
-
-export type CreateRuntimeAgent = (input: {
-  thread: RunThreadInfo;
-  id: string;
-  attended: boolean;
-  tools: readonly AnyTool[];
-  skills?: readonly SkillListing[];
-  envNames?: readonly string[];
-  mcp?: McpNote;
-  memory?: RunMemory;
-  forks?: boolean;
-  model?: RunModel;
-  role?: SubagentType;
-  compact?: boolean;
-}) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
-
-export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
+import { timing } from "./timing";
+import type { RunMcpServer, RunThreadInfo, SteerResult } from "@aven/protocol/types";
+import type {
+  ConnectedMcp,
+  DriverContext,
+  DurableEnd,
+  Emit,
+  FollowedRun,
+  GoalEnd,
+  RunInput,
+  RunMessage,
+  RunRecord,
+  SteerParams,
+  ThreadWorkspaces,
+  Timing,
+} from "./types";
 
 type Live = {
   threadId: string;
@@ -106,28 +84,6 @@ async function prepareRun(
   ]);
   sandbox.setProjectEnv?.(threadId, env);
 }
-
-export type DriverContext = {
-  journal: Promise<DurableRuns>;
-  records: RunRecords;
-  outbox: RunOutbox;
-  sandbox: ThreadWorkspaces;
-  createAgent: CreateRuntimeAgent;
-  call<M extends keyof RuntimeCalls>(
-    method: M,
-    params: RuntimeCalls[M]["params"],
-  ): Promise<RuntimeCalls[M]["result"]>;
-  report(
-    runId: string,
-    make: (seq: number) => Extract<RuntimeToControlPlane, { type: "run.event" | "run.end" }>,
-    source?: Source,
-  ): void;
-  boxes: Map<string, ThreadSandbox>;
-  starting(threadId: string): Promise<void>;
-  finished(threadId: string, ended?: DurableEnd["type"]): void;
-  controlPlane: string;
-  stopped(): boolean;
-};
 
 export function createRunDriver(context: DriverContext) {
   const { records, outbox, report } = context;

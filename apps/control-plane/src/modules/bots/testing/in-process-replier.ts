@@ -1,22 +1,9 @@
-import type { AgentMemoryOptions, MemoryStore } from "@anvia/core";
-import type { createBotAgent } from "@aven/agents/bot-agent";
+import type { MemoryStore } from "@anvia/core";
 import { typingDelay } from "@aven/agents/bot-delay";
-import type { AskQuestion } from "@aven/agents/tools/ask-question";
-import type { SendMessage } from "@aven/agents/tools/send-message";
-import type { ModelConfig } from "@aven/agents/model";
-import { USER_HANDLE, type Bot } from "@aven/protocol/bots";
-
-import type { BotReplier } from "../runner";
-
-type BotAgent = Pick<ReturnType<typeof createBotAgent>, "generate">;
-
-export type CreateBotAgent = (input: {
-  bot: Bot;
-  model: ModelConfig;
-  send: SendMessage;
-  askQuestion: AskQuestion;
-  memory: AgentMemoryOptions;
-}) => BotAgent;
+import { USER_HANDLE } from "@aven/protocol/bots";
+import type { BotReplier, CreateBotAgent } from "../types";
+import type { SendMessage } from "@aven/agents/tools/types";
+import type { Bot } from "@aven/protocol/types";
 
 export function inProcessReplier(options: {
   store: MemoryStore;

@@ -14,10 +14,10 @@ import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
-import type { RunIdentity } from "../workload-identity/grants";
 import { keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
+import type { RunIdentity } from "../workload-identity/types";
 
 async function runIdentity(
   thread: { id: string; organizationId: string; projectId: string },
@@ -184,5 +184,3 @@ export const createThreadMessages = (runs: RunManager) => {
     },
   };
 };
-
-export type ThreadMessages = ReturnType<typeof createThreadMessages>;

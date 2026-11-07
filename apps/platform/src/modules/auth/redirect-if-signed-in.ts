@@ -1,8 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
-
-import type { InvitationSearch } from "./invitation-search";
+import type { InvitationSearch } from "./types";
 
 export async function redirectIfSignedIn({ invitation }: InvitationSearch) {
   const { data } = await authClient.getSession();

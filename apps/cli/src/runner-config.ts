@@ -2,8 +2,7 @@ import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { parseEnv, setEnv } from "./env-file";
-
-export type RunnerSettings = { url: string; token: string; image: string };
+import type { RunnerSettings } from "./types";
 
 const HEADER = `# The settings of this machine's Aven runner, written by \`aven runner install\`.
 # Other AVEN_SANDBOX_* and AVEN_RUNTIME_HOME settings (see .env.example in the repository) can be

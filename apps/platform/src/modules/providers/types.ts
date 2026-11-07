@@ -1,4 +1,4 @@
-import type { Provider as WireProvider } from "@aven/protocol/runtime-wire";
+import type { Provider as WireProvider } from "@aven/protocol/types";
 
 export type ProviderKind = WireProvider;
 
@@ -54,3 +54,19 @@ export type NewProvider = {
 type ModelEfforts = { options: string[]; defaultValue: string | null };
 
 export type ProviderModels = { models: string[]; efforts: Record<string, ModelEfforts> };
+
+export type CompatiblePreset = {
+  id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
+  name: string;
+  description: string;
+  baseUrl: string;
+  needsKey: boolean;
+  exampleModel: string;
+  keyPlaceholder: string;
+};
+
+export type ModelsState = {
+  status: "idle" | "loading" | "ready" | "error";
+  models: string[] | null;
+  error?: string;
+};

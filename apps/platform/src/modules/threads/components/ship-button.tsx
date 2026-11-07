@@ -5,9 +5,9 @@ import { ButtonGroup } from "@/components/button-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
-import { useShipReadiness, type ShipGate } from "../hooks/use-ship-readiness";
+import { useShipReadiness } from "../hooks/use-ship-readiness";
 import { useShipThread } from "../hooks/use-ship-thread";
-import type { Thread, ThreadPullRequest } from "../types";
+import type { ShipGate, Thread, ThreadPullRequest } from "../types";
 import { ShipMenu } from "./ship-menu";
 
 type Props = {

@@ -2,8 +2,7 @@ import { Monitor } from "@mynaui/icons-react";
 
 import { PanelToggle } from "@/components/panel-toggle";
 
-import type { BotPanels } from "../hooks/use-bot-panels";
-import type { Bot } from "../types";
+import type { Bot, BotPanels } from "../types";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
 export function BotHeader({ bot, panels }: { bot: Bot; panels: BotPanels }) {

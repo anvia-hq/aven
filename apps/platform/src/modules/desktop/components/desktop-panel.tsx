@@ -5,13 +5,13 @@ import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
 
-import type { Computer } from "../computer";
 import { useDesktopControl } from "../hooks/use-desktop-control";
 import { useDesktopStatus } from "../hooks/use-desktop-status";
 import { useDesktopWake } from "../hooks/use-desktop-wake";
 import { sandboxView } from "../sandbox-view";
 import { DesktopViewer } from "./desktop-viewer";
 import { SandboxAsleepNotice } from "./sandbox-asleep-notice";
+import type { Computer } from "../types";
 
 type Props = {
   computer: Computer;

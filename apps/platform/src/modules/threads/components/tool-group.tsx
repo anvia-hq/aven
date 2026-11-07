@@ -2,11 +2,9 @@ import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
-import type { ToolPart } from "../types";
+import type { ToolGroupEntry, ToolPart } from "../types";
 import { ReasoningBlock } from "./reasoning-block";
 import { ToolCall } from "./tool-call";
-
-export type ToolGroupEntry = { type: "tool"; tool: ToolPart } | { type: "reasoning"; text: string };
 
 type Kind = { label: (count: number) => string };
 

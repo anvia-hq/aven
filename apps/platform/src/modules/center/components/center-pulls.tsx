@@ -7,13 +7,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { TrackedRow } from "@/modules/projects/components/repo-tracked";
 import type { Project } from "@/modules/projects/types";
 
-import type { CenterFilters, CenterSearch } from "../filters";
-import type { PullEntry } from "../hooks/use-center-feed";
 import { DebouncedInput } from "./debounced-input";
 import { FilterChips } from "./filter-chips";
 import { clearPulls, PullFilters, pullChips } from "./pull-filters";
-
-export type PullsView = "pulls" | "branches";
+import type { CenterFilters, CenterSearch, PullEntry, PullsView } from "../types";
 
 type Props = {
   pulls: PullEntry[] | undefined;

@@ -3,17 +3,9 @@ import { homedir, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 
 import { exec } from "./compose";
-import { launchdPlist, systemdUnit, type ServiceDefinition } from "./service-files";
+import { launchdPlist, systemdUnit } from "./service-files";
 import { withUserBus } from "./user-bus";
-
-export type ServiceManager = {
-  install(def: ServiceDefinition): Promise<void>;
-  uninstall(): Promise<void>;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  restart(): Promise<void>;
-  status(): Promise<string>;
-};
+import type { ServiceManager } from "./types";
 
 async function mustRun(command: string[], env?: Record<string, string | undefined>) {
   const { code, out } = await exec(command, env);

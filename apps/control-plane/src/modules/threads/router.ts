@@ -12,10 +12,8 @@ import {
   threadParams,
   updateThreadBody,
 } from "./schema";
-import type { ThreadContinuation } from "./continuation";
-import type { ThreadMessages } from "./messages";
-import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
+import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
 export const threadsRouter = (
   runs: RunManager,

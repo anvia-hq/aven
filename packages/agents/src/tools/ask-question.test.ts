@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { BotQuestion } from "@aven/protocol/bots";
 
 import {
   ASK_QUESTION_TOOL_NAME,
@@ -8,6 +7,7 @@ import {
   createAskQuestionTool,
   toQuestions,
 } from "./ask-question";
+import type { BotQuestion } from "@aven/protocol/types";
 
 const question = {
   id: "scope",
