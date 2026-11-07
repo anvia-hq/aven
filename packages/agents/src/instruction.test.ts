@@ -80,3 +80,7 @@ test("the agent is told to end its turn and be woken when a process ends, and ne
   expect(text).toContain("end your turn");
   expect(text).toContain("Never wait with sleep in a command");
 });
+
+test("the agent is told its commands already start in /workspace, so it does not cd there each time", () => {
+  expect(codingInstructions(200, true)).toContain("do not begin one with cd /workspace");
+});
