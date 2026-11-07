@@ -151,6 +151,14 @@ export function createModelCatalog(
         return entry ? entry.usable && !entry.deprecated : looksLikeChatModel(kind, id);
       });
     },
+    async knownChatModels(kind: Provider) {
+      const known = await lookup(kind);
+      const ids: string[] = [];
+      for (const [id, entry] of known ?? []) {
+        if (entry.usable && !entry.deprecated) ids.push(id);
+      }
+      return ids;
+    },
     async efforts(kind: Provider, id: string) {
       if (kind === "openai-compatible" || kind === "bedrock" || kind === "vertex") return null;
       const levels = (await lookup(kind))?.get(id)?.efforts;

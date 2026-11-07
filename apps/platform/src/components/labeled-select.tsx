@@ -8,13 +8,19 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 };
 
-export function LabeledSelect({ label, options, value, onChange, placeholder }: Props) {
+export function LabeledSelect({ label, options, value, onChange, placeholder, disabled }: Props) {
   return (
     <div className="flex flex-col gap-1 text-sm">
       <span>{label}</span>
-      <Select items={options} value={value} onValueChange={(next) => next && onChange(next)}>
+      <Select
+        items={options}
+        value={value}
+        disabled={disabled}
+        onValueChange={(next) => next && onChange(next)}
+      >
         <SelectTrigger aria-label={label} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
