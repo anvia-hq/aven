@@ -374,6 +374,7 @@ export class RuntimeHub {
   forks: ThreadForks = {
     start: () => Promise.reject(new Error("Forks are not available")),
     status: () => Promise.reject(new Error("Forks are not available")),
+    ended: async () => undefined,
   };
 
   // A runtime that reconnects replaces its previous connection.

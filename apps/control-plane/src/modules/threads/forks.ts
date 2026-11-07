@@ -4,7 +4,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
 import { UnprocessableError } from "../../errors";
-import type { RunManager } from "../runs/service";
+import type { RunEnding, RunManager } from "../runs/service";
 import type { ThreadMessages } from "./messages";
 import { threadsService } from "./service";
 
@@ -17,6 +17,14 @@ export type ThreadForks = {
   ): Promise<{ id: string; title: string }>;
   /** Looks at one of the run's thread's forks. */
   status(thread: RunThreadInfo, id: string): Promise<ForkView>;
+  /**
+   * A run of `fork` ended. A parent that is working is told, so it can look; one that is idle is
+   * left alone, since nobody asked it to do anything (decision 0135).
+   */
+  ended(
+    fork: { id: string; organizationId: string; parentThreadId?: string | null },
+    ending: RunEnding,
+  ): Promise<void>;
 };
 
 export function createThreadForks({
@@ -24,7 +32,7 @@ export function createThreadForks({
   messages,
 }: {
   runs: RunManager;
-  messages: Pick<ThreadMessages, "start">;
+  messages: Pick<ThreadMessages, "start" | "send">;
 }): ThreadForks {
   // A fork of this thread, and no other thread: the id comes from the agent.
   const forkOf = async (thread: RunThreadInfo, id: string) => {
@@ -70,6 +78,31 @@ export function createThreadForks({
         throw error;
       }
       return { id: fork.id, title: fork.title };
+    },
+
+    async ended(fork, ending) {
+      if (!fork.parentThreadId || ending.outcome === "cancelled") return;
+      if (!runs.isRunning(fork.parentThreadId)) return;
+      const parent = await threadsService.get(fork.organizationId, fork.parentThreadId);
+      const forked = await threadsService.get(fork.organizationId, fork.id);
+      if (!parent || !forked) return;
+      const how = {
+        done: "is done",
+        failed: "failed",
+        question: "stopped to ask the person a question",
+      }[ending.outcome];
+      const prompt = `[fork] Your fork "${forked.title}" (${forked.id}) ${how}. Look at it with fork_status, and take its changes with take_fork_changes when you want them.`;
+      // The parent is working for the person already: this reaches it at its next step. Should it
+      // have finished in the moment since, the note starts a run of its own, which only looks.
+      await messages
+        .send(
+          parent.organizationId,
+          parent.createdBy,
+          parent.id,
+          { prompt },
+          { onPersonsWord: false },
+        )
+        .catch(() => undefined);
     },
 
     async status(thread, id) {

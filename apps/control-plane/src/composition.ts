@@ -60,6 +60,8 @@ export const runsService = new RunManager({
     // updated (decision 0101). `threadWatcher` is made below; this runs only when a run ends.
     await threadWatcher.ended(thread.id, run.startedAt, ending, updated);
     await updated;
+    // A thread's agent that forked this one, and is still working, is told (decision 0135).
+    await runtimeHub.forks.ended(thread, ending);
   },
   continuations: {
     save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),

@@ -35,6 +35,12 @@ the parent's workspace, in a sandbox of its own, and works on a task the parent 
   change (commits and uncommitted work, against the point it forked from) as a patch in the parent's
   workspace, which the agent applies with `git apply` or reads. Nothing is merged for it.
 
+- **Told when a fork ends, only if the parent is working.** The control plane sends the parent a
+  `[fork] ...` message (how it ended, never what the fork wrote), which reaches a working agent at its
+  next step. An idle parent is left alone: nobody asked it to do anything, and waking an agent
+  to act unasked is what this decision avoids. The person tells it to take the fork's work.
+- **The fork runs on the person's default model**, as a bot's thread does, not on the parent's choice.
+
 ## Consequences
 
 - A fork costs a container (4 CPUs, 8 GB by default) and a copy of the workspace: `node_modules`

@@ -18,6 +18,7 @@ run("a thread's forks (postgres)", async () => {
   afterAll(cleanup);
 
   const sent: { thread: string; prompt: string }[] = [];
+  const told: { thread: string; prompt: string; onWord: boolean | undefined }[] = [];
   let failSend = false;
   let running = new Set<string>();
   const transcript: ChatMessage[] = [
@@ -27,6 +28,16 @@ run("a thread's forks (postgres)", async () => {
   const forks = createThreadForks({
     runs: { isRunning: (id: string) => running.has(id), history: async () => transcript } as never,
     messages: {
+      send: async (
+        _org: string,
+        _user: string,
+        thread: string,
+        { prompt }: { prompt: string },
+        options?: { onPersonsWord?: boolean },
+      ) => {
+        told.push({ thread, prompt, onWord: options?.onPersonsWord });
+        return { steered: true };
+      },
       start: async (
         _org: string,
         _user: string,
@@ -108,5 +119,26 @@ run("a thread's forks (postgres)", async () => {
     await expect(
       forks.status({ id: main.id, organizationId: orgB }, crypto.randomUUID()),
     ).rejects.toThrow();
+  });
+
+  test("tells a parent that is working when a fork ends, and leaves an idle one alone (decision 0135)", async () => {
+    const main = await parent();
+    const made = await forks.start(main, input);
+    const fork = { id: made.id, organizationId: orgA, parentThreadId: main.id };
+
+    await forks.ended(fork, { outcome: "done" });
+    expect(told).toEqual([]);
+
+    running = new Set([main.id]);
+    await forks.ended(fork, { outcome: "done" });
+    expect(told).toHaveLength(1);
+    expect(told[0]).toMatchObject({ thread: main.id, onWord: false });
+    expect(told[0]?.prompt).toContain(made.id);
+    expect(told[0]?.prompt).toContain("is done");
+
+    await forks.ended(fork, { outcome: "cancelled" });
+    await forks.ended({ ...fork, parentThreadId: null }, { outcome: "done" });
+    expect(told).toHaveLength(1);
+    running = new Set();
   });
 });
