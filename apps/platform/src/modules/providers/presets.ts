@@ -4,7 +4,7 @@
 // address is the preset's.
 
 export type CompatiblePreset = {
-  id: string;
+  id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
   /** The panel's title, and the name the provider is saved with. */
   name: string;
   /** One line under the title, like the other kinds'. */

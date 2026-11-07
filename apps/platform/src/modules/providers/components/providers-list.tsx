@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/components/badge";
 
-import { COMPATIBLE_PRESETS, presetOf } from "../presets";
+import { COMPATIBLE_PRESETS, presetOf, type CompatiblePreset } from "../presets";
 import { useProviders } from "../hooks/use-providers";
 import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
@@ -34,10 +34,18 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Tile({ kind }: { kind: ProviderKind }) {
+function Tile({
+  kind,
+  baseUrl,
+  preset,
+}: {
+  kind: ProviderKind;
+  baseUrl?: string | null;
+  preset?: CompatiblePreset["id"];
+}) {
   return (
     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
-      <ProviderLogo kind={kind} />
+      <ProviderLogo kind={kind} baseUrl={baseUrl} preset={preset} />
     </span>
   );
 }
@@ -67,7 +75,7 @@ export function ProvidersList() {
               aria-label={provider.name}
               className="flex items-center gap-3.5 px-4 py-3.5"
             >
-              <Tile kind={provider.kind} />
+              <Tile kind={provider.kind} baseUrl={provider.baseUrl} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium">{provider.name}</span>
@@ -117,7 +125,7 @@ export function ProvidersList() {
             aria-label={preset.name}
             className="flex items-center gap-3.5 px-4 py-3.5"
           >
-            <Tile kind="openai-compatible" />
+            <Tile kind="openai-compatible" preset={preset.id} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
               <span className="text-sm font-medium">{preset.name}</span>
               <span className="truncate text-xs text-muted-foreground">{preset.description}</span>

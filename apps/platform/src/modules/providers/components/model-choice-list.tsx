@@ -31,7 +31,7 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
             key={item.id}
             heading={
               <span className="flex items-center gap-1.5">
-                <ProviderLogo kind={item.kind} />
+                <ProviderLogo kind={item.kind} baseUrl={item.baseUrl} />
                 {item.name}
               </span>
             }
