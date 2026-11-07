@@ -1,3 +1,5 @@
+import type { ThemedToken } from "shiki";
+
 export type FolderResponse = { available: false } | { available: true; entries: FileEntry[] };
 
 export type FileEntry = { name: string; type: "file" | "directory" };
@@ -16,3 +18,5 @@ export type ExplorerState = {
   active: string | null;
   treeShown: boolean;
 };
+
+export type HighlightedLine = ThemedToken[];

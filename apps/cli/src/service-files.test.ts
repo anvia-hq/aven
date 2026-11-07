@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
-import { launchdPlist, systemdUnit, type ServiceDefinition } from "./service-files";
+import { launchdPlist, systemdUnit } from "./service-files";
+import type { ServiceDefinition } from "./types";
 
 const def: ServiceDefinition = {
   label: "dev.anvia.aven-runner",

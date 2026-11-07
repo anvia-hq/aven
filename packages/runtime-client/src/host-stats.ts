@@ -2,9 +2,8 @@ import { readFile } from "node:fs/promises";
 import { statfs } from "node:fs/promises";
 import { cpus, freemem, platform, totalmem } from "node:os";
 
-import type { HostStats } from "@aven/protocol/runtime-wire";
-
 import { runCommand } from "./run-command";
+import type { HostStats } from "@aven/protocol/types";
 
 type CpuTimes = { busy: number; total: number };
 

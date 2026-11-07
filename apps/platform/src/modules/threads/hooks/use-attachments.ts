@@ -5,9 +5,7 @@ import { ARTIFACT_MEDIA_TYPES } from "@aven/protocol/runtime-wire";
 import { toast } from "@/components/toast";
 import { fileSize } from "@/lib/format";
 
-import type { AttachmentUpload } from "../types";
-
-export type PendingFile = { id: string; file: File; preview?: string };
+import type { AttachmentUpload, PendingFile } from "../types";
 
 const MODEL_IMAGES = new Set<string>(ARTIFACT_MEDIA_TYPES);
 

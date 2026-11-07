@@ -15,7 +15,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
   const { runtimesService } = await import("../runtimes/service");
   const { botComputerRouter } = await import("./computer-router");
   const { botsService } = await import("./service");
-  type ControlPlaneToRuntime = import("@aven/protocol/runtime-wire").ControlPlaneToRuntime;
+  type ControlPlaneToRuntime = import("@aven/protocol/types").ControlPlaneToRuntime;
 
   const hub = new RuntimeHub(createMemoryStore(db));
   const owner = await signUp("bot-owner");

@@ -1,9 +1,8 @@
-import type { TokenUsage } from "@aven/protocol/events";
-
 import { Skeleton } from "@/components/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
+import type { TokenUsage } from "@aven/protocol/types";
 
 export function UsageCard({
   totals,

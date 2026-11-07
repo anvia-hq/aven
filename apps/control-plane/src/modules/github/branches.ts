@@ -1,12 +1,4 @@
-export type GithubBranchSummary = {
-  name: string;
-  isDefault: boolean;
-  protected: boolean;
-  ahead: number;
-  behind: number;
-  lastCommit: { sha: string; message: string; author: string | null; date: string } | null;
-  pull: { number: number; title: string } | null;
-};
+import type { OpenPullPayload } from "./types";
 
 export const BRANCHES_SUMMARIZED = 30;
 export const BRANCH_CALLS_AT_ONCE = 6;
@@ -27,12 +19,6 @@ export async function mapLimit<T, R>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
 }
-
-export type OpenPullPayload = {
-  number: number;
-  title: string;
-  head: { ref: string; repo: { full_name: string } | null };
-};
 
 export function pullsByBranch(pulls: OpenPullPayload[], fullName: string) {
   const byBranch = new Map<string, { number: number; title: string }>();

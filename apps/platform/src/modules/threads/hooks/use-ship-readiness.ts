@@ -1,12 +1,7 @@
 import { useRequest } from "@/hooks/use-request";
+import type { ShipGate } from "../types";
 
 type Readiness = { ready: boolean; setup: boolean; ship: boolean; appKey: string };
-
-export type ShipGate =
-  | { kind: "checking" }
-  | { kind: "ready" }
-  | { kind: "unknown" }
-  | { kind: "missing"; commands: string[] };
 
 export function useShipReadiness(
   threadId: string,

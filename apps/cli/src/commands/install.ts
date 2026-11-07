@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { stringFlag, type Args } from "../args";
+import { stringFlag } from "../args";
 import { exec } from "../compose";
 import { parseEnv } from "../env-file";
 import { serverDir } from "../home";
@@ -9,6 +9,7 @@ import { runnerInstall } from "./runner";
 import { isExposed } from "../server-plan";
 import { serverInstall } from "./server";
 import { finish } from "./update";
+import type { Args } from "../types";
 
 export async function install(args: Args) {
   if (args.flags.runner) return runnerInstall(args);

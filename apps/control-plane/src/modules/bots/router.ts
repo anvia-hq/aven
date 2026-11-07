@@ -2,9 +2,9 @@ import { Elysia, sse, status } from "elysia";
 
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
-import type { BotChats } from "./chats";
 import { botParams, sendBotMessageBody, updateBotBody } from "./schema";
 import { botsService } from "./service";
+import type { BotChats } from "./types";
 
 export const botsRouter = (chats: BotChats) =>
   new Elysia({ prefix: "/bots" })

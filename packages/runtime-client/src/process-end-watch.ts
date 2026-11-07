@@ -1,18 +1,9 @@
-import type { ProcessEnded, RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
-
-import type { ThreadSandbox } from "./sandbox";
+import type { ProcessEnded } from "@aven/protocol/types";
+import type { ProcessEndWatchContext, ThreadSandbox } from "./types";
 
 const POLL_MS = 3000;
 const TAIL_CHARS = 4000;
 const COMMAND_CHARS = 500;
-
-export type ProcessEndWatchContext = {
-  box(threadId: string): ThreadSandbox | undefined;
-  send(message: RuntimeToControlPlane): boolean;
-  hasRun(threadId: string): boolean;
-  stopped(): boolean;
-  pollMs?: number;
-};
 
 const processesOf = (box: ThreadSandbox) =>
   Promise.resolve()

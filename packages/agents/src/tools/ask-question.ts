@@ -1,7 +1,8 @@
 import { createTool } from "@anvia/core";
-import { BOT_CHOICES_MAX, BOT_QUESTIONS_MAX, type BotQuestion } from "@aven/protocol/bots";
-import type { BotQuestioned } from "@aven/protocol/runtime-wire";
+import { BOT_CHOICES_MAX, BOT_QUESTIONS_MAX } from "@aven/protocol/bots";
 import { z } from "zod";
+import type { AskQuestion } from "./types";
+import type { BotQuestion } from "@aven/protocol/types";
 
 export const ASK_QUESTION_TOOL_NAME = "ask_question";
 
@@ -49,8 +50,6 @@ export const toQuestions = (questions: QuestionsInput): BotQuestion[] =>
   }));
 
 export const askQuestionSchema = z.object({ questions: botQuestionsSchema });
-
-export type AskQuestion = (questions: BotQuestion[]) => Promise<BotQuestioned>;
 
 const SHOWN =
   "The question is on the person's screen. Stop now and send nothing else: their answer arrives as their next message.";

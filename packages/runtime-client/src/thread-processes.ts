@@ -1,5 +1,6 @@
 import type { SandboxProcessInfo, SandboxRuntime } from "@anvia/sandbox";
-import type { ProcessLogs, ProcessView } from "@aven/protocol/runtime-wire";
+import type { ProcessView } from "@aven/protocol/types";
+import type { ThreadProcesses } from "./types";
 
 const LOG_TAIL_BYTES = 16 * 1024;
 
@@ -22,12 +23,6 @@ export function processView(info: SandboxProcessInfo): ProcessView {
     endedAt: info.endedAt,
   };
 }
-
-export type ThreadProcesses = {
-  list(): Promise<ProcessView[]>;
-  stop(processId: string): Promise<ProcessView[]>;
-  logs(processId: string): Promise<ProcessLogs>;
-};
 
 export const noProcesses: ThreadProcesses = {
   list: async () => [],

@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { GithubClient, GithubConfig } from "./client";
+import type { GithubClient } from "./client";
 import { createGithubClients, GithubAppNotFoundError, PLATFORM_APP } from "./clients";
+import type { GithubConfig } from "./types";
 
 const config = (slug: string) => ({ slug }) as GithubConfig;
 

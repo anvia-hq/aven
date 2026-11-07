@@ -1,8 +1,8 @@
 import { ForbiddenError } from "../../errors";
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
-import type { ViewerSink } from "../runtimes/viewer-streams";
 import { threadsService } from "../threads/service";
+import type { ViewerSink } from "../runtimes/types";
 
 export function createTerminalService(hub: RuntimeHub) {
   const runner = runnerFor(hub);

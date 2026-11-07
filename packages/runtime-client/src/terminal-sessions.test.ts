@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
-import type { ThreadWorkspaces } from "./sandbox";
 import { TerminalSessions } from "./terminal-sessions";
+import type { RuntimeToControlPlane } from "@aven/protocol/types";
+import type { ThreadWorkspaces } from "./types";
 
 const viewerId = crypto.randomUUID();
 const size = { cols: 100, rows: 30 };

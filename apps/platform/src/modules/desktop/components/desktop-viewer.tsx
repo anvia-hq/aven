@@ -3,8 +3,8 @@ import { Refresh } from "@mynaui/icons-react";
 import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
 
-import type { Computer } from "../computer";
 import { useDesktopStream } from "../hooks/use-desktop-stream";
+import type { Computer } from "../types";
 
 type Props = {
   computer: Computer;

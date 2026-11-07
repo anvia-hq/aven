@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RunEvent } from "@aven/protocol/events";
-
 import { UnavailableError } from "../../errors";
-import type { ConversationStore } from "../../memory-store";
 import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
-import type { Runtime, RunResult, RunThread, RuntimeRun } from "./runtime";
 import { RunBusyError, RunManager } from "./service";
+import type { ConversationStore } from "../../types";
+import type { RunResult, RunThread, Runtime, RuntimeRun } from "./types";
+import type { RunEvent } from "@aven/protocol/types";
 
 function liveRun() {
   const done = Promise.withResolvers<RunResult>();

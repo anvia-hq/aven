@@ -22,5 +22,3 @@ export const accounts = pgTable("accounts", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type Account = typeof accounts.$inferSelect;

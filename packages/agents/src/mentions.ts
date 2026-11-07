@@ -1,8 +1,9 @@
-import { mentionToken, type MessageMention } from "@aven/protocol/events";
+import { mentionToken } from "@aven/protocol/events";
 
 import { WORKSPACE_DIR } from "./sandbox-tools";
-import type { SkillListing } from "./skills";
 import { asRecord } from "./values";
+import type { SkillListing } from "./types";
+import type { MessageMention } from "@aven/protocol/types";
 
 const unique = (names: string[]) => [...new Set(names)];
 

@@ -1,4 +1,4 @@
-export type CommandOutput = { code: number; stdout: string; stderr: string };
+import type { CommandOutput } from "./types";
 
 export async function runCommand(
   argv: string[],

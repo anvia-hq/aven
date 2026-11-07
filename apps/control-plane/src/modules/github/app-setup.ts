@@ -8,11 +8,11 @@ import {
   githubUrlsFromEnv,
   newAppUrl,
   readSetupState,
-  type GithubUrls,
 } from "./app-manifest";
 import { saveGithubApp, saveOrganizationApp } from "./app-store";
-import { github, type GithubClient, type GithubConfig } from "./client";
-import { githubClients, PLATFORM_APP, type GithubClients } from "./clients";
+import { github, type GithubClient } from "./client";
+import { githubClients, PLATFORM_APP } from "./clients";
+import type { GithubClients, GithubConfig, GithubUrls } from "./types";
 
 type Person = { id: string; email: string };
 

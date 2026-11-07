@@ -3,7 +3,8 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { setupEnvironment, setupRunArgs, scriptState, type DockerRun } from "./environment-setup";
+import { setupEnvironment, setupRunArgs, scriptState } from "./environment-setup";
+import type { DockerRun } from "./types";
 
 const dirs: string[] = [];
 async function temp() {

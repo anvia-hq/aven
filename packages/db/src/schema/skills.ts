@@ -42,5 +42,3 @@ export const skills = pgTable(
     index("skills_digest_idx").on(table.digest),
   ],
 );
-
-export type SkillRow = typeof skills.$inferSelect;

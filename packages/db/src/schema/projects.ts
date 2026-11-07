@@ -41,6 +41,3 @@ export const projects = pgTable(
       .where(sql`${table.deletedAt} is null`),
   ],
 );
-
-export type Project = typeof projects.$inferSelect;
-export type NewProject = typeof projects.$inferInsert;

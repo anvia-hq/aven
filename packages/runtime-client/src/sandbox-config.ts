@@ -1,4 +1,4 @@
-import type { SandboxConfig } from "./sandbox";
+import type { SandboxConfig } from "./types";
 
 type Env = Record<string, string | undefined>;
 

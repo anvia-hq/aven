@@ -6,9 +6,9 @@ import { authRouter } from "../auth/router";
 import { createArtifactsService } from "../artifacts/service";
 import { createDesktopService } from "../desktop/service";
 import type { RuntimeHub } from "../runtimes/hub";
-import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { botRunnerFor, requireOwnBot } from "./computer";
 import { botArtifactParams, botParams } from "./schema";
+import type { ViewerHandle } from "../runtimes/types";
 
 const VIEWER_SUBPROTOCOL = "binary";
 

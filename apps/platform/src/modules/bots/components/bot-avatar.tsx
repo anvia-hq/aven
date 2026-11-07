@@ -3,14 +3,8 @@ import type { CSSProperties } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
 
-import {
-  avatarFor,
-  parseAvatarSetting,
-  type Avatar as Look,
-  type Part,
-  type Point,
-} from "../avatar";
-import type { Bot } from "../types";
+import { avatarFor, parseAvatarSetting } from "../avatar";
+import type { Avatar as Look, Bot, BotMood, Part, Point } from "../types";
 
 const CORNER = 6;
 const LINE = 2.6;
@@ -49,8 +43,6 @@ function Body({ parts, color }: { parts: readonly Part[]; color: string }) {
     }
   });
 }
-
-export type BotMood = "idle" | "working";
 
 const LOOK: Record<Look["face"], Point> = {
   smile: { x: 0, y: 0 },

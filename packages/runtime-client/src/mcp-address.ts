@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import type { ResolveHost } from "./types";
 
 export function isPrivateAddress(address: string): boolean {
   const family = isIP(address);
@@ -40,8 +41,6 @@ function isPrivateV6(address: string) {
     address.startsWith("ff")
   );
 }
-
-export type ResolveHost = (host: string) => Promise<string[]>;
 
 const resolveWithSystem: ResolveHost = async (host) =>
   (await lookup(host, { all: true })).map(({ address }) => address);

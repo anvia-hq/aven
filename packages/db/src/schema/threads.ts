@@ -54,6 +54,3 @@ export const threads = pgTable(
     index("threads_runtime_idx").on(table.runtimeId),
   ],
 );
-
-export type Thread = typeof threads.$inferSelect;
-export type NewThread = typeof threads.$inferInsert;

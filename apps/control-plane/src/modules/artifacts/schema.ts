@@ -1,11 +1,8 @@
-import {
-  ARTIFACT_MEDIA_TYPES,
-  ARTIFACT_NAME,
-  type ArtifactContent,
-} from "@aven/protocol/runtime-wire";
+import { ARTIFACT_MEDIA_TYPES, ARTIFACT_NAME } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { threadParams } from "../threads/schema";
+import type { ArtifactContent } from "@aven/protocol/types";
 
 export const artifactParams = threadParams.extend({ name: z.string().regex(ARTIFACT_NAME) });
 

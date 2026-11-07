@@ -1,8 +1,7 @@
 import { useState } from "react";
 
 import { api, attempt } from "@/lib/api";
-
-import type { Computer } from "../computer";
+import type { Computer } from "../types";
 
 export function useDesktopWake({ path }: Computer, onAwake: () => void) {
   const [waking, setWaking] = useState(false);

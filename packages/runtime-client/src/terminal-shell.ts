@@ -1,10 +1,5 @@
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
-
-export type TerminalShellInput = {
-  container: string;
-  sessionId: string;
-  project: Readonly<Record<string, string>>;
-};
+import type { TerminalShellInput } from "./types";
 
 export function terminalShell({ container, sessionId, project }: TerminalShellInput) {
   const pidFile = `/tmp/.aven-terminal-${sessionId}`;

@@ -1,6 +1,4 @@
-import type { Thread } from "./types";
-
-export type NestedThread = { thread: Thread; nested: boolean };
+import type { NestedThread, Thread } from "./types";
 
 export function nestForks(threads: readonly Thread[]): NestedThread[] {
   const ids = new Set(threads.map((thread) => thread.id));

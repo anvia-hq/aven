@@ -1,32 +1,9 @@
-import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import { providerNeedsKey } from "@aven/protocol/providers";
-import type { Provider } from "@aven/protocol/runtime-wire";
 
 import { UnprocessableError } from "../../errors";
 import { keylessProviderBody } from "./schema";
-import { providersService, type ProviderView } from "./service";
-
-export type BotProviders = {
-  list(userId: string): Promise<BotProviderView[]>;
-  add(
-    userId: string,
-    input: {
-      kind: Provider;
-      name: string;
-      baseUrl?: string;
-      modelId?: string;
-      isDefault?: boolean;
-    },
-  ): Promise<BotProviderView>;
-  update(
-    userId: string,
-    id: string,
-    patch: { name?: string; baseUrl?: string; modelId?: string; isDefault?: true },
-  ): Promise<BotProviderView>;
-  remove(userId: string, id: string): Promise<void>;
-  models(userId: string, id: string): Promise<{ models: string[] }>;
-  keyFor(userId: string, id: string): Promise<ProviderKeyAsk>;
-};
+import { providersService } from "./service";
+import type { BotProviders, ProviderView } from "./types";
 
 const seenByBot = ({ id, kind, name, baseUrl, modelId, isDefault, hasKey }: ProviderView) => ({
   id,

@@ -3,7 +3,8 @@ import type { GoalAssessment } from "@anvia/durable";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
-import { assessGoal, verifyWith, type CommandResult } from "./goal-assessment";
+import { assessGoal, verifyWith } from "./goal-assessment";
+import type { CommandResult } from "./types";
 
 const assistant = (text: string): Message => ({
   role: "assistant",

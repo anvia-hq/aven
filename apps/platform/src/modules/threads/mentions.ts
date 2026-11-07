@@ -1,8 +1,6 @@
 import { mentionToken } from "@aven/protocol/events";
 
-import type { MessageMention } from "./types";
-
-export type Mentionable = Pick<MessageMention, "type" | "name">;
+import type { Mentionable, MessageMention } from "./types";
 
 export const COMPACT_COMMAND = "/compact";
 

@@ -1,11 +1,6 @@
-import type { ProcessEnded } from "@aven/protocol/runtime-wire";
-
-import type { ThreadMessages } from "./messages";
 import { threadsService } from "./service";
-
-export type ProcessEnds = {
-  ended(runtimeId: string, ended: ProcessEnded): Promise<void>;
-};
+import type { ProcessEnds, ThreadMessages } from "./types";
+import type { ProcessEnded } from "@aven/protocol/types";
 
 const FENCE = "process_output";
 

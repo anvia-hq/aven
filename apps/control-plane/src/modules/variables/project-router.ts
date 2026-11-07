@@ -2,7 +2,8 @@ import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { projectParams, setVariableBody, variableParams } from "./schema";
-import { variablesService, type Scope } from "./service";
+import { variablesService } from "./service";
+import type { Scope } from "./types";
 
 const inProject = (organizationId: string, projectId: string, actorId: string): Scope => ({
   kind: "project",

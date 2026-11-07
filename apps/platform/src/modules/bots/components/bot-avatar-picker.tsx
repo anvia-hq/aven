@@ -12,9 +12,9 @@ import {
   formatAvatarSetting,
   parseAvatarSetting,
   randomSeed,
-  type AvatarSetting,
 } from "../avatar";
 import { BotAvatar } from "./bot-avatar";
+import type { AvatarSetting } from "../types";
 
 const VARIANTS = 15;
 const CHOICE = "size-11 rounded-full p-0.5 [&_.bot-body]:animate-none";

@@ -8,8 +8,7 @@ import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
 import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
-
-import type { ThreadPanels } from "../hooks/use-thread-panels";
+import type { ThreadPanels } from "../types";
 
 type Props = {
   threadId: string;

@@ -1,5 +1,5 @@
 import type { SandboxRuntime } from "@anvia/sandbox";
-import type { RunEnvVar } from "@aven/protocol/runtime-wire";
+import type { RunEnvVar } from "@aven/protocol/types";
 
 type Env = Readonly<Record<string, string>>;
 

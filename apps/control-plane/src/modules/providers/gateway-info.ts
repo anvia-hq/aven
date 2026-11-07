@@ -1,9 +1,9 @@
+import type { GatewayModel } from "./types";
+
 const TIMEOUT_MS = 3_000;
 const TTL_MS = 60 * 60 * 1000;
 
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
-
-export type GatewayModel = { contextWindow: number | null; effortLevels: string[] | null };
 
 const NOTHING: GatewayModel = { contextWindow: null, effortLevels: null };
 

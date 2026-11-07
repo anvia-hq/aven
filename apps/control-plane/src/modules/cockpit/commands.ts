@@ -4,12 +4,6 @@ import {
   normalizeTag,
   TASK_PRIORITIES,
   TASK_STATUSES,
-  type CockpitAccess,
-  type CockpitCommand,
-  type CockpitKind,
-  type CockpitNote,
-  type CockpitTask,
-  type InboxItem,
 } from "@aven/protocol/cockpit";
 import { cockpitMarkdown } from "@aven/protocol/cockpit-markdown";
 import { z } from "zod";
@@ -25,8 +19,14 @@ import {
   type UpdateTaskBody,
 } from "./schema";
 import { cockpitService } from "./service";
-
-export type CockpitCaller = { userId: string; access: CockpitAccess; onPersonsWord: boolean };
+import type { CockpitCaller } from "./types";
+import type {
+  CockpitCommand,
+  CockpitKind,
+  CockpitNote,
+  CockpitTask,
+  InboxItem,
+} from "@aven/protocol/types";
 
 export const threadCockpit = (userId: string): CockpitCaller => ({
   userId,

@@ -1,12 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { ForkHost } from "@aven/agents/tools/forks";
-import type { ForkView } from "@aven/protocol/forks";
-import type { RuntimeCalls } from "@aven/protocol/runtime-wire";
-
-import type { ThreadWorkspaces } from "./sandbox";
 import { forkChanges } from "./thread-diff";
+import type { ForkHost } from "@aven/agents/tools/types";
+import type { ForkView, RuntimeCalls } from "@aven/protocol/types";
+import type { ThreadWorkspaces } from "./types";
 
 type ForkCall = <M extends "fork.start" | "fork.status">(
   method: M,

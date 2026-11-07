@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { IdleRelease } from "./idle-release";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import type { ThreadSandbox, ThreadWorkspaces } from "./types";
 
 function harness({ runUntil = 0, box = true } = {}) {
   const released: string[] = [];

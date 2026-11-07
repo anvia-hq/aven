@@ -1,4 +1,4 @@
-import { layoutGraph, type GraphRow } from "@aven/protocol/commit-graph";
+import { layoutGraph } from "@aven/protocol/commit-graph";
 import { ChevronLeft, ChevronRight, GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
 import { useMemo, useState, type ReactNode } from "react";
 
@@ -13,6 +13,7 @@ import { hasWords } from "@/lib/words";
 import { commitUrl } from "../repo-links";
 import type { Project, RepoCommit } from "../types";
 import { CommitGraphRow, ROW_HEIGHT } from "./commit-graph";
+import type { GraphRow } from "@aven/protocol/types";
 
 const CHIPS_SHOWN = 2;
 

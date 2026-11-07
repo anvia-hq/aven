@@ -1,12 +1,7 @@
 import { getAssistantGenerationMetadata, type Message, type Usage } from "@anvia/core";
 
-import {
-  addUsage,
-  NO_USAGE,
-  type ContextUsage,
-  type ThreadUsage,
-  type TokenUsage,
-} from "@aven/protocol/events";
+import { addUsage, NO_USAGE } from "@aven/protocol/events";
+import type { ContextUsage, ThreadUsage, TokenUsage } from "@aven/protocol/types";
 
 export function tokenUsageOf(usage: Usage): TokenUsage {
   return {

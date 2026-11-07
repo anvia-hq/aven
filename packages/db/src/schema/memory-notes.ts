@@ -30,5 +30,3 @@ export const memoryNotes = pgTable(
     index("memory_notes_bot_idx").on(table.botId),
   ],
 );
-
-export type MemoryNoteRow = typeof memoryNotes.$inferSelect;

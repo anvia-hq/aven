@@ -1,11 +1,4 @@
-import {
-  applyEvent,
-  applyUsage,
-  isRunning,
-  pendingQuestion,
-  type RunEvent,
-  type ThreadUsage,
-} from "@aven/protocol/events";
+import { applyEvent, applyUsage, isRunning, pendingQuestion } from "@aven/protocol/events";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
@@ -13,22 +6,19 @@ import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
-import {
-  pendingMessage,
-  settlePending,
-  withoutPending,
-  type PendingMessage,
-} from "../pending-messages";
+import { pendingMessage, settlePending, withoutPending } from "../pending-messages";
 import type {
   ChatMessage,
   OutgoingMessage,
-  QueuedSteer,
+  PendingMessage,
   QuestionAnswer,
+  QueuedSteer,
   RunSelection,
   SecretChoice,
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
+import type { RunEvent, ThreadUsage } from "@aven/protocol/types";
 
 function newSteerId() {
   return (

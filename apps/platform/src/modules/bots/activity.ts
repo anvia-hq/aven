@@ -1,8 +1,4 @@
-import type { Bot, BotChatMessage, BotChatPeer } from "./types";
-
-export type ChatItem =
-  | { type: "message"; key: string; message: BotChatMessage }
-  | { type: "activity"; key: string; messages: BotChatMessage[] };
+import type { Bot, BotChatMessage, BotChatPeer, ChatItem } from "./types";
 
 export function chatItems(messages: readonly BotChatMessage[]): ChatItem[] {
   const items: ChatItem[] = [];

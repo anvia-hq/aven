@@ -12,5 +12,3 @@ export const SANDBOX_TOOL_NAMES = [
   "stop_process",
   "wait_for_port",
 ] as const;
-
-export type SandboxToolName = (typeof SANDBOX_TOOL_NAMES)[number];

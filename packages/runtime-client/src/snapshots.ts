@@ -4,17 +4,9 @@ import { dirname, join } from "node:path";
 
 import { PACKAGE_STORES } from "./local-excludes";
 import { runCommand } from "./run-command";
+import type { Snapshot } from "./types";
 
 export const SNAPSHOT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
-
-export type Snapshot = {
-  key: string;
-  image: string;
-  baseImageId: string;
-  createdAt: string;
-  workspace: string;
-  logPath: string;
-};
 
 type Meta = Pick<Snapshot, "image" | "baseImageId" | "createdAt">;
 

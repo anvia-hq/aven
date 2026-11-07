@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  SUBAGENT_TOOLS_KEPT,
-  applyEvent,
-  isRunning,
-  mentionToken,
-  type ChatMessage,
-  type RunEvent,
-} from "./events";
+import { SUBAGENT_TOOLS_KEPT, applyEvent, isRunning, mentionToken } from "./events";
+import type { ChatMessage, RunEvent } from "./types";
 
 type Fixture = {
   name: string;

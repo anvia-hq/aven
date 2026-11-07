@@ -1,35 +1,7 @@
-import type { BotMcpView } from "@aven/protocol/mcp";
-import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
-
 import { UnprocessableError } from "../../errors";
-import { mcpService, type McpServerView } from "./service";
-
-export type BotMcp = {
-  forRun(userId: string): Promise<RunMcpServer[]>;
-  list(userId: string): Promise<BotMcpView[]>;
-  add(
-    userId: string,
-    input: {
-      name: string;
-      url: string;
-      headers?: { name: string; value: string }[];
-      target?: BotMcpView["target"];
-    },
-  ): Promise<BotMcpView>;
-  update(
-    userId: string,
-    id: string,
-    patch: {
-      name?: string;
-      url?: string;
-      headers?: { name: string; value: string }[];
-      target?: BotMcpView["target"];
-      enabled?: boolean;
-    },
-  ): Promise<BotMcpView>;
-  remove(userId: string, id: string): Promise<void>;
-  record(results: McpConnectResult[]): Promise<void>;
-};
+import { mcpService } from "./service";
+import type { BotMcp, McpServerView } from "./types";
+import type { BotMcpView } from "@aven/protocol/types";
 
 const seenByBot = ({
   id,

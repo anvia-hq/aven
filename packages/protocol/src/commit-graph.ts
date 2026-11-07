@@ -1,8 +1,4 @@
-export type GraphCommit = { sha: string; parents: readonly string[] };
-
-export type GraphRow = { lane: number; up: number[]; through: number[]; down: number[] };
-
-export type CommitGraph = { rows: GraphRow[]; lanes: number };
+import type { CommitGraph, GraphCommit, GraphRow } from "./types";
 
 export function layoutGraph(commits: readonly GraphCommit[]): CommitGraph {
   const waiting: (string | null)[] = [];

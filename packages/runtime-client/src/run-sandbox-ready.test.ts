@@ -4,10 +4,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 
 import { startRuntime } from "./runner";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
+import type { ThreadSandbox, ThreadWorkspaces } from "./types";
 
 const thread = { id: "thread-1", organizationId: "org-1" };
 const runStart = { type: "run.start", runId: "run-1", thread, prompt: "hi" } as const;

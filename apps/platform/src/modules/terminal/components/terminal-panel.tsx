@@ -3,13 +3,13 @@ import { Terminal } from "@mynaui/icons-react";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
-import type { Computer } from "@/modules/desktop/computer";
 import { SandboxAsleepNotice } from "@/modules/desktop/components/sandbox-asleep-notice";
 import { useDesktopStatus } from "@/modules/desktop/hooks/use-desktop-status";
 import { useDesktopWake } from "@/modules/desktop/hooks/use-desktop-wake";
 import { sandboxView } from "@/modules/desktop/sandbox-view";
 
 import { TerminalViewer } from "./terminal-viewer";
+import type { Computer } from "@/modules/desktop/types";
 
 type Props = {
   computer: Computer;

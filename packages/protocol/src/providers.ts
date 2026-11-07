@@ -1,15 +1,4 @@
-import type { QuestionPrompt } from "./events";
-import type { Provider } from "./runtime-wire";
-
-export type BotProviderView = {
-  id: string;
-  kind: Provider;
-  name: string;
-  baseUrl: string | null;
-  modelId: string | null;
-  isDefault: boolean;
-  hasKey: boolean;
-};
+import type { Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
 
 export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
 
@@ -41,8 +30,6 @@ export function vertexPartsOf(baseUrl: string | null | undefined) {
   if ((hostRegion ?? "global") !== location) return null;
   return { project, location };
 }
-
-export type ProviderKeyAsk = { providerId: string; name: string };
 
 export const providerKeyQuestion = (
   providerKey: ProviderKeyAsk,

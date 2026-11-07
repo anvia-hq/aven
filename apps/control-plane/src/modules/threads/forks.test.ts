@@ -1,11 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import type { ChatMessage } from "@aven/protocol/events";
 import { FORKS_PER_THREAD } from "@aven/protocol/forks";
 
 import { runtimesService } from "../runtimes/service";
 import { createThreadForks } from "./forks";
 import { threadsService } from "./service";
+import type { ChatMessage } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

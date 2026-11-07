@@ -1,12 +1,3 @@
-import type { RunEvent } from "@aven/protocol/events";
-import type {
-  ControlPlaneToRuntime,
-  RunIdentityCredential,
-  RunModel,
-  RunOutcome,
-  RunThreadInfo,
-} from "@aven/protocol/runtime-wire";
-import type { ModelConfig } from "@aven/agents/model";
 import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
@@ -15,12 +6,21 @@ import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "..
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
-  Runtime,
   RunResult,
   RunThread,
+  Runtime,
   RuntimeRun,
   StartRunInput,
-} from "./runtime";
+} from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type {
+  ControlPlaneToRuntime,
+  RunEvent,
+  RunIdentityCredential,
+  RunModel,
+  RunOutcome,
+  RunThreadInfo,
+} from "@aven/protocol/types";
 
 const STEER_TIMEOUT_MS = 10_000;
 

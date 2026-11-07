@@ -5,19 +5,9 @@ import { MAX_SKILL_NAME, SKILL_NAME, readSkillFolder } from "@aven/agents/skills
 
 import { UnprocessableError } from "../../errors";
 import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "./schema";
+import type { PackedSkill, SkillFiles } from "./types";
 
 export class InvalidSkillError extends UnprocessableError {}
-
-export type SkillFiles = Map<string, Uint8Array>;
-
-export type PackedSkill = {
-  name: string;
-  description: string;
-  archive: Uint8Array;
-  digest: string;
-  size: number;
-  fileCount: number;
-};
 
 const JUNK = /(^|\/)(__MACOSX|\.DS_Store|Thumbs\.db)(\/|$)/;
 

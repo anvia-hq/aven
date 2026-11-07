@@ -1,8 +1,7 @@
 import { Folder, GitDiff, List, Monitor, Terminal } from "@mynaui/icons-react";
 import { PanelToggle } from "@/components/panel-toggle";
 
-import type { ThreadPanels } from "../hooks/use-thread-panels";
-import type { Thread } from "../types";
+import type { Thread, ThreadPanels } from "../types";
 import { ThreadShare } from "./thread-share";
 
 type Props = {

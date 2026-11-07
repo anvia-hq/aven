@@ -1,9 +1,9 @@
 import type { AgentPrompt } from "@anvia/core";
-import { sentPrompt, type KeptAttachment } from "@aven/agents/attachments";
-import type { RunAttachment } from "@aven/protocol/runtime-wire";
+import { sentPrompt } from "@aven/agents/attachments";
 
-import type { RunRecord } from "./run-records";
-import type { ThreadWorkspaces } from "./sandbox";
+import type { KeptAttachment } from "@aven/agents/types";
+import type { RunAttachment } from "@aven/protocol/types";
+import type { RunRecord, ThreadWorkspaces } from "./types";
 
 type Stores = Pick<ThreadWorkspaces, "uploads" | "artifacts">;
 

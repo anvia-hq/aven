@@ -6,21 +6,14 @@ import {
   GOAL_MAX_ROUNDS,
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
-  type BotGoalView,
-  type GoalAction,
 } from "@aven/protocol/goals";
 import { z } from "zod";
+import type { GoalHost } from "./types";
+import type { GoalAction } from "@aven/protocol/types";
 
 export const GET_GOAL_TOOL_NAME = "get_goal";
 export const START_GOAL_TOOL_NAME = "start_goal";
 export const UPDATE_GOAL_TOOL_NAME = "update_goal";
-
-export type GoalHost = {
-  get(): Promise<BotGoalView | null>;
-  start(input: { objective: string; checks: string[]; maxRounds?: number }): Promise<BotGoalView>;
-  update(action: GoalAction, reason?: string): Promise<BotGoalView | null>;
-  check?(checks: readonly string[], signal?: AbortSignal): Promise<string[]>;
-};
 
 const startSchema = z.object({
   objective: z

@@ -1,3 +1,6 @@
+import type { CHECKS, PULL_STATES, REVIEWS, SORTS } from "./filters";
+import type { Project, RepoCommit, TrackedItem } from "@/modules/projects/types";
+
 export type FileChange = {
   path: string;
   oldPath: string | null;
@@ -61,3 +64,41 @@ export type BranchSummary = {
 };
 
 export type BranchList = { branches: BranchSummary[]; truncated: boolean };
+
+export type PullsView = "pulls" | "branches";
+
+export type Chip = { key: string; label: string; remove: () => void };
+
+export type DayGroup = { key: string; label: string; entries: CommitEntry[] };
+
+export type PullState = (typeof PULL_STATES)[number];
+
+export type CenterFilters = {
+  state: PullState;
+  author?: "me";
+  reviewRequested?: "me";
+  review?: (typeof REVIEWS)[number];
+  checks?: (typeof CHECKS)[number];
+  label?: string;
+  text?: string;
+  stale?: number;
+  sort: (typeof SORTS)[number];
+};
+
+export type CenterSearch = Partial<Omit<CenterFilters, "state" | "sort">> & {
+  project?: string;
+  commitAuthor?: string;
+  since?: string;
+  until?: string;
+  path?: string;
+  branch?: string;
+  grep?: string;
+  pr?: string;
+  commit?: string;
+  state?: PullState;
+  sort?: CenterFilters["sort"];
+};
+
+export type PullEntry = { project: Project; item: TrackedItem };
+
+export type CommitEntry = { project: Project; commit: RepoCommit };

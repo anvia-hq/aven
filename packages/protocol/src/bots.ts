@@ -1,5 +1,4 @@
-import type { MessageAttachment, QuestionPrompt } from "./events";
-import type { ProviderKeyAsk } from "./providers";
+import type { BotChatMessage, BotEvent } from "./types";
 
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
@@ -31,42 +30,8 @@ export function freeBotHandle(handle: string, taken: ReadonlySet<string>) {
   return free;
 }
 
-export type Bot = {
-  id: string;
-  name: string;
-  handle: string;
-  instruction: string;
-  description: string;
-  avatar: string;
-  providerId: string | null;
-  modelId: string | null;
-  reasoningEffort: string | null;
-  compactAfterTokens: number | null;
-  isMain: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type BotChatPeer = {
-  name: string;
-  handle: string;
-  id?: string;
-  direction: "to" | "from";
-};
-
-export type BotQuestion = QuestionPrompt & { providerKey?: ProviderKeyAsk };
-
 export const BOT_QUESTIONS_MAX = 4;
 export const BOT_CHOICES_MAX = 5;
-
-export type BotChatMessage = {
-  id: string;
-  role: "user" | "bot";
-  text: string;
-  attachments?: MessageAttachment[];
-  peer?: BotChatPeer;
-  questions?: BotQuestion[];
-};
 
 const FROM_BOT = /^\[from ([a-z0-9][a-z0-9-]*)\] ([\s\S]*)$/;
 const NOTE = /^\[note\] ([\s\S]*)$/;
@@ -92,12 +57,6 @@ export function parseBotPrompt(prompt: string): { from?: string; note?: boolean;
 export const BOT_MAX_HOPS = 8;
 
 export const BOT_MESSAGES_PER_REPLY = 10;
-
-export type BotEvent =
-  | { type: "snapshot"; messages: BotChatMessage[]; typing: boolean }
-  | { type: "message"; message: BotChatMessage }
-  | { type: "typing"; typing: boolean }
-  | { type: "error"; message: string };
 
 export const botMessageId = (index: number) => `m-${index}`;
 

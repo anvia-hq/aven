@@ -4,10 +4,11 @@ import { useState } from "react";
 
 import { Button } from "@/components/button";
 import { Form } from "@/components/form";
-import { Question, valueOf, type Draft } from "@/modules/threads/components/question-form";
+import { Question, valueOf } from "@/modules/threads/components/question-form";
 
 import { answerText } from "../questions";
 import type { BotQuestion } from "../types";
+import type { Draft } from "@/modules/threads/types";
 
 export function BotQuestionForm({
   botName,

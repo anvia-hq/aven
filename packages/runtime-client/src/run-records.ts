@@ -1,36 +1,5 @@
 import type { Database } from "bun:sqlite";
-import type { KeptAttachment } from "@aven/agents/attachments";
-import type { SkillListing } from "@aven/agents/skills";
-import type { GoalRequest } from "@aven/agents/tools/define-goal";
-import type { MessageMention } from "@aven/protocol/events";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
-import type { RunModel, RunSkill, RunThreadInfo } from "@aven/protocol/runtime-wire";
-
-import type { GoalState } from "./durable-goals";
-
-export type RunRecord = {
-  runId: string;
-  thread: RunThreadInfo;
-  model?: RunModel;
-  kind: "start" | "answer";
-  prompt?: string;
-  compact?: boolean;
-  attachments?: KeptAttachment[];
-  mentions?: MessageMention[];
-  skills?: RunSkill[];
-  skillListing?: SkillListing[];
-  memory?: RunMemory;
-  cockpit?: CockpitAccess;
-  agentId: string;
-  durableId?: string;
-  turn: number;
-  phase: "chat" | "goal" | "report";
-  goal?: GoalRequest;
-  goalState?: GoalState;
-  reportId?: string;
-  done?: boolean;
-};
+import type { RunRecord } from "./types";
 
 export const agentsOf = (record: RunRecord) => [
   record.agentId,

@@ -1,53 +1,39 @@
 import type { MemoryStore } from "@anvia/core";
-import type { RunEvent } from "@aven/protocol/events";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
-import type {
-  McpConnectResult,
-  BotReplyInfo,
-  CallMethod,
-  ControlPlaneToRuntime,
-  RepoAccess,
-  RunAttachment,
-  RunMcpServer,
-  RunSkill,
-  RunModel,
-  RunnerCallMethod,
-  RunOutcome,
-  ReportedStats,
-  RuntimeToControlPlane,
-  RunThreadInfo,
-} from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
-import type { ThreadForks } from "../threads/forks";
-import type { ProcessEnds } from "../threads/process-ends";
-import type { CockpitCaller } from "../cockpit/commands";
-import type { MemoryCaller } from "../memory/commands";
 import { PendingCalls } from "./pending-calls";
-import { answerRuntimeCall, type CallBotReply } from "./runtime-calls";
+import { answerRuntimeCall } from "./runtime-calls";
 import { runtimesService } from "./service";
-import { ViewerStreams, type ViewerSink } from "./viewer-streams";
+import { ViewerStreams } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
+import type { CockpitCaller } from "../cockpit/types";
+import type { MemoryCaller } from "../memory/types";
+import type { BotReplySink, RunSink, ViewerSink } from "./types";
+import type { ProcessEnds, ThreadForks } from "../threads/types";
+import type {
+  BotReplyInfo,
+  CallMethod,
+  CockpitAccess,
+  ControlPlaneToRuntime,
+  McpConnectResult,
+  RepoAccess,
+  ReportedStats,
+  RunAttachment,
+  RunMcpServer,
+  RunMemory,
+  RunModel,
+  RunnerCallMethod,
+  RunSkill,
+  RunThreadInfo,
+  RuntimeToControlPlane,
+} from "@aven/protocol/types";
 
 export class RuntimeOfflineError extends UnavailableError {
   constructor(message = "The runtime for this project is offline") {
     super(message);
   }
 }
-
-export type RunSink = {
-  event(event: RunEvent): void;
-  end(outcome: RunOutcome, error?: string, continuation?: unknown): void;
-  lost(error: Error): void;
-};
-
-export type BotReplySink = CallBotReply & {
-  say(text: string): void;
-  end(error?: string): void;
-  lost(error: Error): void;
-};
 
 type Run = {
   thread: RunThreadInfo;

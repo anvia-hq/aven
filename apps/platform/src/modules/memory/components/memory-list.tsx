@@ -6,8 +6,7 @@ import { SettingsSection } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 
 import { useMemory } from "../hooks/use-memory";
-import type { FolderSection } from "../hooks/use-memory-folders";
-import type { MemoryNote } from "../types";
+import type { FolderSection, MemoryNote } from "../types";
 import { EditNoteDialog } from "./memory-note-dialog";
 
 function NoteRow({ note }: { note: MemoryNote }) {

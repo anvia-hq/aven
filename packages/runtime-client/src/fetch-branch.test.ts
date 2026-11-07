@@ -3,8 +3,9 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { fetchBranch, isBranchName } from "./fetch-branch";
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
 import { gitFixture, sh } from "./testing/git-fixture";
+import type { Git } from "./types";
 
 const fixtures: (() => Promise<void>)[] = [];
 

@@ -1,24 +1,13 @@
 import { createTool } from "@anvia/core";
-import { FORKS_PER_THREAD, FORK_TEXT_MAX, type ForkView } from "@aven/protocol/forks";
+import { FORKS_PER_THREAD, FORK_TEXT_MAX } from "@aven/protocol/forks";
 import { z } from "zod";
 
 import { createWaitForForksTool } from "./wait-for-forks";
+import type { ForkHost } from "./types";
 
 export const FORK_THREAD_TOOL_NAME = "fork_thread";
 export const FORK_STATUS_TOOL_NAME = "fork_status";
 export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
-
-export type TakenChanges = { empty: true } | { empty: false; patchPath: string; files: string[] };
-
-export type ForkHost = {
-  start(input: {
-    task: string;
-    context: string;
-    title?: string;
-  }): Promise<{ id: string; title: string }>;
-  status(id: string): Promise<ForkView>;
-  take(id: string): Promise<TakenChanges>;
-};
 
 const forkId = z.string().uuid().describe("The id fork_thread gave you.");
 

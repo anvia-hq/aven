@@ -32,6 +32,3 @@ export const providers = pgTable(
       .where(sql`${table.isDefault}`),
   ],
 );
-
-export type ProviderRow = typeof providers.$inferSelect;
-export type NewProviderRow = typeof providers.$inferInsert;

@@ -1,7 +1,7 @@
-import type { ProcessLogs, ProcessView } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { threadParams } from "../threads/schema";
+import type { ProcessLogs, ProcessView } from "@aven/protocol/types";
 
 export const processParams = threadParams.extend({ processId: z.string().min(1).max(200) });
 

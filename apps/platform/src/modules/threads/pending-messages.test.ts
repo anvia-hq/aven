@@ -1,14 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ChatMessage, RunEvent } from "@aven/protocol/events";
-
-import {
-  pendingMessage,
-  settlePending,
-  withoutPending,
-  type PendingMessage,
-} from "./pending-messages";
-import type { OutgoingMessage } from "./types";
+import { pendingMessage, settlePending, withoutPending } from "./pending-messages";
+import type { OutgoingMessage, PendingMessage } from "./types";
+import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
 const message = (prompt: string, extra: Partial<OutgoingMessage> = {}): OutgoingMessage => ({
   prompt,

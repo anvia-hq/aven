@@ -1,9 +1,9 @@
+import type { LatestRelease } from "./types";
+
 const RELEASES = "https://github.com/anvia-hq/aven/releases";
 const FOUND_MS = 60 * 60_000;
 const FAILED_MS = 5 * 60_000;
 const ASK_MS = 5_000;
-
-export type LatestRelease = { get(): Promise<string | undefined> };
 
 export function createLatestRelease({
   fetchFn = fetch,

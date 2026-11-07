@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { SandboxDesktop } from "@anvia/sandbox";
-import { type RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { DesktopViewers } from "./desktop-viewers";
 import { fakeDesktop } from "./testing/fake-desktop";
-import type { ThreadWorkspaces } from "./sandbox";
+import type { RuntimeToControlPlane } from "@aven/protocol/types";
+import type { ThreadWorkspaces } from "./types";
 
 const viewerId = crypto.randomUUID();
 

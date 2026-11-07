@@ -1,6 +1,7 @@
 import { createTool } from "@anvia/core";
 import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import { z } from "zod";
+import type { UpdateSelf } from "./types";
 
 export const UPDATE_SELF_TOOL_NAME = "update_self";
 
@@ -31,8 +32,6 @@ export const updateSelfSchema = z.object({
 });
 
 export type SelfChanges = z.infer<typeof updateSelfSchema>;
-
-export type UpdateSelf = (changes: SelfChanges) => Promise<{ name: string; description: string }>;
 
 export function createUpdateSelfTool(updateSelf: UpdateSelf) {
   return createTool({

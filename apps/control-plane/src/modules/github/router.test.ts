@@ -9,9 +9,10 @@ import { eq } from "drizzle-orm";
 import { ConflictError, errorsRouter, ForbiddenError } from "../../errors";
 import { auth, authService } from "../auth/service";
 import type { githubAppSetup } from "./app-setup";
-import type { GithubClient, GithubUserGrant } from "./client";
+import type { GithubClient } from "./client";
 import { githubRouter } from "./router";
 import { createGithubService, createState, readState } from "./service";
+import type { GithubUserGrant } from "./types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

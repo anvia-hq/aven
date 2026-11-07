@@ -1,4 +1,4 @@
-import type { ControlPlaneToRuntime, Reply, RunnerCallMethod } from "@aven/protocol/runtime-wire";
+import type { ControlPlaneToRuntime, Reply, RunnerCallMethod } from "@aven/protocol/types";
 
 type PendingCall = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 

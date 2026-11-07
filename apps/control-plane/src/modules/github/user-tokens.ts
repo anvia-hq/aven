@@ -1,15 +1,12 @@
 import { db } from "@aven/db/client";
-import { githubUserTokens, type GithubUserTokenRow } from "@aven/db/schema/github-user-tokens";
-import type { RunGithub } from "@aven/protocol/runtime-wire";
+import { githubUserTokens } from "@aven/db/schema/github-user-tokens";
 import { and, eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "../../crypto";
-import type { GithubUserGrant } from "./client";
-import { githubClients, PLATFORM_APP, type GithubClients } from "./clients";
-
-export type GithubIdentity = { id: number; login: string; name: string | null };
-
-export type GithubUserToken = { token: string; identity: GithubIdentity };
+import { githubClients, PLATFORM_APP } from "./clients";
+import type { GithubClients, GithubIdentity, GithubUserGrant, GithubUserToken } from "./types";
+import type { GithubUserTokenRow } from "@aven/db/schema/types";
+import type { RunGithub } from "@aven/protocol/types";
 
 const RUN_MIN_REMAINING_MS = 2 * 60 * 60_000;
 

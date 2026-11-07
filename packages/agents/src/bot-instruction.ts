@@ -1,12 +1,9 @@
-import type { RunMemory } from "@aven/protocol/memory";
-
 import { memoryInstructions } from "./memory";
 import { UPLOADS_DIR } from "./attachments";
-import { mcpInstructions, type McpNote } from "./mcp";
+import { mcpInstructions } from "./mcp";
 import { WORKSPACE_DIR } from "./sandbox-tools";
-import { skillsInstructions, type SkillListing } from "./skills";
+import { skillsInstructions } from "./skills";
 import { MAIN_BOT_HANDLE, USER_HANDLE } from "@aven/protocol/bots";
-import type { BotPeer } from "@aven/protocol/runtime-wire";
 
 import { ASK_QUESTION_TOOL_NAME } from "./tools/ask-question";
 import { CREATE_BOT_TOOL_NAME } from "./tools/create-bot";
@@ -43,6 +40,8 @@ import {
 } from "./tools/schedules";
 import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
 import { UPDATE_SELF_TOOL_NAME } from "./tools/update-self";
+import type { McpNote, SkillListing } from "./types";
+import type { BotPeer, RunMemory } from "@aven/protocol/types";
 
 type BotInstructionsInput = {
   name: string;

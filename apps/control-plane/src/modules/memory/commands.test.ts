@@ -24,7 +24,7 @@ run("runMemoryCommand (postgres)", async () => {
   const { threadsService } = await import("../threads/service");
   const { memoryService } = await import("./service");
   const { runMemoryCommand } = await import("./commands");
-  type Caller = import("./commands").MemoryCaller;
+  type Caller = import("./types").MemoryCaller;
 
   const { userId, orgA, cleanup } = await seedOrgPair();
   const runner = (await runtimesService.create(orgA, userId, { name: "m" })).runtime;

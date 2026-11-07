@@ -1,22 +1,26 @@
 import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
-import type { McpNote } from "@aven/agents/mcp";
 import { createMcpServerTools } from "@aven/agents/tools/mcp-servers";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
-import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import * as z from "zod/v4";
 
-import type { CreateBotReplyAgent } from "./bot-replies";
-import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-control-plane";
+import { fakeControlPlane } from "./testing/fake-control-plane";
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
+import type { McpNote } from "@aven/agents/types";
+import type { RunMcpServer } from "@aven/protocol/types";
+import type {
+  CreateBotReplyAgent,
+  CreateRuntimeAgent,
+  FakeControlPlaneOptions,
+  ThreadSandbox,
+  ThreadWorkspaces,
+} from "./types";
 
 const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {

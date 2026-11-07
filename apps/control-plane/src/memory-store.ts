@@ -21,7 +21,5 @@ export function createBotMemoryStore(database: DrizzleMemoryDatabaseLike) {
   });
 }
 
-export type ConversationStore = ReturnType<typeof createMemoryStore>;
-
 export const memoryStore = createMemoryStore(db);
 export const botMemoryStore = createBotMemoryStore(db);

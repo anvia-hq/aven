@@ -2,8 +2,8 @@ import { X } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
 
-import type { PendingFile } from "../hooks/use-attachments";
 import { FileChip } from "./file-chip";
+import type { PendingFile } from "../types";
 
 export function PendingAttachments({
   files,

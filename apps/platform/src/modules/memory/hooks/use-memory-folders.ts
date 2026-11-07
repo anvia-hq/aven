@@ -1,7 +1,7 @@
 import { useBots } from "@/modules/bots/hooks/use-bots";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
-import type { FolderChoice, MemoryEvent, MemoryNote } from "../types";
+import type { FolderSection, MemoryEvent, MemoryNote } from "../types";
 import { useMemory } from "./use-memory";
 
 type Placed = Pick<MemoryNote, "scope" | "projectId" | "botId">;
@@ -11,8 +11,6 @@ function keyOf({ scope, projectId, botId }: Placed) {
   if (scope === "bot") return `bot:${botId}`;
   return "personal";
 }
-
-export type FolderSection = FolderChoice & { description: string; notes: MemoryNote[] };
 
 export function useMemoryFolders() {
   const { notes, loaded } = useMemory({ fresh: true });

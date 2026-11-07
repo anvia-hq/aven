@@ -8,23 +8,17 @@ import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
 
-import {
-  commitFilterQuery,
-  filtersOf,
-  pullsQuery,
-  QUICK_VIEWS,
-  quickViewSearch,
-  type CenterSearch,
-} from "../filters";
+import { commitFilterQuery, filtersOf, pullsQuery, QUICK_VIEWS, quickViewSearch } from "../filters";
 import { useCenterFeed } from "../hooks/use-center-feed";
 import { useProjectBranches } from "../hooks/use-project-branches";
 import { CenterBranches } from "./center-branches";
 import { CenterCommits } from "./center-commits";
 import { CenterDetail, openOf } from "./center-detail";
-import { CenterPulls, type PullsView } from "./center-pulls";
+import { CenterPulls } from "./center-pulls";
 import { clearCommits, CommitFilters, commitChips, CommitSearch } from "./commit-filters";
 import { FilterChips } from "./filter-chips";
 import { QuickViews } from "./quick-views";
+import type { CenterSearch, PullsView } from "../types";
 
 export function CenterPage() {
   const search = useSearch({ from: "/_authed/center/" });

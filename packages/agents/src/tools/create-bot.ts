@@ -1,6 +1,7 @@
 import { createTool } from "@anvia/core";
 import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import { z } from "zod";
+import type { CreateBot } from "./types";
 
 export const CREATE_BOT_TOOL_NAME = "create_bot";
 
@@ -28,10 +29,6 @@ export const createBotSchema = z.object({
 });
 
 export type NewBotInput = z.infer<typeof createBotSchema>;
-
-export type CreateBot = (
-  input: NewBotInput,
-) => Promise<{ id: string; name: string; handle: string }>;
 
 export function createCreateBotTool(createBot: CreateBot) {
   return createTool({

@@ -1,36 +1,14 @@
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
-
-import {
-  SETUP_SCRIPT,
-  hostUser,
-  scriptState,
-  setupEnvironment,
-  type DockerRun,
-} from "./environment-setup";
+import { SETUP_SCRIPT, hostUser, scriptState, setupEnvironment } from "./environment-setup";
 import { fetchBranch } from "./fetch-branch";
 import { forkWorkspace } from "./fork-workspace";
-import { clearDirectory, cloneRepository, type Git } from "./git-clone";
+import { clearDirectory, cloneRepository } from "./git-clone";
 import { updateRestoredWorkspace } from "./restore-workspace";
 import { SnapshotStore } from "./snapshots";
-
-export type ThreadRef = { id: string; organizationId?: string; forkOf?: string };
-
-export type EnvironmentsConfig = {
-  image: string;
-  platform?: string;
-  runtime?: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  home: string;
-  docker: DockerRun;
-  git: Git;
-  spareDelayMs?: number;
-};
+import type { RepoAccess } from "@aven/protocol/types";
+import type { EnvironmentsConfig, ThreadRef } from "./types";
 
 const SPARES_KEPT = 3;
 const DEFAULT_SPARE_DELAY_MS = 5_000;

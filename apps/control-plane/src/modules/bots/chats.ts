@@ -1,11 +1,12 @@
-import { BOT_MAX_HOPS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
-import type { BotSent } from "@aven/protocol/runtime-wire";
+import { BOT_MAX_HOPS, personPrompt } from "@aven/protocol/bots";
 
 import { prepareAttachments, type AttachmentBody } from "../../attachments";
 import { orNotFound, UnprocessableError } from "../../errors";
 import { assertSeesImages, environmentModel, resolveModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
+import type { BotLetter } from "./types";
+import type { Bot, BotEvent, BotSent } from "@aven/protocol/types";
 
 const GREETING =
   "You were just created. Introduce yourself to the person now: a short hello, who you are, and what you can do for them, in one or two short messages. You may end with one easy question to get started. Do not mention this note.";
@@ -19,15 +20,6 @@ async function modelOf(userId: string, bot: Bot) {
     })) ?? environmentModel()
   );
 }
-
-export type BotLetter = {
-  userId: string;
-  from: Bot;
-  hops: number;
-  handle: string;
-  text: string;
-  relaysPersonsWord: boolean;
-};
 
 export const createBotChats = (runner: BotRunner) => ({
   async send(userId: string, botId: string, text: string, files: readonly AttachmentBody[] = []) {
@@ -95,5 +87,3 @@ export const createBotChats = (runner: BotRunner) => ({
     yield* runner.events(botId, userId, signal);
   },
 });
-
-export type BotChats = ReturnType<typeof createBotChats>;

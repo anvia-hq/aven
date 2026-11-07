@@ -1,8 +1,7 @@
 import { X } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
-
-export type Chip = { key: string; label: string; remove: () => void };
+import type { Chip } from "../types";
 
 export function FilterChips({
   chips,

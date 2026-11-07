@@ -15,9 +15,9 @@ import { Form } from "@/components/form";
 import { TextField } from "@/components/text-field";
 
 import { useProviderForm } from "../hooks/use-provider-form";
-import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ModelField } from "./model-field";
+import type { CompatiblePreset } from "../types";
 
 const keyPlaceholders: Record<ProviderKind, string> = {
   openai: "sk-…",

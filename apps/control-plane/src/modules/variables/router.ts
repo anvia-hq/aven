@@ -2,7 +2,8 @@ import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { nameParams, setVariableBody } from "./schema";
-import { variablesService, type Scope } from "./service";
+import { variablesService } from "./service";
+import type { Scope } from "./types";
 
 function scopeRoutes(kind: "workspace" | "personal") {
   const scopeOf = (organizationId: string, userId: string): Scope =>

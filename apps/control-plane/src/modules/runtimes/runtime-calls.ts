@@ -1,36 +1,5 @@
-import type { MemoryStore } from "@anvia/core";
-import type {
-  BotCreated,
-  BotGoaled,
-  BotGoalParams,
-  BotCreateParams,
-  BotMcped,
-  BotMcpParams,
-  BotProvided,
-  BotProviderParams,
-  BotThreaded,
-  BotThreadParams,
-  BotMemoryParams,
-  BotNotesParams,
-  BotCockpitParams,
-  BotQuestioned,
-  BotQuestionParams,
-  BotScheduled,
-  BotScheduleParams,
-  BotSendParams,
-  BotSent,
-  BotSkillParams,
-  BotUpdated,
-  BotUpdateParams,
-  CallMethod,
-  McpConnectResult,
-  RepoAccess,
-  RunThreadInfo,
-} from "@aven/protocol/runtime-wire";
-
-import type { ThreadForks } from "../threads/forks";
-import { runCockpitCommand, type CockpitCaller } from "../cockpit/commands";
-import { runMemoryCommand, type MemoryCaller } from "../memory/commands";
+import { runCockpitCommand } from "../cockpit/commands";
+import { runMemoryCommand } from "../memory/commands";
 import {
   parseAppendParams,
   parseBotNotesParams,
@@ -54,41 +23,8 @@ import {
   parseForkStatusParams,
   parseSkillsGetParams,
 } from "./wire";
-
-export type CallRun = {
-  thread: RunThreadInfo;
-  appended: Set<number>;
-  skills: Set<string>;
-  mcp: Set<string>;
-  memory?: MemoryCaller;
-  cockpit?: CockpitCaller;
-};
-
-export type CallBotReply = {
-  memory(params: BotMemoryParams): Promise<unknown>;
-  create(params: BotCreateParams): Promise<BotCreated>;
-  update(params: BotUpdateParams): Promise<BotUpdated>;
-  send(params: BotSendParams): Promise<BotSent>;
-  schedule(params: BotScheduleParams): Promise<BotScheduled>;
-  goal(params: BotGoalParams): Promise<BotGoaled>;
-  question(params: BotQuestionParams): Promise<BotQuestioned>;
-  skill(params: BotSkillParams): Promise<{ data: string }>;
-  mcp(params: BotMcpParams): Promise<BotMcped>;
-  provider(params: BotProviderParams): Promise<BotProvided>;
-  thread(params: BotThreadParams): Promise<BotThreaded>;
-  notes(params: BotNotesParams): Promise<string>;
-  cockpit(params: Omit<BotCockpitParams, "command"> & { command: unknown }): Promise<string>;
-};
-
-export type RuntimeCallContext = {
-  forks: ThreadForks;
-  findRun(runId: string): CallRun | undefined;
-  findBotReply(replyId: string): CallBotReply | undefined;
-  store: MemoryStore;
-  repoAccess(threadId: string): Promise<RepoAccess>;
-  skillArchive(digest: string): Promise<Uint8Array | undefined>;
-  mcpReport(results: McpConnectResult[]): Promise<void>;
-};
+import type { CallBotReply, RuntimeCallContext } from "./types";
+import type { CallMethod } from "@aven/protocol/types";
 
 function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   const { runId } = parseMemoryParams(params);

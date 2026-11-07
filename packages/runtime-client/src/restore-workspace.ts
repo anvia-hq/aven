@@ -1,10 +1,11 @@
-import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { fetchBranch } from "./fetch-branch";
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
 import { gitFailure, hostGit } from "./host-git";
 import { trackPushes } from "./track-pushes";
+import type { RepoAccess } from "@aven/protocol/types";
+import type { Git } from "./types";
 
 export async function updateRestoredWorkspace(
   root: string,

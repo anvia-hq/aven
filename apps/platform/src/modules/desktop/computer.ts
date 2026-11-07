@@ -1,7 +1,4 @@
-export type Computer = {
-  path: string;
-  asleep: string;
-};
+import type { Computer } from "./types";
 
 export const threadComputer = (threadId: string): Computer => ({
   path: `/threads/${threadId}`,

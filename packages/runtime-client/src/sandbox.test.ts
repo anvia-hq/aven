@@ -6,8 +6,9 @@ import { join } from "node:path";
 import { homeRepairArgs } from "./container-home";
 import { git } from "./git-clone";
 import { containerBaseArgs } from "./environment-setup";
-import { dockerRunArgs, runnerLabel, Sandboxes, type ThreadSandbox } from "./sandbox";
+import { dockerRunArgs, runnerLabel, Sandboxes } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
+import type { ThreadSandbox } from "./types";
 
 const fakeGit = async (args: string[], { cwd }: { cwd: string }) => {
   if (args[0] === "clone") await Bun.write(join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");

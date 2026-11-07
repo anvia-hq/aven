@@ -1,19 +1,8 @@
 import { toast } from "@/components/toast";
 
 import { tasksAtom } from "../atoms/cockpit-atoms";
-import type { CockpitTask, TaskPriority, TaskStatus } from "../types";
+import type { CockpitTask, TaskInput, TaskPatch } from "../types";
 import { createCollection } from "./use-collection";
-
-export type TaskInput = {
-  title: string;
-  description?: string;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  dueDate?: string | null;
-  tags?: string[];
-};
-
-export type TaskPatch = Partial<TaskInput> & { position?: number };
 
 const byPosition = (tasks: CockpitTask[]) =>
   [...tasks].sort((a, b) => a.position - b.position || b.number - a.number);

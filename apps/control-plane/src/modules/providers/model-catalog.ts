@@ -1,4 +1,4 @@
-import type { Provider } from "@aven/protocol/runtime-wire";
+import type { Provider } from "@aven/protocol/types";
 
 type Entry = {
   usable: boolean;

@@ -2,8 +2,7 @@ import RFB from "@novnc/novnc";
 import { useEffect, useRef, useState } from "react";
 
 import { wsUrl } from "@/lib/api";
-
-import type { Computer } from "../computer";
+import type { Computer } from "../types";
 
 type Phase = "connecting" | "connected" | "ended";
 

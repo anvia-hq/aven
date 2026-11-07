@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { CockpitCommand } from "@aven/protocol/cockpit";
 
 import { createCockpitTool } from "./cockpit";
+import type { CockpitCommand } from "@aven/protocol/types";
 
 type Input = Record<string, unknown>;
 const call = (tool: ReturnType<typeof createCockpitTool>, input: Input) =>

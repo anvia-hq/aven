@@ -1,9 +1,9 @@
 import { startRuntime } from "../packages/runtime-client/src/runner";
-import type { ThreadWorkspaces } from "../packages/runtime-client/src/sandbox";
 import { directoryWorkspaces } from "../packages/runtime-client/src/testing/directory-workspaces";
 import { journalPath } from "../packages/runtime-client/src/testing/journal-path";
 import { BOT_RUNNER_HEALTH_PORT, BOT_RUNNER_TOKEN } from "./bot-runner-config";
 import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
+import type { ThreadWorkspaces } from "../packages/runtime-client/src/types";
 
 const url = process.env.AVEN_URL ?? "http://localhost:8100";
 

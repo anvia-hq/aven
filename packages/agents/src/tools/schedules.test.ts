@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { BotScheduleView } from "@aven/protocol/schedules";
 
 import {
   createScheduleTools,
@@ -7,8 +6,9 @@ import {
   DELETE_SCHEDULE_TOOL_NAME,
   LIST_SCHEDULES_TOOL_NAME,
   UPDATE_SCHEDULE_TOOL_NAME,
-  type ScheduleHost,
 } from "./schedules";
+import type { ScheduleHost } from "./types";
+import type { BotScheduleView } from "@aven/protocol/types";
 
 const ID = "11111111-2222-4333-8444-555555555555";
 const view: BotScheduleView = {

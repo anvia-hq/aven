@@ -1,6 +1,6 @@
 import { createTool } from "@anvia/core";
-import type { BotPeer } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
+import type { BotPeer } from "@aven/protocol/types";
 
 export const LIST_BOTS_TOOL_NAME = "list_bots";
 

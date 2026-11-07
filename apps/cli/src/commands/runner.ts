@@ -2,16 +2,16 @@ import { startDetachedUpdate } from "../detached-update";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import { stringFlag, type Args } from "../args";
+import { stringFlag } from "../args";
 import { capture, dockerProblem, exec, run } from "../compose";
 import { waitForHealthy } from "../health";
 import { logsDir, runnerEnvFile } from "../home";
 import { parseEnv } from "../env-file";
 import { loadRunnerEnv, writeRunnerEnv } from "../runner-config";
 import { selfCommand } from "../self";
-import type { ServiceDefinition } from "../service-files";
 import { serviceManager } from "../service-manager";
 import { version } from "../version";
+import type { Args, ServiceDefinition } from "../types";
 
 const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
 const manager = () => serviceManager(names);

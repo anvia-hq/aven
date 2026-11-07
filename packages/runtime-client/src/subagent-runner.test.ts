@@ -7,10 +7,10 @@ import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import { z } from "zod";
 
-import type { RunEvent } from "@aven/protocol/events";
-
 import { defaultCreateAgent } from "./runner";
-import { subagentRunner, type CreateSubagent } from "./subagent-runner";
+import { subagentRunner } from "./subagent-runner";
+import type { RunEvent } from "@aven/protocol/types";
+import type { CreateSubagent } from "./types";
 
 const named = (name: string): AnyTool =>
   createTool({ name, description: name, inputSchema: z.object({}), execute: () => name });

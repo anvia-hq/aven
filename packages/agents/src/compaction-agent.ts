@@ -12,7 +12,8 @@ import {
   isMemoryCompactionMessage,
 } from "@anvia/core/memory";
 
-import { outputLimitFor, resolveAgentModel, type ModelSource } from "./agent-model";
+import { outputLimitFor, resolveAgentModel } from "./agent-model";
+import type { ModelSource } from "./types";
 
 export const COMPACTED = "Compacted the conversation: the earlier turns are now a summary.";
 export const NOTHING_TO_COMPACT = "There is nothing to compact yet.";

@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { Message } from "@anvia/core";
 
-import { sentPrompt, type KeptAttachment } from "./attachments";
+import { sentPrompt } from "./attachments";
 import { botMessagesToChat } from "./bot-projection";
+import type { KeptAttachment } from "./types";
 
 const call = (toolCallId: string, input: Record<string, string>) =>
   ({ type: "tool-call", toolCallId, toolName: "send_message", input }) as const;

@@ -8,5 +8,3 @@ export function useThreadPanels() {
   const terminal = usePanel("aven.terminal-open", false);
   return { overview, desktop, diff, files, terminal };
 }
-
-export type ThreadPanels = ReturnType<typeof useThreadPanels>;

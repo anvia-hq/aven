@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { createTool, type Message, type MemoryStore } from "@anvia/core";
-import type { BotPeer } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { BOT_COMPUTER_MAX_TURNS, BOT_MAX_TURNS, createBotAgent } from "./bot-agent";
@@ -11,6 +10,7 @@ import { CREATE_BOT_TOOL_NAME } from "./tools/create-bot";
 import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
 import { LIST_BOTS_TOOL_NAME } from "./tools/list-bots";
 import { UPDATE_SELF_TOOL_NAME } from "./tools/update-self";
+import type { BotPeer } from "@aven/protocol/types";
 
 const send = (message: string) => toolCall(SEND_MESSAGE_TOOL_NAME, { text: message });
 const sendTo = (to: string, message: string) =>

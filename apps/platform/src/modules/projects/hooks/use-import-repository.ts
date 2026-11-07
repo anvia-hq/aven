@@ -107,5 +107,3 @@ export function useImportRepository(onImported?: (project: Project) => void) {
     setRuntimeId,
   };
 }
-
-export type ImportRepositoryState = ReturnType<typeof useImportRepository>;

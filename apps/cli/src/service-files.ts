@@ -1,9 +1,4 @@
-export type ServiceDefinition = {
-  label: string;
-  command: string[];
-  env: Record<string, string>;
-  logFile: string;
-};
+import type { ServiceDefinition } from "./types";
 
 const xml = (text: string) =>
   text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");

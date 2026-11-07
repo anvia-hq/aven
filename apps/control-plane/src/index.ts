@@ -45,7 +45,7 @@ import { workloadIdentityRouter } from "./modules/workload-identity/router";
 
 await useStoredGithubApp(github);
 
-const app = new Elysia()
+export const app = new Elysia()
   .use(errorsRouter)
   .get("/health", () => ({ status: "ok" }))
   .use(artifactsRouter(runtimeHub))
@@ -98,5 +98,3 @@ goalDriver.start();
 threadWatcher.start();
 
 console.log(`control-plane listening on ${app.server?.url}`);
-
-export type App = typeof app;

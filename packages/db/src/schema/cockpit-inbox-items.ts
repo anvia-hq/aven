@@ -25,5 +25,3 @@ export const cockpitInboxItems = pgTable(
   },
   (table) => [index("cockpit_inbox_items_user_idx").on(table.userId, table.createdAt)],
 );
-
-export type CockpitInboxItemRow = typeof cockpitInboxItems.$inferSelect;
