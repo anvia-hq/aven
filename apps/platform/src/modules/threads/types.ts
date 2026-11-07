@@ -66,6 +66,8 @@ export type Thread = {
   createdBy: string;
   createdByName: string;
   visibility: ThreadVisibility;
+  /** The thread this one was forked from by its agent (decision 0135); null for any other. */
+  parentThreadId: string | null;
   /** The runner that hosts the thread's sandbox, copied from its project when the thread was made. */
   runtimeId: string;
   state: ThreadState;
