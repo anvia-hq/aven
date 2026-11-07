@@ -1,3 +1,4 @@
+import { startDetachedUpdate } from "../detached-update";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -98,7 +99,14 @@ export async function runnerRun() {
     throw new Error(
       `No runner is set up. Run: aven runner install --url <address> --token <token> (settings are read from ${runnerEnvFile()})`,
     );
-  await runRunner({ base, token, build: version === "dev" ? undefined : version });
+  const release = version === "dev" ? undefined : version;
+  await runRunner({
+    base,
+    token,
+    build: release,
+    // An installed release can update itself when the control plane asks (decision 0145).
+    update: release ? (to) => void startDetachedUpdate(to) : undefined,
+  });
   // The runner keeps the process alive with its connection.
 }
 

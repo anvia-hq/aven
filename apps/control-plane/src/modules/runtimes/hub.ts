@@ -93,6 +93,7 @@ export class RuntimeConnection {
   #ready = false;
   /** The release the runtime says it is, if it says. */
   #build: string | undefined;
+  #canUpdate = false;
   /** How loaded the runtime's machine was when it last said (decision 0091). */
   #stats: ReportedStats | undefined;
 
@@ -117,6 +118,11 @@ export class RuntimeConnection {
 
   get build() {
     return this.#build;
+  }
+
+  /** The runner is an installed `aven` that can update itself (decision 0145). */
+  get canUpdate() {
+    return this.#canUpdate;
   }
 
   get stats() {
@@ -215,7 +221,8 @@ export class RuntimeConnection {
   async receive(raw: string) {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
-    if (message.type === "hello") return this.#hello(message.version, message.runs, message.build);
+    if (message.type === "hello")
+      return this.#hello(message.version, message.runs, message.build, message.canUpdate);
     // Nothing else is accepted from a runtime that has not introduced itself.
     if (!this.#ready) return;
     await this.#dispatch(message);
@@ -227,10 +234,16 @@ export class RuntimeConnection {
     this.#viewers.receive(frame);
   }
 
-  #hello(version: number, runs: string[], build: string | undefined) {
+  #hello(
+    version: number,
+    runs: string[],
+    build: string | undefined,
+    canUpdate: boolean | undefined,
+  ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
       this.#build = build;
+      this.#canUpdate = canUpdate === true;
       void runtimesService.touch(this.runtimeId);
       this.hub.reclaim(this, runs);
       return;
@@ -473,6 +486,11 @@ export class RuntimeHub {
   /** The release an online runtime says it is, if it says. */
   buildOf(runtimeId: string) {
     return this.get(runtimeId)?.build;
+  }
+
+  /** Whether an online runtime can update itself when asked (decision 0145). */
+  canUpdateOf(runtimeId: string) {
+    return this.get(runtimeId)?.canUpdate ?? false;
   }
 
   /** How loaded an online runtime's machine was when it last said, if it says. */

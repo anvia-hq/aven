@@ -26,6 +26,8 @@ export type Runtime = {
   build: string | null;
   /** The runner is on an older release than the server: run `aven update` on its machine. */
   outdated: boolean;
+  /** An installed `aven` that can update itself when asked (decision 0145). */
+  canUpdate: boolean;
   /** Null while offline, and for a runner that does not report its load (an older release). */
   stats: RuntimeStats | null;
   lastSeenAt: string | null;

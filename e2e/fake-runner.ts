@@ -69,7 +69,14 @@ const numbered = (runId: string) => {
 // With FAKE_STATS (the JSON of a `host.stats` message's stats) the runner tells how loaded its
 // machine is, as a runner of this release does; without it, as an older runner that never does.
 ws.onopen = () => {
-  send({ type: "hello", version: WIRE_VERSION, runs: [] });
+  // With FAKE_BUILD it says which release it is, and with FAKE_CAN_UPDATE that it can update itself.
+  send({
+    type: "hello",
+    version: WIRE_VERSION,
+    runs: [],
+    build: process.env.FAKE_BUILD,
+    canUpdate: process.env.FAKE_CAN_UPDATE ? true : undefined,
+  });
   if (process.env.FAKE_STATS)
     send({ type: "host.stats", stats: JSON.parse(process.env.FAKE_STATS) });
 };
@@ -412,6 +419,14 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   if (call.method === "processes.logs") {
     const { processId } = call.params as { processId: string };
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
+  }
+  if (call.method === "runner.update") {
+    // Asked to update itself (decision 0145): it agrees, or with FAKE_UPDATE_BUSY says why not.
+    return reply(
+      process.env.FAKE_UPDATE_BUSY
+        ? { status: "busy", reason: process.env.FAKE_UPDATE_BUSY }
+        : { status: "started" },
+    );
   }
   if (call.method === "sandbox.release") {
     // The thread was put away (decision 0118): its sandbox goes, its files staying.

@@ -116,4 +116,52 @@ test.describe("machine monitor", () => {
     await build.click();
     await expect(page).toHaveURL(/\/settings\/runtimes$/);
   });
+
+  test("a runner behind the server has an Update button that asks it, and says Updating (decision 0145)", async ({
+    page,
+  }) => {
+    await registerUser(page, "upd", "Update User");
+    await runner(page, "old-box", { FAKE_BUILD: "9.9.0", FAKE_CAN_UPDATE: "1" });
+    await runner(page, "current-box", { FAKE_BUILD: "9.9.9", FAKE_CAN_UPDATE: "1" });
+    await runner(page, "dev-box", { FAKE_BUILD: "9.9.0" });
+
+    await page.goto("/threads");
+    const machines = page.getByRole("list", { name: "Machines" });
+    // Only the one that is behind and can update itself has the button.
+    await expect(machines.getByRole("button", { name: "Update old-box" })).toBeVisible();
+    await expect(machines.getByRole("button", { name: "Update current-box" })).toHaveCount(0);
+    await expect(machines.getByRole("button", { name: "Update dev-box" })).toHaveCount(0);
+
+    // It says what it will do first, then asks the runner and shows Updating.
+    await machines.getByRole("button", { name: "Update old-box" }).click();
+    const dialog = page.getByRole("dialog", { name: "Update old-box?" });
+    await expect(dialog).toContainText("restarts for a moment");
+    await dialog.getByRole("button", { name: "Update", exact: true }).click();
+    await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Updating…");
+    await expect(machines.getByRole("button", { name: "Update old-box" })).toHaveCount(0);
+  });
+
+  test("a runner that is busy says so and keeps its button", async ({ page }) => {
+    await registerUser(page, "bsy", "Busy User");
+    await runner(page, "busy-box", {
+      FAKE_BUILD: "9.9.0",
+      FAKE_CAN_UPDATE: "1",
+      FAKE_UPDATE_BUSY: "A run is going on this runner. Try again when it has finished.",
+    });
+
+    await page.goto("/threads");
+    const machines = page.getByRole("list", { name: "Machines" });
+    await machines.getByRole("button", { name: "Update busy-box" }).click();
+    await page
+      .getByRole("dialog", { name: "Update busy-box?" })
+      .getByRole("button", { name: "Update", exact: true })
+      .click();
+    await expect(page.getByText("A run is going on this runner")).toBeVisible();
+    // The dialog stays for a second try; closed, the button is still there.
+    await page
+      .getByRole("dialog", { name: "Update busy-box?" })
+      .getByRole("button", { name: "Cancel" })
+      .click();
+    await expect(machines.getByRole("button", { name: "Update busy-box" })).toBeVisible();
+  });
 });

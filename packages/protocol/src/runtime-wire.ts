@@ -190,6 +190,21 @@ export type SteerResult =
  */
 type SandboxCallMethod = "sandbox.release";
 
+/**
+ * What the control plane asks of the runner itself: `runner.update` takes `{ release? }`, a release
+ * number, and has the machine's `aven` update itself to it (decision 0145). The answer comes before
+ * the update starts, since the update restarts the runner.
+ */
+type RunnerSelfCallMethod = "runner.update";
+
+export type RunnerUpdateParams = { release?: string };
+
+/** `busy` when a run or a bot's reply is going, `unsupported` for a runner that is not an installed `aven`. */
+export type RunnerUpdateResult =
+  | { status: "started" }
+  | { status: "busy"; reason: string }
+  | { status: "unsupported" };
+
 export type SandboxReleaseParams = { threadId: string };
 
 export type SandboxReleaseResult = { released: boolean };
@@ -202,7 +217,8 @@ export type RunnerCallMethod =
   | ArtifactsCallMethod
   | ProcessesCallMethod
   | RunCallMethod
-  | SandboxCallMethod;
+  | SandboxCallMethod
+  | RunnerSelfCallMethod;
 
 /** `holder` and `leaseMs` go with a takeover, `holder` with a release; `force` releases whoever holds it. */
 export type DesktopCallParams = {
@@ -420,9 +436,10 @@ export type RuntimeToControlPlane =
   /**
    * `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged
    * included. `build` is the release of the `aven` the runner is, so Settings can say when it is
-   * behind the server (decision 0073); a runner that is not a release leaves it out.
+   * behind the server (decision 0073); a runner that is not a release leaves it out. `canUpdate` says it is an
+   * installed `aven` that can update itself when asked (decision 0145).
    */
-  | { type: "hello"; version: number; runs: string[]; build?: string }
+  | { type: "hello"; version: number; runs: string[]; build?: string; canUpdate?: boolean }
   /**
    * How loaded the machine is, sent after hello and every few seconds. Optional on the wire: a
    * control plane that does not know it ignores it, and a runner that does not send it shows no load
@@ -799,4 +816,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 48;
+export const WIRE_VERSION = 49;

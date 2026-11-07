@@ -191,6 +191,11 @@ export class BotReplies {
     this.#pause = context.pause ?? sleep;
   }
 
+  /** How many bots are answering now. */
+  get count() {
+    return this.#live.size;
+  }
+
   /** Whether the bot is answering now. */
   has(botId: string) {
     return [...this.#live.values()].some((reply) => reply.botId === botId);

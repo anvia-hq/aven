@@ -7,6 +7,7 @@ import { SettingsEmpty, SettingsList, SettingsRow } from "@/components/settings-
 import { timeAgo } from "@/lib/format";
 
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
+import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
 import { useRuntimes } from "../hooks/use-runtimes";
 
@@ -37,7 +38,10 @@ export function RuntimesList() {
                 <span>{runtime.online ? "Online" : "Offline"}</span>
                 {runtime.build && <span className="font-mono">v{runtime.build}</span>}
                 {runtime.outdated && (
-                  <Badge variant="outline" title="Run `aven update` on that machine">
+                  <Badge
+                    variant="outline"
+                    title="Update it here, or run `aven update` on that machine"
+                  >
                     Update available
                   </Badge>
                 )}
@@ -50,6 +54,7 @@ export function RuntimesList() {
               </span>
             }
           >
+            <UpdateRuntimeDialog runtime={runtime} />
             {isOwnedByMe(runtime) && (
               <>
                 <RotateRuntimeDialog runtime={runtime} />

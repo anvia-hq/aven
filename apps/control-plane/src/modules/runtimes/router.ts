@@ -1,12 +1,14 @@
 import { Elysia } from "elysia";
 
-import { orNotFound } from "../../errors";
+import { ForbiddenError, orNotFound } from "../../errors";
+import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
 import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
 import { createRuntimeBody, runtimeParams } from "./schema";
+import { requestUpdate } from "./update";
 import { runtimesService } from "./service";
 
 export const runtimesRouter = (hub: RuntimeHub) =>
@@ -26,6 +28,8 @@ export const runtimesRouter = (hub: RuntimeHub) =>
             // The release the runner says it is, and whether it is behind this server's.
             build,
             outdated: isBehind(build ?? undefined, server),
+            // An installed `aven` that can update itself when asked (decision 0145).
+            canUpdate: hub.canUpdateOf(runtime.id),
             // How loaded its machine was when it last said; null while offline or if it never does.
             stats: hub.statsOf(runtime.id) ?? null,
           };
@@ -56,6 +60,23 @@ export const runtimesRouter = (hub: RuntimeHub) =>
         );
         hub.disconnect(params.id, "Token rotated");
         return rotated;
+      },
+      { auth: true, org: true, params: runtimeParams },
+    )
+    // An owner or an admin has the runner update itself to this server's release (decision 0145).
+    // Answered when the runner has agreed, before it starts: the update restarts it.
+    .post(
+      "/:id/update",
+      async ({ params, organizationId, user, set }) => {
+        if (!(await isOwnerOrAdmin(organizationId, user.id)))
+          throw new ForbiddenError("Only an owner or an admin can update a runner");
+        const runtime = orNotFound(
+          await runtimesService.get(organizationId, params.id),
+          "Runtime not found",
+        );
+        const result = await requestUpdate(hub, runtime.id, serverBuild());
+        set.status = 202;
+        return result;
       },
       { auth: true, org: true, params: runtimeParams },
     )

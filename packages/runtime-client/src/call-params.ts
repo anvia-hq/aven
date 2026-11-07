@@ -9,6 +9,7 @@ import {
   type FilesCallParams,
   type FilesSearchParams,
   type ProcessesCallParams,
+  type RunnerUpdateParams,
   type SandboxReleaseParams,
 } from "@aven/protocol/runtime-wire";
 
@@ -49,6 +50,14 @@ export function processesCallParams(params: unknown): ProcessesCallParams {
   if (typeof threadId !== "string") throw invalid();
   if (processId !== undefined && typeof processId !== "string") throw invalid();
   return { threadId, processId };
+}
+
+/** What `runner.update` carries: a release number, which is passed to a command and so is checked. */
+export function runnerUpdateParams(params: unknown): RunnerUpdateParams {
+  const { release } = asRecord(params);
+  if (release === undefined || release === null) return {};
+  if (typeof release !== "string" || !/^\d+\.\d+\.\d+$/.test(release)) throw invalid();
+  return { release };
 }
 
 /** What `sandbox.release` carries: the thread whose sandbox is freed (decision 0118). */
