@@ -25,5 +25,3 @@ export const memoryEvents = pgTable(
   },
   (table) => [index("memory_events_user_idx").on(table.userId, table.createdAt)],
 );
-
-export type MemoryEventRow = typeof memoryEvents.$inferSelect;

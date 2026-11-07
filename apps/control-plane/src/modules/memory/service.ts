@@ -1,6 +1,6 @@
 import { db } from "@aven/db/client";
-import { memoryEvents, type MemoryEventRow } from "@aven/db/schema/memory-events";
-import { memoryNotes, type MemoryNoteRow } from "@aven/db/schema/memory-notes";
+import { memoryEvents } from "@aven/db/schema/memory-events";
+import { memoryNotes } from "@aven/db/schema/memory-notes";
 import {
   MEMORY_INDEXED_PER_SCOPE,
   MEMORY_NOTE_MAX,
@@ -8,10 +8,6 @@ import {
   MEMORY_NOTE_NAME_RULE,
   MEMORY_NOTES_PER_SCOPE,
   noteDescription,
-  type MemoryEventView,
-  type MemoryFolder,
-  type MemoryNoteView,
-  type MemoryScope,
 } from "@aven/protocol/memory";
 import { projects } from "@aven/db/schema/projects";
 import { and, asc, count, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
@@ -20,6 +16,13 @@ import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
 import { projectsService } from "../projects/service";
 import type { MemoryActor, MemoryOwner, MemoryPlace } from "./types";
+import type { MemoryEventRow, MemoryNoteRow } from "@aven/db/schema/types";
+import type {
+  MemoryEventView,
+  MemoryFolder,
+  MemoryNoteView,
+  MemoryScope,
+} from "@aven/protocol/types";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

@@ -1,13 +1,11 @@
 import { createTool } from "@anvia/core";
-import {
-  MAX_ARTIFACTS_PER_CALL,
-  SHOW_ARTIFACT_TOOL_NAME,
-  type ToolArtifact,
-} from "@aven/protocol/events";
+import { MAX_ARTIFACTS_PER_CALL, SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
 import { z } from "zod";
 
 import { artifactType } from "../artifact-type";
 import { errorMessage } from "../values";
+import type { ShownArtifacts } from "./types";
+import type { ToolArtifact } from "@aven/protocol/types";
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 10 * 1024 * 1024;
@@ -21,12 +19,6 @@ const itemSchema = z.object({
   path: z.string().min(1).describe("The file, relative to the workspace or absolute."),
   caption: z.string().max(500).optional().describe("A short line shown under it."),
 });
-
-export type ShownArtifacts = {
-  artifacts: ToolArtifact[];
-  paths: string[];
-  failed: { path: string; error: string }[];
-};
 
 export function createShowArtifactTool(files: ArtifactFiles) {
   const show = async (

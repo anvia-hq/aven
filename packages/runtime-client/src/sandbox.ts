@@ -4,45 +4,40 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createDesktopTools } from "@anvia/sandbox";
 import { RemoteSandboxHub } from "@anvia/sandbox/remote";
-import type { AnyTool } from "@anvia/core";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { SKILLS_DIR } from "@aven/agents/skills";
 
-import type { SandboxDesktop } from "@anvia/sandbox";
-import type {
-  RepoAccess,
-  RunEnvVar,
-  RunGithub,
-  RunIdentityCredential,
-} from "@aven/protocol/runtime-wire";
-
 import { ArtifactStore } from "./artifacts";
 import { homeRepairArgs } from "./container-home";
-import {
-  RESUME_SCRIPT,
-  containerBaseArgs,
-  hostUser,
-  scriptState,
-  type ContainerBase,
-  type DockerRun,
-} from "./environment-setup";
-import { Environments, type ThreadRef } from "./environments";
-import { git, isCloned, type Git } from "./git-clone";
+import { RESUME_SCRIPT, containerBaseArgs, hostUser, scriptState } from "./environment-setup";
+import { Environments } from "./environments";
+import { git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
 import { identitySignInCommand } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { runCommand } from "./run-command";
-import { preflight, type HostCommands } from "./sandbox-preflight";
+import { preflight } from "./sandbox-preflight";
 import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import type { SnapshotStore } from "./snapshots";
 import { startedOnUse } from "./started-on-use";
 import { terminalShell } from "./terminal-shell";
-import { threadProcesses, type ThreadProcesses } from "./thread-processes";
+import { threadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
+import type { RepoAccess, RunEnvVar, RunGithub, RunIdentityCredential } from "@aven/protocol/types";
+import type {
+  AcquireOptions,
+  ContainerBase,
+  DockerRun,
+  HostCommands,
+  SandboxConfig,
+  ThreadRef,
+  ThreadSandbox,
+  ThreadWorkspaces,
+} from "./types";
 
 export const runtimeHome = (home?: string) => home ?? join(homedir(), ".aven", "runtime");
 export const journalPathIn = (home?: string) => join(runtimeHome(home), "runs.db");
@@ -52,31 +47,6 @@ export const runnerLabel = (home?: string) =>
     .update(resolve(runtimeHome(home)))
     .digest("hex")
     .slice(0, 16);
-
-export type SandboxConfig = {
-  image: string;
-  platform?: string;
-  runtime?: string;
-  home?: string;
-  memoryMb?: number;
-  cpus?: number;
-  pidsLimit?: number;
-  hostName?: string;
-  connectTimeoutMs?: number;
-  git?: Git;
-  docker?: DockerRun;
-};
-
-export type AcquireOptions = {
-  lazy?: boolean;
-};
-
-export type ThreadSandbox = {
-  tools: readonly AnyTool[];
-  hasRunningProcesses(): Promise<boolean>;
-  processes: ThreadProcesses;
-  start?(): Promise<void>;
-};
 
 type Docker = DockerRun;
 
@@ -125,34 +95,6 @@ export function dockerRunArgs(input: DockerRunInput) {
   if (input.user) args.push("--user", input.user);
   args.push(input.image);
   return args;
-}
-
-export interface ThreadWorkspaces {
-  acquire(
-    thread: ThreadRef,
-    repo?: () => Promise<RepoAccess>,
-    options?: AcquireOptions,
-  ): Promise<ThreadSandbox>;
-  desktop(threadId: string): SandboxDesktop | undefined;
-  shell?(
-    threadId: string,
-    sessionId: string,
-  ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
-  workspace(threadId: string): Promise<string | undefined>;
-  release(threadId: string): Promise<void>;
-  running?(): number;
-  signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
-  signInIdentity?(
-    threadId: string,
-    identity: RunIdentityCredential | undefined,
-    controlPlane: string,
-  ): Promise<void>;
-  setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
-  saveEnvironment?(thread: ThreadRef, access: RepoAccess): Promise<{ image: string }>;
-  readonly artifacts?: ArtifactStore;
-  readonly uploads?: UploadStore;
-  readonly skills?: SkillStore;
-  dispose(): Promise<void>;
 }
 
 export class Sandboxes implements ThreadWorkspaces {

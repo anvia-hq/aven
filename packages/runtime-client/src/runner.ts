@@ -5,32 +5,29 @@ import { createCompactionAgent } from "@aven/agents/compaction-agent";
 import { subagentInstructions } from "@aven/agents/subagent-instruction";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { errorMessage } from "@aven/agents/values";
-import {
-  WIRE_VERSION,
-  CloseCode,
-  type ControlPlaneToRuntime,
-  type RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION, CloseCode } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
-import {
-  BotReplies,
-  defaultCreateBotAgent,
-  type BotRepliesContext,
-  type CreateBotReplyAgent,
-} from "./bot-replies";
+import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
 import { createControlPlaneCalls } from "./control-plane-calls";
-import { DesktopViewers, type ViewerLink } from "./desktop-viewers";
+import { DesktopViewers } from "./desktop-viewers";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
 import { ProcessEndWatch } from "./process-end-watch";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
-import { createRunDriver, type CreateRuntimeAgent, type DriverContext } from "./run-driver";
+import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
+import type { ControlPlaneToRuntime, RuntimeToControlPlane } from "@aven/protocol/types";
+import type {
+  CreateRuntimeAgent,
+  DriverContext,
+  RuntimeOptions,
+  ThreadSandbox,
+  ViewerLink,
+} from "./types";
 
 export const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
@@ -69,24 +66,6 @@ export const defaultCreateAgent =
       forks,
     });
   };
-
-export type RuntimeOptions = {
-  url: string;
-  token: string;
-  build?: string;
-  update?: (release: string | undefined) => void;
-  createAgent?: CreateRuntimeAgent;
-  createBotAgent?: CreateBotReplyAgent;
-  typingPause?: BotRepliesContext["pause"];
-  sandbox: ThreadWorkspaces;
-  journalPath: string;
-  statePath?: string;
-  onRefused?: (reason: string) => void;
-  callTimeoutMs?: number;
-  idleReleaseMs?: number;
-  processPollMs?: number;
-  statsIntervalMs?: number;
-};
 
 const DEFAULT_STATS_INTERVAL_MS = 15_000;
 const RECONNECT_MIN_MS = 1_000;

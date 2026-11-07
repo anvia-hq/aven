@@ -1,5 +1,4 @@
-import { BOT_MAX_HOPS, personPrompt, type Bot, type BotEvent } from "@aven/protocol/bots";
-import type { BotSent } from "@aven/protocol/runtime-wire";
+import { BOT_MAX_HOPS, personPrompt } from "@aven/protocol/bots";
 
 import { prepareAttachments, type AttachmentBody } from "../../attachments";
 import { orNotFound, UnprocessableError } from "../../errors";
@@ -7,6 +6,7 @@ import { assertSeesImages, environmentModel, resolveModel } from "../providers/r
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
 import type { BotLetter } from "./types";
+import type { Bot, BotEvent, BotSent } from "@aven/protocol/types";
 
 const GREETING =
   "You were just created. Introduce yourself to the person now: a short hello, who you are, and what you can do for them, in one or two short messages. You may end with one easy question to get started. Do not mention this note.";

@@ -1,8 +1,8 @@
-import type { ProcessView } from "@aven/protocol/runtime-wire";
 import { useState } from "react";
 
 import { useRequest } from "@/hooks/use-request";
 import { attempt, postJson } from "@/lib/api";
+import type { ProcessView } from "@aven/protocol/types";
 
 const POLL_MS = 5_000;
 

@@ -1,8 +1,7 @@
-import type { BotMcpView } from "@aven/protocol/mcp";
-
 import { UnprocessableError } from "../../errors";
 import { mcpService } from "./service";
 import type { BotMcp, McpServerView } from "./types";
+import type { BotMcpView } from "@aven/protocol/types";
 
 const seenByBot = ({
   id,

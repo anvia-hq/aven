@@ -1,6 +1,5 @@
 import { db } from "@aven/db/client";
-import { providers, type ProviderRow } from "@aven/db/schema/providers";
-import type { ModelConfig } from "@aven/agents/model";
+import { providers } from "@aven/db/schema/providers";
 import { providerNeedsKey } from "@aven/protocol/providers";
 import { and, asc, eq } from "drizzle-orm";
 
@@ -18,6 +17,8 @@ import {
   type UpdateProviderBody,
 } from "./schema";
 import type { ModelSource, ProviderView } from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type { ProviderRow } from "@aven/db/schema/types";
 
 class InvalidProviderError extends UnprocessableError {}
 

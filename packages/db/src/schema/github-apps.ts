@@ -20,5 +20,3 @@ export const githubApps = pgTable("github_apps", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
-export type GithubAppRow = typeof githubApps.$inferSelect;

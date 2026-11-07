@@ -1,11 +1,4 @@
-import {
-  applyEvent,
-  applyUsage,
-  isRunning,
-  pendingQuestion,
-  type RunEvent,
-  type ThreadUsage,
-} from "@aven/protocol/events";
+import { applyEvent, applyUsage, isRunning, pendingQuestion } from "@aven/protocol/events";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
@@ -25,6 +18,7 @@ import type {
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
+import type { RunEvent, ThreadUsage } from "@aven/protocol/types";
 
 function newSteerId() {
   return (

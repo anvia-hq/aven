@@ -1,18 +1,12 @@
 import type { AnyTool } from "@anvia/core";
 import { McpClient, type McpServer } from "@anvia/mcp";
-import type { McpNote } from "@aven/agents/mcp";
 import { errorMessage } from "@aven/agents/values";
 import { mcpSlug } from "@aven/protocol/mcp";
-import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
 
-import { refusePrivateHost, type ResolveHost } from "./mcp-address";
-
-export type ConnectedMcp = {
-  tools: AnyTool[];
-  results: McpConnectResult[];
-  note: McpNote;
-  close(): Promise<void>;
-};
+import { refusePrivateHost } from "./mcp-address";
+import type { McpNote } from "@aven/agents/types";
+import type { McpConnectResult, RunMcpServer } from "@aven/protocol/types";
+import type { ConnectedMcp, ResolveHost } from "./types";
 
 export const MCP_CONNECT_TIMEOUT_MS = 15_000;
 

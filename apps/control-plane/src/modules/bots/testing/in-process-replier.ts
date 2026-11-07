@@ -1,8 +1,9 @@
 import type { MemoryStore } from "@anvia/core";
 import { typingDelay } from "@aven/agents/bot-delay";
-import type { SendMessage } from "@aven/agents/tools/send-message";
-import { USER_HANDLE, type Bot } from "@aven/protocol/bots";
+import { USER_HANDLE } from "@aven/protocol/bots";
 import type { BotReplier, CreateBotAgent } from "../types";
+import type { SendMessage } from "@aven/agents/tools/types";
+import type { Bot } from "@aven/protocol/types";
 
 export function inProcessReplier(options: {
   store: MemoryStore;

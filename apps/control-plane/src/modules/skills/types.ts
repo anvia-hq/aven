@@ -1,4 +1,4 @@
-import type { SkillRow } from "@aven/db/schema/skills";
+import type { SkillRow } from "@aven/db/schema/types";
 
 export type SkillFiles = Map<string, Uint8Array>;
 

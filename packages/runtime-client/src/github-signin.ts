@@ -1,4 +1,4 @@
-import type { RunGithub } from "@aven/protocol/runtime-wire";
+import type { RunGithub } from "@aven/protocol/types";
 
 const SIGN_IN = `set -e
 umask 077

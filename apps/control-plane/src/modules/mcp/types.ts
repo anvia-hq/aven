@@ -1,6 +1,5 @@
-import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
-import type { BotMcpView } from "@aven/protocol/mcp";
-import type { McpServerRow } from "@aven/db/schema/mcp-servers";
+import type { McpServerRow } from "@aven/db/schema/types";
+import type { BotMcpView, McpConnectResult, RunMcpServer } from "@aven/protocol/types";
 
 export type BotMcp = {
   forRun(userId: string): Promise<RunMcpServer[]>;

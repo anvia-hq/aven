@@ -2,14 +2,9 @@ import { posix } from "node:path";
 
 import { createTool } from "@anvia/core";
 import { z } from "zod";
+import type { EditableFiles } from "./types";
 
 export const EDIT_TOOL_NAME = "edit";
-
-export type EditableFiles = {
-  workdir: string;
-  readTextFile(options: { path: string; abortSignal?: AbortSignal }): Promise<string>;
-  writeTextFile(options: { path: string; text: string; abortSignal?: AbortSignal }): Promise<void>;
-};
 
 function countOccurrences(text: string, search: string) {
   let count = 0;

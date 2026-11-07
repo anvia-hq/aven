@@ -1,14 +1,10 @@
-import type {
-  FilesCallMethod,
-  FilesCallParams,
-  FilesSearchParams,
-} from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
 
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { fileAnswer, folderAnswer, searchAnswer } from "./schema";
 import type { FileResult, FolderResult, SearchResult } from "./types";
+import type { FilesCallMethod, FilesCallParams, FilesSearchParams } from "@aven/protocol/types";
 
 export function createFilesService(hub: RuntimeHub) {
   const runner = runnerFor(hub);

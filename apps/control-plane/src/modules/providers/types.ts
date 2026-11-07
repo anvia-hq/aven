@@ -1,7 +1,6 @@
-import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
-import type { Provider } from "@aven/protocol/runtime-wire";
-import type { ModelConfig } from "@aven/agents/model";
-import type { ProviderRow } from "@aven/db/schema/providers";
+import type { ModelConfig } from "@aven/agents/types";
+import type { ProviderRow } from "@aven/db/schema/types";
+import type { BotProviderView, Provider, ProviderKeyAsk } from "@aven/protocol/types";
 
 export type BotProviders = {
   list(userId: string): Promise<BotProviderView[]>;

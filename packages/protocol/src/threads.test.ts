@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ChatMessage } from "./events";
 import {
   BOT_TURN_TEXT_MAX,
   BOT_TURN_TOOLS_MAX,
@@ -8,6 +7,7 @@ import {
   threadTitleFrom,
   threadTurns,
 } from "./threads";
+import type { ChatMessage } from "./types";
 
 const user = (id: string, text: string): ChatMessage => ({
   id,

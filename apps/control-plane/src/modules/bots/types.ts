@@ -1,23 +1,25 @@
-import type { Bot, BotQuestion } from "@aven/protocol/bots";
 import type { createBotChats } from "./chats";
-import type {
-  BotCreateParams,
-  BotSent,
-  RunAttachment,
-  RunSkill,
-} from "@aven/protocol/runtime-wire";
-import type { MemoryCommand, MemoryFolder } from "@aven/protocol/memory";
 import type { UpdateBotBody } from "./schema";
-import type { BotScheduleView } from "@aven/protocol/schedules";
-import type { BotGoalView, GoalAction } from "@aven/protocol/goals";
-import type { ModelConfig } from "@aven/agents/model";
-import type { SendMessage } from "@aven/agents/tools/send-message";
-import type { AskQuestion } from "@aven/agents/tools/ask-question";
 import type { AgentMemoryOptions } from "@anvia/core";
 import type { createBotAgent } from "@aven/agents/bot-agent";
 import type { GoalInput } from "../goals/types";
 import type { MemoryCaller, MemoryOwner } from "../memory/types";
 import type { ScheduleInput, SchedulePatch } from "../schedules/types";
+import type { ModelConfig } from "@aven/agents/types";
+import type { AskQuestion, SendMessage } from "@aven/agents/tools/types";
+import type {
+  Bot,
+  BotCreateParams,
+  BotGoalView,
+  BotQuestion,
+  BotScheduleView,
+  BotSent,
+  GoalAction,
+  MemoryCommand,
+  MemoryFolder,
+  RunAttachment,
+  RunSkill,
+} from "@aven/protocol/types";
 
 export type BotLetter = {
   userId: string;

@@ -4,18 +4,15 @@ import {
   COCKPIT_KINDS,
   TASK_PRIORITIES,
   TASK_STATUSES,
-  type CockpitAccess,
-  type CockpitCommand,
-  type CockpitFields,
 } from "@aven/protocol/cockpit";
 import { z } from "zod";
+import type { CockpitHost } from "./types";
+import type { CockpitAccess, CockpitCommand, CockpitFields } from "@aven/protocol/types";
 
 export const COCKPIT_TOOL_NAME = "cockpit";
 
 const READS = ["list", "get", "tags"] as const;
 const WRITES = ["create", "update", "delete"] as const;
-
-export type CockpitHost = (command: CockpitCommand) => Promise<string>;
 
 function schemaFor(access: CockpitAccess) {
   const read = {

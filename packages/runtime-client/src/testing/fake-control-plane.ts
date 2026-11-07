@@ -1,9 +1,5 @@
-import type { RuntimeToControlPlane } from "@aven/protocol/runtime-wire";
-
-export type FakeControlPlaneOptions = {
-  storesTranscripts?: boolean;
-  answer?: (message: Extract<RuntimeToControlPlane, { type: "call" }>) => unknown;
-};
+import type { RuntimeToControlPlane } from "@aven/protocol/types";
+import type { FakeControlPlaneOptions } from "../types";
 
 export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
   const transcripts = { stored: options.storesTranscripts !== false };

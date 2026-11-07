@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { createGitFetchTool, type FetchRemote } from "./git-fetch";
+import { createGitFetchTool } from "./git-fetch";
+import type { FetchRemote } from "./types";
 
 const SHA_A = "a".repeat(40);
 const SHA_B = "b".repeat(40);

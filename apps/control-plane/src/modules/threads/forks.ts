@@ -1,5 +1,4 @@
 import { FORKS_PER_THREAD, forkPrompt } from "@aven/protocol/forks";
-import type { RunThreadInfo } from "@aven/protocol/runtime-wire";
 import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
@@ -7,6 +6,7 @@ import { UnprocessableError } from "../../errors";
 import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
 import type { ThreadForks, ThreadMessages } from "./types";
+import type { RunThreadInfo } from "@aven/protocol/types";
 
 export function createThreadForks({
   runs,

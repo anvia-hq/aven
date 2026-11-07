@@ -1,4 +1,3 @@
-import type { ProcessView } from "@aven/protocol/runtime-wire";
 import { Check, DangerCircle, StopSolid } from "@mynaui/icons-react";
 import { useState } from "react";
 
@@ -7,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { timeAgo } from "@/lib/format";
 
 import { useProcessLogs } from "../hooks/use-process-logs";
+import type { ProcessView } from "@aven/protocol/types";
 
 type Props = {
   threadId: string;

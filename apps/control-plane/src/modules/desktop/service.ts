@@ -1,9 +1,8 @@
-import type { DesktopInfo } from "@aven/protocol/runtime-wire";
-
 import { ConflictError, UnavailableError } from "../../errors";
 import { desktopControl, desktopInfo } from "./schema";
 import type { DesktopStatus } from "./types";
 import type { Refusal, Runner, ViewerSink } from "../runtimes/types";
+import type { DesktopInfo } from "@aven/protocol/types";
 
 const TAKEOVER_LEASE_MS = 60_000;
 

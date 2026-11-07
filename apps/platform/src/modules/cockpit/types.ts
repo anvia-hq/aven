@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from "@aven/protocol/cockpit";
+import type { TaskPriority, TaskStatus } from "@aven/protocol/types";
 
 export type {
   CockpitNote,
@@ -7,7 +7,7 @@ export type {
   InboxItem,
   TaskPriority,
   TaskStatus,
-} from "@aven/protocol/cockpit";
+} from "@aven/protocol/types";
 
 export type TaskView = "board" | "list";
 

@@ -23,6 +23,3 @@ export const runtimes = pgTable(
     uniqueIndex("runtimes_token_hash_idx").on(table.tokenHash),
   ],
 );
-
-export type RuntimeRow = typeof runtimes.$inferSelect;
-export type NewRuntimeRow = typeof runtimes.$inferInsert;

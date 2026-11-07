@@ -1,4 +1,4 @@
-import { applyBotEvent, isTyping, type BotEvent } from "@aven/protocol/bots";
+import { applyBotEvent, isTyping } from "@aven/protocol/bots";
 import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
@@ -11,6 +11,7 @@ import type { AttachmentUpload } from "@/modules/threads/types";
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import type { BotChatMessage } from "../types";
 import { refreshBots } from "./use-bots";
+import type { BotEvent } from "@aven/protocol/types";
 
 function parseEvent(data: string): BotEvent | null {
   try {

@@ -1,32 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
-import type { ModelConfig } from "@aven/agents/model";
-import {
-  BOT_MESSAGE_MAX,
-  BOT_MESSAGES_PER_REPLY,
-  parseBotPrompt,
-  type Bot,
-} from "@aven/protocol/bots";
+import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, parseBotPrompt } from "@aven/protocol/bots";
 import { providerKeyQuestion } from "@aven/protocol/providers";
 import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
-import type {
-  BotGoaled,
-  BotGoalParams,
-  BotPeer,
-  BotQuestioned,
-  BotQuestionParams,
-  BotScheduled,
-  BotScheduleParams,
-  BotSendParams,
-  BotMcped,
-  BotMcpParams,
-  BotNotesParams,
-  BotProvided,
-  BotProviderParams,
-  BotThreaded,
-  BotThreadParams,
-  BotSkillParams,
-  BotUpdateParams,
-} from "@aven/protocol/runtime-wire";
 import { isGoalRoundNote } from "@aven/protocol/goals";
 
 import type { RunGateway } from "../runtimes/gateway";
@@ -44,6 +19,27 @@ import type {
 import type { BotMcp } from "../mcp/types";
 import type { BotProviders } from "../providers/types";
 import type { BotThreads } from "../threads/types";
+import type { ModelConfig } from "@aven/agents/types";
+import type {
+  Bot,
+  BotGoaled,
+  BotGoalParams,
+  BotMcped,
+  BotMcpParams,
+  BotNotesParams,
+  BotPeer,
+  BotProvided,
+  BotProviderParams,
+  BotQuestioned,
+  BotQuestionParams,
+  BotScheduled,
+  BotScheduleParams,
+  BotSendParams,
+  BotSkillParams,
+  BotThreaded,
+  BotThreadParams,
+  BotUpdateParams,
+} from "@aven/protocol/types";
 
 function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
   const line = (text: string) => text.replace(/\s+/g, " ").trim();

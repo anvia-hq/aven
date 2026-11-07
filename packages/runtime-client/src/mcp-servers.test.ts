@@ -1,15 +1,14 @@
 import { Agent } from "@anvia/core";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
-import type { RunEvent } from "@aven/protocol/events";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import * as z from "zod/v4";
 
 import { DurableRuns } from "./durable-runs";
-import type { RunMcpServer } from "@aven/protocol/runtime-wire";
 
 import { connectMcpServers, mcpPrefix } from "./mcp-servers";
 import { journalPath } from "./testing/journal-path";
+import type { RunEvent, RunMcpServer } from "@aven/protocol/types";
 
 const seen: { authorization: string | null; note: string }[] = [];
 const handler = createMcpHandler(({ requestInfo }) => {

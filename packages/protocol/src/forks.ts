@@ -2,15 +2,6 @@ export const FORKS_PER_THREAD = 3;
 
 export const FORK_TEXT_MAX = 20_000;
 
-export type ForkView = {
-  id: string;
-  title: string;
-  running: boolean;
-  archived: boolean;
-  error: string | null;
-  lastMessage: string;
-};
-
 export function forkPrompt(
   { task, context }: { task: string; context: string },
   { branch, parentTitle }: { branch: string; parentTitle: string },

@@ -4,8 +4,7 @@ import { createCodingAgent } from "@aven/agents/coding-agent";
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 
 import { toolsForRun } from "./run-tools";
-import type { ThreadWorkspaces } from "./sandbox";
-import type { CreateSubagent } from "./subagent-runner";
+import type { CreateSubagent, ThreadWorkspaces } from "./types";
 
 const sandbox = {
   workspace: async () => undefined,

@@ -1,10 +1,11 @@
-import { reasoningControlsFor, type ReasoningControls } from "@aven/agents/model";
+import { reasoningControlsFor } from "@aven/agents/model";
 
 import { UnprocessableError } from "../../errors";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, bedrockEndpoint } from "./schema";
 import type { ModelSource } from "./types";
+import type { ReasoningControls } from "@aven/agents/types";
 
 export class ModelListError extends UnprocessableError {}
 

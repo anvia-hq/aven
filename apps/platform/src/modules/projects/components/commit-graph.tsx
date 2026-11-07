@@ -1,4 +1,4 @@
-import type { GraphRow } from "@aven/protocol/commit-graph";
+import type { GraphRow } from "@aven/protocol/types";
 
 export const ROW_HEIGHT = 56;
 export const LANE_WIDTH = 16;

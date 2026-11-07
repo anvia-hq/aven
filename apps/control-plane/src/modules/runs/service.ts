@@ -1,16 +1,7 @@
 import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
-import type { ModelConfig } from "@aven/agents/model";
 import { messagesToChat } from "@aven/agents/projection";
 import { usageFromHistory } from "@aven/agents/usage";
-import {
-  applyEvent,
-  applyUsage,
-  type ChatMessage,
-  type QueuedSteer,
-  type QuestionAnswer,
-  type RunEvent,
-  type ThreadUsage,
-} from "@aven/protocol/events";
+import { applyEvent, applyUsage } from "@aven/protocol/events";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
@@ -26,6 +17,14 @@ import type {
   Runtime,
   RuntimeRun,
 } from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type {
+  ChatMessage,
+  QuestionAnswer,
+  QueuedSteer,
+  RunEvent,
+  ThreadUsage,
+} from "@aven/protocol/types";
 
 type ActiveRun = {
   handle: RuntimeRun;

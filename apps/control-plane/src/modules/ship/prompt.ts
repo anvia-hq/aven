@@ -1,7 +1,6 @@
-import type { FileContent } from "@aven/protocol/runtime-wire";
-
 import { UnprocessableError } from "../../errors";
 import type { ShipMode } from "./types";
+import type { FileContent } from "@aven/protocol/types";
 
 export const SHIP_PROMPT_FILE = ".aven/ship.md";
 

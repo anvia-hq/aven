@@ -1,5 +1,5 @@
-import type { DesktopInfo } from "@aven/protocol/runtime-wire";
 import type { Available } from "../runtimes/types";
+import type { DesktopInfo } from "@aven/protocol/types";
 
 export type DesktopStatus = Available<{
   state: DesktopInfo["state"];

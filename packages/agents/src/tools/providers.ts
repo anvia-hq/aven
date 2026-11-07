@@ -1,7 +1,7 @@
 import { createTool } from "@anvia/core";
-import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
+import type { ProvidersHost } from "./types";
 
 export const LIST_PROVIDERS_TOOL_NAME = "list_providers";
 export const ADD_PROVIDER_TOOL_NAME = "add_provider";
@@ -9,15 +9,6 @@ export const UPDATE_PROVIDER_TOOL_NAME = "update_provider";
 export const REMOVE_PROVIDER_TOOL_NAME = "remove_provider";
 export const LIST_PROVIDER_MODELS_TOOL_NAME = "list_provider_models";
 export const ASK_PROVIDER_KEY_TOOL_NAME = "ask_provider_key";
-
-export type ProvidersHost = {
-  list(): Promise<BotProviderView[]>;
-  add(input: ProviderInput): Promise<BotProviderView>;
-  update(id: string, patch: ProviderPatch): Promise<BotProviderView>;
-  remove(id: string): Promise<void>;
-  models(id: string): Promise<string[]>;
-  askKey?(id: string): Promise<ProviderKeyAsk>;
-};
 
 const name = z
   .string()

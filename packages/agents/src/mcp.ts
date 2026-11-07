@@ -1,7 +1,4 @@
-export type McpNote = {
-  servers: readonly { name: string; tools: number }[];
-  failed: readonly { name: string; reason: string }[];
-};
+import type { McpNote } from "./types";
 
 export function mcpInstructions(note: McpNote | undefined) {
   if (!note || (note.servers.length === 0 && note.failed.length === 0)) return "";

@@ -1,22 +1,18 @@
 import type { MemoryStore } from "@anvia/core";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
-import type { ModelConfig } from "@aven/agents/model";
-import {
-  applyBotEvent,
-  botMessageId,
-  botNote,
-  botPrompt,
-  isTyping,
-  type Bot,
-  type BotChatMessage,
-  type BotChatPeer,
-  type BotEvent,
-} from "@aven/protocol/bots";
-import type { RunAttachment } from "@aven/protocol/runtime-wire";
+import { applyBotEvent, botMessageId, botNote, botPrompt, isTyping } from "@aven/protocol/bots";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError } from "../../errors";
 import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
+import type { ModelConfig } from "@aven/agents/types";
+import type {
+  Bot,
+  BotChatMessage,
+  BotChatPeer,
+  BotEvent,
+  RunAttachment,
+} from "@aven/protocol/types";
 
 const PING_MS = 5_000;
 

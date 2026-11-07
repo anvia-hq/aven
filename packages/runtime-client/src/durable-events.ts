@@ -10,12 +10,8 @@ import { projectStreamEvent } from "@aven/agents/projection";
 import { projectToolCall, projectToolEnd } from "@aven/agents/tool-projection";
 import { tokenUsageOf } from "@aven/agents/usage";
 import { asRecord } from "@aven/agents/values";
-import type { RunEvent } from "@aven/protocol/events";
-
-export type DurableEnd =
-  | { type: "response"; messages: AgentOutcome<unknown>["messages"] }
-  | { type: "interaction"; continuation: unknown; messages: AgentOutcome<unknown>["messages"] }
-  | { type: "error"; error: string };
+import type { RunEvent } from "@aven/protocol/types";
+import type { DurableEnd } from "./types";
 
 const DELTAS = new Set(["text_delta", "reasoning_delta", "tool_call"]);
 

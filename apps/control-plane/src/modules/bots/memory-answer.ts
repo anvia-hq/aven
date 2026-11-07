@@ -1,5 +1,5 @@
 import type { MemoryCompactionMessage, MemoryScope, MemoryStore, Message } from "@anvia/core";
-import type { BotMemoryParams } from "@aven/protocol/runtime-wire";
+import type { BotMemoryParams } from "@aven/protocol/types";
 
 export function answerBotMemory(store: MemoryStore, scope: MemoryScope) {
   return async (params: BotMemoryParams): Promise<unknown> => {

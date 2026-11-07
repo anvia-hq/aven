@@ -1,6 +1,7 @@
-import { WIRE_VERSION, type ControlPlaneToRuntime } from "../packages/protocol/src/runtime-wire";
+import { WIRE_VERSION } from "../packages/protocol/src/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
 import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
+import type { ControlPlaneToRuntime } from "../packages/protocol/src/types";
 
 const base = process.env.AVEN_URL!;
 const token = process.env.AVEN_RUNTIME_TOKEN!;

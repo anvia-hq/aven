@@ -1,6 +1,10 @@
 import type { RuntimeConnection } from "./hub";
 import type { runnerVia } from "./ask-runner";
-import type { RunEvent } from "@aven/protocol/events";
+import type { MODES } from "./local";
+import type { MemoryStore } from "@anvia/core";
+import type { MemoryCaller } from "../memory/types";
+import type { CockpitCaller } from "../cockpit/types";
+import type { ThreadForks } from "../threads/types";
 import type {
   BotCockpitParams,
   BotCreated,
@@ -26,14 +30,10 @@ import type {
   BotUpdateParams,
   McpConnectResult,
   RepoAccess,
+  RunEvent,
   RunOutcome,
   RunThreadInfo,
-} from "@aven/protocol/runtime-wire";
-import type { MODES } from "./local";
-import type { MemoryStore } from "@anvia/core";
-import type { MemoryCaller } from "../memory/types";
-import type { CockpitCaller } from "../cockpit/types";
-import type { ThreadForks } from "../threads/types";
+} from "@aven/protocol/types";
 
 export type Available<T> = { available: false } | ({ available: true } & T);
 

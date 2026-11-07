@@ -1,14 +1,8 @@
 import { createTool } from "@anvia/core";
 import { z } from "zod";
+import type { FetchRemote } from "./types";
 
 export const GIT_FETCH_TOOL_NAME = "git_fetch";
-
-type FetchedBranch = { branch: string; commit: string; previous: string | null };
-
-export type FetchRemote = (
-  branch: string | undefined,
-  abortSignal?: AbortSignal,
-) => Promise<FetchedBranch>;
 
 export function createGitFetchTool(fetchRemote: FetchRemote) {
   return createTool({

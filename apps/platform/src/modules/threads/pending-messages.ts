@@ -1,6 +1,5 @@
-import type { ChatMessage, RunEvent } from "@aven/protocol/events";
-
 import type { AttachmentUpload, OutgoingMessage, PendingMessage } from "./types";
+import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
 function textOf(message: ChatMessage) {
   return message.parts.map((part) => (part.type === "text" ? part.text : "")).join("");

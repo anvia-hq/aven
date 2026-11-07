@@ -1,19 +1,18 @@
 import type { Message, ToolResultOutput } from "@anvia/core";
-import type { MessageAttachment } from "@aven/protocol/events";
-import {
-  botMessageId,
-  parseBotPrompt,
-  USER_HANDLE,
-  type BotChatMessage,
-  type BotQuestion,
-} from "@aven/protocol/bots";
+import { botMessageId, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 
-import { providerKeyQuestion, type ProviderKeyAsk } from "@aven/protocol/providers";
+import { providerKeyQuestion } from "@aven/protocol/providers";
 
 import { sentMessage } from "./attachments";
 import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
+import type {
+  BotChatMessage,
+  BotQuestion,
+  MessageAttachment,
+  ProviderKeyAsk,
+} from "@aven/protocol/types";
 
 function resultsAfter(messages: readonly Message[], at: number) {
   const results = new Map<string, ToolResultOutput>();

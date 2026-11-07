@@ -1,12 +1,3 @@
-import type { ProcessEndWatch } from "./process-end-watch";
-import type {
-  FilesCallMethod,
-  ProcessesCallMethod,
-  RunnerCallMethod,
-  RunnerUpdateResult,
-  SteerResult,
-} from "@aven/protocol/runtime-wire";
-
 import {
   artifactsReadParams,
   desktopCallParams,
@@ -17,26 +8,16 @@ import {
   runnerUpdateParams,
   sandboxReleaseParams,
   steerParams,
-  type SteerParams,
 } from "./call-params";
-import type { DesktopViewers } from "./desktop-viewers";
-import type { IdleRelease } from "./idle-release";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
-
-export type RunnerCallsContext = {
-  sandbox: ThreadWorkspaces;
-  boxes: Map<string, ThreadSandbox>;
-  viewers: Pick<DesktopViewers, "call">;
-  idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
-  update?: {
-    start(release: string | undefined): void;
-    busy(): string | undefined;
-  };
-  processEnds: Pick<ProcessEndWatch, "ignore">;
-  steer(params: SteerParams): Promise<SteerResult>;
-};
+import type {
+  FilesCallMethod,
+  ProcessesCallMethod,
+  RunnerCallMethod,
+  RunnerUpdateResult,
+} from "@aven/protocol/types";
+import type { RunnerCallsContext } from "./types";
 
 const UPDATE_DELAY_MS = 1000;
 

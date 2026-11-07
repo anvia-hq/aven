@@ -6,13 +6,11 @@ import {
   SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 
-import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
+import type { SandboxToolName, SubagentType } from "./types";
 
 export const SUBAGENT_TYPES = ["explore", "general"] as const;
-
-export type SubagentType = (typeof SUBAGENT_TYPES)[number];
 
 export const SUBAGENT_MAX_TURNS = 200;
 

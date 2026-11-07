@@ -1,5 +1,5 @@
-import type { DesktopControl, DesktopInfo } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
+import type { DesktopControl, DesktopInfo } from "@aven/protocol/types";
 
 const control = z.object({
   held: z.boolean(),

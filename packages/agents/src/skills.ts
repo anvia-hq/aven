@@ -4,6 +4,7 @@ import { SkillValidationError, skill } from "@anvia/core";
 import type { Skill } from "@anvia/core/skills";
 
 import { errorMessage } from "./values";
+import type { SkillListing } from "./types";
 
 export const SKILLS_DIR = "/skills";
 
@@ -11,8 +12,6 @@ export const REPO_SKILLS_DIR = ".aven/skills";
 
 export const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const MAX_SKILL_NAME = 64;
-
-export type SkillListing = { name: string; description: string; path: string };
 
 function skillProblem(error: unknown) {
   if (error instanceof SkillValidationError)

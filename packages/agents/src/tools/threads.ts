@@ -1,11 +1,7 @@
 import { createTool } from "@anvia/core";
-import {
-  BOT_THREAD_PROMPT_MAX,
-  type BotProjectView,
-  type BotThreadDetail,
-  type BotThreadView,
-} from "@aven/protocol/threads";
+import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
 import { z } from "zod";
+import type { ThreadsHost } from "./types";
 
 export const LIST_PROJECTS_TOOL_NAME = "list_projects";
 export const LIST_THREADS_TOOL_NAME = "list_threads";
@@ -14,16 +10,6 @@ export const START_THREAD_TOOL_NAME = "start_thread";
 export const CONTINUE_THREAD_TOOL_NAME = "continue_thread";
 export const ARCHIVE_THREAD_TOOL_NAME = "archive_thread";
 export const STOP_THREAD_TOOL_NAME = "stop_thread";
-
-export type ThreadsHost = {
-  projects(): Promise<BotProjectView[]>;
-  list(filter: { projectId?: string; archived?: boolean }): Promise<BotThreadView[]>;
-  get(id: string): Promise<BotThreadDetail>;
-  start(input: StartThreadInput): Promise<BotThreadView>;
-  continue(id: string, input: ContinueThreadInput): Promise<BotThreadView>;
-  archive(id: string, archived: boolean): Promise<BotThreadView>;
-  stop(id: string): Promise<BotThreadView>;
-};
 
 const id = z.uuid().describe("The thread id from list_threads or start_thread.");
 const prompt = z

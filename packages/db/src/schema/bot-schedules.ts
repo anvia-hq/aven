@@ -32,5 +32,3 @@ export const botSchedules = pgTable(
     index("bot_schedules_due_idx").on(table.enabled, table.nextRunAt),
   ],
 );
-
-export type BotScheduleRow = typeof botSchedules.$inferSelect;

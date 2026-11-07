@@ -1,10 +1,11 @@
 import type { MemoryStore } from "@anvia/core";
-import type { BotMemoryParams } from "@aven/protocol/runtime-wire";
-import { BotReplies, type CreateBotReplyAgent } from "@aven/runtime-client/bot-replies";
+import { BotReplies } from "@aven/runtime-client/bot-replies";
 import { noProcesses } from "@aven/runtime-client/thread-processes";
 
 import { answerBotMemory } from "../memory-answer";
 import type { BotReplier } from "../types";
+import type { BotMemoryParams } from "@aven/protocol/types";
+import type { CreateBotReplyAgent } from "@aven/runtime-client/types";
 
 export function loopbackReplier(options: {
   store: MemoryStore;

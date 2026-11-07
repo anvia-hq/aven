@@ -1,5 +1,5 @@
-import type { FileContent, FileEntry } from "@aven/protocol/runtime-wire";
 import type { Available } from "../runtimes/types";
+import type { FileContent, FileEntry } from "@aven/protocol/types";
 
 export type FolderResult = Available<{ entries: FileEntry[] }>;
 

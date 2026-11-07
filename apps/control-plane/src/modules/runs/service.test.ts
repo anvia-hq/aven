@@ -2,14 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import {
-  scriptedModel,
-  text,
-  toolCall,
-  type ScriptStep,
-} from "@aven/agents/testing/scripted-model";
+import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCodingAgent } from "@aven/agents/coding-agent";
-import { applyEvent, type ChatMessage, type RunEvent } from "@aven/protocol/events";
+import { applyEvent } from "@aven/protocol/events";
 
 import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
@@ -27,6 +22,8 @@ import { RunGateway } from "../runtimes/gateway";
 import { RemoteRuntime } from "./remote-runtime";
 import { RunBusyError, RunManager } from "./service";
 import type { RunEnding, RunThread } from "./types";
+import type { ScriptStep } from "@aven/agents/types";
+import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

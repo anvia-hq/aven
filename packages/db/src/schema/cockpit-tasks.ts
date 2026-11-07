@@ -48,5 +48,3 @@ export const cockpitTasks = pgTable(
     index("cockpit_tasks_user_idx").on(table.userId, table.status, table.position),
   ],
 );
-
-export type CockpitTaskRow = typeof cockpitTasks.$inferSelect;

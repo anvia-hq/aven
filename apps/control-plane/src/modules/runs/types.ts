@@ -1,18 +1,20 @@
-import type { MessageMention, QueuedSteer, RunEvent } from "@aven/protocol/events";
+import type { CockpitCaller } from "../cockpit/types";
+import type { MemoryCaller } from "../memory/types";
+import type { RunIdentity } from "../workload-identity/types";
+import type { ModelConfig } from "@aven/agents/types";
 import type {
+  MessageMention,
+  QueuedSteer,
   RunAttachment,
   RunEnvVar,
+  RunEvent,
   RunGithub,
   RunMcpServer,
+  RunMemory,
   RunOutcome,
   RunSkill,
   SteerResult,
-} from "@aven/protocol/runtime-wire";
-import type { CockpitCaller } from "../cockpit/types";
-import type { ModelConfig } from "@aven/agents/model";
-import type { MemoryCaller } from "../memory/types";
-import type { RunMemory } from "@aven/protocol/memory";
-import type { RunIdentity } from "../workload-identity/types";
+} from "@aven/protocol/types";
 
 export type RunThread = {
   id: string;

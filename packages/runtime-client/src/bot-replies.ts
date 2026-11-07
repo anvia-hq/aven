@@ -1,70 +1,38 @@
-import type { Agent, AgentMemoryOptions, AgentPrompt, AnyTool } from "@anvia/core";
+import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 import { createBotAgent } from "@aven/agents/bot-agent";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
-import type { AskQuestion } from "@aven/agents/tools/ask-question";
-import type { CreateBot } from "@aven/agents/tools/create-bot";
-import type { UpdateSelf } from "@aven/agents/tools/update-self";
-import type { GoalHost } from "@aven/agents/tools/goals";
-import type { McpNote } from "@aven/agents/mcp";
-import type { McpServersHost } from "@aven/agents/tools/mcp-servers";
-import type { CockpitHost } from "@aven/agents/tools/cockpit";
-import type { MemoryHost } from "@aven/agents/tools/memory";
-import type { ProvidersHost } from "@aven/agents/tools/providers";
-import type { ScheduleHost } from "@aven/agents/tools/schedules";
-import type { ThreadsHost } from "@aven/agents/tools/threads";
-import type { SendMessage } from "@aven/agents/tools/send-message";
 import { botNote, MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
-import type { BotGoalView } from "@aven/protocol/goals";
-import type { BotMcpView } from "@aven/protocol/mcp";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
-import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/providers";
-import type { BotScheduleView } from "@aven/protocol/schedules";
-import type { BotProjectView, BotThreadDetail, BotThreadView } from "@aven/protocol/threads";
 import { SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
-import type {
-  BotPeer,
-  BotReplyInfo,
-  ControlPlaneToRuntime,
-  RunModel,
-  RunSkill,
-  RuntimeCalls,
-  RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
-
-import type { SkillListing } from "@aven/agents/skills";
 
 import { keepAttachments } from "./attachments";
 import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
-import { connectMcpServers, type ConnectedMcp } from "./mcp-servers";
+import { connectMcpServers } from "./mcp-servers";
 import { remoteBotMemory } from "./remote-bot-memory";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-
-export type BotReplyMessage = Extract<ControlPlaneToRuntime, { type: "bot.reply" }>;
-
-export type CreateBotReplyAgent = (input: {
-  bot: BotReplyInfo;
-  model: RunModel;
-  send: SendMessage;
-  memory: AgentMemoryOptions;
-  computer: readonly AnyTool[];
-  createBot?: CreateBot;
-  askQuestion?: AskQuestion;
-  goals: GoalHost;
-  schedules: ScheduleHost;
-  peers: BotPeer[];
-  updateSelf: UpdateSelf;
-  skills: readonly SkillListing[];
-  mcp?: { tools: readonly AnyTool[]; note: McpNote };
-  mcpServers: McpServersHost;
-  providers: ProvidersHost;
-  threads: ThreadsHost;
-  notes?: { memory: RunMemory; host: MemoryHost };
-  cockpit?: { access: CockpitAccess; host: CockpitHost };
-}) => Pick<Agent<unknown>, "generate">;
+import type { SendMessage } from "@aven/agents/tools/types";
+import type {
+  BotGoalView,
+  BotMcpView,
+  BotProjectView,
+  BotProviderView,
+  BotReplyInfo,
+  BotScheduleView,
+  BotThreadDetail,
+  BotThreadView,
+  CockpitAccess,
+  ProviderKeyAsk,
+  RunMemory,
+  RunModel,
+  RunSkill,
+} from "@aven/protocol/types";
+import type {
+  BotRepliesContext,
+  BotReplyMessage,
+  ConnectedMcp,
+  CreateBotReplyAgent,
+} from "./types";
 
 export const defaultCreateBotAgent =
   (origin: string): CreateBotReplyAgent =>
@@ -133,20 +101,6 @@ const sleep = (ms: number, signal?: AbortSignal) =>
       { once: true },
     );
   });
-
-export type BotRepliesContext = {
-  sandbox: ThreadWorkspaces;
-  createAgent: CreateBotReplyAgent;
-  send(message: RuntimeToControlPlane): boolean;
-  call<M extends keyof RuntimeCalls>(
-    method: M,
-    params: RuntimeCalls[M]["params"],
-  ): Promise<RuntimeCalls[M]["result"]>;
-  boxes: Map<string, ThreadSandbox>;
-  starting(botId: string): Promise<void>;
-  finished(botId: string): void;
-  pause?: (ms: number, signal?: AbortSignal) => Promise<void>;
-};
 
 const UNSENT_NOTE =
   "You answered without sending anything: the person sees only what you send with send_message, and nothing of what you wrote outside it. Send your answer now with send_message, the way you would text it, and do not repeat what you did.";

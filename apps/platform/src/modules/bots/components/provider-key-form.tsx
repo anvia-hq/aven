@@ -1,4 +1,3 @@
-import type { ProviderKeyAsk } from "@aven/protocol/providers";
 import { ArrowUp, Lock } from "@mynaui/icons-react";
 import { useEffect, useState } from "react";
 
@@ -8,6 +7,7 @@ import { Input } from "@/components/input";
 import { Label } from "@/components/label";
 import { useProviders } from "@/modules/providers/hooks/use-providers";
 import { PROVIDER_LABELS, type Provider } from "@/modules/providers/types";
+import type { ProviderKeyAsk } from "@aven/protocol/types";
 
 export function ProviderKeyForm({
   botName,

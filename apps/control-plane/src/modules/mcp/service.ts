@@ -1,13 +1,14 @@
 import { db } from "@aven/db/client";
-import { mcpServers, type McpServerRow } from "@aven/db/schema/mcp-servers";
-import { MCP_LIMIT, mcpSlug, type McpTarget } from "@aven/protocol/mcp";
-import type { McpConnectResult, RunMcpServer } from "@aven/protocol/runtime-wire";
+import { mcpServers } from "@aven/db/schema/mcp-servers";
+import { MCP_LIMIT, mcpSlug } from "@aven/protocol/mcp";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { ConflictError, UnprocessableError } from "../../errors";
 import type { CreateMcpBody, UpdateMcpBody } from "./schema";
 import type { McpServerView } from "./types";
+import type { McpServerRow } from "@aven/db/schema/types";
+import type { McpConnectResult, McpTarget, RunMcpServer } from "@aven/protocol/types";
 
 function view({ headers: _headers, userId: _userId, ...row }: McpServerRow): McpServerView {
   return row;

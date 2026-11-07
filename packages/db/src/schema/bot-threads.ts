@@ -33,5 +33,3 @@ export const botThreads = pgTable(
       .where(sql`${table.notifiedAt} IS NULL`),
   ],
 );
-
-export type BotThreadRow = typeof botThreads.$inferSelect;

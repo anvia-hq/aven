@@ -1,16 +1,12 @@
 import { db } from "@aven/db/client";
-import { botGoals, type BotGoalRow } from "@aven/db/schema/bot-goals";
-import {
-  GOAL_DEFAULT_ROUNDS,
-  GOAL_MAX_ROUNDS,
-  type BotGoalView,
-  type GoalAction,
-  type GoalPhase,
-} from "@aven/protocol/goals";
+import { botGoals } from "@aven/db/schema/bot-goals";
+import { GOAL_DEFAULT_ROUNDS, GOAL_MAX_ROUNDS } from "@aven/protocol/goals";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import type { GoalInput } from "./types";
+import type { BotGoalRow } from "@aven/db/schema/types";
+import type { BotGoalView, GoalAction, GoalPhase } from "@aven/protocol/types";
 
 const FROM: Record<GoalAction, GoalPhase[]> = {
   complete: ["active", "paused", "blocked"],

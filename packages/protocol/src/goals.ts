@@ -7,19 +7,6 @@ export const GOAL_CHECKS_MAX = 8;
 export const GOAL_CHECK_MAX = 4_000;
 export const GOAL_REASON_MAX = 2_000;
 
-export type GoalPhase = "active" | "paused" | "blocked" | "complete" | "cleared";
-
-export type GoalAction = "complete" | "blocked" | "pause" | "resume" | "clear";
-
-export type BotGoalView = {
-  objective: string;
-  checks: string[];
-  phase: GoalPhase;
-  blockedReason: string | null;
-  round: number;
-  maxRounds: number;
-};
-
 export const GOAL_ROUND_NOTE_PREFIX = "Goal round ";
 
 export function isGoalRoundNote(prompt: string) {

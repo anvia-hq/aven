@@ -1,4 +1,4 @@
-import type { MemoryScope } from "@aven/protocol/memory";
+import type { MemoryScope } from "@aven/protocol/types";
 
 export type MemoryCaller = { owner: MemoryOwner; actor: MemoryActor; writable: boolean };
 

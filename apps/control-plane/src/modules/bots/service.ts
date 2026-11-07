@@ -1,19 +1,15 @@
 import { db } from "@aven/db/client";
-import { bots, type BotRow } from "@aven/db/schema/bots";
+import { bots } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
-import {
-  BOT_LIMIT,
-  botHandleOf,
-  freeBotHandle,
-  MAIN_BOT_HANDLE,
-  type Bot,
-} from "@aven/protocol/bots";
+import { BOT_LIMIT, botHandleOf, freeBotHandle, MAIN_BOT_HANDLE } from "@aven/protocol/bots";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
 import type { UpdateBotBody } from "./schema";
 import type { NewBot } from "./types";
+import type { BotRow } from "@aven/db/schema/types";
+import type { Bot } from "@aven/protocol/types";
 
 const MAIN_BOT = {
   name: "Aven",

@@ -4,9 +4,7 @@ import type {
   MemoryStore,
   Message,
 } from "@anvia/core";
-import type { BotMemoryParams } from "@aven/protocol/runtime-wire";
-
-export type BotMemoryCall = (params: BotMemoryParams) => Promise<unknown>;
+import type { BotMemoryCall } from "./types";
 
 export function remoteBotMemory(replyId: string, call: BotMemoryCall): MemoryStore {
   return {

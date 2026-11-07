@@ -1,13 +1,11 @@
 import type { AgentPrompt, JsonValue, Message, UserContentPart } from "@anvia/core";
-import type { MessageAttachment, MessageMention } from "@aven/protocol/events";
 
 import { mentionNote, mentionOf } from "./mentions";
-import type { SkillListing } from "./skills";
 import { asRecord } from "./values";
+import type { KeptAttachment, SentExtras } from "./types";
+import type { MessageAttachment, MessageMention } from "@aven/protocol/types";
 
 export const UPLOADS_DIR = "/uploads";
-
-export type KeptAttachment = MessageAttachment & { path: string };
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -29,13 +27,6 @@ function attachmentNote(kept: readonly KeptAttachment[]) {
 function forTranscript({ name, mediaType, size, image }: KeptAttachment): MessageAttachment {
   return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }
-
-export type SentExtras = {
-  attachments?: readonly KeptAttachment[];
-  images?: ReadonlyMap<string, string>;
-  mentions?: readonly MessageMention[];
-  skills?: readonly SkillListing[];
-};
 
 export function sentPrompt(
   prompt: string,

@@ -22,6 +22,3 @@ export const members = pgTable(
   },
   (table) => [unique().on(table.organizationId, table.userId)],
 );
-
-export type Member = typeof members.$inferSelect;
-export type NewMember = typeof members.$inferInsert;

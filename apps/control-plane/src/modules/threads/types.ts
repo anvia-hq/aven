@@ -1,8 +1,13 @@
-import type { BotProjectView, BotThreadDetail, BotThreadView } from "@aven/protocol/threads";
-import type { ProcessEnded, RunThreadInfo } from "@aven/protocol/runtime-wire";
-import type { ForkView } from "@aven/protocol/forks";
 import type { RunEnding } from "../runs/types";
 import type { createThreadMessages } from "./messages";
+import type {
+  BotProjectView,
+  BotThreadDetail,
+  BotThreadView,
+  ForkView,
+  ProcessEnded,
+  RunThreadInfo,
+} from "@aven/protocol/types";
 
 export type ThreadModelChoice = { providerId?: string; modelId?: string; reasoningEffort?: string };
 

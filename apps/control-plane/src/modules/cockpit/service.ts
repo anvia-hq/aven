@@ -1,16 +1,9 @@
 import { db } from "@aven/db/client";
-import { cockpitInboxItems, type CockpitInboxItemRow } from "@aven/db/schema/cockpit-inbox-items";
-import { cockpitNotes, type CockpitNoteRow } from "@aven/db/schema/cockpit-notes";
+import { cockpitInboxItems } from "@aven/db/schema/cockpit-inbox-items";
+import { cockpitNotes } from "@aven/db/schema/cockpit-notes";
 import { cockpitTags } from "@aven/db/schema/cockpit-tags";
-import { cockpitTasks, type CockpitTaskRow } from "@aven/db/schema/cockpit-tasks";
-import {
-  COCKPIT_ITEMS_MAX,
-  TAGS_DEFINED_MAX,
-  type CockpitNote,
-  type CockpitTag,
-  type CockpitTask,
-  type InboxItem,
-} from "@aven/protocol/cockpit";
+import { cockpitTasks } from "@aven/db/schema/cockpit-tasks";
+import { COCKPIT_ITEMS_MAX, TAGS_DEFINED_MAX } from "@aven/protocol/cockpit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
@@ -22,6 +15,8 @@ import type {
   UpdateNoteBody,
   UpdateTaskBody,
 } from "./schema";
+import type { CockpitInboxItemRow, CockpitNoteRow, CockpitTaskRow } from "@aven/db/schema/types";
+import type { CockpitNote, CockpitTag, CockpitTask, InboxItem } from "@aven/protocol/types";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

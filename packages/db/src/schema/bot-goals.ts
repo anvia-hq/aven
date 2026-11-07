@@ -39,5 +39,3 @@ export const botGoals = pgTable(
     index("bot_goals_phase_idx").on(table.phase),
   ],
 );
-
-export type BotGoalRow = typeof botGoals.$inferSelect;

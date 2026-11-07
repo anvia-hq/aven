@@ -4,7 +4,7 @@ import { Elysia } from "elysia";
 import { db } from "@aven/db/client";
 import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
-import { WIRE_VERSION, type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
+import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 import { eq } from "drizzle-orm";
 
@@ -16,6 +16,7 @@ import { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import { threadsService } from "../threads/service";
 import { terminalRouter } from "./router";
+import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

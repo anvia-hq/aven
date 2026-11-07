@@ -3,12 +3,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
-import type { ChatMessage } from "@aven/protocol/events";
 import { eq } from "drizzle-orm";
 
 import { runtimesService } from "../runtimes/service";
 import { createBotThreads } from "./bot-access";
 import { threadsService } from "./service";
+import type { ChatMessage } from "@aven/protocol/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

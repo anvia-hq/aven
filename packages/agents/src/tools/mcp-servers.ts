@@ -5,21 +5,14 @@ import {
   MCP_MAX_NAME,
   MCP_MAX_URL,
   MCP_TARGETS,
-  type BotMcpView,
 } from "@aven/protocol/mcp";
 import { z } from "zod";
+import type { McpServersHost } from "./types";
 
 export const LIST_MCP_SERVERS_TOOL_NAME = "list_mcp_servers";
 export const ADD_MCP_SERVER_TOOL_NAME = "add_mcp_server";
 export const UPDATE_MCP_SERVER_TOOL_NAME = "update_mcp_server";
 export const REMOVE_MCP_SERVER_TOOL_NAME = "remove_mcp_server";
-
-export type McpServersHost = {
-  list(): Promise<BotMcpView[]>;
-  add(input: McpServerInput): Promise<BotMcpView>;
-  update(id: string, patch: McpServerPatch): Promise<BotMcpView>;
-  remove(id: string): Promise<void>;
-};
 
 const name = z
   .string()

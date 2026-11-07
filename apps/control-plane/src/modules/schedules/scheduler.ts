@@ -1,10 +1,12 @@
 import { db } from "@aven/db/client";
-import { botSchedules, type BotScheduleRow } from "@aven/db/schema/bot-schedules";
-import { SCHEDULE_CATCH_UP_MS, type ScheduleStatus } from "@aven/protocol/schedules";
+import { botSchedules } from "@aven/db/schema/bot-schedules";
+import { SCHEDULE_CATCH_UP_MS } from "@aven/protocol/schedules";
 import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 
 import { describeError } from "../../errors";
 import { describeTime, nextRun } from "./cron";
+import type { BotScheduleRow } from "@aven/db/schema/types";
+import type { ScheduleStatus } from "@aven/protocol/types";
 
 const LATE_MS = 2 * 60_000;
 const TICK_LIMIT = 100;

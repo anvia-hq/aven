@@ -1,8 +1,8 @@
-import { type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { UnavailableError } from "../../errors";
 import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
+import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" };
 

@@ -1,45 +1,4 @@
-import type { ChatMessage } from "./events";
-
-export type BotProjectView = {
-  id: string;
-  name: string;
-  repository: string;
-  defaultBranch: string;
-};
-
-export type BotThreadPullRequest = {
-  number: number;
-  url: string;
-  title: string;
-  state: "open" | "closed" | "merged";
-};
-
-export type BotThreadView = {
-  id: string;
-  title: string;
-  projectId: string;
-  repository: string;
-  state: "open" | "snoozed" | "archived";
-  mine: boolean;
-  createdBy?: string;
-  running: boolean;
-  lastActivityAt?: string;
-  awaitingAnswer: boolean;
-  pullRequests: BotThreadPullRequest[];
-  updatedAt: string;
-};
-
-export type BotThreadTurn = {
-  role: "user" | "assistant";
-  text: string;
-  tools?: string[];
-};
-
-export type BotThreadDetail = BotThreadView & {
-  turns: BotThreadTurn[];
-  earlier: number;
-  question?: string;
-};
+import type { BotThreadTurn, ChatMessage } from "./types";
 
 export const BOT_THREADS_LISTED = 30;
 export const BOT_TURNS_SHOWN = 8;

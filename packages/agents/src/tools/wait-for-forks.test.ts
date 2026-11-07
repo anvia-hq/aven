@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ForkView } from "@aven/protocol/forks";
-
 import { projectToolOutput } from "../tool-projection";
 import { createWaitForForksTool, WAIT_FOR_FORKS_TOOL_NAME } from "./wait-for-forks";
+import type { ForkView } from "@aven/protocol/types";
 
 const A = crypto.randomUUID();
 const B = crypto.randomUUID();

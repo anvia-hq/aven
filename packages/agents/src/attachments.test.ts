@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import type { UserMessage } from "@anvia/core";
-import type { MessageMention } from "@aven/protocol/events";
 
-import { sentPrompt, type KeptAttachment, type SentExtras } from "./attachments";
+import { sentPrompt } from "./attachments";
 import { messagesToChat } from "./projection";
+import type { KeptAttachment, SentExtras } from "./types";
+import type { MessageMention } from "@aven/protocol/types";
 
 function sent(prompt: string, extras: SentExtras): UserMessage {
   const message = sentPrompt(prompt, extras);

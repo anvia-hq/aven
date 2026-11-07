@@ -12,17 +12,19 @@ import {
   NOTHING_TO_COMPACT,
   createCompactionAgent,
 } from "@aven/agents/compaction-agent";
-import { scriptedModel, text, type ScriptStep } from "@aven/agents/testing/scripted-model";
-import type { RunEvent } from "@aven/protocol/events";
+import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { hostname } from "node:os";
 import { z } from "zod";
 
-import { DurableRuns, type RunInput } from "./durable-runs";
+import { DurableRuns } from "./durable-runs";
 import { goalSessionMarker } from "./goal-report";
 import { journalPath } from "./testing/journal-path";
 import { defaultCreateAgent } from "./runner";
+import type { ScriptStep } from "@aven/agents/types";
+import type { RunEvent } from "@aven/protocol/types";
+import type { RunInput } from "./types";
 
 const question: ScriptStep = [
   {

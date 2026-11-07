@@ -1,4 +1,4 @@
-import type { Provider as WireProvider } from "@aven/protocol/runtime-wire";
+import type { Provider as WireProvider } from "@aven/protocol/types";
 
 export type ProviderKind = WireProvider;
 

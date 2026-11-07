@@ -1,8 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import type { BotThreadDetail } from "@aven/protocol/threads";
-
 import { endedNote, QUIET_ALERT_MS, quietNote } from "./watcher";
+import type { BotThreadDetail } from "@aven/protocol/types";
 
 const detail = (over: Partial<BotThreadDetail> = {}): BotThreadDetail => ({
   id: "t1",

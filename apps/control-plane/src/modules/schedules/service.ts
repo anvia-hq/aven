@@ -1,12 +1,7 @@
 import { db } from "@aven/db/client";
-import { botSchedules, type BotScheduleRow } from "@aven/db/schema/bot-schedules";
+import { botSchedules } from "@aven/db/schema/bot-schedules";
 import { bots } from "@aven/db/schema/bots";
-import {
-  SCHEDULE_MIN_INTERVAL_MS,
-  SCHEDULES_LIMIT,
-  type BotScheduleView,
-  type ScheduleStatus,
-} from "@aven/protocol/schedules";
+import { SCHEDULE_MIN_INTERVAL_MS, SCHEDULES_LIMIT } from "@aven/protocol/schedules";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "../../errors";
@@ -14,6 +9,8 @@ import { botsService } from "../bots/service";
 import { preferencesService } from "../preferences/service";
 import { checkTimezone, CronError, describeTime, minimumGapMinutes, nextRun } from "./cron";
 import type { ScheduleInput, SchedulePatch } from "./types";
+import type { BotScheduleRow } from "@aven/db/schema/types";
+import type { BotScheduleView, ScheduleStatus } from "@aven/protocol/types";
 
 function checkExpression(cron: string, timezone: string, now: Date) {
   try {

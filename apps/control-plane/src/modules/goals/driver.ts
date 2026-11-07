@@ -1,8 +1,8 @@
 import { GOAL_ROUND_NOTE_PREFIX, isGoalRoundNote } from "@aven/protocol/goals";
-import type { BotGoalRow } from "@aven/db/schema/bot-goals";
 
 import { describeError } from "../../errors";
 import { goalsService } from "./service";
+import type { BotGoalRow } from "@aven/db/schema/types";
 
 export function roundNote(goal: BotGoalRow, round: number) {
   if (round > 1) {

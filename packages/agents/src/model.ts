@@ -3,23 +3,14 @@ import { defineCompletionModelControls, type CompletionModelControls } from "@an
 import { AzureOpenAIClient } from "@anvia/azure";
 import { GeminiClient } from "@anvia/gemini";
 import { OpenAIClient } from "@anvia/openai";
-import type { Provider } from "@aven/protocol/runtime-wire";
 import { GoogleGenAI } from "@google/genai";
 
 import { DEFAULT_MODEL_IDS } from "./model-defaults";
 import { nullFreeStream } from "./null-free-stream";
+import type { ModelConfig, ReasoningControls } from "./types";
+import type { Provider } from "@aven/protocol/types";
 
 export type { Provider };
-
-export type ModelConfig = {
-  provider: Provider;
-  modelId?: string;
-  apiKey?: string;
-  baseUrl?: string;
-  reasoningEffort?: string;
-  effortLevels?: readonly string[];
-  contextWindow?: number;
-};
 
 const contextLimitsFor = (config: ModelConfig) =>
   config.contextWindow ? { contextWindow: config.contextWindow } : undefined;
@@ -131,8 +122,6 @@ export function createModel(config: ModelConfig) {
 export function providerOptionsFor(provider: Provider) {
   return provider === "anthropic" ? { cache_control: { type: "ephemeral" } } : undefined;
 }
-
-export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
 
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,

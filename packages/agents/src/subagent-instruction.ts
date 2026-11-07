@@ -1,4 +1,4 @@
-import type { SubagentType } from "./subagents";
+import type { SubagentType } from "./types";
 
 const COMMON = `<role>
 You are a subagent: another agent gave you one task in the sandbox it works in, and you report back to it, not to the user. You have none of its conversation, only the task.

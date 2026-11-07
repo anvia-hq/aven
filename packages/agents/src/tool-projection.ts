@@ -6,15 +6,8 @@ import {
   SHOW_ARTIFACT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
-  type DiffLine,
-  type QuestionPrompt,
-  type RunEvent,
-  type SubagentPart,
-  type ToolArtifact,
-  type ToolPart,
 } from "@aven/protocol/events";
 
-import type { SandboxToolName } from "./sandbox-tools";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
@@ -22,6 +15,15 @@ import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
+import type { SandboxToolName } from "./types";
+import type {
+  DiffLine,
+  QuestionPrompt,
+  RunEvent,
+  SubagentPart,
+  ToolArtifact,
+  ToolPart,
+} from "@aven/protocol/types";
 
 const MAX_UI_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;

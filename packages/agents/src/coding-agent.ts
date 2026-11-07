@@ -1,16 +1,17 @@
 import { Agent, createQuestionTool, type AnyTool, type RetrySetting } from "@anvia/core";
 
-import { compactionFor, resolveAgentModel, type ModelSource } from "./agent-model";
+import { compactionFor, resolveAgentModel } from "./agent-model";
 import { forkInstructions } from "./fork-instruction";
 import { environmentInstructions } from "./environment";
-import { mcpInstructions, type McpNote } from "./mcp";
+import { mcpInstructions } from "./mcp";
 import { memoryInstructions } from "./memory";
-import type { RunMemory } from "@aven/protocol/memory";
 import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
-import { skillsInstructions, type SkillListing } from "./skills";
+import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
+import type { McpNote, ModelSource, SkillListing } from "./types";
+import type { RunMemory } from "@aven/protocol/types";
 
 type CodingAgentOptions = ModelSource & {
   tools: readonly AnyTool[];

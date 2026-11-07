@@ -1,4 +1,3 @@
-import type { FileContent } from "@aven/protocol/runtime-wire";
 import { wrapShipRequest } from "@aven/protocol/ship-request";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
@@ -13,6 +12,7 @@ import { SETUP_FILE, SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
 import type { ModelSelection } from "../providers/types";
 import type { ShipMode } from "./types";
 import type { ThreadPullRequest } from "../threads/types";
+import type { FileContent } from "@aven/protocol/types";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {

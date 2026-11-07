@@ -19,5 +19,3 @@ export const cockpitTags = pgTable(
   },
   (table) => [unique("cockpit_tags_name_unique").on(table.userId, table.name)],
 );
-
-export type CockpitTagRow = typeof cockpitTags.$inferSelect;

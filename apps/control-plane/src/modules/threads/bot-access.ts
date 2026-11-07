@@ -1,10 +1,5 @@
 import { pendingQuestion } from "@aven/protocol/events";
-import {
-  BOT_THREADS_LISTED,
-  threadTitleFrom,
-  threadTurns,
-  type BotThreadView,
-} from "@aven/protocol/threads";
+import { BOT_THREADS_LISTED, threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
 import { UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
@@ -12,6 +7,7 @@ import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
 import type { WatchedRun, Watcher } from "../thread-watch/types";
 import type { BotActor, BotThreads, PutAwayThread, ThreadMessages } from "./types";
+import type { BotThreadView } from "@aven/protocol/types";
 
 type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
 

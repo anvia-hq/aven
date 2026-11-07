@@ -1,17 +1,17 @@
+import type { useThreadPanels } from "./hooks/use-thread-panels";
 import type {
   ChatMessage,
   DiffLine,
   MessageAttachment,
   MessageMention,
   MessagePart,
-  QueuedSteer,
   QuestionAnswer,
   QuestionPrompt,
+  QueuedSteer,
   SubagentPart,
   ToolArtifact,
   ToolPart,
-} from "@aven/protocol/events";
-import type { useThreadPanels } from "./hooks/use-thread-panels";
+} from "@aven/protocol/types";
 
 export type {
   ChatMessage,

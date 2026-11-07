@@ -13,7 +13,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
+import type { Git } from "./types";
 
 const SAFE_CONFIG = [
   "-c",

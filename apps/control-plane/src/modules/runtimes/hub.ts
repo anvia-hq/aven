@@ -1,22 +1,5 @@
 import type { MemoryStore } from "@anvia/core";
-import type { CockpitAccess } from "@aven/protocol/cockpit";
-import type { RunMemory } from "@aven/protocol/memory";
 import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
-import type {
-  McpConnectResult,
-  BotReplyInfo,
-  CallMethod,
-  ControlPlaneToRuntime,
-  RepoAccess,
-  RunAttachment,
-  RunMcpServer,
-  RunSkill,
-  RunModel,
-  RunnerCallMethod,
-  ReportedStats,
-  RuntimeToControlPlane,
-  RunThreadInfo,
-} from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
 import { PendingCalls } from "./pending-calls";
@@ -28,6 +11,23 @@ import type { CockpitCaller } from "../cockpit/types";
 import type { MemoryCaller } from "../memory/types";
 import type { BotReplySink, RunSink, ViewerSink } from "./types";
 import type { ProcessEnds, ThreadForks } from "../threads/types";
+import type {
+  BotReplyInfo,
+  CallMethod,
+  CockpitAccess,
+  ControlPlaneToRuntime,
+  McpConnectResult,
+  RepoAccess,
+  ReportedStats,
+  RunAttachment,
+  RunMcpServer,
+  RunMemory,
+  RunModel,
+  RunnerCallMethod,
+  RunSkill,
+  RunThreadInfo,
+  RuntimeToControlPlane,
+} from "@aven/protocol/types";
 
 export class RuntimeOfflineError extends UnavailableError {
   constructor(message = "The runtime for this project is offline") {

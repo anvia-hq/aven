@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { statSync } from "node:fs";
 
 import { RunOutbox, openRunDatabase } from "./run-outbox";
-import { RunRecords, type RunRecord } from "./run-records";
+import { RunRecords } from "./run-records";
 import { journalPath } from "./testing/journal-path";
+import type { RunRecord } from "./types";
 
 const record: RunRecord = {
   runId: "run-1",

@@ -1,4 +1,5 @@
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
+import type { Git } from "./types";
 
 export async function remoteBase(root: string, run: Git = git) {
   const head = await run(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root });

@@ -1,9 +1,10 @@
 import { threadBranch } from "@aven/protocol/thread-branch";
 
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
 import { gitFailure, hostGit } from "./host-git";
 import { copyTree } from "./snapshots";
 import { markFork } from "./thread-diff";
+import type { Git } from "./types";
 
 export async function forkWorkspace(from: string, to: string, forkId: string, run: Git = git) {
   await copyTree(from, to);

@@ -4,13 +4,17 @@ import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { afterEach, describe, expect, test } from "bun:test";
 
-import type { CreateBotReplyAgent } from "./bot-replies";
-import type { CreateRuntimeAgent } from "./run-driver";
 import { startRuntime } from "./runner";
-import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
-import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-control-plane";
+import { fakeControlPlane } from "./testing/fake-control-plane";
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
+import type {
+  CreateBotReplyAgent,
+  CreateRuntimeAgent,
+  FakeControlPlaneOptions,
+  ThreadSandbox,
+  ThreadWorkspaces,
+} from "./types";
 
 const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {

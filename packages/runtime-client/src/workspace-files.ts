@@ -1,9 +1,11 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
-import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/protocol/runtime-wire";
+import { FILE_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
 
-import { git, type Git } from "./git-clone";
+import { git } from "./git-clone";
 import { hostGit } from "./host-git";
+import type { FileContent, FileEntry } from "@aven/protocol/types";
+import type { Git } from "./types";
 
 const MAX_ENTRIES = 2000;
 const MAX_FILE_BYTES = 512 * 1024;

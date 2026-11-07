@@ -1,3 +1,9 @@
+import type { z } from "zod";
+
+import { describeError, UnavailableError } from "../../errors";
+import { threadsService } from "../threads/service";
+import { RuntimeOfflineError, type RuntimeHub } from "./hub";
+import type { FindRunner, Refusal } from "./types";
 import type {
   ArtifactsReadParams,
   DesktopCallParams,
@@ -6,13 +12,7 @@ import type {
   FilesSearchParams,
   ProcessesCallParams,
   RunnerCallMethod,
-} from "@aven/protocol/runtime-wire";
-import type { z } from "zod";
-
-import { describeError, UnavailableError } from "../../errors";
-import { threadsService } from "../threads/service";
-import { RuntimeOfflineError, type RuntimeHub } from "./hub";
-import type { FindRunner, Refusal } from "./types";
+} from "@aven/protocol/types";
 
 function refuse(refusal: Refusal, error: unknown): never {
   const reason = describeError(error);

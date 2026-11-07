@@ -1,11 +1,10 @@
-import type { ThreadUsage } from "@aven/protocol/events";
-
 import type { Thread } from "@/modules/threads/types";
 
 import { BackgroundTasksCard } from "./background-tasks-card";
 import { ContextCard } from "./context-card";
 import { EnvironmentCard } from "./environment-card";
 import { UsageCard } from "./usage-card";
+import type { ThreadUsage } from "@aven/protocol/types";
 
 export function OverviewColumn({
   thread,

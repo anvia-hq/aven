@@ -1,5 +1,5 @@
 import type { AnyTool } from "@anvia/core";
-import type { RunEnvVar } from "@aven/protocol/runtime-wire";
+import type { RunEnvVar } from "@aven/protocol/types";
 
 export const MIN_REDACTED_LENGTH = 8;
 export const REDACTED = "[redacted]";

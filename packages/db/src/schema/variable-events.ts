@@ -28,6 +28,3 @@ export const variableEvents = pgTable(
     index("variable_events_user_idx").on(table.userId, table.createdAt),
   ],
 );
-
-export type VariableEventRow = typeof variableEvents.$inferSelect;
-export type NewVariableEventRow = typeof variableEvents.$inferInsert;

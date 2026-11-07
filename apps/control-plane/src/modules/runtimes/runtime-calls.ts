@@ -1,5 +1,3 @@
-import type { CallMethod } from "@aven/protocol/runtime-wire";
-
 import { runCockpitCommand } from "../cockpit/commands";
 import { runMemoryCommand } from "../memory/commands";
 import {
@@ -26,6 +24,7 @@ import {
   parseSkillsGetParams,
 } from "./wire";
 import type { CallBotReply, RuntimeCallContext } from "./types";
+import type { CallMethod } from "@aven/protocol/types";
 
 function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   const { runId } = parseMemoryParams(params);

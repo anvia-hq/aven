@@ -1,9 +1,5 @@
-import type {
-  CallMethod,
-  ControlPlaneToRuntime,
-  RuntimeCalls,
-  RuntimeToControlPlane,
-} from "@aven/protocol/runtime-wire";
+import type { CallMethod, ControlPlaneToRuntime, RuntimeCalls } from "@aven/protocol/types";
+import type { ControlPlaneCallsContext } from "./types";
 
 type Reply = Extract<ControlPlaneToRuntime, { type: "reply" }>;
 
@@ -12,11 +8,6 @@ type PendingCall = {
   params: unknown;
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
-};
-
-export type ControlPlaneCallsContext = {
-  send(message: RuntimeToControlPlane): boolean;
-  timeoutMs: number;
 };
 
 export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsContext) {
