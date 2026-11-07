@@ -6,7 +6,7 @@ const CUT: unique symbol = Symbol("cut");
 async function collect(stream: ReadableStream<Uint8Array>, stop: Promise<void>) {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
-  const cut = stop.then(() => CUT);
+  const cut: Promise<typeof CUT> = stop.then(() => CUT);
   try {
     for (;;) {
       const next = await Promise.race([reader.read(), cut]);
