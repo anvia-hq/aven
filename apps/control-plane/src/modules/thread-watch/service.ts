@@ -3,7 +3,12 @@ import { botThreads } from "@aven/db/schema/bot-threads";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { WatchedRun, Watcher } from "./types";
 
+// A bot may follow a thread up this many times without the person's word before each further
+// follow-up is logged as going past the usual limit.
 export const BOT_THREAD_FOLLOW_UPS = 3;
+// The hard ceiling on follow-ups without the person's word. It stays, so a bot cannot run a thread
+// on forever with no word from the person.
+export const BOT_THREAD_FOLLOW_UPS_CEILING = 12;
 
 const at = (run: WatchedRun) => (run === null ? null : new Date(run));
 
@@ -42,9 +47,16 @@ export const threadWatchService = {
     const [counted] = await db
       .update(botThreads)
       .set({ followUps: sql`${botThreads.followUps} + 1` })
-      .where(and(ofBot(threadId, botId), lt(botThreads.followUps, BOT_THREAD_FOLLOW_UPS)))
-      .returning({ threadId: botThreads.threadId });
-    if (counted) return "ok";
+      .where(and(ofBot(threadId, botId), lt(botThreads.followUps, BOT_THREAD_FOLLOW_UPS_CEILING)))
+      .returning({ followUps: botThreads.followUps });
+    if (counted) {
+      if (counted.followUps > BOT_THREAD_FOLLOW_UPS) {
+        console.warn(
+          `Bot ${botId} follows up thread ${threadId} for the ${counted.followUps}th time without the person's word, past the usual ${BOT_THREAD_FOLLOW_UPS}; allowed up to ${BOT_THREAD_FOLLOW_UPS_CEILING}.`,
+        );
+      }
+      return "ok";
+    }
     const [row] = await db
       .select({ botId: botThreads.botId })
       .from(botThreads)

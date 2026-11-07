@@ -113,7 +113,7 @@ run("createThreadWatcher (postgres)", async () => {
   const { runtimesService } = await import("../runtimes/service");
   const { threadsService } = await import("../threads/service");
   const { botsService } = await import("../bots/service");
-  const { threadWatchService } = await import("./service");
+  const { threadWatchService, BOT_THREAD_FOLLOW_UPS_CEILING } = await import("./service");
   const { createThreadWatcher } = await import("./watcher");
 
   const { userId, orgA, cleanup } = await seedOrgPair();
@@ -227,11 +227,12 @@ run("createThreadWatcher (postgres)", async () => {
     expect(woken).toEqual([]);
   });
 
-  test("a bot follows up only a thread it watches, three times until the person's word", async () => {
+  test("a bot follows up only a thread it watches, up to the ceiling until the person's word", async () => {
     const { thread } = await setup();
     const other = await botsService.create(userId, { name: "Another", instruction: "x" });
     expect(await threadWatchService.followUp(thread.id, other.id)).toBe("unwatched");
-    for (let i = 0; i < 3; i++) {
+    // Past the usual limit of three the follow-up still goes ahead, up to the ceiling.
+    for (let i = 0; i < BOT_THREAD_FOLLOW_UPS_CEILING; i++) {
       expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("ok");
     }
     expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("spent");
