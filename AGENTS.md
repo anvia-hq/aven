@@ -33,9 +33,9 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 
 - **Bun only.** Use `bun`/`bunx`. Do not use npm, yarn, or pnpm, and do not commit other lockfiles.
 - **Prefer Bun built-ins** (`Bun.serve`, `Bun.file`, `bun:test`, `bun:sqlite`) over third-party equivalents.
-- **TypeScript strict.** Avoid `any`; where it cannot be avoided, say why in the pull request. Extend the root `tsconfig.json`.
-- **No comments in TypeScript code** (decision 0149). Names, types and tests say what code does; why a choice was made goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay.
+- **TypeScript strict.** No `any` without a comment explaining why. Extend the root `tsconfig.json`.
 - **Internal packages** are named `@aven/<name>`, referenced as `"workspace:*"`, and exported from `src/index.ts`. Apps never import from another app. Shared code goes in `packages/`.
+- **Reusable types live in `types.ts`.** Every exported `type` or `interface` goes in its module's (or package's or folder's) `types.ts`, imported with `import type` (decision 0150). Component `Props` and types inferred from a zod schema stay beside their code.
 - **No build step** for internal packages; they ship as TS source.
 - **Dependencies:** add them to the workspace that uses them, not the root (root is for tooling only). Ask before adding a heavy or new dependency.
 - **Patched dependencies** live in `patches/` (`bun patch`, listed in the root `package.json`). `@anvia/durable` 0.14.0 has one that lets an agent registration carry `toolConcurrency` (decision 0070, `docs/bugs/0005-anvia-durable-has-no-tool-concurrency.md`); it goes when Anvia has the setting upstream. Durable rejects agents with enabled retries: `defaultCreateAgent` turns agent retries off for journaled runs, whose registration owns `modelRetry`; plain subagents and bots retain their own retries (decision 0112).
