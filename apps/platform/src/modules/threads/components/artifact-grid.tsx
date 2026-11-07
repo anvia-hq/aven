@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Refresh } from "@mynaui/icons-react";
 import { cn } from "cn";
 
@@ -120,19 +120,19 @@ function Viewer({
   const open = index !== null;
   const current = open ? images[index] : undefined;
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") onIndex((index + images.length - 1) % images.length);
-      if (event.key === "ArrowRight") onIndex((index + 1) % images.length);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, index, images.length, onIndex]);
+  const step = (by: number) => {
+    if (open) onIndex((index + by + images.length) % images.length);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="w-fit max-w-[calc(100%-2rem)] gap-0 p-2 sm:max-w-[min(72rem,calc(100%-4rem))]">
+      <DialogContent
+        className="w-fit max-w-[calc(100%-2rem)] gap-0 p-2 sm:max-w-[min(72rem,calc(100%-4rem))]"
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft") step(-1);
+          if (event.key === "ArrowRight") step(1);
+        }}
+      >
         <DialogTitle className="sr-only">{current ? labelOf(current) : "Image"}</DialogTitle>
         {current && (
           <img
@@ -143,23 +143,13 @@ function Viewer({
         )}
         {open && images.length > 1 && (
           <div className="flex items-center justify-between gap-2 pt-2 text-xs text-muted-foreground">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Previous"
-              onClick={() => onIndex((index + images.length - 1) % images.length)}
-            >
+            <Button variant="ghost" size="icon-sm" aria-label="Previous" onClick={() => step(-1)}>
               <ChevronLeft />
             </Button>
             <span className="tabular-nums">
               {index + 1} of {images.length}
             </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Next"
-              onClick={() => onIndex((index + 1) % images.length)}
-            >
+            <Button variant="ghost" size="icon-sm" aria-label="Next" onClick={() => step(1)}>
               <ChevronRight />
             </Button>
           </div>
