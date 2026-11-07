@@ -42,8 +42,6 @@ function EventRow({ event }: { event: VariableEvent }) {
   );
 }
 
-// Who changed a scope's variables, and when (decision 0048). The values are never kept, so there
-// are none to show.
 export function VariableHistoryDialog({ scope }: { scope: VariableScope }) {
   const [open, setOpen] = useState(false);
   const { events, loaded } = useVariableHistory(scope, open);

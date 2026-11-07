@@ -1,7 +1,5 @@
 import type { SandboxDesktop } from "@anvia/sandbox";
 
-// FOR TESTS ONLY.
-// A desktop whose VNC stream the test controls. Only what the viewers use is there, so it is cast.
 export function fakeDesktop() {
   const stream = new TransformStream<Uint8Array, Uint8Array>();
   const writer = stream.writable.getWriter();

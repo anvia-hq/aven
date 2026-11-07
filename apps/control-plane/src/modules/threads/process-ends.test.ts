@@ -60,7 +60,6 @@ run("a process that ended (postgres)", async () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ thread: thread.id, user: userId, onWord: false });
 
-    // Another runner, a thread that is not there (a bot's computer), and an archived thread.
     await processEnds.ended(other.id, ended(thread.id));
     await processEnds.ended(runner.id, ended(crypto.randomUUID()));
     await threadsService.update({ organizationId: orgA, userId }, thread.id, { state: "archived" });

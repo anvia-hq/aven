@@ -33,7 +33,6 @@ describe("storageSize", () => {
     expect(storageSize(5 * 1024 ** 2)).toBe("5.0 MB");
     expect(storageSize(5.5 * 1024 ** 3)).toBe("5.5 GB");
     expect(storageSize(1024 ** 4)).toBe("1.0 TB");
-    // Just under a terabyte rounds up to one, rather than reading "1024.0 GB".
     expect(storageSize(1024 ** 4 - 1024 ** 2)).toBe("1.0 TB");
   });
 });

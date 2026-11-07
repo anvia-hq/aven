@@ -19,7 +19,6 @@ const home = async () => {
 const CLI = join(import.meta.dir, "../../../apps/runtime/sandbox-image/aven");
 const file = (dir: string) => join(dir, ".config", "aven", "identity");
 
-// Runs the command as the container would: a shell in a home of its own.
 async function signIn(dir: string, ...args: Parameters<typeof identitySignInCommand>) {
   const { script, env } = identitySignInCommand(...args);
   const result = await runCommand(["sh", "-c", script], {
@@ -43,7 +42,6 @@ describe("reaching the control plane from a container", () => {
       "http://host.docker.internal:8000",
     );
     expect(reachableFromContainer("https://aven.example", host)).toBe("https://aven.example");
-    // The API behind a prefix keeps it.
     expect(reachableFromContainer("https://aven.example/api", host)).toBe(
       "https://aven.example/api",
     );

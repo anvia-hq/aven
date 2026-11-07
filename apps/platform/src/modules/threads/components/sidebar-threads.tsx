@@ -27,8 +27,6 @@ import type { Thread } from "../types";
 
 const RUNNING_REFRESH_MS = 5000;
 
-// The thread's project as a tile, which takes the project's colors and turns while the thread runs.
-// Until the project is known the tile's place is kept, so a row does not change when it arrives.
 function SidebarProjectTile({
   thread,
   project,
@@ -42,9 +40,6 @@ function SidebarProjectTile({
   return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
 }
 
-// When the thread last changed, in the place the Archive button takes at the row's end: centred on
-// it, so on hover the button is drawn where the time was. Outside the row's link, which keeps that
-// room free, and not something to click. Below `md` the button is always shown, so the time is not.
 function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolean }) {
   return (
     <time
@@ -61,21 +56,16 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
   );
 }
 
-// Beside the project's tile, for a thread shared with the workspace (decision 0084).
 function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace") return null;
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
-// Beside the title of a thread an agent forked from another (decision 0135), under that one.
 function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
   return <GitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
 
-// The line that joins the forks to the thread above them: one vertical line down the middle of that
-// thread's tile, and an elbow into each fork. The first fork's line starts at the tile's foot, and
-// every fork but the last carries the line on to the next.
 function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
   const line =
     "pointer-events-none absolute left-[calc(1rem-0.5px)] group-data-[collapsible=icon]:hidden";
@@ -100,8 +90,6 @@ function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
   );
 }
 
-// The field a title is edited in: Enter or leaving it keeps the new title and Escape the old one.
-// It is made again for each edit, so each one is finished once.
 function TitleField({ title, onDone }: { title: string; onDone: (title?: string) => void }) {
   const finished = useRef(false);
   const finish = (value?: string) => {
@@ -128,7 +116,6 @@ function TitleField({ title, onDone }: { title: string; onDone: (title?: string)
   );
 }
 
-// The title of a thread of the person's own: a double click turns it into a field.
 function ThreadTitle({
   thread,
   hint,
@@ -161,7 +148,6 @@ export function SidebarThreads() {
   const navigate = useNavigate();
   const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
-  // What the workspace shares to read (decision 0084), which its creator can still archive.
   const shared = others.filter((thread) => thread.state === "open");
   const { runtimes } = useRuntimes();
   const { projects } = useProjects();
@@ -172,8 +158,6 @@ export function SidebarThreads() {
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  // Only the open thread has a stream to hear its run end on. While a thread is shown as running,
-  // the list is asked again now and then, so another thread's dots go when its run ends.
   const anyRunning = [...own, ...others].some((thread) => thread.running);
   useEffect(() => {
     if (!anyRunning) return;
@@ -229,8 +213,6 @@ export function SidebarThreads() {
               />
             </SidebarMenuButton>
             <UpdatedAt thread={thread} yields />
-            {/* Shown on hover or keyboard focus, not `showOnHover`: that also shows it while the
-                row's link keeps focus after a click, over the time. */}
             <SidebarMenuAction
               className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
               aria-label={`Archive ${thread.title}`}
@@ -253,7 +235,6 @@ export function SidebarThreads() {
           <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
             {shared.map((thread) => (
               <SidebarMenuItem key={thread.id}>
-                {/* No Archive here, so the room for the time is kept by hand. */}
                 <SidebarMenuButton
                   render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
                   isActive={pathname === `/threads/${thread.id}`}

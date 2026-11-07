@@ -6,11 +6,6 @@ import { asRecord } from "./values";
 
 const unique = (names: string[]) => [...new Set(names)];
 
-/**
- * What the agent is told about the files and skills a message mentions (decision 0036): where each
- * file is, and that each skill is to be read and followed. A skill the run does not have is said
- * to be missing, so the agent does not look for it. Undefined when nothing is mentioned.
- */
 export function mentionNote(
   mentions: readonly MessageMention[],
   skills: readonly SkillListing[],
@@ -43,7 +38,6 @@ export function mentionNote(
   return sections.length > 0 ? sections.join("\n\n") : undefined;
 }
 
-/** A mention read back from a stored message, or undefined when it is not one. */
 export function mentionOf(value: unknown): MessageMention | undefined {
   const { type, name, from, to } = asRecord(value);
   if ((type !== "file" && type !== "skill") || typeof name !== "string") return undefined;

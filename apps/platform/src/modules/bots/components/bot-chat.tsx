@@ -16,9 +16,6 @@ import { BotChatBubble, isPersons } from "./bot-chat-bubble";
 import { BotQuestionForm } from "./bot-question-form";
 import { ProviderKeyForm } from "./provider-key-form";
 
-// A bot's chat: what was said, the bot "typing" while it works, and the composer. Several messages
-// from the bot arrive one after another, each as the bot sends it, close together; a change of
-// speaker leaves more room.
 export function BotChat({ bot }: { bot: Bot }) {
   const { messages, typing, error, send } = useBotChat(bot.id);
   const { bots } = useBots();
@@ -27,10 +24,8 @@ export function BotChat({ bot }: { bot: Bot }) {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {/* As in a thread: the conversation scrolls the full height, behind the composer. */}
       <div className="relative min-h-0 flex-1">
         <div ref={scroll} className="h-full overflow-y-auto">
-          {/* The bottom padding clears the composer. */}
           <div className="mx-auto flex max-w-4xl flex-col px-4 pt-6 pb-48">
             {messages.length === 0 && !typing && (
               <p className="py-16 text-center text-sm text-muted-foreground">
@@ -45,7 +40,6 @@ export function BotChat({ bot }: { bot: Bot }) {
               }
               const { message } = item;
               const before = items[index - 1];
-              // Close to the message before it when the same one said it, and apart otherwise.
               const together = before?.type === "message" && before.message.role === message.role;
               return (
                 <Message
@@ -87,7 +81,6 @@ export function BotChat({ bot }: { bot: Bot }) {
   );
 }
 
-// What an open message asks: a masked field for a provider's key (decision 0086), or questions to answer.
 function BotAsks({
   botName,
   questions,
@@ -102,7 +95,6 @@ function BotAsks({
   return <BotQuestionForm botName={botName} questions={questions} onSubmit={send} />;
 }
 
-// The bot at work, as in the Anvia harness: its avatar with open eyes, and a line saying so.
 function TypingIndicator({ bot }: { bot: Bot }) {
   return (
     <p

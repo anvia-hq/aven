@@ -108,7 +108,6 @@ describe("completing the setup", () => {
   });
 });
 
-// A workspace's own app (decision 0123): an owner or an admin of it, once, kept for it alone.
 function workspaceSetup(options: { hasApp?: boolean } = {}) {
   const kept: { organizationId: string; userId: string; config: GithubConfig }[] = [];
   const forgotten: string[] = [];

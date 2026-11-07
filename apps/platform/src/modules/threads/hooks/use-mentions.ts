@@ -8,13 +8,9 @@ import { useSkills } from "@/modules/skills/hooks/use-skills";
 
 import { COMPACT_COMMAND, type Mentionable } from "../mentions";
 
-// Where a repository keeps its own skills (decision 0035).
 const REPO_SKILLS = ".aven/skills";
-// A search waits this long for the next key before it asks the runner.
 const SEARCH_DELAY_MS = 120;
 const MAX_SKILLS = 50;
-// A `/` typed before the skills have loaded waits this long for them, so the menu is not made, and
-// kept, with none of them in it.
 const SKILLS_WAIT_MS = 3000;
 
 const itemOf = (mention: Mentionable, detail?: string): ComposerTriggerItem => ({
@@ -35,7 +31,6 @@ const wait = (ms: number, signal: AbortSignal) =>
 
 type SkillOption = { name: string; detail: string };
 
-// The `/compact` command of a thread's composer (decision 0097).
 const compactItem: ComposerTriggerItem = {
   id: COMPACT_COMMAND,
   label: "compact",
@@ -43,10 +38,6 @@ const compactItem: ComposerTriggerItem = {
   detail: "Summarize the conversation so far to free up context",
 };
 
-// The composer's `@` and `/` (decision 0036). `@` finds files of the thread's workspace, so it
-// is there only in a thread; `/` offers the `/compact` command (in a thread) and the skills a run would have: the repository's own (in a
-// thread), the user's enabled ones and the built-in ones, the first of these winning on a name.
-// The triggers stay the same object while the composer lives: a new one would remake its editor.
 export function useMentions(threadId: string | undefined) {
   const { personal, builtIn, loaded } = useSkills();
   const skillsLoaded = useRef(Promise.withResolvers<void>());
@@ -60,7 +51,6 @@ export function useMentions(threadId: string | undefined) {
       .map(({ name, description }) => ({ name, detail: description })),
     ...builtIn.map(({ name, description }) => ({ name, detail: description })),
   ];
-  // The repository's skills, read again each time `/` is typed anew.
   const repoSkills = useRef<Promise<SkillOption[]> | undefined>(undefined);
 
   return useMemo((): ComposerTriggerDefinition[] => {
@@ -88,7 +78,6 @@ export function useMentions(threadId: string | undefined) {
         if (threadId && (query === "" || !repoSkills.current)) {
           repoSkills.current = listRepoSkills(threadId);
         }
-        // The first of a name wins: the repository's, then the user's, then the built-in one.
         const fromRepo = (await repoSkills.current) ?? [];
         const byName = new Map<string, SkillOption>();
         for (const skill of [...fromRepo, ...skills.current]) {
@@ -99,7 +88,6 @@ export function useMentions(threadId: string | undefined) {
           .filter(({ name }) => name.includes(wanted))
           .slice(0, MAX_SKILLS)
           .map(({ name, detail }) => itemOf({ type: "skill", name }, detail));
-        // Commands come first, and only in a thread, which has a history to compact.
         return threadId && "compact".includes(wanted) ? [compactItem, ...skillItems] : skillItems;
       },
     };

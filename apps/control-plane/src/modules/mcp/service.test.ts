@@ -48,7 +48,6 @@ run("mcpService (postgres)", async () => {
     await expect(mcpService.create(alice, make({ name: "team-notes" }))).rejects.toBeInstanceOf(
       ConflictError,
     );
-    // Another person may use the same name.
     await mcpService.create(bob, make({ name: "Team Notes" }));
   });
 
@@ -140,7 +139,6 @@ run("mcpService (postgres)", async () => {
       expect(connected?.lastError).toBeNull();
       expect(connected?.lastUsedAt).not.toBeNull();
 
-      // Once it connects, the error it had goes.
       await mcpService.record([{ id: down.id }]);
       expect((await mcpService.get(person, down.id))?.lastError).toBeNull();
     } finally {
@@ -170,7 +168,6 @@ run("mcpService (postgres)", async () => {
         headers: { Authorization: "Bearer abc" },
         allowLocal: false,
       });
-      // Nobody else's servers are in it.
       expect(await mcpService.forRun(bob, "threads")).not.toContainEqual(
         expect.objectContaining({ name: "Threads only" }),
       );

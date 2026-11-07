@@ -25,8 +25,6 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
               params={{ threadId: thread.id }}
               className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
             >
-              {/* The project as its tile, as in the sidebar; its name is on hover and for a
-                  screen reader. */}
               {project ? (
                 <span title={project.name} className="flex shrink-0">
                   <ProjectTile projectId={project.id} palette={palettes.get(project.id)} />
@@ -36,7 +34,6 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
                 <span className="size-5 shrink-0" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate text-sm">{thread.title}</span>
-              {/* Someone else's, which the workspace shares to read (decision 0084). */}
               {thread.createdBy !== session?.user.id && (
                 <span className="shrink-0 truncate text-xs text-muted-foreground">
                   {thread.createdByName}

@@ -8,8 +8,6 @@ import { useBots } from "./use-bots";
 
 const shown = (bot: Bot) => bot.compactAfterTokens?.toString() ?? "";
 
-// The size past which a bot's chat is summarized, as it is written in its field: empty leaves it
-// to the model. A value is checked here, in words, before it is sent.
 export function useBotCompaction(bot: Bot) {
   const { update } = useBots();
   const [text, setText] = useState(shown(bot));

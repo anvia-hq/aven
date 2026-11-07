@@ -11,8 +11,6 @@ const noteBody = z.string().max(MEMORY_NOTE_MAX);
 
 export const noteParams = z.object({ id: z.uuid() });
 
-// A note the person writes themselves, in a folder of theirs: a project's needs the project, a
-// bot's the bot (decision 0102).
 export const createNoteBody = z
   .object({
     scope: z.enum(MEMORY_SCOPES),

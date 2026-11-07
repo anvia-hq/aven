@@ -1,20 +1,10 @@
-// Services with a panel of their own in Settings > Providers (decision 0141). They are not kinds of
-// the server: what is saved is an `openai-compatible` provider at the service's address, and the
-// model is still picked from the server's own list. A saved provider belongs to a panel when its
-// address is the preset's.
-
 export type CompatiblePreset = {
   id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
-  /** The panel's title, and the name the provider is saved with. */
   name: string;
-  /** One line under the title, like the other kinds'. */
   description: string;
   baseUrl: string;
-  /** Whether the service refuses a call with no key; a server on the person's own machine does not. */
   needsKey: boolean;
-  /** A model of the service, as the form's placeholder. */
   exampleModel: string;
-  /** Where the person gets a key (shown for those that need one). */
   keyPlaceholder: string;
 };
 
@@ -75,7 +65,6 @@ export const COMPATIBLE_PRESETS: readonly CompatiblePreset[] = [
   },
 ];
 
-/** The panel a saved provider belongs to, if its address is one of the presets'. */
 export function presetOf(provider: {
   kind: string;
   baseUrl: string | null;

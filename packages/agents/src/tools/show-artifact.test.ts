@@ -6,7 +6,6 @@ import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, createShowArtifactTool } from "./show
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
 const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32]);
 
-// A sandbox with these files, and what the tool kept, in order.
 function setup(files: Record<string, Uint8Array>) {
   const kept: { bytes: Uint8Array; mediaType: string }[] = [];
   const tool = createShowArtifactTool({
@@ -54,7 +53,6 @@ describe("show_artifact", () => {
     expect(result.artifacts).toHaveLength(1);
     expect(result.failed.map((failure) => failure.path)).toEqual(["logo.png", "missing.png"]);
     expect(result.failed[0]?.error).toContain("is not a PNG, JPEG, GIF, WebP, MP4 or WebM");
-    // It goes by what a file holds, not its name.
     expect(kept).toHaveLength(1);
   });
 

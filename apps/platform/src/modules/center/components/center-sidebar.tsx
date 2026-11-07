@@ -12,7 +12,6 @@ import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
-// What Center's sidebar lists: all the projects together, then each one to look at by itself.
 export function CenterSidebar() {
   const { projects } = useProjects();
   const palettes = useProjectPalettes();

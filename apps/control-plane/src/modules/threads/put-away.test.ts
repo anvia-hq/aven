@@ -5,7 +5,6 @@ import { createPutAwayThread } from "./put-away";
 
 const thread = { id: "t-1", runtimeId: "r-1" };
 
-/** A runner that answers `sandbox.release`, and the calls the control plane made to it. */
 function harness({ connected = true } = {}) {
   const calls: { method: string; params: unknown }[] = [];
   const hub = {

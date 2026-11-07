@@ -15,7 +15,6 @@ After you get the answers:
 - Each answer says \`stored as NAME\` or that nothing was provided. The value is now in your commands' environment as $NAME: use it by name, and never print it or write it into a file, a commit or a message.
 - If it was not provided, carry on without it or tell the user what is blocked.`;
 
-/** `request_secret` (decision 0047): a question whose answer is stored as a secret variable, not given to the agent. */
 export function createSecretRequestTool() {
   return createQuestionTool({ name: SECRET_TOOL_NAME, description: DESCRIPTION });
 }

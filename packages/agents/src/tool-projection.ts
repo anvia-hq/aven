@@ -23,13 +23,11 @@ import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
 
-// What a client is sent of a tool result; the model sees the full output.
 const MAX_UI_OUTPUT_CHARS = 4000;
 const MAX_DIFF_LINES = 60;
 
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
 
-// The sandbox's tools (from @anvia/sandbox) and what each one acts on, for the line a client shows.
 const PATH_TOOLS = new Set<string>([
   "read_file",
   "write_file",
@@ -37,7 +35,6 @@ const PATH_TOOLS = new Set<string>([
   EDIT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
 ] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME | typeof SHOW_IMAGE_TOOL_NAME)[]);
-// What `show_artifact` acts on: the paths it was given, as many as fit on a line.
 const artifactTarget = (args: Record<string, unknown>) => {
   const items = Array.isArray(args.items) ? args.items : [];
   return items
@@ -54,9 +51,7 @@ const PROCESS_TOOLS = new Set<string>([
   "stop_process",
 ] satisfies SandboxToolName[]);
 const PORT_TOOL: SandboxToolName = "wait_for_port";
-// A tool the agent no longer has (decision 0147), still drawn in the transcripts that used it.
 const WAIT_FOR_PROCESS_TOOL_NAME = "wait_for_process";
-// Tools whose JSON result carries a `summary` meant to be read as it is.
 const SUMMARISED_TOOLS = new Set<string>([
   GIT_FETCH_TOOL_NAME,
   SAVE_ENVIRONMENT_TOOL_NAME,
@@ -90,7 +85,6 @@ function editDiff(input: unknown): DiffLine[] | undefined {
   );
 }
 
-// The questions of an `ask_user` call, as the model wrote them. Anything malformed is left out.
 function questionsOf(input: unknown): QuestionPrompt[] {
   const { questions } = asRecord(input);
   if (!Array.isArray(questions)) return [];
@@ -110,7 +104,6 @@ function questionsOf(input: unknown): QuestionPrompt[] {
   });
 }
 
-// The tasks of a `spawn_agent` call as they begin: every subagent is there, working, from the start.
 function subagentsOf(input: unknown): SubagentPart[] {
   const { tasks } = asRecord(input);
   if (!Array.isArray(tasks)) return [];
@@ -153,7 +146,6 @@ export function clip(text: string) {
     : text;
 }
 
-// The text a human would read from a tool's structured result; anything unfamiliar is shown as JSON.
 function jsonText(value: unknown) {
   const result = asRecord(value);
   if (result.status === "exited" || result.status === "timed_out") return commandText(result);
@@ -169,7 +161,6 @@ function jsonText(value: unknown) {
   return JSON.stringify(value);
 }
 
-// What each subagent of a finished `spawn_agent` call said, from the call's result.
 function subagentResults(value: unknown) {
   const { results } = asRecord(value);
   if (!Array.isArray(results)) return [];
@@ -181,10 +172,6 @@ function subagentResults(value: unknown) {
   });
 }
 
-/**
- * `spawn_agent`'s tool part with how each subagent ended, from the call's result: a rebuilt
- * transcript has no live events. When the call itself failed, none of them finished.
- */
 export function withSubagentResults(tool: ToolPart, output: ToolResultOutput): ToolPart {
   if (!tool.subagents) return tool;
   const results = output.type === "json" ? subagentResults(output.value) : [];
@@ -203,10 +190,6 @@ function artifactOf(value: unknown): ToolArtifact | undefined {
   return typeof caption === "string" ? { name, mediaType, caption } : { name, mediaType };
 }
 
-// What a result of the tool that shows files carries, when it has the right shape: the artifacts of
-// `show_artifact`, or the one image of the `show_image` of transcripts made before it (decision
-// 0136). Only those tools' results are read this way: another tool's JSON may have an `artifacts`
-// or an `image` of its own.
 function shownOf(value: unknown, toolName?: string) {
   const result = asRecord(value);
   if (toolName === SHOW_IMAGE_TOOL_NAME) {
@@ -232,7 +215,6 @@ function commandText(result: Record<string, unknown>) {
   return parts.join("\n");
 }
 
-// What the UI shows for a tool result: the text a human would read, never the raw payload.
 export function projectToolOutput(
   output: ToolResultOutput,
   toolName?: string,
@@ -249,7 +231,6 @@ export function projectToolOutput(
     case "json": {
       const shown = shownOf(output.value, toolName);
       if (shown) return { status: "done", output: shown.said, artifacts: shown.artifacts };
-      // What these tools did, in the words they gave it.
       if (toolName === SPAWN_AGENT_TOOL_NAME) {
         const results = subagentResults(output.value);
         const failed = results.filter(({ status }) => status === "error").length;
@@ -269,7 +250,6 @@ export function projectToolOutput(
     case "content":
       return {
         status: "done",
-        // Images and files (a desktop screenshot) are not sent to clients; say that one was there.
         output: clip(
           output.value
             .map((part) => (part.type === "text" ? part.text : `[${part.type}]`))
@@ -283,7 +263,6 @@ export function projectToolOutput(
   }
 }
 
-/** The end of a tool call as a client sees it: how it went and what it said. */
 export function projectToolEnd(
   id: string,
   output: ToolResultOutput,

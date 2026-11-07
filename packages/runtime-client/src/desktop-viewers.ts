@@ -12,31 +12,23 @@ import type { ThreadWorkspaces } from "./sandbox";
 
 type Tunnel = Awaited<ReturnType<SandboxDesktop["openViewer"]>>;
 
-/** How the viewers reach the control plane. */
 export type ViewerLink = {
   send(message: RuntimeToControlPlane): void;
   sendBinary(frame: Uint8Array): void;
-  /** Bytes queued on the link and not yet sent. */
   buffered(): number;
 };
 
 type Viewer = {
   threadId: string;
-  /** Not there until the desktop has answered `openViewer`. */
   tunnel?: Tunnel;
   closing: boolean;
 };
 
-// Stop reading the desktop's stream while this much is waiting to go out, so a slow link slows
-// the desktop instead of filling memory.
 const MAX_BUFFERED_BYTES = 4 * 1024 * 1024;
 const DRAIN_POLL_MS = 10;
 
 const NOT_RUNNING = "The sandbox is not running";
 
-// The desktops of this runner's sandboxes, streamed to viewers the control plane opens (decision
-// 0015). Watching never starts a sandbox: a thread whose container is not running has no desktop to
-// see, until the runner is asked to wake it (decision 0039).
 export class DesktopViewers {
   #viewers = new Map<string, Viewer>();
 
@@ -45,7 +37,6 @@ export class DesktopViewers {
     private link: ViewerLink,
   ) {}
 
-  /** How many viewers are watching the thread; a watched sandbox is not idle. */
   watching(threadId: string) {
     return [...this.#viewers.values()].filter((viewer) => viewer.threadId === threadId).length;
   }
@@ -66,7 +57,6 @@ export class DesktopViewers {
     void this.#pump(viewerId, viewer, viewer.tunnel);
   }
 
-  // Bytes from the browser's viewer for the desktop. Dropped until the desktop has answered.
   write(viewerId: string, bytes: Uint8Array) {
     const viewer = this.#viewers.get(viewerId);
     viewer?.tunnel?.write(bytes).catch(() => this.#end(viewerId, "The desktop connection ended"));
@@ -84,7 +74,6 @@ export class DesktopViewers {
     for (const viewerId of this.#viewers.keys()) this.close(viewerId);
   }
 
-  /** The control plane's calls about a thread's desktop; null when its sandbox is not running. */
   async call(method: Exclude<DesktopCallMethod, "desktop.wake">, params: unknown) {
     const { threadId, holder, leaseMs, force } = desktopCallParams(params);
     const desktop = this.sandbox.desktop(threadId);
@@ -111,7 +100,6 @@ export class DesktopViewers {
     this.#end(viewerId, "The desktop connection ended");
   }
 
-  // The desktop ended the stream; a viewer the control plane closed is already gone.
   #end(viewerId: string, reason: string) {
     if (!this.#viewers.delete(viewerId)) return;
     this.link.send({ type: "desktop.closed", viewerId, reason });

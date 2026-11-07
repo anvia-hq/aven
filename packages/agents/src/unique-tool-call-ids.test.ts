@@ -21,8 +21,6 @@ const calls = (ids: string[]): AssistantContentPart[] =>
 const response = (ids: string[]) =>
   ({ choice: calls(ids), usage: {} as Usage, rawResponse: {} }) as CompletionResponse;
 
-// What Anvia's chat completions adapter yields for a reply: positional ids on the deltas and in the
-// final response, whichever reply it is.
 function fakeModel(ids: string[]) {
   const events: CompletionModelStreamEvent[] = [
     ...ids.map((id) => ({ type: "tool_call_delta" as const, id, name: "exec_command" })),

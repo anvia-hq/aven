@@ -2,8 +2,6 @@ import { Folder } from "@mynaui/icons-react";
 
 import { useProjects } from "../hooks/use-projects";
 
-// The project a thread belongs to, drawn as the picker's chip in the composer's toolbar but only
-// to read: a thread stays in the project it began in.
 export function ProjectInfo({ projectId }: { projectId: string }) {
   const { projects } = useProjects();
   const project = projects.find((item) => item.id === projectId);

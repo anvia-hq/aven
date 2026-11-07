@@ -8,17 +8,13 @@ type Props = {
 
 const NAMES: Record<string, string> = { xhigh: "Extra high" };
 
-/** A reasoning level as people read it: "xhigh" is "Extra high". */
 export function effortName(level: string) {
   const name = NAMES[level] ?? level;
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-// The thumb is 36px wide, taller than the 24px track, and sits within it by its edges, so the dots
-// keep 18px from each end to line up with the steps.
 const THUMB = "size-9";
 
-// One step per level the model accepts, lowest on the left, with the levels named underneath.
 export function EffortSlider({ levels, value, onChange }: Props) {
   const last = Math.max(levels.length - 1, 1);
   return (

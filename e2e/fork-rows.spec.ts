@@ -29,7 +29,6 @@ test.describe("forked threads in the sidebar", () => {
       await page.request.patch(`/api/threads/${thread.id}`, { data: { title } });
       made.push(thread.id);
     }
-    // The server makes forks only for an agent; the list is given a parent here.
     await page.route("**/api/threads", async (route) => {
       if (route.request().method() !== "GET") return route.fallback();
       const response = await route.fetch();

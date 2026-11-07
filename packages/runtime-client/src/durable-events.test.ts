@@ -43,8 +43,6 @@ test("a tool the stream already announced is not announced again", () => {
   expect(map(started).events).toEqual([]);
 });
 
-// What a model that streams a call in pieces and never as a finished one made of a question
-// (journaled by a real run): the turn's text, `ask_user`, and the run parking on it.
 const question = {
   toolCallId: "tool_0-364895b4",
   toolName: "ask_user",
@@ -94,7 +92,6 @@ test("a call is announced once, whichever of the stream, the finished turn and i
     stream.map(turnEnd([{ type: "tool-call", ...question }])).events.map((e) => e.type),
   ).toEqual(["usage"]);
 
-  // A tool that runs is announced by its finished turn, and not again when it starts.
   const turn = createDurableEventMapper();
   const call = {
     type: "tool-call",

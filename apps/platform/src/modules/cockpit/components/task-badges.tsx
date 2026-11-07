@@ -12,7 +12,6 @@ import {
   STATUS_LABELS,
 } from "./task-fields";
 
-// A status as a small ring, filled as the work goes on.
 export function StatusDot({ status, className }: { status: TaskStatus; className?: string }) {
   return (
     <span
@@ -27,7 +26,6 @@ export function StatusDot({ status, className }: { status: TaskStatus; className
   );
 }
 
-// A priority as a flag in its colour; none is a faint one.
 export function PriorityFlag({ priority }: { priority: TaskPriority }) {
   return (
     <Flag
@@ -38,7 +36,6 @@ export function PriorityFlag({ priority }: { priority: TaskPriority }) {
   );
 }
 
-// When a task is due, red once the day has passed and it is not finished.
 export function DueDate({ task }: { task: Pick<CockpitTask, "dueDate" | "status"> }) {
   if (!task.dueDate) return null;
   return (

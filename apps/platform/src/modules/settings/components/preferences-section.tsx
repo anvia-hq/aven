@@ -9,7 +9,6 @@ import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 import { useTimezone } from "../hooks/use-timezone";
 
-// Every timezone this browser knows, with the person's own in the list whatever it is.
 const zones = (current: string) => {
   const all = Intl.supportedValuesOf("timeZone");
   return all.includes(current) ? all : [current, ...all];

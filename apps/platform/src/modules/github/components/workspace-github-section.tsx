@@ -9,9 +9,6 @@ import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "@/modules/projects/hooks/use-create-github-app";
 import type { GithubStatus } from "@/modules/projects/types";
 
-// Which GitHub App the workspace acts as: the platform's, or one it made for itself, which an owner
-// or an admin can create (decision 0123). Its repositories are imported through it, and a person
-// who ships connects their GitHub account to it.
 export function WorkspaceGithubSection() {
   const status = useRequest<GithubStatus>("/github");
   const { create, working } = useCreateGithubApp();

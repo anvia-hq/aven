@@ -2,7 +2,6 @@ import { LabeledSelect } from "@/components/labeled-select";
 import { TextField } from "@/components/text-field";
 
 type Props = {
-  // The models the provider listed; null until they are loaded, when the model is typed instead.
   models: string[] | null;
   value: string;
   onChange: (modelId: string) => void;

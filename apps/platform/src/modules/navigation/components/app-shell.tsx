@@ -33,26 +33,18 @@ import { SidebarResizer } from "./sidebar-resizer";
 
 type Props = {
   user: { name: string };
-  /** What the sidebar lists between its header and Settings: threads, bots. */
   sidebar: ReactNode;
 };
 
-// The frame of the app: the rail with the logo, and beside it the sidebar and the page. Each part
-// of the app brings its own sidebar content, so threads and the bot have shells of their own.
 export function AppShell({ user, sidebar }: Props) {
   const navigate = useNavigate();
   const { setOpen: setCommandOpen } = useCommandMenu();
 
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
-  // The page on screen, not the one being navigated to: `location` changes as soon as a link is
-  // clicked, a frame before the new page replaces the old, and the frame would be drawn for a page
-  // that is not there yet.
   const pathname = useRouterState({
     select: (state) => (state.resolvedLocation ?? state.location).pathname,
   });
-  // A thread, and the bot, draw their own card for the conversation, so their side panels can be
-  // cards of their own on the frame beside it, level with it.
   const drawsOwnCards = /^\/(threads\/[^/]+|bot)(\/|$)/.test(pathname);
 
   return (
@@ -60,7 +52,6 @@ export function AppShell({ user, sidebar }: Props) {
       className="bg-frame"
       style={{ "--sidebar-width": `${sidebarSize.width}px` } as CSSProperties}
     >
-      {/* The rail takes its own width in the row and stays in view; the sidebar sits beside it. */}
       <TooltipProvider delay={300}>
         <nav
           aria-label="Aven"
@@ -82,15 +73,9 @@ export function AppShell({ user, sidebar }: Props) {
           </div>
         </nav>
       </TooltipProvider>
-      {/* The sidebar and the page are one white panel in the frame, told apart by the sidebar's own
-          border. On a thread the panel is drawn in two parts, the sidebar's and the conversation's,
-          which together look the same: both are drawn with real borders, so the content sits in the same
-          place on either. */}
       <div
         className={cn(
           "flex min-w-0 flex-1 md:my-2 md:mr-2",
-          // The panel is as tall as the screen and its page scrolls inside it, so the panel keeps its
-          // edges and the sidebar's, whatever the page holds.
           !drawsOwnCards &&
             "md:h-[calc(100svh-1rem)] md:overflow-clip md:rounded-xl md:border-y md:border-r md:border-sidebar-border md:bg-background",
         )}
@@ -99,10 +84,6 @@ export function AppShell({ user, sidebar }: Props) {
           collapsible="icon"
           className={cn(
             "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
-            // Without the panel behind it, the sidebar's border would be drawn over the lighter
-            // frame and show more than it does on a panel: give it the panel's surface to sit on,
-            // and its top and bottom edges the frame's color, which the panel's two borders make
-            // of them there.
             drawsOwnCards && "md:border-y-frame md:bg-background",
           )}
         >

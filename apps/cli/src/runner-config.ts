@@ -10,7 +10,6 @@ const HEADER = `# The settings of this machine's Aven runner, written by \`aven 
 # added here; \`aven runner restart\` applies a change.
 `;
 
-/** Writes the runner's settings, keeping any other line a person added to an existing file. Readable by its owner only: it holds the token. */
 export async function writeRunnerEnv(file: string, settings: RunnerSettings) {
   const existing = await readFile(file, "utf8").catch(() => HEADER);
   const text = setEnv(existing, {
@@ -23,7 +22,6 @@ export async function writeRunnerEnv(file: string, settings: RunnerSettings) {
   await chmod(file, 0o600);
 }
 
-/** Puts the file's settings in the environment, except those the environment already has: a runner started by hand with its own AVEN_URL keeps it. */
 export async function loadRunnerEnv(
   file: string,
   env: Record<string, string | undefined> = process.env,

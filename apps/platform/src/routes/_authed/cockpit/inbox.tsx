@@ -26,7 +26,6 @@ function InboxPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { items, loaded } = useInbox();
   const shown: InboxShown = show ?? "open";
-  // `?item=new` is an item being written, not kept until it is added.
   const creating = openId === NEW_ITEM;
   const open = items.find((item) => item.id === openId);
   const go = (search: Partial<InboxSearch>, replace = false) =>
@@ -37,7 +36,6 @@ function InboxPage() {
       return (
         <InboxDraft
           tag={tag}
-          // The draft is gone once added: going back leads to the inbox, not to it again.
           onAdded={(id) => go({ item: id, show: undefined }, true)}
           onCancel={() => go({ item: undefined })}
         />

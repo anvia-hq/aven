@@ -1,9 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
-// Whether an address is one a server of the person's must not be reached at unless they said it is on
-// their own network: this machine, a private or link-local range (the cloud's metadata address is one),
-// carrier-grade NAT, multicast and the unspecified address.
 export function isPrivateAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 4) return isPrivateV4(address.split(".").map(Number));
@@ -27,7 +24,6 @@ function isPrivateV4([a = 0, b = 0, c = 0]: number[]) {
 }
 
 function isPrivateV6(address: string) {
-  // ::ffff:a.b.c.d is an IPv4 address written as IPv6, whether it is dotted or in hex.
   const mapped = /^(?:0{0,4}:){0,5}ffff:(.+)$/.exec(address)?.[1];
   if (mapped !== undefined) {
     if (isIP(mapped) === 4) return isPrivateV4(mapped.split(".").map(Number));
@@ -45,18 +41,11 @@ function isPrivateV6(address: string) {
   );
 }
 
-/** Every address a name has, as the system resolves it. */
 export type ResolveHost = (host: string) => Promise<string[]>;
 
 const resolveWithSystem: ResolveHost = async (host) =>
   (await lookup(host, { all: true })).map(({ address }) => address);
 
-/**
- * Throws when a server's address is on this machine or a private network. The library's own check
- * stops a literal address; a name that resolves to one is stopped here, since its protection against
- * that does not apply under Bun's `fetch`. A name that points elsewhere again after this is
- * not stopped: the connection that follows resolves it for itself.
- */
 export async function refusePrivateHost(url: string, resolve: ResolveHost = resolveWithSystem) {
   const host = new URL(url).hostname.replace(/^\[|\]$/g, "");
   const addresses = isIP(host) === 0 ? await resolve(host).catch(() => []) : [host];

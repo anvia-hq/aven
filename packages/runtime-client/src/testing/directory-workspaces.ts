@@ -21,8 +21,6 @@ const encoder = new TextEncoder();
 
 type Spawned = ReturnType<typeof Bun.spawn>;
 
-// Stops the command and what it spawned: commands run as process groups so `sleep` under `bash -c`
-// does not outlive a kill.
 function killGroup(proc: Spawned) {
   try {
     process.kill(-proc.pid, "SIGKILL");
@@ -46,8 +44,6 @@ const argvOf = ({ command, args }: { command: string; args?: readonly string[] }
 
 type Managed = { info: SandboxProcessInfo; proc: Spawned; stdout: Buffer[]; stderr: Buffer[] };
 
-// FOR TESTS ONLY: a `SandboxRuntime` over a temporary directory on this machine, with commands run
-// directly and no container. A real runner always uses `Sandboxes`.
 export class DirectorySandbox implements SandboxRuntime {
   readonly provider = "directory";
   readonly publishedPorts = [] as const;
@@ -55,11 +51,9 @@ export class DirectorySandbox implements SandboxRuntime {
 
   constructor(
     readonly id: string,
-    /** Absolute path of the workspace directory. */
     readonly workdir: string,
   ) {}
 
-  // The real path of a workspace-relative path, or of an absolute path inside the workspace.
   #path(input: string) {
     const normalized = posix.normalize(input.replaceAll("\\", "/"));
     const relative = posix.isAbsolute(normalized)
@@ -127,7 +121,6 @@ export class DirectorySandbox implements SandboxRuntime {
 
   async readTextFilePage(options: { path: string; startLine?: number; lineCount?: number }) {
     const text = await this.readTextFile(options);
-    // Lines keep their terminators, as the sandbox's pages do.
     const lines = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
     const startLine = options.startLine ?? 1;
     const page = lines.slice(startLine - 1, startLine - 1 + (options.lineCount ?? 500));
@@ -231,7 +224,6 @@ export class DirectorySandbox implements SandboxRuntime {
     throw new Error("waitForPort is not supported by the directory sandbox");
   }
 
-  // Ends every process still running, as removing a real container would.
   async dispose() {
     for (const { proc } of this.#processes.values()) killGroup(proc);
     await Promise.all([...this.#processes.values()].map(({ proc }) => proc.exited));
@@ -248,12 +240,7 @@ async function collect(stream: ReadableStream, into: Buffer[]) {
   for await (const chunk of stream) into.push(Buffer.from(chunk));
 }
 
-// FOR TESTS ONLY: gives each thread a temporary directory and a sandbox over it. The agent gets the
-// same tools as in a container.
-export function directoryWorkspaces(
-  /** Puts files in a new workspace before the first run. */
-  seed?: (root: string) => Promise<void>,
-): ThreadWorkspaces & {
+export function directoryWorkspaces(seed?: (root: string) => Promise<void>): ThreadWorkspaces & {
   roots: Map<string, string>;
   sandboxes: Map<string, DirectorySandbox>;
   artifacts: ArtifactStore;
@@ -265,11 +252,8 @@ export function directoryWorkspaces(
   const artifacts = new ArtifactStore(
     join(tmpdir(), `aven-directory-artifacts-${crypto.randomUUID()}`),
   );
-  // There is no container to mount them in: the files are only kept.
   const uploads = new UploadStore(join(tmpdir(), `aven-directory-uploads-${crypto.randomUUID()}`));
   const skills = new SkillStore(join(tmpdir(), `aven-directory-skills-${crypto.randomUUID()}`));
-  // Unlike `ThreadWorkspaces.release`, which keeps the workspace's files for the next `acquire`,
-  // this ends the thread's processes and deletes its temporary directory too.
   const free = async (threadId: string) => {
     await sandboxes.get(threadId)?.dispose();
     sandboxes.delete(threadId);

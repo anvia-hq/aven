@@ -10,7 +10,6 @@ import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 const sandboxesLine = (count: number) =>
   `${count} ${count === 1 ? "sandbox" : "sandboxes"} running`;
 
-// What the row says when there is nothing to measure, and the longer reason for the tooltip.
 function missing(runtime: Runtime) {
   if (!runtime.online) {
     return {
@@ -59,12 +58,7 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
   );
 }
 
-// One runner as a single card with no border or status dot (an offline one says so where its meters
-// would be): its name, and CPU, memory and disk as three
-// small upright meters, each with its label over its percent; the detail behind them is on hover,
-// and a click goes to the runtimes (decision 0091). Each row is a card of its own (decision 0103).
 export function MachineRow({ runtime }: { runtime: Runtime }) {
-  // Numbers from a runner that stopped reporting are not shown as its load now.
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
   const metrics = stats ? machineMetrics(stats) : [];
   const gap = missing(runtime);

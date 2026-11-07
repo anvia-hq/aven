@@ -24,14 +24,9 @@ export type ThreadPullRequest = {
   state: "open" | "closed" | "merged";
 };
 
-// A thread as clients see it. The continuation of an unanswered question holds conversation state
-// and stays server-side; clients get whether one is waiting, and the thread's pull requests, newest
-// first (decision 0069). Drizzle leaves the table off a column of a one-table query, so the outer
-// `threads.id` is written out: unqualified, it would be the pull request's own `id`.
 const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads);
 const columns = {
   ...publicColumns,
-  // Who made it, for the people a shared thread is shown to.
   createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
   pullRequests: sql<ThreadPullRequest[]>`coalesce((
@@ -47,26 +42,20 @@ const columns = {
   ), '[]'::json)`,
 };
 
-/** Who is asking: a member of an organization. */
 export type Viewer = { organizationId: string; userId: string };
 
-// The threads a person may see: their own, and the ones their workspace shares (decision 0084).
 const seenBy = ({ organizationId, userId }: Viewer) =>
   and(
     eq(threads.organizationId, organizationId),
     or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
   );
 
-// The workspaces a person belongs to: what a bot, which has no workspace of its own, may reach for
-// its person (decision 0088). A thread of a workspace they have left is not theirs to reach.
 const inPersonsWorkspaces = (userId: string) =>
   inArray(
     threads.organizationId,
     db.select({ id: members.organizationId }).from(members).where(eq(members.userId, userId)),
   );
 
-// A thread of a deleted project stays archived (decision 0094): reopening it would put a thread in
-// the lists that nobody can drive. A thread that is not found is left to the update to say so.
 async function requireLiveProject(organizationId: string, threadId: string) {
   const [thread] = await db
     .select({ projectId: threads.projectId })
@@ -81,8 +70,6 @@ export const threadsService = {
   list: (viewer: Viewer) =>
     db.select(columns).from(threads).where(seenBy(viewer)).orderBy(desc(threads.updatedAt)),
 
-  // A thread the person may read: their own, or one shared with the workspace. Anything else is
-  // simply not found, as another organization's thread is.
   async readable(viewer: Viewer, id: string) {
     const [thread] = await db
       .select(columns)
@@ -92,8 +79,6 @@ export const threadsService = {
     return thread;
   },
 
-  // A thread the person made, for whatever acts on it or on its sandbox. A shared thread is not
-  // theirs to drive: it is not found here either.
   async owned({ organizationId, userId }: Viewer, id: string) {
     const [thread] = await db
       .select(columns)
@@ -109,8 +94,6 @@ export const threadsService = {
     return thread;
   },
 
-  // The threads a person may see in every workspace they belong to, newest first: their own, and
-  // the ones those workspaces share (decision 0084), for a bot acting as them (decision 0088).
   listForPerson: (userId: string, limit: number) =>
     db
       .select(columns)
@@ -124,7 +107,6 @@ export const threadsService = {
       .orderBy(desc(threads.updatedAt))
       .limit(limit),
 
-  // `readable` and `owned` for a bot, which has the thread's id and not its workspace.
   async readableForPerson(userId: string, id: string) {
     const [thread] = await db
       .select(columns)
@@ -149,7 +131,6 @@ export const threadsService = {
     return thread;
   },
 
-  // Every lookup is scoped to the organization: another organization's thread is simply not found.
   async get(organizationId: string, id: string) {
     const [thread] = await db
       .select(columns)
@@ -158,7 +139,6 @@ export const threadsService = {
     return thread ?? null;
   },
 
-  // The forks of a thread that are still in use: the number a thread may have going (decision 0135).
   async liveForks(parentThreadId: string) {
     const [found] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -167,13 +147,11 @@ export const threadsService = {
     return found?.count ?? 0;
   },
 
-  // A thread by its id alone, for a runner that names one: the caller checks it is the runner's.
   async byId(id: string) {
     const [thread] = await db.select(columns).from(threads).where(eq(threads.id, id));
     return thread ?? null;
   },
 
-  // The forks of a thread that are not archived, for telling its agent that they are all done.
   async liveForkList(parentThreadId: string) {
     return db
       .select({ id: threads.id, title: threads.title })
@@ -181,19 +159,16 @@ export const threadsService = {
       .where(and(eq(threads.parentThreadId, parentThreadId), ne(threads.state, "archived")));
   },
 
-  // A run was sent as this person: their credentials are what the thread's sandbox now holds.
   async markRunBy(threadId: string, userId: string) {
     await db.update(threads).set({ lastRunBy: userId }).where(eq(threads.id, threadId));
   },
 
-  // Like `get`, for a route that cannot go on without the thread.
   async require(organizationId: string, id: string) {
     const thread = await this.get(organizationId, id);
     if (!thread) throw new ThreadNotFoundError();
     return thread;
   },
 
-  // `fork` makes a thread of a thread's agent: the parent's runner, and the parent it came from (decision 0135).
   async create(
     organizationId: string,
     userId: string,
@@ -216,7 +191,6 @@ export const threadsService = {
     return thread!;
   },
 
-  // Only the creator changes a thread: its title, its state and who it is shared with.
   async update({ organizationId, userId }: Viewer, id: string, body: UpdateThreadBody) {
     if (body.state && body.state !== "archived") await requireLiveProject(organizationId, id);
     const [thread] = await db
@@ -233,14 +207,11 @@ export const threadsService = {
     return thread ?? null;
   },
 
-  // A thread its creator drives is one of their open threads, whatever it was before (decision
-  // 0114). The project is live by now: `messages.ts` checks it before anything is sent.
   async reopen(thread: { id: string; state: string }) {
     if (thread.state === "open") return;
     await db.update(threads).set({ state: "open" }).where(eq(threads.id, thread.id));
   },
 
-  // The run that stopped on the agent's question waits for the answer here (decision 0020).
   async saveContinuation(id: string, continuation: unknown) {
     await db.update(threads).set({ pendingContinuation: continuation }).where(eq(threads.id, id));
   },
@@ -257,8 +228,6 @@ export const threadsService = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
-  // Why the thread's latest run failed, or null (decision 0100). Not a change to the thread, so its
-  // `updated_at` stays as it was.
   async saveLastError(id: string, message: string | null) {
     await db
       .update(threads)
@@ -274,8 +243,6 @@ export const threadsService = {
     return row?.lastError ?? null;
   },
 
-  // The pull requests found for the thread's branches after a run (decisions 0044 and 0069): new
-  // ones are added and the title and state of known ones are brought up to date.
   async savePullRequests(id: string, pullRequests: ThreadPullRequest[]) {
     if (pullRequests.length === 0) return;
     await db
@@ -293,7 +260,6 @@ export const threadsService = {
       });
   },
 
-  // Bumps the thread to the top of the list after the agent has worked on it.
   async touch(id: string) {
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, id));
   },

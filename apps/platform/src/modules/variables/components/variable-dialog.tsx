@@ -26,7 +26,6 @@ import {
 
 type Props = {
   scope: VariableScope;
-  /** Given one, the dialog replaces its value; without, it adds a variable. */
   variable?: Variable;
   label: string;
 };
@@ -71,7 +70,6 @@ export function VariableDialog({ scope, variable, label }: Props) {
             type={form.secret ? "password" : "text"}
             autoComplete="off"
             maxLength={MAX_VALUE_LENGTH}
-            // A secret is never shown, so a new value must come with every change to one.
             required={form.secret || variable?.secret}
             defaultValue={variable?.value ?? undefined}
             placeholder={editing && variable.secret ? "Enter the value again" : undefined}

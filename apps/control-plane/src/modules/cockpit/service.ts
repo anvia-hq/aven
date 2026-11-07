@@ -61,7 +61,6 @@ const noteView = (row: CockpitNoteRow): CockpitNote => ({
   updatedAt: iso(row.updatedAt),
 });
 
-// One person's writes of a kind at a time, so the count and a task's next number hold.
 async function lockPerson(tx: Tx, userId: string, kind: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`cockpit|${kind}|${userId}`}))`);
 }
@@ -79,7 +78,6 @@ async function roomFor(
 
 const notFound = (what: string) => new NotFoundError(`${what} not found`);
 
-// Whether any of the person's records carries a tag.
 async function tagInUse(tx: Tx, userId: string, name: string) {
   for (const table of [cockpitInboxItems, cockpitTasks, cockpitNotes]) {
     const [row] = await tx
@@ -92,7 +90,6 @@ async function tagInUse(tx: Tx, userId: string, name: string) {
   return false;
 }
 
-// A person defines at most so many tags.
 async function checkDefinedRoom(tx: Tx, userId: string) {
   const [row] = await tx
     .select({ n: count() })
@@ -103,8 +100,6 @@ async function checkDefinedRoom(tx: Tx, userId: string) {
   }
 }
 
-// A person's cockpit (decision 0104): their inbox, tasks and notes, each theirs alone and found by
-// id within what is theirs.
 export const cockpitService = {
   inbox: {
     async list(userId: string) {
@@ -154,7 +149,6 @@ export const cockpitService = {
         .orderBy(asc(cockpitTasks.position), desc(cockpitTasks.number));
       return rows.map(taskView);
     },
-    // A new task takes the next number and goes to the top of its column.
     async create(userId: string, input: CreateTaskBody) {
       const status = input.status ?? "todo";
       const row = await db.transaction(async (tx) => {
@@ -251,10 +245,6 @@ export const cockpitService = {
     },
   },
 
-  /**
-   * Every tag the person uses or defined, with how many of each kind carry it and its color, most
-   * used first.
-   */
   async tags(userId: string): Promise<CockpitTag[]> {
     const counted = async (
       table: typeof cockpitInboxItems | typeof cockpitTasks | typeof cockpitNotes,
@@ -292,12 +282,9 @@ export const cockpitService = {
       );
   },
 
-  /** Adds a tag before anything carries it (decision 0107); one the person has already is refused. */
   async addTag(userId: string, input: { name: string; color?: string | null }) {
     await db.transaction(async (tx) => {
       await lockPerson(tx, userId, "tags");
-      // Asked on the transaction's own connection: a request holding one while it waits for
-      // another, as many at once would, can take every connection there is.
       const [defined] = await tx
         .select({ id: cockpitTags.id })
         .from(cockpitTags)
@@ -311,10 +298,6 @@ export const cockpitService = {
     return this.tag(userId, input.name);
   },
 
-  /**
-   * Sets a tag's color, or with null gives it back the one its name picks. A tag in use that goes
-   * back to its default needs no row, so it stops counting toward the tags a person defines.
-   */
   async colorTag(userId: string, name: string, color: string | null) {
     const tag = await this.tag(userId, name);
     await db.transaction(async (tx) => {

@@ -19,7 +19,6 @@ run("threadsService (postgres)", async () => {
   const { project: projectB } = await seedProject(orgB, userId, runnerB.id, "proj-b");
 
   const mine = { organizationId: orgA, userId };
-  // A teammate: another person of the same organization.
   const teammateId = `${userId}-mate`;
   await db.insert(users).values({ id: teammateId, name: "Mate", email: `${teammateId}@aven.test` });
   const teammate = { organizationId: orgA, userId: teammateId };

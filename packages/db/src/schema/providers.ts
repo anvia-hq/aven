@@ -3,8 +3,6 @@ import { sql } from "drizzle-orm";
 
 import { users } from "./users";
 
-// A model provider a user has set up. Tied to the user, not to an organization: it follows them
-// into every workspace. The API key is stored encrypted (AES-256-GCM); only `keyHint` is shown.
 export const providers = pgTable(
   "providers",
   {
@@ -16,12 +14,9 @@ export const providers = pgTable(
       enum: ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure", "openai-compatible"],
     }).notNull(),
     name: text("name").notNull(),
-    /** The server root for "openai-compatible", the resource URL for "azure", the regional endpoint for "bedrock", the project's endpoint for "vertex". */
     baseUrl: text("base_url"),
     modelId: text("model_id"),
-    /** `iv.tag.ciphertext`, base64 parts. Null when a compatible endpoint needs no key. */
     apiKeyEncrypted: text("api_key_encrypted"),
-    /** Last characters of the key, safe to display. */
     keyHint: text("key_hint"),
     isDefault: boolean("is_default").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -32,7 +27,6 @@ export const providers = pgTable(
   },
   (table) => [
     index("providers_user_idx").on(table.userId),
-    // At most one default provider per user.
     uniqueIndex("providers_user_default_idx")
       .on(table.userId)
       .where(sql`${table.isDefault}`),

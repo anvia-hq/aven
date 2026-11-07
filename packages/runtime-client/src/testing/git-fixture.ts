@@ -14,11 +14,6 @@ export async function sh(cwd: string, ...args: string[]) {
 export const commit = (cwd: string, message: string) =>
   sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", message);
 
-/**
- * A remote with `main` and `other`, a clone of it made as Aven makes it (one named branch, on the
- * thread's own branch), and `advance` to move the remote's `main` on as a teammate's merge would.
- * `cleanup` removes it all.
- */
 export async function gitFixture() {
   const base = await mkdtemp(join(tmpdir(), "aven-git-fixture-"));
   const remote = join(base, "remote.git");

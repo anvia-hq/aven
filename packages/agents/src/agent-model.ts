@@ -9,31 +9,20 @@ import {
 } from "./own-reasoning";
 import { withUniqueToolCallIds } from "./unique-tool-call-ids";
 
-/** Where an agent's model comes from: a provider's config to build it from, or a model already built. */
 export type ModelSource = ModelConfig | { model: CompletionModel };
 
-// Model requests that fail transiently (rate limits, dropped connections) are tried this many times.
 const MODEL_REQUEST_ATTEMPTS = 5;
 
-// Summarizing starts at this share of the model's context window, leaving room for the next
-// request and the summary itself.
 const COMPACT_AT = 0.7;
 
-// Anthropic requires a limit on what one reply may write, and Anvia's adapter defaults it to 1,024
-// tokens, which cut replies off mid-answer. 16,000 is well above that, and it stays under the
-// most the SDK lets a request that is not streamed ask for (about 21,000), since bot replies and
-// summaries are not streamed.
 const ANTHROPIC_MAX_OUTPUT_TOKENS = 16_000;
 
-// The output limit of a model config's requests: Anthropic's, else none (the provider's default).
 export function outputLimitFor(source: ModelSource) {
   return "provider" in source && source.provider === "anthropic"
     ? ANTHROPIC_MAX_OUTPUT_TOKENS
     : undefined;
 }
 
-// What every agent takes from its model, whatever else it is: the model, the provider's own
-// options, the reasoning effort, the output limit and how a failed request is retried.
 export function resolveAgentModel(source: ModelSource) {
   const { model, providerOptions, controls } = resolveModel(source);
   return {
@@ -45,9 +34,6 @@ export function resolveAgentModel(source: ModelSource) {
   };
 }
 
-// Old history is summarized by the agent's own model once it passes the trigger: the size the host
-// gave, else 70% of the model's context window. Without either there is nothing to measure
-// against, so history is left whole.
 export function compactionFor(source: ModelSource, model: CompletionModel, afterTokens?: number) {
   const contextWindow = "contextWindow" in source ? source.contextWindow : undefined;
   const trigger =
@@ -62,8 +48,6 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
   };
 }
 
-// What an agent's earlier runs left may be another provider's reasoning, which this one rejects. The
-// tool calls another provider issued are left to the provider package (bug 0003).
 function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
   if (config.provider === "anthropic") return withAnthropicReasoning(model);
   const responses =
@@ -72,8 +56,6 @@ function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
   return responses ? withOwnReasoning(model, ownedByResponsesApi) : model;
 }
 
-// A ready model carries no provider settings; a model config also picks the provider's options
-// and the reasoning effort.
 function resolveModel(source: ModelSource) {
   if ("model" in source)
     return { model: source.model, providerOptions: undefined, controls: undefined };

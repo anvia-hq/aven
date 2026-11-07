@@ -7,7 +7,6 @@ import { platformService } from "./service";
 
 export const platformRouter = new Elysia({ prefix: "/platform" })
   .use(authRouter)
-  // Public: the register page needs to know whether sign-ups are open before anyone is signed in.
   .get("/config", async ({ request }) => {
     const session = await authService.getSession(request.headers);
     return {

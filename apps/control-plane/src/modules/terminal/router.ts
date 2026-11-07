@@ -9,8 +9,6 @@ import { threadParams } from "../threads/schema";
 import { terminalControl, terminalSize } from "./schema";
 import { createTerminalService } from "./service";
 
-// A shell in a thread's sandbox (decision 0053). `/stream` is a WebSocket: the browser's
-// keystrokes go in binary messages and so does the shell's output; a resize is a JSON text message.
 export const terminalRouter = (hub: RuntimeHub) => {
   const service = createTerminalService(hub);
   const terminals = bridgeToRunner<TerminalHandle>("The terminal is too slow");
@@ -20,7 +18,6 @@ export const terminalRouter = (hub: RuntimeHub) => {
     query: terminalSize,
     async beforeHandle({ request, status, organizationId, user, params }) {
       if (!originAllowed(request)) return status(403, "Forbidden origin");
-      // Checked before any socket is upgraded.
       await service.requireShell(organizationId, user.id, params.id);
     },
     async open(ws) {

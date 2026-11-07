@@ -5,11 +5,8 @@ import { api, attempt, errorMessage } from "@/lib/api";
 
 import type { Computer } from "../computer";
 
-// The control plane gives control for a minute at a time; this renews it well before that.
 const RENEW_MS = 20_000;
 
-// Taking over a desktop: the agent's inputs fail while a person holds it. Control is kept by
-// renewing while this is mounted and given back on leaving, and a closed tab's lease runs out.
 export function useDesktopControl({ path }: Computer) {
   const [controlling, setControlling] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,7 +39,6 @@ export function useDesktopControl({ path }: Computer) {
         });
       });
     }, RENEW_MS);
-    // `keepalive` lets the request outlive a closing page.
     const release = () =>
       void fetch(`/api${releasePath}`, { method: "POST", credentials: "include", keepalive: true });
     window.addEventListener("pagehide", release);

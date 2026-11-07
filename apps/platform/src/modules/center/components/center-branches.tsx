@@ -8,7 +8,6 @@ import { timeAgo } from "@/lib/format";
 
 import type { BranchList, BranchSummary } from "../types";
 
-// A branch with no open pull request that nobody has touched for this long is called stale.
 const STALE_DAYS = 30;
 
 export const isStale = (branch: BranchSummary, now = Date.now()) =>
@@ -19,14 +18,11 @@ export const isStale = (branch: BranchSummary, now = Date.now()) =>
 
 type Props = {
   branches: ReturnType<typeof useRequest<BranchList>>;
-  /** The branch whose history the commits show. */
   selected: string | undefined;
   onSelect: (branch: string | undefined) => void;
   onOpenPull: (number: number) => void;
 };
 
-// A project's branches (the body of the pull requests card's other tab): how far each is from the default branch (commits ahead and behind), when
-// it was last touched and its open pull request. Choosing one has the commits show its history.
 export function CenterBranches({ branches, selected, onSelect, onOpenPull }: Props) {
   const list = branches?.data;
   return (

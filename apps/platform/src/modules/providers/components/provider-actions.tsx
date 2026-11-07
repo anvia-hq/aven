@@ -9,11 +9,9 @@ import type { Provider } from "../types";
 
 type Props = {
   provider: Provider;
-  /** A way to edit it, before the remove button. */
   edit?: ReactNode;
 };
 
-// A saved provider's buttons: fetching its models again, making it the default, editing and removing it.
 export function ProviderActions({ provider, edit }: Props) {
   const { makeDefault, remove } = useProviders();
   const { refetch, fetching } = useRefetchModels();

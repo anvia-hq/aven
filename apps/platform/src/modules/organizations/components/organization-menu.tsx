@@ -7,7 +7,6 @@ import { initials } from "@/lib/format";
 
 import { useOrganizations } from "../hooks/use-organizations";
 
-// The organization block at the top of the account menu. Renders inside a DropdownMenuContent.
 export function OrganizationMenu() {
   const navigate = useNavigate();
   const { organizations, activeOrganization, switchTo } = useOrganizations();
@@ -27,7 +26,6 @@ export function OrganizationMenu() {
           </span>
         </div>
       </div>
-      {/* An item, not a button, so the menu closes when it is chosen, also on a settings page. */}
       <DropdownMenuItem
         className="mx-2 mb-2 h-8 justify-center border border-border bg-background px-2.5 font-medium focus:bg-muted"
         onClick={() => navigate({ to: "/settings/members" })}

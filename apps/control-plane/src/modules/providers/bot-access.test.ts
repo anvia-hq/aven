@@ -18,8 +18,6 @@ run("a bot's use of the person's providers (postgres)", async () => {
 
   beforeAll(async () => {
     previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
-    // No catalog to fetch: what a model can do is not what is asked here, and the catalog is kept
-    // once it has been read, for the tests that come after.
     process.env.MODEL_CATALOG_URL = "";
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString("base64");
     await db.insert(users).values([
@@ -40,7 +38,6 @@ run("a bot's use of the person's providers (postgres)", async () => {
     const added = await botProviders.add(alice, { kind: "anthropic", name: "Claude" });
     expect(added).toMatchObject({ kind: "anthropic", hasKey: false, isDefault: false });
     expect(added).not.toHaveProperty("keyHint");
-    // A provider that cannot run is never what a message falls back to.
     expect(await providersService.forRun(alice, undefined)).toBeUndefined();
   });
 
@@ -103,7 +100,6 @@ run("a bot's use of the person's providers (postgres)", async () => {
     });
     await providersService.update(alice, compat.id, { apiKey: "sk-gateway-keep-away" });
     expect((await stored(compat.id)).apiKeyEncrypted).not.toBeNull();
-    // A change that leaves the address alone keeps it.
     await botProviders.update(alice, compat.id, { modelId: "m2" });
     expect((await stored(compat.id)).apiKeyEncrypted).not.toBeNull();
     const moved = await botProviders.update(alice, compat.id, {

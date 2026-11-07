@@ -6,12 +6,9 @@ import { logsAnswer, processesAnswer } from "./schema";
 
 export type ProcessesResult = { processes: ProcessView[] };
 
-// The processes the agent left running in a thread's sandbox, seen and stopped through the runner
-// that holds it (decision 0071). Every call starts from a thread of the caller's organization.
 export function createProcessesService(hub: RuntimeHub) {
   const runner = runnerFor(hub);
   return {
-    // A sandbox that is not up has none; the runner does not start it to look.
     async list(organizationId: string, threadId: string): Promise<ProcessesResult> {
       return runner.ask(organizationId, "processes.list", { threadId }, processesAnswer, {
         logged: "The processes.list call was refused:",

@@ -2,7 +2,6 @@ import type { useSidebarWidth } from "../hooks/use-sidebar-width";
 
 type Props = { size: ReturnType<typeof useSidebarWidth> };
 
-// The sidebar's edge as a drag handle, drawn like the handle between a thread's panels.
 export function SidebarResizer({ size }: Props) {
   return (
     <div

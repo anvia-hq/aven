@@ -4,20 +4,16 @@ import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 
 import type { CommandOutput } from "./run-command";
 
-/** Docker on the runner's machine; replaced in tests. A command may be stopped after `timeoutMs`. */
 export type DockerRun = (
   args: string[],
   options?: { timeoutMs?: number },
 ) => Promise<CommandOutput>;
 
-/** Where a repository keeps what sets up its environment, and what runs when a container starts (decision 0043). */
 export const SETUP_SCRIPT = ".aven/setup";
 export const RESUME_SCRIPT = ".aven/resume";
 
-/** A setup that has not finished by then is stopped. */
 const SETUP_TIMEOUT_MS = 20 * 60_000;
 
-/** `missing` when the repository has no such script; `not-executable` when it has one that cannot run. */
 export async function scriptState(root: string, script: string) {
   const found = await stat(join(root, script)).catch(() => null);
   if (!found?.isFile()) return "missing" as const;
@@ -26,45 +22,32 @@ export async function scriptState(root: string, script: string) {
 
 export type SetupInput = {
   docker: DockerRun;
-  /** A snapshot's key: names the setup container and the image made from it. */
   key: string;
-  /** The image the setup container is made from: the sandbox image. */
   baseImage: string;
-  /** The image the result is committed as. */
   image: string;
-  /** The workspace on this machine, with the repository in it. */
   root: string;
-  /** Where the output of the script is written. */
   logPath: string;
-  /** The runner the container belongs to, as `runnerLabel` gives it. */
   runner: string;
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
   platform?: string;
   runtime?: string;
-  /** `uid:gid` of the host user, when files must end up theirs (Linux); the setup runs as the image's user. */
   hostUser?: string;
   timeoutMs?: number;
 };
 
 export type ContainerBase = {
   name: string;
-  /** What the container is for, as a label beside `aven.sandbox=1`, which every runner container has. */
   label: string;
-  /** The runner the container belongs to, so a runner removes only its own (`runnerLabel`). */
   runner: string;
   memoryMb: number;
   cpus: number;
   pidsLimit: number;
-  /** Passed to `docker run --platform`; the host's own when not set. */
   platform?: string;
-  /** Passed to `docker run --runtime`; the daemon's default when not set. */
   runtime?: string;
 };
 
-// The `docker run` arguments a runner's containers share, up to the image: `beforeLimits` and
-// `afterLimits` are the container's own, in their place among them.
 export function containerBaseArgs(
   input: ContainerBase,
   { beforeLimits = [], afterLimits }: { beforeLimits?: string[]; afterLimits: string[] },
@@ -80,9 +63,6 @@ export function containerBaseArgs(
     `aven.runner=${input.runner}`,
     "--label",
     input.label,
-    // Without an init the container's command is PID 1 and nothing reaps the children it is left
-    // with: every process the agent kills or abandons stays a zombie that counts against
-    // `--pids-limit`, until `fork` fails (decision 0113).
     "--init",
     ...beforeLimits,
     "--memory",
@@ -100,8 +80,6 @@ export function containerBaseArgs(
   return args;
 }
 
-// A setup container is the sandbox image with a way to install system packages: no
-// `no-new-privileges`, so `sudo` works. It only lives for the length of one setup and its commit.
 export function setupRunArgs(input: SetupInput & { name: string }) {
   const args = containerBaseArgs(
     { ...input, label: `aven.setup=${input.key}` },
@@ -111,27 +89,17 @@ export function setupRunArgs(input: SetupInput & { name: string }) {
   return args;
 }
 
-// On Linux a bind mount keeps host ownership, so files must be written as the host user.
 export function hostUser() {
   if (process.platform !== "linux" || !process.getuid || !process.getgid) return undefined;
   return `${process.getuid()}:${process.getgid()}`;
 }
 
-// The folders of the image that any user of the container can write (decision 0095): the home, the
-// Python environment and the Rust toolchain.
 const SANDBOX_USER_TREES = ["/home/node", "/opt/venv", "/usr/local/rustup", "/usr/local/cargo"];
 
-// The image's own user, which runs the setup script: the workspace is the host user's, and a script
-// that writes to it (an install makes `node_modules`) needs it to be this user's while it runs.
 const SANDBOX_USER = "node";
 
 const tail = (text: string, lines = 20) => text.trimEnd().split("\n").slice(-lines).join("\n");
 
-/**
- * Runs the repository's `.aven/setup` in a setup container and commits the container as
- * `input.image` (decision 0043). A script that fails, or runs too long, throws with the end of its
- * output, and nothing is committed; the container is removed either way.
- */
 export async function setupEnvironment(input: SetupInput) {
   const { docker } = input;
   const name = `aven-setup-${input.key}`;
@@ -147,9 +115,6 @@ export async function setupEnvironment(input: SetupInput) {
       );
     }
 
-    // On Linux the workspace belongs to the host user, whose id is not the image user's, so the
-    // script could not write in it (`mkdir node_modules: permission denied`): it is the image
-    // user's for the length of the script and handed back right after, whether it worked or not.
     const handOver = (owner: string) =>
       docker(["exec", "-u", "0", name, "chown", "-R", owner, WORKSPACE_DIR]);
     if (input.hostUser) {
@@ -180,14 +145,9 @@ export async function setupEnvironment(input: SetupInput) {
       );
     }
 
-    // What the script wrote should be the host user's to use, as the agent's files are: the
-    // workspace is theirs again, and the home and toolchain folders, which the script wrote as the
-    // image's user, are writable by any user again (decision 0095).
     if (input.hostUser) {
       if (handedBack && handedBack.code !== 0)
         throw new Error(`Could not hand the workspace back: ${handedBack.stderr.trim()}`);
-      // Only what is not writable already: `chmod -R` over the toolchains touches every file, and
-      // each one touched is copied into the container's layer and so into the snapshot (900 MB).
       const opened = await docker([
         "exec",
         "-u",
@@ -215,7 +175,6 @@ export async function setupEnvironment(input: SetupInput) {
         throw new Error(`Could not open the environment to the host user: ${opened.stderr.trim()}`);
     }
 
-    // The container ran `sleep`; a thread's container must run the sandbox's daemon.
     const committed = await docker([
       "commit",
       "--change",

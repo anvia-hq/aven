@@ -15,9 +15,6 @@ import {
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
 
-// The Update button of a runner that is behind the server, or of the control plane's own runner when GitHub has a newer release (decisions 0146 and 0148), for an owner or an admin,
-// with what it will do said first; while it works, the row says Updating. The sidebar's row is
-// `compact`; Settings has the plain one.
 export function UpdateRuntimeDialog({
   runtime,
   compact = false,
@@ -38,8 +35,6 @@ export function UpdateRuntimeDialog({
   }
   if (!canUpdate || !runtime.online || !runtime.updateTo || !runtime.canUpdate) return null;
 
-  // The control plane's own runner is on the machine that has the server: its update is the whole
-  // `aven update` there, which restarts the server too.
   const withServer = runtime.ownerId === null;
   const from = runtime.build ?? "its release";
 

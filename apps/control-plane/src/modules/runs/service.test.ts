@@ -28,18 +28,14 @@ import { RemoteRuntime } from "./remote-runtime";
 import type { RunThread } from "./runtime";
 import { RunBusyError, RunManager, type RunEnding } from "./service";
 
-// Needs the migrated Postgres from DATABASE_URL; skipped when there is none.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-// Runs happen on a runner connected over a real WebSocket (decisions 0008 and 0010); its workspaces
-// here are plain temporary directories, since a scripted model needs no container.
 run("RunManager (remote runtime, scripted model, real postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const store = createMemoryStore(db);
   const threads: RunThread[] = [];
   let finished = 0;
 
-  // The scripted model never calls a provider, so there is nothing for the gateway to guard here.
   const scriptedGateway = {
     issue: () => ({
       provider: "anthropic" as const,
@@ -56,7 +52,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
   const clients: { stop(): Promise<void> }[] = [];
   let runtimeId: string | null = null;
 
-  // One scripted model per manager, shared by every run on it, so a script spans multiple runs.
   const managerWith = async (
     steps: ScriptStep[],
     extra: Partial<ConstructorParameters<typeof RunManager>[0]> = {},
@@ -101,7 +96,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     return thread;
   };
 
-  // Attaches like an SSE client would and records what it sees.
   const attach = (manager: RunManager, thread: RunThread) => {
     const controller = new AbortController();
     const events: RunEvent[] = [];
@@ -216,7 +210,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     ]);
     expect(manager.isRunning(thread.id)).toBe(false);
 
-    // The question is in the history, unanswered, and what resumes it is kept.
     const waiting = await manager.history(thread);
     expect(waiting.at(-1)?.parts.at(-1)).toMatchObject({
       type: "tool",
@@ -225,7 +218,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const continuation = continuations.saved.get(thread.id);
     expect(continuation).toBeDefined();
 
-    // Answers must be the questions' own.
     await expect(
       manager.answer(thread, continuation, [{ questionId: "nope", value: "red" }]),
     ).rejects.toBeInstanceOf(UnprocessableError);
@@ -271,7 +263,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(snapshot).toMatchObject({ type: "snapshot", running: true });
     if (snapshot.type !== "snapshot") throw new Error("expected a snapshot");
     expect(snapshot.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
-    // It says how long the run had gone on when this client came, so its clock does not start at 0.
     expect(snapshot.runningMs).toBeGreaterThanOrEqual(100);
     expect(snapshot.runningMs).toBeLessThan(3000);
     expect(late.events.slice(1).map((event) => event.type)).toEqual([
@@ -298,12 +289,10 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const thread = newThread();
     await manager.start(thread, "go");
     await until(async () => !manager.isRunning(thread.id), 60_000);
-    // What comes after the run, such as telling a bot that sent it, hears why (decision 0101).
     await until(() => endings.length > 0);
     expect(endings[0]).toMatchObject({ outcome: "failed" });
     expect((endings[0] as { error: string }).error).toContain("The model is unavailable");
 
-    // Nobody was watching when it failed: a client that opens the thread now is told.
     const later = attach(manager, thread);
     await until(() => later.events.length > 0);
     await later.detach();
@@ -312,9 +301,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(said).toContain("The model is unavailable");
     expect(kept.saved.get(thread.id)).toBe(said);
 
-    // A restarted server knows it from the store, and the next run clears it.
     const restarted = await managerWith([[text("fine now")]], { failures: kept.store });
-    // The same thread, on the runner this manager connected, whose script answers.
     const again: RunThread = { ...thread, runtimeId: runtimeId! };
     const fresh = attach(restarted, again);
     await until(() => fresh.events.length > 0);
@@ -362,7 +349,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await until(() => endings.length === 2);
     expect(endings[1]!.ending).toEqual({ outcome: "question" });
 
-    // Another thread, whose run waits on a command: what it shows moves its last activity on.
     const other = newThread();
     await manager.start(other, "three");
     const early = manager.activity(other.id)!;
@@ -436,7 +422,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await until(() => client.events.some((event) => event.type === "done"));
     await client.detach();
 
-    // The foreground command was part of the run and is gone; the server-like process is not.
     await until(async () => !(await alive("sleep 3")));
     expect(await alive("sleep 43")).toBe(true);
     expect(JSON.stringify(await manager.history(thread))).not.toContain("never reached");
@@ -448,7 +433,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     delete process.env.AGENT_PROVIDER;
     delete process.env.ANTHROPIC_API_KEY;
     try {
-      // The real gateway, which is what refuses a model it has no key for.
       const manager = await managerWith([], { runtime: new RemoteRuntime(hub, new RunGateway()) });
       const thread = newThread();
       await expect(manager.start(thread, "hi")).rejects.toThrow("ANTHROPIC_API_KEY is not set");
@@ -464,13 +448,10 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const manager = await managerWith([]);
     const offline = { ...newThread(), runtimeId: crypto.randomUUID() };
     await expect(manager.start(offline, "hi")).rejects.toThrow("offline");
-    // This is what the API answers with 503; any other error is not.
     await expect(manager.start(offline, "hi")).rejects.toBeInstanceOf(UnavailableError);
     expect(await manager.history(offline)).toEqual([]);
   });
 
-  // What the person says while the agent works (decision 0098): it is queued, the agent takes it at
-  // its next step, and every client shows it the same way, live and after a reload.
   describe("a message sent while the agent works", () => {
     const message = (id: string, prompt = "use the other one") => ({ id, prompt, mentions: [] });
 
@@ -486,7 +467,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       await until(() => client.events.some((event) => event.type === "tool_start"));
 
       expect(await manager.steer(thread, message("steer-1"))).toBe("queued");
-      // A client that attaches now is told what is waiting.
       const late = attach(manager, thread);
       await until(() => late.events.length > 0);
       await late.detach();
@@ -499,14 +479,12 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       await client.detach();
       const types = client.events.map((event) => event.type);
       expect(types.filter((type) => type.startsWith("steer"))).toEqual(["steer_queued", "steer"]);
-      // The runner's own word is not passed on: clients get the message with its words.
       expect(types).not.toContain("steer_applied");
       expect(client.events.find((event) => event.type === "steer")).toMatchObject({
         id: "steer-1",
         prompt: "use the other one",
       });
 
-      // The transcript as the live events built it is what a reload reads back.
       const live = client.events.reduce(
         (messages, event) => applyEvent(messages, event),
         [] as ChatMessage[],
@@ -556,7 +534,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
         id: "steer-3",
         reason: expect.stringContaining("ended"),
       });
-      // The run is over, and so is the thread's wait: nothing is left pending.
       expect(manager.isRunning(thread.id)).toBe(false);
       await Bun.$`pkill -f ${"sleep 41"}`.nothrow().quiet();
     });

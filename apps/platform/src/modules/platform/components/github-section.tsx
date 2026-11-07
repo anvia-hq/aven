@@ -9,8 +9,6 @@ import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "@/modules/projects/hooks/use-create-github-app";
 import type { GithubStatus } from "@/modules/projects/types";
 
-// Whether Aven has a GitHub App, which projects are imported through (decision 0013), and for an
-// owner the way to create it (decision 0074).
 export function GithubSection() {
   const status = useRequest<GithubStatus>("/github");
   const { create, working } = useCreateGithubApp();

@@ -15,7 +15,6 @@ describe("the processors' load", () => {
 
     expect(sample()).toBe(30);
     expect(sample()).toBe(100);
-    // No time has passed: nothing to say.
     expect(sample()).toBeNull();
   });
 });

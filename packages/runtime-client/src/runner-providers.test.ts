@@ -12,7 +12,6 @@ import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-c
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
 
-// A sandbox that is up at once with no tools: what is asked here is about providers, not the sandbox.
 const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {
     return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
@@ -86,8 +85,6 @@ const providerCalls = (plane: ReturnType<typeof fakeControlPlane>) =>
 const done = (plane: ReturnType<typeof fakeControlPlane>) =>
   plane.received.some((message) => message.type === "bot.end");
 
-// The agent a reply builds, with only the provider tools, so what the bot can call is what the
-// runner gave it (decision 0086).
 const toolsOf = (steps: Parameters<typeof scriptedModel>[0], seen?: string[][]) =>
   (({ send, memory, providers }) => {
     const tools: AnyTool[] = [createSendMessageTool(send), ...createProviderTools(providers)];
@@ -168,7 +165,6 @@ describe("a bot's reply with the person's providers (decision 0086)", () => {
     await until(() => seen.length === 2);
     reply("bot", "[from scout] help", "pip");
     await until(() => seen.length === 3);
-    // The main bot is the person's point of contact, so it may ask on a bot's message.
     reply("main", "[from scout] help", "main");
     await until(() => seen.length === 4);
 
@@ -178,7 +174,6 @@ describe("a bot's reply with the person's providers (decision 0086)", () => {
       false,
       true,
     ]);
-    // Looking and changing are offered whatever the prompt: the control plane holds to whose word.
     for (const tools of seen) expect(tools).toContain("add_provider");
   });
 });

@@ -14,13 +14,10 @@ import { FileViewer } from "./file-viewer";
 
 type Props = {
   threadId: string;
-  /** Whether the agent is working: the files are followed while it is. */
   running: boolean;
   onClose: () => void;
 };
 
-// The files of the thread's workspace beside the conversation: a file to read, in tabs, and the
-// tree of the workspace beside it. Which folders and files are open is kept per thread.
 export function FilesPanel({ threadId, running, onClose }: Props) {
   const explorer = useExplorerState(threadId);
   const { folders, available, problem, refresh } = useWorkspaceTree(

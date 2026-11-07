@@ -2,8 +2,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 
 import { activeQuickView, QUICK_VIEWS, type CenterFilters } from "../filters";
 
-// The quick views as the page's tabs: each is a set of filters, so the tab that is on is the one
-// whose filters are exactly the ones set. Views about the person need their GitHub account.
 export function QuickViews({
   filters,
   connected,

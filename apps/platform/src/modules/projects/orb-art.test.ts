@@ -24,7 +24,6 @@ describe("orbShape", () => {
   });
 });
 
-// Bun has no canvas: a stand-in that answers every drawing call and counts the circles drawn.
 function circlesDrawn(seed: number, color: number, time: number) {
   let circles = 0;
   const gradient = { addColorStop() {} };

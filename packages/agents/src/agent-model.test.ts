@@ -28,8 +28,6 @@ describe("resolveAgentModel", () => {
 });
 
 describe("the output limit", () => {
-  // Asks the Anthropic adapter for a reply through a local server that refuses it, and returns the
-  // body it was sent.
   async function sentTo(
     call: (model: ReturnType<typeof resolveAgentModel>["model"]) => Promise<unknown>,
   ) {
@@ -66,7 +64,6 @@ describe("the output limit", () => {
         tools: [],
         maxTokens,
       })) {
-        // the stream is refused before any event
       }
     });
     expect(body?.max_tokens).toBe(16_000);
@@ -95,10 +92,6 @@ describe("the output limit", () => {
 });
 
 describe("history from another provider, sent to the Responses API", () => {
-  // What OpenAI is sent for a chat that began on Claude: its tool call is `toolu_…`, which the
-  // Responses API refused with `Invalid 'input[1].id'. Expected an ID that begins with 'fc'`.
-  // `@anvia/openai` leaves the id out of a call whose stored origin is another provider (bug 0003),
-  // which every message a run stores carries, so this fails if an upgrade stops doing that.
   test("a tool call another provider issued is sent without an item id, matched to its result", async () => {
     const bodies: { input: Record<string, unknown>[] }[] = [];
     const server = Bun.serve({
@@ -187,7 +180,6 @@ describe("compactionFor", () => {
     expect(compactionFor({ model }, model, 5_000)?.trigger).toEqual({ afterTokens: 5_000 });
   });
 
-  // Reasoning models refuse temperature; Anvia 1.17.3 omits it by default (bug 0004).
   test("the summary request carries no temperature, which reasoning models refuse", async () => {
     const bodies: Record<string, unknown>[] = [];
     const server = Bun.serve({

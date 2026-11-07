@@ -12,13 +12,11 @@ import { useBotModel } from "../hooks/use-bot-model";
 import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 
-// The model a bot talks with: any model of any of the person's providers, or their default.
 export function BotModelSelect({ bot }: { bot: Bot }) {
   const { providers, loaded, choices, loading, provider, modelId } = useBotModel(bot);
   const { update } = useBots();
   const [open, setOpen] = useState(false);
 
-  // Without a provider there is nothing to choose: the shared model of the server answers.
   if (loaded && providers.length === 0) {
     return (
       <Link to="/settings/providers" className="text-xs text-muted-foreground underline">

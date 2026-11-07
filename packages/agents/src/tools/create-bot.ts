@@ -29,13 +29,10 @@ export const createBotSchema = z.object({
 
 export type NewBotInput = z.infer<typeof createBotSchema>;
 
-/** What the host does to make the bot (decision 0060); it says who it made. */
 export type CreateBot = (
   input: NewBotInput,
 ) => Promise<{ id: string; name: string; handle: string }>;
 
-// How the person's main bot makes another bot. What making one takes, a place to keep it and the
-// person's permission, is the host's.
 export function createCreateBotTool(createBot: CreateBot) {
   return createTool({
     name: CREATE_BOT_TOOL_NAME,

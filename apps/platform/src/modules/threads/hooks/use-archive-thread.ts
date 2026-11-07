@@ -6,8 +6,6 @@ import { attempt, postJson } from "@/lib/api";
 import type { Thread } from "../types";
 import { useThreads } from "./use-threads";
 
-// Archiving takes a thread out of the sidebar; its conversation and sandbox are left as they are.
-// The person reading it is taken back to the new thread page.
 export function useArchiveThread() {
   const { refresh } = useThreads();
   const navigate = useNavigate();

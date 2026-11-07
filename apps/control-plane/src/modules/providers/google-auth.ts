@@ -1,19 +1,13 @@
 import { createHash, createSign } from "node:crypto";
 
-// What a Vertex AI provider's credential is (decision 0140): a service account's JSON key, which the
-// control plane trades for a one-hour access token, or an access token the person pasted, which is
-// used as it is until Google refuses it.
-
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/cloud-platform";
-// A token is renewed this long before it ends, so a run never starts with one that is about to.
 const RENEW_BEFORE_MS = 5 * 60 * 1000;
 
 export class GoogleAuthError extends Error {}
 
 type ServiceAccount = { client_email: string; private_key: string; private_key_id?: string };
 
-/** The service account in a pasted JSON key, or null when the credential is not a valid one. */
 export function parseServiceAccount(credential: string): ServiceAccount | null {
   if (!credential.trimStart().startsWith("{")) return null;
   try {
@@ -29,13 +23,10 @@ export function parseServiceAccount(credential: string): ServiceAccount | null {
         private_key_id: typeof json.private_key_id === "string" ? json.private_key_id : undefined,
       };
     }
-  } catch {
-    // Not JSON: told below.
-  }
+  } catch {}
   return null;
 }
 
-/** Whether a credential can be used at all: a service account's key, or something shaped like a token. */
 export const isGoogleCredential = (credential: string) =>
   parseServiceAccount(credential) !== null ||
   (!credential.trimStart().startsWith("{") && !/\s/.test(credential.trim()));
@@ -66,11 +57,6 @@ function signedAssertion(account: ServiceAccount, nowMs: number) {
 
 type Minted = { token: string; expiresAt: number };
 
-/**
- * Turns a Vertex provider's credential into the bearer token Google's API takes. A service account
- * key is exchanged at Google's own token endpoint (never one named in the key) and the token kept
- * until shortly before it ends; anything else is the token itself.
- */
 export function createGoogleTokens(fetchFn: typeof fetch = fetch, now: () => number = Date.now) {
   const minted = new Map<string, Minted>();
   const pending = new Map<string, Promise<Minted>>();
@@ -112,7 +98,6 @@ export function createGoogleTokens(fetchFn: typeof fetch = fetch, now: () => num
     const id = createHash("sha256").update(credential).digest("hex");
     const have = minted.get(id);
     if (have && have.expiresAt - RENEW_BEFORE_MS > now()) return have.token;
-    // Runs that start together share one exchange.
     let inFlight = pending.get(id);
     if (!inFlight) {
       inFlight = exchange(account)

@@ -24,12 +24,10 @@ test.describe("MCP servers", () => {
     await expect(row).toContainText("https://mcp.example.com/mcp");
     await expect(row).toContainText("Headers: Authorization");
     await expect(row).toContainText("Bots and threads");
-    // The value is not shown anywhere, nor sent back.
     await expect(page.getByText("s3cret-token")).toHaveCount(0);
     const listed = await (await page.request.get("/api/mcp-servers")).text();
     expect(listed).not.toContain("s3cret-token");
 
-    // Editing keeps the header's value when it is left blank.
     await page.getByRole("button", { name: "Edit Team notes" }).click();
     await page.getByRole("combobox", { name: "Used by" }).click();
     await page.getByRole("option", { name: "Threads only" }).click();
@@ -61,7 +59,6 @@ test.describe("MCP servers", () => {
     };
     await add("Docs Site");
     await expect(page.getByText("MCP server added")).toBeVisible();
-    // The form has closed, so the page's own Add server button is the only one.
     await expect(page.getByRole("button", { name: "Add server" })).toHaveCount(1);
     await add("docs-site");
     await expect(page.getByText("You already have an MCP server with that name")).toBeVisible();

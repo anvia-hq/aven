@@ -7,28 +7,20 @@ import type { ThreadWorkspaces } from "./sandbox";
 type Session = {
   threadId: string;
   proc: Bun.Subprocess;
-  /** Ends the shell inside the container, whatever became of the `docker exec` that runs it. */
   hangup: string[];
-  /** Keystrokes the terminal did not take yet, in order. */
   unwritten: Uint8Array[];
   closing: boolean;
 };
 
 const MAX_COLS = 500;
 const MAX_ROWS = 200;
-// A terminal cannot be paused, so one that writes this much faster than the link carries it (a
-// runaway `yes`) is ended instead of filling memory.
 const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
-// A paste that the terminal does not take is held; this much at most.
 const MAX_UNWRITTEN_BYTES = 1024 * 1024;
 
 const NOT_RUNNING = "The sandbox is not running";
 
 const clamp = (value: number, max: number) => Math.min(max, Math.max(1, Math.trunc(value) || 1));
 
-// The shells of this runner's sandboxes, on pseudo-terminals the control plane opens for people
-// (decision 0053). Like watching a desktop, opening one never starts a sandbox: a thread whose
-// container is not running has no shell, until the runner is asked to wake it (decision 0039).
 export class TerminalSessions {
   #sessions = new Map<string, Session>();
 
@@ -37,7 +29,6 @@ export class TerminalSessions {
     private link: ViewerLink,
   ) {}
 
-  /** How many terminals are open on the thread; an open terminal is not idle. */
   count(threadId: string) {
     return [...this.#sessions.values()].filter((session) => session.threadId === threadId).length;
   }
@@ -77,7 +68,6 @@ export class TerminalSessions {
     void opened.proc.exited.then(() => this.#end(viewerId, opened, "The shell ended"));
   }
 
-  // Keystrokes from the browser. Dropped for a terminal that is gone.
   write(viewerId: string, bytes: Uint8Array) {
     const session = this.#sessions.get(viewerId);
     if (!session) return;
@@ -103,7 +93,6 @@ export class TerminalSessions {
     for (const viewerId of this.#sessions.keys()) this.close(viewerId);
   }
 
-  // Hands the terminal what it will take; the rest waits for its `drain`.
   #flush(session: Session) {
     const terminal = session.proc.terminal;
     while (terminal && !terminal.closed && session.unwritten.length > 0) {
@@ -122,12 +111,9 @@ export class TerminalSessions {
     this.#sessions.delete(viewerId);
     session.proc.kill();
     session.proc.terminal?.close();
-    // Killing the client leaves the shell running in the container. Best effort: a container that
-    // is gone has nothing to end.
     Bun.spawn(session.hangup, { stdout: "ignore", stderr: "ignore" }).exited.catch(() => undefined);
   }
 
-  // The shell exited or was cut off; a terminal the control plane closed is already gone.
   #end(viewerId: string, session: Session, reason: string) {
     if (this.#sessions.get(viewerId) !== session) return;
     this.#stop(viewerId, session);

@@ -15,7 +15,6 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-// A prepared workspace: tracked-looking files, hidden ones, a nested folder and a link.
 async function preparedWorkspace() {
   const dir = await temp();
   await writeFile(join(dir, "package.json"), "{}");
@@ -75,7 +74,6 @@ describe("snapshots", () => {
       "node_modules",
       "package.json",
     ]);
-    // The workspace it was taken from still has it.
     expect(await readdir(workspace)).toContain(".pnpm-store");
   });
 
@@ -96,7 +94,6 @@ describe("snapshots", () => {
       "node_modules",
       "package.json",
     ]);
-    // A thread's changes do not reach the snapshot.
     await writeFile(join(to, "package.json"), "changed");
     expect(await readFile(join(snapshot.workspace, "package.json"), "utf8")).toBe("{}");
   });

@@ -3,11 +3,8 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 import { authEnv, git, type Git } from "./git-clone";
 import { gitFailure, hostGit } from "./host-git";
 
-// A fetch that has not finished by then is stopped, so a stalled connection cannot hold a run.
 const FETCH_TIMEOUT_MS = 2 * 60_000;
 
-// A plain branch name, as a person types one: no leading `-` or `/`, no `..`, no `//`, no trailing
-// `/`, `.` or `.lock`, and not `HEAD`. Anything else is not fetched (decision 0042).
 const BRANCH_NAME = /^(?![-/])[\w./-]+$/;
 export function isBranchName(name: string) {
   return (
@@ -20,16 +17,8 @@ export function isBranchName(name: string) {
   );
 }
 
-/** What a fetch did: the branch, where `origin/<branch>` is now, and where it was (null if it was not there). */
 export type Fetched = { branch: string; commit: string; previous: string | null };
 
-/**
- * Brings `branch` (the default branch when none is named) of the thread's repository into the
- * workspace as `origin/<branch>` and changes nothing else (decision 0042). It runs on the runner's
- * host with the read-only token of `access`, from the clone URL of `access` rather than the
- * workspace's own `origin`, which the agent can rewrite; the token travels in git's environment
- * and is left out of errors.
- */
 export async function fetchBranch(
   root: string,
   access: RepoAccess,

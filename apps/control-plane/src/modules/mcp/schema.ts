@@ -19,8 +19,6 @@ export const mcpName = z
   .max(MCP_MAX_NAME)
   .regex(MCP_NAME, "Use letters, digits, spaces, dashes and underscores");
 
-// A server is reached over the network by the runner: http or https, and no credentials in the
-// address, which would be shown and logged where a header's value never is.
 export const mcpUrl = z
   .string()
   .trim()
@@ -49,7 +47,6 @@ export const mcpHeaderName = z
     "The connection sets that header",
   );
 
-// A line break in a value would end the header and start another.
 export const mcpHeaderValue = z
   .string()
   .min(1)
@@ -72,8 +69,6 @@ export const createMcpBody = z.object({
   allowLocal: z.boolean().default(false),
 });
 
-// Headers replace the server's set: a header listed without a value keeps the value it has, and
-// one not listed is removed. Values are never read back, so this is how one is left alone.
 export const updateMcpBody = z
   .object({
     name: mcpName,

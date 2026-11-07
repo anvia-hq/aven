@@ -31,8 +31,6 @@ function Status({ runtime }: { runtime: Runtime }) {
   );
 }
 
-// CPU, memory and disk as three small upright meters. Numbers from a runner that stopped reporting
-// are not shown as its load now.
 function Load({ runtime }: { runtime: Runtime }) {
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
   if (!stats) return <span className="text-xs text-muted-foreground">–</span>;
@@ -58,8 +56,6 @@ function Load({ runtime }: { runtime: Runtime }) {
   );
 }
 
-// One line a machine, with the columns that are compared across machines. A runtime's token is
-// never shown: it is given once, when the runtime is added or its token rotated.
 export function RuntimesList() {
   const { runtimes, loaded, revoke, isOwnedByMe } = useRuntimes({ poll: true });
 

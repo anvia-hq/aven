@@ -24,24 +24,18 @@ export const updateThreadBody = z
     },
   );
 
-// Optional per-message choice; without it the sender's default provider runs.
 const modelSelection = {
   providerId: z.uuid().optional(),
   modelId: z.string().trim().min(1).max(200).optional(),
   reasoningEffort: z.string().trim().min(1).max(20).optional(),
 };
 
-// Shipping runs on the model the thread's composer has, which the client names the same way. `mode`
-// says whether to update the thread's open pull request or open a separate one (decision 0069);
-// without it, the newest pull request decides.
 export const shipBody = z
   .object({ ...modelSelection, mode: z.enum(["update", "new"]).optional() })
   .optional();
 
-// Compacting runs on the model the thread's composer has, named the same way (decision 0097).
 export const compactBody = z.object(modelSelection).optional();
 
-// A path inside the workspace, as the composer's `@` found it: relative, with no `..` or empty part.
 const workspacePath = z
   .string()
   .min(1)
@@ -53,7 +47,6 @@ const workspacePath = z
     },
   );
 
-// A file or a skill the prompt mentions (decision 0036); its token must be in the prompt where it says.
 const mention = z.discriminatedUnion("type", [
   z.object({ type: z.literal("file"), name: workspacePath, ...mentionRange() }),
   z.object({
@@ -70,8 +63,6 @@ function mentionRange() {
 export const sendMessageBody = z
   .object({
     prompt: z.string().trim().max(20_000),
-    // Names the message if it is steered into a run that is going (decision 0098), so the client
-    // that sent it can tell its own message, which it already shows, from the events about it.
     steerId: z
       .string()
       .min(8)
@@ -91,8 +82,6 @@ export const sendMessageBody = z
     { message: "A mention is not where the prompt has it", path: ["mentions"] },
   );
 
-// The user's answers to the agent's question, one per question; the run continues with the model
-// chosen here like a message would.
 export const answerQuestionBody = z.object({
   answers: z
     .array(
@@ -103,8 +92,6 @@ export const answerQuestionBody = z.object({
     )
     .min(1)
     .max(4),
-  // For a request for a secret (decision 0047): whose variable it becomes, or that the person
-  // would rather not give it. Ignored for any other question.
   secretScope: z.enum(["project", "personal"]).default("project"),
   skipSecrets: z.boolean().optional(),
   ...modelSelection,

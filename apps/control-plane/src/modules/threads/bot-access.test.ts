@@ -20,7 +20,6 @@ run("a bot's threads (postgres)", async () => {
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
   const { project: projectA } = await seedProject(orgA, userId, runnerA.id, "app-a");
   const { project: projectB } = await seedProject(orgB, userId, runnerB.id, "app-b");
-  // The person belongs to workspace A only; B is a workspace they are not a member of.
   await db
     .insert(members)
     .values({ id: `m-${userId}`, organizationId: orgA, userId, role: "owner" });
@@ -57,16 +56,13 @@ run("a bot's threads (postgres)", async () => {
     },
   ];
   const sent: { org: string; userId: string; thread: string; body: unknown }[] = [];
-  // Whether each message was sent on the person's word, which lets its run keep notes (decision 0102).
   const onWord: (boolean | undefined)[] = [];
   let failSend: Error | undefined;
-  // Whether a message starts a run that is still going when the bot is answered.
   let sendStartsRun = true;
   let running = new Set<string>();
   const botId = crypto.randomUUID();
   const QUIET_AT = Date.parse("2026-11-03T10:00:00.000Z");
   const watched: string[] = [];
-  // Threads the bot put away on the person's word (decision 0118).
   const putAway: string[] = [];
   let followUp: "ok" | "unwatched" | "spent" = "ok";
   const person = { userId, botId, via: "person" } as const;
@@ -166,7 +162,6 @@ run("a bot's threads (postgres)", async () => {
     await bot.archive(person, one.id, true);
 
     expect(putAway).toEqual([one.id]);
-    // Opening it again asks nothing of the runner.
     await bot.archive(person, one.id, false);
     expect(putAway).toEqual([one.id]);
   });
@@ -197,7 +192,6 @@ run("a bot's threads (postgres)", async () => {
 
   test("continuing sends the message to the person's own thread, working or not, and not while it waits for an answer", async () => {
     const one = await bot.start(person, { projectId: projectA.id, prompt: "Continue me" });
-    // A run is going on: the message steers it, as the person's composer does.
     await bot.continue(person, one.id, { prompt: "Steer" });
     expect(sent.at(-1)).toMatchObject({ thread: one.id, body: { prompt: "Steer" } });
     expect(onWord.at(-1)).toBe(true);
@@ -209,7 +203,6 @@ run("a bot's threads (postgres)", async () => {
       thread: one.id,
       body: { prompt: "More", reasoningEffort: "high" },
     });
-    // The agent asked a question.
     running = new Set();
     await threadsService.saveContinuation(one.id, { waiting: true });
     await expect(bot.continue(person, one.id, { prompt: "Again" })).rejects.toThrow(
@@ -259,7 +252,6 @@ run("a bot's threads (postgres)", async () => {
     running = new Set();
     const one = await bot.start(person, { projectId: projectA.id, prompt: "Watch me" });
     running = new Set();
-    // So quick it has ended: no run to tie the watch to, which the tick then tells of.
     sendStartsRun = false;
     await bot.continue(person, one.id, { prompt: "And more" });
     sendStartsRun = true;
@@ -293,13 +285,11 @@ run("a bot's threads (postgres)", async () => {
     });
     expect(sent.at(-1)).toMatchObject({ thread: one.id, body: { prompt: "Again" } });
     expect(sent.at(-1)!.body).not.toHaveProperty("modelId");
-    // Its run may read the person's memory and not change it.
     expect(onWord.at(-1)).toBe(false);
     expect(watched.slice(-2)).toEqual([
       `follow-up ${one.id}`,
       `watch ${one.id} ${botId} run 7 follow-up`,
     ]);
-    // A stop with no run going is refused before anything is counted.
     running = new Set();
     const before = watched.length;
     await expect(bot.stop(noted, one.id)).rejects.toThrow("No run is going on");
@@ -325,7 +315,6 @@ run("a bot's threads (postgres)", async () => {
       failSend = undefined;
     }
     expect(watched.at(-1)).toBe(`give back ${one.id}`);
-    // A note never brings back a thread the person put away, and asks nothing of the count.
     await bot.archive(person, one.id, true);
     const before = watched.length;
     await expect(bot.continue(noted, one.id, { prompt: "x" })).rejects.toThrow("archived");

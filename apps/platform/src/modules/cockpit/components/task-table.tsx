@@ -11,8 +11,6 @@ import { TagList } from "./tag-list";
 
 const statusOrder = (status: TaskStatus) => STATUSES.indexOf(status);
 
-// The tasks as a table, by status then their place in it, with the status and priority changed
-// right in the row.
 export function TaskTable({
   tasks,
   onOpen,

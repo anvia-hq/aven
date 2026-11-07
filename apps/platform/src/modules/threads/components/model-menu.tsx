@@ -12,14 +12,10 @@ import { EffortSlider, effortName } from "./effort-slider";
 
 type Props = { model: ReturnType<typeof useModelSelection> };
 
-// The panel opens on the reasoning effort and the model in use; the model opens a second view with
-// every provider's models in one flat list, under a heading per provider.
 export function ModelMenu({ model }: Props) {
   const { providers, provider, modelId, choices, loadingModels, levels, effort } = model;
   const [choosing, setChoosing] = useState(false);
 
-  // With no provider yet, a link to add one: the server's shared model still answers, but nothing
-  // here can be chosen.
   if (!provider) {
     return (
       <Link to="/settings/providers" className="text-xs text-muted-foreground underline">

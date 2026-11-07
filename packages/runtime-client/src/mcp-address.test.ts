@@ -22,7 +22,6 @@ describe("isPrivateAddress", () => {
       "fd12:3456::1",
       "fe80::1",
       "ff02::1",
-      // An IPv4 address written as IPv6, dotted or in hex.
       "::ffff:127.0.0.1",
       "::ffff:7f00:1",
       "::ffff:a9fe:a9fe",

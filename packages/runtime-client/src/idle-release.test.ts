@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import { IdleRelease } from "./idle-release";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 
-// A runner with one thread's sandbox up, whose run is going until the spec says otherwise.
 function harness({ runUntil = 0, box = true } = {}) {
   const released: string[] = [];
   let stopped = false;
@@ -11,7 +10,6 @@ function harness({ runUntil = 0, box = true } = {}) {
     sandbox: {
       release: async (threadId: string) => void released.push(threadId),
     } as unknown as Pick<ThreadWorkspaces, "release">,
-    // A sandbox with nothing running: the idle check this leaves scheduled (60 s on) asks it so.
     boxes: new Map<string, ThreadSandbox>(
       box ? [["t-1", { hasRunningProcesses: async () => false } as ThreadSandbox]] : [],
     ),
@@ -49,7 +47,6 @@ describe("releaseNow", () => {
 
   test("waits for a run that was just stopped to let go, then frees the sandbox", async () => {
     const { idle, released, setRunUntil } = harness({ runUntil: Date.now() + 250 });
-    // The run ends on its own while the release waits.
     setTimeout(() => setRunUntil(0), 300);
 
     expect(await idle.releaseNow("t-1", 2_000)).toBe(true);

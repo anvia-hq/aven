@@ -2,10 +2,6 @@ import { useId, type SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-// Brand marks from Lobe Icons (MIT, https://github.com/lobehub/lobe-icons), the static SVGs copied
-// in as components, sized by the caller. The plain ones are one colour that follows the text colour;
-// the Claude and Azure ones keep their own colours. They are logos, so they are not in the mynaui set.
-
 export function GithubMark(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" aria-hidden {...props}>
@@ -45,7 +41,6 @@ export function GeminiColorMark(props: IconProps) {
 }
 
 export function AzureColorMark(props: IconProps) {
-  // Gradients are found by id, and two logos on a page must not share one.
   const id = useId().replace(/:/g, "");
   return (
     <svg viewBox="0 0 24 24" aria-hidden {...props}>
@@ -107,7 +102,6 @@ export function AzureColorMark(props: IconProps) {
   );
 }
 
-// Aven's own mark: a blocky A, drawn from the logo file (the viewBox is cropped to the shape).
 export function AvenMark(props: IconProps) {
   return (
     <svg viewBox="296 367 642 501" fill="currentColor" fillRule="evenodd" aria-hidden {...props}>
@@ -115,9 +109,6 @@ export function AvenMark(props: IconProps) {
     </svg>
   );
 }
-
-// Marks of the services with a panel of their own, from models.dev (https://models.dev/logos/), one
-// colour that follows the text colour. Ollama's is its llama.
 
 export function OpenRouterMark(props: IconProps) {
   return (

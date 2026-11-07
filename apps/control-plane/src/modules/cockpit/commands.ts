@@ -26,14 +26,8 @@ import {
 } from "./schema";
 import { cockpitService } from "./service";
 
-/**
- * Whose cockpit an agent's command is answered in, and what it may do there (decision 0109): a
- * thread's agent reads, a bot adds and changes, and deletes only on the person's own
- * word.
- */
 export type CockpitCaller = { userId: string; access: CockpitAccess; onPersonsWord: boolean };
 
-/** A thread's agent reads its sender's cockpit and changes nothing in it (decision 0109). */
 export const threadCockpit = (userId: string): CockpitCaller => ({
   userId,
   access: "read",
@@ -55,8 +49,6 @@ const fields = z
   .partial()
   .strict();
 
-// The shape of a command; what each field may hold is the record's own rules, checked as the
-// platform's changes are.
 const command = z.discriminatedUnion("command", [
   z.object({
     command: z.literal("list"),
@@ -73,7 +65,6 @@ const command = z.discriminatedUnion("command", [
   z.object({ command: z.literal("delete"), kind, id: z.string() }),
 ]) satisfies z.ZodType<CockpitCommand>;
 
-// The fields each kind has, as the agent names them: a task's description is its `body`.
 const KIND_FIELDS: Record<CockpitKind, readonly string[]> = {
   inbox: ["title", "body", "tags", "done"],
   tasks: ["title", "body", "tags", "status", "priority", "dueDate"],
@@ -93,7 +84,6 @@ const bodyOf = (kind: CockpitKind, record: CockpitRecord) =>
 const label = (kind: CockpitKind, record: CockpitRecord) =>
   kind === "tasks" ? `T-${(record as CockpitTask).number} ${record.title}` : record.title;
 
-// The words of a body on one line, cut short, for a listing.
 function preview(body: string) {
   const text = cockpitMarkdown(body)
     .replace(/[#>*_`~[\]|-]+/g, " ")
@@ -115,7 +105,6 @@ function checkFields(kind: CockpitKind, given: CockpitFields) {
   }
 }
 
-// The fields in the shape the platform sends them: a task's body is its description.
 function shape(kind: CockpitKind, given: CockpitFields) {
   checkFields(kind, given);
   const { body, ...rest } = given;
@@ -123,7 +112,6 @@ function shape(kind: CockpitKind, given: CockpitFields) {
   return Object.fromEntries(Object.entries(shaped).filter(([, value]) => value !== undefined));
 }
 
-// Checked by the same rules as the platform's changes.
 function parse<S extends z.ZodType>(schema: S, value: unknown): z.infer<S> {
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw invalid(parsed.error);
@@ -134,7 +122,6 @@ function list(kind: CockpitKind, userId: string): Promise<CockpitRecord[]> {
   return cockpitService[kind].list(userId);
 }
 
-// A record named by its id, or a task by its key.
 async function find(kind: CockpitKind, userId: string, id: string) {
   const records = await list(kind, userId);
   const key = /^t-(\d+)$/i.exec(id.trim());
@@ -165,12 +152,10 @@ function line(kind: CockpitKind, record: CockpitRecord) {
 }
 
 async function listing(userId: string, cmd: Extract<CockpitCommand, { command: "list" }>) {
-  // A filter the kind has no field for is a mistake to say, not a reason to find nothing.
   if (cmd.status && cmd.kind !== "tasks") throw new UnprocessableError("Only tasks have a status.");
   if (cmd.done !== undefined && cmd.kind !== "inbox") {
     throw new UnprocessableError("Only inbox items are done or open.");
   }
-  // Tags are kept as `normalizeTag` makes them, so `#Big Idea` finds `big-idea`.
   const tag = cmd.tag === undefined ? undefined : normalizeTag(cmd.tag);
   const needle = cmd.query?.trim().toLowerCase();
   const shown = (await list(cmd.kind, userId)).filter((record) => {
@@ -192,7 +177,6 @@ async function listing(userId: string, cmd: Extract<CockpitCommand, { command: "
   return lines.join("\n");
 }
 
-// A record in full, its body as markdown.
 function shown(kind: CockpitKind, record: CockpitRecord) {
   const facts = [`id: ${record.id}`, `title: ${record.title}`];
   if (kind === "tasks") {
@@ -205,7 +189,6 @@ function shown(kind: CockpitKind, record: CockpitRecord) {
   if (kind === "notes") facts.push(`pinned: ${(record as CockpitNote).pinned}`);
   facts.push(`tags: ${record.tags.join(", ") || "none"}`, `updated: ${record.updatedAt}`);
   const whole = cockpitMarkdown(bodyOf(kind, record)).trim();
-  // A long body is cut, as a sandbox tool's long output is, and the cut is said.
   const body =
     whole.length > SHOWN_MAX
       ? `${whole.slice(0, SHOWN_MAX)}\n\n[cut: the body is ${whole.length} characters; this is the first ${SHOWN_MAX}]`
@@ -213,7 +196,6 @@ function shown(kind: CockpitKind, record: CockpitRecord) {
   return `${facts.join("\n")}\n\n${body || "(no body)"}`;
 }
 
-// A task moved to another status goes to the top of its new column, as the platform puts it.
 async function placed(userId: string, task: CockpitTask, changes: UpdateTaskBody) {
   if (!changes.status || changes.status === task.status) return changes;
   const column = (await cockpitService.tasks.list(userId)).filter(
@@ -227,7 +209,6 @@ async function create(userId: string, kind: CockpitKind, given: CockpitFields) {
   const values = shape(kind, given);
   if (kind === "tasks") return cockpitService.tasks.create(userId, parse(createTaskBody, values));
   if (kind === "notes") return cockpitService.notes.create(userId, parse(createNoteBody, values));
-  // An inbox item is made open; one the agent says is done is marked so after.
   const { done, ...rest } = values;
   const made = await cockpitService.inbox.create(userId, parse(createInboxBody, rest));
   return done === true ? cockpitService.inbox.update(userId, made.id, { done: true }) : made;
@@ -250,11 +231,6 @@ async function update(
   return cockpitService.inbox.update(userId, record.id, parse(updateInboxBody, values));
 }
 
-/**
- * Answers an agent's command in the person's cockpit (decision 0109) in words the model reads. A
- * body comes as markdown and is kept so, and is read back as markdown whatever wrote it. A mistake
- * is thrown as an `UnprocessableError` the model is told.
- */
 export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
   const parsed = command.safeParse(raw);
   if (!parsed.success) throw invalid(parsed.error);
@@ -282,7 +258,6 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
       return `Created ${label(cmd.kind, made)} (id ${made.id}).`;
     }
     case "update": {
-      // Any reply may change a record, its title and body included (decision 0120).
       const record = await find(cmd.kind, userId, cmd.id);
       const changed = await update(userId, cmd.kind, record, cmd.fields);
       return `Updated ${label(cmd.kind, changed)}.`;

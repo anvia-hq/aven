@@ -42,8 +42,6 @@ function NoteRow({ note }: { note: MemoryNote }) {
   );
 }
 
-// The person's notes, folder by folder: their own, a project's and a bot's (decision 0102). A
-// project or bot with no notes is left out, except the person's own folder.
 export function MemoryList({ sections }: { sections: FolderSection[] }) {
   const shown = sections.filter(
     (section) => section.key === "personal" || section.notes.length > 0,

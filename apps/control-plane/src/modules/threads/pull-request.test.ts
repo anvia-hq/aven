@@ -15,7 +15,6 @@ const pull = (number: number, extra: Partial<ThreadPullRequest> = {}): ThreadPul
   ...extra,
 });
 
-// Services that hold one thread, and record what the sync asked and saved.
 function setup(options: { found?: ThreadPullRequest[]; known?: boolean } = {}) {
   const { found = [], known = true } = options;
   const asked: unknown[][] = [];

@@ -14,7 +14,6 @@ export const ADD_MCP_SERVER_TOOL_NAME = "add_mcp_server";
 export const UPDATE_MCP_SERVER_TOOL_NAME = "update_mcp_server";
 export const REMOVE_MCP_SERVER_TOOL_NAME = "remove_mcp_server";
 
-/** What a bot may ask of the person's MCP servers (decision 0085); what each takes and may refuse is the host's. */
 export type McpServersHost = {
   list(): Promise<BotMcpView[]>;
   add(input: McpServerInput): Promise<BotMcpView>;
@@ -79,9 +78,6 @@ const updateSchema = z.object({
 export type McpServerInput = z.infer<typeof addSchema>;
 export type McpServerPatch = Omit<z.infer<typeof updateSchema>, "id">;
 
-// How a bot keeps the person's MCP servers (decision 0085): four tools. The servers' own tools are
-// in the bot's tool list once connected. The host holds to whose word may change them, and what a
-// bot may not set or see: a header's value, and whether a server is on the runner's own network.
 export function createMcpServerTools(host: McpServersHost) {
   const list = createTool({
     name: LIST_MCP_SERVERS_TOOL_NAME,

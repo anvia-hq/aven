@@ -2,8 +2,6 @@ import type { ComponentType, ReactNode } from "react";
 
 import { cn } from "cn";
 
-// A list beside what is open in it, as a mail app has them (decisions 0105 and 0106): each scrolls
-// by itself. On a narrow screen only one shows, the open one when there is one.
 export function SplitView({
   list,
   detail,
@@ -11,7 +9,6 @@ export function SplitView({
 }: {
   list: ReactNode;
   detail: ReactNode;
-  /** Whether something is open, which a narrow screen shows instead of the list. */
   open: boolean;
 }) {
   return (
@@ -33,7 +30,6 @@ export function SplitView({
   );
 }
 
-// What the open side says with nothing open: a quiet word in the middle.
 export function NothingOpen({
   icon: Icon,
   children,

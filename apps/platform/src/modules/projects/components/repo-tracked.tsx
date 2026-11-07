@@ -22,7 +22,6 @@ import type { Project, TrackedItem, TrackedKind, TrackedState } from "../types";
 const isKind = (value: unknown): value is TrackedKind => value === "pull" || value === "issue";
 const isState = (value: unknown): value is TrackedState => value === "open" || value === "closed";
 
-// The state shown is the one that stands out; the shared toggle's pressed tint is too faint on a card.
 const PRESSED = "aria-pressed:bg-secondary aria-pressed:text-secondary-foreground";
 
 export const TRACKED_STATUS = {
@@ -38,8 +37,6 @@ function StatusIcon({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
   return <Circle className="size-4 shrink-0" />;
 }
 
-// A pull request or an issue as a row; `project` is given where rows of many projects are mixed
-// (Center), to show whose it is.
 export function TrackedRow({
   item,
   kind,
@@ -50,9 +47,7 @@ export function TrackedRow({
   item: TrackedItem;
   kind: TrackedKind;
   project?: Project;
-  /** Given, a label is a button that asks for the pull requests with it. */
   onLabel?: (label: string) => void;
-  /** Given, the title opens the pull request where it is shown rather than on GitHub. */
   onOpen?: () => void;
 }) {
   const { label, variant } = TRACKED_STATUS[item.status];
@@ -117,8 +112,6 @@ export function TrackedRow({
 
 const NOUN: Record<TrackedKind, string> = { pull: "pull requests", issue: "issues" };
 
-// The repository's pull requests and issues, open or closed, ten to a page, the latest changed
-// first, with each one's status (decision 0092). Read from GitHub like the commits.
 export function RepoTracked({ projectId }: { projectId: string }) {
   const [kind, setKind] = useState<TrackedKind>("pull");
   const [state, setState] = useState<TrackedState>("open");
@@ -130,7 +123,6 @@ export function RepoTracked({ projectId }: { projectId: string }) {
     page,
   );
 
-  // Another list starts at its first page.
   const choose = (change: () => void) => {
     change();
     setPage(1);

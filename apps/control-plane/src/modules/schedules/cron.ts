@@ -23,8 +23,6 @@ type Cron = {
 
 export class CronError extends Error {}
 
-// Where a range ends: at its `to`; at the field's top for `*` or a start with a step (`5/10`); else
-// where it starts.
 function upperBound(range: {
   range: string;
   to: string | undefined;
@@ -50,7 +48,6 @@ function parseField(
   const bad = () => new CronError(`Invalid ${name} field "${text}".`);
   const number = (part: string) => {
     const index = names.indexOf(part.toLowerCase());
-    // A name (`mon`, `jan`) is its place in the list; otherwise it must be a plain number.
     let value = Number.NaN;
     if (index >= 0) value = index + offset;
     else if (/^\d+$/.test(part)) value = Number(part);
@@ -94,12 +91,6 @@ export function parseCron(expression: string): Cron {
   };
 }
 
-/**
- * The least minutes between two times of a day the cron runs at, counting from the last of one day
- * to the first of the next, since the next day may run too. Not the times it runs on a day-by-day
- * basis, which depend on the days: this is the closest any two can be, so a schedule is held to its
- * minimum however many of its next times are looked at.
- */
 export function minimumGapMinutes(expression: string) {
   const { hour, minute } = parseCron(expression);
   const times = hour.values

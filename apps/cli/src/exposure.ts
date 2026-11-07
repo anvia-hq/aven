@@ -1,21 +1,14 @@
 export type ExposureReport = { ok: boolean; detail: string };
 
-/** A `.env`'s settings, as `parseEnv` reads them. */
 type Env = Record<string, string | undefined>;
 
 const isLoopback = (address: string) => address.startsWith("127.");
 
-/** Whether Caddy serves a domain: `:80` and an empty address are plain HTTP. */
 export const serveDomain = (env: Env) => {
   const address = env.AVEN_SITE_ADDRESS?.trim() ?? "";
   return address !== "" && !address.startsWith(":") ? address : undefined;
 };
 
-/**
- * Who can reach the server and how: a server on this machine only is fine, a domain is HTTPS, and
- * plain HTTP open to a network is not private, which `aven doctor` says. An empty `AVEN_BIND` is
- * every address, how an install made before the setting existed behaves.
- */
 export function describeExposure(env: Env): ExposureReport {
   const bind = env.AVEN_BIND?.trim() ?? "";
   const domain = serveDomain(env);
@@ -38,7 +31,6 @@ export function describeExposure(env: Env): ExposureReport {
   };
 }
 
-/** Whether people other than the owner can register, when the server can be reached from elsewhere. */
 export function describeSignups(
   exposure: ExposureReport,
   env: Env,

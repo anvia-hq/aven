@@ -1,11 +1,7 @@
-// A stand-in for GitHub for the e2e run: just the endpoints the control plane calls, with one
-// installation (id 1, account "acme") that can see a few repositories.
 const port = Number(process.env.FAKE_GITHUB_PORT ?? 8101);
-// Where the app is served, which GitHub sends the browser back to after it is authorised.
 const appUrl = process.env.FAKE_GITHUB_APP_URL ?? "http://localhost:5174";
 const repositories = ["shiny-app", "docs-site", "composer-app", "project"];
 
-// Writing approved for the installation, and the person allowed to push (decisions 0041 and 0044).
 const repo = (name: string) => ({
   id: repositories.indexOf(name) + 1,
   full_name: `acme/${name}`,
@@ -24,17 +20,14 @@ type Pull = {
   merged_at: string | null;
   head: { ref: string; repo: { full_name: string } };
 };
-// Newest last, by repository.
 const pullRequests = new Map<string, Pull[]>();
 
-// What the fake's search finds: pull requests or issues, open or closed, the latest changed first.
 function searchTitles(pulls: boolean, open: boolean) {
   if (pulls && open) return Array.from({ length: 12 }, (_, i) => `Open pull request ${12 - i}`);
   if (pulls) return ["Merged pull request", "Closed pull request"];
   return open ? ["Open issue two", "Open issue one"] : ["Closed issue"];
 }
 
-// What a pull request and a commit change, as GitHub lists the files.
 const changedFiles = [
   {
     filename: "src/login.ts",
@@ -50,9 +43,6 @@ Bun.serve({
   port,
   async fetch(request) {
     const { pathname } = new URL(request.url);
-    // Pull requests: none is open until one is created (a spec does it, standing in for the agent's
-    // `gh pr create`, decision 0044), with the branch it was opened from (decision 0069). They are
-    // listed newest first, with whatever the query asks for ignored.
     if (/^\/repos\/acme\/[\w.-]+\/pulls$/.test(pathname)) {
       const list = pullRequests.get(pathname) ?? [];
       if (request.method === "POST") {
@@ -62,8 +52,6 @@ Bun.serve({
           head?: string;
           title?: string;
         };
-        // Numbered from 7 for each thread (the branches that share a prefix), since specs that run
-        // at the same time share the repository and each expects to see its own first.
         const thread = (branch: string) => branch.split("-")[0];
         const number = 7 + list.filter((pull) => thread(pull.head.ref) === thread(head)).length;
         const made: Pull = {
@@ -80,7 +68,6 @@ Bun.serve({
       return Response.json([...list].reverse());
     }
     if (pathname === "/health") return new Response("ok");
-    // The page where a person lets the app act as them: they agree at once and come back.
     if (pathname === "/login/oauth/authorize") {
       const state = new URL(request.url).searchParams.get("state") ?? "";
       const back = new URL("/api/github/callback", appUrl);
@@ -105,7 +92,6 @@ Bun.serve({
       return Response.json({
         id: Number(pathname.split("/").pop()),
         account: { login: "acme" },
-        // Issues are listed only when the app may read them (decision 0092).
         permissions: {
           contents: "write",
           pull_requests: "write",
@@ -118,8 +104,6 @@ Bun.serve({
       const expires = new Date(Date.now() + 60 * 60_000).toISOString();
       return Response.json({ token: "ghs_fake", expires_at: expires });
     }
-    // What the project page reads (decision 0082): the top of every repository, one folder below it
-    // and a README, except for composer-app, which has none.
     const contents = pathname.match(/^\/repos\/acme\/([\w.-]+)\/contents(?:\/(.*))?$/);
     if (contents && repositories.includes(contents[1]!)) {
       const folder = contents[2] ?? "";
@@ -148,9 +132,6 @@ Bun.serve({
         content: Buffer.from(text).toString("base64"),
       });
     }
-    // The history on the project page: fourteen commits, newest first, ten to a page, with GitHub's
-    // `next` link on the first page only. Commit 12 merges a branch that began at 9, as 10 and 11 both
-    // did: 11 on main and 10 on the branch `feature/login`, whose head it is.
     const sha = (n: number) =>
       `${String(n).padStart(2, "0")}abcdef0123456789abcdef0123456789abcdef`;
     const history = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits$/)?.[1];
@@ -174,8 +155,6 @@ Bun.serve({
         author: { login: "ada", avatar_url: "https://avatars.githubusercontent.com/u/1?v=4" },
         parents: parentsOf(14 - index).map((n) => ({ sha: sha(n) })),
       }));
-      // The history's filters (decision 0132): the author is always ada, the branch
-      // `feature/login` ends at commit 10, and the even-numbered commits touch `src/login.ts`.
       const wanted = commits.filter((entry, index) => {
         const number = 14 - index;
         if (asked.get("author") && !/ada/i.test(asked.get("author")!)) return false;
@@ -193,8 +172,6 @@ Bun.serve({
             : {},
       });
     }
-    // A pull request and a commit opened in Center (decision 0132): number 100 is a draft with a
-    // failing check and a review requested, any other is open and approved.
     const opened = pathname.match(/^\/repos\/acme\/([\w.-]+)\/pulls\/(\d+)(\/files|\/reviews)?$/);
     if (opened && repositories.includes(opened[1]!)) {
       const number = Number(opened[2]);
@@ -259,9 +236,6 @@ Bun.serve({
         files: changedFiles,
       });
     }
-    // Pull requests and issues on the project page (decision 0092), by GitHub's search: twelve open
-    // pull requests (the newest a draft, ten to a page), two closed ones (one merged), two open
-    // issues and one closed.
     if (pathname === "/search/issues") {
       const params = new URL(request.url).searchParams;
       const query = params.get("q") ?? "";
@@ -272,9 +246,6 @@ Bun.serve({
       const titles = merged ? ["Merged pull request"] : searchTitles(pulls, open);
       const qualifier = (name: string) =>
         new RegExp(`${name}:("[^"]+"|\\S+)`).exec(query)?.[1]?.replaceAll('"', "");
-      // The qualifiers of the filters (decision 0132): every other pull request carries the label
-      // `bug`, the first three await a review from ada, the odd ones fail their checks, and every
-      // author is ada.
       const words = query
         .replace(/\S+:\S+/g, "")
         .replace(/"[^"]*"/g, "")
@@ -318,7 +289,6 @@ Bun.serve({
         items: items.slice((page - 1) * 10, page * 10),
       });
     }
-    // Commit 12 is the release `v1.0` (decision 0132).
     const tags = pathname.match(/^\/repos\/acme\/([\w.-]+)\/tags$/)?.[1];
     if (tags && repositories.includes(tags)) {
       return Response.json([{ name: "v1.0", commit: { sha: sha(12) } }]);
@@ -331,7 +301,6 @@ Bun.serve({
         { name: "old/spike", protected: false, commit: { sha: sha(2) } },
       ]);
     }
-    // A branch by name: its latest commit, and how far it is from `main` (decision 0132).
     const tip = pathname.match(
       /^\/repos\/acme\/([\w.-]+)\/commits\/(main|feature%2Flogin|old%2Fspike)$/,
     );

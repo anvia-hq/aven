@@ -11,14 +11,11 @@ const NOTHING_MATCHES: Record<string, string> = {
   bot: "No bot matches",
 };
 
-// What the menu says while it has nothing to pick.
 function emptyMenu({ loading, trigger }: ComposerTriggerState) {
   if (loading) return "Searching…";
   return NOTHING_MATCHES[trigger.id] ?? "Nothing matches";
 }
 
-// One choice of the menu. The arrow keys move the selection, but Anvia leaves the list where it
-// was, so a choice past the edge is scrolled into view here.
 function MentionOption({
   item,
   index,
@@ -47,14 +44,11 @@ function MentionOption({
   );
 }
 
-// What `@` or `/` found, above the composer: the composer sits at the foot of the page, so a
-// menu at the caret, where Anvia places it, would open off screen.
 export function MentionMenu() {
   return (
     <ComposerPrimitive.TriggerMenu
       aria-label="Mention"
       className="absolute inset-x-0 bottom-full z-20 mb-1 flex max-h-72 flex-col overflow-y-auto rounded-lg border bg-popover p-1 text-sm text-popover-foreground shadow-md"
-      // Anvia pins the menu to the caret; here it belongs to the composer instead.
       style={{ position: "absolute", top: "auto", left: 0 }}
     >
       {(trigger) =>

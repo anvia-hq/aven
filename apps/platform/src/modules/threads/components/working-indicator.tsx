@@ -4,10 +4,6 @@ import { elapsed } from "@/lib/format";
 
 import { useWorkingWord } from "../hooks/use-working-word";
 
-// Three rows of three dots whose color runs from pale mint (top left) to green (bottom right), and
-// whose pulse crosses the grid diagonally, one step after another. The colors are the
-// `--working-from` and `--working-to` tokens of index.css. Also beside a running thread in the
-// sidebar, where `label` names it, as it is the only thing there that says the thread works.
 const STEPS = 4;
 const DOTS = Array.from({ length: 9 }, (_, index) => {
   const step = Math.floor(index / 3) + (index % 3);
@@ -36,8 +32,6 @@ export function WorkingDots({ label }: { label?: string }) {
   );
 }
 
-// A word that changes now and then, blurring out as the next one blurs in. A screen reader is
-// told once that the agent is working, not every time the word changes.
 function WorkingWord() {
   const { current, previous } = useWorkingWord();
   return (
@@ -65,7 +59,6 @@ function WorkingWord() {
   );
 }
 
-// How long the run has gone on, counted from `startedAt` once a second.
 function WorkingTime({ startedAt }: { startedAt: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -77,14 +70,9 @@ function WorkingTime({ startedAt }: { startedAt: number }) {
 }
 
 type Props = {
-  /** When the run started (`Date.now()`); without it only the dots and the word are shown. */
   startedAt?: number | null;
 };
 
-// The line above the composer while the agent works, whether it is writing, running a tool or
-// waiting for the model's first token. It is not part of the scrolling text: it stays in the same
-// place whatever the text does, and the conversation leaves room for it, so it never covers a
-// line. Its row is kept when nothing is running, so the composer does not move when a run starts.
 export function WorkingIndicator({ running, startedAt = null }: Props & { running: boolean }) {
   return (
     <div className="flex h-7 items-center gap-2 px-1 text-sm text-muted-foreground">

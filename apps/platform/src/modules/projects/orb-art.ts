@@ -1,18 +1,7 @@
-// A project's mark: a glass ring drawn on a canvas, different for every project. Its id picks the
-// ring's tilt, the rings inside it, where the light falls and how the dust is shed, so a project
-// always looks the same and no two look alike. At rest it is one ink color and bare; while the
-// project's thread works it takes the project's palette, the inner rings turn and the light sweeps
-// round the edge, shedding dust. Colors are palette data like a bot's (decision 0062).
-
-/** Three colors the ring's edge runs through while the project works. */
 export type OrbColors = readonly [string, string, string];
 export type Rgb = readonly [number, number, number];
 
 type Ring = { across: number; turn: number; speed: number };
-// A speck of the dust the light sheds. Each lives for `1 / rate` seconds, and is born at the edge
-// of the ring where the light is at that moment, offset by `lobe` and `spread`, so the dust trails
-// the light as it sweeps round. It starts `start` of the way out from the centre, drifts to `reach`
-// past the ring (slowing as it goes), curls by `curl` and wobbles sideways as it travels.
 type Dot = {
   lobe: number;
   spread: number;
@@ -40,10 +29,8 @@ function random(seed: number) {
 
 export const DOTS = 72;
 
-// How fast the light sweeps round the ring, in radians a second.
 const LIGHT_TURN = 0.6;
 
-/** What a project's id decides, once; painting it is then only arithmetic. */
 export function orbShape(seed: number): OrbShape {
   const next = random(seed);
   const light = next() * Math.PI * 2;
@@ -52,7 +39,6 @@ export function orbShape(seed: number): OrbShape {
     turn: next() * Math.PI,
     speed: (next() < 0.5 ? -1 : 1) * (0.25 + next() * 0.35),
   }));
-  // Three lobes of dust round the light, the way a spray leaves a turning wheel.
   const lobes = [0, 1.1 + next() * 0.4, -(1.1 + next() * 0.4)];
   const dots = Array.from({ length: DOTS }, (_, index) => ({
     lobe: lobes[index % 3]!,
@@ -90,16 +76,12 @@ function blend(from: Rgb, to: Rgb, amount: number): Rgb {
 }
 
 type Paint = {
-  /** The resting color, as the page's muted text. */
   ink: Rgb;
   colors: OrbColors;
-  /** 0 at rest, 1 working in the palette. */
   color: number;
-  /** Seconds, which turns the rings; 0 holds them still. */
   time: number;
 };
 
-/** Draws the mark filling a square canvas of `size` device pixels. */
 export function paintOrb(
   context: CanvasRenderingContext2D,
   size: number,
@@ -111,14 +93,11 @@ export function paintOrb(
   const c = blend(ink, hexRgb(colors[2]), color);
   const white: Rgb = blend(ink, [255, 255, 255], color);
   const centre = size / 2;
-  // Room is left round the ring for the dust that drifts out of it.
   const radius = size * 0.35;
-  // One stroke width for the ring and every ring inside it.
   const stroke = Math.max(size * 0.04, 1);
   const light = shape.light + time * LIGHT_TURN;
   context.clearRect(0, 0, size, size);
 
-  // A faint tint inside, so the ring reads as glass and not as a line.
   const glass = context.createRadialGradient(
     centre + Math.cos(light) * radius * 0.4,
     centre + Math.sin(light) * radius * 0.4,
@@ -150,7 +129,6 @@ export function paintOrb(
     context.stroke();
   });
 
-  // The edge: a conic gradient that goes through white where the light falls.
   const sweep = context.createConicGradient(light, centre, centre);
   sweep.addColorStop(0, rgba(white, 0.95));
   sweep.addColorStop(0.18, rgba(b, 1));
@@ -162,17 +140,12 @@ export function paintOrb(
   context.arc(centre, centre, radius, 0, Math.PI * 2);
   context.stroke();
 
-  // Dust, only while the mark is colored: it fades in and out with the colors, so a mark at rest
-  // is bare.
   if (color > 0.01) paintDust(context, size, radius, shape, [a, b, c, white], color, time);
 }
 
 const easeOut = (amount: number) => 1 - (1 - amount) ** 2.4;
 const smooth = (amount: number) => amount * amount * (3 - 2 * amount);
 
-// Each speck is born where the light is when its life begins, and so trails it round the ring. It
-// leaves quickly, slows as it goes, wobbles sideways and curls, brightens at once, twinkles, and
-// dims and shrinks as it drifts away. Its life is a loop in `time`, so there is no seam.
 function paintDust(
   context: CanvasRenderingContext2D,
   size: number,
@@ -201,7 +174,6 @@ function paintDust(
     const y = centre + Math.sin(angle) * distance;
     const grain = Math.max(size * dot.size * (1.1 - 0.65 * life), 0.8);
     const tone = tones[dot.tone]!;
-    // A wide faint halo and a bright core, so the dust reads as light and not as grain.
     context.fillStyle = rgba(tone, alpha * 0.2);
     context.beginPath();
     context.arc(x, y, grain * 2, 0, Math.PI * 2);

@@ -16,8 +16,6 @@ import {
 } from "./document-page";
 import { TagInput } from "./tag-input";
 
-// A new inbox item before it is kept (decision 0106): a page like an item's own, written in and
-// then added to the inbox, or cancelled and gone, nothing of it sent. ⌘ or Ctrl and Enter add it.
 export function InboxDraft({
   tag,
   onAdded,
@@ -33,8 +31,6 @@ export function InboxDraft({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const ready = title.trim() !== "" && !busy;
-  // Leaving by another row or link asks first when something is written; adding it or Cancel
-  // are the person's own way out (`settled`).
   const settled = useRef(false);
   const written = title.trim() !== "" || body !== "";
   useBlocker({

@@ -10,16 +10,11 @@ import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { botRunnerFor, requireOwnBot } from "./computer";
 import { botArtifactParams, botParams } from "./schema";
 
-// noVNC offers this subprotocol and fails the connection if the server does not pick it.
 const VIEWER_SUBPROTOCOL = "binary";
 
-// Watching and driving a bot's desktop, as a person does a thread's (decisions 0015 and 0059): the
-// same calls and the same stream, found through the bot's owner, not an organization. A bot has no
-// terminal for a person: its shell is the bot's own.
 export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
   const runner = botRunnerFor(hub, runtimeId);
   const desktop = createDesktopService(runner, { what: "The bot's computer" });
-  // The images the person sent to the bot (decision 0080), kept by its runner.
   const artifacts = createArtifactsService(runner);
   const viewers = bridgeToRunner<ViewerHandle>("The viewer is too slow");
 
@@ -57,7 +52,6 @@ export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
       params: botParams,
       async beforeHandle({ request, set, status, user, params }) {
         if (!originAllowed(request)) return status(403, "Forbidden origin");
-        // Another person's bot is not found before any socket is upgraded.
         await requireOwnBot(user.id, params.id);
         const offered = request.headers.get("sec-websocket-protocol") ?? "";
         if (offered.split(",").some((protocol) => protocol.trim() === VIEWER_SUBPROTOCOL)) {

@@ -54,13 +54,11 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
   let plain!: Person;
   let asMember = false;
 
-  // The people are made once the tests start, not while they are being collected.
   beforeAll(async () => {
     owner = await signUp("owner");
     outsider = await signUp("outsider");
     plain = await signUp("plain");
     organizationIds.push(owner.organizationId, outsider.organizationId, plain.organizationId);
-    // The third person is a plain member of the first's workspace, and their active one.
     await db.insert(members).values({
       id: `m-${plain.userId}`,
       organizationId: owner.organizationId,
@@ -86,7 +84,6 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
       await db.delete(organizations).where(eq(organizations.id, id));
   });
 
-  // A runner of the owner's that says `hello` as given and answers `runner.update` with `answer`.
   async function connect(
     hello: { build?: string; canUpdate?: boolean },
     answer: Record<string, unknown> = { status: "started" },

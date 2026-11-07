@@ -27,7 +27,6 @@ run("botsService (postgres)", async () => {
   });
 
   afterAll(async () => {
-    // Cascades remove their bots.
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -125,7 +124,6 @@ run("botsService (postgres)", async () => {
 
       await botsService.update(erin, first.id, { name: "Scout" });
       expect((await botsService.get(erin, first.id))?.handle).toBe("data-analyst");
-      // Another person's bots do not count.
       const other = await botsService.create(alice, { name: "Data Analyst", instruction: "x" });
       expect(other.handle).toBe("data-analyst");
     } finally {
@@ -158,7 +156,6 @@ run("botsService (postgres)", async () => {
     try {
       const [main] = await botsService.list(erin);
       const provider = await addProvider(erin, "Erin's");
-      // An effort its model does not take, as when a model is retired: written past the checks.
       await db
         .update(bots)
         .set({ providerId: provider.id, modelId: "fast-1", reasoningEffort: "no-longer-offered" })
@@ -175,7 +172,6 @@ run("botsService (postgres)", async () => {
         modelId: "fast-1",
         reasoningEffort: "no-longer-offered",
       });
-      // Nothing to change is not an error either.
       expect(await botsService.update(erin, main!.id, {})).toMatchObject({ name: "Pip" });
     } finally {
       await db.delete(users).where(eq(users.id, erin));
@@ -201,7 +197,6 @@ run("botsService (postgres)", async () => {
     });
     expect(chosen).toMatchObject({ providerId: mine.id, modelId: "fast-1" });
 
-    // Another provider starts without a model; none at all puts the bot back on the default.
     const other = await addProvider(alice, "Other");
     expect(await botsService.update(alice, main!.id, { providerId: other.id })).toMatchObject({
       providerId: other.id,
@@ -260,7 +255,6 @@ run("botsService (postgres)", async () => {
     );
     expect((await botsService.get(alice, main!.id))?.reasoningEffort).toBe("high");
 
-    // A compatible server has no levels at all.
     const compatible = await addProvider(alice, "Compatible");
     await expect(
       botsService.update(alice, main!.id, {
@@ -280,7 +274,6 @@ run("botsService (postgres)", async () => {
       modelId: "gpt-5",
       reasoningEffort: "low",
     });
-    // The same request that changes the model may name the effort for it.
     expect(
       await botsService.update(alice, main!.id, { modelId: "o3", reasoningEffort: "high" }),
     ).toMatchObject({ modelId: "o3", reasoningEffort: "high" });

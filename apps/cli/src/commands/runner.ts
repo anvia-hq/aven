@@ -20,8 +20,6 @@ const logFile = () => join(logsDir(), "runner.log");
 const IMAGE_REPOSITORY = "ghcr.io/anvia-hq/aven-sandbox";
 const imageFor = (release: string) => `${IMAGE_REPOSITORY}:${release}`;
 
-// What the service runs and with what. A service gets almost no environment of its own: it needs
-// the person's PATH to find docker and git.
 function serviceDefinition(): ServiceDefinition {
   const env: Record<string, string> = {
     HOME: process.env.HOME ?? "",
@@ -37,10 +35,8 @@ function serviceDefinition(): ServiceDefinition {
   };
 }
 
-/** Installs this machine as a runner of a control plane and starts it as a service. */
 export async function runnerInstall(args: Args) {
   const url = stringFlag(args, "url");
-  // The token can come from the environment, so that it need not be on a command line.
   const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN;
   if (!url || !token)
     throw new Error(
@@ -74,8 +70,6 @@ export async function runnerInstall(args: Args) {
   console.log(await outcome(logSize));
 }
 
-// What the runner said about connecting, for the first half minute. Only what the log gained since
-// `from`: an earlier run's "connected" must not read as this one's.
 async function outcome(from: number) {
   for (let i = 0; i < 30; i++) {
     const log = await readFile(logFile(), "utf8").catch(() => "");
@@ -89,7 +83,6 @@ async function outcome(from: number) {
   return "No word yet from the runner. See: aven runner logs";
 }
 
-/** The runner itself, in the foreground: what the service runs. */
 export async function runnerRun() {
   const { runRunner } = await import("@aven/runtime-client/run-runner");
   await loadRunnerEnv(runnerEnvFile());
@@ -104,10 +97,8 @@ export async function runnerRun() {
     base,
     token,
     build: release,
-    // An installed release can update itself when the control plane asks (decision 0146).
     update: release ? (to) => void startDetachedUpdate(to) : undefined,
   });
-  // The runner keeps the process alive with its connection.
 }
 
 export async function runnerStart() {
@@ -136,12 +127,6 @@ export async function runnerUninstall() {
   );
 }
 
-/**
- * Brings an installed runner to a release: the sandbox image of that release, if the runner uses
- * the one Aven publishes (a runner set up with its own `--image` keeps it), and a restart. Threads
- * already running keep their container; the next one uses the new image. Returns false when no
- * runner is installed here.
- */
 export async function runnerUpgrade(release: string) {
   const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
   if (text === undefined) return false;
@@ -162,8 +147,6 @@ export async function runnerUpgrade(release: string) {
       image,
     });
   }
-  // The service is written again, not only restarted: it may have been removed, or `aven` may have
-  // moved, and installing starts it on the new files either way.
   await manager().install(serviceDefinition());
   return true;
 }

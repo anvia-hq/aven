@@ -13,7 +13,6 @@ import type { QuestionAnswer, RunSelection, SecretChoice, ToolPart } from "../ty
 type Props = {
   tool: ToolPart;
   threadId: string;
-  // Resolves to whether the answer was taken, like the composer's `onSubmit`.
   onSubmit: (
     answers: QuestionAnswer[],
     selection: RunSelection,
@@ -26,10 +25,6 @@ const SCOPES = [
   { value: "personal", label: "Only me" },
 ] as const;
 
-// Takes the composer's place while the agent waits on a request for a secret (decision 0047): a
-// masked field for each, and whose variable it becomes. The agent never sees the value; it is
-// stored encrypted and the agent uses it by name. The model is the one the composer would use,
-// since the run continues with it.
 export function SecretForm({ tool, threadId, onSubmit }: Props) {
   const model = useModelSelection(threadId);
   const prompts = tool.questions ?? [];
@@ -43,7 +38,6 @@ export function SecretForm({ tool, threadId, onSubmit }: Props) {
     if (sending) return;
     setSending(true);
     await onSubmit(
-      // A declined request still names each question; the control plane tells the agent so.
       prompts.map((prompt) => ({
         questionId: prompt.id,
         value: skip ? "declined" : (values[prompt.id] ?? ""),

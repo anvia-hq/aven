@@ -34,7 +34,6 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   "openai-compatible": "sk-…",
 };
 
-// Azure and Vertex AI have no list to load: their model is typed.
 const typedModels: Partial<Record<ProviderKind, { label: string; placeholder: string }>> = {
   azure: { label: "Deployment name", placeholder: "my-gpt-deployment" },
   vertex: { label: "Model id", placeholder: "google/gemini-2.5-flash" },
@@ -47,11 +46,8 @@ const modelPlaceholders: Partial<Record<ProviderKind, string>> = {
 
 type Props = {
   kind: ProviderKind;
-  /** Given one, the dialog edits it; without, it adds a provider. */
   provider?: Provider;
-  /** A service with its own panel: its name and address are fixed, and only the key and model are asked. */
   preset?: CompatiblePreset;
-  /** The trigger's label: "Add" for a kind with many, "Set up" or "Edit" for one with a single. */
   label: string;
 };
 

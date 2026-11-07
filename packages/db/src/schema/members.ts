@@ -3,7 +3,6 @@ import { pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { users } from "./users";
 
-// Better Auth organization plugin table. A user can belong to an organization once.
 export const members = pgTable(
   "members",
   {

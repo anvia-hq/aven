@@ -9,8 +9,6 @@ import { z } from "zod";
 
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 
-// What the runner relies on @anvia/durable for (decision 0021): a run continues after the runtime
-// stops without repeating a committed tool call, and the history is the journal's, not a memory store's.
 test("a run resumes after the runtime closes, reusing committed tool results", async () => {
   const dir = mkdtempSync(join(tmpdir(), "aven-durable-"));
   const db = join(dir, "runs.db");
@@ -56,7 +54,6 @@ test("a run resumes after the runtime closes, reusing committed tool results", a
     prompt: "go",
   });
   await reached.promise;
-  // close() waits for the attempt in flight to settle, so let it go once the close has begun.
   const closing = first.close();
   hold.resolve();
   await closing;

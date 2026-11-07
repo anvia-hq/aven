@@ -19,14 +19,11 @@ export type ScheduleInput = {
   cron: string;
   prompt: string;
   timezone?: string;
-  /** The handle of the bot that runs it. */
   bot?: string;
 };
 
 export type SchedulePatch = Partial<ScheduleInput & { enabled: boolean }>;
 
-// It must run sometime, and no two of its times may be closer than the least, whichever day: the
-// gaps are those of the cron's own times of day, not of the next few runs.
 function checkExpression(cron: string, timezone: string, now: Date) {
   try {
     checkTimezone(timezone);
@@ -61,7 +58,6 @@ async function view(row: BotScheduleRow): Promise<BotScheduleView> {
   };
 }
 
-// The bot a handle names among the person's.
 async function botNamed(userId: string, handle: string) {
   const bot = await botsService.getByHandle(userId, handle.trim().replace(/^@/, "").toLowerCase());
   if (!bot) throw new UnprocessableError(`No bot with the handle "${handle}". Use list_bots.`);
@@ -78,7 +74,6 @@ export const schedulesService = {
     return Promise.all(rows.map(view));
   },
 
-  // At most SCHEDULES_LIMIT a person; one at a time, or schedules made at once would each see room.
   async create(userId: string, selfId: string, input: ScheduleInput, now = new Date()) {
     const botId = input.bot === undefined ? selfId : await botNamed(userId, input.bot);
     const timezone = input.timezone ?? (await preferencesService.timezone(userId));
@@ -112,13 +107,11 @@ export const schedulesService = {
   async update(userId: string, id: string, patch: SchedulePatch, now = new Date()) {
     const [current] = await db.select().from(botSchedules).where(ownSchedule(userId, id));
     if (!current) throw new NotFoundError("Schedule not found.");
-    // What is left out stays: an undefined is not a change.
     const { bot, ...given } = patch;
     const fields = Object.fromEntries(
       Object.entries(given).filter(([, value]) => value !== undefined),
     );
     const next = { ...current, ...fields };
-    // What changes when it runs is found again: from now, and not at all while it is paused.
     const timing =
       fields.cron !== undefined || fields.timezone !== undefined || fields.enabled === true;
     if (timing) checkExpression(next.cron, next.timezone, now);

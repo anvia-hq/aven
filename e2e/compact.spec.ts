@@ -4,8 +4,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// Compacting a thread (decision 0097): the Context card has a button and the composer's `/` a
-// command, and either one has the runner summarize the conversation as a run that is only that.
 test.describe("compacting a thread", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -21,7 +19,6 @@ test.describe("compacting a thread", () => {
     expect(provider.ok()).toBe(true);
     const { child, events, threadId } = await threadOnFakeRunner(page, { FAKE_RUN_ENDS: "1" });
     runner = child;
-    // The context is known once the agent has replied; a stand-in snapshot says it is.
     await page.route("**/api/threads/*/events", (route) =>
       route.fulfill({
         status: 200,

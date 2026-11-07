@@ -51,8 +51,6 @@ const platformGroup = {
   items: [{ to: "/settings/platform", label: "Platform", icon: Servers }],
 } as const;
 
-// What the sidebar lists on the settings pages: the same menu as the thread list, in the same
-// shell, with the pages in groups. Platform is for an owner of the installation.
 export function SettingsSidebar() {
   const { config } = usePlatformConfig();
   const visibleGroups = config?.isOwner ? [...groups, platformGroup] : groups;

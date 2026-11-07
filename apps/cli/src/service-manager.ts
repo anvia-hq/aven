@@ -6,15 +6,12 @@ import { exec } from "./compose";
 import { launchdPlist, systemdUnit, type ServiceDefinition } from "./service-files";
 import { withUserBus } from "./user-bus";
 
-/** A background service of the person's own: a launchd agent on macOS, a systemd user unit on Linux. */
 export type ServiceManager = {
-  /** Writes the service's files and starts it on them, or starts it again if it was running. */
   install(def: ServiceDefinition): Promise<void>;
   uninstall(): Promise<void>;
   start(): Promise<void>;
   stop(): Promise<void>;
   restart(): Promise<void>;
-  /** A word for what it is doing, such as "running" or "not installed". */
   status(): Promise<string>;
 };
 
@@ -28,8 +25,6 @@ function launchd(label: string): ServiceManager {
   const target = `${domain}/${label}`;
   const plist = join(homedir(), "Library", "LaunchAgents", `${label}.plist`);
   const loaded = async () => (await exec(["launchctl", "print", target])).code === 0;
-  // `bootout` returns before the service is gone, and a `bootstrap` right after it fails with
-  // "Input/output error", so wait until launchd no longer knows the service.
   const unload = async () => {
     await exec(["launchctl", "bootout", target]);
     for (let waited = 0; waited < 10_000 && (await loaded()); waited += 200) await Bun.sleep(200);
@@ -66,7 +61,6 @@ function launchd(label: string): ServiceManager {
 
 function systemd(unit: string): ServiceManager {
   const file = join(homedir(), ".config", "systemd", "user", `${unit}.service`);
-  // Found again for every call, as a session can be one with no runtime directory (`withUserBus`).
   const env = () => withUserBus(process.env, process.getuid?.());
   const ctl = (...args: string[]) => ["systemctl", "--user", ...args];
   const run = (...args: string[]) => mustRun(ctl(...args), env());
@@ -78,9 +72,7 @@ function systemd(unit: string): ServiceManager {
       await writeFile(file, systemdUnit(def));
       await run("daemon-reload");
       await run("enable", unit);
-      // Restarted, so a service that was already running moves to the new files.
       await run("restart", unit);
-      // Without lingering the service stops when the person logs out. It may need a password or not exist; the service still works while logged in.
       await exec(["loginctl", "enable-linger", process.env.USER ?? userInfo().username]);
     },
     async uninstall() {

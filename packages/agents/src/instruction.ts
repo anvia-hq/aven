@@ -1,8 +1,3 @@
-/**
- * What the agent is told about its turn budget. One that has `define_goal` (a run with a person to
- * answer to) is told when to hand a large task to a goal; a goal's own sessions do not have it, so
- * they are only told to leave the work where a next session can take it up.
- */
 function longTasks(maxTurns: number, canHandOff: boolean) {
   const plan = Math.round(maxTurns / 4);
   const late = Math.round((maxTurns * 3) / 5);
@@ -23,12 +18,6 @@ function longTasks(maxTurns: number, canHandOff: boolean) {
   return `<long_tasks>\n${lines.map((line) => `- ${line}`).join("\n")}\n</long_tasks>`;
 }
 
-/**
- * How a goal's session talks. Nobody answers it while it works and whoever reads the thread wants
- * how the work went, not every step: so it spends its turns on tool calls and writes only at a
- * major step, in one paragraph. Left to `<tone>` and `<output>` alone it narrated each call in
- * fragments ("Need migrations.", "Add tests.").
- */
 function goalReporting() {
   const lines = [
     'Nobody answers you while the goal runs, so spend your turns on tool calls, not on commentary. Make the call: do not announce it, do not narrate each step, and do not write fragments such as "Need migrations." or "Add tests." between calls.',
@@ -38,10 +27,6 @@ function goalReporting() {
   return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
 }
 
-/**
- * The coding agent's instructions, for an agent that may take `maxTurns` model calls for a message.
- * An agent that cannot hand a task to a goal is a goal's own session, which is told how to report.
- */
 export function codingInstructions(maxTurns: number, canHandOff = true) {
   return `<role>
 You are a coding agent working in a sandbox with a project workspace.

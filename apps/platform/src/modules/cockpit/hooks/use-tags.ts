@@ -10,7 +10,6 @@ import { refreshCockpitTags, useCockpitTags } from "./use-collection";
 
 const store = getDefaultStore();
 
-/** The color a tag is drawn in: the one the person chose, else the one its name picks (decision 0107). */
 export function useTagColors() {
   const tags = useCockpitTags();
   return useMemo(() => {
@@ -19,7 +18,6 @@ export function useTagColors() {
   }, [tags]);
 }
 
-// The person's tags, which they add before using and give colors (decision 0107).
 export function useTags() {
   const tags = useCockpitTags();
   return {
@@ -28,14 +26,12 @@ export function useTags() {
       const made = await attempt("Could not add the tag", () =>
         postJson<CockpitTag>("/cockpit/tags", { name }),
       );
-      // The tag answered, put in at once: a list read before it was added would leave it out.
       const before = store.get(cockpitTagsAtom);
       if (made && before && !before.some((tag) => tag.name === made.name)) {
         store.set(cockpitTagsAtom, [...before, made]);
       }
       return made;
     },
-    /** A color of `#rrggbb`, or null for the one the name picks. Shown at once. */
     async setColor(name: string, color: string | null) {
       const before = store.get(cockpitTagsAtom);
       if (before) {
@@ -47,7 +43,6 @@ export function useTags() {
       const saved = await attempt("Could not change the color", () =>
         postJson<CockpitTag>(`/cockpit/tags/${encodeURIComponent(name)}`, { color }, "PATCH"),
       );
-      // What the server kept wins over a list read before the change.
       const now = store.get(cockpitTagsAtom);
       if (saved && now) {
         store.set(

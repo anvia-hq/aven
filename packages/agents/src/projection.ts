@@ -17,9 +17,6 @@ import {
 } from "./tool-projection";
 import { contextOf, tokenUsageOf } from "./usage";
 
-// Only these run events ever reach a client. Turn events carry full history and the system prompt,
-// and provider payloads are private, so they are dropped here. The model's reasoning goes to the
-// thread's tool group (decision 0115).
 export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefined {
   switch (event.type) {
     case "text_delta":
@@ -41,11 +38,6 @@ export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefine
   }
 }
 
-/**
- * What a subagent's stream tells a client (decision 0057): the tools it calls, by what they act on,
- * and what its model calls used, which count toward the thread but not toward its context. Its
- * text, and what its tools returned, are its own: the agent gets them in the call's result.
- */
 export function projectSubagentEvent(
   event: AgentStreamEvent<unknown, unknown>,
   index: number,
@@ -71,13 +63,10 @@ export function projectSubagentEvent(
 }
 
 function assistantParts(content: string | readonly AssistantContentPart[]): MessagePart[] {
-  // Blank text is left out, as the reducer does with a blank delta: it would split tool calls.
   if (typeof content === "string") return content.trim() ? [{ type: "text", text: content }] : [];
   const parts: MessagePart[] = [];
   for (const part of content) {
     if (part.type === "text" && part.text.trim()) parts.push({ type: "text", text: part.text });
-    // Reasoning is shown as the tool group shows it (decision 0115); one whose provider keeps it
-    // opaque (encrypted, redacted) has no text to show.
     if (part.type === "reasoning") {
       const text = reasoningDisplayText(part);
       if (text.trim()) parts.push({ type: "reasoning", text });
@@ -87,8 +76,6 @@ function assistantParts(content: string | readonly AssistantContentPart[]): Mess
   return parts;
 }
 
-// Rebuilds the UI transcript from stored memory. An assistant turn spans several stored messages
-// (text, tool calls, tool results), which become one assistant message with results paired by id.
 export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
   const chat: ChatMessage[] = [];
   const add = (role: ChatMessage["role"], parts: MessagePart[]) => {

@@ -13,8 +13,6 @@ import { sql } from "drizzle-orm";
 import { providers } from "./providers";
 import { users } from "./users";
 
-// A bot a person talks to (decision 0058). Tied to the user, like providers and skills: it follows
-// them into every organization. Its conversation lives in the agent memory tables, keyed by this id.
 export const bots = pgTable(
   "bots",
   {
@@ -23,27 +21,13 @@ export const bots = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    /**
-     * How bots name one another (decision 0065): a slug of the name it was made with, kept when it is
-     * renamed. `main` for the main bot; no other bot has it, nor `user`.
-     */
     handle: text("handle").notNull(),
-    /** What the person told the bot to be like. */
     instruction: text("instruction").notNull(),
-    /** A line on what the bot is for, shown under its name; empty until it or the person writes one. */
     description: text("description").notNull().default(""),
-    /** The look as JSON (`{"seed","family","color"}`, each optional), or a short text; empty until the person picks one, which shows the look drawn from the bot's id (decision 0062). */
     avatar: text("avatar").notNull().default(""),
-    /**
-     * The model the bot talks with: one of the person's providers and one of its models. Without a
-     * provider the bot uses the person's default; without a model, the provider's own. A provider
-     * that is removed leaves the bot on the default.
-     */
     providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
     modelId: text("model_id"),
-    /** One of the model's reasoning levels; only a bot with a model of its own has one. */
     reasoningEffort: text("reasoning_effort"),
-    /** The size of the chat, in tokens, past which old turns are summarized; null is the model's 70%. */
     compactAfterTokens: integer("compact_after_tokens"),
     isMain: boolean("is_main").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -55,7 +39,6 @@ export const bots = pgTable(
   (table) => [
     index("bots_user_idx").on(table.userId),
     uniqueIndex("bots_user_handle_idx").on(table.userId, table.handle),
-    // At most one main bot per user.
     uniqueIndex("bots_user_main_idx")
       .on(table.userId)
       .where(sql`${table.isMain}`),

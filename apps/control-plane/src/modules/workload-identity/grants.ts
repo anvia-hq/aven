@@ -5,7 +5,6 @@ import type { MintTokenBody, SubjectScope } from "./schema";
 
 const TOKEN_PREFIX = "avid_";
 
-/** Who a run is, for the tokens it mints: kept here, never sent to the runner (decision 0049). */
 export type RunIdentity = {
   organizationId: string;
   projectId: string;
@@ -20,9 +19,6 @@ const SUBJECTS: Record<SubjectScope, (identity: RunIdentity) => string> = {
   organization: (identity) => `organization:${identity.organizationId}`,
 };
 
-// What lets a run mint identity tokens, as the gateway's grants let it call a model (decision 0008):
-// each run gets a random credential for who it is, and it ends with the run. The sandbox holds the
-// credential, not the identity, so the agent cannot claim another thread's or person's.
 export class RunIdentities {
   #grants = new Map<string, RunIdentity>();
   #credentials = new Map<string, string>();
@@ -43,7 +39,6 @@ export class RunIdentities {
     this.#grants.delete(credential);
   }
 
-  /** A signed token for the run the credential belongs to, or null when there is none (an ended run's). */
   async mint(credential: string, { audience, subjectScope, lifetime }: MintTokenBody) {
     const identity = this.#grants.get(credential);
     if (!identity) return null;

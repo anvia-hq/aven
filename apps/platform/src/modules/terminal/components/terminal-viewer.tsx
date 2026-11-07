@@ -12,7 +12,6 @@ type Props = {
   computer: Computer;
 };
 
-// A shell in a computer, with an overlay while it connects and once it has ended.
 export function TerminalViewer({ computer }: Props) {
   const { target, phase, reason, reconnect } = useTerminal(computer);
 

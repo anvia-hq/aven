@@ -32,7 +32,6 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
   const emails: string[] = [];
   const organizationIds: string[] = [];
 
-  // A real user with a bearer token, in their personal organization.
   async function signUp(name: string) {
     const email = `${name}-${crypto.randomUUID().slice(0, 8)}@aven.test`;
     emails.push(email);
@@ -68,7 +67,6 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
       await db.delete(organizations).where(eq(organizations.id, id));
   });
 
-  // A thread on a runner that is connected and answering like a real one; `behaviour` says how.
   async function setup(
     behaviour: { running?: boolean; lockedByOther?: boolean; neverRan?: boolean } = {},
   ) {
@@ -162,7 +160,6 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
     }
   };
 
-  // A browser's viewer: it offers the subprotocol noVNC offers, with a bearer token in place of a cookie.
   function view(threadId: string, token: string | undefined, headers: Record<string, string> = {}) {
     const sent = { ...headers };
     if (token) sent.authorization = `Bearer ${token}`;
@@ -210,7 +207,6 @@ run("a thread's desktop (real postgres, real WebSockets)", async () => {
     const { thread, seen } = await setup();
     const { ws } = view(thread.id, owner.token);
 
-    // As soon as the socket is up, before the thread lookup and the runner's answer.
     ws.onopen = () => ws.close();
 
     await until(() => seen.messages.some((message) => message.type === "desktop.open"));

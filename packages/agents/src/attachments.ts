@@ -5,10 +5,8 @@ import { mentionNote, mentionOf } from "./mentions";
 import type { SkillListing } from "./skills";
 import { asRecord } from "./values";
 
-/** Where the sandbox has the files users attach (decision 0034); read-only, outside the workspace. */
 export const UPLOADS_DIR = "/uploads";
 
-/** A file sent with a message, as the runner kept it: `path` is where the agent finds it. */
 export type KeptAttachment = MessageAttachment & { path: string };
 
 function formatSize(bytes: number) {
@@ -17,7 +15,6 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-/** What the agent is told about the files that came with a message. */
 function attachmentNote(kept: readonly KeptAttachment[]) {
   const lines = kept.map((file) => {
     const shown = file.image ? ", shown to you below" : "";
@@ -29,12 +26,10 @@ function attachmentNote(kept: readonly KeptAttachment[]) {
   ].join("\n");
 }
 
-// Without the path, which is for the agent; and without unset fields, which JSON cannot hold.
 function forTranscript({ name, mediaType, size, image }: KeptAttachment): MessageAttachment {
   return image ? { name, mediaType, size, image } : { name, mediaType, size };
 }
 
-/** What came with a message's text: its files, the images among them in base64 by artifact name, and its mentions with the skills of the run they may name. */
 export type SentExtras = {
   attachments?: readonly KeptAttachment[];
   images?: ReadonlyMap<string, string>;
@@ -42,11 +37,6 @@ export type SentExtras = {
   skills?: readonly SkillListing[];
 };
 
-/**
- * The prompt of a message: the user's text alone, or, when files or mentions came with it, the
- * text, what was mentioned (decision 0036), where the files are and the images themselves. The
- * metadata keeps the message as the user sent it, for the transcript.
- */
 export function sentPrompt(
   prompt: string,
   { attachments = [], images = new Map(), mentions = [], skills = [] }: SentExtras = {},
@@ -79,7 +69,6 @@ function attachmentOf(value: unknown): MessageAttachment | undefined {
 const listOf = <T>(value: unknown, read: (item: unknown) => T | undefined) =>
   Array.isArray(value) ? value.map(read).filter((item) => item !== undefined) : [];
 
-/** What a stored user message said, and the files and mentions sent with it, as the user sent them. */
 export function sentMessage(message: Extract<Message, { role: "user" }>): {
   text: string;
   attachments?: MessageAttachment[];

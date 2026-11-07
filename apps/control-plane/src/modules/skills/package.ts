@@ -8,10 +8,8 @@ import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "./schema";
 
 export class InvalidSkillError extends UnprocessableError {}
 
-/** A skill's files by their path in its folder. */
 export type SkillFiles = Map<string, Uint8Array>;
 
-/** A skill ready to store or send: its folder as a `.tar.gz`, named by what is in it. */
 export type PackedSkill = {
   name: string;
   description: string;
@@ -21,10 +19,8 @@ export type PackedSkill = {
   fileCount: number;
 };
 
-// What an archiver or a desktop adds that is not part of the skill.
 const JUNK = /(^|\/)(__MACOSX|\.DS_Store|Thumbs\.db)(\/|$)/;
 
-// A path inside the folder, with `/` between its parts; undefined for one that would leave it.
 function safePath(path: string) {
   const parts = path.replaceAll("\\", "/").split("/");
   if (parts[0] === "") return undefined;
@@ -33,10 +29,6 @@ function safePath(path: string) {
   return kept.join("/");
 }
 
-/**
- * The files of an upload as one skill's folder. A folder the browser read, or a zip of one, has
- * the skill in a folder of its own; that folder is taken away, so SKILL.md is at the top.
- */
 export function skillFolder(uploaded: readonly { path: string; data: string }[]): SkillFiles {
   const files: SkillFiles = new Map();
   for (const file of uploaded) {
@@ -60,7 +52,6 @@ export function skillFolder(uploaded: readonly { path: string; data: string }[])
   return folder;
 }
 
-// The name a SKILL.md gives its skill, which is also the folder Anvia expects it in.
 function declaredName(files: SkillFiles) {
   const text = new TextDecoder().decode(files.get("SKILL.md"));
   const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text)?.[1];
@@ -80,7 +71,6 @@ function declaredName(files: SkillFiles) {
   return name;
 }
 
-// Named by the files, not the archive's bytes, so the same folder packed twice is the same skill.
 function digestOf(files: SkillFiles) {
   const hasher = new Bun.CryptoHasher("sha256");
   for (const path of [...files.keys()].sort()) {
@@ -95,7 +85,6 @@ async function pack(files: SkillFiles) {
   return new Bun.Archive(Object.fromEntries(files), { compress: "gzip" }).bytes();
 }
 
-/** Checks a skill's folder as Anvia reads it, and packs it. Throws InvalidSkillError with why not. */
 export async function packSkill(files: SkillFiles): Promise<PackedSkill> {
   const name = declaredName(files);
   const scratch = await mkdtemp(join(tmpdir(), "aven-skill-"));
@@ -120,7 +109,6 @@ export async function packSkill(files: SkillFiles): Promise<PackedSkill> {
   }
 }
 
-/** The files of a skill folder on this machine. */
 export async function readFolder(dir: string): Promise<SkillFiles> {
   const files: SkillFiles = new Map();
   const entries = await readdir(dir, { withFileTypes: true, recursive: true });

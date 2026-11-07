@@ -9,8 +9,6 @@ type Props = {
   onChange: (projectId: string) => void;
 };
 
-// Every thread belongs to a project; this picks one. Small enough to sit in the composer's toolbar,
-// where it looks like the model chip beside it.
 export function ProjectPicker({ value, onChange }: Props) {
   const { projects } = useProjects();
 
@@ -28,8 +26,6 @@ export function ProjectPicker({ value, onChange }: Props) {
         <Folder />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
-      {/* A list under the button, not over it: drawn over it, each item's folder sat beside the
-          button's. */}
       <SelectContent alignItemWithTrigger={false} align="start">
         {projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>

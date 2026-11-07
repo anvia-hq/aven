@@ -5,7 +5,6 @@ import { Button } from "@/components/button";
 import type { PendingFile } from "../hooks/use-attachments";
 import { FileChip } from "./file-chip";
 
-// The files picked in the composer, before they are sent.
 export function PendingAttachments({
   files,
   onRemove,

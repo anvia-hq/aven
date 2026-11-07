@@ -18,7 +18,6 @@ test.describe("platform auth", () => {
     const password = "password123";
     const email = await registerUser(page, "ui", "UI User");
 
-    // The user card is in the sidebar header and shows the account's name.
     const userCard = page.locator('[data-slot="sidebar-header"]');
     await expect(userCard.getByText("UI User")).toBeVisible();
 
@@ -50,7 +49,6 @@ test.describe("platform auth", () => {
     await expect(page.locator("html")).toHaveClass(/dark/);
     await registerUser(page, "ui", "Theme User");
 
-    // On a wide screen the sidebar is resized, not toggled; its trigger is only in the mobile bar.
     await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeHidden();
     const toggle = page.getByRole("button", { name: "Toggle theme" });
     await toggle.click();

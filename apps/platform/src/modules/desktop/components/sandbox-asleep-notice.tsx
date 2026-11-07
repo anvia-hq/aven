@@ -5,16 +5,12 @@ import { PanelNotice } from "@/components/panel-notice";
 import { Spinner } from "@/components/spinner";
 
 type Props = {
-  /** Says it is not running, and when it starts and stops (`Computer.asleep`). */
   asleep: string;
-  /** What waking it lets the person do: "You can also wake it up to <purpose>." */
   purpose: string;
   waking: boolean;
   onWake: () => void;
 };
 
-// What a panel on a computer (the desktop, a terminal) says while it is not running, with a button
-// that starts it.
 export function SandboxAsleepNotice({ asleep, purpose, waking, onWake }: Props) {
   return (
     <PanelNotice>

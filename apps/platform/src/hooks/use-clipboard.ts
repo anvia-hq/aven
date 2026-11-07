@@ -5,7 +5,6 @@ import { copyToClipboard } from "@/lib/clipboard";
 
 const COPIED_MS = 2000;
 
-// Copies text and reports `copied` for a moment afterwards; a denied copy is toasted.
 export function useClipboard() {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);

@@ -8,7 +8,6 @@ type Props = { threadId: string; path: string | null; running: boolean };
 
 const KIB = 1024;
 
-// A file as plain text with line numbers. It is only read, never changed from here.
 export function FileViewer({ threadId, path, running }: Props) {
   const { loaded, file, problem } = useWorkspaceFile(threadId, path, running);
   if (path === null) return <PanelNotice>Pick a file in the tree to read it.</PanelNotice>;
@@ -24,9 +23,7 @@ export function FileViewer({ threadId, path, running }: Props) {
   return <Lines key={path} path={path} text={file.text} truncated={file.truncated} />;
 }
 
-// Text with line numbers, coloured once the colours are ready.
 function Lines({ path, text, truncated }: { path: string; text: string; truncated: boolean }) {
-  // A final newline ends the last line; it does not start another.
   const shown = text.replace(/\n$/, "");
   const coloured = useHighlightedLines(shown, path);
   const lines = shown.split("\n");

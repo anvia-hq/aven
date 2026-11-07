@@ -6,8 +6,6 @@ import type { RepoCommitPage } from "../types";
 
 type Answer = { key: string; page?: RepoCommitPage; problem?: string };
 
-// One page of the project's commit history on GitHub, from the newest, read again when the page
-// changes. Until the answer for this page is in, `loading` is true, never the last page's commits.
 export function useProjectCommits(projectId: string, page: number, filters = "") {
   const [answer, setAnswer] = useState<Answer>();
   const key = `${projectId}\n${page}\n${filters}`;

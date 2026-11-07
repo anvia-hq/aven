@@ -21,7 +21,6 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
 
   const sent: { userId: string; threadId: string; prompt: string }[] = [];
   let connected = true;
-  // The files the thread's workspace has.
   let workspaceFiles: string[] = [];
   const service = createShipService({} as RuntimeHub, {
     userTokens: {

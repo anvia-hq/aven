@@ -2,23 +2,13 @@ import { NotFoundError } from "../../errors";
 import { loadAppById, loadOrganizationApp } from "./app-store";
 import { github as platformClient, GithubClient, type GithubConfig } from "./client";
 
-/** The key of the platform's app in `github_user_tokens.app_key`; a workspace's own is its `github_apps` id. */
 export const PLATFORM_APP = "platform";
 
-/** The app a workspace acts as, and the client that acts as it. */
 export type AppClient = { key: string; client: GithubClient };
 
-/**
- * The GitHub clients of the server, one for each app (decision 0123): the platform's, which the
- * environment or a platform owner set (decision 0074), and the apps workspaces made for
- * themselves. A workspace without one of its own uses the platform's.
- */
 export type GithubClients = {
-  /** The client of an app by its key (`PLATFORM_APP` or a `github_apps` id). */
   forKey(appKey: string): Promise<GithubClient>;
-  /** The app a workspace acts as: its own if it has one, else the platform's. */
   forOrganization(organizationId: string): Promise<AppClient>;
-  /** Drops what is kept of a workspace's app, after it was made or replaced. */
   forget(organizationId: string): void;
 };
 
@@ -38,7 +28,6 @@ export function createGithubClients(
   },
   make: (config: GithubConfig) => GithubClient = (config) => new GithubClient(config),
 ): GithubClients {
-  // A workspace app's client keeps its installation tokens, so it is made once.
   const own = new Map<string, GithubClient>();
   const ofOrganization = new Map<string, string>();
 

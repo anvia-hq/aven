@@ -6,7 +6,6 @@ import type { MessageMention } from "@aven/protocol/events";
 import { sentPrompt, type KeptAttachment, type SentExtras } from "./attachments";
 import { messagesToChat } from "./projection";
 
-// A prompt that came with something is a message, not text alone.
 function sent(prompt: string, extras: SentExtras): UserMessage {
   const message = sentPrompt(prompt, extras);
   if (typeof message === "string") throw new Error("Expected a message");
@@ -90,7 +89,6 @@ describe("messagesToChat with attachments", () => {
   });
 });
 
-// "fix @src/app.ts with /writing-skills"
 const file: MessageMention = { type: "file", name: "src/app.ts", from: 4, to: 15 };
 const skill: MessageMention = { type: "skill", name: "writing-skills", from: 21, to: 36 };
 const listing = [

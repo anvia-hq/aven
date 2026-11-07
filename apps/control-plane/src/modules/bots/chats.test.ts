@@ -35,11 +35,9 @@ run("createBotChats (postgres)", async () => {
   });
 
   afterAll(async () => {
-    // Cascades remove their bots.
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
-  // A store that keeps what is appended, as the database does.
   const keeping = () => {
     const kept = new Map<string, Message[]>();
     return {
@@ -53,7 +51,6 @@ run("createBotChats (postgres)", async () => {
     } satisfies MemoryStore;
   };
 
-  // A runner whose bot answers in this process, with the agent a test made.
   const runnerWith = (options: {
     store: MemoryStore;
     createAgent?: Parameters<typeof inProcessReplier>[0]["createAgent"];
@@ -110,7 +107,6 @@ run("createBotChats (postgres)", async () => {
 
   describe("files sent with a message (decision 0080)", () => {
     const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
-    // The reply is given to the replier a moment after `send` returns, once its turn comes.
     const answeredBy = async (answered: unknown[], count: number) => {
       for (let tries = 0; answered.length < count && tries < 2000; tries++) await Bun.sleep(1);
     };
@@ -167,7 +163,6 @@ run("createBotChats (postgres)", async () => {
         ).rejects.toBeInstanceOf(InvalidSelectionError);
         expect(answered).toEqual([]);
 
-        // A file that is no image is for the computer, and needs no eyes.
         await botChats.send(alice, mine!.id, "read", [
           { name: "notes.txt", data: new TextEncoder().encode("hi").toBase64() },
         ]);
@@ -192,7 +187,6 @@ run("createBotChats (postgres)", async () => {
     });
   });
 
-  // The messages of a bot's chat as they are now, read from a runner.
   const chatOf = async (runner: InstanceType<typeof BotRunner>, botId: string, userId: string) => {
     const controller = new AbortController();
     const [messages] = await Array.fromAsync(
@@ -208,8 +202,6 @@ run("createBotChats (postgres)", async () => {
     return messages!;
   };
 
-  // Bots that write to each other (decision 0065): the main bot says nothing, and any other writes
-  // back to it, which is what the person's request amounted to.
   const writingBack = () => {
     const runner: InstanceType<typeof BotRunner> = runnerWith({
       store: keeping(),
@@ -249,7 +241,6 @@ run("createBotChats (postgres)", async () => {
     const [main] = await botsService.list(alice);
     const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
     const { runner, botChats } = writingBack();
-    // The writing bot's chat is open, so the exchange is added to it as it happens.
     const watching = runner.events(main!.id, alice, new AbortController().signal);
     await watching.next();
     const heard: string[] = [];
@@ -271,12 +262,10 @@ run("createBotChats (postgres)", async () => {
       text: "do A",
       relaysPersonsWord: true,
     });
-    // Nothing is waited for: the answer is a message of its own, which comes when the bot has it.
     expect(sent).toEqual({ handle: "scout", name: "Scout" });
     await Bun.sleep(30);
 
     expect(heard).toEqual(["bot to: do A", "user from: Scout did A"]);
-    // Read back from what the bot remembers, which knows the other bot by its handle.
     expect(await chatOf(runner, scout.id, alice)).toEqual([
       {
         id: "m-0",
@@ -365,7 +354,6 @@ run("createBotChats (postgres)", async () => {
   test("a bot with a lot to answer refuses more, and the sender's chat has only what was sent", async () => {
     const [main] = await botsService.list(alice);
     const busy = await botsService.create(alice, { name: "Busy", instruction: "x" });
-    // Its first reply never ends, so what comes after waits behind it.
     const runner = runnerWith({
       store: keeping(),
       createAgent: ({ bot, send, memory }) =>
@@ -485,7 +473,6 @@ run("createBotChats (postgres)", async () => {
       "remember me",
       "kept",
     ]);
-    // Another person's scope on the same bot id finds nothing.
     expect(await botMemoryStore.load({ scope: { sessionId: mine!.id, userId: bob } })).toEqual([]);
     await botMemoryStore.clear({ scope });
   });
@@ -607,7 +594,6 @@ run("createBotChats (postgres)", async () => {
     await botMemoryStore.clear({ scope });
     await botsService.update(alice, mine!.id, { compactAfterTokens: 1000 });
 
-    // A model that sends "ok" to each message, and summarizes when asked (a request with no tools).
     const requests: string[] = [];
     let spoke = false;
     const decide = (request: CompletionRequest) => {
@@ -616,7 +602,6 @@ run("createBotChats (postgres)", async () => {
       spoke = !spoke;
       return spoke ? [toolCall("send_message", { text: "ok" })] : [text("")];
     };
-    // The runner's own code answers, and asks the real store through the answers of the control plane.
     const runner = new BotRunner({
       store: botMemoryStore,
       replier: loopbackReplier({
@@ -645,7 +630,6 @@ run("createBotChats (postgres)", async () => {
         if (event?.type === "typing" && !event.typing) break;
       }
     };
-    // About 1,250 tokens each, past the size, so every turn after the first has old ones to fold.
     const filler = "apples and oranges ".repeat(260);
     await say(`FIRSTMARK ${filler}`);
     await say(`second ${filler}`);
@@ -656,7 +640,6 @@ run("createBotChats (postgres)", async () => {
     expect(lastAsked).toContain("SUMMARY OF EARLIER TALK");
     expect(lastAsked).not.toContain("FIRSTMARK");
 
-    // The conversation the person sees is whole: nothing was lost to the summary.
     const chat = botMessagesToChat(await botMemoryStore.load({ scope }));
     expect(chat.map((message) => message.text.slice(0, 9))).toEqual([
       "FIRSTMARK",

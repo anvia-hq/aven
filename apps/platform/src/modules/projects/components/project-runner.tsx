@@ -7,9 +7,6 @@ import { useCanManageProject } from "../hooks/use-can-manage-project";
 import { useProjects } from "../hooks/use-projects";
 import type { Project } from "../types";
 
-// The runner the project's new threads run on: a badge for a member, and for whoever may change
-// the project a menu of the workspace's runners (decision 0093). Threads already started stay on
-// the runner they began on, which is said under the menu.
 export function ProjectRunner({ project }: { project: Project }) {
   const canManage = useCanManageProject(project);
   const { runtimes } = useRuntimes();

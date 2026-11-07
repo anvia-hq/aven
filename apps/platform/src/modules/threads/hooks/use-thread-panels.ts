@@ -1,7 +1,5 @@
 import { usePanel } from "@/hooks/use-panel";
 
-// Which panels are open beside a thread, remembered. The overview is on until closed; the others
-// open when asked for.
 export function useThreadPanels() {
   const overview = usePanel("aven.overview-open", true);
   const desktop = usePanel("aven.desktop-open", false);

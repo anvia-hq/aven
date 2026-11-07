@@ -1,9 +1,3 @@
-// Some servers behind the chat completions API send `null` for fields a chunk does not set
-// (`"id": null, "name": null` on every continuation of a streamed tool call, as Azure does for
-// DeepSeek). The Anvia SDK accepts a missing field but rejects a null one as an invalid tool call
-// (docs/bugs/0002-chat-stream-null-tool-call-fields.md). This wraps `fetch` so the event stream it
-// returns carries no null properties.
-
 function withoutNulls(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutNulls);
   if (typeof value !== "object" || value === null) return value;
@@ -14,7 +8,6 @@ function withoutNulls(value: unknown): unknown {
   );
 }
 
-// One server-sent line: a JSON `data:` line is cleaned, anything else passes through.
 function cleanLine(line: string) {
   const match = /^data: ?(.*)$/.exec(line);
   if (!match || match[1] === "[DONE]") return line;

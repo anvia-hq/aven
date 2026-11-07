@@ -11,7 +11,6 @@ import { TerminalSessions } from "./terminal-sessions";
 const viewerId = crypto.randomUUID();
 const size = { cols: 100, rows: 30 };
 
-// A plain `sh` stands in for `docker exec` into the container.
 function setup(running = true) {
   const hangupFile = join(tmpdir(), `terminal-hangup-${crypto.randomUUID()}`);
   const sent: RuntimeToControlPlane[] = [];
@@ -92,7 +91,6 @@ describe("TerminalSessions", () => {
     sessions.close(viewerId);
     await Bun.sleep(100);
     expect(sent).toEqual([{ type: "terminal.opened", viewerId }]);
-    // Docker leaves the shell running when its client is killed, so it is hung up inside.
     expect(await hangups()).toBe(1);
     expect(sessions.count("t1")).toBe(0);
   });

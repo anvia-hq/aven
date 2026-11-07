@@ -5,7 +5,6 @@ import type { RepoAccess } from "@aven/protocol/runtime-wire";
 
 import { git } from "../git-clone";
 
-// FOR TESTS ONLY: a local git repository with one commit on `main`, standing in for GitHub.
 export async function createRemoteRepo(token = "test-token") {
   const dir = await mkdtemp(join(tmpdir(), "aven-remote-"));
   await Bun.write(join(dir, "README.md"), "# remote\n");

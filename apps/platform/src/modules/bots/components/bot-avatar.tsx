@@ -12,7 +12,6 @@ import {
 } from "../avatar";
 import type { Bot } from "../types";
 
-// A round corner is a stroke of the shape's own color, so a polygon only needs its points.
 const CORNER = 6;
 const LINE = 2.6;
 const EYE_SPACING = 5.7;
@@ -51,10 +50,8 @@ function Body({ parts, color }: { parts: readonly Part[]; color: string }) {
   });
 }
 
-/** What a bot is doing, which its avatar shows: at work its eyes are open (decision 0062). */
 export type BotMood = "idle" | "working";
 
-// Where the pupils look, by face: ahead, up and to the right, or off to the left.
 const LOOK: Record<Look["face"], Point> = {
   smile: { x: 0, y: 0 },
   grin: { x: 0, y: 0 },
@@ -62,8 +59,6 @@ const LOOK: Record<Look["face"], Point> = {
   glance: { x: -1.8, y: 0.4 },
 };
 
-// Eyes shut as in a smile when idle, wide open and looking about when at work; and the mouth the
-// face has: a smile, a grin or none.
 function Face({ look, mood }: { look: Look; mood: BotMood }) {
   const { center, face } = look;
   const gaze = LOOK[face];
@@ -102,7 +97,6 @@ function Face({ look, mood }: { look: Look; mood: BotMood }) {
   );
 }
 
-// A bot at work gives off a ring that spreads and a dot that goes round it, in its color.
 function Working({ look }: { look: Look }) {
   const radius = look.reach + 3;
   return (
@@ -124,10 +118,6 @@ function Working({ look }: { look: Look }) {
   );
 }
 
-// The bot's character: the one the person chose, or the one its id draws (decision 0062). An
-// avatar that is plain text, from before characters, is shown as the text. `children` can add to
-// the avatar, such as a badge. The box is cropped to the shapes, which fill about 80% of their 48
-// by 48 one, and the size is forced with `!` because a sidebar button sizes every svg in it to 16px.
 export function BotAvatar({
   bot,
   mood = "idle",
@@ -140,8 +130,6 @@ export function BotAvatar({
   children?: ReactNode;
 }) {
   const setting = parseAvatarSetting(bot.avatar);
-  // Text from before characters is drawn as it is; anything that looks like a setting but is not
-  // one this client reads, such as a later version's, is left to the character the id draws.
   const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
   const look = avatarFor(bot.id, setting ?? undefined);
   return (

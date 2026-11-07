@@ -9,46 +9,29 @@ import type { RunModel, RunSkill, RunThreadInfo } from "@aven/protocol/runtime-w
 
 import type { GoalState } from "./durable-goals";
 
-// What a runner needs to take a run up again after it restarts: who asked for what, and how far
-// the run had got. Everything else is in the journal (decision 0024).
 export type RunRecord = {
   runId: string;
   thread: RunThreadInfo;
-  /** The model the control plane granted. Its token works while the control plane holds the run. */
   model?: RunModel;
-  /** "start" runs a prompt; "answer" delivers the answers to a question the thread parked. */
   kind: "start" | "answer";
   prompt?: string;
-  /** The run only summarizes the thread's history, with no sandbox and no tools (decision 0097). */
   compact?: boolean;
-  /** The files sent with the prompt, once copied into the sandbox's /uploads (decision 0034). */
   attachments?: KeptAttachment[];
-  /** The files and skills the prompt mentions (decision 0036). */
   mentions?: MessageMention[];
-  /** The skills the control plane gave the run, and what the agent is told of once they are in the sandbox (decision 0035). */
   skills?: RunSkill[];
   skillListing?: SkillListing[];
-  /** The person's memory the run was given (decision 0102): kept so a run taken up again is told of it. */
   memory?: RunMemory;
-  /** What the agent may do in the sender's cockpit (decision 0109): kept so a run taken up again has it. */
   cockpit?: CockpitAccess;
-  /** The agent the run's first part uses, and the run it has in the journal once submitted. */
   agentId: string;
   durableId?: string;
-  /** The messages of the run filed with the control plane so far. */
   turn: number;
-  /** Where the run is: the agent's turn, the goal it handed over, or the report on that goal. */
   phase: "chat" | "goal" | "report";
-  /** A goal the agent handed over, to start when its turn ends, and how far it has got. */
   goal?: GoalRequest;
   goalState?: GoalState;
-  /** The report turn's run in the journal, once started. */
   reportId?: string;
-  /** Set once `run.end` is in the outbox: nothing is left to do but wait for it to be acknowledged. */
   done?: boolean;
 };
 
-// Every agent a run uses in the journal, so a restart knows which of the journal's runs are its own.
 export const agentsOf = (record: RunRecord) => [
   record.agentId,
   `goal-${record.runId}`,

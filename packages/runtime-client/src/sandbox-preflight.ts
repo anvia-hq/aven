@@ -3,7 +3,6 @@ import { asRecord } from "@aven/agents/values";
 import type { DockerRun } from "./environment-setup";
 import type { Git } from "./git-clone";
 
-/** What the checks need to know of the sandbox's configuration. */
 export type PreflightConfig = { image: string; platform?: string; runtime?: string };
 
 const PLATFORM_PATTERN = /^linux\/(amd64|arm64)(\/v\d+)?$/;
@@ -17,11 +16,8 @@ function safeJson(text: string): Record<string, unknown> {
   }
 }
 
-/** What a runner runs on its own machine: Docker for the containers, git for the clones. */
 export type HostCommands = { docker: DockerRun; git: Git };
 
-// What a runner needs before it can take a thread: the image, git, and a platform and runtime
-// Docker knows. Each failure says what to do about it.
 export async function preflight(
   config: PreflightConfig,
   { docker: run, git: gitRun }: HostCommands,

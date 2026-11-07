@@ -4,8 +4,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// A message sent while the agent works (decision 0098): it shows at once as queued, the agent takes
-// it at its next step and it becomes the person's message, and the composer stays usable.
 test.describe("steering a running agent", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -15,12 +13,10 @@ test.describe("steering a running agent", () => {
 
   async function runningThread(page: Page, env: Record<string, string> = {}) {
     await registerUser(page, "str", "Steer User");
-    // The run needs a model grant; the pretend runner never calls the model.
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
     expect(provider.ok()).toBe(true);
-    // The run goes on until the spec is over: it is the agent that has not finished.
     const { child, events, threadId } = await threadOnFakeRunner(page, {
       FAKE_RUN_ENDS_AFTER: "120000",
       ...env,
@@ -41,7 +37,6 @@ test.describe("steering a running agent", () => {
     await page.keyboard.type("use the other API");
     await page.getByRole("button", { name: "Send" }).click();
 
-    // Before the agent has it: dimmed and said to be queued, and the composer is free again.
     const queued = page.locator("[data-queued]");
     await expect(queued).toContainText("use the other API");
     await expect(queued).toContainText("Queued");
@@ -53,7 +48,6 @@ test.describe("steering a running agent", () => {
       )
       .toBe(true);
 
-    // The agent reads it: it is an ordinary message of the conversation now.
     await expect(queued).toHaveCount(0, { timeout: 8000 });
     const user = page.locator('[data-role="user"]:not([data-queued])');
     await expect(user).toHaveCount(2);
@@ -64,7 +58,6 @@ test.describe("steering a running agent", () => {
     page,
   }) => {
     await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" });
-    // The server answers late, and the second time with a refusal.
     let calls = 0;
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
@@ -77,14 +70,12 @@ test.describe("steering a running agent", () => {
     await prompt.click();
     await page.keyboard.type("first");
     await page.keyboard.press("Enter");
-    // Within a fraction of the server's 1.5 seconds, the message is shown and the composer is free.
     await expect(page.locator("[data-queued]")).toContainText("first", { timeout: 500 });
     await expect(prompt).toHaveText("", { timeout: 500 });
 
     await page.keyboard.type("second");
     await page.keyboard.press("Enter");
     await expect(page.locator("[data-queued]")).toHaveCount(2, { timeout: 500 });
-    // Refused: it is not shown as waiting any more, and what was typed is back to send again.
     await expect(page.locator("[data-queued]")).toHaveCount(1, { timeout: 4000 });
     await expect(page.locator("[data-queued]")).toContainText("first");
     await expect(prompt).toHaveText("second");
@@ -96,7 +87,6 @@ test.describe("steering a running agent", () => {
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     await prompt.click();
     await page.keyboard.type("and add tests");
-    // Send is beside Stop while there is something to send, and not without.
     await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
     await page.keyboard.press("Enter");
 

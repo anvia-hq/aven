@@ -13,7 +13,6 @@ describe("tileColors", () => {
 });
 
 describe("tilePalettes", () => {
-  // Two ids that hash to the same palette, as two projects of one install may.
   const twins = ["e10b6307-ab40-49eb-958f-929445d72a80", "8426ffae-0657-464f-95e8-e9a56327b4a6"];
 
   test("two ids that hash to one palette are given two", () => {

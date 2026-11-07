@@ -12,7 +12,6 @@ test.afterEach(() => {
   for (const child of children.splice(0)) child.kill();
 });
 
-// A runner of the organization that connects with `env`; with FAKE_STATS it reports its load.
 async function runner(page: Page, name: string, env: Record<string, string> = {}) {
   const created = await page.request.post("/api/runtimes", { data: { name } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
@@ -56,12 +55,10 @@ test.describe("machine monitor", () => {
     await page.goto("/threads");
     const machines = page.getByRole("list", { name: "Machines" });
     const rows = machines.locator("[data-slot=machine-row]");
-    // One row each, the online ones first and each group oldest first.
     await expect(rows).toHaveCount(4);
     expect(
       await rows.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual(["build-box", "hot-box", "old-box", "sleeping-box"]);
-    // Above Settings, and every row as tall as one line of the menu.
     const settings = await page.getByRole("button", { name: "Settings" }).boundingBox();
     const last = await rows.last().boundingBox();
     expect(last!.y + last!.height).toBeLessThanOrEqual(settings!.y);
@@ -69,7 +66,6 @@ test.describe("machine monitor", () => {
       expect(box!.height).toBeLessThanOrEqual(34);
     }
 
-    // CPU, memory and disk of a runner that reports, each as a meter with its number.
     const build = machines.getByRole("listitem", { name: "build-box" });
     await expect(build.getByRole("meter", { name: "CPU of build-box" })).toHaveAttribute(
       "aria-valuenow",
@@ -90,7 +86,6 @@ test.describe("machine monitor", () => {
       build.getByRole("meter", { name: "CPU of build-box" }).locator("[data-slot=meter-fill]"),
     ).toHaveCSS("width", /^\d/);
 
-    // Nearly full is drawn as a warning, and not before.
     const fillOf = (row: typeof build, name: string) =>
       row.getByRole("meter", { name }).locator("[data-slot=meter-fill]");
     await expect(
@@ -98,11 +93,9 @@ test.describe("machine monitor", () => {
     ).toHaveAttribute("data-level", "high");
     await expect(fillOf(build, "CPU of build-box")).toHaveAttribute("data-level", "low");
 
-    // A runner that does not report, and one that is off, say so in the row.
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");
     await expect(machines.getByRole("listitem", { name: "sleeping-box" })).toContainText("Offline");
 
-    // The detail is on hover.
     await build.hover();
     const tip = page.locator('[data-slot="tooltip-content"]');
     await expect(tip).toContainText("Memory: 38%, 6.0 of 16.0 GB");
@@ -110,7 +103,6 @@ test.describe("machine monitor", () => {
     await expect(tip).toContainText("4 cores");
     await expect(tip).toContainText("2 sandboxes running");
 
-    // On every page of the shell, and a click goes to the runtimes.
     await page.goto("/bot");
     await expect(rows).toHaveCount(4);
     await build.click();
@@ -127,12 +119,10 @@ test.describe("machine monitor", () => {
 
     await page.goto("/threads");
     const machines = page.getByRole("list", { name: "Machines" });
-    // Only the one that is behind and can update itself has the button.
     await expect(machines.getByRole("button", { name: "Update old-box" })).toBeVisible();
     await expect(machines.getByRole("button", { name: "Update current-box" })).toHaveCount(0);
     await expect(machines.getByRole("button", { name: "Update dev-box" })).toHaveCount(0);
 
-    // It says what it will do first, then asks the runner and shows Updating.
     await machines.getByRole("button", { name: "Update old-box" }).click();
     const dialog = page.getByRole("dialog", { name: "Update old-box?" });
     await expect(dialog).toContainText("restarts for a moment");
@@ -140,7 +130,6 @@ test.describe("machine monitor", () => {
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Updating…");
     await expect(machines.getByRole("button", { name: "Update old-box" })).toHaveCount(0);
 
-    // A refresh does not forget it: the row still says Updating.
     await page.reload();
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Updating…");
   });
@@ -161,7 +150,6 @@ test.describe("machine monitor", () => {
       .getByRole("button", { name: "Update", exact: true })
       .click();
     await expect(page.getByText("A run is going on this runner")).toBeVisible();
-    // The dialog stays for a second try; closed, the button is still there.
     await page
       .getByRole("dialog", { name: "Update busy-box?" })
       .getByRole("button", { name: "Cancel" })

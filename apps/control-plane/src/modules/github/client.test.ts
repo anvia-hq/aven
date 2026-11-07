@@ -23,7 +23,6 @@ const config = {
 
 type Call = { url: string; init?: RequestInit };
 
-// A GitHub that answers each request from `routes` (keyed "METHOD path") and records the calls.
 function fakeGithub(routes: Record<string, unknown>) {
   const calls: Call[] = [];
   const fetch = async (url: string, init?: RequestInit) => {
@@ -202,7 +201,6 @@ describe("GithubClient", () => {
         { name: "README.md", path: "README.md", type: "file" },
         { name: "vendor", path: "vendor", type: "file" },
       ]);
-      // With the installation's token, and the default branch because no ref is asked for.
       expect(auth(github.calls.at(-1)!)).toBe("Bearer ghs_one");
       expect(github.calls.at(-1)!.url).toBe("https://api.github.com/repos/acme/web/contents");
     });
@@ -285,12 +283,9 @@ describe("GithubClient", () => {
       parents: [],
       ...extra,
     });
-    // A GitHub that answers the commits listing with `answer` and the branch listing with
-    // `branches`, and the token as the app asks.
     const github = (
       answer: () => Response,
       branches: () => Response = () => Response.json([]),
-      // One branch by name; by default found in the listing.
       branch?: (name: string) => Response,
       tags: () => Response = () => Response.json([]),
     ) => {
@@ -370,7 +365,6 @@ describe("GithubClient", () => {
             { name: "main", commit: { sha: "m1" } },
             { name: "release", commit: { sha: "m1" } },
             { name: "feature/login", commit: { sha: "f3" } },
-            // A branch that ends on a commit this page does not have.
             { name: "old", commit: { sha: "zzz" } },
           ]),
       );
@@ -413,8 +407,6 @@ describe("GithubClient", () => {
     });
 
     test("the default branch is shown even when it is past the branches GitHub lists first", async () => {
-      // GitHub lists branches by name, 100 to a page: `main` can be on a later page, so it is also
-      // asked for by its own name.
       const { calls, client } = github(
         () => Response.json([commit("a1", "Fix", { parents: [] })]),
         () => Response.json([{ name: "zzz", commit: { sha: "a1" } }]),
@@ -525,8 +517,6 @@ describe("GithubClient", () => {
       user: { login: "ada" },
       ...extra,
     });
-    // A GitHub that gives a token, says what the installation may do and answers the search with
-    // `answer(query)`.
     const github = (
       answer: (query: URLSearchParams) => Response,
       permissions: Record<string, string> = { pull_requests: "write", issues: "read" },
@@ -580,12 +570,10 @@ describe("GithubClient", () => {
         updatedAt: "2026-11-01T10:00:00Z",
         labels: [],
       });
-      // The search is for this repository's pull requests that are open, the latest changed first.
       const search = new URL(calls.at(-1)!).searchParams;
       expect(search.get("q")).toBe("repo:acme/web is:pr is:open");
       expect(search.get("sort")).toBe("updated");
       expect(search.get("per_page")).toBe("10");
-      // Pull requests need nothing but the pull requests permission: no look at the permissions.
       expect(calls.some((url) => url.endsWith("/app/installations/7"))).toBe(false);
     });
 
@@ -626,9 +614,7 @@ describe("GithubClient", () => {
       await expect(client.tracked(7, "acme/web", "issue", "open", 1)).rejects.toBeInstanceOf(
         GithubIssuesNotGrantedError,
       );
-      // GitHub's search would have answered nothing: it is not asked.
       expect(calls.some((url) => url.includes("/search/issues"))).toBe(false);
-      // Pull requests still list.
       expect((await client.tracked(7, "acme/web", "pull", "open", 1))?.total).toBe(0);
     });
 

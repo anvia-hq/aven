@@ -50,20 +50,13 @@ function ThreadPage() {
   } = useThread(threadId);
   useFirstPrompt(threadId, send);
   const { compacting, compact } = useCompactThread(threadId);
-  // Compacting is a run of its own: not while the agent works or waits on its question.
   const canCompact = owned && !running && !question;
-  // Side by side needs room; on a narrow screen the desktop stacks under the conversation.
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels();
   const { overview, desktop, diff, files, terminal } = panels;
-  // Files, Changes, Desktop and Terminal share one column, so the conversation keeps the same width whichever is open.
-  // The Desktop and the Terminal are the thread's creator's alone (decision 0084).
   const sideOpen = diff.open || files.open || (owned && (desktop.open || terminal.open));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
-  // What the pull request does not have yet (everything, before there is one): the badge shows it,
-  // and Update PR has nothing to send without it. Asked for here, before the thread has loaded.
   const unshipped = useThreadDiff(threadId, "unshipped", running);
-  // Each orientation and each set of panels keeps its own sizes.
   const layout = useDefaultLayout({
     id: `aven.thread-panels.${wide ? "row" : "column"}`,
     panelIds,
@@ -84,8 +77,6 @@ function ThreadPage() {
   return (
     <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
       <div className="min-h-0 flex-1">
-        {/* The conversation stays the first panel whether or not the desktop is open, so opening
-            it does not remount the conversation and lose a half-written reply. */}
         <ResizablePanelGroup
           orientation={wide ? "horizontal" : "vertical"}
           defaultLayout={layout.defaultLayout}
@@ -94,7 +85,6 @@ function ThreadPage() {
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div className="@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-r-xl md:border-y md:border-r md:border-sidebar-border">
               <ThreadHeader thread={thread} panels={panels} owned={owned} />
-              {/* The conversation scrolls the full height of the panel, behind the composer. */}
               <div ref={conversation} className="relative min-h-0 flex-1">
                 <ThreadMessages
                   threadId={thread.id}
@@ -123,7 +113,6 @@ function ThreadPage() {
                   ref={composer}
                   className={cn(
                     "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3",
-                    // Keep the composer under the messages, not under the overview.
                     overview.open && "@4xl:pr-75",
                   )}
                 >
@@ -145,8 +134,6 @@ function ThreadPage() {
                           running={running}
                           onStop={cancel}
                           onCompact={compact}
-                          // The same while the agent works: the composer's editor is made again
-                          // when its placeholder changes, which broke a message sent as a run began.
                           placeholder="Reply to the agent…"
                           onSubmit={send}
                           tools={<ProjectInfo projectId={thread.projectId} />}

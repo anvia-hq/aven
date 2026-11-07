@@ -11,8 +11,6 @@ import { useCockpitTags } from "../hooks/use-collection";
 import { useTagColors } from "../hooks/use-tags";
 import { TagBadge, tagClass, tagStyle } from "./tag-badge";
 
-// The tags of a record as chips, and a field that adds one on Enter or a comma and takes the last
-// away on Backspace. The tags the person already uses are offered as they type.
 export function TagInput({
   value,
   onChange,
@@ -22,7 +20,6 @@ export function TagInput({
   value: string[];
   onChange: (tags: string[]) => void;
   label?: string;
-  /** As a page's property: no box, only the chips and a quiet field. */
   bare?: boolean;
 }) {
   const [draft, setDraft] = useState("");
@@ -65,7 +62,6 @@ export function TagInput({
         )}
       >
         {value.map((tag) => (
-          // The × shows on hover, when it has the keyboard's focus, and always on a touch screen.
           <TagBadge
             key={tag}
             tag={tag}

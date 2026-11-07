@@ -2,7 +2,6 @@ import { db } from "@aven/db/client";
 import { githubInstallations } from "@aven/db/schema/github-installations";
 import { projects } from "@aven/db/schema/projects";
 
-// Inserts a GitHub installation and a project imported from it, without calling GitHub.
 export async function seedProject(
   organizationId: string,
   userId: string,

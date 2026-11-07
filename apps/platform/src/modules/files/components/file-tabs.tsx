@@ -12,7 +12,6 @@ type Props = {
   onClose: (path: string) => void;
 };
 
-// The files that are open, one tab each; a tab that shares its name with another shows its path.
 export function FileTabs({ open, active, onSelect, onClose }: Props) {
   return (
     <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">

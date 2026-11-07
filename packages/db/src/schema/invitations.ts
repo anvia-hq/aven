@@ -3,7 +3,6 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { users } from "./users";
 
-// Better Auth organization plugin table.
 export const invitations = pgTable("invitations", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")

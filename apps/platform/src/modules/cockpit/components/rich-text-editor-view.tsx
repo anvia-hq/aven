@@ -12,9 +12,7 @@ import { useTheme } from "@/modules/theme/hooks/use-theme";
 import { blocksOf } from "../rich-text";
 
 export type RichTextEditorProps = {
-  /** The body as it is kept: BlockNote's blocks as JSON, or text written before (decision 0105). */
   value: string;
-  /** The body as it is now, as JSON, or empty when nothing is written. */
   onChange?: (value: string) => void;
   editable?: boolean;
   placeholder?: string;
@@ -22,7 +20,6 @@ export type RichTextEditorProps = {
   className?: string;
 };
 
-// An empty document is one empty paragraph, which is kept as no body at all.
 const isEmpty = (blocks: Block[]) =>
   blocks.length === 0 ||
   (blocks.length === 1 &&
@@ -30,8 +27,6 @@ const isEmpty = (blocks: Block[]) =>
     (blocks[0]!.content as unknown[] | undefined)?.length === 0 &&
     blocks[0]!.children.length === 0);
 
-// The cockpit's editor (decision 0105): BlockNote, in the platform's theme. It is made once for the
-// record it opens on: give it a `key` of the record's id so another record gets an editor of its own.
 export default function RichTextEditorView({
   value,
   onChange,
@@ -45,22 +40,17 @@ export default function RichTextEditorView({
   const editor = useCreateBlockNote({
     initialContent: blocks && blocks.length > 0 ? (blocks as Block[]) : undefined,
     dictionary: { ...en, placeholders: { ...en.placeholders, emptyDocument: placeholder } },
-    // The name goes on the editable area itself, which is what a screen reader lands on.
     domAttributes: { editor: { "aria-label": label } },
   });
-  // Text written before the editor came is read in as markdown, once, without counting as a change.
   const loading = useRef(false);
   useEffect(() => {
     if (blocks || !value.trim()) return;
     loading.current = true;
     editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(value));
     loading.current = false;
-    // Only for the value the editor opened on.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  // Escape in a menu of the editor's (`/`, emoji) closes that menu and goes no further: in a
-  // drawer or a dialog it would otherwise close those too (decision 0108).
   const frame = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = frame.current;

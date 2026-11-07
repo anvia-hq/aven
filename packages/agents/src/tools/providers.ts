@@ -10,11 +10,6 @@ export const REMOVE_PROVIDER_TOOL_NAME = "remove_provider";
 export const LIST_PROVIDER_MODELS_TOOL_NAME = "list_provider_models";
 export const ASK_PROVIDER_KEY_TOOL_NAME = "ask_provider_key";
 
-/**
- * What a bot may ask of the person's model providers (decision 0086); what each takes and may refuse
- * is the host's. There is no key anywhere in it: `askKey` is how the person gives one, in a masked
- * card, and it is left out of a host with nobody to answer.
- */
 export type ProvidersHost = {
   list(): Promise<BotProviderView[]>;
   add(input: ProviderInput): Promise<BotProviderView>;
@@ -75,9 +70,6 @@ export type ProviderPatch = Omit<z.infer<typeof updateSchema>, "id">;
 const KEY_SHOWN =
   "The key form is on the person's screen. Stop now and send nothing else: they type the key there, it is saved to the provider without passing through you, and they will tell you in their next message.";
 
-// How a bot keeps the person's providers (decision 0086). It never sees or writes a key: it makes a
-// provider without one and asks the person for it with a masked card. The host holds to whose word
-// may change anything, and what a bot may not do: a provider moved to another address forgets its key.
 export function createProviderTools(host: ProvidersHost) {
   const list = createTool({
     name: LIST_PROVIDERS_TOOL_NAME,

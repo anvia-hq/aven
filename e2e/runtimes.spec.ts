@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { connectGithub, registerUser } from "./helpers";
 
-// A runner refuses to start without Docker and the sandbox image (decision 0010).
 const hasSandboxImage =
   spawnSync("docker", ["image", "inspect", "aven-sandbox-desktop:dev"]).status === 0;
 
@@ -39,10 +38,8 @@ test.describe("runtimes", () => {
       .getByRole("row")
       .filter({ hasText: "e2e-laptop" });
     await expect(row).toContainText("Offline");
-    // The token is not shown on the page.
     await expect(row).not.toContainText("token");
 
-    // The address and token the command shows, through the platform's /api proxy, WebSocket included.
     runtime = spawn("bun", ["apps/runtime/src/main.ts"], {
       env: { ...process.env, AVEN_URL: url, AVEN_RUNTIME_TOKEN: token },
       stdio: "ignore",
@@ -52,7 +49,6 @@ test.describe("runtimes", () => {
       await expect(row).toContainText("Online", { timeout: 1000 });
     }).toPass({ timeout: 15_000 });
 
-    // Rotating cuts it off; the old process is refused and exits, and the new token reconnects.
     const refused = new Promise<number | null>((resolve) => runtime?.once("exit", resolve));
     await page.getByRole("button", { name: "Rotate token for e2e-laptop" }).click();
     await page.getByRole("button", { name: "Rotate token", exact: true }).click();
@@ -70,7 +66,6 @@ test.describe("runtimes", () => {
       await expect(row).toContainText("Online", { timeout: 1000 });
     }).toPass({ timeout: 15_000 });
 
-    // Projects can now be put on it.
     await connectGithub(page);
     await page.goto("/threads");
     await page.getByRole("button", { name: "Import repository" }).click();

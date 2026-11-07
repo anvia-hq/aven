@@ -18,7 +18,6 @@ import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-c
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
 
-// A sandbox that is up at once with no tools: what is asked here is about MCP, not the sandbox.
 const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {
     return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
@@ -73,11 +72,8 @@ const reports = (plane: ReturnType<typeof fakeControlPlane>) =>
       : [],
   );
 
-// The person's MCP servers (decision 0085), through a runner: a real MCP server over HTTP that
-// writes down what it was sent, and the runs that come with it.
 describe("a run with the person's MCP servers", () => {
   const calls: { authorization: string | null; note: string }[] = [];
-  // What the server has been sent: a run that reuses the thread's connections sends it nothing.
   let requests = 0;
   const handler = createMcpHandler(({ requestInfo }) => {
     const server = new McpServer({ name: "notes", version: "1.0.0" });
@@ -133,18 +129,15 @@ describe("a run with the person's MCP servers", () => {
 
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
-    // The server got the header and the call; the agent heard the answer.
     expect(calls.at(-1)).toEqual({ authorization: "Bearer secret-token", note: "ship friday" });
     expect(JSON.stringify(plane.received)).toContain("Saved: ship friday");
     expect(told[0]).toEqual({ servers: [{ name: "Team Notes", tools: 1 }], failed: [] });
     expect(reports(plane)).toEqual([{ runId: "run-1", results: [{ id: serverId }] }]);
-    // The header's value is a secret of the person's: it is not in anything sent home.
     expect(JSON.stringify(plane.received)).not.toContain("secret-token");
   });
 
   test("the headers are in memory only: no file in the runner's data folder holds them", async () => {
     const journal = journalPath();
-    // The agent calls the tool, so the secret has been used and the run journaled before the check.
     const { plane, runtime } = connect(
       ({ id, tools }) => ({
         agent: new Agent({
@@ -179,9 +172,7 @@ describe("a run with the person's MCP servers", () => {
       agent: new Agent({
         id,
         instructions: "x",
-        // The note is in the agent's instructions, so a run that reconnected would say so.
         tools: [],
-        // The run's tools come from the connection, which a run that reuses one still has.
         model: scriptedModel([[text(note?.servers.length === 1 ? "connected" : "none")]]),
       }),
     }));
@@ -192,16 +183,12 @@ describe("a run with the person's MCP servers", () => {
     expect(requests - before).toBeGreaterThan(0);
     const handshake = requests;
 
-    // The thread's connections outlive the run that made them: the next message uses them, and the
-    // server hears nothing at all.
     plane.send({ type: "run.start", runId: "run-2", thread, prompt: "again", mcp: mcp() });
     await until(() => ended(plane).length === 2);
     expect(ended(plane)[1]).toMatchObject({ runId: "run-2", outcome: "response" });
     expect(requests).toBe(handshake);
-    // The agent of that run still had the server's tools.
     expect(JSON.stringify(plane.received)).toContain("connected");
 
-    // Other servers are other connections, and the old ones are let go.
     plane.send({
       ...runStart,
       runId: "run-3",
@@ -232,8 +219,6 @@ describe("a run with the person's MCP servers", () => {
     expect(results.find((result) => result.id === down.id)?.error).toEqual(expect.any(String));
     const first = requests - before;
 
-    // A set that was not whole is not kept: the healthy server is handshaken again, in case the
-    // other one is back too.
     plane.send({ ...runStart, runId: "run-2", mcp: [...mcp(), down] });
     await until(() => ended(plane).length === 2);
     expect(requests - before).toBeGreaterThan(first);
@@ -262,7 +247,6 @@ describe("a run with the person's MCP servers", () => {
         id,
         instructions: "x",
         tools: [createQuestionTool(), ...tools],
-        // One agent for the whole exchange: the run that answers continues the asking run's.
         model: scriptedModel([
           [
             {
@@ -285,8 +269,6 @@ describe("a run with the person's MCP servers", () => {
     const continuation = asked && "continuation" in asked ? asked.continuation : undefined;
     const before = calls.length;
 
-    // The thread's connections outlive the asking run, which parked on the question: the run that
-    // answers takes them over rather than handshaking again.
     plane.send({
       type: "run.resume",
       runId: "run-2",
@@ -304,8 +286,6 @@ describe("a run with the person's MCP servers", () => {
   });
 });
 
-// A bot's reply (decision 0085): the same servers for bots, connected by the runner, and the person's
-// own say over them through the control plane.
 describe("a bot's reply with the person's MCP servers", () => {
   const calls: string[] = [];
   const handler = createMcpHandler(({ requestInfo }) => {
@@ -398,7 +378,6 @@ describe("a bot's reply with the person's MCP servers", () => {
       op: "report",
       results: [{ id: serverId }],
     });
-    // The token is the person's: it is in nothing the runner sends home.
     expect(JSON.stringify(plane.received)).not.toContain("bot-token");
   });
 

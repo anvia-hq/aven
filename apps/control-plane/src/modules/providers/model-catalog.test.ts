@@ -47,7 +47,6 @@ describe("a catalog with entries that are not models", () => {
   test("skips them and still serves the rest", async () => {
     const models = { ...catalog.openai.models, "gpt-null": null, "gpt-text": "x" };
     const served = createModelCatalog(serving({ openai: { models } }), Date.now, url);
-    // The name alone would let the deprecated o4-mini through: only a loaded catalog drops it.
     expect(await served.chatModels("openai", ["o4-mini", "gpt-5.6"])).toEqual(["gpt-5.6"]);
   });
 });
@@ -56,8 +55,6 @@ describe("modelCatalog", () => {
   test("keeps models that call tools and answer in text, and drops the rest", async () => {
     const models = createModelCatalog(serving(catalog), Date.now, url);
     const ids = ["gpt-5.6", "o4-mini", "gpt-image-2", "text-embedding-3-small", "whisper-1"];
-    // o4-mini is deprecated, gpt-image-2 has no tools; the embedding and speech ids are unknown
-    // to the catalog and fail the name check.
     expect(await models.chatModels("openai", ids)).toEqual(["gpt-5.6"]);
   });
 
@@ -123,7 +120,6 @@ describe("modelCatalog", () => {
     const models = createModelCatalog(serving(catalog), Date.now, url);
     expect(await models.seesImages("openai", "gpt-5.6")).toBe(true);
     expect(await models.seesImages("anthropic", "claude-text-only")).toBe(false);
-    // The catalog does not say, or does not know the model.
     expect(await models.seesImages("anthropic", "claude-sonnet-5")).toBe(true);
     expect(await models.seesImages("openai", "gpt-unknown")).toBe(true);
     expect(await models.seesImages("openai-compatible", "anything")).toBe(true);

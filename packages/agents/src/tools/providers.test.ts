@@ -37,7 +37,6 @@ function host(options: { askKey?: boolean } = {}) {
         : async (id) => (calls.push(["askKey", id]), { providerId: id, name: "Claude" }),
   };
   const tools = createProviderTools(hosted);
-  // The tools come back as a list, each with its own input: tests call them with whatever a model might.
   const by = (name: string) =>
     tools.find((tool) => tool.name === name) as unknown as {
       call(input: Record<string, unknown>): Promise<unknown>;

@@ -41,26 +41,16 @@ import { timing, type Timing } from "./timing";
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
-  /** The agent's id: durable registers one agent per run. */
   id: string;
-  /** Whether a person is there to answer: only then may the agent ask a question. */
   attended: boolean;
-  /** What the agent can do in the thread's sandbox: files, commands, processes and a desktop. */
   tools: readonly AnyTool[];
-  /** The skills in the sandbox, for the instructions (decision 0035). */
   skills?: readonly SkillListing[];
-  /** The names of the project's environment variables the run came with (decision 0045). */
   envNames?: readonly string[];
-  /** The MCP servers the run connected and the ones it could not (decision 0085). */
   mcp?: McpNote;
-  /** The person's memory the run was given, for the instructions (decision 0102); not a subagent's. */
   memory?: RunMemory;
-  /** The agent can fork its thread, and is told how (decision 0135). */
   forks?: boolean;
   model?: RunModel;
-  /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
   role?: SubagentType;
-  /** The agent of a run that only summarizes the thread's history: it has no tools (decision 0097). */
   compact?: boolean;
 }) => { agent: Agent<unknown>; compaction?: DurableAgentRegistration["compaction"] };
 
@@ -68,54 +58,36 @@ export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "r
 
 type Live = {
   threadId: string;
-  /** Records something about the run as it goes. */
   save(changes: Partial<RunRecord>): void;
-  /** Not there until the thread's sandbox is up and the run is in the journal; a goal's, while it works. */
   followed?: Pick<FollowedRun, "cancel">;
-  /** Why the run was cancelled, also when the cancel arrived before there was a run to cancel. */
   cancelReason?: string;
-  /** What the person said before the run was in the journal, handed to it once it is (decision 0098). */
   steers: { steerId: string; message: AgentPrompt }[];
-  /** The person's MCP servers as the thread has them, which this run uses until it ends or parks (decisions 0085 and 0119). */
   mcp?: ConnectedMcp;
-  /** The run's connections being made while its sandbox is got ready (decision 0119). */
   mcpGoing?: Promise<ConnectedMcp | undefined>;
 };
 
-// What every part of one wire run works with. `record` is read from here each time, never kept:
-// `save` replaces it as the run goes.
 type RunScope = {
   readonly runId: string;
   readonly thread: RunThreadInfo;
   readonly run: Live;
-  /** Where the start-up to the first token is timed (decision 0119). */
   readonly clock: Timing;
   readonly journaled: DurableRuns;
   readonly record: RunRecord;
   save(changes: Partial<RunRecord>): void;
-  /** The tools of the thread's sandbox as it is now. */
   current(): readonly AnyTool[] | undefined;
-  /** The agent for a part of the run; only an attended one may ask or take on a goal. */
   build(id: string, attended: boolean): RunInput;
   forward: Emit;
-  /** Files messages of the run with the control plane, after those filed before. */
   file(messages: Message[]): Promise<void>;
   stopIfCancelled(): void;
 };
 
-// What an unattended part of the run is told is a note to the agent, not something the user said.
 const withoutPrompt = (messages: Message[]) =>
   messages[0]?.role === "user" ? messages.slice(1) : messages;
 
-// The first thing a model sends that a person sees: the thread has started to answer (decision 0119).
 const FIRST_OUTPUT = new Set(["text", "reasoning", "tool_start"]);
 
-// How often a thread's MCP connections are checked against the sandboxes still up (decision 0119).
 const MCP_SWEEP_MS = 60_000;
 
-// Gives the thread's sandbox what the starting run brought, of what the sandbox can take: who the
-// sender is on GitHub, an identity to mint tokens with, and the project's variables. All of it is
-// kept in memory and out of the record and the journal; a run taken up after a restart has none.
 async function prepareRun(
   sandbox: ThreadWorkspaces,
   runId: string,
@@ -124,22 +96,14 @@ async function prepareRun(
   controlPlane: string,
 ) {
   const { github, identity, env } = message ?? {};
-  // The two sign-ins are independent of each other and both only reach the tools that come after
-  // them, so they go together: two container round trips, one after the other, are a wait for
-  // nothing.
-  //
-  // The GitHub account the sender gave this run, or none (decision 0044). A failure to sign in
-  // does not fail the run: it has no GitHub.
   await Promise.all([
     sandbox.signInGithub?.(threadId, github).catch((error: unknown) => {
       console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
     }),
-    // What `aven id-token` mints tokens with; a failure does not fail the run (decision 0049).
     sandbox.signInIdentity?.(threadId, identity, controlPlane).catch((error: unknown) => {
       console.warn(`Run ${runId} could not sign in to mint identity tokens:`, errorMessage(error));
     }),
   ]);
-  // The project's variables for this run's commands, until the next message (decision 0045).
   sandbox.setProjectEnv?.(threadId, env);
 }
 
@@ -153,48 +117,27 @@ export type DriverContext = {
     method: M,
     params: RuntimeCalls[M]["params"],
   ): Promise<RuntimeCalls[M]["result"]>;
-  /** Sends a message of a run, or keeps it for when the control plane asks. */
   report(
     runId: string,
     make: (seq: number) => Extract<RuntimeToControlPlane, { type: "run.event" | "run.end" }>,
     source?: Source,
   ): void;
-  /** The sandboxes of the threads that have one. */
   boxes: Map<string, ThreadSandbox>;
-  /** A run is about to use the thread's sandbox: it must not be released as idle. */
   starting(threadId: string): Promise<void>;
-  /**
-   * A run is over: the thread's sandbox may be released once it has been idle for a while. `ended`
-   * is how it ended when it ran to its end and was not cancelled.
-   */
   finished(threadId: string, ended?: DurableEnd["type"]): void;
-  /** The control plane's origin, which the sandbox's `aven` command calls to mint identity tokens. */
   controlPlane: string;
-  /** The runner is shutting down: its state is closed, so nothing more is recorded. */
   stopped(): boolean;
 };
 
-// Runs one wire run from its first message to its end: the agent's turn, a goal it hands over, and
-// the report on it. What it needs to take the run up again after a restart is in a record, saved as
-// it goes (decision 0024).
 export function createRunDriver(context: DriverContext) {
   const { records, outbox, report } = context;
   const live = new Map<string, Live>();
-  // A thread has one run at a time; the agent of an answered question is the one the asking run built,
-  // so what it hands over reaches the run that is going now, not the one that built it.
   const activeRun = (threadId: string) =>
     [...live.values()].find((run) => run.threadId === threadId);
-  // The MCP connections a thread has now, which the tools of an agent built by an earlier run call
-  // through (a run that waited for an answer outlives the connections of the run that asked), and
-  // what they were connected from: a run of the same servers takes them over rather than handshaking
-  // every message (decision 0119).
   const mcpConnections = new Map<string, ConnectedMcp>();
   const mcpKeys = new Map<string, string>();
-  // A thread with a run in it is using whatever it has, even when its sandbox is not in `boxes` yet.
   const runGoing = (threadId: string) =>
     [...live.values()].some((run) => run.threadId === threadId);
-  // What a run's servers are, for telling one run's set from the next; the order they arrive in is
-  // not part of it.
   const mcpKey = (configs: readonly RunMcpServer[]) =>
     JSON.stringify(
       [...configs]
@@ -207,10 +150,6 @@ export function createRunDriver(context: DriverContext) {
           allowLocal,
         ]),
     );
-  // A thread's connections live as long as its sandbox, which the runner gives up when the thread
-  // has been idle (runner.ts): the ones kept for a released thread are ended here, so a long-lived
-  // runner does not hold a socket to every server a person ever used. Asked after each connection
-  // and every minute, so a thread nobody runs again is let go too.
   async function closeReleasedMcp(threadId: string) {
     for (const [id, connected] of mcpConnections) {
       if (id === threadId || context.boxes.has(id) || runGoing(id)) continue;
@@ -225,18 +164,12 @@ export function createRunDriver(context: DriverContext) {
   }, MCP_SWEEP_MS);
   sweeper.unref();
 
-  // Connects the servers the run came with and tells the control plane how each went, for the person
-  // to see in Settings. A server that is down is left out; it does not fail the run. The connections
-  // are the thread's, not the run's: a run whose servers were not changed in between uses them
-  // again, so a handshake is paid once a thread rather than once a message (decision 0119).
   async function connectMcp(run: Live, runId: string, threadId: string, message?: RunMessage) {
     const configs = message?.mcp ?? [];
     if (!configs.length) return undefined;
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
     const kept = mcpConnections.get(threadId);
-    // A set with a server that did not answer is not reused: the next run tries it again, so a
-    // server that comes back is used again without the person changing anything.
     let connected = kept && kept.results.every((result) => !result.error) ? kept : undefined;
     if (connected && mcpKeys.get(threadId) === key) {
       run.mcp = connected;
@@ -252,7 +185,6 @@ export function createRunDriver(context: DriverContext) {
       mcpKeys.set(threadId, key);
       run.mcp = connected;
     }
-    // How each went, every run: a server that has been down is reported again until it is fixed.
     context.call("mcp.report", { runId, results: connected.results }).catch((error: unknown) => {
       console.warn(`Run ${runId} could not report on its MCP servers:`, errorMessage(error));
     });
@@ -261,7 +193,6 @@ export function createRunDriver(context: DriverContext) {
 
   async function execute(initial: RunRecord, message?: RunMessage) {
     const { runId, thread } = initial;
-    // Off unless AVEN_TIMING is set: every step of the start-up to the first token (decision 0119).
     const clock = timing(`run ${runId}`);
     const state = { record: initial };
     const save = (changes: Partial<RunRecord>) => {
@@ -286,16 +217,11 @@ export function createRunDriver(context: DriverContext) {
       finish(runId, { type: "error", error: errorMessage(error) });
     } finally {
       live.delete(runId);
-      // A run that failed while connecting waits for the connections it started, so nothing is left
-      // opening after the thread thinks the run is over.
       if (run.mcpGoing) await run.mcpGoing.catch(() => undefined);
-      // The connections are the thread's and outlive the run (decision 0119): they are ended when
-      // other servers replace them, or once the thread's sandbox is gone.
       context.finished(thread.id, ended);
     }
   }
 
-  // Puts the run's skills in the thread's /skills and lists them with the repository's (decision 0035).
   async function installSkills({ runId, thread, skills = [] }: RunRecord) {
     const store = context.sandbox.skills;
     if (!store) return [];
@@ -304,14 +230,10 @@ export function createRunDriver(context: DriverContext) {
     return store.install(thread.id, skills, fetch, await context.sandbox.workspace(thread.id));
   }
 
-  // What every run does the same with or without a sandbox: tell the control plane what happens,
-  // file its transcript there, and stop once it is cancelled.
   function reporting({ runId }: RunRecord, state: { record: RunRecord }, run: Live) {
     return {
-      // Events reach the control plane as the journal records them.
       forward: ((event, source) =>
         report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source)) as Emit,
-      // The transcript the control plane keeps, filed as each part of the run ends.
       async file(messages: Message[]) {
         if (messages.length === 0) return;
         await context.call("memory.append", { runId, turn: state.record.turn, messages });
@@ -323,8 +245,6 @@ export function createRunDriver(context: DriverContext) {
     };
   }
 
-  // What a run that only compacts works with: the journal, and nothing of the thread's sandbox,
-  // which it neither starts nor needs (decision 0097).
   async function compactionScope(
     initial: RunRecord,
     state: { record: RunRecord },
@@ -351,8 +271,6 @@ export function createRunDriver(context: DriverContext) {
     };
   }
 
-  // Gets the run what it works with: the thread's sandbox and the journal. Everything a phase of the
-  // run does goes through the scope this returns.
   async function acquire(
     initial: RunRecord,
     state: { record: RunRecord },
@@ -363,20 +281,10 @@ export function createRunDriver(context: DriverContext) {
     const { env } = message ?? {};
     const { runId, thread, model } = initial;
     if (initial.compact) return compactionScope(initial, state, run, clock);
-    // Read-only access to the thread's repository, asked for each time it is needed.
     const repoAccess = () => context.call("repo.access", { runId });
     await context.starting(thread.id);
-    // The person's MCP servers are reached over the network and want nothing of the sandbox, so they
-    // are connected while the workspace and the container are being got ready: one wait, not two
-    // (decision 0119). The run waits for them where it builds its agent, which needs their tools.
     run.mcpGoing = connectMcp(run, runId, thread.id, message);
-    // Handled at once so a failure while the sandbox is still starting is not an unhandled rejection;
-    // the run still sees it where it awaits `mcpGoing`.
     run.mcpGoing.catch(() => undefined);
-    // The thread's workspace (cloned, or restored from its snapshot, on first use) and its container
-    // are got ready beside the rest of the start-up, and the agent starts without waiting for them:
-    // its first words do not need them, and its tools wait for them (decision 0128). A sandbox that
-    // cannot be had ends the run with why, as it did when the run waited.
     const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
     context.boxes.set(thread.id, box);
     const ready = (async () => {
@@ -385,8 +293,6 @@ export function createRunDriver(context: DriverContext) {
       if (run.cancelReason) throw new Error(run.cancelReason);
       await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
       clock.mark("sign-in");
-      // What this turn changes is measured from here; a run picked up again after a restart, or
-      // resumed with an answer, is still the same turn.
       if (state.record.kind === "start" && !state.record.durableId) {
         const root = await context.sandbox.workspace(thread.id);
         if (root) await markTurn(root).catch(() => false);
@@ -400,12 +306,9 @@ export function createRunDriver(context: DriverContext) {
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
     if (run.cancelReason) throw new Error(run.cancelReason);
-    // Once per run: a run taken up after a restart keeps the skills it was told of.
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     clock.mark("skills");
     const journaled = await context.journal;
-    // The thread's sandbox as it is now: a run that waited for an answer may find it replaced.
-    // What its tools give back hides this run's secrets, the goal's checks included (decision 0045).
     const redact = secretRedactor(env);
     const current = () => {
       const live = context.boxes.get(thread.id)?.tools;
@@ -414,8 +317,6 @@ export function createRunDriver(context: DriverContext) {
     };
 
     const { forward: send, file, stopIfCancelled } = reporting(initial, state, run);
-    // The first thing the model sends back, whichever it is: how long it took from the person's
-    // message to the thread starting to answer (decision 0119).
     let answered = false;
     const forward = ((event, source) => {
       if (!answered && FIRST_OUTPUT.has(event.type)) {
@@ -457,8 +358,6 @@ export function createRunDriver(context: DriverContext) {
             attended,
             repoAccess,
             defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
-            // What the agent writes in its memory, and what it reads back, hides this run's
-            // secrets as its other tools do: a note the person or a bot wrote may hold one (decision 0102).
             memory:
               state.record.memory &&
               (async (command) => {
@@ -468,16 +367,12 @@ export function createRunDriver(context: DriverContext) {
                 });
                 return redact ? redact(answer) : answer;
               }),
-            // The sender's cockpit, read only, its answers with this run's secrets hidden as the
-            // other tools' are (decision 0109).
             cockpit:
               state.record.cockpit &&
               (async (command) => {
                 const answer = await context.call("cockpit.read", { runId, command });
                 return redact ? redact(answer) : answer;
               }),
-            // A thread's agent forks its thread only for a person to ask, and a fork cannot fork
-            // (decision 0135).
             forks: forking
               ? createForkHost({
                   runId,
@@ -487,10 +382,7 @@ export function createRunDriver(context: DriverContext) {
                   redact,
                 })
               : undefined,
-            // A subagent is not in the journal, so what it does is sent as it happens.
             emit: (event) => forward(event),
-            // Nobody is there to answer a subagent, and it is not journaled: its agent id only
-            // has to be its own.
             createSubagent: ({ type, id: subagentId, tools }) =>
               context.createAgent({
                 thread,
@@ -518,7 +410,6 @@ export function createRunDriver(context: DriverContext) {
     };
   }
 
-  // The parts of the run that are left, from where its record says it is.
   async function phases(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     let end: DurableEnd = { type: "response", messages: [] };
     if (scope.record.phase === "chat") end = await runChat(scope, message);
@@ -528,13 +419,10 @@ export function createRunDriver(context: DriverContext) {
     return end;
   }
 
-  // The agent's turn.
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     const { runId, thread, run, journaled, save, build, forward } = scope;
     let followed: FollowedRun;
     if (scope.record.durableId) {
-      // Picked up again after a restart: the run is in the journal, and the control plane has
-      // heard everything of it up to the newest event this run reported.
       followed = await journaled.rejoin(
         scope.record.durableId,
         build(scope.record.agentId, true),
@@ -550,10 +438,8 @@ export function createRunDriver(context: DriverContext) {
         forward,
       );
     } else {
-      // The question stays parked in the journal; the answer is delivered to it.
       const asked = await journaled.asked(thread.id);
       if (!asked) throw new Error("This thread has no question waiting for an answer");
-      // The run in the journal is the one that asked, with the agent it was registered under.
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
@@ -566,33 +452,24 @@ export function createRunDriver(context: DriverContext) {
       );
     }
     save({ durableId: followed.durableId });
-    // The agent is in the journal and its first model call is going: what comes next is the model's.
     scope.clock.mark("started");
     run.followed = followed;
     await handOverSteers(run, journaled, followed.durableId);
     if (run.cancelReason) void followed.cancel();
     const end = await followed.done;
     if (end.type !== "error") {
-      // A run that stopped on a question and was answered files its second part after the first.
       save({ turn: journaled.transcriptTurn(followed.durableId, end) });
       await scope.file(end.messages);
     } else {
-      // A run that failed or was cancelled still files what it did: without it the thread is empty
-      // after a reload, and the person loses a long run to a turn limit. The error is reported
-      // either way, so a transcript that cannot be filed does not replace it.
       await scope
         .file(await journaled.unfinishedMessages(followed.durableId))
         .catch(() => undefined);
     }
-    // Handed a goal: the rest of the run is the goal and the report on it.
     if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
     else save({ goal: undefined });
     return end;
   }
 
-  // What the person said while the run was starting goes to the agent now that it is in the journal.
-  // A message the journal no longer takes (the run ended first) is lost, which the control plane
-  // tells the person when the run ends and it was never applied.
   async function handOverSteers(run: Live, journaled: DurableRuns, durableId: string) {
     for (const { steerId, message } of run.steers.splice(0)) {
       await journaled.steer(durableId, message, steerId).catch((error: unknown) => {
@@ -601,7 +478,6 @@ export function createRunDriver(context: DriverContext) {
     }
   }
 
-  // The goal the turn handed over: sessions until the verify commands pass or it stops short.
   async function runGoal(scope: RunScope, goal: GoalRequest): Promise<DurableEnd> {
     const { runId, run, journaled, save, build, forward } = scope;
     scope.stopIfCancelled();
@@ -628,7 +504,6 @@ export function createRunDriver(context: DriverContext) {
     return reportOnGoal(scope, goal, goalEnd);
   }
 
-  // One more turn, unattended, in which the agent tells the thread how the goal went.
   async function reportOnGoal(
     scope: RunScope,
     goal: GoalRequest,
@@ -663,7 +538,6 @@ export function createRunDriver(context: DriverContext) {
     return closed;
   }
 
-  // The run is over: tell the control plane, and note that nothing is left but its acknowledgement.
   function finish(runId: string, end: DurableEnd, cancelReason?: string) {
     if (context.stopped()) return;
     report(runId, (seq) =>
@@ -674,7 +548,6 @@ export function createRunDriver(context: DriverContext) {
             runId,
             seq,
             outcome: end.type,
-            // What resumes a run that stopped to ask the user; the control plane keeps it.
             continuation: end.type === "interaction" ? end.continuation : undefined,
           },
     );
@@ -683,10 +556,8 @@ export function createRunDriver(context: DriverContext) {
   }
 
   return {
-    /** Runs that are going in this process, for the sandbox's idle check and for cancels. */
     live,
 
-    /** A run the control plane just started. */
     start(message: RunMessage) {
       const record: RunRecord = {
         runId: message.runId,
@@ -708,19 +579,12 @@ export function createRunDriver(context: DriverContext) {
       return execute(record, message);
     },
 
-    /** A run this process had before it restarted, which the control plane asked for again. */
     restore(runId: string) {
       const record = records.get(runId);
-      // Nothing to take up: it is going, or it is over and only waiting to be acknowledged.
       if (!record || record.done || live.has(runId)) return;
       return execute(record);
     },
 
-    /**
-     * A message the person sent while the run goes on, for the agent to take at its next safe step
-     * (decision 0098). Only the agent's own turn takes one: a compaction has no one to read it and a
-     * goal works unattended.
-     */
     async steer({ runId, steerId, prompt, mentions }: SteerParams): Promise<SteerResult> {
       const run = live.get(runId);
       const record = records.get(runId);
@@ -735,7 +599,6 @@ export function createRunDriver(context: DriverContext) {
         };
       }
       const message = sentPrompt(prompt, { mentions, skills: record.skillListing });
-      // Not in the journal yet (the sandbox is still starting): kept for when it is.
       if (!record.durableId) {
         run.steers.push({ steerId, message });
         return { status: "queued" };
@@ -751,11 +614,9 @@ export function createRunDriver(context: DriverContext) {
         void run.followed?.cancel();
         return;
       }
-      // Not going in this process, yet the control plane wants it stopped: it is over.
       const record = records.get(runId);
       if (!record || record.done) return;
       if (record.durableId) await (await context.journal).cancelRun(record.durableId);
-      // The control plane did not ask for this run, so it will not ask for its end either.
       outbox.attach(runId, Number.MAX_SAFE_INTEGER);
       finish(runId, { type: "error", error: reason }, reason);
     },

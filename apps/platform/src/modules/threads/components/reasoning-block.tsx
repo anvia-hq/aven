@@ -2,7 +2,6 @@ import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
-// @mynaui/icons-react has no brain; this one follows its stroke style (1.5, round caps, no fill).
 function BrainIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -21,8 +20,6 @@ function BrainIcon({ className }: { className?: string }) {
   );
 }
 
-// The model's reasoning, as one row: "Thinking" while it streams, "Thoughts" once done; the text
-// itself opens on click (decision 0115).
 export function ReasoningBlock({ text, thinking = false }: { text: string; thinking?: boolean }) {
   return (
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>

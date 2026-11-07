@@ -1,7 +1,5 @@
 import { Rocket } from "@mynaui/icons-react";
 
-// What Ship sent the agent, as a card in the person's place in the thread. The steps themselves
-// are not shown: the agent's work below says what was done.
 export function ShipRequestCard() {
   return (
     <div

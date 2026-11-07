@@ -10,10 +10,8 @@ import { serviceManager } from "../service-manager";
 import { API_PORT } from "../server-plan";
 import { version } from "../version";
 
-// A warning is worth reading but not a failure: a server open on a network is a choice.
 type Check = { name: string; ok: boolean; detail: string; warn?: boolean };
 
-/** Looks at everything Aven needs on this machine and says what is wrong. Exits non-zero when something is. */
 export async function doctor() {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
@@ -77,7 +75,6 @@ export async function doctor() {
   if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
 }
 
-// What the server itself says about sign-ups, as the register page asks; undefined when it does not say.
 async function registrationIsOpen(env: Record<string, string>) {
   try {
     const response = await fetch(

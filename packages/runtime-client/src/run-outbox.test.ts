@@ -31,7 +31,6 @@ describe("RunOutbox", () => {
 
     outbox.detachAll();
     expect(outbox.attached("a")).toBe(false);
-    // Still kept while nobody is listening.
     say(outbox, "a", "5");
 
     expect(outbox.attach("a", 2)).toEqual([
@@ -63,7 +62,6 @@ describe("RunOutbox", () => {
 
     const after = new RunOutbox(openRunDatabase(path));
     expect(after.ids()).toEqual(["a"]);
-    // Not attached until the control plane asks, and numbering carries on.
     expect(after.attached("a")).toBe(false);
     expect(after.cursor("a", "journal-run")).toBe(12);
     expect(after.cursor("a", "another")).toBe(0);

@@ -24,8 +24,6 @@ function hintFor(inControl: boolean, heldByOther: boolean) {
   return "Watching. Take over to click and type.";
 }
 
-// The computer's desktop beside the conversation: watch it live, or take it over so the agent's
-// inputs pause while you drive it.
 export function DesktopPanel({ computer, onClose }: Props) {
   const { status, problem, refresh } = useDesktopStatus(computer);
   const { controlling, busy, takeOver, giveBack } = useDesktopControl(computer);

@@ -28,7 +28,6 @@ const unseal = (value: string, urls: GithubUrls): GithubConfig => ({
   ...urls,
 });
 
-/** Keeps the app a platform owner created (decision 0074), encrypted with the providers' key. */
 export async function saveGithubApp(config: GithubConfig) {
   const value = seal(config);
   await db
@@ -37,7 +36,6 @@ export async function saveGithubApp(config: GithubConfig) {
     .onConflictDoUpdate({ target: platformSettings.key, set: { value } });
 }
 
-/** The kept app, or null when there is none or it cannot be read (the key changed: it has to be created again). */
 export async function loadGithubApp(
   urls: GithubUrls = githubUrlsFromEnv(),
 ): Promise<GithubConfig | null> {
@@ -54,11 +52,6 @@ export async function loadGithubApp(
   }
 }
 
-/**
- * Keeps the app a workspace made for itself and returns its id (decision 0123). A workspace has
- * one: a second one, as when two callbacks arrive together, is refused rather than replacing the
- * first, which installations and people's connections already belong to.
- */
 export async function saveOrganizationApp(
   organizationId: string,
   userId: string,
@@ -78,7 +71,6 @@ export async function saveOrganizationApp(
   return row.id;
 }
 
-/** A workspace's own app and its id, or null when it has none or it cannot be read. */
 export async function loadOrganizationApp(
   organizationId: string,
   urls: GithubUrls = githubUrlsFromEnv(),
@@ -90,7 +82,6 @@ export async function loadOrganizationApp(
   return row ? unsealApp(row, urls) : null;
 }
 
-/** An app by its id, whichever workspace it is of. */
 export async function loadAppById(
   id: string,
   urls: GithubUrls = githubUrlsFromEnv(),
@@ -109,7 +100,6 @@ function unsealApp(row: typeof githubApps.$inferSelect, urls: GithubUrls) {
   }
 }
 
-/** At start: an app set in the environment is used as it is, otherwise the one that was kept. */
 export async function useStoredGithubApp(client: {
   configured: boolean;
   configure: (config: GithubConfig | null) => void;

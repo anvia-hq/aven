@@ -16,8 +16,6 @@ type Props = {
   onClose: () => void;
 };
 
-// A shell in the computer beside the conversation. Whether it runs, and waking it, are the
-// desktop's: it is the same container.
 export function TerminalPanel({ computer, onClose }: Props) {
   const { status, problem, refresh } = useDesktopStatus(computer);
   const { waking, wake } = useDesktopWake(computer, refresh);

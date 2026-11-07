@@ -2,9 +2,6 @@ import { useState, type ClipboardEvent, type DragEvent } from "react";
 
 import type { useAttachments } from "./use-attachments";
 
-// What a composer needs to take files by dropping them on it or pasting them, for the element that
-// holds it: the props to spread on it, and `data-dragging` while a file is over it. Pasted text is
-// left to the editor.
 export function useAttachmentDrop(attachments: ReturnType<typeof useAttachments>) {
   const [dragging, setDragging] = useState(false);
 

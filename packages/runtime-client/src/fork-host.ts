@@ -13,18 +13,11 @@ type ForkCall = <M extends "fork.start" | "fork.status">(
   params: RuntimeCalls[M]["params"],
 ) => Promise<RuntimeCalls[M]["result"]>;
 
-// Where a fork's patch is put: inside `.git`, so it is in the workspace for the agent to apply and
-// never a change of the thread's own.
 const PATCHES = "aven-forks";
 
 const filesOf = (patch: string) =>
   [...patch.matchAll(/^diff --git a\/.+ b\/(.+)$/gm)].map((match) => match[1]!);
 
-/**
- * What the forking agent's tools do on this runner (decision 0135): the control plane makes and
- * looks at a fork, and the runner, which holds both workspaces, takes its changes as a patch.
- * `redact` hides the run's secrets from what the fork said.
- */
 export function createForkHost({
   runId,
   thread,
@@ -46,7 +39,6 @@ export function createForkHost({
     start: (input) => call("fork.start", { runId, ...input }),
     status,
     async take(id) {
-      // The control plane says whether it is one of this thread's forks before anything is read.
       await status(id);
       const forked = await sandbox.workspace(id);
       if (!forked) throw new Error("The fork has no workspace on this runner");

@@ -77,7 +77,6 @@ run("schedulesService (postgres)", async () => {
     await refuses({ cron: "every day" });
     await refuses({ cron: "0 0 31 2 *" });
     await refuses({ cron: "*/5 * * * *" });
-    // Too close at some time of the day, though the next few runs from now are far enough apart.
     await refuses({ cron: "0,30,40 * * * *" });
     await refuses({ cron: "0,10,30 7 * * *" });
     await refuses({ timezone: "Mars/Olympus" });

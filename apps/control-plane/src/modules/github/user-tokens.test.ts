@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import type { GithubClient, GithubUserGrant } from "./client";
 
-// The one app these tests connect for: whatever the key, the client is this one.
 const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => ({
   forKey: async () => client as GithubClient,
 });
@@ -29,7 +28,6 @@ run("a person's GitHub connection (postgres)", async () => {
     ...over,
   });
 
-  // A GitHub that hands out the next refresh grant, or refuses with null, and counts the calls.
   function fakeClient(refresh: (token: string) => GithubUserGrant | null) {
     const refreshed: string[] = [];
     return {
@@ -97,7 +95,6 @@ run("a person's GitHub connection (postgres)", async () => {
 
     expect(used.map((entry) => entry?.token)).toEqual(["ghu_new", "ghu_new", "ghu_new"]);
     expect(github.refreshed).toEqual(["ghr_one"]);
-    // The new refresh token is the one kept, since the old one works once.
     expect((await tokens.use(id))?.token).toBe("ghu_new");
     const [row] = await db.select().from(githubUserTokens).where(eq(githubUserTokens.userId, id));
     expect(row!.accessExpiresAt!.getTime()).toBeGreaterThan(Date.now() + 3_600_000);
@@ -173,7 +170,6 @@ run("a person's GitHub connection (postgres)", async () => {
     const tokens = createGithubUserTokens(only(github.client));
     expect(await tokens.forRun(id)).toBeUndefined();
 
-    // Plenty of life left: used as it is.
     await tokens.connect(
       id,
       grant({ accessToken: "ghu_ok", expiresAt: Date.now() + 5 * 3_600_000 }),
@@ -186,7 +182,6 @@ run("a person's GitHub connection (postgres)", async () => {
     });
     expect(github.refreshed).toEqual([]);
 
-    // An hour left is enough for `use`, not for a run that may go on for hours.
     await tokens.connect(
       id,
       grant({ accessToken: "ghu_short", expiresAt: Date.now() + 3_600_000 }),

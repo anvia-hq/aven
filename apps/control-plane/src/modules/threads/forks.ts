@@ -8,20 +8,12 @@ import type { RunEnding, RunManager } from "../runs/service";
 import type { ThreadMessages } from "./messages";
 import { threadsService } from "./service";
 
-/** What the agent of a run does with forks of its thread (decision 0135). */
 export type ThreadForks = {
-  /** Makes a thread forked from the run's, which starts working on the task at once. */
   start(
     thread: RunThreadInfo,
     input: { task: string; context: string; title?: string },
   ): Promise<{ id: string; title: string }>;
-  /** Looks at one of the run's thread's forks. */
   status(thread: RunThreadInfo, id: string): Promise<ForkView>;
-  /**
-   * A run of `fork` ended. A parent that is working is told, so it can look. One that is idle is
-   * woken once, when its last fork that is going has ended: the person asked for the forks, so
-   * someone must collect them (decision 0138).
-   */
   ended(
     fork: { id: string; organizationId: string; parentThreadId?: string | null },
     ending: RunEnding,
@@ -35,7 +27,6 @@ export function createThreadForks({
   runs: RunManager;
   messages: Pick<ThreadMessages, "start" | "send">;
 }): ThreadForks {
-  // A fork of this thread, and no other thread: the id comes from the agent.
   const forkOf = async (thread: RunThreadInfo, id: string) => {
     const fork = await threadsService.get(thread.organizationId, id);
     if (!fork || fork.parentThreadId !== thread.id) {
@@ -44,8 +35,6 @@ export function createThreadForks({
     return fork;
   };
 
-  // The agent may call fork_thread several times at once, and each call counts the forks before it
-  // makes one: one thread's forks are made one at a time, so the limit holds.
   const turns = new Map<string, Promise<unknown>>();
   const inTurn = <T>(parentId: string, work: () => Promise<T>) => {
     const turn = (turns.get(parentId) ?? Promise.resolve()).catch(() => undefined).then(work);
@@ -67,7 +56,6 @@ export function createThreadForks({
         `This thread has ${FORKS_PER_THREAD} forks that are not archived. Wait for one to finish and have the person archive it.`,
       );
     }
-    // The thread is its creator's alone to drive, so a fork is theirs too.
     const userId = parent.createdBy;
     const fork = await threadsService.create(
       parent.organizationId,
@@ -82,7 +70,6 @@ export function createThreadForks({
     try {
       await messages.start(parent.organizationId, userId, fork.id, { prompt });
     } catch (error) {
-      // A fork that never ran would only sit in the person's list.
       await threadsService
         .update({ organizationId: parent.organizationId, userId }, fork.id, { state: "archived" })
         .catch(() => undefined);
@@ -98,7 +85,6 @@ export function createThreadForks({
       if (!fork.parentThreadId || ending.outcome === "cancelled") return;
       const parentWorking = runs.isRunning(fork.parentThreadId);
       const siblings = await threadsService.liveForkList(fork.parentThreadId);
-      // An idle parent waits for the forks that are still going: one note for the batch.
       if (!parentWorking && siblings.some((other) => runs.isRunning(other.id))) return;
       const parent = await threadsService.get(fork.organizationId, fork.parentThreadId);
       const forked = await threadsService.get(fork.organizationId, fork.id);
@@ -111,7 +97,6 @@ export function createThreadForks({
       const prompt = parentWorking
         ? `[fork] Your fork "${forked.title}" (${forked.id}) ${how}. Look at it with fork_status, and take its changes with take_fork_changes when you want them.`
         : `[fork] Your fork "${forked.title}" (${forked.id}) ${how}, and none of your forks is going now: ${siblings.map((other) => `"${other.title}" (${other.id})`).join(", ")}. Look at each with fork_status. If the person asked you to take their work or open pull requests, do that now, checking each change first; otherwise tell them the forks are done and ask what they want taken.`;
-      // A working parent gets this at its next step; an idle one starts a run of its own with it.
       await messages
         .send(
           parent.organizationId,

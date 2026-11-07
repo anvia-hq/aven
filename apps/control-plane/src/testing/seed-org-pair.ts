@@ -3,8 +3,6 @@ import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-// Shared by service tests that need two isolated organizations and one user belonging to both,
-// to exercise cross-organization scoping (another organization's row is simply not found).
 export async function seedOrgPair() {
   const suffix = crypto.randomUUID().slice(0, 8);
   const userId = `u-${suffix}`;
@@ -21,7 +19,6 @@ export async function seedOrgPair() {
     userId,
     orgA,
     orgB,
-    // Cascades remove everything the user/organizations own (members, projects, threads, ...).
     async cleanup() {
       await db.delete(users).where(eq(users.id, userId));
       await db.delete(organizations).where(eq(organizations.id, orgA));

@@ -12,7 +12,6 @@ const task = (name: string, type: SubagentTask["type"] = "explore"): SubagentTas
 describe("spawn_agent", () => {
   test("returns what each subagent said, in the order asked", async () => {
     const tool = createSpawnAgentTool(async ({ description }, { index }) => {
-      // The first finishes last: the order of the answers is the order of the tasks.
       await Bun.sleep((3 - index) * 10);
       return `  ${description} done\n`;
     });
@@ -34,7 +33,6 @@ describe("spawn_agent", () => {
     const tool = createSpawnAgentTool(async () => {
       peak = Math.max(peak, ++running);
       if (running === MAX_PARALLEL_SUBAGENTS) release();
-      // Nobody finishes until all six have started: sequential execution would hang here.
       await everyoneStarted;
       running--;
       return "ok";

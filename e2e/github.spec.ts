@@ -53,7 +53,6 @@ test.describe("importing a repository", () => {
       appKey: "platform",
     });
 
-    // GitHub (the fake) sends the browser straight back with a code.
     await page.goto("/api/github/connect?next=/projects?back=here");
 
     await expect(page).toHaveURL(/\/projects\?back=here$/);
@@ -82,8 +81,6 @@ test.describe("a workspace's GitHub App (decision 0123)", () => {
     await page.goto("/settings/github");
 
     await expect(page.getByText("This workspace uses the platform's GitHub App")).toBeVisible();
-    // The person who made the workspace is its owner, so they may make its own app; GitHub asks
-    // for the manifest as a form post, which the control plane describes here.
     const manifest = await page.request.get("/api/github/app/manifest?scope=workspace");
     expect(manifest.ok()).toBe(true);
     const { postUrl } = (await manifest.json()) as { postUrl: string };

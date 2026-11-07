@@ -3,15 +3,12 @@ import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-fram
 
 import { UnavailableError } from "../../errors";
 
-/** What a viewer's stream reports to whoever opened it (decision 0015). */
 export type ViewerSink = {
   data(bytes: Uint8Array): void;
-  /** The viewer ended or could not start, or the connection dropped; `reason` says why. */
   closed(reason: string): void;
 };
 
 export type ViewerHandle = {
-  /** The browser's bytes for the desktop or terminal; dropped until the stream has opened. */
   write(bytes: Uint8Array): void;
   close(): void;
 };
@@ -22,10 +19,8 @@ export type TerminalHandle = ViewerHandle & {
 
 type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" };
 
-// Each viewer is a connection into a sandbox, so a runner is asked for only so many at once.
 const MAX_VIEWERS = 32;
 
-// The desktops and terminals a runtime is streaming over one connection, by viewer id.
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
 
@@ -35,15 +30,12 @@ export class ViewerStreams {
     private connectionClosed: () => boolean,
   ) {}
 
-  // Starts streaming a thread's desktop. Throws when the runtime is offline; whether the thread has
-  // a running sandbox is the runtime's answer, through `sink.closed`.
   open(threadId: string, sink: ViewerSink): ViewerHandle {
     const viewerId = this.#add("desktop", sink);
     this.post({ type: "desktop.open", viewerId, threadId });
     return this.#handle(viewerId, "desktop.close");
   }
 
-  // Starts a shell in a thread's sandbox, like `open`.
   openTerminal(
     threadId: string,
     size: { cols: number; rows: number },
@@ -82,7 +74,6 @@ export class ViewerStreams {
     };
   }
 
-  /** The viewer is streaming; its bytes may flow both ways. */
   opened(viewerId: string, kind: Viewer["kind"]) {
     const viewer = this.#viewers.get(viewerId);
     if (viewer?.kind === kind) viewer.ready = true;
@@ -95,7 +86,6 @@ export class ViewerStreams {
     viewer.sink.closed(reason);
   }
 
-  // A binary frame from the runtime. Only a viewer this connection opened is heard.
   receive(frame: Uint8Array) {
     const decoded = decodeViewerFrame(frame);
     if (!decoded) return;

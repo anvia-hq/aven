@@ -20,14 +20,12 @@ test.describe("a thread's files", () => {
     await page.goto(`/threads/${threadId}`);
     await page.getByRole("button", { name: "Files", exact: true }).click();
     const panel = page.getByRole("region", { name: "Files" });
-    // A file's name is on its tab and in the tree; these are the tree's.
     const tree = panel.getByRole("complementary");
 
     await expect(panel.getByText("Pick a file in the tree to read it.")).toBeVisible();
     await tree.getByRole("button", { name: "src" }).click();
     await tree.getByRole("button", { name: "greeting.ts" }).click();
     await expect(panel.getByText('return "hello, world";')).toBeVisible();
-    // The grammar is fetched when the file opens; its tokens carry the colours of both themes.
     await expect(panel.locator('[style*="--shiki-dark"]').first()).toBeVisible();
     await tree.getByRole("button", { name: "README.md" }).click();
     await expect(panel.getByText("# Notes")).toBeVisible();
@@ -37,7 +35,6 @@ test.describe("a thread's files", () => {
     await tree.getByRole("button", { name: "greeting.ts" }).click();
     await expect(panel.getByText('return "hello, world";')).toBeVisible();
 
-    // The filter looks through the folders that are open.
     await panel.getByLabel("Filter files").fill("greet");
     await expect(tree.getByRole("button", { name: "src/greeting.ts" })).toBeVisible();
     await expect(tree.getByRole("button", { name: "README.md" })).toHaveCount(0);

@@ -6,7 +6,6 @@ import { Field, FilterPopover } from "./filter-popover";
 import { FilterSelect } from "./filter-select";
 
 const DAY = 86_400_000;
-// The day, in the reader's own time zone, as the address holds it.
 const dayOf = (time: number) => {
   const date = new Date(time);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -22,7 +21,6 @@ const periodSince = (days: number, now = Date.now()) => dayOf(now - days * DAY);
 const periodOf = (since: string | undefined, now = Date.now()) =>
   PERIODS.find((period) => periodSince(period.days, now) === since);
 
-/** The label of what `since` and `until` ask for, for a chip. */
 export function periodLabel(search: CenterSearch, now = Date.now()) {
   if (!search.since && !search.until) return undefined;
   const preset = !search.until ? periodOf(search.since, now) : undefined;
@@ -39,7 +37,6 @@ export const clearCommits: CenterSearch = {
   grep: undefined,
 };
 
-/** What is narrowing the commits, as chips that remove it. */
 export function commitChips(search: CenterSearch, change: (next: CenterSearch) => void): Chip[] {
   const chips: Chip[] = [];
   const add = (key: string, label: string, remove: CenterSearch) =>
@@ -53,7 +50,6 @@ export function commitChips(search: CenterSearch, change: (next: CenterSearch) =
   return chips;
 }
 
-// The commits' own search, beside the filters button.
 export function CommitSearch({
   value,
   onChange,
@@ -73,7 +69,6 @@ export function CommitSearch({
   );
 }
 
-// The commits' filters in one popover: who, when and, for one project, the file and the branch.
 export function CommitFilters({
   search,
   branches,
@@ -81,7 +76,6 @@ export function CommitFilters({
   onChange,
 }: {
   search: CenterSearch;
-  /** Given for one project: its branches to read the history of, and a file to read it for. */
   branches?: BranchSummary[];
   count: number;
   onChange: (change: CenterSearch) => void;

@@ -4,8 +4,6 @@ import { EffortSlider } from "@/modules/threads/components/effort-slider";
 import { useBotEffort } from "../hooks/use-bot-effort";
 import type { Bot } from "../types";
 
-// How hard a bot's model thinks before it answers. Only a bot with a model of its own has one to
-// set; a model with a single level has nothing to choose.
 export function BotEffortRow({ bot }: { bot: Bot }) {
   const { levels, effort, hasOwnModel, choose } = useBotEffort(bot);
 

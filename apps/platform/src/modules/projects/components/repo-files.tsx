@@ -12,8 +12,6 @@ type Props = { project: Project; path: string };
 
 const rowClass = "flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50";
 
-// Where in the repository the list is: the repository's name, then each folder down to this one,
-// each a link back to it.
 function Trail({ project, path }: Props) {
   const parts = path === "" ? [] : path.split("/");
   return (
@@ -60,7 +58,6 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       </Link>
     );
   }
-  // A file is read on GitHub: the app shows the repository's folders and README, not its files.
   return (
     <a
       href={blobUrl(project.repoFullName, project.defaultBranch, entry.path)}
@@ -75,7 +72,6 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
   );
 }
 
-// The files of a folder of the project's repository, like the top of a repository page.
 export function RepoFiles({ project, path }: Props) {
   const { entries, problem, loading } = useProjectFolder(project.id, path);
   const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";

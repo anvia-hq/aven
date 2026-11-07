@@ -5,7 +5,6 @@ import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/runtime-
 import { ProcessEndWatch } from "./process-end-watch";
 import type { ThreadSandbox } from "./sandbox";
 
-// Started a moment after the watch began, as what the agent starts in a run is.
 const startedMs = Date.now() + 1000;
 const proc = (
   id: string,

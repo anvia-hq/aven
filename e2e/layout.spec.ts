@@ -14,7 +14,6 @@ test("the sidebar is resized by dragging its edge, and keeps its width", async (
   const box = (await page.getByRole("separator", { name: "Resize sidebar" }).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, 300);
   await page.mouse.down();
-  // The sidebar starts after the 56px rail, so its edge is at the rail plus its width.
   await page.mouse.move(56 + 360, 300, { steps: 6 });
   await page.mouse.up();
   await expect.poll(width).toBe(360);
@@ -62,7 +61,6 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(rail).toBeHidden();
   await expect(page.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible();
 
-  // Without the rail, the sidebar that opens from the top bar goes to the bot and the cockpit too.
   await page.getByRole("button", { name: "Toggle Sidebar" }).click();
   const apps = page.getByRole("navigation", { name: "Apps" });
   await expect(apps.getByRole("link", { name: "Threads" })).toBeVisible();

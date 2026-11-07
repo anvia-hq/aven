@@ -5,8 +5,6 @@ import { authRouter } from "../auth/router";
 import { createMcpBody, mcpParams, updateMcpBody } from "./schema";
 import { mcpService } from "./service";
 
-// MCP servers belong to the signed-in user, not to the active organization, so no `org: true`.
-// Headers go in and are never read back: a server's view has their names only.
 export const mcpRouter = new Elysia({ prefix: "/mcp-servers" })
   .use(authRouter)
   .get("/", ({ user }) => mcpService.list(user.id), { auth: true })

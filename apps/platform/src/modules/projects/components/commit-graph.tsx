@@ -1,14 +1,9 @@
 import type { GraphRow } from "@aven/protocol/commit-graph";
 
-// The lines of a commit's row in the graph (decision 0090): its dot, and the lines that join it to
-// the rows above and below. One lane is a column LANE_WIDTH wide, one row is ROW_HEIGHT high, and the
-// rows are drawn with no gap, so that a line leaving one row is the line entering the next.
 export const ROW_HEIGHT = 56;
 export const LANE_WIDTH = 16;
-// A history with more lanes than this has the rest cut off at the edge, not squeezed.
 export const LANES_SHOWN = 8;
 
-// Each lane has its own colour, which wraps; the classes are written out so that they are found.
 const STROKES = [
   "stroke-graph-1",
   "stroke-graph-2",
@@ -52,7 +47,6 @@ export function CommitGraphRow({ row, lanes }: { row: GraphRow; lanes: number })
       {row.up.map((lane) => (
         <path
           key={`up-${lane}`}
-          // From the top of the row, bending in to the dot when it is on another lane.
           d={
             lane === row.lane
               ? `M ${x(lane)} 0 V ${middle}`
@@ -65,7 +59,6 @@ export function CommitGraphRow({ row, lanes }: { row: GraphRow; lanes: number })
       {row.down.map((lane) => (
         <path
           key={`down-${lane}`}
-          // From the dot, bending out to the lane of the parent when it is on another.
           d={
             lane === row.lane
               ? `M ${x(lane)} ${middle} V ${ROW_HEIGHT}`

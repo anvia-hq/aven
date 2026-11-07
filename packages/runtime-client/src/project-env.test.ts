@@ -3,7 +3,6 @@ import type { SandboxRuntime } from "@anvia/sandbox";
 
 import { envOf, withProjectEnv } from "./project-env";
 
-// A runtime that keeps the options of the calls that carry an environment.
 function recording() {
   const calls: { method: string; env: unknown }[] = [];
   const sandbox = {

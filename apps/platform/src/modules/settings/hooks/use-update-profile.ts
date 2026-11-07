@@ -3,8 +3,6 @@ import { useRouter } from "@tanstack/react-router";
 import { toast } from "@/components/toast";
 import { authClient } from "@/lib/auth-client";
 
-// Saves the signed-in user's name. The layout reads the user in its route loader, so invalidating
-// the router is what makes the sidebar show the new name.
 export function useUpdateProfile() {
   const router = useRouter();
 

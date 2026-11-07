@@ -5,7 +5,6 @@ import { createHash } from "node:crypto";
 
 export type CommandResult = {
   command: string;
-  /** Null when the command did not finish in time. */
   exitCode: number | null;
   output: string;
 };
@@ -16,8 +15,6 @@ const OUTPUT_TAIL_CHARS = 1_500;
 const tail = (text: string) =>
   text.length > OUTPUT_TAIL_CHARS ? `…${text.slice(-OUTPUT_TAIL_CHARS)}` : text;
 
-// Runs the goal's verify commands in the thread's sandbox, one after another, so a later command
-// can rely on an earlier one (a build before a test).
 export function verifyWith(exec: AnyTool | undefined, commands: readonly string[]) {
   return async (): Promise<CommandResult[]> => {
     if (commands.length === 0) return [];
@@ -49,9 +46,6 @@ function lastAssistantText(messages: readonly Message[]) {
 
 const digest = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 16);
 
-// The decision after a working session. Trusted code, not the model, says whether the goal is
-// met: the verify commands, or, with none, the agent stopping on its own. Failing commands that
-// fail the same way twice in a row count as no progress, which pauses the goal.
 export async function assessGoal(
   { session }: GoalAssessment,
   verify: () => Promise<CommandResult[]>,
@@ -92,7 +86,6 @@ export async function assessGoal(
   };
 }
 
-// How a command that did not pass ended, e.g. "`bun test` exited 1".
 function outcomeText(result: CommandResult) {
   const ended = result.exitCode === null ? "timed out" : `exited ${result.exitCode}`;
   return `\`${result.command}\` ${ended}`;

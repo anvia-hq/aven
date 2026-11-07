@@ -3,12 +3,8 @@ import { z } from "zod";
 
 export const SAVE_ENVIRONMENT_TOOL_NAME = "save_environment";
 
-/** Runs the repository's `.aven/setup` in a fresh setup container and keeps the result as the snapshot. */
 type SaveEnvironment = (abortSignal?: AbortSignal) => Promise<unknown>;
 
-// Saves the repository's environment (decision 0043): the host runs the setup script in a fresh
-// container, so what is kept is what the script makes, and new threads on the repository start
-// from it. The agent cannot do this itself: its own container cannot install system packages.
 export function createSaveEnvironmentTool(save: SaveEnvironment) {
   return createTool({
     name: SAVE_ENVIRONMENT_TOOL_NAME,
@@ -19,7 +15,6 @@ export function createSaveEnvironmentTool(save: SaveEnvironment) {
       await save(context?.abortSignal);
       return {
         saved: true,
-        // Said in words so the agent does not have to work out what happened.
         summary:
           "The environment is saved. New threads on this repository start from it for the next 72 hours, then it is made again from .aven/setup, so commit the .aven folder.",
       };

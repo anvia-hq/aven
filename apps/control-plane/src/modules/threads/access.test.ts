@@ -25,13 +25,10 @@ import { threadsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-// Who may do what with a thread (decision 0084), through every route that has a thread's id: the
-// creator all of it, a teammate nothing of a private thread and, once it is shared, only reading.
 run("a thread's access (real postgres)", async () => {
   const { seedProject } = await import("../../testing/seed-project");
   const { signUp } = await import("../../testing/sign-up");
   const hub = new RuntimeHub(createMemoryStore(db));
-  // The runs and messages do nothing here: what is asked is whether a request gets that far.
   const runs = {
     isRunning: () => false,
     history: async () => [],
@@ -43,7 +40,6 @@ run("a thread's access (real postgres)", async () => {
     answer: async () => {},
     compact: async () => {},
   } as unknown as ThreadMessages;
-  // The threads put away: archiving one stops its run and frees its sandbox (decision 0118).
   const putAway: { id: string; runtimeId: string }[] = [];
   const server = new Elysia()
     .use(errorsRouter)
@@ -60,7 +56,6 @@ run("a thread's access (real postgres)", async () => {
 
   const owner = await signUp("owner");
   const mate = await signUp("mate");
-  // The teammate joins the owner's workspace and works in it.
   await db.insert(members).values({
     id: crypto.randomUUID(),
     organizationId: owner.organizationId,
@@ -93,8 +88,6 @@ run("a thread's access (real postgres)", async () => {
       body: body ? JSON.stringify(body) : undefined,
     });
   const id = thread.id;
-  // Routes that only look, and routes that act. Each carries what it needs to pass validation, so
-  // the answer is the access check's.
   const reading: [string, string][] = [
     ["GET", `/threads/${id}`],
     ["GET", `/threads/${id}/files?path=`],
@@ -132,7 +125,6 @@ run("a thread's access (real postgres)", async () => {
   test("its creator gets past the check on every route", async () => {
     for (const [method, path, body] of [...reading, ...acting]) {
       const response = await call(method, path, owner.token, body);
-      // The runner is offline and the project has no GitHub: anything but not found is past it.
       expect([method, path, response.status === 404]).toEqual([method, path, false]);
     }
   });
@@ -147,7 +139,6 @@ run("a thread's access (real postgres)", async () => {
     expect(archived.status).toBe(200);
     expect(putAway).toEqual([{ id, runtimeId: thread.runtimeId }]);
 
-    // Opening it again asks nothing of the runner.
     await call("PATCH", `/threads/${id}`, owner.token, { state: "open" });
     expect(putAway).toEqual([{ id, runtimeId: thread.runtimeId }]);
   });
@@ -173,10 +164,8 @@ run("a thread's access (real postgres)", async () => {
     expect((await call("GET", `/threads/${id}`, mate.token)).status).toBe(404);
   });
 
-  // Whether a socket is let through the upgrade: it opens, or the request is refused first.
   const upgrades = (path: string, token: string) =>
     new Promise<boolean>((resolve) => {
-      // Bun takes headers here; its type for the second argument only knows protocols.
       const init = { headers: { authorization: `Bearer ${token}` } };
       const socket = new WebSocket(
         `${base.replace("http", "ws")}${path}`,

@@ -6,7 +6,6 @@ import { SettingsRow } from "@/components/settings-section";
 import { useBotCompaction } from "../hooks/use-bot-compaction";
 import type { Bot } from "../types";
 
-// How long a bot's chat may grow before its early turns are folded into a summary.
 export function BotCompactionRow({ bot }: { bot: Bot }) {
   const { text, setText, commit } = useBotCompaction(bot);
 

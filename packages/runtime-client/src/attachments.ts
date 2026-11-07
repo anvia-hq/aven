@@ -7,9 +7,6 @@ import type { ThreadWorkspaces } from "./sandbox";
 
 type Stores = Pick<ThreadWorkspaces, "uploads" | "artifacts">;
 
-// Copies the files sent with a message where the agent finds them, in /uploads, and keeps a copy
-// of each image for the transcript to show (decision 0034). The bytes are not kept in the run's
-// record: what is there is where they went.
 export async function keepAttachments(
   { uploads, artifacts }: Stores,
   threadId: string,
@@ -26,9 +23,6 @@ export async function keepAttachments(
   return kept;
 }
 
-// What the agent is asked: the user's text, or with files or mentions, the text, what it mentions
-// (the skills from the run's own list), where the files are, and the images themselves, read back
-// from the copies `keepAttachments` made.
 export async function promptOf(record: RunRecord, { artifacts }: Stores): Promise<AgentPrompt> {
   const { attachments = [], mentions, skillListing: skills } = record;
   const images = new Map<string, string>();

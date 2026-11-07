@@ -29,19 +29,15 @@ export const githubRouter = (
         const { configured, appKey, own } = await service.status(organizationId);
         return {
           configured,
-          // Which app the workspace acts as, and whether it is its own (decision 0123).
           appKey,
           own,
           installUrl: configured ? await service.installUrl(organizationId, user.id) : null,
-          // A platform owner can have the app created from the platform (decision 0074).
           canSetUp: await appSetup.canSetUp(user),
-          // An owner or an admin of the workspace can have it make its own app (decision 0123).
           canSetUpWorkspace: await appSetup.canSetUpWorkspace(user, organizationId),
         };
       },
       { auth: true, org: true },
     )
-    // Whether the person has connected their GitHub account, which shipping acts as (decision 0041).
     .get(
       "/user",
       async ({ query, user, organizationId }) => {
@@ -51,22 +47,18 @@ export const githubRouter = (
       },
       { auth: true, org: true, query: userQuery },
     )
-    // Sends the browser to GitHub to connect the person's account, then back to `next`.
     .get(
       "/connect",
       async ({ query, organizationId, user, redirect }) =>
         redirect(await service.connectUrl(organizationId, user.id, query.next, query.app)),
       { auth: true, org: true, query: connectQuery },
     )
-    // What the platform posts to GitHub to have the app created, for a platform owner (decision 0074).
     .get(
       "/app/manifest",
       ({ query, user, organizationId }) =>
         appSetup.manifest(user, query, query.scope === "workspace" ? organizationId : undefined),
       { auth: true, org: true, query: manifestQuery },
     )
-    // GitHub made the app and sends the browser back here with its code: keep the app, then on to
-    // installing it on the person's account.
     .get(
       "/app/callback",
       async ({ query, user, organizationId, redirect }) => {
@@ -84,14 +76,9 @@ export const githubRouter = (
       ({ params, organizationId }) => service.repos(organizationId, params.id),
       { auth: true, org: true, params: installationParams },
     )
-    // The app's "Callback URL": the browser comes back here after installing the app or connecting
-    // an account, with the session cookie, through the platform's /api proxy.
     .get(
       "/callback",
       async ({ query, organizationId, user, redirect }) => {
-        // GitHub sends no state when the app was installed from its own page, not from our link.
-        // Its code cannot be trusted then (a forged link could carry anyone's), so the person
-        // authorizes again through a state of ours that names the installation.
         if (query.state === undefined) {
           if (query.installation_id === undefined) {
             throw new InstallationNotAllowedError("The GitHub connection link is invalid");

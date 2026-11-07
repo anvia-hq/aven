@@ -18,30 +18,22 @@ const HINT_MIN_LENGTH = 12;
 
 export class TooManyVariablesError extends UnprocessableError {}
 
-/**
- * Whose variables a call is about (decision 0046): the organization's, one project's, or one
- * person's own in the organization. Every scope carries the organization the caller is in, so
- * another organization's rows are never reached.
- */
 export type Scope =
   | {
       kind: "workspace";
       organizationId: string;
-      /** Who is asking: only an owner or an admin may change them. */ actorId: string;
+      actorId: string;
     }
   | {
       kind: "project";
       organizationId: string;
       projectId: string;
-      /** Who is acting, for the history (decision 0048). */
       actorId: string;
     }
   | { kind: "personal"; organizationId: string; userId: string };
 
 const SCOPE_LABEL = { workspace: "workspace", project: "project", personal: "person" } as const;
 
-// The rows of a scope, in the variables or their events, which share the columns: the
-// organization's, and then whichever of project and person it names.
 function inScope(scope: Scope, table: typeof variables | typeof variableEvents = variables) {
   const organization = eq(table.organizationId, scope.organizationId);
   switch (scope.kind) {
@@ -56,7 +48,6 @@ function inScope(scope: Scope, table: typeof variables | typeof variableEvents =
 
 const HISTORY_LIMIT = 100;
 
-// Which unique index a name is held to in a scope, for an upsert to land on.
 function conflictOf(scope: Scope) {
   switch (scope.kind) {
     case "workspace":
@@ -83,22 +74,18 @@ const ownerOf = (scope: Scope) => ({
   userId: scope.kind === "personal" ? scope.userId : null,
 });
 
-// Who is acting, for the history: a person's own variables are only ever theirs.
 const actorOf = (scope: Scope) => (scope.kind === "personal" ? scope.userId : scope.actorId);
 
 type Source = NewVariableEventRow["source"];
 
-// A value that cannot be decrypted is unavailable: the owner enters the value again.
 const readValue = (row: EnvironmentVariableRow) =>
   decryptOrUnavailable(row.valueEncrypted, {
     logged: `Could not decrypt variable ${row.id}:`,
     message: `The saved value of ${row.name} could not be read; enter it again`,
   });
 
-// Only a long secret shows its end: a short one (a PIN, a word) would be shown whole.
 const hint = (value: string) => (value.length >= HINT_MIN_LENGTH ? value.slice(-4) : null);
 
-// What a client sees: a plain variable's value, a secret only as its last characters.
 function view(row: EnvironmentVariableRow) {
   return {
     name: row.name,
@@ -109,14 +96,12 @@ function view(row: EnvironmentVariableRow) {
   };
 }
 
-// The organization's values reach every member's runs, so only an owner or an admin changes them.
 async function requireAdmin(organizationId: string, userId: string) {
   if (!(await isOwnerOrAdmin(organizationId, userId))) {
     throw new ForbiddenError("Only an owner or an admin can change the workspace's variables");
   }
 }
 
-// A project scope must name a project of the organization: another organization's is not found.
 async function requireScope(scope: Scope) {
   if (scope.kind !== "project") return;
   const project = await projectsService.get(scope.organizationId, scope.projectId);
@@ -134,9 +119,6 @@ export const variablesService = {
     return rows.map(view);
   },
 
-  // Makes the variable or replaces its value and whether it is a secret, and records it (decision
-  // 0048) in the same transaction, so there is no change without its event. `source` is how it
-  // was asked for: the settings, or the agent's request for a secret (decision 0047).
   async set(scope: Scope, name: string, body: SetVariableBody, source: Source = "settings") {
     await requireScope(scope);
     if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
@@ -179,8 +161,6 @@ export const variablesService = {
     return view(row);
   },
 
-  // What was done to a scope's variables, newest first (decision 0048): by whom, never to what
-  // value. Who may read it is who may read the list; a person's own is theirs alone.
   async history(scope: Scope) {
     await requireScope(scope);
     const rows = await db
@@ -220,10 +200,6 @@ export const variablesService = {
     });
   },
 
-  // What a run gets in its commands' environment (decisions 0045 and 0046): the organization's
-  // variables, then the project's, then the sender's own, a later one replacing an earlier of the
-  // same name. The caller has the project and the person from a thread of the organization and the
-  // message's sender.
   async forRun(run: {
     organizationId: string;
     projectId: string;

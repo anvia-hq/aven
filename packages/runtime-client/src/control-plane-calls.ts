@@ -15,13 +15,10 @@ type PendingCall = {
 };
 
 export type ControlPlaneCallsContext = {
-  /** False when the link is down and the message went nowhere. */
   send(message: RuntimeToControlPlane): boolean;
   timeoutMs: number;
 };
 
-// The runner's calls to the control plane: each waits for the reply that carries its id. A call
-// sent over a connection that dropped is sent again on the next, until it is answered or times out.
 export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsContext) {
   const pending = new Map<string, PendingCall>();
 
@@ -35,21 +32,17 @@ export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsCo
       pending.set(id, {
         method,
         params,
-        // The control plane's answer is taken to be what the method returns; it is not checked.
         resolve: (value) => (clearTimeout(timer), resolve(value as RuntimeCalls[M]["result"])),
         reject: (error) => (clearTimeout(timer), reject(error)),
       });
-      // Sent now if the link is up, and again whenever it comes back until it is answered.
       send({ type: "call", id, method, params });
     });
 
-  /** Sends every call still waiting again, over a connection that has just opened. */
   const resend = () => {
     for (const [id, waiting] of pending)
       send({ type: "call", id, method: waiting.method, params: waiting.params });
   };
 
-  /** Hands the control plane's answer to the call that asked. */
   const settle = (reply: Reply) => {
     const waiting = pending.get(reply.id);
     if (!waiting) return;

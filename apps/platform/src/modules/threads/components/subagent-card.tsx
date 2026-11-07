@@ -6,7 +6,6 @@ import { Markdown } from "@/components/markdown";
 import type { SubagentPart } from "../types";
 import { ToolCall } from "./tool-call";
 
-// The icon set has no robot, so this one is drawn in its style: 24px, 1.5 stroke, round ends.
 function Robot({ className }: { className?: string }) {
   return (
     <svg
@@ -31,8 +30,6 @@ function Robot({ className }: { className?: string }) {
 
 const toolCount = (count: number) => (count === 1 ? "1 tool call" : `${count} tool calls`);
 
-// One subagent of a `spawn_agent` call (decision 0057): what it was asked, how it is going and,
-// opened, the tools it called and what it sent back. While it works the row shows its latest tool.
 export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
   const { description, type, status, tools, output } = subagent;
   const latest = tools.at(-1);
