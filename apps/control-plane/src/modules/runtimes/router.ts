@@ -8,7 +8,7 @@ import { connectRouter } from "./connect";
 import { createLatestRelease, type LatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
-import { createRuntimeBody, runtimeParams } from "./schema";
+import { createRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
@@ -33,6 +33,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
               outdated: isBehind(build ?? undefined, server),
               // The release its Update button would take it to: the server's, or for the control
               // plane's own runner a newer one on GitHub.
+              isControlPlane: runtime.id === LOCAL_RUNTIME_ID,
               updateTo: await updateTarget(
                 { build: build ?? undefined, isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
                 server,
@@ -78,24 +79,23 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
     // Answered when the runner has agreed, before it starts: the update restarts it.
     .post(
       "/:id/update",
-      async ({ params, organizationId, user, set }) => {
+      async ({ params, body, organizationId, user, set }) => {
         if (!(await isOwnerOrAdmin(organizationId, user.id)))
           throw new ForbiddenError("Only an owner or an admin can update a runner");
         const runtime = orNotFound(
           await runtimesService.get(organizationId, params.id),
           "Runtime not found",
         );
-        const release =
-          (await updateTarget(
-            { build: hub.buildOf(runtime.id), isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
-            serverBuild(),
-            latest,
-          )) ?? serverBuild();
-        const result = await requestUpdate(hub, runtime.id, release);
+        const release = await updateTarget(
+          { build: hub.buildOf(runtime.id), isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
+          serverBuild(),
+          latest,
+        );
+        const result = await requestUpdate(hub, runtime.id, release, body?.release);
         set.status = 202;
         return result;
       },
-      { auth: true, org: true, params: runtimeParams },
+      { auth: true, org: true, params: runtimeParams, body: updateRuntimeBody },
     )
     .delete(
       "/:id",

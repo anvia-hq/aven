@@ -12,10 +12,10 @@ import { runtimesService } from "../runtimes/service";
 import type { RunManager } from "../runs/service";
 import type { ThreadMessages } from "./messages";
 import type { SendMessageBody } from "./schema";
+import { threadsService, type Viewer } from "./service";
 
 /** The model the first run uses: the sender's choice, or else their default. */
 export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;
-import { threadsService, type Viewer } from "./service";
 
 /** The changes of a thread, as a patch, read through its runner; null when they cannot be had. */
 export type PatchOf = (
@@ -23,8 +23,9 @@ export type PatchOf = (
   threadId: string,
 ) => Promise<{ patch: string; truncated: boolean } | null>;
 
-// A patch past this is not carried: it would not fit in a message's files with room to spare.
-const PATCH_MAX_BYTES = 5 * 1024 * 1024;
+// A patch past this is not carried: a message's files add up to 10 MiB, and the base64 a patch is
+// sent in is a third larger, so this leaves room.
+const PATCH_MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * A thread that carries on another's work on a different runner (decision 0149). A thread's
@@ -37,11 +38,13 @@ export function createThreadContinuation({
   hub,
   messages,
   patchOf,
+  putAway,
 }: {
   runs: Pick<RunManager, "history" | "isRunning">;
   hub: Pick<RuntimeHub, "isOnline">;
   messages: Pick<ThreadMessages, "start">;
   patchOf: PatchOf;
+  putAway: (thread: { id: string; runtimeId: string }) => unknown;
 }) {
   return {
     async continueOn(
@@ -63,10 +66,10 @@ export function createThreadContinuation({
       if (old.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
       const found = await patchOf(viewer.organizationId, old.id).catch(() => null);
-      const carried =
-        found && !found.truncated && found.patch.length <= PATCH_MAX_BYTES ? found.patch : null;
+      const bytes = found && !found.truncated ? Buffer.from(found.patch) : null;
+      const carried = bytes && bytes.length <= PATCH_MAX_BYTES ? bytes : null;
       let patch: ContinuationPatch = "unavailable";
-      if (carried !== null) patch = carried ? "attached" : "none";
+      if (carried) patch = carried.length > 0 ? "attached" : "none";
 
       const { turns, earlier } = threadTurns(await runs.history(old));
       const created = await threadsService.create(
@@ -91,16 +94,16 @@ export function createThreadContinuation({
             {
               name: CONTINUATION_PATCH_NAME,
               mediaType: "text/x-diff",
-              data: Buffer.from(carried).toString("base64"),
+              data: carried.toString("base64"),
             },
           ];
         }
         await messages.start(viewer.organizationId, viewer.userId, created.id, body);
       } catch (error) {
-        // A thread that never ran would only sit in the person's list.
         await threadsService
           .update(viewer, created.id, { state: "archived" })
           .catch(() => undefined);
+        putAway({ id: created.id, runtimeId: created.runtimeId });
         throw error;
       }
       return created;

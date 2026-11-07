@@ -124,19 +124,17 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
       method,
       headers: { authorization: `Bearer ${token}` },
     });
-  const withServerRelease = async <T>(work: () => Promise<T>) => {
-    const before = process.env.AVEN_VERSION;
+  const releaseBefore = process.env.AVEN_VERSION;
+  beforeAll(() => {
     process.env.AVEN_VERSION = "9.9.9";
-    try {
-      return await work();
-    } finally {
-      if (before === undefined) delete process.env.AVEN_VERSION;
-      else process.env.AVEN_VERSION = before;
-    }
-  };
+  });
+  afterAll(() => {
+    if (releaseBefore === undefined) delete process.env.AVEN_VERSION;
+    else process.env.AVEN_VERSION = releaseBefore;
+  });
 
   test("an owner has an agreeing runner update to the server's release, and the list says it can", async () => {
-    await withServerRelease(async () => {
+    {
       const { runtime, calls } = await connect({ build: "9.9.0", canUpdate: true });
 
       const listed = (await (await request("GET", "", owner.token)).json()) as {
@@ -153,7 +151,25 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
       expect(response.status).toBe(202);
       expect(await response.json()).toEqual({ status: "started" });
       expect(calls).toEqual([{ release: "9.9.9" }]);
+    }
+  });
+
+  test("a runner already on the server's release is not asked, and a release the person did not see is refused", async () => {
+    const current = await connect({ build: "9.9.9", canUpdate: true });
+    const same = await request("POST", `/${current.runtime.id}/update`, owner.token);
+    expect(same.status).toBe(409);
+    expect(await same.text()).toContain("already up to date");
+
+    const behind = await connect({ build: "9.9.0", canUpdate: true });
+    const stale = await fetch(`http://${base}/runtimes/${behind.runtime.id}/update`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${owner.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ release: "9.9.5" }),
     });
+    expect(stale.status).toBe(409);
+    expect(await stale.text()).toContain("now 9.9.9");
+    expect(current.calls).toEqual([]);
+    expect(behind.calls).toEqual([]);
   });
 
   test("a runner that is not an installed aven, or is busy, or is offline, is a refusal that says why", async () => {

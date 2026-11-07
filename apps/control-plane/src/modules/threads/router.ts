@@ -84,8 +84,6 @@ export const threadsRouter = (
       },
       { thread: "own", params: threadParams, body: compactBody },
     )
-    // A thread that carries this one's work on to another runner, in the same project (decision
-    // 0149): the new thread is returned and starts working at once.
     .post(
       "/:id/continue",
       ({ params, body, organizationId, user }) => {

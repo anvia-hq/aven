@@ -16,29 +16,34 @@ export function createLatestRelease({
   now = Date.now,
   url = process.env.AVEN_RELEASES_URL || RELEASES,
 }: { fetchFn?: typeof fetch; now?: () => number; url?: string } = {}): LatestRelease {
-  const base = url.replace(/\/$/, "");
+  const base = url.replace(/\/+$/, "");
   let known: { version: string | undefined; until: number } | undefined;
   let asking: Promise<string | undefined> | undefined;
 
   async function ask() {
+    const before = known?.version;
     try {
       const response = await fetchFn(`${base}/latest`, {
         redirect: "manual",
         signal: AbortSignal.timeout(ASK_MS),
       });
       const tag = /\/tag\/v?(\d+\.\d+\.\d+)$/.exec(response.headers.get("location") ?? "")?.[1];
-      known = { version: tag, until: now() + (tag ? FOUND_MS : FAILED_MS) };
+      known = tag
+        ? { version: tag, until: now() + FOUND_MS }
+        : { version: before, until: now() + FAILED_MS };
     } catch {
-      known = { version: undefined, until: now() + FAILED_MS };
+      known = { version: before, until: now() + FAILED_MS };
     }
     return known.version;
   }
 
+  const refresh = () => (asking ??= ask().finally(() => (asking = undefined)));
+
   return {
     async get() {
-      if (known && known.until > now()) return known.version;
-      asking ??= ask().finally(() => (asking = undefined));
-      return asking;
+      if (!known) return refresh();
+      if (known.until <= now()) void refresh();
+      return known.version;
     },
   };
 }

@@ -90,6 +90,7 @@ export const threadContinuation = createThreadContinuation({
   runs: runsService,
   hub: runtimeHub,
   messages: threadMessages,
+  putAway: (thread) => putAwayThread(thread),
   patchOf: async (organizationId, threadId) => {
     const diff = await diffService.get(organizationId, threadId, "all");
     return diff.available ? { patch: diff.patch, truncated: diff.truncated } : null;

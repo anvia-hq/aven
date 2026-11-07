@@ -10,6 +10,7 @@ import { isOwnerOrAdminRole } from "@/lib/member-role";
 
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import { updatingAtom } from "../atoms/updating-atom";
+import { isUpdating as isStillUpdating, UPDATE_WAIT_MS, updateEnd } from "../updating";
 import type { CreatedRuntime, Runtime } from "../types";
 
 const runtimesStore = createListStore<Runtime>({
@@ -23,8 +24,6 @@ const runtimesStore = createListStore<Runtime>({
 export const resetRuntimes = runtimesStore.reset;
 
 const POLL_MS = 10_000;
-// How long a runner is shown as updating before the row goes back to what it says.
-const UPDATE_WAIT_MS = 5 * 60_000;
 
 // The organization's runtimes. Loads on first use. With `poll`, online status refreshes while the
 // caller is mounted, since a runtime comes and goes without the page doing anything.
@@ -85,7 +84,9 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
   // Asks the runner to update itself; true when it agreed (a refusal is already toasted).
   async function update(runtime: Runtime) {
     const agreed = await attempt("Could not update the runner", () =>
-      postJson<{ status: string }>(`/runtimes/${runtime.id}/update`, {}),
+      postJson<{ status: string }>(`/runtimes/${runtime.id}/update`, {
+        release: runtime.updateTo ?? undefined,
+      }),
     );
     if (agreed === null) return false;
     setUpdating((current) => ({
@@ -95,12 +96,23 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     return true;
   }
 
-  // Asked to update and not yet back on another release; given up on after a few minutes.
-  const isUpdating = (runtime: Runtime) => {
-    const asked = updating[runtime.id];
-    if (!asked || Date.now() - asked.at > UPDATE_WAIT_MS) return false;
-    return !runtime.online || runtime.build === asked.from;
-  };
+  const isUpdating = (runtime: Runtime) =>
+    isStillUpdating(updating[runtime.id], runtime, Date.now());
+
+  const asked = (runtime: Runtime) => updating[runtime.id];
+  function finishUpdating(runtime: Runtime) {
+    const was = updating[runtime.id];
+    const ended = updateEnd(was, runtime, Date.now());
+    if (!was || !ended) return;
+    setUpdating(({ [runtime.id]: _dropped, ...rest }) => rest);
+    if (ended === "failed") {
+      toast.add({
+        title: "The update did not finish",
+        description: `${runtime.name} is still on ${was.from ?? "its release"}. Run aven update on its machine, and check its log.`,
+        type: "error",
+      });
+    }
+  }
 
   return {
     runtimes: runtimes ?? [],
@@ -114,5 +126,8 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     canUpdate,
     update,
     isUpdating,
+    asked,
+    finishUpdating,
+    updateWaitMs: UPDATE_WAIT_MS,
   };
 }

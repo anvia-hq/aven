@@ -15,15 +15,18 @@ export function useContinueThread(thread: Thread) {
   const navigate = useNavigate();
   const { refresh } = useThreads();
   const [working, setWorking] = useState(false);
-  // The new thread's first run uses the model this thread's composer shows.
   const { selection } = useModelSelection(thread.id);
 
   async function continueOn(runtimeId: string) {
     setWorking(true);
-    const created = await attempt("Could not continue the thread", () =>
-      postJson<Thread>(`/threads/${thread.id}/continue`, { runtimeId, ...selection }),
-    );
-    setWorking(false);
+    let created: Thread | null;
+    try {
+      created = await attempt("Could not continue the thread", () =>
+        postJson<Thread>(`/threads/${thread.id}/continue`, { runtimeId, ...selection }),
+      );
+    } finally {
+      setWorking(false);
+    }
     if (!created) return false;
     toast.add({ title: "Continued on another runner", description: thread.title, type: "success" });
     await navigate({ to: "/threads/$threadId", params: { threadId: created.id } });

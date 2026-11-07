@@ -28,6 +28,8 @@ export type Runtime = {
   outdated: boolean;
   /** The release its Update button takes it to: the server's, or a newer one for the control plane's own runner. */
   updateTo: string | null;
+  /** The control plane's own runner: on the server's machine, so its update is the server's too. */
+  isControlPlane: boolean;
   /** An installed `aven` that can update itself when asked (decision 0146). */
   canUpdate: boolean;
   /** Null while offline, and for a runner that does not report its load (an older release). */

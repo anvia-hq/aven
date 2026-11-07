@@ -21,6 +21,7 @@ run("a thread continued on another runner (postgres, decision 0149)", async () =
   const viewer = { organizationId: orgA, userId };
   const started: { thread: string; prompt: string; files: string[]; modelId?: string }[] = [];
   let failStart = false;
+  const freed: { id: string; runtimeId: string }[] = [];
   let online = new Set<string>([to.id]);
   let running = false;
   let patch: { patch: string; truncated: boolean } | null = {
@@ -51,6 +52,7 @@ run("a thread continued on another runner (postgres, decision 0149)", async () =
       },
     } as never,
     patchOf: async () => patch,
+    putAway: (thread) => void freed.push(thread),
   });
   const oldThread = async () =>
     threadsService.create(orgA, userId, { projectId: project.id, title: "Pager" });
@@ -69,7 +71,6 @@ run("a thread continued on another runner (postgres, decision 0149)", async () =
     expect(first.prompt).toStartWith('[continued] Continued from "Pager", now on big-box');
     expect(first.prompt).toContain("The pager is half done.");
     expect(first.prompt).toContain(threadBranch(created.id));
-    // The old thread is left as it was.
     expect((await threadsService.get(orgA, old.id))?.runtimeId).toBe(from.id);
     expect((await threadsService.get(orgA, old.id))?.state).not.toBe("archived");
   });
@@ -87,6 +88,10 @@ run("a thread continued on another runner (postgres, decision 0149)", async () =
     patch = { patch: "x", truncated: true };
     await continuation.continueOn(viewer, old.id, to.id);
     expect(started.at(-1)!.files).toEqual([]);
+    patch = { patch: "あ".repeat(1_500_000), truncated: false };
+    await continuation.continueOn(viewer, old.id, to.id);
+    expect(started.at(-1)!.files).toEqual([]);
+    expect(started.at(-1)!.prompt).toContain("too large to carry");
     patch = { patch: "diff\n", truncated: false };
   });
 

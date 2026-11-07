@@ -16,16 +16,17 @@ test.describe("continuing a thread on another runner (decision 0149)", () => {
     page,
   }) => {
     await registerUser(page, "cnt", "Continue User");
-    // The first run needs a model to name; the fake runner never calls it.
     await page.request.post("/api/providers", {
       data: { kind: "openai", name: "Work", apiKey: "sk-test-1234" },
     });
     const { child, threadId } = await threadOnFakeRunner(page);
     children.push(child);
+    const originalRuntimeId = (
+      (await (await page.request.get(`/api/threads/${threadId}`)).json()) as { runtimeId: string }
+    ).runtimeId;
     await page.setViewportSize({ width: 1400, height: 760 });
     await page.goto(`/threads/${threadId}`);
 
-    // With no other runner online there is nothing to continue on.
     const environment = page.getByRole("region", { name: "Environment" });
     await expect(environment).toContainText("fake desktop");
     await expect(
@@ -56,16 +57,15 @@ test.describe("continuing a thread on another runner (decision 0149)", () => {
     await page.getByRole("option", { name: "big box" }).click();
     await dialog.getByRole("button", { name: "Continue", exact: true }).click();
 
-    // The new thread opens on the other runner, with the first message as one quiet line.
     await expect(page).not.toHaveURL(new RegExp(`/threads/${threadId}$`));
     await expect(page.getByText('Continued from "', { exact: false })).toBeVisible();
     await expect(page.getByRole("region", { name: "Environment" })).toContainText("big box");
 
-    // The old thread is left on its own runner.
     const old = (await (await page.request.get(`/api/threads/${threadId}`)).json()) as {
       runtimeId: string;
       state: string;
     };
+    expect(old.runtimeId).toBe(originalRuntimeId);
     expect(old.runtimeId).not.toBe(runtime.id);
     expect(old.state).not.toBe("archived");
   });

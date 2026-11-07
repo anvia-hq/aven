@@ -14,7 +14,11 @@ export const CONTINUATION_PATCH_NAME = "previous-thread.patch";
 const BUDGET = 14_000;
 const TURN_MAX = 2_000;
 
-const cut = (text: string) => (text.length > TURN_MAX ? `${text.slice(0, TURN_MAX)}… (cut)` : text);
+// What was said is data: its angle brackets are replaced so it cannot close the fence it sits in.
+const cut = (text: string) => {
+  const safe = text.replaceAll("<", "‹");
+  return safe.length > TURN_MAX ? `${safe.slice(0, TURN_MAX)}… (cut)` : safe;
+};
 
 /** The latest turns that fit, oldest first, and how many earlier ones were left out. */
 export function turnsThatFit(turns: readonly BotThreadTurn[], earlier: number) {

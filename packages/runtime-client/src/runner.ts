@@ -251,9 +251,8 @@ export function startRuntime(options: RuntimeOptions) {
     finished: (threadId, ended) => {
       idle.schedule(threadId);
       // A run that ran to its end leaves the agent idle: what it started is still watched, and what
-      // ended during the run is told now. One stopped or failed tells nothing.
       if (ended === "response") processEnds.settle(threadId);
-      else processEnds.disarm(threadId);
+      else processEnds.suspend(threadId);
     },
     stopped: () => stopped,
   });
