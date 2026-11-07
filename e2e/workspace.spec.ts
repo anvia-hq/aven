@@ -97,20 +97,27 @@ test.describe("settings", () => {
 
   test("a provider with one credential is set up, edited and removed", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
+    await page.route("**/api/providers/models", (route) =>
+      route.fulfill({ json: { models: ["deploy-one", "deploy-two"] } }),
+    );
+    await page.route("**/api/providers/*/models", (route) =>
+      route.fulfill({ json: { models: ["deploy-one", "deploy-two"], efforts: {} } }),
+    );
     await page.goto("/settings/providers");
     const azure = page.getByRole("listitem", { name: "Azure OpenAI" });
 
     await azure.getByRole("button", { name: "Set up" }).click();
     await page.getByLabel("Resource URL").fill("https://my-resource.openai.azure.com/openai");
     await page.getByLabel("API key").fill("azure-secret-1234");
-    await page.getByLabel("Deployment name").fill("deploy-one");
+    await expect(page.getByRole("combobox", { name: "Deployment" })).toContainText("deploy-one");
     await page.getByRole("button", { name: "Add provider" }).click();
 
     await expect(azure).toContainText("https://my-resource.openai.azure.com · deploy-one · …1234");
     await expect(azure.getByRole("button", { name: "Set up" })).toHaveCount(0);
 
     await azure.getByRole("button", { name: "Edit" }).click();
-    await page.getByLabel("Deployment name").fill("deploy-two");
+    await page.getByRole("combobox", { name: "Deployment" }).click();
+    await page.getByRole("option", { name: "deploy-two" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(azure).toContainText("deploy-two · …1234");
 
@@ -127,6 +134,18 @@ test.describe("settings", () => {
     page,
   }) => {
     await registerUser(page, "ws", "Workspace User");
+    await page.route("**/api/providers/models", async (route) => {
+      const sent = route.request().postDataJSON() as { kind: string; baseUrl?: string };
+      const byKind: Record<string, string[]> = {
+        bedrock: ["openai.gpt-oss-120b"],
+        vertex: ["google/gemini-2.5-flash"],
+        gemini: ["gemini-2.5-flash"],
+      };
+      let models = byKind[sent.kind] ?? ["model-a"];
+      if (sent.baseUrl?.includes("groq")) models = ["llama-3.3-70b-versatile"];
+      if (sent.baseUrl?.includes("11434")) models = ["llama3.1"];
+      return route.fulfill({ json: { models } });
+    });
     await page.goto("/settings/providers");
     const connected = page.getByRole("list").first();
 
@@ -136,7 +155,9 @@ test.describe("settings", () => {
       .click();
     await page.getByLabel("Region").fill("us-west-2");
     await page.getByLabel("API key").fill("bedrock-secret-4321");
-    await page.getByLabel("Model", { exact: true }).fill("openai.gpt-oss-120b");
+    await expect(page.getByRole("combobox", { name: "Model" })).toContainText(
+      "openai.gpt-oss-120b",
+    );
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(
       page.getByRole("listitem", { name: "Amazon Bedrock", exact: true }).first(),
@@ -149,7 +170,9 @@ test.describe("settings", () => {
     await page.getByLabel("Project ID").fill("my-project-123");
     await page.getByLabel("Location").fill("global");
     await page.getByLabel("Credential").fill("ya29.pasted-token-9876");
-    await page.getByLabel("Model id").fill("google/gemini-2.5-flash");
+    await expect(page.getByRole("combobox", { name: "Model" })).toContainText(
+      "google/gemini-2.5-flash",
+    );
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(
       page.getByText(
@@ -175,7 +198,9 @@ test.describe("settings", () => {
     await expect(page.getByLabel("Base URL")).toHaveCount(0);
     await expect(page.getByLabel("API key")).toHaveAttribute("required", "");
     await page.getByLabel("API key").fill("gsk-secret-7777");
-    await page.getByLabel("Model", { exact: true }).fill("llama-3.3-70b-versatile");
+    await expect(page.getByRole("combobox", { name: "Model" })).toContainText(
+      "llama-3.3-70b-versatile",
+    );
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(page.getByRole("listitem", { name: "Groq" })).toContainText(
       "https://api.groq.com/openai/v1 · llama-3.3-70b-versatile · …7777",
@@ -189,7 +214,7 @@ test.describe("settings", () => {
       .getByRole("button", { name: "Set up" })
       .click();
     await expect(page.getByLabel("API key (optional)")).not.toHaveAttribute("required", "");
-    await page.getByLabel("Model", { exact: true }).fill("llama3.1");
+    await expect(page.getByRole("combobox", { name: "Model" })).toContainText("llama3.1");
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText(
       "http://localhost:11434/v1 · llama3.1",
