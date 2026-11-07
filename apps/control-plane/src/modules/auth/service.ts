@@ -13,6 +13,7 @@ import { bearer, organization } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 
 import { platformService } from "../platform/service";
+import { parseOrigins } from "./origins";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
@@ -34,7 +35,7 @@ export async function ensurePersonalOrganization(userId: string) {
   return organizationId;
 }
 
-export const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "http://localhost:5173").split(",");
+export const trustedOrigins = parseOrigins(process.env.TRUSTED_ORIGINS ?? "http://localhost:5173");
 
 export const auth = betterAuth({
   secret,
