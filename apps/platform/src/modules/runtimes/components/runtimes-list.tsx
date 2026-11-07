@@ -98,7 +98,7 @@ export function RuntimesList() {
               <td className="px-3 py-3">
                 <span className="flex items-center gap-2 font-mono text-xs">
                   {runtime.build ? `v${runtime.build}` : "–"}
-                  {runtime.outdated && (
+                  {runtime.updateTo && (
                     <Badge
                       variant="outline"
                       title="Update it here, or run `aven update` on that machine"

@@ -26,6 +26,8 @@ export type Runtime = {
   build: string | null;
   /** The runner is on an older release than the server: run `aven update` on its machine. */
   outdated: boolean;
+  /** The release its Update button takes it to: the server's, or a newer one for the control plane's own runner. */
+  updateTo: string | null;
   /** An installed `aven` that can update itself when asked (decision 0146). */
   canUpdate: boolean;
   /** Null while offline, and for a runner that does not report its load (an older release). */
