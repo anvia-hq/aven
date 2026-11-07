@@ -71,7 +71,7 @@ function Composer({
   const model = useModelSelection(threadId);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
-  const { canSend, hasContent, submit } = useSendComposer({
+  const { canSend, submit } = useSendComposer({
     composer,
     attachments,
     selection: model.selection,
@@ -129,24 +129,15 @@ function Composer({
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
           {running && (
-            <Button
-              size="icon-sm"
-              variant={canSend ? "outline" : "default"}
-              aria-label="Stop"
-              onClick={onStop}
-            >
+            <Button size="icon-sm" className="rounded-full" aria-label="Stop" onClick={onStop}>
               <StopSolid />
             </Button>
           )}
-          {(!running || hasContent) && (
+          {!running && (
             <Button
               size="icon-sm"
+              className="rounded-full"
               aria-label="Send"
-              title={
-                running && attachments.files.length > 0
-                  ? "Files can be sent when the agent is not working"
-                  : undefined
-              }
               disabled={!canSend}
               onClick={() => void submit()}
             >

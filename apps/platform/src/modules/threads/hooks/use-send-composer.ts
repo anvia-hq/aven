@@ -104,5 +104,5 @@ export function useSendComposer({
     }
   }
 
-  return { canSend, hasContent, submit };
+  return { canSend, submit };
 }
