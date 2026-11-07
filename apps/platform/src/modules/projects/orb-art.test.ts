@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DOTS, orbShape } from "./orb-art";
+import { DOTS, orbShape, paintOrb } from "./orb-art";
 
 describe("orbShape", () => {
   test("is the same for a seed every time", () => {
@@ -21,5 +21,41 @@ describe("orbShape", () => {
       expect(shape.rings.length).toBeLessThanOrEqual(3);
       expect(shape.dots).toHaveLength(DOTS);
     }
+  });
+});
+
+// Bun has no canvas: a stand-in that answers every drawing call and counts the circles drawn.
+function circlesDrawn(seed: number, color: number, time: number) {
+  let circles = 0;
+  const gradient = { addColorStop() {} };
+  const answers: Record<string, unknown> = {
+    arc: () => circles++,
+    createRadialGradient: () => gradient,
+    createConicGradient: () => gradient,
+  };
+  const context = new Proxy(
+    {},
+    { get: (_, key) => answers[String(key)] ?? (() => {}), set: () => true },
+  ) as CanvasRenderingContext2D;
+  paintOrb(context, 40, orbShape(seed), {
+    ink: [120, 120, 120],
+    colors: ["#ff6a3d", "#ffb347", "#ff3d7f"],
+    color,
+    time,
+  });
+  return circles;
+}
+
+describe("paintOrb", () => {
+  test("a mark at rest is the ring and its glass, with no dust", () => {
+    for (let seed = 1; seed < 20; seed++) expect(circlesDrawn(seed, 0, 3)).toBe(2);
+  });
+
+  test("a working mark adds a halo and a core for every speck of dust", () => {
+    for (let seed = 1; seed < 20; seed++) expect(circlesDrawn(seed, 1, 3)).toBe(2 + DOTS * 2);
+  });
+
+  test("dust fades in with the color, so one just starting to work already has it", () => {
+    expect(circlesDrawn(1, 0.05, 0)).toBe(2 + DOTS * 2);
   });
 });
