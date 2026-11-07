@@ -25,6 +25,8 @@ import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
 import { skillsService } from "./modules/skills/service";
 import { createBotThreads } from "./modules/threads/bot-access";
+import { createDiffService } from "./modules/diff/service";
+import { createThreadContinuation } from "./modules/threads/continuation";
 import { createThreadForks } from "./modules/threads/forks";
 import { createProcessEnds } from "./modules/threads/process-ends";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -81,6 +83,18 @@ runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessag
 
 // A process the agent left running ends while it is idle: it is woken with a note (decision 0144).
 runtimeHub.processEnds = createProcessEnds({ messages: threadMessages });
+
+// A thread carried on to another runner reads the old one's changes through its runner (decision 0149).
+const diffService = createDiffService(runtimeHub);
+export const threadContinuation = createThreadContinuation({
+  runs: runsService,
+  hub: runtimeHub,
+  messages: threadMessages,
+  patchOf: async (organizationId, threadId) => {
+    const diff = await diffService.get(organizationId, threadId, "all");
+    return diff.available ? { patch: diff.patch, truncated: diff.truncated } : null;
+  },
+});
 
 // Archiving a thread stops its run and frees its sandbox (decision 0118), for the person's own
 // routes and for a bot doing it on their word.

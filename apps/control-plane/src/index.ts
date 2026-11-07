@@ -12,6 +12,7 @@ import {
   shipService,
   threadMessages,
   putAwayThread,
+  threadContinuation,
 } from "./composition";
 import { errorsRouter } from "./errors";
 import { artifactsRouter } from "./modules/artifacts/router";
@@ -70,7 +71,7 @@ const app = new Elysia()
   .use(mcpRouter)
   .use(memoryRouter)
   .use(terminalRouter(runtimeHub))
-  .use(threadsRouter(runsService, threadMessages, putAwayThread))
+  .use(threadsRouter(runsService, threadMessages, putAwayThread, threadContinuation))
   .use(variablesRouter)
   .use(projectVariablesRouter)
   .use(workloadIdentityRouter);

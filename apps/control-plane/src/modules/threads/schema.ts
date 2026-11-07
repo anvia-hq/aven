@@ -112,6 +112,9 @@ export const answerQuestionBody = z.object({
 
 export type CreateThreadBody = z.infer<typeof createThreadBody>;
 export type UpdateThreadBody = z.infer<typeof updateThreadBody>;
+// The runner to continue on, and the model the new thread's first run uses (the composer's choice).
+export const continueBody = z.object({ runtimeId: z.uuid(), ...modelSelection });
+
 export type SendMessageBody = z.infer<typeof sendMessageBody>;
 export type AnswerQuestionBody = z.infer<typeof answerQuestionBody>;
 export type CompactBody = z.infer<typeof compactBody>;

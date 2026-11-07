@@ -6,17 +6,24 @@ import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
   compactBody,
+  continueBody,
   createThreadBody,
   sendMessageBody,
   threadParams,
   updateThreadBody,
 } from "./schema";
+import type { ThreadContinuation } from "./continuation";
 import type { ThreadMessages } from "./messages";
 import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
 
 // The runs and messages are given: they are made with the rest of the app in `composition.ts`.
-export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAway: PutAwayThread) =>
+export const threadsRouter = (
+  runs: RunManager,
+  messages: ThreadMessages,
+  putAway: PutAwayThread,
+  continuation: ThreadContinuation,
+) =>
   new Elysia({ prefix: "/threads" })
     .use(threadAccess)
     .get(
@@ -76,6 +83,21 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAwa
         return status(202, { ok: true });
       },
       { thread: "own", params: threadParams, body: compactBody },
+    )
+    // A thread that carries this one's work on to another runner, in the same project (decision
+    // 0149): the new thread is returned and starts working at once.
+    .post(
+      "/:id/continue",
+      ({ params, body, organizationId, user }) => {
+        const { runtimeId, ...selection } = body;
+        return continuation.continueOn(
+          { organizationId, userId: user.id },
+          params.id,
+          runtimeId,
+          selection,
+        );
+      },
+      { thread: "own", params: threadParams, body: continueBody },
     )
     .post(
       "/:id/answer",
