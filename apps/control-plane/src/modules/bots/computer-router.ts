@@ -27,7 +27,8 @@ export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
     .use(authRouter)
     .get(
       "/:id/artifacts/:name",
-      ({ params, user }) => artifacts.read(user.id, params.id, params.name),
+      ({ params, user, request }) =>
+        artifacts.read(user.id, params.id, params.name, request.headers.get("range")),
       {
         auth: true,
         params: botArtifactParams,

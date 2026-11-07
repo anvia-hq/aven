@@ -64,3 +64,18 @@ test("a goal's own session is told to work in tool calls and report a major step
 test("an agent that talks to a person is not told to keep quiet between tool calls", () => {
   expect(codingInstructions(200, true)).not.toContain("<reporting>");
 });
+
+test("the agent is told to show proof of its work, and a goal's session too", () => {
+  for (const canHandOff of [true, false]) {
+    const text = codingInstructions(200, canHandOff);
+    expect(text).toContain("<proof>");
+    expect(text).toContain("show proof that it works");
+    expect(text).toContain("show_artifact");
+  }
+});
+
+test("the agent is told to wait for a process with wait_for_process and never to sleep in a command", () => {
+  const text = codingInstructions(200, true);
+  expect(text).toContain("call wait_for_process");
+  expect(text).toContain("Never wait with sleep in a command");
+});

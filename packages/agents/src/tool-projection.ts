@@ -3,13 +3,14 @@ import type { ToolCallPart, ToolResultOutput } from "@anvia/core";
 import {
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
+  SHOW_ARTIFACT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
   type DiffLine,
   type QuestionPrompt,
   type RunEvent,
   type SubagentPart,
-  type ToolImage,
+  type ToolArtifact,
   type ToolPart,
 } from "@aven/protocol/events";
 
@@ -18,6 +19,7 @@ import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
 import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
+import { WAIT_FOR_PROCESS_TOOL_NAME } from "./tools/wait-for-process";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
 
@@ -35,6 +37,14 @@ const PATH_TOOLS = new Set<string>([
   EDIT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
 ] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME | typeof SHOW_IMAGE_TOOL_NAME)[]);
+// What `show_artifact` acts on: the paths it was given, as many as fit on a line.
+const artifactTarget = (args: Record<string, unknown>) => {
+  const items = Array.isArray(args.items) ? args.items : [];
+  return items
+    .map((item) => asString(asRecord(item).path))
+    .filter(Boolean)
+    .join(", ");
+};
 const COMMAND_TOOLS = new Set<string>([
   "exec_command",
   "start_process",
@@ -45,13 +55,20 @@ const PROCESS_TOOLS = new Set<string>([
 ] satisfies SandboxToolName[]);
 const PORT_TOOL: SandboxToolName = "wait_for_port";
 // Tools whose JSON result carries a `summary` meant to be read as it is.
-const SUMMARISED_TOOLS = new Set<string>([GIT_FETCH_TOOL_NAME, SAVE_ENVIRONMENT_TOOL_NAME]);
+const SUMMARISED_TOOLS = new Set<string>([
+  GIT_FETCH_TOOL_NAME,
+  SAVE_ENVIRONMENT_TOOL_NAME,
+  WAIT_FOR_PROCESS_TOOL_NAME,
+]);
 
 export function toolTarget(name: string, input: unknown) {
   const args = asRecord(input);
   if (PATH_TOOLS.has(name)) return asString(args.path);
+  if (name === SHOW_ARTIFACT_TOOL_NAME) return artifactTarget(args);
   if (COMMAND_TOOLS.has(name)) return asString(args.command);
-  if (PROCESS_TOOLS.has(name)) return asString(args.processId);
+  if (PROCESS_TOOLS.has(name) || name === WAIT_FOR_PROCESS_TOOL_NAME) {
+    return asString(args.processId);
+  }
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
   if (name === GIT_FETCH_TOOL_NAME) return asString(args.branch) || "default branch";
@@ -177,12 +194,32 @@ export function withSubagentResults(tool: ToolPart, output: ToolResultOutput): T
   };
 }
 
-// The image a result of the image tool carries, when it has one of the right shape. Only that
-// tool's result is read this way: another tool's JSON may have an `image` of its own.
-function imageOf(value: unknown): ToolImage | undefined {
-  const { name, mediaType, caption } = asRecord(asRecord(value).image);
+function artifactOf(value: unknown): ToolArtifact | undefined {
+  const { name, mediaType, caption } = asRecord(value);
   if (typeof name !== "string" || typeof mediaType !== "string") return undefined;
   return typeof caption === "string" ? { name, mediaType, caption } : { name, mediaType };
+}
+
+// What a result of the tool that shows files carries, when it has the right shape: the artifacts of
+// `show_artifact`, or the one image of the `show_image` of transcripts made before it (decision
+// 0136). Only those tools' results are read this way: another tool's JSON may have an `artifacts`
+// or an `image` of its own.
+function shownOf(value: unknown, toolName?: string) {
+  const result = asRecord(value);
+  if (toolName === SHOW_IMAGE_TOOL_NAME) {
+    const image = artifactOf(result.image);
+    return image && { artifacts: [image], said: `Showed ${asString(result.path)}` };
+  }
+  if (toolName !== SHOW_ARTIFACT_TOOL_NAME || !Array.isArray(result.artifacts)) return undefined;
+  const artifacts = result.artifacts.flatMap((item) => artifactOf(item) ?? []);
+  if (artifacts.length === 0) return undefined;
+  const failed = Array.isArray(result.failed) ? result.failed.length : 0;
+  return {
+    artifacts,
+    said: failed
+      ? `Showed ${artifacts.length} of ${artifacts.length + failed}`
+      : `Showed ${artifacts.length}`,
+  };
 }
 
 function commandText(result: Record<string, unknown>) {
@@ -199,7 +236,7 @@ export function projectToolOutput(
 ): {
   status: "done" | "error";
   output: string;
-  image?: ToolImage;
+  artifacts?: ToolArtifact[];
 } {
   switch (output.type) {
     case "text":
@@ -207,10 +244,8 @@ export function projectToolOutput(
     case "error-text":
       return { status: "error", output: clip(output.value) };
     case "json": {
-      const image = toolName === SHOW_IMAGE_TOOL_NAME ? imageOf(output.value) : undefined;
-      if (image) {
-        return { status: "done", output: `Showed ${asString(asRecord(output.value).path)}`, image };
-      }
+      const shown = shownOf(output.value, toolName);
+      if (shown) return { status: "done", output: shown.said, artifacts: shown.artifacts };
       // What these tools did, in the words they gave it.
       if (toolName === SPAWN_AGENT_TOOL_NAME) {
         const results = subagentResults(output.value);

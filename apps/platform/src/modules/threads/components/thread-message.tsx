@@ -6,8 +6,8 @@ import { Markdown } from "@/components/markdown";
 
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
-import type { ChatMessage, MessagePart, ToolImage, ToolPart } from "../types";
-import { ImageBlock } from "./image-block";
+import type { ChatMessage, MessagePart, ToolArtifact, ToolPart } from "../types";
+import { ArtifactGrid } from "./artifact-grid";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
@@ -18,14 +18,14 @@ import { ToolGroup, type ToolGroupEntry } from "./tool-group";
 type Block =
   | { type: "text"; text: string }
   | { type: "question"; tool: ToolPart }
-  | { type: "image"; image: ToolImage }
+  | { type: "artifacts"; artifacts: ToolArtifact[] }
   | { type: "subagents"; tool: ToolPart }
   | { type: "tools"; entries: ToolGroupEntry[] };
 
 // Consecutive tool calls become one block, so a burst of work reads as a single row; the reasoning
 // between them goes to the same row (decision 0115). A question stands apart: the user has to see
-// it, not find it inside a collapsed group. So does an image the agent showed, once it is done;
-// while it is being kept it is a tool call like any other. So do the subagents it handed tasks to:
+// it, not find it inside a collapsed group. So do the files the agent showed, once the call is done:
+// one grid for each call; while they are being kept it is a tool call like any other. So do the subagents it handed tasks to:
 // their work is something to follow, one card each.
 function blocks(parts: MessagePart[]) {
   const result: Block[] = [];
@@ -38,7 +38,8 @@ function blocks(parts: MessagePart[]) {
     if (part.type === "text") result.push(part);
     else if (part.type === "reasoning") group({ type: "reasoning", text: part.text });
     else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
-    else if (part.tool.image) result.push({ type: "image", image: part.tool.image });
+    else if (part.tool.artifacts)
+      result.push({ type: "artifacts", artifacts: part.tool.artifacts });
     else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
     else group({ type: "tool", tool: part.tool });
   }
@@ -58,7 +59,9 @@ function AssistantBlock({
     return <Markdown live={live}>{block.text}</Markdown>;
   }
   if (block.type === "question") return <QuestionBlock tool={block.tool} />;
-  if (block.type === "image") return <ImageBlock threadId={threadId} image={block.image} />;
+  if (block.type === "artifacts") {
+    return <ArtifactGrid threadId={threadId} artifacts={block.artifacts} />;
+  }
   if (block.type === "subagents") {
     return (
       <div className="flex min-w-0 flex-col">

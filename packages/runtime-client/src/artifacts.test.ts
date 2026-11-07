@@ -18,6 +18,13 @@ describe("ArtifactStore", () => {
     expect(await store.read(thread, name)).toEqual({ mediaType: "image/png", data: "AQID" });
   });
 
+  test("keeps a video as it keeps an image (decision 0136)", async () => {
+    const name = await store.save(thread, new Uint8Array([9, 8]), "video/mp4");
+    expect(name).toMatch(/\.mp4$/);
+    expect(await store.read(thread, name)).toEqual({ mediaType: "video/mp4", data: "CQg=" });
+    expect(await store.save(thread, new Uint8Array([1]), "video/webm")).toMatch(/\.webm$/);
+  });
+
   test("keeps each thread's images apart", async () => {
     const name = await store.save(thread, new Uint8Array([1]), "image/webp");
     expect(await store.read(crypto.randomUUID(), name)).toBeNull();

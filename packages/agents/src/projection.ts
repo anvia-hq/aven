@@ -120,10 +120,10 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
           (candidate) => candidate.type === "tool" && candidate.tool.id === part.toolCallId,
         );
         if (target?.type === "tool") {
-          const { status, output, image } = projectToolOutput(part.output, target.tool.name);
+          const { status, output, artifacts } = projectToolOutput(part.output, target.tool.name);
           target.tool.status = status;
           target.tool.output = output;
-          if (image) target.tool.image = image;
+          if (artifacts) target.tool.artifacts = artifacts;
           const { subagents } = withSubagentResults(target.tool, part.output);
           if (subagents) target.tool.subagents = subagents;
         }
