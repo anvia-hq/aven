@@ -1,6 +1,6 @@
 # The agent shows images in the conversation
 
-Status: accepted. Builds on 0010 (per-thread workspaces), 0012 (the sandbox's tools) and 0031 (reading a thread's files through the runner).
+Status: accepted; `show_image` is replaced by `show_artifact`, and one image by a list of images and videos, in 0136. Builds on 0010 (per-thread workspaces), 0012 (the sandbox's tools) and 0031 (reading a thread's files through the runner).
 
 ## Context
 
