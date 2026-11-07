@@ -15,6 +15,8 @@ import type { MessageAttachment, MessageMention, RunEvent } from "./events";
 export type RunThreadInfo = {
   id: string;
   organizationId: string;
+  /** The thread this one was forked from: its workspace starts as a copy of that thread's (decision 0135). */
+  forkOf?: string;
 };
 
 /** The kinds of model provider, in the order a client lists them. */
