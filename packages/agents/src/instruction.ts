@@ -23,7 +23,25 @@ function longTasks(maxTurns: number, canHandOff: boolean) {
   return `<long_tasks>\n${lines.map((line) => `- ${line}`).join("\n")}\n</long_tasks>`;
 }
 
-/** The coding agent's instructions, for an agent that may take `maxTurns` model calls for a message. */
+/**
+ * How a goal's session talks. Nobody answers it while it works and whoever reads the thread wants
+ * how the work went, not every step: so it spends its turns on tool calls and writes only at a
+ * major step, in one paragraph. Left to `<tone>` and `<output>` alone it narrated each call in
+ * fragments ("Need migrations.", "Add tests.").
+ */
+function goalReporting() {
+  const lines = [
+    'Nobody answers you while the goal runs, so spend your turns on tool calls, not on commentary. Make the call: do not announce it, do not narrate each step, and do not write fragments such as "Need migrations." or "Add tests." between calls.',
+    "Write a message only when something major or important has happened: a milestone reached, a decision that shapes the rest of the work, a surprise, a failure you had to work around, or a blocker. Give it as one paragraph of two to four full sentences that say what happened, why it matters and what comes next.",
+    "Leave the routine out of your messages: reading files, a check that passes, a small edit, a retry.",
+  ];
+  return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
+}
+
+/**
+ * The coding agent's instructions, for an agent that may take `maxTurns` model calls for a message.
+ * An agent that cannot hand a task to a goal is a goal's own session, which is told how to report.
+ */
 export function codingInstructions(maxTurns: number, canHandOff = true) {
   return `<role>
 You are a coding agent working in a sandbox with a project workspace.
@@ -41,7 +59,7 @@ You are a coding agent working in a sandbox with a project workspace.
 - Keep going until the task is done and verified, or you are blocked on something only the user can give.
 </workflow>
 
-${longTasks(maxTurns, canHandOff)}
+${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 
 <sandbox>
 - Only /workspace is yours to change, and only it lasts: the repository is cloned there, on the branch aven/<thread id> that this thread works on. Stay on that branch, leave changes you did not make alone, and do not force-push or rewrite history unless the user asks.
