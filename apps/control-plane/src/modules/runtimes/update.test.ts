@@ -177,6 +177,13 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
     expect((await request("POST", `/${offline.id}/update`, owner.token)).ok).toBe(false);
   });
 
+  test("a runner that answers with something else is unavailable, not a server error", async () => {
+    const { runtime } = await connect({ build: "9.9.0", canUpdate: true }, { status: "maybe" });
+    const response = await request("POST", `/${runtime.id}/update`, owner.token);
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain("did not answer the update");
+  });
+
   test("a plain member is refused, and another workspace's runner is not found", async () => {
     expect(asMember).toBe(true);
     const { runtime, calls } = await connect({ build: "9.9.0", canUpdate: true });

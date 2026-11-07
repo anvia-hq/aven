@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ConflictError, UnavailableError } from "../../errors";
+import { ConflictError, describeError, UnavailableError } from "../../errors";
 import type { RuntimeHub } from "./hub";
 
 const answer = z.discriminatedUnion("status", [
@@ -26,7 +26,14 @@ export async function requestUpdate(
       "This runner was not installed with aven, so it cannot update itself: run aven update on its machine",
     );
   }
-  const result = answer.parse(await runner.call("runner.update", { release }, AGREE_MS));
+  // A runner that does not answer, or answers with something else, is as good as offline.
+  const result = await runner
+    .call("runner.update", { release }, AGREE_MS)
+    .then((reply) => answer.parse(reply))
+    .catch((error: unknown) => {
+      console.warn(`Runner ${runtimeId} did not take runner.update:`, describeError(error));
+      throw new UnavailableError("The runner did not answer the update");
+    });
   if (result.status === "busy") throw new ConflictError(result.reason);
   if (result.status === "unsupported") {
     throw new ConflictError("This runner cannot update itself: run aven update on its machine");

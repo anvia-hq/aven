@@ -272,7 +272,11 @@ export class RuntimeConnection {
         this.#stats = { ...message.stats, reportedAt: new Date().toISOString() };
         return;
       case "process.ended":
-        await this.hub.processEnds.ended(this.runtimeId, message).catch(() => undefined);
+        await this.hub.processEnds
+          .ended(this.runtimeId, message)
+          .catch((error: unknown) =>
+            console.warn(`Could not wake a thread for an ended process:`, describeError(error)),
+          );
         return;
       case "bot.say":
         this.#botReplies.get(message.replyId)?.say(message.text);
