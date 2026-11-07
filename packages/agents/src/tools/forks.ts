@@ -2,6 +2,8 @@ import { createTool } from "@anvia/core";
 import { FORKS_PER_THREAD, FORK_TEXT_MAX, type ForkView } from "@aven/protocol/forks";
 import { z } from "zod";
 
+import { createWaitForForksTool } from "./wait-for-forks";
+
 export const FORK_THREAD_TOOL_NAME = "fork_thread";
 export const FORK_STATUS_TOOL_NAME = "fork_status";
 export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
@@ -75,5 +77,5 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     execute: async ({ id }) => host.take(id),
   });
 
-  return [forkThread, forkStatus, takeForkChanges];
+  return [forkThread, forkStatus, createWaitForForksTool((id) => host.status(id)), takeForkChanges];
 }

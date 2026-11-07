@@ -1578,6 +1578,7 @@ describe("startRuntime runs", () => {
           "spawn_agent",
           "fork_thread",
           "fork_status",
+          "wait_for_forks",
           "take_fork_changes",
           "define_goal",
         ],

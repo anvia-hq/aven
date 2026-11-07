@@ -16,12 +16,12 @@ export type ProcessWatch = {
   tail(processId: string): Promise<{ stdout: string; stderr: string }>;
 };
 
-type Clock = {
+export type Clock = {
   now(): number;
   sleep(ms: number, abortSignal?: AbortSignal): Promise<void>;
 };
 
-const realClock: Clock = {
+export const realClock: Clock = {
   now: () => Date.now(),
   sleep: (ms, abortSignal) =>
     new Promise((resolve, reject) => {

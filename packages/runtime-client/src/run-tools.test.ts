@@ -88,7 +88,7 @@ describe("toolsForRun", () => {
 
     const tools = toolsForRun({ ...base, forks });
     expect(tools.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining(["fork_thread", "fork_status", "take_fork_changes"]),
+      expect.arrayContaining(["fork_thread", "fork_status", "wait_for_forks", "take_fork_changes"]),
     );
     const spawn = tools.find((tool) => tool.name === "spawn_agent") as AnyTool & {
       call(input: unknown): Promise<unknown>;
