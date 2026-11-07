@@ -13,7 +13,6 @@ import { DiffStat } from "./diff-stat";
 
 type Props = {
   threadId: string;
-  /** Whether the agent is working: the changes are followed while it is. */
   running: boolean;
   onClose: () => void;
 };
@@ -23,8 +22,6 @@ const EMPTY: Record<DiffScope, string> = {
   all: "This thread has not changed any files yet.",
 };
 
-// What the thread has changed in its workspace, beside the conversation: the last turn's changes or
-// everything since the branch left the default branch, drawn as one column or two.
 export function DiffPanel({ threadId, running, onClose }: Props) {
   const { scope, setScope, layout, setLayout } = useDiffPreferences();
   const { loaded, problem, available, truncated, files, additions, deletions } = useThreadDiff(

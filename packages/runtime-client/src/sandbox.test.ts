@@ -9,7 +9,6 @@ import { containerBaseArgs } from "./environment-setup";
 import { dockerRunArgs, runnerLabel, Sandboxes, type ThreadSandbox } from "./sandbox";
 import { createRemoteRepo } from "./testing/remote-repo";
 
-// Stands in for git where a test is about the container: a clone is just a `.git` directory.
 const fakeGit = async (args: string[], { cwd }: { cwd: string }) => {
   if (args[0] === "clone") await Bun.write(join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");
   return { code: 0, stdout: "", stderr: "" };
@@ -149,7 +148,6 @@ describe("Sandboxes starting a container", () => {
       expect(started()).toHaveLength(0);
       const dir = join(await realpath(home), "workspaces", "bot-1");
       expect((await stat(dir)).isDirectory()).toBe(true);
-      // Nothing is cloned, so it is not a thread's workspace as far as its changes and files go.
       expect(await sandboxes.workspace("bot-1")).toBeUndefined();
       await sandboxes.dispose();
       await rm(home, { recursive: true, force: true });
@@ -185,7 +183,6 @@ describe("Sandboxes starting a container", () => {
       await Bun.sleep(100);
 
       const started = calls.filter((args) => args[0] === "run");
-      // Only the bot that has used it: before the reply asked for anything.
       expect(started).toHaveLength(1);
       expect(started[0]?.some((arg) => arg.includes("bot-1"))).toBe(true);
       await sandboxes.dispose();
@@ -196,14 +193,12 @@ describe("Sandboxes starting a container", () => {
       const { box, started, sandboxes, home } = await acquireBotSandbox();
       const exec = box.tools.find((tool) => tool.name === "exec_command")!;
 
-      // The daemon never dials in here, so the call fails after the container was started.
       await Promise.resolve(exec.call({ command: "ls" }, undefined as never)).catch(
         () => undefined,
       );
 
       expect(started()).toHaveLength(1);
       expect(await box.hasRunningProcesses()).toBe(false);
-      // Asking whether anything runs did not start another.
       expect(started()).toHaveLength(1);
       await sandboxes.dispose();
       await rm(home, { recursive: true, force: true });
@@ -213,7 +208,6 @@ describe("Sandboxes starting a container", () => {
   test("a second acquire while the container is starting waits for it and does not restart it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
-    // No daemon ever dials in here, so both give up on the connect timeout.
     const sandboxes = await Sandboxes.start({
       image: "img",
       home,
@@ -280,7 +274,6 @@ describe("Sandboxes starting a container", () => {
   });
 });
 
-// The first word of a git command, past the `-c name=value` pairs the hardened ones start with.
 const verbOf = (args: string[]) => {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "-c") i++;
@@ -292,7 +285,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
   const org = "org-1";
   const sha = "sha256:base";
 
-  // A Docker that names the sandbox image `sha`, records every command and can make one fail.
   function docker(fail: (args: string[]) => boolean = () => false) {
     const calls: string[][] = [];
     const run = async (args: string[]) => {
@@ -304,7 +296,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
     return { calls, run };
   }
 
-  // A git whose clone leaves a repository with (or without) an executable setup script.
   function git(options: { setup?: boolean; failRestore?: boolean } = {}) {
     const { setup = true, failRestore = false } = options;
     const calls: string[][] = [];
@@ -337,7 +328,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
       connectTimeoutMs: 100,
     });
     const key = sandboxes.snapshots.keyFor(org, access.cloneUrl);
-    // No daemon dials in, so an acquire ends on the connect timeout: what matters is before that.
     const acquire = (id: string) =>
       sandboxes.acquire({ id, organizationId: org }, repo).catch(() => undefined);
     const cleanup = async () => {
@@ -381,7 +371,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
 
     expect(g.verbs().filter((verb) => verb === "clone")).toHaveLength(clones);
     expect(setupRuns(d.calls)).toHaveLength(1);
-    // The default branch is fetched and the thread's own branch is made from it.
     expect(g.calls.some((args) => verbOf(args) === "fetch")).toBe(true);
     const checkout = g.calls.find((args) => verbOf(args) === "checkout" && args.includes("-B"))!;
     expect(checkout.slice(checkout.indexOf("checkout"))).toEqual([
@@ -412,7 +401,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
     expect(d.calls.some((args) => args[0] === "commit")).toBe(false);
     expect(await sandboxes.snapshots.valid(key, sha)).toBeNull();
     expect(imageOfThread(d.calls, "t-broken")).toBe("img");
-    // The container of the setup is gone either way.
     expect(d.calls.at(-1)?.[0]).toBe("rm");
     await cleanup();
   });
@@ -459,7 +447,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
   });
 
   describe("saving the environment on request", () => {
-    // A thread whose repository had no setup script when it started, and now has one.
     async function threadWithScript(d: ReturnType<typeof docker>, mode: number | null = 0o755) {
       const g = git({ setup: false });
       const started = await start(d, g);
@@ -483,7 +470,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
       expect(saved).toEqual({ image: `aven-env-${key}` });
       expect((await sandboxes.snapshots.valid(key, sha))?.image).toBe(`aven-env-${key}`);
       expect(d.calls.some((args) => args[0] === "commit")).toBe(true);
-      // The next thread restores it.
       await sandboxes.release("t-save");
       d.calls.length = 0;
       await sandboxes.acquire({ id: "t-save", organizationId: org }, repo).catch(() => undefined);
@@ -536,7 +522,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
     await acquire("t-store");
     expect(await exclude()).toContain(".pnpm-store/");
 
-    // A workspace made before this existed gets it the next time the thread starts.
     await Bun.write(join(home, "workspaces", "t-store", ".git", "info", "exclude"), "");
     await sandboxes.release("t-store");
     await acquire("t-store");
@@ -554,7 +539,6 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
 
     await acquire("t-first");
 
-    // Its container comes back from the image it was pinned to, not the bare one.
     const runs = d.calls.filter(
       (args) => args[0] === "run" && args.includes("aven-sandbox-t-first"),
     );
@@ -563,12 +547,10 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
   });
 });
 
-// Needs Docker and a desktop sandbox image: AVEN_SANDBOX_TEST_IMAGE=aven-sandbox-desktop:dev
 const image = process.env.AVEN_SANDBOX_TEST_IMAGE;
 const live = image ? describe : describe.skip;
 
 live("a sandbox (real docker)", () => {
-  // Set up in beforeAll: a skipped describe still runs its body, which must not touch Docker.
   let sandboxes: Sandboxes;
   let home: string;
   let threadId: string;
@@ -590,7 +572,6 @@ live("a sandbox (real docker)", () => {
     await rm(home, { recursive: true, force: true });
   });
 
-  // Calls a tool the way the agent does, with the shape its result is expected to have.
   const call = async <Result = unknown>(from: ThreadSandbox, name: string, input: unknown) => {
     const tool = from.tools.find((candidate) => candidate.name === name);
     if (!tool) throw new Error(`No tool ${name}`);
@@ -643,7 +624,6 @@ live("a sandbox (real docker)", () => {
       { compress: "gzip" },
     ).bytes();
     const skill = { name: "hello", description: "Says hello.", digest: "e".repeat(64) };
-    // The container is already running: what is installed now still shows up in it.
     await sandboxes.skills.install(threadId, [skill], async () => archive);
 
     expect((await run("/skills/hello/scripts/hi.sh")).stdout).toContain("hello from a skill");
@@ -671,7 +651,6 @@ live("a sandbox (real docker)", () => {
   test("a window manager keeps running on the desktop, so windows have title bars and can be moved", async () => {
     await sandboxes.desktop(threadId)!.start();
     const running = async () => (await run("pgrep -x xfwm4")).exitCode === 0;
-    // xfwm4 comes up once the Xfce session has.
     const deadline = Date.now() + 80_000;
     while (!(await running()) && Date.now() < deadline) await Bun.sleep(1_000);
     expect(await running()).toBe(true);
@@ -727,25 +706,21 @@ live("a sandbox (real docker)", () => {
     sandboxes.setProjectEnv(threadId, [{ name: "DATABASE_URL", value: "postgres://in-container" }]);
     expect((await run("printenv DATABASE_URL")).stdout.trim()).toBe("postgres://in-container");
 
-    // A process gets them too, and the variables are not in the container's own environment.
     await call(box, "start_process", {
       command: "sh",
       args: ["-c", "printenv DATABASE_URL > /workspace/from-process.txt"],
     });
     const written = join(root, "from-process.txt");
-    // The shell makes the file before the command fills it: wait for the content.
     let content = "";
     for (let tries = 0; tries < 100 && content === ""; tries++) {
       await Bun.sleep(100);
       content = await readFile(written, "utf8").catch(() => "");
     }
     expect(content).toBe("postgres://in-container\n");
-    // Leaves the sandbox as idle as it found it, for the test that follows.
     for (let tries = 0; tries < 100 && (await box.hasRunningProcesses()); tries++) {
       await Bun.sleep(100);
     }
 
-    // The next run brings none: the last run's value is gone.
     sandboxes.setProjectEnv(threadId, undefined);
     expect((await run("printenv DATABASE_URL")).exitCode).toBe(1);
   }, 60_000);
@@ -783,12 +758,10 @@ live("a bot's computer (real docker, decision 0059)", () => {
     const box = await sandboxes.acquire({ id });
     expect(await running(id)).toBe(false);
 
-    // The first command starts the container.
     await exec(box, "echo kept > note.txt");
     expect(await running(id)).toBe(true);
     expect((await exec(box, "pwd")).stdout).toContain("/workspace");
 
-    // Freed, it is gone; the next computer for the same bot finds the file again.
     await sandboxes.release(id);
     expect(await running(id)).toBe(false);
     const again = await sandboxes.acquire({ id });
@@ -860,7 +833,6 @@ live("a repository's environment (real docker)", () => {
     home = await realpath(await mkdtemp(join(tmpdir(), "aven-runner-home-")));
     sandboxes = await Sandboxes.start({ image: image!, home });
     remote = await createRemoteRepo();
-    // A repository that sets itself up, and does a quick thing whenever a container starts.
     await Bun.write(
       join(remote.dir, ".aven", "setup"),
       '#!/bin/sh\nset -e\necho "from setup" > "$HOME/marker.txt"\necho "built" > /workspace/built.txt\n',
@@ -894,7 +866,6 @@ live("a repository's environment (real docker)", () => {
       async () => remote.access,
     );
 
-    // What the script put in the container's home and in the workspace, and what resume did on start.
     expect((await run(firstBox, "cat ~/marker.txt && cat /workspace/built.txt")).stdout).toBe(
       "from setup\nbuilt\n",
     );
@@ -906,7 +877,6 @@ live("a repository's environment (real docker)", () => {
       `aven-env-${key}`,
     );
 
-    // The repository moves on after the snapshot was made.
     await Bun.write(join(remote.dir, "NEWS.md"), "fresh\n");
     for (const args of [
       ["add", "."],
@@ -920,8 +890,6 @@ live("a repository's environment (real docker)", () => {
       async () => remote.access,
     );
 
-    // The environment came from the snapshot (setup did not run again), the repository is current
-    // and on this thread's own branch.
     expect((await run(secondBox, "cat ~/marker.txt && cat /workspace/built.txt")).stdout).toBe(
       "from setup\nbuilt\n",
     );
@@ -929,11 +897,9 @@ live("a repository's environment (real docker)", () => {
     expect((await run(secondBox, "git rev-parse --abbrev-ref HEAD")).stdout.trim()).toBe(
       `aven/${second.slice(0, 8)}`,
     );
-    // Resume ran again on this container's start.
     expect((await run(secondBox, "test -s /workspace/resumed.txt && echo yes")).stdout).toBe(
       "yes\n",
     );
-    // The two threads' workspaces are their own.
     await run(secondBox, "echo mine > /workspace/only-second.txt");
     expect((await run(firstBox, "test -e /workspace/only-second.txt; echo $?")).stdout.trim()).toBe(
       "1",
@@ -974,7 +940,6 @@ live("signing a sandbox in to GitHub (real docker)", () => {
 
     await sandboxes.signInGithub(id, ada);
 
-    // gh uses the token it was given, git asks gh for credentials, commits are the person's.
     expect((await run(box, "gh auth token")).stdout.trim()).toBe("ghu_live-token");
     const credential = await run(
       box,
@@ -984,12 +949,9 @@ live("signing a sandbox in to GitHub (real docker)", () => {
     expect((await run(box, "git config --global user.email")).stdout.trim()).toBe(
       "42+ada@users.noreply.github.com",
     );
-    // Only the container's user can read what holds the token.
     expect((await run(box, "stat -c %a ~/.config/gh/hosts.yml")).stdout.trim()).toBe("600");
-    // The workspace, which a snapshot copies, does not.
     expect((await run(box, "grep -rl ghu_live-token /workspace || true")).stdout).toBe("");
 
-    // Another person's run replaces it, and a run with none removes it.
     await sandboxes.signInGithub(id, { token: "ghu_next", id: 7, login: "grace", name: null });
     expect((await run(box, "gh auth token")).stdout.trim()).toBe("ghu_next");
     expect((await run(box, "git config --global user.name")).stdout.trim()).toBe("grace");
@@ -999,8 +961,6 @@ live("signing a sandbox in to GitHub (real docker)", () => {
   }, 300_000);
 });
 
-// A killed process's children are left to PID 1, which has to reap them or they stay as zombies
-// that count against the pids limit (decision 0113).
 live("a container started with the runner's arguments (real docker)", () => {
   const zombiesLeft = async (withInit: boolean) => {
     const name = `aven-zombie-${crypto.randomUUID().slice(0, 8)}`;
@@ -1015,8 +975,6 @@ live("a container started with the runner's arguments (real docker)", () => {
       },
       { afterLimits: [] },
     ).filter((arg) => withInit || arg !== "--init");
-    // `sleep` as the command never waits on anything, as the sandbox daemon does not. The subshell
-    // exits at once and leaves `true` to PID 1, which is a zombie until PID 1 waits for it.
     const script = "(true &); sleep 1; ps -eo stat | grep -c '^Z' || true";
     const docker = async (args: string[]) => {
       const child = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
@@ -1038,8 +996,6 @@ live("a container started with the runner's arguments (real docker)", () => {
   }, 120_000);
 });
 
-// A Linux runner starts the container as the host user so the workspace's files are theirs, and
-// their uid is not the image's (decision 0095): the image has to work for whoever it is.
 live("the sandbox image for a user it has never heard of (real docker)", () => {
   const runAs = async (user: string | undefined, script: string) => {
     const asUser = user ? ["--user", user] : [];
@@ -1083,8 +1039,6 @@ live("the sandbox image for a user it has never heard of (real docker)", () => {
   }, 120_000);
 
   test("is repaired in a container made from an image that has not got the fix", async () => {
-    // A container started as the host user, with the entrypoint left out, as the old image had no
-    // entry for the uid, and its home and trees made the way that image had them.
     const name = `aven-repair-${crypto.randomUUID().slice(0, 8)}`;
     const docker = async (args: string[]) => {
       const child = Bun.spawn(["docker", ...args], { stdout: "pipe", stderr: "pipe" });
@@ -1125,7 +1079,6 @@ live("the sandbox image for a user it has never heard of (real docker)", () => {
 
       const after = await docker(["exec", name, "sh", "-c", probe]);
       expect(after.stdout).toBe("aven");
-      // A second run, on an image that now has the fix, changes nothing and does not fail.
       expect((await docker(homeRepairArgs(name, "4242:4242"))).code).toBe(0);
       expect(
         (await docker(["exec", name, "sh", "-c", "grep -c '^aven:' /etc/passwd"])).stdout,
@@ -1142,7 +1095,6 @@ live("the sandbox image for a user it has never heard of (real docker)", () => {
   }, 120_000);
 });
 
-// The id of a local Docker image, which a snapshot is made from.
 async function imageId(name: string) {
   const out = await new Response(
     Bun.spawn(["docker", "image", "inspect", "--format", "{{.Id}}", name]).stdout,

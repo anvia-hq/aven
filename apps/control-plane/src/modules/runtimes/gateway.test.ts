@@ -31,7 +31,6 @@ describe("RunGateway", () => {
   const origin = `http://localhost:${upstream.port}`;
   const gateway = new RunGateway({ anthropic: origin, openai: `${origin}/v1`, gemini: origin });
 
-  // Stands in for the control plane's route: /runtimes/gateway/:segment/*.
   const front = Bun.serve({
     port: 0,
     fetch(req) {
@@ -110,7 +109,6 @@ describe("RunGateway", () => {
   });
 
   test("azure: the SDK reaches the resource's v1 API with the sender's key and deployment", async () => {
-    // OpenAI's models go to the Responses API, the others to chat completions (decision 0026).
     for (const [runtimeModel, path] of [
       ["gpt-5.5", "/openai/v1/responses"],
       ["DeepSeek-V4.1-Flash", "/openai/v1/chat/completions"],
@@ -180,7 +178,6 @@ describe("RunGateway", () => {
   });
 
   test("bedrock: chat completions go to the stored regional endpoint with the sender's key and model", async () => {
-    // The stored endpoint is AWS's; here a local server stands in for it.
     const run = gateway.issue("r2i", {
       provider: "bedrock",
       modelId: "openai.gpt-oss-120b",
@@ -246,7 +243,6 @@ describe("RunGateway", () => {
         "no credential",
       );
 
-      // A credential Google refuses is a 502 that says so, and nothing goes upstream.
       const failing = new RunGateway({ anthropic: origin, openai: origin }, async () => {
         throw new GoogleAuthError("Google refused the service account key (400)");
       });
@@ -340,7 +336,6 @@ describe("RunGateway", () => {
     gateway.revoke("r-first");
     expect((await post("anthropic/v1/messages", first.gatewayToken, {})).status).toBe(401);
 
-    // The run that answers the thread's question gets the token the paused run's client holds.
     const second = gateway.issue(
       "r-second",
       { provider: "anthropic", apiKey: "sk-real" },
@@ -384,7 +379,6 @@ describe("RunGateway", () => {
       expect(() => gateway.check({ provider: "anthropic", apiKey: "k" })).not.toThrow();
       expect(() => gateway.check({ provider: "azure" })).toThrow("no API key");
       expect(() => gateway.check({ provider: "gemini" })).toThrow("GEMINI_API_KEY is not set");
-      // A compatible server needs no key.
       expect(() => gateway.check({ provider: "openai-compatible" })).not.toThrow();
     } finally {
       if (saved) process.env.ANTHROPIC_API_KEY = saved;

@@ -40,7 +40,6 @@ describe("keeping package stores out of a workspace's git", () => {
     await ensureLocalExcludes(root);
 
     expect(await status(root)).toBe("");
-    // Neither the Changes panel's diff nor a `git add --all` sees it.
     expect((await threadDiff(root, "all"))?.patch).toBe("");
     await git(["add", "--all"], { cwd: root });
     expect((await git(["diff", "--cached", "--name-only"], { cwd: root })).stdout.trim()).toBe("");

@@ -6,7 +6,6 @@ import { Button } from "@/components/button";
 
 type Props = {
   path: string;
-  /** What the button says: the file's name in the tree, its whole path among matches. */
   label: string;
   active: boolean;
   title?: string;
@@ -14,7 +13,6 @@ type Props = {
   onOpen: (path: string) => void;
 };
 
-// A file in the explorer; picking it opens it.
 export function FileButton({ path, label, active, title, style, onOpen }: Props) {
   return (
     <Button

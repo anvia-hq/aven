@@ -7,5 +7,4 @@ export type {
   TaskStatus,
 } from "@aven/protocol/cockpit";
 
-/** How the tasks page shows them. */
 export type TaskView = "board" | "list";

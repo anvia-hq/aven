@@ -66,7 +66,6 @@ run("the images a thread's agent showed (real postgres, real WebSocket)", async 
       await db.delete(organizations).where(eq(organizations.id, id));
   });
 
-  // A thread on a runner that answers `artifacts.read` with `answer`; the calls it got are in `calls`.
   async function setup(
     answer: (params: unknown) => { ok: boolean; result?: unknown; error?: string },
   ) {

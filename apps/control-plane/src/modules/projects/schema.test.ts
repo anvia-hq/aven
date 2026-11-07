@@ -33,7 +33,6 @@ describe("folderQuery", () => {
     expect(folderQuery.parse({}).path).toBe("");
   });
 
-  // A dot-only or empty segment would climb out of `/repos/<owner>/<name>/contents/`.
   test.each(["..", ".", "src/..", "../..", "a//b", "/src", "src/", "a\0b", "x".repeat(1025)])(
     "refuses %p",
     (path) => {
@@ -83,7 +82,6 @@ describe("trackedQuery", () => {
     });
   });
 
-  // Search stops at a thousand matches: a hundred pages of ten.
   test.each([
     { state: "gone" },
     { author: "a b" },

@@ -44,7 +44,6 @@ describe("the GitHub clients (decision 0123)", () => {
     expect((await clients.forOrganization("org-1")).client).toBe(first.client);
     expect(await clients.forKey("app-of-org-1")).toBe(first.client);
     expect(made).toEqual(["acme-aven"]);
-    // Another workspace is not given it.
     expect((await clients.forOrganization("org-2")).client).toBe(platform);
   });
 

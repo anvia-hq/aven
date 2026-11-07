@@ -8,7 +8,6 @@ import type { Thread } from "@/modules/threads/types";
 
 import { OverviewCard } from "./overview-card";
 
-// Where the thread's agent works: the runner, the repository and the branch it commits to.
 export function EnvironmentCard({ thread }: { thread: Thread }) {
   const { project } = useProject(thread.projectId);
   const { runtime } = useRuntime(thread.runtimeId);

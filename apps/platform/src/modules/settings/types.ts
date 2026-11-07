@@ -1,4 +1,3 @@
-// Better Auth organization roles. Owners come with the organization and cannot be invited.
 export const ROLES = ["admin", "member"] as const;
 
 export type InvitableRole = (typeof ROLES)[number];

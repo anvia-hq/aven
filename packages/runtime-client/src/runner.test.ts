@@ -30,7 +30,6 @@ import { journalPath } from "./testing/journal-path";
 const thread = { id: "thread-1", organizationId: "org-1" };
 const runStart = { type: "run.start", runId: "run-1", thread, prompt: "hi" };
 
-// Sandboxes that come up when the test says so, and report a running process while `busy.now`.
 function slowSandbox() {
   const gate = Promise.withResolvers<void>();
   const released: string[] = [];
@@ -50,7 +49,6 @@ function slowSandbox() {
   return { sandbox, up: gate.resolve, released, busy };
 }
 
-// An agent that answers from a script, one step per model call.
 const agentThat =
   (...steps: ScriptStep[]): CreateRuntimeAgent =>
   ({ id }) => ({
@@ -129,12 +127,10 @@ describe("startRuntime updating itself (decision 0146)", () => {
 
     const reply = await ask(plane, "u1", { release: "1.2.3" });
     expect(reply).toMatchObject({ ok: true, result: { status: "started" } });
-    // The answer is out before the update runs.
     expect(started).toEqual([]);
     await until(() => started.length > 0);
     expect(started).toEqual(["1.2.3"]);
 
-    // Anything but a release number is not passed on to a command.
     expect(await ask(plane, "u2", { release: "1.2.3; rm -rf /" })).toMatchObject({ ok: false });
     await Bun.sleep(1200);
     expect(started).toEqual(["1.2.3"]);
@@ -150,7 +146,6 @@ describe("startRuntime updating itself (decision 0146)", () => {
     });
     await runtime.ready;
     plane.send(runStart);
-    // The sandbox is still starting, so the run is going.
     await Bun.sleep(100);
     expect(await ask(plane, "u3", {})).toMatchObject({
       ok: true,
@@ -175,7 +170,6 @@ describe("startRuntime processes", () => {
       return plane.received.find((m) => m.type === "reply" && m.id === id);
     };
 
-    // No sandbox is up: nothing is running, and asking did not start one.
     expect(await ask("a", "processes.list", { threadId: "t1" })).toMatchObject({
       ok: true,
       result: { processes: [] },
@@ -185,7 +179,6 @@ describe("startRuntime processes", () => {
       ok: false,
     });
 
-    // A person wakes the sandbox; the agent left a server running.
     await ask("w", "desktop.wake", { threadId: "t1" });
     const started = await workspaces.sandboxes
       .get("t1")!
@@ -314,7 +307,6 @@ describe("startRuntime desktops", () => {
       result: { state: "running", control: { held: false } },
     });
     expect(acquired).toEqual(["t1"]);
-    // Nothing uses it, so the idle clock frees it again.
     await until(() => released.length === 1);
     expect(released).toEqual(["t1"]);
   });
@@ -329,7 +321,6 @@ describe("startRuntime desktops", () => {
       acquire: async (thread, repo) => {
         acquired.push({ id: thread.id, repo });
         const box = await sandbox.acquire(thread, repo);
-        // A bot's container is started by what needs it, here the wake.
         return { ...box, start: async () => void starts.push(thread.id) };
       },
     };
@@ -355,7 +346,6 @@ describe("startRuntime desktops", () => {
 
   test("a thread with no workspace is not woken: the clone is made by a run", async () => {
     const { sandbox, up } = withDesktop(undefined);
-    // `acquire` asks for the repository only when the workspace holds no clone yet.
     const unclonedSandbox: ThreadWorkspaces = {
       ...sandbox,
       acquire: async (thread, repo) => (await repo?.(), sandbox.acquire(thread, repo)),
@@ -433,7 +423,6 @@ describe("startRuntime", () => {
     await runtime.ready;
     plane.send(runStart);
 
-    // The tool asks the control plane for this run's access, as the clone does.
     await until(() => plane.received.some((message) => message.type === "call"));
     const call = plane.received.find((message) => message.type === "call");
     expect(call).toMatchObject({ method: "repo.access", params: { runId: "run-1" } });
@@ -449,7 +438,6 @@ describe("startRuntime", () => {
     expect(await sh(fixture.root, "rev-parse", "--abbrev-ref", "HEAD")).toBe("aven/test");
     const ended = plane.received.find((message) => message.type === "run.end");
     expect(ended).toMatchObject({ outcome: "response" });
-    // The token reached neither the transcript the control plane keeps nor the workspace's config.
     expect(JSON.stringify(plane.received)).not.toContain("secret-token");
     expect(await Bun.file(`${fixture.root}/.git/config`).text()).not.toContain("secret-token");
   });
@@ -506,7 +494,6 @@ describe("startRuntime", () => {
   describe("signing the sandbox in to GitHub for a run (decision 0044)", () => {
     const ada = { token: "ghu_very-secret", id: 42, login: "ada", name: "Ada L" };
 
-    // A sandbox that records who each run signed in as.
     function signingSandbox(options: { failSignIn?: boolean } = {}) {
       const signedIn: { threadId: string; github: unknown }[] = [];
       const identities: { threadId: string; identity: unknown; controlPlane: string }[] = [];
@@ -602,7 +589,6 @@ describe("startRuntime", () => {
   describe("giving the agent's commands the project's variables (decision 0045)", () => {
     const env = [{ name: "DATABASE_URL", value: "postgres://very-secret" }];
 
-    // A sandbox that records the variables each run was given.
     function envSandbox() {
       const given: { threadId: string; env: unknown }[] = [];
       const sandbox: ThreadWorkspaces = {
@@ -816,7 +802,6 @@ describe("startRuntime", () => {
   });
 
   test("a run whose history grows past a megabyte, as screenshots and command output make it, does not end", async () => {
-    // What a few desktop screenshots amount to: results of a few hundred kilobytes each.
     const screenshot = createTool({
       name: "screenshot",
       description: "A big result",
@@ -854,7 +839,6 @@ describe("startRuntime", () => {
     });
     await runtime.ready;
     plane.send(runStart);
-    // The sandbox of this test comes up when the test says so.
     await Bun.sleep(0);
 
     await until(() => plane.received.some((message) => message.type === "run.end"));
@@ -999,7 +983,6 @@ describe("startRuntime", () => {
     plane.send(runStart);
     await until(() => plane.received.some((message) => message.type === "run.end"));
 
-    // Several idle periods pass with a dev server still up.
     await Bun.sleep(250);
     expect(released).toEqual([]);
 
@@ -1015,7 +998,6 @@ describe("startRuntime", () => {
         id: "p1",
         command: "bun test",
         status: "running",
-        // Started by the run, a moment after the watch began.
         startedAt: new Date(Date.now() + 1000).toISOString(),
       },
     ];
@@ -1073,7 +1055,6 @@ describe("startRuntime", () => {
     const { plane, runtime } = connect({
       sandbox: checking,
       idleReleaseMs: 30,
-      // The first run ends at once; the second is still going when the idle check comes back.
       createAgent: (input) =>
         ++runs === 1
           ? reply()(input)
@@ -1149,7 +1130,6 @@ describe("startRuntime runs", () => {
       status: "done",
       output: "value of a",
     });
-    // The prompt, the assistant's turn, the tool's result and the final reply.
     const [transcript] = appended(plane);
     expect(transcript?.turn).toBe(0);
     expect(transcript?.messages.map((message) => message.role)).toEqual([
@@ -1192,7 +1172,6 @@ describe("startRuntime runs", () => {
     plane.send({ ...runStart, runId: "run-2", prompt: COMPACT_PROMPT, compact: true });
     await until(() => ended(plane).length === 2);
     expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
-    // The sandbox is the first run's alone: compacting did not ask for one.
     expect(acquired).toBe(1);
     const [, filed] = appended(plane);
     expect(filed?.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
@@ -1264,7 +1243,6 @@ describe("startRuntime runs", () => {
         { type: "steer_applied", id: "steer-1" },
       ]);
       expect(seen[0]).toContain("use /deploy");
-      // Its place in what is filed is where the agent took it, with its mentions kept.
       const [filed] = appended(plane);
       expect(filed?.messages.map((message) => message.role)).toEqual([
         "user",
@@ -1303,7 +1281,6 @@ describe("startRuntime runs", () => {
       ).toMatchObject({ result: { status: "queued" } });
       up();
       await until(() => ended(plane).length === 1);
-      // Applied before the first model call: the agent's first request already has it.
       expect(seen[0]).toContain("also this");
       expect(events(plane).some((event) => event.type === "steer_applied")).toBe(true);
     });
@@ -1381,8 +1358,6 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "error" });
     expect(JSON.stringify(ended(plane)[0])).toContain("Reached max turn limit: 2");
-    // The prompt and every round the agent took (it stops on the call after the limit), so a
-    // reload of the thread shows them.
     const [transcript] = appended(plane);
     expect(transcript?.turn).toBe(0);
     expect(transcript?.messages.map((message) => message.role)).toEqual([
@@ -1433,7 +1408,6 @@ describe("startRuntime runs", () => {
 
     const [first, second] = appended(plane);
     expect(first?.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
-    // What the thread already has is not filed again: the second run's messages start at its prompt.
     expect(second?.messages[0]).toMatchObject({ role: "user", content: "again" });
     expect(second?.messages.map((message) => message.role)).toEqual([
       "user",
@@ -1472,7 +1446,6 @@ describe("startRuntime runs", () => {
     await working.promise;
 
     plane.send({ type: "run.cancel", runId: "run-1", reason: "Cancelled by user" });
-    // The cancel reaches the journal before the model, which was mid-call, answers.
     await Bun.sleep(150);
     hold.resolve();
     await until(() => ended(plane).length === 1);
@@ -1528,7 +1501,6 @@ describe("startRuntime runs", () => {
       data: png.toBase64(),
     });
 
-    // The model gets the text, where the files are, and the image itself.
     const prompt = asked?.chatHistory.find((message) => message.role === "user");
     const content = Array.isArray(prompt?.content) ? prompt.content : [];
     expect(content[0]).toEqual({ type: "text", text: "what is in these?" });
@@ -1540,7 +1512,6 @@ describe("startRuntime runs", () => {
       image: { type: "data", data: png.toBase64() },
     });
 
-    // The transcript keeps the message as it was sent, for the client to show.
     const [transcript] = appended(plane);
     const user = transcript?.messages[0] as { metadata?: unknown } | undefined;
     expect(user?.metadata).toEqual({
@@ -1606,7 +1577,6 @@ describe("startRuntime runs", () => {
           id,
           instructions: "x",
           tools: [createQuestionTool()],
-          // One agent for the whole exchange: the run that answers continues the asking run's.
           model: scriptedModel([
             [
               {
@@ -1685,9 +1655,6 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
-    // Every agent of the run can fetch (decision 0042) and hand tasks to subagents (decision 0057);
-    // only the one with a person to talk to may define a goal and fork its thread (decision 0135),
-    // and only it may ask questions.
     expect(made).toEqual([
       {
         id: "run-run-1",
@@ -1716,12 +1683,9 @@ describe("startRuntime runs", () => {
       "All done, paging works.",
     ]);
 
-    // What the user reads: the prompt, the agent's turn, the goal's work and the report. The notes
-    // Aven wrote to the agent are not in it.
     const roles = appended(plane).flatMap((append) =>
       append.messages.map((message) => message.role),
     );
-    // The session's divider is an assistant message of its own.
     expect(roles).toEqual([
       "user",
       "assistant",
@@ -1782,7 +1746,6 @@ describe("startRuntime runs", () => {
   test("an agent hands tasks to subagents that work at the same time, and the control plane hears them", async () => {
     const { sandbox, up } = slowSandbox();
     up();
-    // Neither subagent finishes before both have started: they run beside each other, not in turn.
     const started = Promise.withResolvers<void>();
     let working = 0;
     const together = async () => {
@@ -1847,7 +1810,6 @@ describe("startRuntime runs", () => {
     up();
     const waiting = Promise.withResolvers<void>();
     let stopped = false;
-    // Holds the subagent until it is told to stop; a signal that never came would hang this test.
     const wait = createTool({
       name: "wait",
       description: "Waits.",
@@ -1897,7 +1859,6 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
     await until(() => stopped);
-    // What the subagent made of the cancel is told before the run ends, not after.
     await Bun.sleep(50);
     const types = plane.received.flatMap((m) => {
       if (m.type === "run.end") return ["end"];
@@ -1975,16 +1936,13 @@ describe("startRuntime runs", () => {
       });
       await runtime.ready;
       plane.send(runStart);
-      // The run is under way: the model holds the first reply back.
       await Bun.sleep(100);
       const before = plane.received.length;
 
       plane.drop();
       hold.resolve();
-      // The run finishes with nobody listening; the runner reconnects and says what it holds.
       await until(() => hellos(plane).length === 2);
       expect(hellos(plane)[1]).toMatchObject({ runs: ["run-1"] });
-      // Nothing about the run is sent until it is asked for.
       await Bun.sleep(100);
       expect(plane.received.slice(before).filter((m) => m.type === "run.end")).toEqual([]);
 
@@ -1996,7 +1954,6 @@ describe("startRuntime runs", () => {
       );
       expect(seqs).toEqual([1, 2, 3]);
 
-      // Once the end is acknowledged the run is forgotten.
       plane.send({ type: "run.ack", runId: "run-1" });
       plane.drop();
       await until(() => hellos(plane).length === 3);
@@ -2044,12 +2001,10 @@ describe("startRuntime runs", () => {
       await until(() => first.plane.received.some((m) => m.type === "run.event"));
       const heard = first.plane.received.flatMap((m) => (m.type === "run.event" ? [m.seq] : []));
 
-      // The runner stops with the run half done.
       const stopping = first.runtime.stop();
       hold.resolve();
       await stopping;
 
-      // A new runner on the same files. The control plane has the first events and asks for the rest.
       const second = connect({
         sandbox,
         ...paths,
@@ -2069,7 +2024,6 @@ describe("startRuntime runs", () => {
 
       await until(() => ended(second.plane).length === 1);
       expect(ended(second.plane)[0]).toMatchObject({ outcome: "response" });
-      // What the first runner did is not done again, and the numbering carries on.
       expect(lookups).toBe(1);
       const seqs = second.plane.received.flatMap((m) =>
         m.type === "run.event" || m.type === "run.end" ? [m.seq] : [],
@@ -2081,7 +2035,6 @@ describe("startRuntime runs", () => {
       );
       expect(texts).toEqual(["all done"]);
 
-      // Acknowledged, it is forgotten for good.
       second.plane.send({ type: "run.ack", runId: "run-1" });
       second.plane.drop();
       await until(() => hellos(second.plane).length === 2);
@@ -2125,7 +2078,6 @@ describe("startRuntime runs", () => {
     test("a goal goes on from the session it was in, and is checked and reported as usual", async () => {
       const { sandbox: base, up } = slowSandbox();
       up();
-      // The goal's check fails after the first session and passes after the second.
       let checks = 0;
       const exec = createTool({
         name: "exec_command",
@@ -2190,7 +2142,6 @@ describe("startRuntime runs", () => {
       await first.runtime.ready;
       first.plane.send(runStart);
       await secondSession.promise;
-      // Everything up to the second session's divider reached the control plane.
       await until(() =>
         first.plane.received.some(
           (m) =>
@@ -2230,7 +2181,6 @@ describe("startRuntime runs", () => {
       const texts = second.plane.received.flatMap((m) =>
         m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
       );
-      // The second session and the report: the first session, and the dividers, were told before.
       expect(texts).toEqual(["session two done", "All checked, paging works."]);
       expect(checks).toBe(2);
       const filed = second.plane.received.flatMap((m) =>
@@ -2238,7 +2188,6 @@ describe("startRuntime runs", () => {
           ? [(m.params as { messages: { role: string }[] }).messages.length]
           : [],
       );
-      // The second session (its divider and its reply), then the report.
       expect(filed).toEqual([2, 1]);
     });
   });
@@ -2262,7 +2211,6 @@ describe("startRuntime answering for a bot", () => {
     model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
   };
 
-  // A bot whose model says one thing, then stops.
   const botThat =
     (...texts: string[]): CreateBotReplyAgent =>
     ({ send, memory }) =>
@@ -2277,7 +2225,6 @@ describe("startRuntime answering for a bot", () => {
         tools: [createSendMessageTool(send)],
       });
 
-  // A bot writes to another bot (decision 0065), then tells the person.
   const writingBot: CreateBotReplyAgent = ({ send, memory }) =>
     new Agent({
       id: "bot",
@@ -2348,7 +2295,6 @@ describe("startRuntime answering for a bot", () => {
       { type: "bot.end", replyId: "reply-1" },
     ]);
     expect(acquired).toEqual(["bot-1"]);
-    // Its conversation was read and written through the control plane.
     const operations = plane.received.flatMap((message) =>
       message.type === "call" && message.method === "bot.memory"
         ? [(message.params as { op: string }).op]
@@ -2405,7 +2351,6 @@ describe("startRuntime answering for a bot", () => {
     plane.send(botReply);
     await typing.promise;
     await Bun.sleep(150);
-    // Well past the idle time, but the bot is still answering.
     expect(released).toEqual([]);
 
     finish.resolve();

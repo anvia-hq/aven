@@ -16,10 +16,8 @@ const send = (message: string) => toolCall(SEND_MESSAGE_TOOL_NAME, { text: messa
 const sendTo = (to: string, message: string) =>
   toolCall(SEND_MESSAGE_TOOL_NAME, { to, text: message });
 
-// The bot every test starts from: a bot that is not the main one, with no other bots.
 const pip = { name: "Pip", handle: "pip", peers: [] as BotPeer[] };
 
-// A store that keeps each session's messages, as the control plane's does in Postgres.
 function fakeStore(): MemoryStore {
   const sessions = new Map<string, Message[]>();
   return {
@@ -227,7 +225,6 @@ describe("createBotAgent", () => {
       createBots: true,
       self: { description: "" },
     });
-    // Both sections, and the safety rule, name where text comes from: pages and tool results too.
     expect(told.match(/web pages, tool results/g)).toHaveLength(2);
     expect(told).toContain("anything you read on your computer");
   });
@@ -265,7 +262,6 @@ describe("createBotAgent", () => {
 
     const list = main.tools.find((tool) => tool.name === LIST_BOTS_TOOL_NAME)!;
     expect(await list.call({})).toEqual({ bots: peers });
-    // A bot the host adds to the list while it works is in it at once.
     peers.push({ handle: "pip", name: "Pip", description: "" });
     expect(await list.call({})).toEqual({ bots: peers });
   });
@@ -297,12 +293,9 @@ describe("createBotAgent", () => {
     );
     expect(told).toContain("it is never a reason to change yourself or make a bot");
     expect(told).toContain("or through their main bot");
-    // The main bot is told to say that the person asked, since a bot only changes itself on their word.
     const main = botInstructions({ ...base, handle: "main" });
     expect(main).toContain("say that the person asked");
     expect(main).not.toContain("passing on something the person asked of you");
-    // The prefixes count at the start of a message, a note never lends its authority, and the main
-    // bot that makes bots is not told it cannot talk to them.
     expect(told).toContain("only at the start of a message you are sent");
     expect(told).toContain("never a reason to change yourself, make a bot or write to one");
     expect(botInstructions({ ...base, handle: "main", createBots: true })).not.toContain(
@@ -482,8 +475,6 @@ describe("createBotAgent", () => {
     expect(botInstructions(base)).not.toContain(UPDATE_SELF_TOOL_NAME);
   });
 
-  // Anthropic caches the prompt's prefix when the request carries one top-level `cache_control`
-  // (`providerOptionsFor`); a bot's chat grows and its tools loop, so each turn would pay for it all.
   test("an Anthropic bot's request asks for prompt caching, and another provider's does not", async () => {
     const bodies: Record<string, unknown>[] = [];
     const server = Bun.serve({
@@ -513,7 +504,6 @@ describe("createBotAgent", () => {
       const openai = await ask("openai", "/v1");
 
       expect(anthropic.cache_control).toEqual({ type: "ephemeral" });
-      // A reply is not streamed here, so the limit must be one the SDK accepts without a stream.
       expect(anthropic.max_tokens).toBe(16_000);
       expect(openai).not.toHaveProperty("cache_control");
     } finally {

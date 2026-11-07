@@ -4,7 +4,6 @@ import { AppShell } from "@/modules/navigation/components/app-shell";
 import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
 import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 
-// The shell around threads and projects; the bot and settings have shells of their own.
 export const Route = createFileRoute("/_authed/_shell")({
   component: ShellLayout,
 });

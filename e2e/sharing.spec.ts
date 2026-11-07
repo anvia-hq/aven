@@ -2,14 +2,12 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
-// A teammate of the owner's workspace, in a browser of their own.
 async function teammateOf(owner: Page, browser: Browser) {
   const context = await browser.newContext();
   const page = await context.newPage();
   const email = await registerUser(page, "mate", "Mate Person");
   const invited = await owner.request.post("/api/auth/organization/invite-member", {
     data: { email, role: "member" },
-    // Better Auth refuses a state-changing call that does not say where it comes from.
     headers: { origin: "http://localhost:5174" },
   });
   expect(invited.ok()).toBe(true);
@@ -38,18 +36,14 @@ test.describe("sharing a thread", () => {
     const mate = await teammateOf(page, browser);
     const sidebar = (who: Page) => who.locator('[data-slot="sidebar"]');
 
-    // Private: the teammate sees nothing of it, by list or by address.
     await mate.page.reload();
     await expect(sidebar(mate.page)).not.toContainText("Private plans");
     expect((await mate.page.request.get(`/api/threads/${thread.id}`)).status()).toBe(404);
     await mate.page.goto(`/threads/${thread.id}`);
     await expect(mate.page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
 
-    // The creator shares it with the workspace, and takes it back. Their menu is used first: a menu
-    // closes when its window loses focus, which it does once the teammate's browser is driven.
     await page.goto(`/threads/${thread.id}`);
     const share = page.getByRole("button", { name: "Who can see this thread" });
-    // The menu has gone before it is opened again: one still closing swallows the click.
     const choose = async (name: RegExp) => {
       await share.click();
       await page.getByRole("menuitemradio", { name }).click();
@@ -68,13 +62,10 @@ test.describe("sharing a thread", () => {
 
     await choose(/Everyone in the workspace/);
     await expect(share).toContainText("Shared");
-    // The creator's own list marks it as shared, beside the project's tile.
     await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(1);
 
-    // The teammate finds it under Shared with workspace and can read it, nothing more.
     await mate.page.goto("/threads");
     await expect(sidebar(mate.page)).toContainText("Shared with workspace");
-    // The palette finds it too, with who shared it.
     await mate.page.keyboard.press("ControlOrMeta+k");
     await mate.page.keyboard.type("Private plans");
     await expect(mate.page.getByRole("option", { name: /Private plans/ })).toContainText(
@@ -88,7 +79,6 @@ test.describe("sharing a thread", () => {
     await expect(mate.page.getByRole("button", { name: "Desktop" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Terminal" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Files" })).toBeVisible();
-    // Nor can they drive it by hand.
     const message = await mate.page.request.post(`/api/threads/${thread.id}/messages`, {
       data: { prompt: "hello" },
     });

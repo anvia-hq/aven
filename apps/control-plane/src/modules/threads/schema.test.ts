@@ -10,7 +10,6 @@ const parses = (body: object) => sendMessageBody.safeParse({ prompt, ...body }).
 describe("a message's mentions", () => {
   test("are taken when each token is where it says", () => {
     expect(parses({ mentions: [file, skill] })).toBe(true);
-    // The prompt is trimmed before the tokens are looked for.
     const padded = sendMessageBody.safeParse({ prompt: `${prompt}\n`, mentions: [file] });
     expect(padded.success).toBe(true);
   });

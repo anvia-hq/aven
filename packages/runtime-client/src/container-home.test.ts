@@ -13,7 +13,6 @@ describe("homeRepairArgs", () => {
   test("does nothing on an image whose home is already open to any user", () => {
     const script = homeRepairArgs("c", "1002:1002")[6]!;
 
-    // The first thing it does, before anything is changed.
     expect(script.trim().split("\n")[0]).toBe('[ "$(stat -c %a /home/node)" = 777 ] && exit 0');
   });
 

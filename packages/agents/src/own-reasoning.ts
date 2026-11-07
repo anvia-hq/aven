@@ -1,17 +1,10 @@
 import type { CompletionModel, CompletionRequest, Message, ReasoningPart } from "@anvia/core";
 
-// A person picks the model per message (decision 0007), so one thread's history can hold reasoning
-// from several providers. A provider takes back only its own: the Responses API wants the ids it
-// issued (`rs_…`) and rejects Anthropic's `thinking_0` with a 400, and Anthropic wants its signed
-// thinking blocks. Reasoning another provider made is not needed to continue, so it is left out of
-// what a request replays. The run's own reasoning, made by this model, passes untouched.
 type ReasoningOwnership = (id: string | undefined) => boolean;
 
 export const ownedByResponsesApi: ReasoningOwnership = (id) => id?.startsWith("rs_") ?? false;
 export const ownedByAnthropic: ReasoningOwnership = (id) => id?.startsWith("thinking_") ?? false;
 
-// The message with only the reasoning `keep` accepts; none when nothing else was in it, since an
-// assistant message of nothing but dropped thinking would be an empty turn.
 function keepingReasoning(message: Message, keep: (part: ReasoningPart) => boolean): Message[] {
   if (message.role !== "assistant" || typeof message.content === "string") return [message];
   const content = message.content.filter((part) => part.type !== "reasoning" || keep(part));
@@ -22,10 +15,6 @@ function keepingReasoning(message: Message, keep: (part: ReasoningPart) => boole
 const onlyOwn = (history: Message[], owns: ReasoningOwnership) =>
   history.flatMap((message) => keepingReasoning(message, (part) => owns(part.id)));
 
-// Anthropic binds a thinking block's signature to what preceded it, so thinking from an earlier turn
-// is refused once anything before it differs, such as the tools of a later run (bug 0001). Only the
-// turn in progress, after the person's latest message, needs its thinking back: its tool calls
-// continue from it.
 function onlyThisTurns(history: Message[]) {
   const start = history.findLastIndex((message) => message.role === "user");
   return history.flatMap((message, index) =>
@@ -33,7 +22,6 @@ function onlyThisTurns(history: Message[]) {
   );
 }
 
-// A proxy, not a copy: a model's methods use its private state, so they must run on the model itself.
 function withChatHistory<T extends CompletionModel>(
   model: T,
   change: (history: Message[]) => Message[],
@@ -58,15 +46,10 @@ export function withOwnReasoning<T extends CompletionModel>(model: T, owns: Reas
   return withChatHistory(model, (history) => onlyOwn(history, owns));
 }
 
-/** Anthropic's thinking, only its own and only from the turn in progress. */
 export function withAnthropicReasoning<T extends CompletionModel>(model: T): T {
   return withChatHistory(model, (history) => onlyThisTurns(onlyOwn(history, ownedByAnthropic)));
 }
 
-// A turn in which the model said nothing, as after a tool whose message was the answer (a bot ends
-// its reply that way), is kept in the history as an assistant message of an empty text. Anthropic
-// refuses it with a 400 ("text content blocks must be non-empty") on every later request. The empty
-// text is left out of what is replayed, and a message of nothing else goes with it.
 function withoutEmptyText(history: Message[]): Message[] {
   return history.flatMap((message): Message[] => {
     if (message.role !== "assistant") return [message];
@@ -79,7 +62,6 @@ function withoutEmptyText(history: Message[]): Message[] {
   });
 }
 
-/** What a request replays, without the empty text an assistant turn of nothing leaves behind. */
 export function withoutEmptyAssistantText<T extends CompletionModel>(model: T): T {
   return withChatHistory(model, withoutEmptyText);
 }

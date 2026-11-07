@@ -8,7 +8,6 @@ import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { ConflictError, UnprocessableError } from "../../errors";
 import type { CreateMcpBody, UpdateMcpBody } from "./schema";
 
-// What the API returns: the headers' names, never their values.
 export type McpServerView = Omit<McpServerRow, "headers" | "userId">;
 
 function view({ headers: _headers, userId: _userId, ...row }: McpServerRow): McpServerView {
@@ -28,8 +27,6 @@ const unsealed = (stored: string): Record<string, string> =>
     }),
   ) as Record<string, string>;
 
-// Postgres says a unique index was broken with this code, which Drizzle wraps as the `cause` of its
-// own error; two names that come to one slug are one server.
 const isDuplicate = (error: unknown): boolean => {
   if (typeof error !== "object" || error === null) return false;
   if ("code" in error && error.code === "23505") return true;
@@ -38,8 +35,6 @@ const isDuplicate = (error: unknown): boolean => {
 
 const SAME_NAME = "You already have an MCP server with that name";
 
-// A person's MCP servers (decision 0085): remote servers their agents use as tools. Tied to the
-// user, not to a workspace, like skills and providers.
 export const mcpService = {
   async list(userId: string) {
     const rows = await db
@@ -86,8 +81,6 @@ export const mcpService = {
     }
   },
 
-  // Null when it is not the user's. Headers replace the set; a header sent without a value keeps
-  // the one it has (the values are never read back to the person).
   async update(userId: string, id: string, body: UpdateMcpBody) {
     const [current] = await db.select().from(mcpServers).where(ownServer(userId, id));
     if (!current) return null;
@@ -114,7 +107,6 @@ export const mcpService = {
       changes.headers = sealed(next);
       changes.headerNames = Object.keys(next);
     }
-    // What was wrong with the old address or headers is not known to be wrong now.
     if (body.url !== undefined || body.headers !== undefined || body.allowLocal !== undefined) {
       changes.lastError = null;
     }
@@ -139,8 +131,6 @@ export const mcpService = {
     return removed.length > 0;
   },
 
-  // How a run's servers connected, for the person to see in Settings: the reason one did not, or
-  // that it did and when. The ids are those the run was given, which the caller has checked.
   async record(results: readonly McpConnectResult[]) {
     for (const { id, error } of results) {
       await db
@@ -152,9 +142,6 @@ export const mcpService = {
     }
   },
 
-  // The servers a run's agents use: the enabled ones that are for this kind of agent, with their
-  // headers in the clear, for the runner to keep in memory for the run. A server whose headers
-  // cannot be read is left out and said so in the log.
   async forRun(userId: string, agent: Exclude<McpTarget, "all">): Promise<RunMcpServer[]> {
     const rows = await db
       .select()

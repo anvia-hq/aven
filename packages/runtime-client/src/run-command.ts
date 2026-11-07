@@ -1,9 +1,5 @@
-/** What a finished command left: its exit code and everything it wrote. */
 export type CommandOutput = { code: number; stdout: string; stderr: string };
 
-// Runs a command on this machine and collects its output. Without `env` it inherits this
-// process's environment, as a spawn with none given does.
-// With `timeoutMs`, a command still running after that long is stopped, and its stderr says so.
 export async function runCommand(
   argv: string[],
   options: { cwd?: string; env?: Record<string, string | undefined>; timeoutMs?: number } = {},

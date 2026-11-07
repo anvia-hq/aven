@@ -6,9 +6,6 @@ import type { HostStats } from "@aven/protocol/runtime-wire";
 
 import { runCommand } from "./run-command";
 
-// How loaded this machine is, for Settings to show beside the runner (decision 0091). Everything is
-// read from the operating system; nothing here touches Docker or a thread.
-
 type CpuTimes = { busy: number; total: number };
 
 const cpuTimes = (): CpuTimes => {
@@ -22,10 +19,6 @@ const cpuTimes = (): CpuTimes => {
   return { busy, total };
 };
 
-/**
- * Says how busy the processors have been since it was last asked (the first time, since it was
- * made), as a whole percent; null when no time has passed to say.
- */
 export function cpuSampler(read: () => CpuTimes = cpuTimes) {
   let before = read();
   return () => {
@@ -37,7 +30,6 @@ export function cpuSampler(read: () => CpuTimes = cpuTimes) {
   };
 }
 
-/** Linux: what is in use is what is not available, which counts the cache a program can have back. */
 export function parseMeminfo(text: string) {
   const kib = (name: string) => {
     const found = text.match(new RegExp(`^${name}:\\s+(\\d+)\\s*kB`, "m"));
@@ -49,7 +41,6 @@ export function parseMeminfo(text: string) {
   return { total, used: Math.max(0, total - available) };
 }
 
-/** macOS: what can be had again without swapping is free, inactive and speculative pages. */
 export function parseVmStat(text: string, totalBytes: number) {
   const size = Number(text.match(/page size of (\d+) bytes/)?.[1]);
   const pages = (name: string) =>
@@ -70,9 +61,7 @@ async function memory() {
       const found = result.code === 0 ? parseVmStat(result.stdout, totalmem()) : undefined;
       if (found) return found;
     }
-  } catch {
-    // Falls back to what Node can say.
-  }
+  } catch {}
   return { total: totalmem(), used: totalmem() - freemem() };
 }
 
@@ -82,7 +71,6 @@ async function disk(path: string) {
   return { total, used: Math.max(0, total - fs.bfree * fs.bsize) };
 }
 
-/** Reads the machine now. `home` is the directory whose disk is measured; `cpu` is one sampler kept for the runner's life. */
 export async function readHostStats({
   home,
   cpu,

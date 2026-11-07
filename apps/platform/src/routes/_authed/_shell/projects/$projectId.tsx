@@ -18,7 +18,6 @@ import { InheritedVariables } from "@/modules/variables/components/inherited-var
 import { VariablesSection } from "@/modules/variables/components/variables-section";
 
 export const Route = createFileRoute("/_authed/_shell/projects/$projectId")({
-  // The folder of the repository being looked at, from its top; none is the top.
   validateSearch: (search: Record<string, unknown>): { path?: string } => ({
     path: typeof search.path === "string" && search.path !== "" ? search.path : undefined,
   }),
@@ -30,7 +29,6 @@ function ProjectPage() {
   const { path = "" } = Route.useSearch();
   const navigate = useNavigate();
   const { project, loaded } = useProject(projectId);
-  // Their own and the ones the workspace shares to read (decision 0084), newest first.
   const threads = useThreads().all.filter((thread) => thread.projectId === projectId);
 
   if (!project) {
@@ -42,12 +40,9 @@ function ProjectPage() {
     <div className="flex w-full min-w-0 flex-col">
       <ProjectHeader project={project} />
 
-      {/* A repository page: the title, then two equal columns that begin level with each other, the
-          repository's files and README on the left and what is about the project on the right. */}
       <main className="flex w-full flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-3">
           <ProjectTitle project={project} />
-          {/* A thread is started on the new-thread page, in this project. */}
           <Button
             className="shrink-0"
             onClick={() => navigate({ to: "/threads", search: { project: project.id } })}

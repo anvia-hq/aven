@@ -8,12 +8,9 @@ import { variablesAtom } from "../atoms/variables-atom";
 import { variablesPath, type Variable, type VariableInput, type VariableScope } from "../types";
 
 const store = getDefaultStore();
-// Bumped by `reset` so a response for the previous organization, resolving after the switch, can't
-// fill the new one's list.
 let generation = 0;
 const inflight = new Map<string, Promise<Variable[]>>();
 
-// Variables are scoped to the active organization's projects: drop them on a switch or sign-out.
 export function resetVariables() {
   generation += 1;
   inflight.clear();
@@ -23,7 +20,6 @@ export function resetVariables() {
 const path = (scope: VariableScope, name?: string) =>
   `${variablesPath(scope)}${name ? `/${name}` : ""}`;
 
-// What a scope's list is kept under: the atom and the requests in flight are by it.
 const keyOf = (scope: VariableScope) => (scope.kind === "project" ? scope.projectId : scope.kind);
 
 async function load(scope: VariableScope) {
@@ -40,7 +36,6 @@ async function load(scope: VariableScope) {
     if (startedIn === generation) store.set(variablesAtom, (all) => ({ ...all, [key]: list }));
   } catch (failure) {
     if (startedIn !== generation) return;
-    // Only a failed first load is worth a toast; a failed refetch keeps the old list.
     if (!known) {
       toast.add({
         title: "Could not load variables",
@@ -52,8 +47,6 @@ async function load(scope: VariableScope) {
   }
 }
 
-// A scope's variables. Loads on first use; mutations refetch. Saving a name that exists replaces
-// it, which is also how an unreadable value is entered again.
 export function useVariables(scope: VariableScope) {
   const [all] = useAtom(variablesAtom);
   const key = keyOf(scope);
@@ -63,7 +56,6 @@ export function useVariables(scope: VariableScope) {
     if (variables === undefined) void load(scope);
   }, [key, variables]);
 
-  // Runs a request that changes a variable and reloads the list; false on failure (already toasted).
   async function change(failureTitle: string, request: () => Promise<unknown>) {
     const changed = await attempt(failureTitle, async () => {
       await request();

@@ -14,7 +14,6 @@ const named = (name: string): AnyTool =>
     execute: () => name,
   });
 
-// What a run's agent has: the sandbox's tools, ours, and the ones only it may use.
 const parentTools = [
   ...SANDBOX_TOOL_NAMES,
   "edit",

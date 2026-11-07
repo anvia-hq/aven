@@ -4,8 +4,6 @@ import { z } from "zod";
 
 export const MEMORY_TOOL_NAME = "memory";
 
-// The shape of Anthropic's memory tool, which Claude models know: one tool, a command and its
-// fields, flat so that every provider takes the schema.
 export const memorySchema = z.object({
   command: z
     .enum(["view", "create", "str_replace", "insert", "delete", "rename"])
@@ -42,7 +40,6 @@ export const memorySchema = z.object({
 
 type MemoryInput = z.infer<typeof memorySchema>;
 
-/** What the host does with a command: the answer the model reads. */
 export type MemoryHost = (command: MemoryCommand) => Promise<string>;
 
 function required<K extends keyof MemoryInput>(input: MemoryInput, key: K) {
@@ -51,7 +48,6 @@ function required<K extends keyof MemoryInput>(input: MemoryInput, key: K) {
   return value as NonNullable<MemoryInput[K]>;
 }
 
-/** The command the model's input names, with the fields it needs. */
 export function memoryCommandOf(input: MemoryInput): MemoryCommand {
   switch (input.command) {
     case "view":
@@ -87,8 +83,6 @@ export function memoryCommandOf(input: MemoryInput): MemoryCommand {
   }
 }
 
-// The agent's notes (decision 0102). Whose they are, and whether they may change, is the host's
-// and the control plane's to say: the tool only names the command.
 export function createMemoryTool(host: MemoryHost) {
   return createTool({
     name: MEMORY_TOOL_NAME,

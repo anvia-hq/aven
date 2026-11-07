@@ -15,7 +15,6 @@ const assistant = (...content: AssistantContentPart[]): Message => ({ role: "ass
 
 type Model = ReturnType<typeof scriptedModel>;
 
-// What the model was asked, after the wrapper.
 async function seen(
   history: Message[],
   wrap: (model: Model) => Model = (model) => withOwnReasoning(model, ownedByResponsesApi),
@@ -60,8 +59,6 @@ describe("reasoning a provider takes back", () => {
     ]);
   });
 
-  // Anthropic refuses an earlier turn's thinking once what preceded it changed (bug 0001), while
-  // the turn in progress needs its own back to continue from its tool calls.
   test("Anthropic gets its thinking back from the turn in progress only", async () => {
     const asked = await seen(
       [

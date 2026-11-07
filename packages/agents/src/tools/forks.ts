@@ -8,10 +8,8 @@ export const FORK_THREAD_TOOL_NAME = "fork_thread";
 export const FORK_STATUS_TOOL_NAME = "fork_status";
 export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
 
-/** What a fork's changes came to: a patch the agent can apply in its own workspace. */
 export type TakenChanges = { empty: true } | { empty: false; patchPath: string; files: string[] };
 
-/** What the host does for the three tools (decision 0135). */
 export type ForkHost = {
   start(input: {
     task: string;
@@ -24,8 +22,6 @@ export type ForkHost = {
 
 const forkId = z.string().uuid().describe("The id fork_thread gave you.");
 
-// The agent's three tools for forks of its own thread: the thread it forks is a real one, with a
-// sandbox and a branch of its own, that starts from a copy of this workspace (decision 0135).
 export function createForkTools(host: ForkHost) {
   const forkThread = createTool({
     name: FORK_THREAD_TOOL_NAME,

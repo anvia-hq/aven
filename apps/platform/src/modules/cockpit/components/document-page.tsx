@@ -10,9 +10,6 @@ import { Textarea } from "@/components/textarea";
 import type { RichTextEditorProps } from "./rich-text-editor-view";
 import { RichTextEditor } from "./rich-text-editor";
 
-// A cockpit record opened as a page, as Notion has one (decision 0106): a quiet bar with where it
-// is and what to do with it, then one centred column of a large title, its properties and the
-// document, with nothing boxed.
 export function DocumentPage({
   label,
   trail,
@@ -21,9 +18,7 @@ export function DocumentPage({
   actions,
   children,
 }: {
-  /** The page's name, which names the article. */
   label: string;
-  /** Where the page is, as a breadcrumb: the place it is in, then the page. */
   trail: ReactNode;
   onBack: () => void;
   backLabel: string;
@@ -57,7 +52,6 @@ export function DocumentPage({
   );
 }
 
-// The place a page is in, in its breadcrumb, which goes back to it.
 export function Crumb({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
     <>
@@ -76,14 +70,12 @@ export function Crumb({ children, onClick }: { children: ReactNode; onClick: () 
   );
 }
 
-// The page itself, last in its breadcrumb.
 export const CurrentCrumb = ({ children }: { children: ReactNode }) => (
   <span aria-current="page" className="truncate px-1.5 text-foreground">
     {children}
   </span>
 );
 
-// What a page's "…" opens: what is done with the page less often, as deleting it.
 export function MoreMenu({ children }: { children: ReactNode }) {
   return (
     <DropdownMenu>
@@ -106,7 +98,6 @@ export function MoreMenu({ children }: { children: ReactNode }) {
   );
 }
 
-// The page's title, as large as Notion's, wrapping as it grows. Enter goes on to the document.
 export function DocumentTitle({
   value,
   onChange,
@@ -115,9 +106,7 @@ export function DocumentTitle({
 }: {
   value: string;
   onChange: (value: string) => void;
-  /** Leaving the title: what was typed is kept, and an empty one put back. */
   onCommit: () => void;
-  /** Just made: the title is chosen, ready to be typed over. */
   autoFocus?: boolean;
 }) {
   const chosen = useRef(false);
@@ -135,7 +124,6 @@ export function DocumentTitle({
       value={value}
       maxLength={200}
       autoFocus={autoFocus}
-      // Chosen the first time only, so coming back to it does not lose it to the next key.
       onFocus={(event) => {
         if (!autoFocus || chosen.current) return;
         chosen.current = true;
@@ -149,7 +137,6 @@ export function DocumentTitle({
   );
 }
 
-// A page's properties, label beside value, as Notion lays them out under the title.
 export function Properties({ children }: { children: ReactNode }) {
   return <dl className="mt-5 flex flex-col gap-px text-sm">{children}</dl>;
 }
@@ -174,8 +161,6 @@ export function Property({
   );
 }
 
-// The document under the properties: BlockNote across the column, its text in line with the
-// title and its handles in the margin.
 export function DocumentBody(props: RichTextEditorProps) {
   return (
     <div className="mt-4 border-t border-border/60 pt-4">

@@ -28,7 +28,6 @@ describe("a tool result kept in the run's history", () => {
     expect(bounded.stdout.endsWith("FAILED: the last line\n")).toBe(true);
     expect(bounded.stdout.startsWith("[… output cut")).toBe(true);
     expect(bounded.stdoutTruncated).toBe(true);
-    // What was short is as it was.
     expect(bounded.stderr).toBe("warning");
     expect(bounded.stderrTruncated).toBe(false);
     expect(bounded.exitCode).toBe(1);
@@ -48,7 +47,6 @@ describe("a tool result kept in the run's history", () => {
   });
 
   test("a screenshot is left alone, however much base64 it carries", () => {
-    // What desktop_screenshot returns: a content list with the image as base64 in a part.
     const screenshot = {
       type: "content",
       value: [

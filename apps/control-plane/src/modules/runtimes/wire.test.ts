@@ -152,7 +152,6 @@ describe("hello", () => {
     expect(
       parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33, runs: [], build: "0.3.0" })),
     ).toEqual({ type: "hello", version: 33, runs: [], build: "0.3.0" });
-    // An older runner leaves it out.
     expect(parseRuntimeFrame(JSON.stringify({ type: "hello", version: 33 }))).toEqual({
       type: "hello",
       version: 33,
@@ -243,7 +242,6 @@ describe("a bot changing itself", () => {
     expect(
       parseBotUpdateParams({ replyId: "r1", description: " Looks things up. " }),
     ).toMatchObject({ description: "Looks things up." });
-    // Clearing a description or an instruction is a change, as it is in settings.
     expect(parseBotUpdateParams({ replyId: "r1", description: "" }).description).toBe("");
     expect(parseBotUpdateParams({ replyId: "r1", instruction: "" }).instruction).toBe("");
   });
@@ -468,7 +466,6 @@ describe("host stats", () => {
     expect(parseRuntimeFrame(frame({ cores: 0 }))).toBeNull();
     expect(parseRuntimeFrame(frame({ sandboxes: 1.5 }))).toBeNull();
     expect(parseRuntimeFrame(frame({ diskUsedBytes: "lots" }))).toBeNull();
-    // More used than there is.
     expect(parseRuntimeFrame(frame({ memoryUsedBytes: 17_000_000_000 }))).toBeNull();
     expect(parseRuntimeFrame(frame({ diskUsedBytes: 99_000_000_000 }))).toBeNull();
     expect(parseRuntimeFrame(JSON.stringify({ type: "host.stats" }))).toBeNull();

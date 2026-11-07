@@ -2,25 +2,15 @@ import type { FileContent } from "@aven/protocol/runtime-wire";
 
 import { UnprocessableError } from "../../errors";
 
-/** Where a repository keeps its own way of shipping (decision 0044). */
 export const SHIP_PROMPT_FILE = ".aven/ship.md";
 
-/** Where `/setup-env` writes the repository's environment script (decision 0043). */
 export const SETUP_FILE = ".aven/setup";
 
-/** A custom prompt may be this long, as in Amp. */
 export const MAX_SHIP_PROMPT_CHARS = 10_000;
 
 export class ShipPromptError extends UnprocessableError {}
 
-/** What a Ship does with the thread's pull requests (decision 0069). */
-export type ShipMode =
-  /** The thread has no pull request yet: ship its own branch. */
-  | "first"
-  /** Push the checked-out branch, which updates its open pull request. */
-  | "update"
-  /** Open a separate pull request, on a new branch, for work an earlier one does not hold. */
-  | "new";
+export type ShipMode = "first" | "update" | "new";
 
 type PullRequest = { number: number; state: string; branch: string; title: string };
 
@@ -28,18 +18,14 @@ type Context = {
   branch: string;
   base: string;
   mode: ShipMode;
-  /** The thread's pull requests, newest first. */
   pullRequests: PullRequest[];
 };
 
-// A title is written by whoever opened the pull request and reaches the prompt: one line, cut short.
 const quote = (title: string) => JSON.stringify(title.replace(/\s+/g, " ").trim().slice(0, 80));
 
-// How new work gets its own branch, for a prompt of Aven's and for a repository's own.
 const startBranch = ({ branch, base }: Context) =>
   `Start a new branch from the default branch (git fetch origin ${base}, then git switch -c ${branch}-<short-slug> origin/${base}) and bring over only the new work (git cherry-pick its commits, or git checkout <old-branch> -- <paths>). Leave the earlier branches and their pull requests alone.`;
 
-// What the agent is asked to do with the branch and the pull request, by mode.
 function modeNote(context: Context) {
   const { base, mode, pullRequests } = context;
   const [latest] = pullRequests;
@@ -52,7 +38,6 @@ function modeNote(context: Context) {
   return "";
 }
 
-// What Ship asks the agent to do when the repository has no `.aven/ship.md`.
 function defaultPrompt(context: Context) {
   const { base, mode } = context;
   const steps =
@@ -77,7 +62,6 @@ function defaultPrompt(context: Context) {
   return `${mode === "new" ? "Ship the new work in this thread as its own pull request." : "Ship this thread's work as a pull request."}\n\n${numbered}`;
 }
 
-// Where the thread is: its branch, the default branch, its pull requests and how its branches are named.
 function whereNote(context: Context) {
   const { branch, base, pullRequests } = context;
   const lines = [
@@ -95,12 +79,6 @@ function whereNote(context: Context) {
   return lines.join("\n");
 }
 
-/**
- * The prompt a Ship sends the agent: the repository's own `.aven/ship.md` when it has one, else
- * Aven's default. A custom prompt is sent as it is, followed by where the thread is and, when it
- * has pull requests, what this ship does with them, so the agent need not look it up. `file` is
- * what the runner answered for `.aven/ship.md`.
- */
 export function shipPrompt(file: FileContent | null, context: Context) {
   const where = whereNote(context);
   if (!file || file.kind === "missing") return `${defaultPrompt(context)}\n\n${where}`;
@@ -111,7 +89,6 @@ export function shipPrompt(file: FileContent | null, context: Context) {
       `${SHIP_PROMPT_FILE} is longer than ${MAX_SHIP_PROMPT_CHARS.toLocaleString("en-US")} characters`,
     );
   }
-  // A custom prompt does not know about the mode, so it is told after where the thread is.
   if (!text) return `${defaultPrompt(context)}\n\n${where}`;
   const note = modeNote(context);
   return `${text}\n\n${where}${note ? `\n\n${note}` : ""}`;

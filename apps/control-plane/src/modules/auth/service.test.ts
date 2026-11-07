@@ -10,8 +10,6 @@ import { auth } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-// A native client (the macOS app) has no cookie jar: it signs in once, keeps the token the
-// response hands back and presents it as a bearer token (decision 0008).
 run("bearer sessions for native clients (real postgres)", () => {
   const email = `native-${crypto.randomUUID().slice(0, 8)}@aven.test`;
   const app = new Elysia().use(projectsRouter(() => {}));
@@ -44,7 +42,6 @@ run("bearer sessions for native clients (real postgres)", () => {
     const token = signIn.headers.get("set-auth-token");
     expect(token).toBeTruthy();
 
-    // A session starts in the user's personal organization, so org-scoped routes work.
     const authed = await call("/projects", { headers: { authorization: `Bearer ${token}` } });
     expect(authed.status).toBe(200);
     expect(await authed.json()).toEqual([]);

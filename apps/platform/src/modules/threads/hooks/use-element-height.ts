@@ -1,8 +1,5 @@
 import { useEffect, useRef } from "react";
 
-// Writes an element's height, as it changes, to a CSS variable on another element. The composer
-// floats over the conversation and grows with a pull-request bar, attachments or a question, so
-// `ready` is when both elements are on the page. What the conversation leaves free below its messages must follow it, not a guess.
 export function useElementHeight<T extends HTMLElement, U extends HTMLElement>(
   variable: string,
   ready: boolean,

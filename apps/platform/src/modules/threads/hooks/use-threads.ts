@@ -13,14 +13,8 @@ const threadsStore = createListStore<Thread>({
   label: "threads",
 });
 
-// Threads are scoped to the active organization: drop them on a switch or sign-out so the next
-// read refetches for whoever is now active.
 export const resetThreads = threadsStore.reset;
 
-// The threads the person can see, most recently updated first: their own as `threads`, and as
-// `shared` the ones other people of the workspace shared to read (decision 0084), which the
-// server sends and nobody else's. `all` is both, for finding a thread by its address. Loads on
-// first use; call `refresh` after changes, or `setRunning` when only a thread's running flag moved.
 export function useThreads() {
   const [threads, setThreads] = useAtom(threadsAtom);
   const { data: session } = authClient.useSession();
@@ -30,9 +24,6 @@ export function useThreads() {
     if (threads === null) void threadsStore.refresh();
   }, [threads]);
 
-  // A list kept from before, as when the person was in the bot or the cockpit, whose sidebars do not
-  // follow the threads: a run in it may have ended since, so it is asked again at once rather than
-  // after the sidebar's first poll (decision 0122). Callers share the one request.
   useEffect(() => {
     if (getDefaultStore().get(threadsAtom) !== null) void threadsStore.refresh();
   }, []);
@@ -47,14 +38,12 @@ export function useThreads() {
     [setThreads],
   );
 
-  // A thread this browser just made, in the list before the server's list is asked again.
   const add = useCallback(
     (thread: Thread) =>
       setThreads((current) => [thread, ...(current ?? []).filter(({ id }) => id !== thread.id)]),
     [setThreads],
   );
 
-  // A thread's title as just changed, before the server's list is asked again.
   const setTitle = useCallback(
     (threadId: string, title: string) =>
       setThreads(

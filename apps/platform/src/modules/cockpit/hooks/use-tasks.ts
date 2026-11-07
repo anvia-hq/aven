@@ -28,7 +28,6 @@ const tasks = createCollection<CockpitTask, TaskInput, TaskPatch>({
 export const resetTasks = tasks.reset;
 export const refreshTasks = tasks.refreshLoaded;
 
-// The person's tasks, in their columns' order.
 export function useTasks() {
   const { items, loaded } = tasks.useItems();
   return {
@@ -40,8 +39,6 @@ export function useTasks() {
         toast.add({ title: `Created T-${made.number}`, description: made.title, type: "success" });
       return made;
     },
-    // A task moved to another status from the table or its form goes to the top of that column,
-    // as a new one does; the board says where itself.
     update(task: CockpitTask, patch: TaskPatch) {
       const moving = patch.status !== undefined && patch.status !== task.status;
       if (moving && patch.position === undefined) {

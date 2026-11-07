@@ -16,7 +16,6 @@ function streamUrl(path: string, size: { cols: number; rows: number }) {
   return wsUrl(`${path}/terminal/stream?cols=${cols}&rows=${rows}`);
 }
 
-// The page's own colours, resolved to something the terminal can paint: it cannot read `var()`.
 function cssColor(variable: string) {
   const probe = document.createElement("span");
   probe.style.color = `var(${variable})`;
@@ -36,10 +35,6 @@ function terminalTheme() {
   };
 }
 
-// A shell in a computer (decisions 0053 and 0059), drawn by xterm.js. Keystrokes go to the control
-// plane as binary messages and the shell's output comes back the same way; a resize is JSON text.
-// A shell that ends, or a connection that drops, leaves the screen as it was until `reconnect`
-// starts a new shell.
 export function useTerminal({ path }: Computer) {
   const target = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -68,7 +63,6 @@ export function useTerminal({ path }: Computer) {
     const ws = new WebSocket(streamUrl(path, term.cols ? term : FALLBACK_SIZE));
     ws.binaryType = "arraybuffer";
     const encoder = new TextEncoder();
-    // Anything typed before the connection opens is dropped, as it would go nowhere.
     const input = term.onData((text) => {
       if (ws.readyState === WebSocket.OPEN) ws.send(encoder.encode(text));
     });

@@ -11,7 +11,6 @@ afterEach(async () => {
   await Promise.all(workspaces.splice(0).map((workspace) => workspace.dispose()));
 });
 
-// The tools of a thread as a run gives them to its agent: the sandbox's, behind the late-bound stand-ins.
 async function agentTools(seed: (root: string) => Promise<void>) {
   const workspace = directoryWorkspaces(seed);
   workspaces.push(workspace);

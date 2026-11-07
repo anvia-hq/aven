@@ -8,13 +8,10 @@ import { useProjectReadme } from "../hooks/use-project-readme";
 import { resolveRepoUrl } from "../repo-links";
 import type { Project } from "../types";
 
-// The project's README, drawn as it is on a repository page. Its relative links and images are
-// made to point into the repository on GitHub (decision 0082).
 export function RepoReadme({ project }: { project: Project }) {
   const { readme, problem, loading } = useProjectReadme(project.id);
   const { repoFullName: repo, defaultBranch: branch } = project;
 
-  // No README, or one that cannot be read, is no section at all.
   if (!loading && (!readme || problem !== undefined)) return null;
 
   return (

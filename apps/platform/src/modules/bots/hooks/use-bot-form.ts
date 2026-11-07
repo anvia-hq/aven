@@ -3,8 +3,6 @@ import { useRef, useState, type FormEvent } from "react";
 import type { Bot } from "../types";
 import { useBots } from "./use-bots";
 
-// The state behind the bot's settings dialog: submitting what was written. Text fields are
-// uncontrolled; they are read from the form when it is sent. The avatar is picked, so it is kept here.
 export function useBotForm(bot: Bot, onDone: () => void) {
   const [submitting, setSubmitting] = useState(false);
   const [avatar, setAvatar] = useState(bot.avatar);

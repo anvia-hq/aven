@@ -13,7 +13,6 @@ const sourceOf = (threadId: string, artifact: ToolArtifact) =>
 const labelOf = (artifact: ToolArtifact) =>
   artifact.caption ?? (isVideo(artifact) ? "Video shown by the agent" : "Image shown by the agent");
 
-// A file that did not load: the runner that keeps it may be offline. Says so, with a retry.
 function Unavailable({ video, onRetry }: { video: boolean; onRetry: () => void }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
@@ -29,9 +28,6 @@ function Unavailable({ video, onRetry }: { video: boolean; onRetry: () => void }
   );
 }
 
-// One artifact in the grid: an image that opens in the viewer, or a video that plays where it is.
-// `single` is an artifact shown on its own, which is as large as the conversation allows; in a grid
-// each is a tile of the same shape.
 function Tile({
   threadId,
   artifact,
@@ -103,7 +99,6 @@ function Tile({
   );
 }
 
-// The images of a grid, full size, one at a time, with the arrow keys and buttons to go between.
 function Viewer({
   threadId,
   images,
@@ -159,9 +154,6 @@ function Viewer({
   );
 }
 
-// What the agent showed with one call (decisions 0033 and 0136): one file as large as it fits, or
-// several together as a grid of equal tiles. The runner keeps a copy outside the sandbox, so they load
-// after the sandbox is released; they fail only while the runner is offline, and say so.
 export function ArtifactGrid({
   threadId,
   artifacts,
@@ -170,7 +162,6 @@ export function ArtifactGrid({
   artifacts: ToolArtifact[];
 }) {
   const [viewing, setViewing] = useState<number | null>(null);
-  // The viewer goes between the images; a video plays in its tile.
   const images = artifacts.filter((artifact) => !isVideo(artifact));
   const single = artifacts.length === 1;
 

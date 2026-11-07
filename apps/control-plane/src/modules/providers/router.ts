@@ -6,7 +6,6 @@ import { createProviderBody, listModelsBody, providerParams, updateProviderBody 
 import { listAgentModels } from "./model-list";
 import { providersService } from "./service";
 
-// Providers belong to the signed-in user, not to the active organization, so no `org: true`.
 export const providersRouter = new Elysia({ prefix: "/providers" })
   .use(authRouter)
   .get("/", ({ user }) => providersService.list(user.id), { auth: true })
@@ -20,7 +19,6 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
   })
   .get(
     "/:id/models",
-    // `efforts` maps a model id to the reasoning levels it accepts; absent means none.
     async ({ params, user }) =>
       orNotFound(await providersService.listModels(user.id, params.id), "Provider not found"),
     { auth: true, params: providerParams },

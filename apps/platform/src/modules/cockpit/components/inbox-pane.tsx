@@ -57,8 +57,6 @@ function InboxRow({
   );
 }
 
-// The inbox's list, as a mail app's (decisions 0105 and 0106): Open or Done, + for a new item,
-// and each item as a quiet row of its title, when it came and the start of its details.
 export function InboxPane({
   items,
   shown,

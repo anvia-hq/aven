@@ -6,7 +6,6 @@ import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "../hooks/use-create-github-app";
 import type { GithubStatus } from "../types";
 
-// GitHub has no app yet. A platform owner can create it from here; anyone else is told who can.
 export function GithubNotSetUp() {
   const status = useRequest<GithubStatus>("/github");
   const { create, working } = useCreateGithubApp();

@@ -37,7 +37,6 @@ run("a bot's use of the person's MCP servers (postgres)", async () => {
     });
     expect(JSON.stringify(added)).not.toContain("s3cret");
     expect(added).not.toHaveProperty("allowLocal");
-    // Whatever address it was given, it is refused on the runner's network: the person's switch is off.
     const [given] = (await mcpService.forRun(alice, "bots")).filter((s) => s.id === added.id);
     expect(given?.allowLocal).toBe(false);
     expect(JSON.stringify(await botMcp.list(alice))).not.toContain("s3cret");

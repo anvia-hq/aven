@@ -7,7 +7,6 @@ import { refreshInbox } from "./use-inbox";
 import { refreshNotes } from "./use-notes";
 import { refreshTasks } from "./use-tasks";
 
-// How often the records are fetched again while a bot is at work, which may be changing them.
 const WHILE_WORKING_MS = 5_000;
 
 const refreshAll = () => {
@@ -17,9 +16,6 @@ const refreshAll = () => {
   void refreshCockpitTags();
 };
 
-// A bot adds and changes the person's records on its own (decision 0109), and nothing tells the
-// open cockpit: it fetches them again whenever the bots at work change, which includes the moment
-// one finishes, and every few seconds while one works (decision 0121).
 export function useBotChanges() {
   const working = useBotsWorking();
   const key = [...working].sort().join(",");

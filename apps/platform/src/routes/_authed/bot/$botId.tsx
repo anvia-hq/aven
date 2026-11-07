@@ -7,7 +7,6 @@ export const Route = createFileRoute("/_authed/bot/$botId")({
   component: OtherBotPage,
 });
 
-// One of the person's other bots, such as one the main bot made; a bot that is not theirs is not found.
 function OtherBotPage() {
   const { botId } = Route.useParams();
   const { bots, loaded } = useBots();

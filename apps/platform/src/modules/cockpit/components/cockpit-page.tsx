@@ -8,16 +8,13 @@ import { TagBadge } from "./tag-badge";
 
 type Props = {
   title: string;
-  /** The tag the page shows only what carries, if one. */
   tag?: string;
   to: "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes";
   actions?: ReactNode;
-  /** Wider for the board, which needs the room. */
   wide?: boolean;
   children: ReactNode;
 };
 
-// A page of the cockpit: its title, the tag it is filtered by with a way to clear it, its actions.
 export function CockpitPage({ title, tag, to, actions, wide = false, children }: Props) {
   return (
     <div
@@ -52,6 +49,5 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
   );
 }
 
-/** What carries `tag`, or everything without one. */
 export const withTag = <T extends { tags: string[] }>(items: T[], tag?: string) =>
   tag ? items.filter((item) => item.tags.includes(tag)) : items;

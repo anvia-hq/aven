@@ -9,18 +9,11 @@ import { z } from "zod";
 import { artifactType } from "../artifact-type";
 import { errorMessage } from "../values";
 
-/** Larger images are refused; a chart or a screenshot is far smaller. */
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-/**
- * Larger videos are refused: a video crosses the runner's connection as one message, which the
- * control plane takes up to 16 MB of, base64 included.
- */
 export const MAX_VIDEO_BYTES = 10 * 1024 * 1024;
 
-/** Where the tool reads from and where it keeps what it shows; any `SandboxRuntime` reads. */
 type ArtifactFiles = {
   readFile(options: { path: string; abortSignal?: AbortSignal }): Promise<Uint8Array>;
-  /** Keeps a copy of the file and returns the name it is served by. */
   save(bytes: Uint8Array, mediaType: string): Promise<string>;
 };
 
@@ -29,17 +22,12 @@ const itemSchema = z.object({
   caption: z.string().max(500).optional().describe("A short line shown under it."),
 });
 
-/** What the tool gives back: what was shown, in order, and what could not be. */
 export type ShownArtifacts = {
   artifacts: ToolArtifact[];
-  /** The path of each artifact shown, in the same order. */
   paths: string[];
   failed: { path: string; error: string }[];
 };
 
-// Shows the user images and videos the agent made in its sandbox, several at once (decision 0136,
-// which carries on from 0033). A copy of each is kept, so it stays as it was when shown even if the
-// file changes or goes. One file that cannot be shown does not stop the others.
 export function createShowArtifactTool(files: ArtifactFiles) {
   const show = async (
     { path, caption }: z.infer<typeof itemSchema>,
@@ -80,7 +68,6 @@ export function createShowArtifactTool(files: ArtifactFiles) {
           shown.failed.push({ path: item.path, error: errorMessage(error) });
         }
       }
-      // Nothing to show is a failed call, so the agent hears why; some of it is a partial success.
       if (shown.artifacts.length === 0) throw new Error(shown.failed[0]!.error);
       return shown;
     },

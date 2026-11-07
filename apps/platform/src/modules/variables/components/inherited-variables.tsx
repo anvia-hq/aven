@@ -5,15 +5,11 @@ import { SectionCard } from "@/components/section-card";
 
 import { useVariables } from "../hooks/use-variables";
 
-// The names a project's threads get from elsewhere (decision 0046), so a value set in the
-// workspace or by the person is not a surprise: each with where it comes from, and a note when the
-// project's own, or the person's, replaces it.
 export function InheritedVariables({
   projectId,
   framed = false,
 }: {
   projectId: string;
-  /** Drawn as a card with a header bar, as on a project's page. */
   framed?: boolean;
 }) {
   const project = useVariables({ kind: "project", projectId });
@@ -27,9 +23,7 @@ export function InheritedVariables({
   const rows = [
     ...personal.variables.map((variable) => ({ name: variable.name, from: "You" })),
     ...workspace.variables.map((variable) => ({ name: variable.name, from: "Workspace" })),
-  ]
-    // A name set in more than one place is shown once, where it wins.
-    .filter((row, index, all) => all.findIndex((other) => other.name === row.name) === index);
+  ].filter((row, index, all) => all.findIndex((other) => other.name === row.name) === index);
   if (rows.length === 0) return null;
 
   const title = "Also set for these threads";

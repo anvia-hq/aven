@@ -1,6 +1,5 @@
 import { BotAvatar } from "./bot-avatar";
 
-/** A bot mentioned in a message, as its token is shown in the composer and in what was sent. */
 export function BotMentionChip({ bot }: { bot: { id: string; name: string; avatar: string } }) {
   return (
     <span

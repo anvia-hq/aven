@@ -10,7 +10,6 @@ import { createListStore } from "@/lib/list-store";
 import { builtinSkillsAtom, skillsAtom } from "../atoms/skills-atom";
 import type { BuiltinSkill, Skill, SkillUploadFile } from "../types";
 
-// The control plane's limits for one skill (decision 0035), checked here first to say so sooner.
 const MAX_FILES = 200;
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -33,14 +32,12 @@ function checkLimits(count: number, bytes: number) {
   if (bytes > MAX_BYTES) throw new UploadRefused(`A skill can be at most ${fileSize(MAX_BYTES)}`);
 }
 
-// The files of a skill as picked: one .zip, unpacked here, or a folder's files with their paths.
 async function readUpload(picked: File[]): Promise<SkillUploadFile[]> {
   const [only] = picked;
   if (picked.length === 1 && only && /\.zip$/i.test(only.name)) {
     let total = 0;
     let count = 0;
     const entries = unzipSync(new Uint8Array(await only.arrayBuffer()), {
-      // Sizes as the zip states them, so a bomb is refused before it is inflated.
       filter: (file) => {
         if (file.name.endsWith("/")) return false;
         total += file.originalSize;
@@ -62,7 +59,6 @@ async function readUpload(picked: File[]): Promise<SkillUploadFile[]> {
   );
   return Promise.all(
     picked.map(async (file) => ({
-      // A folder's files carry their path in it; a lone file has only its name.
       path: file.webkitRelativePath || file.name,
       data: await base64Of(file),
     })),
@@ -76,12 +72,10 @@ const builtinStore = createListStore<BuiltinSkill>({
   label: "built-in skills",
 });
 
-// Skills belong to the signed-in user, so drop them on sign-out; the next user refetches.
 export function resetSkills() {
   skillsStore.reset();
 }
 
-// The user's skills and the built-in ones. Loads on first use; mutations refetch.
 export function useSkills() {
   const [skills] = useAtom(skillsAtom);
   const [builtIn] = useAtom(builtinSkillsAtom);
@@ -95,7 +89,6 @@ export function useSkills() {
     if (builtIn === null) void builtinStore.refresh();
   }, [builtIn]);
 
-  // Runs a request that changes a skill and reloads the list; false on failure (already toasted).
   async function change(failureTitle: string, request: () => Promise<unknown>) {
     const changed = await attempt(failureTitle, async () => {
       await request();

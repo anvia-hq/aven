@@ -29,7 +29,6 @@ run("providersService (postgres)", async () => {
 
   afterAll(async () => {
     process.env.PROVIDER_ENCRYPTION_KEY = previousKey;
-    // Cascades remove their providers.
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -103,14 +102,12 @@ run("providersService (postgres)", async () => {
         reasoningEffort: "low",
       }),
     ).rejects.toThrow("does not support");
-    // Models that are not chat models are refused before a run starts.
     await expect(
       resolveModel(alice, {
         providerId: mine!.id,
         modelId: "text-embedding-3-small",
       }),
     ).rejects.toThrow("cannot be used");
-    // A choice with no provider to apply it to is refused rather than silently dropped.
     await expect(resolveModel(bob, { reasoningEffort: "low" })).rejects.toThrow("Add a provider");
   });
 
@@ -240,7 +237,6 @@ run("providersService (postgres)", async () => {
     await expect(
       providersService.create(alice, { kind: "gemini", name: "Again", apiKey: "k" }),
     ).rejects.toThrow("already connected");
-    // A Gemini provider has no address of its own to change.
     await expect(
       providersService.update(alice, gemini.id, { baseUrl: "https://x.test" }),
     ).rejects.toThrow("base URL");
@@ -255,7 +251,6 @@ run("providersService (postgres)", async () => {
       apiKey: "AIza-secret-wxyz",
       contextWindow: undefined,
     });
-    // The first provider Alice added is the one her other tests expect as the default.
     const [first] = await providersService.list(alice);
     await providersService.update(alice, first!.id, { isDefault: true });
     await providersService.remove(alice, gemini.id);
@@ -279,7 +274,6 @@ run("providersService (postgres)", async () => {
       name: "Bedrock west",
       baseUrl: "https://bedrock-mantle.us-west-2.api.aws/v1",
     });
-    // The key is only ever sent to AWS's own host.
     for (const baseUrl of [
       "https://evil.example.com/v1",
       "https://bedrock-mantle.us-east-1.api.aws.evil.com/v1",
@@ -334,7 +328,6 @@ run("providersService (postgres)", async () => {
     expect(await providersService.listModels(alice, created.id)).toMatchObject({
       models: ["google/gemini-2.5-flash"],
     });
-    // Only Google's own host, in the region the path says.
     for (const baseUrl of [
       "https://evil.example.com/v1/projects/my-project-123/locations/global/endpoints/openapi",
       "https://us-central1-aiplatform.googleapis.com/v1/projects/my-project-123/locations/europe-west4/endpoints/openapi",

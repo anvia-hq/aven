@@ -1,6 +1,3 @@
-// A cockpit body as markdown, for an agent to read (decision 0109). A body is BlockNote's blocks
-// as JSON, or markdown an agent or an earlier version wrote, which is already what is wanted.
-
 type Styles = { bold?: boolean; italic?: boolean; strike?: boolean; code?: boolean };
 type Inline = { type?: string; text?: string; href?: string; styles?: Styles; content?: unknown };
 type Block = {
@@ -16,7 +13,6 @@ const isBlock = (value: unknown): value is Block =>
   typeof (value as Block).type === "string" &&
   Array.isArray((value as Block).children);
 
-// A run of backticks longer than any in the text, so code that holds backticks stays code.
 function fence(text: string, least: number) {
   const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
   return "`".repeat(Math.max(least, longest + 1));
@@ -29,7 +25,6 @@ function styled(text: string, styles: Styles = {}) {
     const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
     return `${ticks}${pad}${text}${pad}${ticks}`;
   }
-  // Markers hug the words: spaces at either end go outside them, where markdown reads them.
   const [, lead = "", core = "", trail = ""] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text) ?? [];
   if (!core) return text;
   let out = core;
@@ -53,7 +48,6 @@ function inline(content: unknown): string {
     .join("");
 }
 
-// A table's rows, the first as its header; a cell is one line.
 function table(content: unknown) {
   const rows = (content as { rows?: { cells?: unknown[] }[] } | null)?.rows ?? [];
   const cell = (value: unknown) =>
@@ -69,15 +63,12 @@ function table(content: unknown) {
 
 const LIST_ITEMS = new Set(["bulletListItem", "numberedListItem", "checkListItem"]);
 
-// Every line of `text` moved right by `width`, as a list item's content must be.
 const indent = (text: string, width: number) =>
   text
     .split("\n")
     .map((line) => (line ? `${" ".repeat(width)}${line}` : line))
     .join("\n");
 
-// One block: its marker and text, and its children under it, indented by the marker's width so
-// they stay in the item; blocks that are not list items have no marker to sit under.
 function block(item: Block, number: number): string {
   const text = inline(item.content);
   const props = item.props ?? {};
@@ -133,8 +124,6 @@ function block(item: Block, number: number): string {
   return head ? `${head}\n${marker ? "" : "\n"}${under}` : under;
 }
 
-// Blocks one after another: items of one list on their own lines, anything else apart by a
-// blank line. A numbered list counts on from its first item's `start`.
 function blocks(list: Block[]): string {
   let out = "";
   let previous: string | undefined;
@@ -158,12 +147,10 @@ function blocks(list: Block[]): string {
   return out;
 }
 
-/** Whether a body is BlockNote's blocks, rather than text an agent or an earlier version wrote. */
 export function isBlockDocument(parsed: unknown): parsed is unknown[] {
   return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isBlock);
 }
 
-/** A body as markdown: BlockNote's blocks written out, or a body that is text as it is. */
 export function cockpitMarkdown(body: string): string {
   if (!body.trimStart().startsWith("[")) return body;
   let parsed: unknown;

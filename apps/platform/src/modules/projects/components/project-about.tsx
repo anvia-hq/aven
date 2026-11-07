@@ -7,7 +7,6 @@ import { ProjectRunner } from "./project-runner";
 
 const row = "flex items-center justify-between gap-4 px-4 py-2.5 text-sm";
 
-// What the project is: the facts the repository page keeps in its side column.
 export function ProjectAbout({ project }: { project: Project }) {
   return (
     <SectionCard title="About">

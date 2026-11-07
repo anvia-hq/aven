@@ -14,8 +14,6 @@ import type { CommitEntry } from "../hooks/use-center-feed";
 
 const LATEST_SHOWN = 40;
 
-// The latest commits of all the projects together, newest first. A graph needs one history, so it is
-// the single project's view that draws one.
 export function CenterCommits({
   commits,
   loading,
@@ -23,9 +21,7 @@ export function CenterCommits({
   actions,
   chips,
 }: {
-  /** Controls for the card's header, such as filters. */
   actions?: ReactNode;
-  /** What shows under the header, such as the filters that are on. */
   chips?: ReactNode;
   commits: CommitEntry[] | undefined;
   loading: boolean;

@@ -4,8 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// The composer's `@` and `/` (decision 0036): a file of the workspace and a skill, picked from a
-// menu, become tokens, travel with the message to the runner and show as chips in the thread.
 test.describe("mentions in the composer", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -15,7 +13,6 @@ test.describe("mentions in the composer", () => {
 
   test("@ picks a file and / a skill, and the runner is told which", async ({ page }) => {
     await registerUser(page, "men", "Mention User");
-    // The run needs a model grant; the pretend runner never calls the model.
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
@@ -38,7 +35,6 @@ test.describe("mentions in the composer", () => {
     await expect(prompt.locator('[data-mention="file"]')).toHaveText("src/greeting.ts");
     await expect(prompt.locator('[data-mention="skill"]')).toHaveText("writing-skills");
 
-    // Text after a `/` that names no skill still sends on Enter.
     await page.keyboard.type("/nothing");
     await expect(menu.getByText("No skill matches")).toBeVisible();
     await page.keyboard.press("Enter");
@@ -70,7 +66,6 @@ test.describe("mentions in the composer", () => {
     await page.keyboard.type("/setup");
 
     const menu = page.getByRole("listbox", { name: "Mention" });
-    // An option's name is the skill's name followed by its description, so pick by the name's own text.
     for (const skill of ["setup-env", "setup-ship"]) {
       await expect(
         menu.getByRole("option").filter({ has: page.getByText(skill, { exact: true }) }),

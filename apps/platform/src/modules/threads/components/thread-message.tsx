@@ -23,11 +23,6 @@ type Block =
   | { type: "subagents"; tool: ToolPart }
   | { type: "tools"; entries: ToolGroupEntry[] };
 
-// Consecutive tool calls become one block, so a burst of work reads as a single row; the reasoning
-// between them goes to the same row (decision 0115). A question stands apart: the user has to see
-// it, not find it inside a collapsed group. So do the files the agent showed, once the call is done:
-// one grid for each call; while they are being kept it is a tool call like any other. So do the subagents it handed tasks to:
-// their work is something to follow, one card each.
 function blocks(parts: MessagePart[]) {
   const result: Block[] = [];
   const group = (entry: ToolGroupEntry) => {
@@ -75,8 +70,6 @@ function AssistantBlock({
   return <ToolGroup entries={block.entries} live={live} />;
 }
 
-// Memoized: while the agent streams, only the last message changes (the reducer keeps the others
-// as they were), and re-parsing every earlier message's Markdown on each delta would add up.
 export const ThreadMessage = memo(function ThreadMessage({
   message,
   threadId,
@@ -85,9 +78,7 @@ export const ThreadMessage = memo(function ThreadMessage({
 }: {
   message: ChatMessage;
   threadId: string;
-  /** The agent is still writing this message: its last block is the one growing. */
   streaming?: boolean;
-  /** Sent from this browser and not yet shown by the server: drawn a little quieter meanwhile. */
   sending?: boolean;
 }) {
   if (message.role === "user") {
@@ -96,7 +87,6 @@ export const ThreadMessage = memo(function ThreadMessage({
         message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
       ) !== null;
     if (isShipRequest) return <ShipRequestCard />;
-    // Something that happened (a fork or a process ended), sent to the agent: one quiet line.
     const note = systemNoteOf(
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
     );
@@ -152,7 +142,6 @@ function AssistantMessage({
 }) {
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
-  // Nothing written yet: the working indicator under the conversation says the agent is on it.
   if (parts.length === 0) return null;
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">

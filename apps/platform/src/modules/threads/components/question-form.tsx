@@ -14,11 +14,9 @@ import type { QuestionAnswer, QuestionPrompt, RunSelection, ToolPart } from "../
 type Props = {
   tool: ToolPart;
   threadId: string;
-  // Resolves to whether the answers were taken, like the composer's `onSubmit`.
   onSubmit: (answers: QuestionAnswer[], selection: RunSelection) => boolean | Promise<boolean>;
 };
 
-// What the user has so far for one question: a picked choice, or their own words, which win.
 export type Draft = { choice: string; custom: string };
 
 export const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
@@ -70,8 +68,6 @@ export function Question({
   );
 }
 
-// Takes the composer's place while the agent waits on its question, one question at a time. The
-// model is the one the composer would use, since the run continues with it.
 export function QuestionForm({ tool, threadId, onSubmit }: Props) {
   const model = useModelSelection(threadId);
   const prompts = tool.questions ?? [];

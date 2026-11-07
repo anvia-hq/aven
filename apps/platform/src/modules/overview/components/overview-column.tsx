@@ -7,9 +7,6 @@ import { ContextCard } from "./context-card";
 import { EnvironmentCard } from "./environment-card";
 import { UsageCard } from "./usage-card";
 
-// The thread's overview beside its conversation. It needs room, so it only shows when the
-// conversation panel is wide enough; the panel is a container for that. It sticks to the top of
-// the conversation's scroll area, which keeps the scrollbar at the panel's edge.
 export function OverviewColumn({
   thread,
   usage,
@@ -19,11 +16,8 @@ export function OverviewColumn({
 }: {
   thread: Thread;
   usage: ThreadUsage | null;
-  /** The thread's usage has arrived: until it has, the cards that show it hold their place. */
   synced: boolean;
-  /** The person made the thread; its processes are not for anyone else to see (decision 0084). */
   owned: boolean;
-  /** Summarizes the conversation (decision 0097). */
   onCompact?: { run: () => void; busy: boolean; disabled: boolean };
 }) {
   return (

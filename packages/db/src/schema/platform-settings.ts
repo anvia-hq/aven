@@ -1,6 +1,5 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-// Platform-wide key/value settings (e.g. whether registration is open).
 export const platformSettings = pgTable("platform_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

@@ -18,7 +18,6 @@ test("the update command names the release it is asked for, and none means the l
   ]);
 });
 
-// Where there is a user systemd the update is a unit of its own, which a test cannot read back.
 test.skipIf(process.platform === "linux")(
   "starts the update as a process of its own, with its output in update.log",
   async () => {

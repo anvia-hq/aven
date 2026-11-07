@@ -3,7 +3,6 @@ import type { ComponentProps } from "react";
 import { MENTION_MARK } from "../mentions";
 import { MentionChip } from "./mention-chip";
 
-/** The `code` element of Markdown with `markMentions`' markers drawn as chips. */
 export function mentionCode({
   node: _node,
   children,

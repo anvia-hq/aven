@@ -24,18 +24,13 @@ import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
 
 type Props = {
-  // Resolves to whether the message was taken; the text and files are only cleared when it was.
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
-  /** The agent is working: Stop is there, and what is sent steers it (decision 0098). */
   running?: boolean;
   onStop?: () => void;
-  /** What `/compact` does, in a thread: summarize its history (decision 0097). */
   onCompact?: (selection: RunSelection) => boolean | Promise<boolean>;
   autoFocus?: boolean;
-  /** The thread this composer replies in, whose own model choice it uses; none for a new thread. */
   threadId?: string;
-  /** More controls for the toolbar, beside the attach button, such as the project of a new thread. */
   tools?: ReactNode;
 };
 
@@ -45,14 +40,11 @@ const renderEntity = ({ triggerId, id }: ComposerInputEntity) => {
   return mention ? <MentionChip {...mention} /> : null;
 };
 
-// The message composer: Anvia's tiptap Composer, where `@` mentions a file of the workspace and
-// `/` a skill (decision 0036), with the files attached and the model picked per message.
 export function PromptInput({ threadId, ...props }: Props) {
   const chat = useComposerChat();
   const triggers = useMentions(threadId);
   return (
     <ChatProvider controller={chat}>
-      {/* Sending is `Composer`'s own; the form Anvia renders never submits. */}
       <ComposerPrimitive.Root
         triggers={triggers}
         className="contents"
@@ -92,11 +84,7 @@ function Composer({
     if (autoFocus) editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
   }, [autoFocus]);
 
-  // Enter sends, unless the `@` or `/` menu has something to pick, which Enter then picks. Handled
-  // before the editor sees it, so a message of files alone, or text after a `/` that matches no
-  // skill, still sends.
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    // Enter while composing text with an input method confirms a candidate; it is not a send.
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     if (composer.activeTrigger?.items.length) return;
     event.preventDefault();
@@ -104,8 +92,6 @@ function Composer({
     void submit();
   }
 
-  // A click on the box that is not on a control, its padding and the space beside the toolbar, puts
-  // the cursor in the field.
   function focusOnBoxClick(event: MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     if (target.closest("button, a, input, [contenteditable], [role='menu'], [role='listbox']"))
@@ -127,7 +113,6 @@ function Composer({
         aria-label="Prompt"
         placeholder={placeholder}
         renderEntity={renderEntity}
-        // The editor is as tall as the field, so a click anywhere in it puts the cursor there.
         className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6 [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
       <div className="flex items-center gap-2 pt-2">
@@ -153,7 +138,6 @@ function Composer({
               <StopSolid />
             </Button>
           )}
-          {/* While the agent works Send is there only with something to say, beside Stop. */}
           {(!running || hasContent) && (
             <Button
               size="icon-sm"

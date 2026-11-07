@@ -6,8 +6,6 @@ import { threadParams } from "../threads/schema";
 import { processParams } from "./schema";
 import { createProcessesService } from "./service";
 
-// The processes the agent left running in a thread's sandbox: to see, to read the output of and
-// to stop, without an agent turn (decision 0071).
 export const processesRouter = (hub: RuntimeHub) => {
   const service = createProcessesService(hub);
   const options = { thread: "own" } as const;

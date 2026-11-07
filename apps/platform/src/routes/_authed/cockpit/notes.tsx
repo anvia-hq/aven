@@ -20,7 +20,6 @@ function NotesPage() {
   const { tag, note: openId } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { notes, loaded } = useNotes();
-  // The note just started here, whose title is ready to be typed over.
   const started = useRef<string | null>(null);
   const open = notes.find((note) => note.id === openId);
   const select = (id?: string) => void navigate({ search: (prev) => ({ ...prev, note: id }) });

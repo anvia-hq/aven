@@ -6,7 +6,6 @@ import { answerBotMemory } from "./memory-answer";
 const scope: MemoryScope = { sessionId: "bot-1", userId: "u1" };
 const message = (text: string): Message => ({ role: "user", content: [{ type: "text", text }] });
 
-// A store that remembers the scope each call used; one that cannot summarize has no `compaction`.
 function recordingStore(compaction = true) {
   const used: { op: string; scope: MemoryScope }[] = [];
   const store: MemoryStore = {

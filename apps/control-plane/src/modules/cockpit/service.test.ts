@@ -20,7 +20,6 @@ describe("cockpit schema", () => {
     expect(createTaskBody.safeParse({ title: " " }).success).toBe(false);
     expect(updateTaskBody.safeParse({ status: "doing" }).success).toBe(false);
     expect(updateTaskBody.parse({ dueDate: "2026-11-30" })).toEqual({ dueDate: "2026-11-30" });
-    // Eleven tags of which one is a repeat are ten.
     const eleven = [...Array.from({ length: 10 }, (_, i) => `t${i}`), "T0"];
     expect(createTaskBody.parse({ title: "x", tags: eleven }).tags).toHaveLength(10);
   });
@@ -134,7 +133,6 @@ run("cockpitService (postgres)", async () => {
     await expect(cockpitService.addTag(person.userId, { name: "later-on" })).rejects.toThrow(
       "already",
     );
-    // A tag in use, with no row yet, takes a color too.
     await cockpitService.notes.create(person.userId, { title: "Tagged", tags: ["used"] });
     expect(await cockpitService.colorTag(person.userId, "used", "#00a84f")).toMatchObject({
       color: "#00a84f",
@@ -160,7 +158,6 @@ run("cockpitService (postgres)", async () => {
       names.map((name) => cockpitService.addTag(person.userId, { name })),
     );
     expect(outcomes.filter((each) => each.status === "fulfilled")).toHaveLength(7);
-    // A tag in use, colored and given back its default, has no row left to count.
     await cockpitService.inbox.create(person.userId, { title: "Tagged", tags: ["in-use"] });
     await cockpitService.colorTag(person.userId, "in-use", "#00a84f");
     await cockpitService.colorTag(person.userId, "in-use", null);

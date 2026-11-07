@@ -6,12 +6,10 @@ import type { ToolPart } from "../types";
 import { ReasoningBlock } from "./reasoning-block";
 import { ToolCall } from "./tool-call";
 
-/** A row of a group: a tool call, or the reasoning the model wrote between calls (decision 0115). */
 export type ToolGroupEntry = { type: "tool"; tool: ToolPart } | { type: "reasoning"; text: string };
 
 type Kind = { label: (count: number) => string };
 
-// "a command", "2 commands".
 const plural = (count: number, one: string, many = `${one}s`) =>
   count === 1 ? `a ${one}` : `${count} ${many}`;
 
@@ -62,8 +60,6 @@ function kindOf(name: string): Kind {
   }
 }
 
-// "Ran 2 commands, edited 2 files": one clause per kind of tool, in the order they first appear.
-// Edits count distinct files, so two edits to one file read as one.
 function summarize(tools: ToolPart[]) {
   const counts = new Map<Kind, number>();
   const editedFiles = new Set<string>();
@@ -80,10 +76,6 @@ function summarize(tools: ToolPart[]) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// A run of tool calls, even a run of one, as one row; the calls themselves open inside it, with
-// the reasoning the model wrote along the way as a row of its own, and a call that failed is
-// marked there, not on the row: the agent often recovers from one. Reasoning with no call around
-// it stands on its own, with no group around it.
 export function ToolGroup({
   entries,
   live = false,
@@ -93,7 +85,6 @@ export function ToolGroup({
 }) {
   const tools = entries.flatMap((entry) => (entry.type === "tool" ? [entry.tool] : []));
   const running = tools.some((tool) => tool.status === "running");
-  // The reasoning row the model is still writing says "Thinking": the last entry, while live.
   const thinking = (index: number) => live && index === entries.length - 1;
 
   if (tools.length === 0) {

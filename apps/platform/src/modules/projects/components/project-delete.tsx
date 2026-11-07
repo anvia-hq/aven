@@ -15,8 +15,6 @@ import { useCanManageProject } from "../hooks/use-can-manage-project";
 import { useDeleteProject } from "../hooks/use-delete-project";
 import type { Project } from "../types";
 
-// Deleting a project, for whoever imported it, an owner or an admin (decision 0094), after a
-// confirmation that says what goes and what stays.
 export function ProjectDelete({ project }: { project: Project }) {
   const canManage = useCanManageProject(project);
   const deleteProject = useDeleteProject();

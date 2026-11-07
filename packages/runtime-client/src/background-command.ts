@@ -6,13 +6,6 @@ const BACKGROUND_DESCRIPTION =
 
 const invalid = (message: string) => new Error(message);
 
-/**
- * The sandbox's `exec_command` with one more option, `background` (decision 0071). A command run
- * with it is started by the sandbox's own `start_process`, so it is the same managed process the
- * panel lists and stops; without it, everything is the sandbox's own. Built on the two tools rather
- * than on the runtime, so what the sandbox does to a command line (a shell for a natural one, its
- * policy) is not done twice.
- */
 export function withBackground(exec: AnyTool, start: AnyTool): AnyTool {
   return {
     name: exec.name,

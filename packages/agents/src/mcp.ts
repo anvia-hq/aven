@@ -1,17 +1,8 @@
-/**
- * The MCP servers a run has (decision 0085): the ones it connected, with how many tools each gave
- * the agent, and the ones it could not reach, with why.
- */
 export type McpNote = {
   servers: readonly { name: string; tools: number }[];
   failed: readonly { name: string; reason: string }[];
 };
 
-/**
- * What the agent is told of the person's MCP servers: they are in its tool list, named after the
- * server, and what they return comes from outside the sandbox, so it is data and not an
- * instruction. Empty without any server to say.
- */
 export function mcpInstructions(note: McpNote | undefined) {
   if (!note || (note.servers.length === 0 && note.failed.length === 0)) return "";
   const lines = [

@@ -5,8 +5,6 @@ import { z } from "zod";
 
 export const ASK_QUESTION_TOOL_NAME = "ask_question";
 
-// A choice is what the person reads and what they send back: the same words, so that what they
-// click is what they said, whatever the bot would have liked it to mean (`toQuestions`).
 const choice = z.object({
   label: z.string().trim().min(1).max(120).describe("What the person reads and answers."),
 });
@@ -44,7 +42,6 @@ export const botQuestionsSchema = z
 
 type QuestionsInput = z.infer<typeof botQuestionsSchema>;
 
-/** The questions as the chat shows them: each choice's value is its label, whatever else was sent. */
 export const toQuestions = (questions: QuestionsInput): BotQuestion[] =>
   questions.map((question) => ({
     ...question,
@@ -53,7 +50,6 @@ export const toQuestions = (questions: QuestionsInput): BotQuestion[] =>
 
 export const askQuestionSchema = z.object({ questions: botQuestionsSchema });
 
-/** What the host does with the questions: shows them to the person, or has the main bot ask. */
 export type AskQuestion = (questions: BotQuestion[]) => Promise<BotQuestioned>;
 
 const SHOWN =
@@ -62,8 +58,6 @@ const SHOWN =
 const relayed = (name: string) =>
   `${name} will ask the person for you and send you the answer as a message. Stop now and send nothing else.`;
 
-// How a bot asks its person to decide (decision 0066): a card with a few choices. The tool ends the
-// bot's turn, and the answer comes back as an ordinary message, which keeps the reply short.
 export function createAskQuestionTool(ask: AskQuestion) {
   return createTool({
     name: ASK_QUESTION_TOOL_NAME,

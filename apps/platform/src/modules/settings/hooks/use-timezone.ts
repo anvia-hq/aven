@@ -5,11 +5,8 @@ import { api, attempt, postJson } from "@/lib/api";
 
 type Preferences = { timezone: string | null; defaultTimezone: string };
 
-/** The timezone of this browser, which a person who has not chosen one is taken to be in. */
 export const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-// The person's timezone, which what a bot schedules is on the clock of (decision 0067): the one they
-// chose, or this browser's until they do.
 export function useTimezone() {
   const [saved, setSaved] = useState<string | null | undefined>(undefined);
 
@@ -38,13 +35,8 @@ export function useTimezone() {
   };
 }
 
-// A person who has not chosen a timezone is put in this browser's, so that what their bots schedule
-// is on their own clock without their having to say; changing it later is theirs (Settings). The
-// server keeps it only when none is chosen, so it never takes the place of a choice.
 export function useDefaultTimezone() {
   useEffect(() => {
-    postJson("/preferences/default-timezone", { timezone: browserTimezone() }).catch(() => {
-      // Not saved: the server's own timezone is used, and Settings can set it.
-    });
+    postJson("/preferences/default-timezone", { timezone: browserTimezone() }).catch(() => {});
   }, []);
 }

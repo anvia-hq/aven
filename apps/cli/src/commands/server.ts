@@ -19,7 +19,6 @@ async function readServerEnv(dir: string) {
   return parseEnv(text);
 }
 
-// The API's own port on this machine, which answers whatever the web entry point is set to.
 const healthUrl = (env: Record<string, string>) =>
   `http://localhost:${env.AVEN_API_PORT || API_PORT}/health`;
 
@@ -28,7 +27,6 @@ async function runCompose(dir: string, args: string[]) {
   if (code !== 0) throw new Error(`docker compose ${args[0]} failed (exit ${code})`);
 }
 
-/** Installs the server's files and starts it; run again it brings the files up to date and starts what is stopped. */
 export async function serverInstall(args: Args) {
   const problem = await dockerProblem();
   if (problem) throw new Error(problem);
@@ -49,11 +47,9 @@ export async function serverInstall(args: Args) {
       ownerEmail: stringFlag(args, "owner-email"),
       bind: stringFlag(args, "bind"),
     },
-    // A server that is already installed holds its ports itself.
     installed ? () => true : portIsFree,
   );
   for (const note of notes) if (!installed) console.log(note);
-  // A server that is already installed holds its ports itself.
   const taken = installed ? undefined : needed.find((port) => !portIsFree(port));
   if (taken !== undefined)
     throw new Error(
@@ -81,12 +77,6 @@ export async function serverStart() {
   await waitUntilHealthy(dir);
 }
 
-/**
- * Starts what is stopped and applies changes to `.env` or the compose file, then restarts the server
- * and the web entry point: `up -d` leaves a container whose configuration did not change running,
- * so the server would keep what it read at its start (the GitHub App, for one) after a change made
- * in the database.
- */
 export async function serverRestart() {
   const dir = serverDir();
   await readServerEnv(dir);
@@ -95,7 +85,6 @@ export async function serverRestart() {
   await waitUntilHealthy(dir);
 }
 
-/** Removes the containers and keeps the database's volume. */
 export async function serverStop() {
   await runCompose(serverDir(), ["down"]);
 }
@@ -117,11 +106,6 @@ export async function serverLogs(service: string | undefined, follow: boolean) {
   await run(composeCommand(serverDir(), args));
 }
 
-/**
- * Brings an installed server to a release: the compose file of this version of `aven`, new settings
- * added to `.env`, the release pinned, the images pulled and the stack started again. Returns false
- * when no server is installed here.
- */
 export async function serverUpgrade(release: string) {
   const dir = serverDir();
   const envPath = join(dir, ".env");
@@ -129,12 +113,10 @@ export async function serverUpgrade(release: string) {
   if (existing === undefined) return false;
 
   await writeFile(join(dir, "docker-compose.yml"), compose);
-  // The file keeps its owner-only mode when it is written again.
   await writeFile(
     envPath,
     setEnv(addMissingKeys(existing, envTemplate), { AVEN_VERSION: release }),
   );
-  // A version's images never change, but `latest` does.
   if (release === "latest") await runCompose(dir, ["pull"]);
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);

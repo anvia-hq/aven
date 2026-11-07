@@ -12,11 +12,8 @@ function keyOf({ scope, projectId, botId }: Placed) {
   return "personal";
 }
 
-/** A folder as the page shows it: what it is called, and its notes. */
 export type FolderSection = FolderChoice & { description: string; notes: MemoryNote[] };
 
-// The person's folders: their own, each project of the workspace, each bot, and any other folder
-// that has notes, such as a project of another workspace.
 export function useMemoryFolders() {
   const { notes, loaded } = useMemory({ fresh: true });
   const { projects } = useProjects();

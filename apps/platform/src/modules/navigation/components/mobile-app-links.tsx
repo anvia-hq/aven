@@ -37,8 +37,6 @@ function AppLink({
   );
 }
 
-// The rail's places (threads, the bot, the cockpit, Center) for a phone, where the rail is not drawn: at the
-// head of the sidebar, which opens from the top bar. Choosing one closes it.
 export function MobileAppLinks() {
   const { main } = useBots();
   const pathname = useRouterState({

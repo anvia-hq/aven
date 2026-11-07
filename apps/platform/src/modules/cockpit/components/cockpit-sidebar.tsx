@@ -21,18 +21,14 @@ import { tagStyle } from "./tag-badge";
 
 type Page = "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes" | "/cockpit/tags";
 
-// The pages a tag filters; on the tags page a tag opens the inbox with it.
 type Filtered = Exclude<Page, "/cockpit/tags">;
 
-// How many of the page's records carry a tag.
 function countOn(page: Filtered, tag: CockpitTag) {
   if (page === "/cockpit/tasks") return tag.tasks;
   if (page === "/cockpit/notes") return tag.notes;
   return tag.inbox;
 }
 
-// What the sidebar lists in the cockpit (decision 0104): its three pages, with what is open in the
-// inbox and the tasks not finished, the notes pinned, as Notion's favourites, and the person's tags, which filter the page on screen.
 export function CockpitSidebar() {
   useBotChanges();
   const pathname = useRouterState({ select: (state) => state.location.pathname });

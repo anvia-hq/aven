@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { createEditTool, type EditableFiles } from "./edit";
 
-// A workspace in memory: paths are workspace-relative, as the sandbox's own file calls take them.
 let files: Map<string, string>;
 let edit: ReturnType<typeof createEditTool>;
 

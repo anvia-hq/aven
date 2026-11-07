@@ -19,7 +19,6 @@ test.describe("projects", () => {
       "No threads in this project yet.",
     );
 
-    // A cold reload re-fetches the project list; it must not flash "Project not found".
     await page.reload();
     await expect(page.locator("header")).toContainText("shiny-app");
     await expect(page.getByRole("heading", { name: "Project not found" })).toHaveCount(0);
@@ -31,7 +30,6 @@ test.describe("projects", () => {
     await connectGithub(page);
     await importRepository(page, "shiny-app");
 
-    // Started in the project, as its page's Start thread button asks for.
     const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
     await page.goto(`/threads?project=${project!.id}`);
     await page.getByRole("textbox", { name: "Prompt" }).fill("Explain the project layout");
@@ -56,10 +54,8 @@ test.describe("settings", () => {
     await expect(page).toHaveURL(/\/settings\/profile$/);
     await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
 
-    // Settings is in the app's shell: the rail and the user menu are still there, and the logo goes back.
     await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
-    // The organization section of the menu has its own Settings item.
     await page.getByRole("menu").getByRole("menuitem", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/members$/);
 
@@ -110,7 +106,6 @@ test.describe("settings", () => {
     await page.getByLabel("Deployment name").fill("deploy-one");
     await page.getByRole("button", { name: "Add provider" }).click();
 
-    // One credential: the row now shows it, with Edit instead of Set up, and the URL kept as an origin.
     await expect(azure).toContainText("https://my-resource.openai.azure.com · deploy-one · …1234");
     await expect(azure.getByRole("button", { name: "Set up" })).toHaveCount(0);
 
@@ -121,7 +116,6 @@ test.describe("settings", () => {
 
     await azure.getByRole("button", { name: "Remove Azure OpenAI" }).click();
     await expect(azure.getByRole("button", { name: "Set up" })).toBeVisible();
-    // Compatible servers stay many: Add is always there.
     await expect(
       page
         .getByRole("listitem", { name: "OpenAI-compatible" })
@@ -136,7 +130,6 @@ test.describe("settings", () => {
     await page.goto("/settings/providers");
     const connected = page.getByRole("list").first();
 
-    // Bedrock: a region becomes AWS's regional endpoint.
     await page
       .getByRole("listitem", { name: "Amazon Bedrock" })
       .getByRole("button", { name: "Add" })
@@ -149,7 +142,6 @@ test.describe("settings", () => {
       page.getByRole("listitem", { name: "Amazon Bedrock", exact: true }).first(),
     ).toContainText("https://bedrock-mantle.us-west-2.api.aws/v1 · openai.gpt-oss-120b · …4321");
 
-    // Vertex AI: a project and a location become the project's endpoint.
     await page
       .getByRole("listitem", { name: "Google Vertex AI" })
       .getByRole("button", { name: "Add" })
@@ -165,7 +157,6 @@ test.describe("settings", () => {
       ),
     ).toBeVisible();
 
-    // Gemini takes only a key, and is then connected.
     const gemini = page.getByRole("listitem", { name: "Google Gemini" });
     await gemini.getByRole("button", { name: "Set up" }).click();
     await page.getByLabel("API key").fill("AIza-secret-5555");
@@ -174,8 +165,6 @@ test.describe("settings", () => {
     await expect(gemini.getByRole("button", { name: "Set up" })).toHaveCount(0);
     await expect(connected).toBeVisible();
 
-    // Each service has a panel of its own, with its address fixed, and goes once it is set up.
-    // The generic server panel is the last one.
     const addRows = page
       .getByRole("listitem")
       .filter({ has: page.getByRole("button", { name: /^(Add|Set up)$/ }) });
@@ -195,7 +184,6 @@ test.describe("settings", () => {
       page.getByRole("listitem", { name: "Groq" }).getByRole("button", { name: "Set up" }),
     ).toHaveCount(0);
 
-    // Ollama needs no key.
     await page
       .getByRole("listitem", { name: "Ollama" })
       .getByRole("button", { name: "Set up" })
@@ -206,7 +194,6 @@ test.describe("settings", () => {
     await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText(
       "http://localhost:11434/v1 · llama3.1",
     );
-    // The OpenAI-compatible panel stays for any other server.
     await expect(
       page
         .getByRole("listitem", { name: "OpenAI-compatible" })
@@ -250,7 +237,6 @@ test.describe("sidebar and search", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/settings\/members$/);
 
-    // The shortcut works on every page, settings included.
     await page.keyboard.press("ControlOrMeta+k");
     await page.keyboard.type("docs-site");
     await page.getByRole("option", { name: "docs-site", exact: true }).click();

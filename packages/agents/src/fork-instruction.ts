@@ -1,6 +1,5 @@
 import { FORKS_PER_THREAD } from "@aven/protocol/forks";
 
-/** What a thread's agent is told about forking its thread (decision 0135). */
 export function forkInstructions() {
   return `<forks>
 - fork_thread starts another thread that works on one task apart from you, from a copy of your workspace. Fork only when the user's own message asks you to fork or to run work in parallel; never because it would be convenient. Do not fork for what a subagent or a step or two can do.

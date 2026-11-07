@@ -5,7 +5,6 @@ import { resetPlatformConfig } from "@/modules/platform/hooks/use-platform-confi
 
 type AuthMode = "sign-in" | "sign-up";
 
-// Submits the sign-in or sign-up form, tracking the pending and error state it shows.
 export function useAuthForm(mode: AuthMode, onSuccess: () => void) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);

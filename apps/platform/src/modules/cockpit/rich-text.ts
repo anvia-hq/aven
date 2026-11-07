@@ -1,15 +1,8 @@
-// A cockpit body as BlockNote keeps it (decision 0105): the editor's blocks as JSON, or, for one
-// written before, plain text or markdown, which the editor reads in on open.
-
 import { isBlockDocument } from "@aven/protocol/cockpit-markdown";
 
 type InlineLike = { text?: unknown; content?: unknown };
 type BlockLike = { content?: unknown; children?: unknown };
 
-/**
- * The blocks of a body, or null for one that is text (or empty): text that happens to be a JSON
- * array, as `[1, 2]` or `[]`, is text.
- */
 export function blocksOf(body: string): unknown[] | null {
   if (!body.trimStart().startsWith("[")) return null;
   try {
@@ -20,7 +13,6 @@ export function blocksOf(body: string): unknown[] | null {
   }
 }
 
-// A piece of inline content: text, a link (whose content is text) or a mention of some kind.
 function partText(part: InlineLike | string): string {
   if (typeof part === "string") return part;
   if (typeof part !== "object" || part === null) return "";
@@ -31,9 +23,7 @@ function partText(part: InlineLike | string): string {
 function inlineText(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) {
-    // A table's content is rows of cells.
     const rows = (content as { rows?: { cells?: unknown[] }[] } | null)?.rows;
-    // A cell is its content, or (as BlockNote 0.56 keeps it) a `tableCell` holding it.
     const cellText = (cell: unknown) =>
       inlineText(Array.isArray(cell) ? cell : (cell as InlineLike | null)?.content);
     return rows ? rows.flatMap((row) => (row.cells ?? []).map(cellText)).join(" ") : "";
@@ -50,7 +40,6 @@ function blockLines(blocks: unknown[]): string[] {
   });
 }
 
-/** The words of a body on one line, for a list's preview: no markup, no structure. */
 export function plainTextOf(body: string) {
   const blocks = blocksOf(body);
   const text = blocks

@@ -37,64 +37,43 @@ export class RuntimeOfflineError extends UnavailableError {
   }
 }
 
-/** What a started run reports back to whoever started it. */
 export type RunSink = {
   event(event: RunEvent): void;
-  /** The run finished; `error` is set when the runtime reports it threw. */
   end(outcome: RunOutcome, error?: string, continuation?: unknown): void;
-  /** The connection dropped before the run ended. */
   lost(error: Error): void;
 };
 
-/** What a started bot reply reports back (decision 0059), and answers for its own bot (decisions 0060 and 0061). */
 export type BotReplySink = CallBotReply & {
-  /** The bot sent a message. */
   say(text: string): void;
-  /** The reply finished; `error` is set when the runner reports the bot's agent threw. */
   end(error?: string): void;
-  /** The connection dropped before the reply ended: a reply does not wait for the runner to return. */
   lost(error: Error): void;
 };
 
 type Run = {
   thread: RunThreadInfo;
   sink: RunSink;
-  /** The newest event heard from the runtime; anything at or below it is a repeat. */
   lastSeq: number;
-  /** The turns of the transcript already stored, so a call sent again after a dropped reply adds nothing. */
   appended: Set<number>;
-  /** The digests of the run's skills: the only ones its runtime may fetch (decision 0035). */
   skills: Set<string>;
-  /** The ids of the run's MCP servers: the only ones its runtime may report on (decision 0085). */
   mcp: Set<string>;
-  /** Whose memory the run's agent works in (decision 0102). */
   memory?: MemoryCaller;
-  /** Whose cockpit the run's agent reads (decision 0109). */
   cockpit?: CockpitCaller;
-  /** A cancel asked for while the run had no connection, sent when it has one again. */
   cancel?: string;
 };
 
 type RunEnd = Extract<RuntimeToControlPlane, { type: "run.end" }>;
 
-/** How long a run waits for its runtime to reconnect before it is given up as lost. */
 export const DEFAULT_GRACE_MS = 60_000;
 
-// One connected runtime. The runtime is not trusted: it may only touch runs this connection
-// started, only while they are live, and the conversation scope always comes from our own record
-// of the run, never from what the runtime sends.
 export class RuntimeConnection {
   #runs = new Map<string, Run>();
   #botReplies = new Map<string, BotReplySink>();
   #viewers: ViewerStreams;
   #calls: PendingCalls;
   #closed = false;
-  /** Set once the runtime has said hello with a wire version we speak. */
   #ready = false;
-  /** The release the runtime says it is, if it says. */
   #build: string | undefined;
   #canUpdate = false;
-  /** How loaded the runtime's machine was when it last said (decision 0091). */
   #stats: ReportedStats | undefined;
 
   constructor(
@@ -120,7 +99,6 @@ export class RuntimeConnection {
     return this.#build;
   }
 
-  /** The runner is an installed `aven` that can update itself (decision 0146). */
   get canUpdate() {
     return this.#canUpdate;
   }
@@ -155,8 +133,6 @@ export class RuntimeConnection {
     });
   }
 
-  // Has the runner's bot answer a message; what it says comes back to `sink`. Throws when the
-  // runner is offline.
   startBotReply(
     replyId: string,
     input: {
@@ -180,31 +156,24 @@ export class RuntimeConnection {
     }
   }
 
-  // Asks the runner to stop a reply; it ends with the runner's `bot.end`.
   cancelBotReply(replyId: string, reason: string) {
     if (this.#botReplies.has(replyId)) this.post({ type: "bot.cancel", replyId, reason });
   }
 
-  // Takes over a run that was following a connection that dropped, and asks for what it missed.
   adopt(runId: string, run: Run) {
     this.#runs.set(runId, run);
     this.post({ type: "run.attach", runId, after: run.lastSeq });
     if (run.cancel) this.post({ type: "run.cancel", runId, reason: run.cancel });
   }
 
-  // Starts streaming a thread's desktop. Throws when the runtime is offline; whether the thread has
-  // a running sandbox is the runtime's answer, through `sink.closed`.
   openViewer(threadId: string, sink: ViewerSink) {
     return this.#viewers.open(threadId, sink);
   }
 
-  // Starts a shell in a thread's sandbox, with the same rules as `openViewer` (decision 0053).
   openTerminal(threadId: string, size: { cols: number; rows: number }, sink: ViewerSink) {
     return this.#viewers.openTerminal(threadId, size, sink);
   }
 
-  // Asks the runtime about a thread (its desktop, changes or files). Rejects with the runtime's own
-  // error, or when it does not answer in time.
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
     return this.#calls.call(method, params, timeoutMs);
   }
@@ -213,7 +182,6 @@ export class RuntimeConnection {
     return this.#runs.has(runId);
   }
 
-  // Forgets the run so nothing more from the runtime is accepted for it.
   endRun(runId: string) {
     this.#runs.delete(runId);
   }
@@ -223,12 +191,10 @@ export class RuntimeConnection {
     if (!message) return;
     if (message.type === "hello")
       return this.#hello(message.version, message.runs, message.build, message.canUpdate);
-    // Nothing else is accepted from a runtime that has not introduced itself.
     if (!this.#ready) return;
     await this.#dispatch(message);
   }
 
-  // A binary frame: a viewer's VNC bytes or a terminal's.
   receiveBinary(frame: Uint8Array) {
     if (!this.#ready) return;
     this.#viewers.receive(frame);
@@ -248,7 +214,6 @@ export class RuntimeConnection {
       this.hub.reclaim(this, runs);
       return;
     }
-    // An incompatible runtime is refused with a reason it can show, not left to fail oddly.
     this.close(
       CloseCode.UnsupportedVersion,
       `Unsupported runtime version ${version}; this control plane speaks ${WIRE_VERSION}`,
@@ -259,7 +224,6 @@ export class RuntimeConnection {
     switch (message.type) {
       case "run.event": {
         const run = this.#runs.get(message.runId);
-        // A repeat of what a reconnect replayed.
         if (!run || message.seq <= run.lastSeq) return;
         run.lastSeq = message.seq;
         run.sink.event(message.event);
@@ -307,7 +271,6 @@ export class RuntimeConnection {
 
   #endRun({ runId, seq, outcome, error, continuation }: RunEnd) {
     const run = this.#runs.get(runId);
-    // Acknowledged whether or not it is followed, so the runtime can forget a run nobody wants.
     this.post({ type: "run.ack", runId });
     if (!run || seq <= run.lastSeq) return;
     this.#runs.delete(runId);
@@ -341,15 +304,12 @@ export class RuntimeConnection {
     this.send(JSON.stringify(reply));
   }
 
-  // A bot's reply is not held for the runner to come back: it ends, and the person says it again.
   #loseBotReplies() {
     const replies = [...this.#botReplies.values()];
     this.#botReplies.clear();
     for (const reply of replies) reply.lost(new Error("The runtime disconnected"));
   }
 
-  // The socket closed: calls in flight fail. Its runs are held for the runtime to reconnect to,
-  // unless it was cut off on purpose (`endRuns`).
   close(code?: number, reason?: string, endRuns = false) {
     if (this.#closed) return;
     this.#closed = true;
@@ -368,40 +328,28 @@ export class RuntimeConnection {
   }
 }
 
-// Tracks which runtimes are connected right now.
 export class RuntimeHub {
   #connections = new Map<string, RuntimeConnection>();
-  // Runs whose connection dropped, by runtime, until it reconnects or the grace period ends.
   #held = new Map<string, { runs: Map<string, Run>; timer: Timer }>();
 
   constructor(
     readonly store: MemoryStore,
-    /** How a runtime gets to clone a thread's repository (decision 0013). */
     readonly repoAccess: (threadId: string) => Promise<RepoAccess> = () =>
       Promise.reject(new Error("Repository access is not available")),
-    /** How long a run waits for its runtime to reconnect before it is given up as lost. */
     private graceMs = DEFAULT_GRACE_MS,
-    /** A skill's archive by its digest (decision 0035). */
     readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined> = async () =>
       undefined,
-    /** Keeps how a run's MCP servers connected (decision 0085). */
     readonly mcpReport: (results: McpConnectResult[]) => Promise<void> = async () => undefined,
   ) {}
 
-  /**
-   * What the agent of a run does with forks of its thread (decision 0135). Set once the thread
-   * messages exist, which are made from the runs this hub serves.
-   */
   forks: ThreadForks = {
     start: () => Promise.reject(new Error("Forks are not available")),
     status: () => Promise.reject(new Error("Forks are not available")),
     ended: async () => undefined,
   };
 
-  /** What happens when a process the agent left running ends (decision 0144); set with the forks. */
   processEnds: ProcessEnds = { ended: async () => undefined };
 
-  // A runtime that reconnects replaces its previous connection.
   attach(
     runtimeId: string,
     send: (message: string | Uint8Array) => void,
@@ -413,20 +361,16 @@ export class RuntimeHub {
     return connection;
   }
 
-  /** A connection dropped with these runs still going: wait for the runtime to come back for them. */
   hold(runtimeId: string, runs: [string, Run][]) {
     const held = this.#held.get(runtimeId);
     clearTimeout(held?.timer);
     const all = held?.runs ?? new Map<string, Run>();
     for (const [runId, run] of runs) all.set(runId, run);
     const timer = setTimeout(() => this.#giveUp(runtimeId), this.graceMs);
-    // A held run must not keep a process that is shutting down alive.
     timer.unref();
     this.#held.set(runtimeId, { runs: all, timer });
   }
 
-  // A runtime said hello with the runs it still holds: it gets each one it was followed for back,
-  // and is told to stop any the control plane no longer follows. Held runs it did not list are over.
   reclaim(connection: RuntimeConnection, reported: string[]) {
     const held = this.#held.get(connection.runtimeId);
     this.#held.delete(connection.runtimeId);
@@ -448,7 +392,6 @@ export class RuntimeHub {
     for (const run of runs.values()) run.sink.lost(new Error("The runtime restarted"));
   }
 
-  // Asks a run to stop, whether its connection is up or the run is waiting for it to come back.
   cancelRun(runtimeId: string, runId: string, reason: string) {
     const connection = this.#connections.get(runtimeId);
     if (connection?.ready && connection.hasRun(runId)) {
@@ -477,7 +420,6 @@ export class RuntimeHub {
     return connection?.ready ? connection : undefined;
   }
 
-  // Cuts a runtime off, e.g. when it is revoked or its token rotated.
   disconnect(runtimeId: string, reason: string) {
     this.#connections.get(runtimeId)?.close(CloseCode.Revoked, reason, true);
     this.#giveUp(runtimeId);
@@ -487,17 +429,14 @@ export class RuntimeHub {
     return this.get(runtimeId) !== undefined;
   }
 
-  /** The release an online runtime says it is, if it says. */
   buildOf(runtimeId: string) {
     return this.get(runtimeId)?.build;
   }
 
-  /** Whether an online runtime can update itself when asked (decision 0146). */
   canUpdateOf(runtimeId: string) {
     return this.get(runtimeId)?.canUpdate ?? false;
   }
 
-  /** How loaded an online runtime's machine was when it last said, if it says. */
   statsOf(runtimeId: string) {
     return this.get(runtimeId)?.stats;
   }

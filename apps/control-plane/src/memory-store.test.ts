@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-// Needs the migrated Postgres from DATABASE_URL; skipped when there is none.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("memory store (postgres)", async () => {

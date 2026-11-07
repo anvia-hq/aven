@@ -166,7 +166,6 @@ describe("DurableRuns after the process restarts", () => {
       }),
       () => {},
     );
-    // The stopped process's own follow ends with the journal; nothing is listening for it.
     working.done.catch(() => undefined);
     await reached.promise;
     await closed(before, hold.resolve);
@@ -235,14 +234,12 @@ describe("DurableRuns goals", () => {
     });
 
     expect(await goal.done).toMatchObject({ type: "complete", evidence: ["`bun test` passed"] });
-    // A divider opens each session, then the session's own text.
     expect(events.filter((event) => event.type === "text")).toEqual([
       { type: "text", delta: goalSessionMarker(1) },
       { type: "text", delta: "first try" },
       { type: "text", delta: goalSessionMarker(2) },
       { type: "text", delta: "fixed it" },
     ]);
-    // Each session's prompt, then its reply.
     expect(sessions).toEqual([
       ["1", "user", "assistant"],
       ["2", "user", "assistant"],
@@ -279,7 +276,6 @@ describe("DurableRuns goals", () => {
 });
 
 describe("DurableRuns tool concurrency", () => {
-  // Three calls in one model turn to a tool that takes a moment, and the most of them at once.
   async function mostAtOnce(withQuestionTool: boolean) {
     let running = 0;
     let most = 0;
@@ -324,15 +320,12 @@ describe("DurableRuns tool concurrency", () => {
     expect(await mostAtOnce(false)).toBe(3);
   });
 
-  // The limit is Anvia's own, not ours: an agent that can ask a question runs its tools one at a
-  // time. This test says so; when Anvia lifts it, the attended runs speed up and this one changes.
   test("a run that can ask a question still calls its tools one at a time", async () => {
     expect(await mostAtOnce(true)).toBe(1);
   });
 });
 
 describe("a run that only compacts (decision 0097)", () => {
-  // The conversation so far: two turns, which the compaction run summarizes.
   const talk = async (runs: DurableRuns, sessionId: string) => {
     for (const [index, word] of ["alpha", "beta"].entries()) {
       const run = await runs.start(
@@ -374,7 +367,6 @@ describe("a run that only compacts (decision 0097)", () => {
   test("counts what the summary cost, and the new size of the history as the context", async () => {
     const runs = await opened(journalPath());
     await talk(runs, "thread-u");
-    // A summary model that says what its call cost.
     const base = scriptedModel([[text("They greeted: alpha, beta.")]]);
     const billed = { ...Usage.empty(), inputTokens: 500, outputTokens: 40, totalTokens: 540 };
     const summaryModel = {
@@ -391,22 +383,18 @@ describe("a run that only compacts (decision 0097)", () => {
       COMPACT_PROMPT,
       {
         ...createCompactionAgent({ id: "compact-u", model: summaryModel, contextWindow: 10_000 }),
-        // As the runner gives it, for the usage events' context.
         contextWindow: 10_000,
       },
       (event) => events.push(event),
     );
     const end = await run.done;
     const usage = events.filter((event) => event.type === "usage");
-    // The call is counted once, at what it cost; the context is the history as it is now, which
-    // is far from the 500 tokens the summary call read.
     expect(usage).toHaveLength(1);
     expect(usage[0]).toMatchObject({ turn: { inputTokens: 500, outputTokens: 40 } });
     const context = usage[0]?.type === "usage" ? usage[0].context : undefined;
     expect(context?.contextWindow).toBe(10_000);
     expect(context?.usedTokens).toBeGreaterThan(0);
     expect(context?.usedTokens).toBeLessThan(500);
-    // A reload reads the same from the stored message.
     const stored =
       end.type === "response" ? getAssistantGenerationMetadata(end.messages.at(-1)!) : undefined;
     expect(stored?.usage.inputTokens).toBe(500);
@@ -425,8 +413,6 @@ describe("a run that only compacts (decision 0097)", () => {
     await talk(runs, "thread-d");
     await compact(runs, "thread-d", "They greeted: alpha, beta.");
     const seen: string[] = [];
-    // Durable applies the summary to a run that has a compaction policy of its own, as every run
-    // of a model with a known window has: here one that is far from being reached.
     const next = await runs.start(
       "after-1",
       "thread-d",
@@ -451,7 +437,6 @@ describe("a run that only compacts (decision 0097)", () => {
 });
 
 describe("steering a run that is going (decision 0098)", () => {
-  // A run whose first step is a tool that waits, so the person speaks while it works.
   const slowRun = () => {
     const gate = Promise.withResolvers<void>();
     const seen: string[] = [];
@@ -486,7 +471,6 @@ describe("steering a run that is going (decision 0098)", () => {
     const run = await runs.start("steer-1", "thread-s", "build it", { agent }, (e) =>
       events.push(e),
     );
-    // The tool is running once the call is announced.
     for (let i = 0; i < 100 && !events.some((e) => e.type === "tool_start"); i++)
       await Bun.sleep(10);
 
@@ -498,7 +482,6 @@ describe("steering a run that is going (decision 0098)", () => {
     expect(events.filter((e) => e.type === "steer_applied")).toEqual([
       { type: "steer_applied", id: "steer-a" },
     ]);
-    // The model's next request has the message after the tool's result, and the transcript keeps it.
     expect(seen[0]).toContain("use the other API");
     expect(seen[0]!.indexOf("done")).toBeLessThan(seen[0]!.indexOf("use the other API"));
     const roles = end.type === "response" ? end.messages.map((message) => message.role) : [];
@@ -524,7 +507,6 @@ describe("steering a run that is going (decision 0098)", () => {
       tools: [slow],
       model: scriptedModel([
         [{ type: "tool-call", toolCallId: "c1", toolName: "slow", input: {} }],
-        // The model call after the message is taken never ends: the run is stopped there.
         async () => {
           await modelGate.promise;
           return [text("never")];
@@ -545,7 +527,6 @@ describe("steering a run that is going (decision 0098)", () => {
     modelGate.resolve();
     expect((await run.done).type).toBe("error");
 
-    // What the person said and the agent took is not lost with the rest of the run.
     const filed = await runs.unfinishedMessages(run.durableId);
     expect(filed.map((message) => message.role)).toEqual(["user", "user"]);
     expect(JSON.stringify(filed)).toContain("build it");
@@ -567,10 +548,6 @@ describe("steering a run that is going (decision 0098)", () => {
 });
 
 describe("a long run", () => {
-  // Durable 0.14 moves a payload over 64 KiB to a blob, but a history of many smaller results is
-  // still one payload against `maxPayloadBytes`, which passes durable's default megabyte after a
-  // few dozen steps. This ends with "Durable payload byte limit exceeded" without the budget set in
-  // `DurableRuns.open`.
   test("of mid-size tool results keeps within the payload budget", async () => {
     const output = "x".repeat(40 * 1024);
     const run = createTool({

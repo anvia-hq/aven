@@ -4,12 +4,10 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-// `/api` goes to the control plane, for the dev server and for `vite preview` (which e2e serves).
 const proxy = {
   "/api": {
     target: process.env.API_URL ?? "http://localhost:8000",
     changeOrigin: true,
-    // Runtimes connect to /api/runtimes/connect over a WebSocket.
     ws: true,
     rewrite: (path: string) => path.replace(/^\/api/, ""),
   },

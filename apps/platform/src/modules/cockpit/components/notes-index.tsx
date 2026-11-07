@@ -36,8 +36,6 @@ function NoteRow({ note, onOpen }: { note: CockpitNote; onOpen: () => void }) {
   );
 }
 
-// The notes as a page, as a Notion database lists its pages (decision 0106): a large title, a
-// search and a button that starts one, then a quiet row a note, pinned first.
 export function NotesIndex({
   notes,
   tag,
@@ -56,7 +54,6 @@ export function NotesIndex({
       )
     : notes;
 
-  // One note a press, however fast the presses come.
   const starting = useRef(false);
   async function startNote() {
     if (starting.current) return;

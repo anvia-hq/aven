@@ -29,7 +29,6 @@ const LOGOS = {
   vertex: VertexMark,
 } as const;
 
-// The services with a panel of their own (decision 0141) have their own marks.
 const PRESET_LOGOS = {
   openrouter: OpenRouterMark,
   groq: GroqMark,
@@ -41,14 +40,11 @@ const PRESET_LOGOS = {
 
 type Props = {
   kind: ProviderKind;
-  /** A saved provider's address, which tells a service with a panel of its own from any server. */
   baseUrl?: string | null;
-  /** A panel's service, when no saved provider is at hand. */
   preset?: CompatiblePreset["id"];
 };
 
 export function ProviderLogo({ kind, baseUrl = null, preset }: Props) {
-  // Other OpenAI-compatible servers have no single vendor, so they get a generic icon.
   const service = preset ?? presetOf({ kind, baseUrl })?.id;
   let Logo: ComponentType<SVGProps<SVGSVGElement>> = Servers;
   if (kind !== "openai-compatible") Logo = LOGOS[kind];

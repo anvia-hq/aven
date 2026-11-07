@@ -10,12 +10,9 @@ import { ProjectTile } from "./project-tile";
 
 type Props = {
   project: Project;
-  /** Its palette among the person's projects (`useProjectPalettes`). */
   palette?: number;
 };
 
-// A project as a card: its tile, name and the runner that hosts it, then the GitHub repository it
-// was imported from, and the branch and when it last changed.
 export function ProjectCard({ project, palette }: Props) {
   return (
     <Link

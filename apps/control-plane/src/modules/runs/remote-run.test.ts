@@ -21,7 +21,6 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 const sse = (events: [string, unknown][]) =>
   events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join("");
 
-// A minimal Anthropic streaming answer: one text block.
 const answer = (text: string) =>
   sse([
     [
@@ -59,8 +58,6 @@ const answer = (text: string) =>
     ["message_stop", { type: "message_stop" }],
   ]);
 
-// The whole remote path with nothing scripted: a runtime built from its own defaults reaches the
-// model only through the control plane's gateway, and the conversation lives in the control plane.
 run("a run on a remote runtime, end to end (real postgres, fake provider)", async () => {
   const seed = await seedOrgPair();
   const store = createMemoryStore(db);
@@ -77,7 +74,6 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
       });
     },
   });
-  // The gateway forwards to the vendor; here the vendor is the fake.
   const pointed = new RunGateway({
     anthropic: `http://localhost:${provider.port}`,
     openai: `http://localhost:${provider.port}/v1`,
@@ -149,8 +145,6 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     expect(requests[0]!.body.model).toBe("claude-sonnet-5");
     expect(JSON.stringify(requests[0]!.body)).toContain("first question");
 
-    // The runtime never held the key, and has no memory of its own: the next run's history comes
-    // from the control plane.
     await manager.start(thread, "second question", model);
     await until(() => !manager.isRunning(thread.id) && requests.length === 2);
     const second = JSON.stringify(requests[1]!.body);

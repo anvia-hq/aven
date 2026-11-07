@@ -15,14 +15,11 @@ import type { ThreadPullRequest } from "../types";
 
 type Props = {
   pullRequests: ThreadPullRequest[];
-  /** Whether the newest pull request is open, so shipping updates it and a new one is a choice. */
   canUpdate: boolean;
   disabled: boolean;
   onNew: () => void;
 };
 
-// Beside the Ship button once the thread has pull requests: ship the work as a separate pull request
-// while the newest is still open (decision 0069), and a way to every pull request of the thread.
 export function ShipMenu({ pullRequests, canUpdate, disabled, onNew }: Props) {
   return (
     <DropdownMenu>

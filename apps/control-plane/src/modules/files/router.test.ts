@@ -66,7 +66,6 @@ run("a thread's files (real postgres, real WebSocket)", async () => {
       await db.delete(organizations).where(eq(organizations.id, id));
   });
 
-  // A thread on a runner that answers file calls with `answer`; the calls it got are in `calls`.
   async function setup(
     answer: (call: [string, unknown]) => { ok: boolean; result?: unknown; error?: string },
   ) {

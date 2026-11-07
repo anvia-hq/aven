@@ -13,8 +13,6 @@ afterEach(async () => {
 
 const ada = { token: "ghu_secret", id: 42, login: "ada", name: "Ada L" };
 
-// Runs the command as the container would: a shell in a home of its own, with git's global
-// configuration in it.
 async function run(home: string, github: Parameters<typeof signInCommand>[0]) {
   const { script, env } = signInCommand(github);
   const result = await runCommand(["sh", "-c", script], {
@@ -45,14 +43,12 @@ describe("signing a container in to GitHub", () => {
     expect(hosts).toBe(
       "github.com:\n    oauth_token: ghu_secret\n    user: ada\n    git_protocol: https\n",
     );
-    // Only the container's user can read it.
     expect((await stat(join(dir, ".config", "gh", "hosts.yml"))).mode & 0o077).toBe(0);
     expect(await gitConfig(dir, "--get-all", "credential.https://github.com.helper")).toBe(
       "!gh auth git-credential",
     );
     expect(await gitConfig(dir, "user.name")).toBe("Ada L");
     expect(await gitConfig(dir, "user.email")).toBe("42+ada@users.noreply.github.com");
-    // Git's own configuration does not hold the token.
     expect(await readFile(join(dir, ".gitconfig"), "utf8")).not.toContain("ghu_secret");
   });
 
@@ -89,7 +85,6 @@ describe("signing a container in to GitHub", () => {
     expect(await Bun.file(join(dir, ".config", "gh", "hosts.yml")).exists()).toBe(false);
     expect(await gitConfig(dir, "--get-all", "credential.https://github.com.helper")).toBe("");
     expect(await gitConfig(dir, "user.email")).toBe("aven@localhost");
-    // Signing out when nobody was signed in is fine too.
     await run(await home(), undefined);
   });
 

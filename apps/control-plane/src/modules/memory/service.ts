@@ -20,13 +20,8 @@ import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
 import { projectsService } from "../projects/service";
 
-/**
- * Whose memory an agent works in (decision 0102): the person's, with the project of a thread's run
- * or the bot of a reply. It comes from the control plane's record of the run, never from a runner.
- */
 export type MemoryOwner = { userId: string; projectId?: string; botId?: string };
 
-/** One folder of a person's memory: a scope, and the project or bot it is for. */
 export type MemoryPlace = {
   userId: string;
   scope: MemoryScope;
@@ -34,7 +29,6 @@ export type MemoryPlace = {
   botId?: string;
 };
 
-/** Who changes a note, for the history. */
 export type MemoryActor =
   | { source: "person" }
   | { source: "thread"; threadId: string }
@@ -42,7 +36,6 @@ export type MemoryActor =
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** The folders an owner has, in the order the agent is shown them. */
 export function placesOf(owner: MemoryOwner): MemoryPlace[] {
   const { userId, projectId, botId } = owner;
   const places: MemoryPlace[] = [];
@@ -67,13 +60,11 @@ const placeOf = (row: MemoryNoteRow): MemoryPlace => ({
   botId: row.botId ?? undefined,
 });
 
-/** A note's name as the agent or the person wrote it, refused with why when it will not do. */
 export function checkName(name: string) {
   if (!MEMORY_NOTE_NAME.test(name)) throw new UnprocessableError(MEMORY_NOTE_NAME_RULE);
   return name;
 }
 
-/** A note's body, refused when it is too long. */
 export function checkBody(body: string) {
   if (body.length > MEMORY_NOTE_MAX) {
     throw new UnprocessableError(
@@ -144,8 +135,6 @@ async function roomFor(tx: Tx, place: MemoryPlace) {
   }
 }
 
-// One write at a time in a folder: its count and its names hold while the write is made.
-// Folders are locked in the order of their keys, so two writes that take two never wait on each other.
 async function lockFolder(tx: Tx, ...places: MemoryPlace[]) {
   const keys = places.map((place) =>
     [place.userId, place.scope, place.projectId ?? "", place.botId ?? ""].join("|"),
@@ -155,8 +144,6 @@ async function lockFolder(tx: Tx, ...places: MemoryPlace[]) {
   }
 }
 
-// A project's folder takes no new note once the project is deleted (decision 0094): its notes went
-// with it. Waits for a deletion going on, which holds the project's row.
 async function requireLiveProject(tx: Tx, place: MemoryPlace) {
   if (place.scope !== "project" || !place.projectId) return;
   const [project] = await tx
@@ -201,18 +188,11 @@ function writeOnce(
   });
 }
 
-// The notes of a person's memory, and every change to them (decision 0102). What the agent may
-// touch is `MemoryOwner`'s folders; what the person may is all of their own.
 export const memoryService = {
-  /** The notes of one folder, by name. */
   async notes(place: MemoryPlace) {
     return db.select().from(memoryNotes).where(inPlace(place)).orderBy(asc(memoryNotes.name));
   },
 
-  /**
-   * What an agent's instructions list of its memory: each folder's latest notes, by name and
-   * description, and how many more it has, so a full folder does not fill the instructions.
-   */
   async folders(owner: MemoryOwner): Promise<MemoryFolder[]> {
     const places = placesOf(owner);
     return Promise.all(
@@ -243,7 +223,6 @@ export const memoryService = {
     return find(db, place, name);
   },
 
-  /** Writes a note, replacing one of that name; says whether it was new. */
   async write(
     place: MemoryPlace,
     name: string,
@@ -255,10 +234,6 @@ export const memoryService = {
     return writeOnce(place, name, body, actor, false);
   },
 
-  /**
-   * Changes a note's body with `edit`, which gets the body as it is and gives the new one or throws:
-   * the note is held meanwhile, so two edits at once do not lose one.
-   */
   async edit(place: MemoryPlace, name: string, edit: (body: string) => string, actor: MemoryActor) {
     return db.transaction(async (tx) => {
       await lockFolder(tx, place);
@@ -286,7 +261,6 @@ export const memoryService = {
     });
   },
 
-  /** Moves a note to another name or folder of the same person; false when there is none. */
   async rename(
     from: { place: MemoryPlace; name: string },
     to: { place: MemoryPlace; name: string },
@@ -326,8 +300,6 @@ export const memoryService = {
     });
   },
 
-  // What the person sees and changes in Settings: every note of theirs, in every scope.
-
   async list(userId: string) {
     const rows = await db
       .select()
@@ -337,7 +309,6 @@ export const memoryService = {
     return rows.map(noteView);
   },
 
-  /** A folder the person names, checked to be theirs: a project they can see, a bot they own. */
   async placeFor(
     userId: string,
     input: { scope: MemoryScope; projectId?: string; botId?: string },
@@ -366,13 +337,11 @@ export const memoryService = {
     return noteView((await find(db, place, input.name))!);
   },
 
-  /** Changes a note's name, body or both, at once: either both change or neither. */
   async update(userId: string, id: string, changes: { name?: string; body?: string }) {
     if (changes.name !== undefined) checkName(changes.name);
     if (changes.body !== undefined) checkBody(changes.body);
     const ofPerson = and(eq(memoryNotes.userId, userId), eq(memoryNotes.id, id));
     const updated = await db.transaction(async (tx) => {
-      // The folder first, as every write takes it, then the note as it is now.
       const [found] = await tx.select().from(memoryNotes).where(ofPerson);
       if (!found) throw new NotFoundError("Note not found");
       await lockFolder(tx, placeOf(found));
@@ -406,7 +375,6 @@ export const memoryService = {
     await memoryService.remove(placeOf(row), row.name, { source: "person" });
   },
 
-  /** The latest 100 changes to the person's memory. */
   async history(userId: string) {
     const rows = await db
       .select()

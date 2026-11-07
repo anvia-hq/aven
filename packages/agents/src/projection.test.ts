@@ -16,7 +16,6 @@ import { createEditTool } from "./tools/edit";
 import { createSpawnAgentTool } from "./tools/spawn-agent";
 import { usageFromHistory } from "./usage";
 
-// Stand-ins for the sandbox's tools: they return what @anvia/sandbox's tools return.
 const files = new Map([["a.txt", "hello"]]);
 
 const readFile = createTool({
@@ -94,7 +93,6 @@ describe("projection", () => {
     const ends = events.filter((event) => event.type === "tool_end");
     expect(ends[0]).toMatchObject({ id: "c1", status: "done" });
     expect((ends[0] as { output: string }).output).toBe("hello");
-    // A failing tool is reported as an error the model can see, and does not end the run.
     expect(ends.find((end) => end.id === "c3")).toMatchObject({ status: "error" });
   });
 
@@ -355,7 +353,6 @@ describe("subagents", () => {
       index: 2,
       event: { type: "tool_end", id: "c1", status: "done" },
     });
-    // What its model calls used counts toward the thread; the context is the agent's own.
     for (const usage of events.filter((event) => event.type === "usage"))
       expect(usage).not.toHaveProperty("context");
   });

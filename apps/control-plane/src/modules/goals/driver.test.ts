@@ -22,7 +22,6 @@ run("createGoalDriver (postgres)", async () => {
     await db.delete(users).where(inArray(users.id, [alice]));
   });
 
-  // A bot with a goal, and a driver whose wakes are written down; `refuse` makes a wake throw.
   async function setup(options: { maxRounds?: number; idle?: boolean } = {}) {
     const bot = await botsService.create(alice, {
       name: `Bot ${crypto.randomUUID().slice(0, 4)}`,
@@ -40,7 +39,6 @@ run("createGoalDriver (postgres)", async () => {
         if (state.refuse) throw new Error("the computer is offline");
         woken.push({ botId, note });
       },
-      // Only this test's bot: the tick goes through every active goal of the database.
       isIdle: (botId) => botId === bot.id && state.idle,
       intervalMs: 60_000,
     });
@@ -118,7 +116,6 @@ run("createGoalDriver (postgres)", async () => {
     });
 
     expect(woken.map((each) => each.note.slice(0, 12))).toEqual(["Goal round 1", "Goal round 2"]);
-    // Later rounds do not repeat the goal: get_goal has it.
     expect(woken[0]!.note).toContain("Port the parser");
     expect(woken[1]!.note).not.toContain("Port the parser");
     expect(woken[1]!.note).toContain("get_goal");

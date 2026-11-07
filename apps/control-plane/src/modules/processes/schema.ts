@@ -15,7 +15,6 @@ const processView: z.ZodType<ProcessView> = z.object({
   endedAt: z.string().optional(),
 });
 
-// A runtime is not trusted, so what it answers is checked before it is used.
 export const processesAnswer = z.object({ processes: z.array(processView) });
 
 export const logsAnswer: z.ZodType<ProcessLogs> = z.object({

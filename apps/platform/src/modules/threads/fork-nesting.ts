@@ -2,9 +2,6 @@ import type { Thread } from "./types";
 
 export type NestedThread = { thread: Thread; nested: boolean };
 
-// The sidebar's order with each fork right under the thread it was forked from (decision 0135). The
-// list is newest first and a parent keeps its place; its forks follow it in that order. A fork
-// whose parent is not in the list, archived or not the person's own, stands on its own.
 export function nestForks(threads: readonly Thread[]): NestedThread[] {
   const ids = new Set(threads.map((thread) => thread.id));
   const forksOf = new Map<string, Thread[]>();

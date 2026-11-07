@@ -6,10 +6,6 @@ import { noProcesses } from "@aven/runtime-client/thread-processes";
 import { answerBotMemory } from "../memory-answer";
 import type { BotReplier } from "../runner";
 
-// FOR TESTS ONLY: answers with the runner's own code (`BotReplies`), with the wire between it and
-// the control plane short-circuited: what the runner says is what the chat shows, and what it asks
-// of the conversation is answered from `store` as the control plane would (decision 0059). It tests
-// the two halves together, a real store included, where `inProcessReplier` tests only the chat.
 export function loopbackReplier(options: {
   store: MemoryStore;
   createAgent: CreateBotReplyAgent;
@@ -21,7 +17,6 @@ export function loopbackReplier(options: {
         const replyId = crypto.randomUUID();
         const memory = answerBotMemory(options.store, { sessionId: bot.id, userId });
         const replies = new BotReplies({
-          // No computer: the bot only talks.
           sandbox: {
             acquire: async () => ({
               tools: [],

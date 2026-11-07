@@ -7,7 +7,6 @@ import type { DiffFile, DiffLayout } from "../types";
 import { DiffLines } from "./diff-lines";
 import { DiffStat } from "./diff-stat";
 
-// A file with this many changed lines starts folded, so one huge change does not bury the rest.
 const FOLD_ABOVE = 400;
 
 const statusLabel: Record<DiffFile["status"], string | null> = {

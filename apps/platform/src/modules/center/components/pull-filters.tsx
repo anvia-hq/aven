@@ -37,7 +37,6 @@ const SORT_LABELS = {
 const options = <T extends string>(values: readonly T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }));
 
-/** What is narrowing the pull requests beyond "open, latest changed first", as chips that remove it. */
 export function pullChips(filters: CenterFilters, change: (next: CenterSearch) => void): Chip[] {
   const chips: Chip[] = [];
   const add = (key: string, label: string, remove: CenterSearch) =>
@@ -65,7 +64,6 @@ export const clearPulls: CenterSearch = {
   text: undefined,
 };
 
-// The pull requests' filters in one popover: state, review, checks, whose, and the order.
 export function PullFilters({
   filters,
   count,

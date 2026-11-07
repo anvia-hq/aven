@@ -22,7 +22,6 @@ const mark: Record<DiffRow["kind"], string> = { add: "+", del: "-", ctx: " " };
 
 type Colour = (row: DiffRow) => HighlightedLine | null;
 
-// A row's text in its language's colours once they are ready, plain until then.
 function Code({ row, colour }: { row: DiffRow; colour: Colour }) {
   const tokens = colour(row);
   if (!tokens) return row.text;
@@ -60,7 +59,6 @@ function UnifiedRow({ row, colour }: { row: DiffRow; colour: Colour }) {
   );
 }
 
-// One side of the split layout; an empty side has nothing to show.
 function Side({ row, number, colour }: { row?: DiffRow; number?: number; colour: Colour }) {
   return (
     <div className={cn("flex min-w-0", row && tint[row.kind], !row && "bg-muted/30")}>
@@ -81,8 +79,6 @@ function HunkHeader({ hunk }: { hunk: DiffHunk }) {
   );
 }
 
-// A file's hunks. Unified keeps every line whole and scrolls sideways; split gives each side half
-// the width and wraps what does not fit.
 export function DiffLines({
   hunks,
   path,

@@ -22,8 +22,6 @@ function statusText({ status, exitCode, startedAt, endedAt }: ProcessView) {
   return exitCode ? `Exited with code ${exitCode}${when}` : `Finished${when}`;
 }
 
-// Where a process is: a pulse while it runs, then a mark for how it ended; the words under the
-// command say the same, so the mark is only drawn.
 function StatusMark({ process }: { process: ProcessView }) {
   if (process.status === "running") {
     return (
@@ -41,8 +39,6 @@ function StatusMark({ process }: { process: ProcessView }) {
   return <Check className="size-4 text-muted-foreground" aria-hidden />;
 }
 
-// One process as a row: how it is doing at the start, its command and when under it, a way to stop
-// it at the end while it runs, and its output on demand, opened from the row.
 export function BackgroundProcess({ threadId, process, stopping, onStop }: Props) {
   const [open, setOpen] = useState(false);
   const running = process.status === "running";

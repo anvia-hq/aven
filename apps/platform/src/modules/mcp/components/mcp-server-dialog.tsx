@@ -29,11 +29,9 @@ export const TARGET_LABELS: Record<McpTarget, string> = {
 };
 
 type HeaderRow = {
-  /** Kept in the row so React does not mix two up when one is removed. */
   key: string;
   name: string;
   value: string;
-  /** The server has this header already: left blank, its value stays. */
   saved: boolean;
 };
 
@@ -65,7 +63,6 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
       url: String(form.get("url")).trim(),
       target,
       allowLocal,
-      // A saved header left blank keeps its value; a row with no name is not a header.
       headers: headers
         .filter((row) => row.name.trim() !== "")
         .map((row) => ({
@@ -141,7 +138,6 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
                 aria-label={`Value of ${row.name || "the header"}`}
                 type="password"
                 autoComplete="off"
-                // A header with no value to send is nothing; a saved one keeps its own.
                 required={!row.saved}
                 placeholder={row.saved ? "Saved: leave blank to keep" : "Bearer …"}
                 value={row.value}
@@ -195,7 +191,6 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
   );
 }
 
-// The button that adds a server, and the form it opens.
 export function McpServerDialog() {
   const [open, setOpen] = useState(false);
   return (
@@ -210,7 +205,6 @@ export function McpServerDialog() {
   );
 }
 
-// The same form for a server that is there already, opened from its row.
 export function EditMcpServerDialog({
   server,
   open,

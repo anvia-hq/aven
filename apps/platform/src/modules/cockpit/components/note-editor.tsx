@@ -22,15 +22,12 @@ import {
 } from "./document-page";
 import { TagInput } from "./tag-input";
 
-// A note as a page of its own, as Notion has one (decisions 0105 and 0106): a large title, its
-// tags and when it was edited, then the document, each saved as it is written.
 export function NoteEditor({
   note,
   fresh,
   onClose,
 }: {
   note: CockpitNote;
-  /** Just made: its title is chosen, ready to be typed over. */
   fresh: boolean;
   onClose: () => void;
 }) {
@@ -91,7 +88,6 @@ export function NoteEditor({
         }}
         onCommit={() => {
           saveTitle.flush();
-          // A title cleared is not saved: the one kept comes back.
           if (!title.trim()) setTitle(note.title);
         }}
       />

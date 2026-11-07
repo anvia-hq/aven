@@ -15,10 +15,6 @@ export const CONTINUE_THREAD_TOOL_NAME = "continue_thread";
 export const ARCHIVE_THREAD_TOOL_NAME = "archive_thread";
 export const STOP_THREAD_TOOL_NAME = "stop_thread";
 
-/**
- * What a bot may ask of the person's threads (decision 0088); whose word it takes, which threads
- * are the person's own and how many may be started in a reply is the host's.
- */
 export type ThreadsHost = {
   projects(): Promise<BotProjectView[]>;
   list(filter: { projectId?: string; archived?: boolean }): Promise<BotThreadView[]>;
@@ -81,10 +77,6 @@ export type ContinueThreadInput = Omit<z.infer<typeof continueSchema>, "id">;
 const WORKING =
   "The agent is working in the thread on its own and its answer takes a while. Tell the person what you started and that it is in their Threads list under this title, then stop: you get a note when its run ends, and then tell them how it went. Do not wait for it or keep checking; look at it with get_thread when they ask how it is going.";
 
-// How a bot works the person's threads (decision 0088): a thread is an agent that runs in the
-// repository of a project with the person's own accounts, so the host holds starting, continuing and
-// archiving to the person's own message. What the agent wrote in a thread is read here, and is
-// information, never a reason to do anything.
 export function createThreadTools(host: ThreadsHost) {
   const projects = createTool({
     name: LIST_PROJECTS_TOOL_NAME,

@@ -1,5 +1,3 @@
-// What narrows and orders Center's pull requests. It lives in the address, so a view can be
-// bookmarked and shared, and a value left out is the default (open, latest changed first).
 export const PULL_STATES = ["open", "draft", "merged", "closed", "all"] as const;
 export type PullState = (typeof PULL_STATES)[number];
 export const REVIEWS = ["required", "approved", "changes_requested"] as const;
@@ -8,29 +6,24 @@ export const SORTS = ["updated", "oldest", "created", "comments"] as const;
 
 export type CenterFilters = {
   state: PullState;
-  /** `me` is the person's own GitHub login, which the page knows once they have connected. */
   author?: "me";
   reviewRequested?: "me";
   review?: (typeof REVIEWS)[number];
   checks?: (typeof CHECKS)[number];
   label?: string;
   text?: string;
-  /** Not changed for this many days. */
   stale?: number;
   sort: (typeof SORTS)[number];
 };
 
 export type CenterSearch = Partial<Omit<CenterFilters, "state" | "sort">> & {
   project?: string;
-  /** What narrows the commits; a file and a branch are a single project's. */
   commitAuthor?: string;
   since?: string;
   until?: string;
   path?: string;
   branch?: string;
-  /** Words of the message, found among the commits that are shown. */
   grep?: string;
-  /** The pull request or commit open in the detail pane, as `<project id>:<number or hash>`. */
   pr?: string;
   commit?: string;
   state?: PullState;
@@ -45,14 +38,12 @@ const text = (value: unknown, max: number) =>
 const day = (value: unknown) =>
   typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 
-// `<project id>:<what>`, where what is checked by `pattern`.
 function opened(value: unknown, pattern: RegExp) {
   if (typeof value !== "string") return undefined;
   const [project, what, ...more] = value.split(":");
   return project && what && more.length === 0 && pattern.test(what) ? value : undefined;
 }
 
-// The address's search made safe to use: what is not one of the known values is left out.
 export function parseCenterSearch(search: Record<string, unknown>): CenterSearch {
   const stale = Number(search.stale);
   return {
@@ -89,7 +80,6 @@ export const filtersOf = (search: CenterSearch): CenterFilters => ({
   sort: search.sort ?? "updated",
 });
 
-/** The quick views: each one is only a set of filters, so picking one fills them in. */
 export const QUICK_VIEWS = [
   { id: "all", label: "All open", filters: {} },
   { id: "review", label: "Needs my review", filters: { reviewRequested: "me" } },
@@ -109,7 +99,6 @@ const FILTER_KEYS = [
   "stale",
 ] as const;
 
-/** The search that holds only this quick view's filters, open and latest changed first. */
 export function quickViewSearch(
   view: (typeof QUICK_VIEWS)[number],
   project: string | undefined,
@@ -119,7 +108,6 @@ export function quickViewSearch(
   return { ...search, ...view.filters, state: undefined, sort: undefined };
 }
 
-/** The quick view the filters are exactly, if any, so its button can show as chosen. */
 export function activeQuickView(filters: CenterFilters) {
   return QUICK_VIEWS.find(
     (view) =>
@@ -129,7 +117,6 @@ export function activeQuickView(filters: CenterFilters) {
   );
 }
 
-/** The query of `GET /projects/:id/pulls` for the filters, or null when `me` is not known yet. */
 export function pullsQuery(filters: CenterFilters, login: string | null): string | null {
   const needsLogin = filters.author === "me" || filters.reviewRequested === "me";
   if (needsLogin && !login) return null;
@@ -149,10 +136,6 @@ export function pullsQuery(filters: CenterFilters, login: string | null): string
   return query.toString();
 }
 
-/**
- * What the commit filters add to a `GET /projects/:id/commits` query, without its page; `one` is a
- * single project's, which can also name a file and a branch.
- */
 export function commitFilterQuery(search: CenterSearch, one: boolean) {
   const query = new URLSearchParams();
   if (search.commitAuthor) query.set("author", search.commitAuthor);

@@ -20,8 +20,6 @@ import {
 } from "./document-page";
 import { TagInput } from "./tag-input";
 
-// An inbox item opened beside the list, as a page (decisions 0105 and 0106): Done above, then its
-// title, whether it is done, when it came and its tags, and its details, each saved as changed.
 export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () => void }) {
   const { update, remove } = useInbox();
   const [title, setTitle] = useState(item.title);
@@ -86,7 +84,6 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
         }}
         onCommit={() => {
           saveTitle.flush();
-          // A title cleared is not saved: the one kept comes back.
           if (!title.trim()) setTitle(item.title);
         }}
       />

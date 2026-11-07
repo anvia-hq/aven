@@ -15,7 +15,6 @@ const inbox = createCollection<InboxItem, InboxInput, Partial<InboxInput & { don
 export const resetInbox = inbox.reset;
 export const refreshInbox = inbox.refreshLoaded;
 
-// The person's inbox: what they captured, newest first.
 export function useInbox() {
   const { items, loaded } = inbox.useItems();
   return {

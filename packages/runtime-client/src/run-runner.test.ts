@@ -27,7 +27,6 @@ describe("controlPlaneBase", () => {
   });
 
   test("keeps the prefix the API is served under, so the model gateway is reached through it", () => {
-    // Behind the web entry point /runtimes/gateway alone is the web app, which answers 405.
     expect(controlPlaneBase("wss://aven.example.com/api/runtimes/connect")).toBe(
       "https://aven.example.com/api",
     );

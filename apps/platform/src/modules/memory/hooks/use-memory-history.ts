@@ -5,8 +5,6 @@ import { api, errorMessage } from "@/lib/api";
 
 import type { MemoryEvent } from "../types";
 
-// Who changed the person's memory (decision 0102), read each time it is opened: it is looked at
-// now and then, and a stale trail is worse than none.
 export function useMemoryHistory(open: boolean) {
   const [events, setEvents] = useState<MemoryEvent[] | null>(null);
 

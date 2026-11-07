@@ -5,7 +5,6 @@ import { RailLink } from "@/components/rail-link";
 import { useBots } from "../hooks/use-bots";
 import { BotAvatar } from "./bot-avatar";
 
-// Keep the person's own character in the rail, and its space while the bot loads.
 export function BotRailLink() {
   const { main } = useBots();
   const active = useRouterState({

@@ -10,11 +10,8 @@ import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
 
-// OpenAI, Anthropic, Gemini and Azure have one credential each; a server, a Bedrock region or a Vertex
-// AI project can be added as often as the person has them.
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 
-// A service with its own panel has one credential, like OpenAI: the panel goes once it is set up.
 const connectedPresets = (providers: Provider[]) =>
   new Set(providers.map((provider) => presetOf(provider)?.id));
 
@@ -59,9 +56,6 @@ function Tile({
   );
 }
 
-// What is set up comes first, with what each one runs; below it, what can still be added. OpenAI,
-// Anthropic, Gemini and Azure have one credential each; any number of OpenAI-compatible servers and
-// Bedrock regions can be added.
 export function ProvidersList() {
   const { providers, loaded } = useProviders();
 
@@ -73,7 +67,6 @@ export function ProvidersList() {
 
   const taken = connectedPresets(providers);
   const presets = COMPATIBLE_PRESETS.filter((preset) => !taken.has(preset.id));
-  // The kinds, then the services with a panel of their own, and the generic server panel last.
   const kindRow = (kind: ProviderKind): Row => ({
     key: kind,
     kind,

@@ -5,10 +5,6 @@ import { eq } from "drizzle-orm";
 
 import { auth, authService } from "../modules/auth/service";
 
-/**
- * A person signed up through Better Auth, with the bearer token a client sends and the personal
- * organization they own. `remove` deletes both.
- */
 export async function signUp(name: string) {
   const email = `${name}-${crypto.randomUUID().slice(0, 8)}@aven.test`;
   const url = process.env.BETTER_AUTH_URL ?? "http://localhost:5173";

@@ -14,21 +14,13 @@ import {
 
 import { outputLimitFor, resolveAgentModel, type ModelSource } from "./agent-model";
 
-/** What the thread says once the conversation has been summarized, and when there was too little to. */
 export const COMPACTED = "Compacted the conversation: the earlier turns are now a summary.";
 export const NOTHING_TO_COMPACT = "There is nothing to compact yet.";
 
-/** The prompt a compaction run is given: what the person typed, as it shows in the thread. */
 export const COMPACT_PROMPT = "/compact";
 
 const MODEL_ID = "compaction";
 
-// Compaction happens as a durable run starts, before its first model call, so a run is the way to
-// ask for it. This agent is that run: its own model only answers, from the request it is sent,
-// without a provider. The tokens it reports are the ones the summary cost (`spent`, which the
-// compactor fills in), so the thread's usage counts what was billed, and the size of the request
-// is its context: the new size of the thread's history, which a reload reads back from the message.
-// The summary itself is written by the person's own model.
 function compactionReply(spent: () => Usage, contextWindow?: number): StreamingCompletionModel {
   const respond = async (request: CompletionRequest): Promise<CompletionResponse> => {
     const summarized = request.chatHistory.some(isMemoryCompactionMessage);
@@ -69,11 +61,6 @@ function compactionReply(spent: () => Usage, contextWindow?: number): StreamingC
   };
 }
 
-/**
- * The agent of a run that only compacts a thread's history (decision 0097). It registers a trigger
- * of one token and keeps no recent turn, so everything before the prompt is summarized, whatever
- * the model's window: for the person who asked, "compact now" is not "compact at 70%".
- */
 export function createCompactionAgent(options: ModelSource & { id: string }) {
   const { model } = resolveAgentModel(options);
   const summarize = createSummaryMemoryCompactor({

@@ -35,13 +35,10 @@ type TavilyResponse = {
 };
 
 type WebSearchOptions = {
-  /** Defaults to `TAVILY_API_KEY`. */
   apiKey?: string;
-  /** Overridable for tests. */
   fetch?: typeof fetch;
 };
 
-// Web search backed by Tavily. Uses fetch directly so the package needs no extra dependency.
 export function createWebSearchTool(options: WebSearchOptions = {}) {
   const request = options.fetch ?? fetch;
 

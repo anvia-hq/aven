@@ -6,8 +6,6 @@ import type { RepoEntry } from "../types";
 
 type Answer = { key: string; entries?: RepoEntry[]; problem?: string };
 
-// A folder of the project's repository on GitHub (decision 0082), read again when the path
-// changes. Until the answer for this path is in, `loading` is true, never the last path's entries.
 export function useProjectFolder(projectId: string, path: string) {
   const [answer, setAnswer] = useState<Answer>();
   const key = `${projectId}\n${path}`;

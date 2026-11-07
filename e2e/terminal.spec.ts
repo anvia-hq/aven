@@ -28,7 +28,6 @@ test.describe("a thread's terminal", () => {
     await page.keyboard.press("Enter");
     await expect(panel.locator(".xterm-rows")).toContainText("ran: echo hi");
 
-    // Narrowing the panel tells the shell the new size.
     const before = events.filter((entry) => entry.type === "terminal.resize").length;
     await page.setViewportSize({ width: 1000, height: 800 });
     await expect

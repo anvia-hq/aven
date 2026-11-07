@@ -6,7 +6,6 @@ import { UnprocessableError } from "../../errors";
 import { keylessProviderBody } from "./schema";
 import { providersService, type ProviderView } from "./service";
 
-/** What a bot's reply does with the person's model providers (decision 0086). */
 export type BotProviders = {
   list(userId: string): Promise<BotProviderView[]>;
   add(
@@ -25,14 +24,10 @@ export type BotProviders = {
     patch: { name?: string; baseUrl?: string; modelId?: string; isDefault?: true },
   ): Promise<BotProviderView>;
   remove(userId: string, id: string): Promise<void>;
-  /** The model ids a provider offers, asked with its own saved key. */
   models(userId: string, id: string): Promise<{ models: string[] }>;
-  /** The provider a key card is for, found among the person's own. */
   keyFor(userId: string, id: string): Promise<ProviderKeyAsk>;
 };
 
-// What a bot sees of a provider: whether it has a key, never the key, and not even its last
-// characters.
 const seenByBot = ({ id, kind, name, baseUrl, modelId, isDefault, hasKey }: ProviderView) => ({
   id,
   kind,
@@ -52,11 +47,6 @@ async function find(userId: string, id: string) {
   return found;
 }
 
-// The person's model providers as a bot may keep them. A bot never reads a key or gives one: it
-// makes a provider without, and asks the person for it with a masked card. A provider cannot be made
-// the default before it has its key, and a provider a bot moves to another address forgets its key,
-// so that the person's key is never sent to an address a bot chose. Whether it may change anything is
-// the replier's to say, as for MCP servers.
 export const botProviders: BotProviders = {
   async list(userId) {
     return (await providersService.list(userId)).map(seenByBot);
@@ -73,7 +63,6 @@ export const botProviders: BotProviders = {
 
   async update(userId, id, patch) {
     const current = await find(userId, id);
-    // Moving it, however slightly written, is moving it: the key stays behind.
     const moved = patch.baseUrl !== undefined && patch.baseUrl !== current.baseUrl;
     const changed = await providersService.update(userId, id, patch, { dropKey: moved });
     if (!changed) throw new UnprocessableError(NOT_FOUND);

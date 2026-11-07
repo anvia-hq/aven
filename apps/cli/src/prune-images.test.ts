@@ -37,7 +37,6 @@ describe("the images an update leaves behind", () => {
   });
 
   test("are none when the update is to a dev build or `latest`, which have no older release", () => {
-    // Trying a build on a machine with Aven installed once removed that install's sandbox image.
     for (const current of ["dev", "latest", "0.1", ""])
       expect(staleImages(listing, current)).toEqual([]);
   });

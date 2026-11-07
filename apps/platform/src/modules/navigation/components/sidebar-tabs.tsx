@@ -3,7 +3,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 
-// A thread's own page is marked in the thread list below, so Threads is active on the list only.
 const tabs = [
   { to: "/threads", label: "Threads", icon: Chat, exact: true },
   { to: "/projects", label: "Projects", icon: Folder, exact: false },

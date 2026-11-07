@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 
 import { auth, authService } from "./service";
 
-// `auth` and `org` both need the session, so a request looks it up once.
 const sessions = new WeakMap<Request, ReturnType<typeof authService.getSession>>();
 
 function sessionOf(request: Request) {
@@ -13,8 +12,6 @@ function sessionOf(request: Request) {
   return session;
 }
 
-// Mount with `.use(authRouter)` and add `{ auth: true }` to a route to require a session, or
-// `{ auth: true, org: true }` to also require (and inject) an active organization.
 export const authRouter = new Elysia({ name: "auth" })
   .macro({
     auth: {

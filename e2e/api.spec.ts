@@ -5,7 +5,6 @@ const WEB_URL = "http://localhost:5174";
 
 const unique = () => `api-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
 
-// Better Auth rejects cookie-bearing requests without an Origin header.
 test.use({ extraHTTPHeaders: { origin: WEB_URL } });
 
 test.describe("control-plane API (through the platform /api proxy)", () => {
@@ -38,7 +37,6 @@ test.describe("control-plane API (through the platform /api proxy)", () => {
     expect((await session.json()).user.email).toBe(email);
     const providers = await request.get("/api/providers");
     expect(providers.status()).toBe(200);
-    // No route lists the platform's users: that would show every organization's people.
     expect((await request.get("/api/users")).status()).toBe(404);
 
     const signOut = await request.post("/api/auth/sign-out", { data: {} });

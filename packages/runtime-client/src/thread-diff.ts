@@ -8,11 +8,8 @@ import { hostGit } from "./host-git";
 import { remoteBase } from "./remote-base";
 import { trackPushes } from "./track-pushes";
 
-// Where the working tree stood when the thread's latest run began (decision 0030).
 const TURN_REF = "refs/aven/turn";
-// Where the working tree stood when a forked thread was made (decision 0135).
 const FORK_REF = "refs/aven/fork-base";
-// A patch past this is cut at a line, so one huge change cannot fill the wire or the page.
 const MAX_PATCH_BYTES = 2 * 1024 * 1024;
 const IDENTITY = {
   GIT_AUTHOR_NAME: "Aven",
@@ -21,9 +18,6 @@ const IDENTITY = {
   GIT_COMMITTER_EMAIL: "aven@localhost",
 };
 
-// The tree of the working directory as it is now: tracked and untracked files, minus what git
-// ignores. A scratch index leaves the thread's own staging area alone. Null when `root` is no
-// repository.
 async function workingTree(root: string, run: Git) {
   const index = join(root, ".git", `aven-index-${randomUUID()}`);
   const env = { GIT_INDEX_FILE: index };
@@ -37,7 +31,6 @@ async function workingTree(root: string, run: Git) {
   }
 }
 
-// Keeps the working tree as it is now under `ref`; false when `root` holds no repository.
 async function markTree(root: string, ref: string, message: string, run: Git) {
   const host = hostGit(run);
   const tree = await workingTree(root, host);
@@ -48,15 +41,12 @@ async function markTree(root: string, ref: string, message: string, run: Git) {
   return saved.code === 0;
 }
 
-/** Remembers the working tree as the start of a turn; false when `root` holds no repository. */
 export const markTurn = (root: string, run: Git = git) =>
   markTree(root, TURN_REF, "Start of a turn", run);
 
-/** Remembers the working tree as what a fork started from, for `forkChanges` (decision 0135). */
 export const markFork = (root: string, run: Git = git) =>
   markTree(root, FORK_REF, "Start of a fork", run);
 
-// Where the thread's branch left the default branch; HEAD when there is no remote branch to compare with.
 async function branchPoint(root: string, run: Git) {
   const remote = await remoteBase(root, run);
   if (!remote) return "HEAD";
@@ -71,11 +61,7 @@ async function turnStart(root: string, run: Git) {
   return start.code === 0 ? start.stdout.trim() : null;
 }
 
-// The tree of the thread's branch as the remote has it, which is what its pull request holds; null
-// until the branch has been pushed.
-// `configure` writes the workspace's own configuration, which the agent's git reads; `run` reads it.
 async function pushedTree(root: string, run: Git, configure: Git) {
-  // A workspace cloned before pushes were recorded learns it here, for the pushes to come.
   await trackPushes(root, configure);
   const branch = await run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
   if (branch.code !== 0) return null;
@@ -100,11 +86,6 @@ function cut(patch: string): ThreadDiff {
   return { patch: head.slice(0, head.lastIndexOf("\n") + 1), truncated: true };
 }
 
-/**
- * What a thread changed, as a unified patch: since its latest run began (`turn`) or since its
- * branch left the default branch (`all`) or since it was last pushed (`unshipped`). Null when the workspace is not a repository. A thread
- * whose turn was never marked has no start to compare with, so its turn is empty.
- */
 export async function threadDiff(
   root: string,
   scope: DiffScope,
@@ -118,10 +99,6 @@ export async function threadDiff(
   return patchBetween(root, from, now, host);
 }
 
-/**
- * Everything a forked thread changed since it was made, commits and uncommitted work alike, as a
- * patch against the tree it started from. Null when `root` is no repository or was never forked.
- */
 export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
   const host = hostGit(run);
   const now = await workingTree(root, host);

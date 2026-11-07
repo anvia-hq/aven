@@ -17,32 +17,19 @@ import { subagentRunner, type CreateSubagent } from "./subagent-runner";
 export type RunToolsInput = {
   sandbox: ThreadWorkspaces;
   thread: RunThreadInfo;
-  /** The tools of the sandbox the run started with. */
   tools: readonly AnyTool[];
-  /** The tools of the thread's sandbox as it is now. */
   current: () => readonly AnyTool[] | undefined;
-  /** The person's MCP servers' tools, and those the thread's connections have now (decision 0085). */
   mcp?: { tools: readonly AnyTool[]; current: () => readonly AnyTool[] | undefined };
-  /** Whether a person is there to answer: only then may the agent save an environment or take on a goal. */
   attended: boolean;
-  /** Asks the control plane for read-only access to the thread's repository. */
   repoAccess: () => Promise<RepoAccess>;
-  /** The agent handed a goal over. */
   defineGoal: (goal: GoalRequest) => void;
-  /** Builds the agent of a subagent the run's agent hands a task to (decision 0057). */
   createSubagent: CreateSubagent;
-  /** Tells clients what the run's subagents do. */
   emit: (event: RunEvent) => void;
-  /** Works the person's memory, when the run has one (decision 0102). */
   memory?: MemoryHost;
-  /** Forks the thread and takes a fork's work, when the agent may (decision 0135). */
   forks?: ForkHost;
-  /** Reads the sender's cockpit, when the run may (decision 0109). */
   cockpit?: CockpitHost;
 };
 
-// What the agent of a run can do: the sandbox's tools, pointed at the thread's current sandbox, and
-// the runner's own.
 export function toolsForRun({
   sandbox,
   thread,
@@ -58,16 +45,12 @@ export function toolsForRun({
   forks,
   cockpit,
 }: RunToolsInput): AnyTool[] {
-  // For a person who has not connected GitHub, so the sandbox cannot fetch itself: it is done
-  // here, on the host, with the read-only access the control plane gives this run (decision 0042).
   const gitFetch = createGitFetchTool(async (branch) => {
     const root = await sandbox.workspace(thread.id);
     if (!root) throw new Error("The thread has no workspace yet");
     return fetchBranch(root, await repoAccess(), branch);
   });
   const bound: AnyTool[] = [...lateBoundTools(tools, current), gitFetch];
-  // A server's tools are called through whichever connection the thread has now, as the sandbox's
-  // are: an agent that waited for an answer was built by the run that asked, whose connections ended.
   if (mcp) {
     bound.push(
       ...lateBoundTools(
@@ -77,22 +60,14 @@ export function toolsForRun({
       ),
     );
   }
-  // Subagents work with the same tools, so a sandbox released and woken again is theirs too, and
-  // what hides this run's secrets from the agent hides them from them.
   const spawnAgent = createSpawnAgentTool(subagentRunner(bound, createSubagent, emit));
-  // The memory is the run's agent's: its subagents, which nobody watches, have none (decision 0102).
   const notes = memory ? [createMemoryTool(memory)] : [];
-  // A thread's agent only reads the person's cockpit (decision 0109); its subagents do not.
   const reading = cockpit ? [createCockpitTool(cockpit, "read")] : [];
-  // Subagents cannot fork, so what they are given does not include it (decision 0135).
   const forking = forks ? createForkTools(forks) : [];
   const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking];
-  // Only an agent with a person to set the repository up with may save its environment,
-  // which can take many minutes (decision 0043); a runner without snapshots has no tool.
   const saveEnvironment = sandbox.saveEnvironment
     ? [createSaveEnvironmentTool(async () => sandbox.saveEnvironment!(thread, await repoAccess()))]
     : [];
-  // Only an agent with a person to talk to may take on a goal.
   return attended
     ? [...withSubagents, ...saveEnvironment, createDefineGoalTool(defineGoal)]
     : withSubagents;

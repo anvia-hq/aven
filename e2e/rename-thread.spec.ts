@@ -27,7 +27,6 @@ test.describe("renaming a thread", () => {
     await field.press("Enter");
     await expect(page.getByRole("link", { name: /Check the login flow/ })).toBeVisible();
 
-    // A second rename in the same page works as the first did.
     await page
       .getByRole("link", { name: /Check the login flow/ })
       .getByText("Check the login flow")
@@ -43,7 +42,6 @@ test.describe("renaming a thread", () => {
     await page.getByRole("textbox", { name: "Thread title" }).press("Enter");
     await expect(page.getByRole("link", { name: /Check the login flow/ })).toBeVisible();
 
-    // It is the server's too: it survives a reload.
     await page.reload();
     await expect(page.getByRole("link", { name: /Check the login flow/ })).toBeVisible();
 

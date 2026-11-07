@@ -1,7 +1,3 @@
-// A runner for the bots' e2e (decision 0059): the real runner, with each bot's computer a temporary
-// directory instead of a container, so no Docker. Its agent reaches the model through the control
-// plane's gateway, as in production, and the person's provider is the pretend model (e2e/fake-model.ts).
-// A computer is "running" once it is woken, and then has a pretend desktop.
 import { startRuntime } from "../packages/runtime-client/src/runner";
 import type { ThreadWorkspaces } from "../packages/runtime-client/src/sandbox";
 import { directoryWorkspaces } from "../packages/runtime-client/src/testing/directory-workspaces";
@@ -13,7 +9,6 @@ const url = process.env.AVEN_URL ?? "http://localhost:8100";
 
 type Desktop = NonNullable<ReturnType<ThreadWorkspaces["desktop"]>>;
 
-// A desktop a viewer can connect to: the RFB server answers the bytes it is written.
 function pretendDesktop() {
   const stream = new TransformStream<Uint8Array, Uint8Array>();
   const writer = stream.writable.getWriter();

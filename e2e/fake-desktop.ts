@@ -1,15 +1,11 @@
-// A pretend desktop for e2e: a small RFB (VNC) server that shows one red screen and reports the keys
-// and clicks it receives. It is what a viewer's bytes are fed to, and what it answers goes to `reply`.
 export const WIDTH = 640;
 export const HEIGHT = 400;
 
 const text = (value: string) => new TextEncoder().encode(value);
 
-// What a viewer sends, one message at a time, in the order the RFB protocol defines.
 export class FakeDesktop {
   #buffer = new Uint8Array(0);
   #stage: "version" | "security" | "init" | "messages" = "version";
-  // Where the red channel sits in a pixel; the viewer changes it with SetPixelFormat.
   #redShift = 16;
 
   constructor(
@@ -27,7 +23,6 @@ export class FakeDesktop {
     while (this.#step());
   }
 
-  // Handles one message if all of it has arrived.
   #step() {
     const view = new DataView(this.#buffer.buffer, this.#buffer.byteOffset, this.#buffer.length);
     const take = (length: number) => {
@@ -37,13 +32,13 @@ export class FakeDesktop {
     if (this.#stage === "version") {
       if (this.#buffer.length < 12) return false;
       this.#stage = "security";
-      this.reply(new Uint8Array([1, 1])); // one security type: none
+      this.reply(new Uint8Array([1, 1]));
       return take(12);
     }
     if (this.#stage === "security") {
       if (this.#buffer.length < 1) return false;
       this.#stage = "init";
-      this.reply(new Uint8Array(4)); // security result: ok
+      this.reply(new Uint8Array(4));
       return take(1);
     }
     if (this.#stage === "init") {
@@ -54,25 +49,24 @@ export class FakeDesktop {
     }
     if (this.#buffer.length < 1) return false;
     switch (view.getUint8(0)) {
-      case 0: // SetPixelFormat
+      case 0:
         if (this.#buffer.length < 20) return false;
         this.#redShift = view.getUint8(14);
         return take(20);
       case 2: {
-        // SetEncodings
         if (this.#buffer.length < 4) return false;
         const length = 4 + 4 * view.getUint16(2);
         return this.#buffer.length >= length && take(length);
       }
-      case 3: // FramebufferUpdateRequest
+      case 3:
         if (this.#buffer.length < 10) return false;
         if (view.getUint8(1) === 0) this.reply(this.#screen());
         return take(10);
-      case 4: // KeyEvent
+      case 4:
         if (this.#buffer.length < 8) return false;
         this.event({ type: "key", down: view.getUint8(1) === 1, keysym: view.getUint32(4) });
         return take(8);
-      case 5: // PointerEvent
+      case 5:
         if (this.#buffer.length < 6) return false;
         this.event({
           type: "pointer",
@@ -82,7 +76,6 @@ export class FakeDesktop {
         });
         return take(6);
       case 6: {
-        // ClientCutText
         if (this.#buffer.length < 8) return false;
         const length = 8 + view.getUint32(4);
         return this.#buffer.length >= length && take(length);
@@ -98,7 +91,6 @@ export class FakeDesktop {
     const view = new DataView(init.buffer);
     view.setUint16(0, WIDTH);
     view.setUint16(2, HEIGHT);
-    // 32 bits per pixel, 24 deep, little-endian, true colour, 8 bits each, red at 16, green at 8.
     init.set([32, 24, 0, 1], 4);
     view.setUint16(8, 255);
     view.setUint16(10, 255);
@@ -109,16 +101,14 @@ export class FakeDesktop {
     return init;
   }
 
-  // One raw rectangle covering the screen, all red.
   #screen() {
     const header = new Uint8Array(16);
     const view = new DataView(header.buffer);
-    view.setUint16(2, 1); // one rectangle
+    view.setUint16(2, 1);
     view.setUint16(8, WIDTH);
     view.setUint16(10, HEIGHT);
     const message = new Uint8Array(16 + WIDTH * HEIGHT * 4);
     message.set(header);
-    // The viewer asked for little-endian 32-bit pixels with red at `#redShift`.
     for (let at = 16; at < message.length; at += 4) {
       new DataView(message.buffer).setUint32(at, 255 << this.#redShift, true);
     }

@@ -4,7 +4,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// The desktop panel opens when asked for, from the thread's toolbar.
 async function openDesktop(page: Page, threadId: string) {
   await page.goto(`/threads/${threadId}`);
   await page.getByRole("button", { name: "Desktop", exact: true }).click();
@@ -56,7 +55,6 @@ test.describe("a thread's desktop", () => {
     const panel = page.getByRole("region", { name: "Desktop" });
     await expect(panel.getByText("Watching. Take over to click and type.")).toBeVisible();
 
-    // The pretend desktop is all red; noVNC draws it on a canvas.
     const canvas = panel.locator("canvas");
     await expect(canvas).toBeVisible();
     await expect(async () => {
@@ -67,7 +65,6 @@ test.describe("a thread's desktop", () => {
       expect(pixel).toEqual([255, 0, 0, 255]);
     }).toPass({ timeout: 10_000 });
 
-    // Watching sends nothing to the desktop.
     await canvas.click({ position: { x: 50, y: 50 } });
     await page.waitForTimeout(500);
     expect(events.filter((entry) => entry.type === "pointer")).toEqual([]);
@@ -104,7 +101,6 @@ test.describe("a thread's desktop", () => {
       panel.getByText("You are in control. The agent's inputs are paused."),
     ).toBeVisible();
 
-    // The runner goes away, and the stream with it, while the person is in control.
     child.kill();
     await expect(panel.getByText("The desktop connection ended.")).toBeVisible();
     await page.waitForTimeout(300);

@@ -15,8 +15,6 @@ type Fixture = {
   expected: { messages: ChatMessage[]; running: boolean };
 };
 
-// The same fixtures drive the Swift client's tests (clients/macos), so the two reducers cannot
-// drift apart without one of the suites failing.
 const fixtures: Fixture[] = await Bun.file(
   new URL("../fixtures/reducer.json", import.meta.url),
 ).json();
@@ -36,8 +34,6 @@ describe("applyEvent", () => {
 });
 
 describe("applyEvent with blank text", () => {
-  // Some models open each step with blank text before a tool call (kept out of the shared fixtures,
-  // which the Swift client also runs).
   test("blank text before a tool call is not a part, so the calls stay together", () => {
     const tool = (id: string) => ({
       id,
@@ -178,9 +174,6 @@ describe("applyEvent with subagents", () => {
 });
 
 describe("applyEvent with a steering message", () => {
-  // The person spoke while the agent worked and the agent took it (decision 0098): their message
-  // comes next and what the agent writes afterwards is a message of its own, as a reload shows it.
-  // Kept out of the shared fixtures, which the Swift client also runs.
   test("a message the agent took is the person's next, followed by a fresh reply", () => {
     const events: RunEvent[] = [
       { type: "run_start", prompt: "build it" },

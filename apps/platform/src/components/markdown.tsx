@@ -6,8 +6,6 @@ import { GithubMark } from "./brand-icons";
 
 const PULL_REQUEST_URL = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 
-// Agent text can link anywhere; never navigate the app away from the thread. A pull request link
-// carries the GitHub mark, so it reads as one at a glance.
 function ExternalLink({
   node: _node,
   children,
@@ -25,10 +23,6 @@ function ExternalLink({
 
 const components = { a: ExternalLink };
 
-// Markdown as prose. Wide code and tables scroll inside themselves, never the page. While `live`,
-// text arriving at the end fades in (the reveal in index.css) and only the block being written is
-// parsed again, so a streaming answer reads as one continuous flow. Pacing bursty text is the
-// caller's (a thread's `useSmoothParts`, decision 0028).
 export function Markdown({
   children,
   live = false,
@@ -36,7 +30,6 @@ export function Markdown({
 }: {
   children: string;
   live?: boolean;
-  /** Element overrides beside the external link, such as a caller's own inline code. */
   components?: Components;
 }) {
   return (

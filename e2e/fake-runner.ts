@@ -1,17 +1,11 @@
-// A runner for e2e whose desktop is pretend: it speaks the runtime wire and, for a viewer, a small
-// RFB (VNC) server that shows one red screen and reports the keys and clicks it receives. No
-// Docker. What it learns is printed as `EVENT {json}` lines for the spec to read.
 import { WIRE_VERSION, type ControlPlaneToRuntime } from "../packages/protocol/src/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
 import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
 
 const base = process.env.AVEN_URL!;
 const token = process.env.AVEN_RUNTIME_TOKEN!;
-// With NO_SANDBOX the thread has no running container, as before its first run; waking it starts one.
 let sandboxRunning = process.env.NO_SANDBOX !== "1";
 
-// With FAKE_QUESTION a run asks the user a question and stops (`interaction`), and the answer
-// resumes it: the runs of a real agent that used `ask_user`, without a model.
 const QUESTIONS = [
   {
     id: "color",
@@ -23,11 +17,8 @@ const QUESTIONS = [
     allowCustom: true,
   },
 ];
-// With FAKE_SECRET it is a `request_secret` instead (decision 0047): one question whose id is the
-// variable to set. What the resumed run is given, the answer and the variables, is printed.
 const SECRET = process.env.FAKE_SECRET === "1";
 const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
-// A run that hands two tasks to subagents (decision 0057), tells what they do, and ends.
 const SUBAGENTS = process.env.FAKE_SUBAGENTS === "1";
 const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
 const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";
@@ -51,14 +42,11 @@ const ws = new WebSocket(`${base.replace(/^http/, "ws").replace(/\/$/, "")}/runt
 } as unknown as string[]);
 ws.binaryType = "arraybuffer";
 const viewers = new Map<string, FakeDesktop>();
-// A pretend shell: it shows a prompt, echoes what is typed and answers each line with `ran: <line>`.
 const terminals = new Map<string, { line: string }>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
 
-// A run's events and its end are numbered from 1 (the wire since version 9).
 const seqs = new Map<string, number>();
-// The runs that have ended, so a stopped one is not ended twice by its own clock.
 const ended = new Set<string>();
 const numbered = (runId: string) => {
   const seq = (seqs.get(runId) ?? 0) + 1;
@@ -66,10 +54,7 @@ const numbered = (runId: string) => {
   return seq;
 };
 
-// With FAKE_STATS (the JSON of a `host.stats` message's stats) the runner tells how loaded its
-// machine is, as a runner of this release does; without it, as an older runner that never does.
 ws.onopen = () => {
-  // With FAKE_BUILD it says which release it is, and with FAKE_CAN_UPDATE that it can update itself.
   send({
     type: "hello",
     version: WIRE_VERSION,
@@ -131,12 +116,9 @@ ws.onmessage = ({ data }) => {
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.cancel") {
-    // A stopped run ends at once as cancelled, as a runner of this release stops one.
     const { runId } = message;
     ended.add(runId);
     event({ type: "cancelled", runId });
-    // A cancelled run ends as an error, as a runner of this release ends one: the control plane
-    // knows it asked for the stop and tells clients it was cancelled (decision 0012).
     send({
       type: "run.end",
       runId,
@@ -195,7 +177,6 @@ ws.onmessage = ({ data }) => {
     say({ type: "text", delta: "Auth is in src/auth.ts; the test could not be written." });
     send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
   } else if (message.type === "run.start" && !ASKING) {
-    // A plain run is left going, unless FAKE_RUN_ENDS says it finishes; the spec reads what it was given.
     event({
       type: "started",
       prompt: message.prompt,
@@ -206,7 +187,6 @@ ws.onmessage = ({ data }) => {
       const { runId } = message;
       if (ended.has(runId)) return;
       ended.add(runId);
-      // With FAKE_RUN_FAILS the run ends with that error, as a model provider that keeps refusing does.
       if (process.env.FAKE_RUN_FAILS) {
         const error = process.env.FAKE_RUN_FAILS;
         send({ type: "run.end", runId, seq: numbered(runId), outcome: "error", error });
@@ -221,7 +201,6 @@ ws.onmessage = ({ data }) => {
       send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
     };
     if (process.env.FAKE_RUN_ENDS) finish();
-    // With FAKE_RUN_ENDS_AFTER (milliseconds) it finishes later, while a spec is elsewhere.
     else if (process.env.FAKE_RUN_ENDS_AFTER)
       setTimeout(finish, Number(process.env.FAKE_RUN_ENDS_AFTER));
   } else if (message.type === "run.start" && ASKING) {
@@ -285,7 +264,6 @@ ws.onmessage = ({ data }) => {
   }
 };
 
-// What the pretend workspace has changed: one file in the last turn, and one more over the thread.
 const TURN_PATCH = `diff --git a/src/greeting.ts b/src/greeting.ts
 index 1111111..2222222 100644
 --- a/src/greeting.ts
@@ -305,7 +283,6 @@ index 0000000..3333333
 +# Notes
 `;
 
-// The pretend workspace's folders and the text of its files.
 const WORKSPACE: Record<string, { name: string; type: "file" | "directory" }[]> = {
   "": [
     { name: "src", type: "directory" },
@@ -317,16 +294,12 @@ const WORKSPACE_FILES: Record<string, string> = {
   "README.md": "# Notes\n",
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
-// With FAKE_AVEN_FILES (`setup`, `ship`, or both) the pretend repository has what /setup-env and
-// /setup-ship write, which Ship waits for (decision 0083).
 const AVEN_FILES = (process.env.FAKE_AVEN_FILES ?? "").split(",");
 if (AVEN_FILES.includes("setup")) WORKSPACE_FILES[".aven/setup"] = "#!/bin/sh\nbun install\n";
 if (AVEN_FILES.includes("ship")) {
   WORKSPACE_FILES[".aven/ship.md"] = "Commit, push, then open it with gh pr create --draft.\n";
 }
 
-// With FAKE_PROCESSES the pretend sandbox has a server running and a test that failed (decision
-// 0071); stopping the server ends it. Without it, nothing runs in the background.
 type PretendProcess = {
   id: string;
   command: string;
@@ -360,9 +333,6 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { holder?: string; leaseMs?: number };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
   if (call.method === "run.steer") {
-    // The person spoke while the run goes on (decision 0098). With FAKE_STEER_REFUSES the runner says
-    // why it cannot take it; otherwise it takes it and the agent reads it a moment later, as it
-    // would at the end of its tool, which FAKE_STEER_APPLIES_AFTER (milliseconds) sets.
     const { runId, steerId, prompt } = call.params as {
       runId: string;
       steerId: string;
@@ -421,7 +391,6 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
   }
   if (call.method === "runner.update") {
-    // Asked to update itself (decision 0146): it agrees, or with FAKE_UPDATE_BUSY says why not.
     return reply(
       process.env.FAKE_UPDATE_BUSY
         ? { status: "busy", reason: process.env.FAKE_UPDATE_BUSY }
@@ -429,7 +398,6 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     );
   }
   if (call.method === "sandbox.release") {
-    // The thread was put away (decision 0118): its sandbox goes, its files staying.
     const { threadId } = call.params as { threadId: string };
     event({ type: "sandbox.release", threadId });
     sandboxRunning = false;

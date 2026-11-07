@@ -13,8 +13,6 @@ import {
 
 import { users } from "./users";
 
-// A task in the person's cockpit (decision 0104), as an issue tracker has one: a number of its own
-// among the person's tasks, a status, a priority, a due day and its place in its status's column.
 export const cockpitTasks = pgTable(
   "cockpit_tasks",
   {

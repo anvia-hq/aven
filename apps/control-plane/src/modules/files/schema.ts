@@ -1,8 +1,6 @@
 import { FILE_SEARCH_LIMIT, type FileContent, type FileEntry } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-// A path inside the workspace, empty for its top. The runner confines it; this only keeps the
-// call small and well formed.
 export const filesQuery = z.object({
   path: z
     .string()
@@ -11,7 +9,6 @@ export const filesQuery = z.object({
     .default(""),
 });
 
-// What the composer's `@` has typed so far (decision 0036); empty lists the workspace's first files.
 export const searchQuery = z.object({
   q: z
     .string()
@@ -20,8 +17,6 @@ export const searchQuery = z.object({
     .default(""),
 });
 
-// A runtime is not trusted, so what it answers is checked before it is used. Null is a runtime
-// saying the thread has no workspace yet.
 export const folderAnswer: z.ZodType<{ entries: FileEntry[] } | null> = z
   .object({
     entries: z.array(z.object({ name: z.string(), type: z.enum(["file", "directory"]) })),

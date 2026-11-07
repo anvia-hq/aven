@@ -14,7 +14,6 @@ const credential = JSON.stringify({
   client_email: "agent@my-project-123.iam.gserviceaccount.com",
   private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
   private_key_id: "abcdef123456",
-  // A key must never choose where it is traded: this is ignored.
   token_uri: "https://evil.example.com/token",
 });
 
@@ -67,7 +66,6 @@ describe("createGoogleTokens", () => {
     const verify = createVerify("RSA-SHA256").update(`${header}.${claims}`);
     expect(verify.verify(publicKey, Buffer.from(signature, "base64url"))).toBe(true);
 
-    // Kept until shortly before it ends, then traded again.
     now += 50 * 60 * 1000;
     expect(await accessToken(credential)).toBe("ya29.minted");
     expect(calls).toHaveLength(1);

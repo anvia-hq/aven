@@ -7,12 +7,7 @@ import type { ThreadDiffResponse, ThreadDiffScope } from "../types";
 
 const POLL_MS = 4_000;
 
-// A thread's changes, read when asked for and again as the agent works: while a run goes on they
-// are looked at every few seconds, and once more when it ends. What was shown stays until the new
-// answer arrives, so the list does not flicker.
 export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running: boolean) {
-  // `running` changes the polling, so the end of a run is looked at once more. What was known
-  // about another thread says nothing about this one.
   const answer = useRequest<ThreadDiffResponse>(`/threads/${threadId}/diff?scope=${scope}`, {
     key: scope,
     pollMs: running ? POLL_MS : undefined,
@@ -23,14 +18,12 @@ export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running:
   const patch = response?.available ? response : null;
   const files = useMemo(() => (patch ? parsePatch(patch.patch) : []), [patch]);
 
-  // Lines added and removed over every file.
   const additions = useMemo(() => files.reduce((sum, file) => sum + file.additions, 0), [files]);
   const deletions = useMemo(() => files.reduce((sum, file) => sum + file.deletions, 0), [files]);
 
   return {
     loaded: answer !== null,
     problem: answer?.error ?? null,
-    /** False when the thread has no workspace yet, which is before its first run. */
     available: response ? response.available : null,
     truncated: patch?.truncated ?? false,
     files,

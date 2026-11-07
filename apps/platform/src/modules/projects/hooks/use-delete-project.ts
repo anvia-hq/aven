@@ -7,8 +7,6 @@ import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { Project } from "../types";
 import { useProjects } from "./use-projects";
 
-// Deletes a project (decision 0094): it goes from the lists, and its threads, archived, from the
-// sidebar. The person is taken back to the projects.
 export function useDeleteProject() {
   const { refresh: refreshProjects } = useProjects();
   const { refresh: refreshThreads } = useThreads();

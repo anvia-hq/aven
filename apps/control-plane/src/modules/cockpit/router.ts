@@ -15,7 +15,6 @@ import {
 } from "./schema";
 import { cockpitService } from "./service";
 
-// A person's cockpit (decision 0104): theirs in every workspace, so no `org: true`.
 export const cockpitRouter = new Elysia({ prefix: "/cockpit" })
   .use(authRouter)
   .get("/tags", ({ user }) => cockpitService.tags(user.id), { auth: true })

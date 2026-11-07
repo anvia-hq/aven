@@ -8,7 +8,6 @@ import { markTurn, threadDiff } from "./thread-diff";
 
 const roots: string[] = [];
 
-// A repository with a remote, a thread branch and one commit on it, as a workspace is after the clone.
 async function workspace({ branchClone = false } = {}) {
   const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
   roots.push(base);
@@ -23,7 +22,6 @@ async function workspace({ branchClone = false } = {}) {
   await writeFile(join(remote, "a.txt"), "one\ntwo\n");
   await sh(remote, "add", ".");
   await sh(remote, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first");
-  // Aven clones one named branch, which leaves `origin/HEAD` unset (decision 0013).
   const clone = branchClone ? ["--single-branch", "--branch", "main"] : [];
   await sh(root, "clone", "-q", ...clone, remote, ".");
   await sh(root, "checkout", "-q", "-b", "aven/test");
@@ -64,12 +62,10 @@ describe("a thread's changes", () => {
     await sh(root, "add", ".");
     await commit("work");
 
-    // Not pushed yet: everything on the branch is still to ship.
     expect((await threadDiff(root, "unshipped"))?.patch).toContain("+++ b/b.txt");
 
     await sh(root, "push", "-q", "-u", "origin", "HEAD");
     expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
-    // The pushed branch is not the default one: the pull request still holds b.txt.
     expect((await threadDiff(root, "all"))?.patch).toContain("+++ b/b.txt");
 
     await writeFile(join(root, "c.txt"), "later\n");
@@ -103,7 +99,6 @@ describe("a thread's changes", () => {
     expect(turn).toContain("+++ b/b.txt");
     expect(turn).toContain("+++ b/c.txt");
     expect(turn).not.toContain("three");
-    // The whole branch still has the earlier change.
     expect((await threadDiff(root, "all"))?.patch).toContain("+three");
   });
 

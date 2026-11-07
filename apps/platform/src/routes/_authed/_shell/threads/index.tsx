@@ -11,7 +11,6 @@ import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
-  // The project to start in, which a project's page asks for; none is the person's own choice.
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project:
       typeof search.project === "string" && search.project !== "" ? search.project : undefined,
@@ -24,11 +23,9 @@ function NewThread() {
   const { projects, loaded } = useProjects();
   const { threads, shared } = useThreads();
   const recent = threads.filter((thread) => thread.state === "open").slice(0, 3);
-  // What the rest of the workspace shares to read (decision 0084).
   const sharedRecent = shared.filter((thread) => thread.state === "open").slice(0, 3);
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  // The person's own choice, else the project the address asks for if it is one of theirs.
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
@@ -38,7 +35,6 @@ function NewThread() {
     <div className="flex min-h-svh flex-col md:min-h-[calc(100svh-1rem-2px)]">
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
-        {/* Only once there are projects: before, the empty state below has the button. */}
         {loaded && projects.length > 0 && (
           <ImportRepositoryDialog size="sm" onImported={(project) => setProjectId(project.id)} />
         )}
@@ -52,7 +48,6 @@ function NewThread() {
           </p>
         </div>
 
-        {/* Nothing until projects load: swapping the composer for the empty state would remount, and so close, an open dialog. */}
         {loaded &&
           (projects.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">

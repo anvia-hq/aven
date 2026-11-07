@@ -5,8 +5,6 @@ export type DayGroup = { key: string; label: string; entries: CommitEntry[] };
 const dayKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-// Commits, newest first, under the day they were made in the reader's own time zone: Today,
-// Yesterday, then the date. A commit without a date is left out of every day.
 export function groupByDay(entries: CommitEntry[], now = new Date()): DayGroup[] {
   const today = dayKey(now);
   const yesterday = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));

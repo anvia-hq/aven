@@ -9,11 +9,8 @@ import { threadParams } from "../threads/schema";
 import { runnerFor } from "../runtimes/ask-runner";
 import { createDesktopService } from "./service";
 
-// noVNC offers this subprotocol and fails the connection if the server does not pick it.
 const VIEWER_SUBPROTOCOL = "binary";
 
-// Watching and taking over a thread's desktop (decision 0015). `/stream` is a WebSocket carrying
-// the VNC session in binary messages, as noVNC expects.
 export const desktopRouter = (hub: RuntimeHub) => {
   const service = createDesktopService(runnerFor(hub), { what: "The thread's sandbox" });
   const viewers = bridgeToRunner<ViewerHandle>("The viewer is too slow");
@@ -45,7 +42,6 @@ export const desktopRouter = (hub: RuntimeHub) => {
     .ws("/:id/desktop/stream", {
       thread: "own",
       params: threadParams,
-      // `thread` has already found it, before any socket is upgraded.
       beforeHandle({ request, set, status }) {
         if (!originAllowed(request)) return status(403, "Forbidden origin");
         const offered = request.headers.get("sec-websocket-protocol") ?? "";

@@ -7,8 +7,6 @@ import { repoUrl } from "../repo-links";
 import type { Project } from "../types";
 import { ProjectTile } from "./project-tile";
 
-// The project as a repository page opens: its tile and name, and the repository on GitHub with its
-// default branch.
 export function ProjectTitle({ project }: { project: Project }) {
   const palette = useProjectPalettes().get(project.id);
 

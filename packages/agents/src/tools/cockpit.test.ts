@@ -3,7 +3,6 @@ import type { CockpitCommand } from "@aven/protocol/cockpit";
 
 import { createCockpitTool } from "./cockpit";
 
-// What the model sends, any of the tool's fields: the tool's own type is the read-only one's.
 type Input = Record<string, unknown>;
 const call = (tool: ReturnType<typeof createCockpitTool>, input: Input) =>
   tool.call(input as Parameters<typeof tool.call>[0]);
@@ -39,7 +38,6 @@ describe("cockpit", () => {
     expect(asked).toEqual([{ command: "list", kind: "inbox", tag: "work" }]);
     const definition = JSON.stringify(await tool.definition(""));
     expect(definition).toContain("only read");
-    // Nothing that sets a record is offered.
     expect(definition).not.toContain('"body"');
   });
 

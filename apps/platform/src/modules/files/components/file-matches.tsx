@@ -11,7 +11,6 @@ type Props = {
 
 const MAX_MATCHES = 100;
 
-// Files whose path holds what was typed, among the folders that have been opened.
 export function FileMatches({ folders, query, active, onOpenFile }: Props) {
   const needle = query.trim().toLowerCase();
   const matches = Object.entries(folders)

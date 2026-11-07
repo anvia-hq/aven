@@ -13,9 +13,6 @@ import {
   type SandboxReleaseParams,
 } from "@aven/protocol/runtime-wire";
 
-// The params of the control plane's calls, checked: the control plane is trusted, but a call of the
-// wrong shape is answered with an error rather than acted on.
-
 const invalid = () => new Error("Invalid parameters");
 
 const isDiffScope = (value: unknown): value is DiffScope =>
@@ -52,7 +49,6 @@ export function processesCallParams(params: unknown): ProcessesCallParams {
   return { threadId, processId };
 }
 
-/** What `runner.update` carries: a release number, which is passed to a command and so is checked. */
 export function runnerUpdateParams(params: unknown): RunnerUpdateParams {
   const { release } = asRecord(params);
   if (release === undefined || release === null) return {};
@@ -60,14 +56,12 @@ export function runnerUpdateParams(params: unknown): RunnerUpdateParams {
   return { release };
 }
 
-/** What `sandbox.release` carries: the thread whose sandbox is freed (decision 0118). */
 export function sandboxReleaseParams(params: unknown): SandboxReleaseParams {
   const { threadId } = asRecord(params);
   if (typeof threadId !== "string") throw invalid();
   return { threadId };
 }
 
-/** Anything but a string `holder`, a number `leaseMs`, `force: true` or `bot: true` is left out. */
 export function desktopCallParams(
   params: unknown,
 ): DesktopCallParams & { force: boolean; bot: boolean } {
@@ -82,7 +76,6 @@ export function desktopCallParams(
   };
 }
 
-/** What `run.steer` carries: the run, the message's id, its words and the mentions in them. */
 export type SteerParams = {
   runId: string;
   steerId: string;

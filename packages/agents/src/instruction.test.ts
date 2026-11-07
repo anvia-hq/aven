@@ -32,7 +32,6 @@ test("the numbers follow the budget the agent is given", () => {
 });
 
 test("a goal's own session is not told to use define_goal, which it does not have", () => {
-  // Only the section on the budget: the rest of the instructions name ask_user and more.
   const section = codingInstructions(200, false)
     .split("<long_tasks>")[1]!
     .split("</long_tasks>")[0]!;
@@ -54,7 +53,6 @@ test("a goal's own session is told to work in tool calls and report a major step
   expect(section).toContain("spend your turns on tool calls");
   expect(section).toContain("only when something major or important has happened");
   expect(section).toContain("one paragraph of two to four full sentences");
-  // Its tags are still closed and named once with the new section among them.
   const opens = [...text.matchAll(/^<([a-z_]+)>$/gm)].map((match) => match[1]);
   const closes = [...text.matchAll(/^<\/([a-z_]+)>$/gm)].map((match) => match[1]);
   expect(closes).toEqual(opens);

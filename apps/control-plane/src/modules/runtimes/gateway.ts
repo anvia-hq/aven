@@ -29,12 +29,9 @@ const SEGMENTS = {
   "openai-compatible": "compatible",
 } as const satisfies Record<Provider, string>;
 
-// The only calls a runtime may make, per provider. Everything else (model lists, files, batches)
-// stays unreachable.
 const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   anthropic: ["/v1/messages"],
   openai: ["/responses", "/chat/completions"],
-  // Gemini names the model in the path, so its calls are matched by `GEMINI_PATH` instead.
   gemini: [],
   bedrock: ["/chat/completions"],
   vertex: ["/chat/completions"],
@@ -42,7 +39,6 @@ const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   "openai-compatible": ["/chat/completions"],
 };
 
-// Gemini's API: the model and the call are one path segment, `models/<id>:streamGenerateContent`.
 const GEMINI_PATH = /^\/v1(?:beta)?\/models\/[^/:?]+:(generateContent|streamGenerateContent)$/;
 
 const allowed = (provider: Provider, path: string) =>
@@ -53,9 +49,6 @@ const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-r
 
 type Grant = { model: ModelConfig; key: string | undefined };
 
-// A thread's token is derived from this, so it stays the same from run to run and across a restart
-// of the control plane. Without a configured secret it is random per process, and a thread that
-// waits for an answer across a restart can no longer continue.
 const TOKEN_SECRET =
   process.env.PROVIDER_ENCRYPTION_KEY ||
   process.env.BETTER_AUTH_SECRET ||
@@ -64,21 +57,15 @@ const TOKEN_SECRET =
 const tokenFor = (scope: string) =>
   `${TOKEN_PREFIX}${createHmac("sha256", TOKEN_SECRET).update(`run-gateway:${scope}`).digest("base64url")}`;
 
-// Lets a runtime use a model without ever holding the provider key (decision 0008). Each run gets
-// a token that maps to the sender's chosen provider, model and effort; the gateway adds the key,
-// overwrites the model and effort in the request and streams the vendor's answer back untouched.
 export class RunGateway {
   #grants = new Map<string, Grant>();
   #tokens = new Map<string, string>();
 
-  // `accessToken` turns a Vertex AI provider's credential into the token Google takes.
   constructor(
     private upstreams: Upstreams = DEFAULT_UPSTREAMS,
     private accessToken: (credential: string) => Promise<string> = googleAccessToken,
   ) {}
 
-  // The key the model is reached with: the provider's own, else the environment's. Throws when
-  // there is none, so a person is told before anything starts.
   #keyOf(config: ModelConfig) {
     const envKey = ENV_KEYS[config.provider];
     const key = config.apiKey ?? (envKey && process.env[envKey]);
@@ -95,15 +82,10 @@ export class RunGateway {
     return key;
   }
 
-  // Throws when the model cannot be used (such as a missing environment key), and grants nothing.
   check(config: ModelConfig) {
     this.#keyOf(config);
   }
 
-  // Throws when the model cannot be used (such as a missing environment key), before any run starts.
-  // With a `scope` (a thread), the token is the same every time: a run parked on the agent's
-  // question keeps the model client it was built with, so the run that answers must reach the
-  // model with that token (decision 0021). The grant still lasts only as long as the run.
   issue(runId: string, config: ModelConfig, scope?: string): RunModel {
     const key = this.#keyOf(config);
     const token = scope
@@ -122,7 +104,6 @@ export class RunGateway {
     };
   }
 
-  // Ends the grant with the run, so a token a runtime kept is worthless afterwards.
   revoke(runId: string) {
     const token = this.#tokens.get(runId);
     if (!token) return;
@@ -174,8 +155,6 @@ export class RunGateway {
         headers: passHeaders(upstream.headers, PASS_RESPONSE_HEADERS),
       });
     } catch (error) {
-      // A runner that went away (the run was stopped) is not a failure; anything else is told, since
-      // the runner only sees a 502 and nothing says why the provider could not be reached.
       if (!request.signal.aborted) {
         console.warn(
           `Model gateway: a request to ${provider} model ${grant.model.modelId} failed:`,
@@ -188,8 +167,6 @@ export class RunGateway {
 
   #upstreamUrl(model: ModelConfig, path: string, request: Request) {
     if (model.provider === "gemini") {
-      // The sender's model replaces the one the runtime named in the path; `alt=sse` is the only
-      // query it may add (it is what makes the answer stream).
       const call = path.slice(path.lastIndexOf(":"));
       const id = encodeURIComponent(model.modelId ?? defaultModelId("gemini") ?? "");
       const sse = new URL(request.url).searchParams.get("alt") === "sse" ? "?alt=sse" : "";
@@ -197,7 +174,6 @@ export class RunGateway {
     }
     if (model.provider === "anthropic") return `${this.upstreams.anthropic}${path}`;
     if (model.provider === "openai") return `${this.upstreams.openai}${path}`;
-    // The resource's v1 API, the same root `@anvia/azure` builds from a resource URL.
     if (model.provider === "azure") return `${model.baseUrl?.replace(/\/+$/, "")}/openai/v1${path}`;
     return `${model.baseUrl?.replace(/\/$/, "")}${path}`;
   }
@@ -214,7 +190,6 @@ function passHeaders(from: Headers, names: readonly string[]) {
   return headers;
 }
 
-// The runtime's own credentials never go upstream: the run's key does.
 function upstreamHeaders(request: Request, grant: Grant) {
   const headers = passHeaders(request.headers, PASS_REQUEST_HEADERS);
   headers.set("content-type", "application/json");
@@ -229,9 +204,7 @@ function upstreamHeaders(request: Request, grant: Grant) {
 const record = (value: unknown) =>
   typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
-// The runtime picks neither the model nor the reasoning effort: the sender's choice wins.
 function pin(body: Record<string, unknown>, model: ModelConfig, path: string) {
-  // Gemini's request has no model field: it is in the URL, which `#upstreamUrl` sets.
   if (model.provider === "gemini") return;
   body.model = model.modelId ?? defaultModelId(model.provider) ?? body.model;
   if (model.provider === "anthropic") pinAnthropicEffort(body, model.reasoningEffort);
@@ -247,7 +220,6 @@ function pinAnthropicEffort(body: Record<string, unknown>, effort: string | unde
 }
 
 function pinOpenAiEffort(body: Record<string, unknown>, effort: string | undefined, path: string) {
-  // Chat completions takes the level at the top level, the Responses API inside `reasoning`.
   if (path === "/chat/completions") {
     if (effort) body.reasoning_effort = effort;
     else delete body.reasoning_effort;

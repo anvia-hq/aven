@@ -15,11 +15,8 @@ export const COCKPIT_TOOL_NAME = "cockpit";
 const READS = ["list", "get", "tags"] as const;
 const WRITES = ["create", "update", "delete"] as const;
 
-/** What the host does with a command: the answer the model reads. */
 export type CockpitHost = (command: CockpitCommand) => Promise<string>;
 
-// One tool, a command and its fields, flat so that every provider takes the schema. An agent that
-// may only read is not offered the fields that change a record.
 function schemaFor(access: CockpitAccess) {
   const read = {
     command: z.enum(access === "write" ? [...READS, ...WRITES] : READS).describe("What to do."),
@@ -93,7 +90,6 @@ function required<K extends keyof CockpitInput>(input: CockpitInput, key: K) {
   return value as NonNullable<CockpitInput[K]>;
 }
 
-// What a create or update sets: the fields given, and no others.
 function fieldsOf(input: CockpitInput): CockpitFields {
   const fields: CockpitFields = {
     title: input.title,
@@ -110,7 +106,6 @@ function fieldsOf(input: CockpitInput): CockpitFields {
   ) as CockpitFields;
 }
 
-/** The command the model's input names, with the fields it needs. */
 export function cockpitCommandOf(input: CockpitInput): CockpitCommand {
   switch (input.command) {
     case "tags":
@@ -144,8 +139,6 @@ export function cockpitCommandOf(input: CockpitInput): CockpitCommand {
   }
 }
 
-// The person's cockpit (decision 0109): their inbox, tasks and notes. What the agent may do there is
-// the host's and the control plane's to say: the tool only names the command.
 export function createCockpitTool(host: CockpitHost, access: CockpitAccess) {
   const reads =
     "list shows records (filter by tag, query, a task's status or an inbox item's done), get shows one in full with its body as markdown, tags lists the person's tags.";

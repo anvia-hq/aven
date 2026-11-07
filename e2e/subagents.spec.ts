@@ -4,8 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-// The subagents an agent hands tasks to (decision 0057), on a runner that hands over two and tells
-// how each went (e2e/fake-runner.ts, FAKE_SUBAGENTS).
 test.describe("subagents", () => {
   let runner: ChildProcess | undefined;
   test.afterEach(() => {
@@ -15,7 +13,6 @@ test.describe("subagents", () => {
 
   test("each shows as a card with its work and what it sent back", async ({ page }) => {
     await registerUser(page, "subs", "Sub Agents");
-    // The run needs a model grant; the pretend runner never calls the model.
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
@@ -33,17 +30,14 @@ test.describe("subagents", () => {
     await expect(explorer).toContainText("1 tool call");
     await expect(page.getByRole("button", { name: /Add a test/ })).toContainText("general");
 
-    // Opened, a subagent shows the tool it called and what it said.
     await explorer.click();
     await expect(page.getByRole("button", { name: /Read src\/auth\.ts/ })).toBeVisible();
     await expect(page.getByText("Auth lives in")).toBeVisible();
 
-    // A subagent that failed says why.
     await page.getByRole("button", { name: /Add a test/ }).click();
     await expect(page.getByText("The model refused.")).toBeVisible();
     await expect(page.getByLabel("Failed")).toBeVisible();
 
-    // The agent's own message follows.
     await expect(page.getByText("the test could not be written")).toBeVisible();
   });
 });

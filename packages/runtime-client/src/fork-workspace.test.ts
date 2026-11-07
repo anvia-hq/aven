@@ -41,7 +41,6 @@ describe("forkWorkspace", () => {
     expect(await readFile(join(child, "node_modules", "dep.js"), "utf8")).toBe("dep");
     const branch = await git(["branch", "--show-current"], { cwd: child });
     expect(branch.stdout.trim()).toBe("aven/abcdef12");
-    // The parent is left as it was.
     expect((await git(["branch", "--show-current"], { cwd: parent })).stdout.trim()).toBe("main");
   });
 

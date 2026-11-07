@@ -15,7 +15,6 @@ async function newThread(page: Page) {
   return ((await made.json()) as { id: string }).id;
 }
 
-// Stands in for the event stream so no model is needed.
 async function streamSnapshot(page: Page, snapshot: Record<string, unknown>) {
   await page.route("**/api/threads/*/events", (route) =>
     route.fulfill({
@@ -54,7 +53,6 @@ test.describe("a thread's overview", () => {
     await expect(context).toContainText("33% used");
     await expect(context).toContainText("330K / 1M");
 
-    // The totals are every call added up, a different thing from the window the latest filled.
     const tokens = page.getByRole("region", { name: "Usage" });
     await expect(tokens.getByText("Input", { exact: true }).locator("..")).toContainText("80K");
     await expect(tokens.getByText("Output", { exact: true }).locator("..")).toContainText("3.4K");
@@ -95,7 +93,6 @@ test("the overview can be closed and opened again from the thread toolbar", asyn
   await expect(overview).toHaveCount(0);
 });
 
-// Serves the events one after another, as a real run does, for the thread page to attach to.
 function serveEvents(events: unknown[], gapMs: number) {
   const server = createServer((_request, response) => {
     response.writeHead(200, {
@@ -121,7 +118,6 @@ function serveEvents(events: unknown[], gapMs: number) {
   };
 }
 
-// A long conversation whose last answer streams in: 20 earlier exchanges, then `words` deltas.
 async function openStreamingThread(page: Page, words: number, gapMs: number) {
   await registerUser(page, "ins", "Overview User");
   const history = Array.from({ length: 20 }, (_, index) => [
@@ -184,9 +180,6 @@ test("a reader who scrolled up is not pulled back down by the answer streaming i
   }
 });
 
-// Some providers send many tokens at once, half a second apart (decision 0028). As in a real run,
-// the message exists before its text: the burst comes a second after the run starts (the blank
-// delta only fills the third event, which `serveEvents` sends at once).
 test("text that arrives in one burst is paced out, not shown at once", async ({ page }) => {
   await registerUser(page, "pace", "Pace User");
   const words = Array.from({ length: 80 }, (_, index) => `word${index}`);
@@ -213,8 +206,6 @@ test("text that arrives in one burst is paced out, not shown at once", async ({ 
   }
 });
 
-// Moving to another thread, the cards wait for its usage in the shape they will have, so nothing
-// appears, disappears or changes the column's height while the stream answers.
 test("the column keeps its height while another thread's usage arrives", async ({ page }) => {
   await registerUser(page, "ins", "Overview User");
   await addRunner(page);
@@ -239,7 +230,6 @@ test("the column keeps its height while another thread's usage arrives", async (
   await page.goto(`/threads/${ids[0]}`);
   await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
 
-  // The column's height in every frame from now on.
   await page.evaluate(() => {
     const heights = new Set<number>();
     (window as unknown as { __heights: Set<number> }).__heights = heights;

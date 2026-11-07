@@ -40,7 +40,6 @@ test.describe("project environment variables", () => {
     await expect(section).toContainText("••••••1234");
     await expect(page.getByText("sk-never-shown")).toHaveCount(0);
 
-    // A cold reload shows the same, and still not the secret.
     await page.reload();
     await expect(section).toContainText("postgres://localhost/app");
     await expect(page.getByText("sk-never-shown")).toHaveCount(0);
@@ -76,7 +75,6 @@ test.describe("project environment variables", () => {
 
     await section.getByRole("button", { name: "Edit" }).click();
     await expect(page.getByLabel("Value")).toHaveAttribute("required", "");
-    // Turning "Secret" off does not make the value optional: it would wipe the secret.
     await page.getByRole("switch", { name: "Secret" }).click();
     await expect(page.getByLabel("Value")).toHaveAttribute("required", "");
     await page.keyboard.press("Escape");
@@ -100,7 +98,6 @@ test.describe("project environment variables", () => {
   test("workspace and personal variables are set, listed and removed through their own routes", async ({
     page,
   }) => {
-    // The person who registers owns the organization, so they may change the workspace's values.
     await registerUser(page, "scopes", "Scopes User");
 
     for (const scope of ["workspace", "personal"]) {
@@ -122,7 +119,6 @@ test.describe("project environment variables", () => {
       }[];
       expect(listed.map((variable) => variable.name)).toEqual(["REGION", "TOKEN"]);
       expect(listed[0]!.value).toBe(`${scope}-region`);
-      // A secret is never given back.
       expect(listed[1]!.value).toBeNull();
       expect(JSON.stringify(listed)).not.toContain("secret-value");
 
@@ -138,7 +134,6 @@ test.describe("project environment variables", () => {
       expect(emptySecret.status()).toBe(422);
     }
 
-    // The two scopes are separate lists.
     const workspace = (await (await page.request.get("/api/variables/workspace")).json()) as {
       name: string;
     }[];
@@ -166,7 +161,6 @@ test.describe("project environment variables", () => {
     await expect(page.getByText("Variable saved")).toBeVisible();
     await expect(own).toContainText("MY_TOKEN");
 
-    // The owner of the workspace may change its variables.
     await page.goto("/settings/workspace-variables");
     const shared = page.getByRole("region", { name: "Workspace variables" });
     await expect(shared.getByRole("button", { name: "Add" })).toBeVisible();
@@ -175,7 +169,6 @@ test.describe("project environment variables", () => {
     await page.getByLabel("Value").fill("registry.example.com");
     await page.getByRole("button", { name: "Add variable" }).click();
     await expect(shared).toContainText("registry.example.com");
-    // Not the person's own list.
     await expect(shared).not.toContainText("MY_TOKEN");
 
     await shared.getByRole("button", { name: "Remove REGISTRY" }).click();
@@ -202,7 +195,6 @@ test.describe("project environment variables", () => {
     const inherited = page.getByRole("region", { name: "Inherited variables" });
     await expect(inherited).toContainText("REGION");
     await expect(inherited).toContainText("You");
-    // REGION is set in the workspace and by the person: shown once, where it wins.
     await expect(inherited.getByText("REGION")).toHaveCount(1);
     await expect(inherited).toContainText("TIER");
     await expect(inherited).toContainText("replaced by the project's");
@@ -244,7 +236,6 @@ test.describe("project environment variables", () => {
       expect(await response.text()).not.toContain("first");
     }
 
-    // The scopes are separate: the project's history is not the workspace's.
     const workspace = (await (await page.request.get(`${paths.workspace}/history`)).json()) as {
       name: string;
     }[];
@@ -275,7 +266,6 @@ test.describe("project environment variables", () => {
     await expect(dialog).toContainText("The values are never kept");
     const events = dialog.getByRole("list", { name: "Variable history" }).getByRole("listitem");
     await expect(events).toHaveCount(3);
-    // Newest first.
     await expect(events.nth(0)).toContainText("Variables User removed HISTORY_ME");
     await expect(events.nth(1)).toContainText("Variables User created HISTORY_SECRET");
     await expect(events.nth(1)).toContainText("Secret");

@@ -210,7 +210,6 @@ describe("reasoningControlsFor", () => {
       "low",
       "max",
     ]);
-    // Without a model there is nothing to build.
     expect(
       reasoningControlsFor({ provider: "openai-compatible", effortLevels: ["low"] }),
     ).toBeNull();
@@ -231,7 +230,6 @@ describe("anthropic request", () => {
     port: 0,
     async fetch(req) {
       bodies.push((await req.json()) as Record<string, unknown>);
-      // Only the request matters; a 400 is not retried by the SDK.
       return Response.json(
         { type: "error", error: { type: "invalid_request_error", message: "stop" } },
         { status: 400 },
@@ -325,7 +323,6 @@ describe("openai-compatible request", () => {
 });
 
 describe("createModel", () => {
-  // The SDK knows the window of some models; for any other the host has to say.
   test("a model the SDK does not know reports context only when given its window", () => {
     const unknown = {
       provider: "anthropic",

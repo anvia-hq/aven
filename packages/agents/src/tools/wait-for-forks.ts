@@ -7,16 +7,11 @@ import { MAX_WAIT_SECONDS, realClock, type Clock } from "./clock";
 export const WAIT_FOR_FORKS_TOOL_NAME = "wait_for_forks";
 
 const DEFAULT_WAIT_SECONDS = 120;
-// A look at a fork reads its thread's history, so this is slower than a process's poll.
 const POLL_MS = 5000;
-// What of a fork's last message comes back: its report is read with fork_status in full.
 const REPORT_MAX = 2000;
 
 const seconds = (ms: number) => Math.round(ms / 1000);
 
-// Waits for forks of the agent's thread to stop (decision 0143): all of them finished, failed or
-// stopped to ask the person, or the time ran out. The agent stays in its turn, so it keeps its own
-// context and model and takes the work itself, and the thread shows a named wait rather than a hang.
 export function createWaitForForksTool(
   look: (id: string) => Promise<ForkView>,
   clock: Clock = realClock,

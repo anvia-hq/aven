@@ -12,7 +12,6 @@ import { fakeControlPlane, type FakeControlPlaneOptions } from "./testing/fake-c
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
 
-// A sandbox that is up at once with no tools: what is asked here is about threads, not the sandbox.
 const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {
     return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
@@ -90,8 +89,6 @@ const threadCalls = (plane: ReturnType<typeof fakeControlPlane>) =>
 const done = (plane: ReturnType<typeof fakeControlPlane>) =>
   plane.received.some((message) => message.type === "bot.end");
 
-// The agent a reply builds, with only the thread tools, so what the bot can call is what the runner
-// gave it (decision 0088).
 const toolsOf = (steps: Parameters<typeof scriptedModel>[0], results?: unknown[]) =>
   (({ send, memory, threads }) => {
     const tools: AnyTool[] = [createSendMessageTool(send), ...createThreadTools(threads)];
@@ -104,7 +101,6 @@ const toolsOf = (steps: Parameters<typeof scriptedModel>[0], results?: unknown[]
     });
   }) satisfies CreateBotReplyAgent;
 
-// What a tool gave the model, kept for the test to read.
 const watched = (tool: AnyTool, results: unknown[]): AnyTool =>
   ({
     ...tool,

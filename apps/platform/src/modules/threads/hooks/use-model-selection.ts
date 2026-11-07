@@ -10,7 +10,6 @@ import {
 } from "../atoms/model-selection-atom";
 import type { RunSelection } from "../types";
 
-// Threads whose choice is remembered; past this, the least recently used are forgotten.
 const MAX_THREADS = 200;
 
 function withThread(
@@ -19,7 +18,6 @@ function withThread(
   selection: SavedSelection,
 ) {
   const next = { ...all };
-  // Removed first, so it moves to the end as the most recently used.
   delete next[threadId];
   next[threadId] = selection;
   const ids = Object.keys(next);
@@ -27,7 +25,6 @@ function withThread(
   return next;
 }
 
-// A choice is the thread's own, and also what the next new thread starts with.
 function save(threadId: string | undefined, selection: SavedSelection) {
   const store = getDefaultStore();
   store.set(modelSelectionAtom, selection);
@@ -40,8 +37,6 @@ export function resetModelSelection() {
   store.set(threadModelSelectionsAtom, {});
 }
 
-// Keeps a thread on what its message was sent with, so a choice made in another thread never moves
-// it. Called when a thread is started and when a message is sent in one.
 export function rememberModelSelection(threadId: string, selection: RunSelection) {
   if (!selection.providerId) return;
   save(threadId, {
@@ -51,11 +46,6 @@ export function rememberModelSelection(threadId: string, selection: RunSelection
   });
 }
 
-// The composer's model (which also names its provider) and reasoning effort, for a thread
-// (`threadId`) or for a new one.
-// A thread uses its own choice, else the last one made anywhere. The provider is the saved one if
-// it still exists, else the user's default. Effort levels belong to the model, so they come from
-// its listing and reset to the model's own default whenever the model changes.
 export function useModelSelection(threadId?: string) {
   const { providers, loaded, byProvider, choices, loading } = useModelChoices();
   const last = useAtomValue(modelSelectionAtom);

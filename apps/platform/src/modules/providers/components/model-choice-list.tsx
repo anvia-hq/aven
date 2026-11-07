@@ -14,12 +14,10 @@ type Props = {
   providers: Provider[];
   choices: ModelChoice[];
   loading: boolean;
-  /** The model in use, marked in the list. */
   selected?: { providerId: string; modelId: string | null };
   onSelect: (choice: ModelChoice) => void;
 };
 
-// Every provider's models in one searchable list, under a heading per provider.
 export function ModelChoiceList({ providers, choices, loading, selected, onSelect }: Props) {
   return (
     <Command>

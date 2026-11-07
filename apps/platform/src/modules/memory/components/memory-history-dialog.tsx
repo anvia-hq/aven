@@ -52,7 +52,6 @@ function EventRow({
   );
 }
 
-// Who changed the person's memory, and when (decision 0102). The notes' words are not kept here.
 export function MemoryHistoryDialog({ folderOf }: { folderOf: (event: MemoryEvent) => string }) {
   const [open, setOpen] = useState(false);
   const { events, loaded } = useMemoryHistory(open);

@@ -32,11 +32,8 @@ export const updateSelfSchema = z.object({
 
 export type SelfChanges = z.infer<typeof updateSelfSchema>;
 
-/** What the host does to change the bot; it says what the bot is now. */
 export type UpdateSelf = (changes: SelfChanges) => Promise<{ name: string; description: string }>;
 
-// How a bot changes itself (decision 0061). Which bot, and whether the change is allowed, is the
-// host's: the tool only names what to change.
 export function createUpdateSelfTool(updateSelf: UpdateSelf) {
   return createTool({
     name: UPDATE_SELF_TOOL_NAME,

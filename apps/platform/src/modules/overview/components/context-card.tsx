@@ -7,25 +7,15 @@ import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";
 
-// Compacting a thread that has barely begun saves nothing, so the button waits for this share of
-// the window (decision 0097).
 const COMPACT_FROM_PERCENT = 25;
 
-// How much of the model's window the latest request filled: the whole conversation as it was sent,
-// not a running total.
 export function ContextCard({
   context,
   loading,
   onCompact,
 }: {
   context: ContextUsage | undefined;
-  /** The thread's usage is still on its way: the card is drawn with its loaded shape, empty. */
   loading: boolean;
-  /**
-   * Summarizes the conversation (decision 0097); none for a reader who does not drive the thread.
-   * The button is disabled while the agent works, and shows only once a quarter of the window is
-   * used. It sits in the card's first row, which has the same height with or without it.
-   */
   onCompact?: { run: () => void; busy: boolean; disabled: boolean };
 }) {
   if (loading) {

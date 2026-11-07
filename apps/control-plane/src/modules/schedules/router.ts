@@ -4,7 +4,6 @@ import { authRouter } from "../auth/router";
 import { scheduleParams, updateScheduleBody } from "./schema";
 import { schedulesService } from "./service";
 
-// Schedules belong to the signed-in user, not to the active organization, so no `org: true`.
 export const schedulesRouter = new Elysia({ prefix: "/schedules" })
   .use(authRouter)
   .get("/", ({ user }) => schedulesService.list(user.id), { auth: true })

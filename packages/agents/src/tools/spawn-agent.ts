@@ -38,17 +38,14 @@ export const spawnAgentSchema = z.object({
     ),
 });
 
-/** What the host does with one task: runs a subagent on it and returns its last message. */
 export type RunSubagent = (
   task: SubagentTask,
   context: {
-    /** Which of the call's tasks this is. */
     index: number;
     abortSignal?: AbortSignal;
   },
 ) => Promise<string>;
 
-/** How one task ended. A failed subagent does not fail the others, or the call. */
 export type SubagentResult = {
   description: string;
   type: SubagentType;
@@ -56,9 +53,6 @@ export type SubagentResult = {
 
 const NOTHING = "The subagent finished without saying anything.";
 
-// Hands tasks to subagents, which work at the same time, and returns what each one said, in the
-// order asked. What runs a subagent is the host; this says what the agent can ask for and what
-// comes back (decision 0057).
 export function createSpawnAgentTool(run: RunSubagent) {
   return createTool({
     name: SPAWN_AGENT_TOOL_NAME,
@@ -82,7 +76,6 @@ Use it to search or understand a large codebase, to look into several independen
           }
         }),
       );
-      // A cancelled run is over: what its subagents made of the abort is not a result.
       context?.abortSignal?.throwIfAborted();
       return { results };
     },

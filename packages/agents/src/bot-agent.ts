@@ -20,69 +20,36 @@ import { createScheduleTools, type ScheduleHost } from "./tools/schedules";
 import { createSendMessageTool, type SendMessage } from "./tools/send-message";
 import { createUpdateSelfTool, type UpdateSelf } from "./tools/update-self";
 
-// A bot answers with a few messages, so a handful of turns is plenty.
 export const BOT_MAX_TURNS = 8;
 
-// A bot with a computer also works on it between its messages.
 export const BOT_COMPUTER_MAX_TURNS = 30;
 
 type BotAgentOptions = ModelSource & {
-  /** The bot's id: its conversation is kept under it. */
   id: string;
   name: string;
-  /** How other bots write to this one (decision 0065). */
   handle: string;
   instruction: string;
-  /** Sends a message the bot wrote, to the person or to another bot. */
   send: SendMessage;
-  /** Where the conversation is kept. */
   memory: AgentMemoryOptions;
-  /** The size of the conversation, in tokens, past which it is summarized; by default 70% of the model's window. */
   compactAfterTokens?: number;
-  /** What the bot can do on its computer, supplied by the host that runs it (decision 0059). Without any, it only talks. */
   computer?: readonly AnyTool[];
-  /** Makes another bot, for the person's main bot only (decision 0060); without it the bot cannot. */
   createBot?: CreateBot;
-  /**
-   * The person's other bots, which the instructions list and `list_bots` gives. The host owns the
-   * array and adds a bot it makes to it, so the list is current through the reply (decision 0065).
-   */
   peers: readonly BotPeer[];
-  /** The bot's goal, which it may work on in the background and, on the person's word, start or stop (decision 0068). */
   goals?: GoalHost;
-  /** The person's schedules, which the bot may look at and, on their word, change (decision 0067). */
   schedules?: ScheduleHost;
-  /** The person's timezone, which the bot's schedules are in unless it says another. */
   timezone?: string;
-  /** What the bot's description is now. */
   description?: string;
-  /** Asks the person to decide (decision 0066); without it the bot cannot, as when nobody is there to answer. */
   askQuestion?: AskQuestion;
-  /** Changes this bot's own name, description or instruction (decision 0061); without it the bot cannot. */
   updateSelf?: UpdateSelf;
-  /** The skills the host put in the computer's `/skills`, which the bot reads there (decision 0081). */
   skills?: readonly SkillListing[];
-  /** The person's MCP servers' tools, which the reply connected, and what the bot is told of them (decision 0085). */
   mcp?: { tools: readonly AnyTool[]; note: McpNote };
-  /** Keeps the person's MCP servers (decision 0085); without it the bot can use them but not change them. */
   mcpServers?: McpServersHost;
-  /** Keeps the person's model providers (decision 0086); without it the bot cannot. A key is never in it. */
   providers?: ProvidersHost;
-  /** Looks at the person's threads and, on their word, works them (decision 0088); without it the bot cannot. */
   threads?: ThreadsHost;
-  /**
-   * The bot's notes and its person's, which outlive the chat (decision 0102): what the instructions
-   * list and what the `memory` tool asks. `memory` above is the chat itself.
-   */
   notes?: { memory: RunMemory; host: MemoryHost };
-  /** The person's cockpit, which the bot reads and writes (decision 0109); without it the bot cannot. */
   cockpit?: { access: CockpitAccess; host: CockpitHost };
 };
 
-// A bot is an agent that talks by sending messages (decision 0058), and works on its computer when
-// the host gives it one (decision 0059). It runs through
-// `generate`, with no stream, since nothing is shown until it sends something. It keeps its own
-// conversation, and summarizes it past a size so the chat can go on.
 export function createBotAgent({
   id,
   name,

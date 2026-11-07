@@ -15,7 +15,6 @@ import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
 import type { UpdateBotBody } from "./schema";
 
-// The main bot a person starts with, until they change it.
 const MAIN_BOT = {
   name: "Aven",
   instruction:
@@ -31,7 +30,6 @@ const view = (row: BotRow): Bot => ({
   description: row.description,
   avatar: row.avatar,
   providerId: row.providerId,
-  // A model is the provider's: with the provider gone, so is its model.
   modelId: row.providerId ? row.modelId : null,
   reasoningEffort: row.providerId ? row.reasoningEffort : null,
   compactAfterTokens: row.compactAfterTokens,
@@ -40,17 +38,11 @@ const view = (row: BotRow): Bot => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
-/**
- * What a new bot is: a name, what it is told to be like, and what it is for if that is said. It has
- * no avatar: its id draws one until the person picks one (decision 0062).
- */
 export type NewBot = Omit<BotCreateParams, "replyId">;
 
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
 
 export const botsService = {
-  // A person always has their main bot: it is made the first time they ask. Two requests at once
-  // make one, since the partial unique index refuses the second.
   async list(userId: string) {
     await db
       .insert(bots)
@@ -64,9 +56,6 @@ export const botsService = {
     return rows.map(view);
   },
 
-  // A bot made for the person, which answers with their default model until they pick another. A
-  // person has at most BOT_LIMIT, so a bot that makes bots cannot fill the account (decision 0060);
-  // the lock makes calls made at once count one after another, or each would see room for one more.
   async create(userId: string, { name, instruction, description = "" }: NewBot) {
     return db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`bots:${userId}`}))`);
@@ -105,8 +94,6 @@ export const botsService = {
     if (!current) return null;
 
     const { providerId, modelId, reasoningEffort, ...details } = body;
-    // A change that is not about the model leaves it alone: the catalog is not asked about a model
-    // nobody touched, and a model chosen at the same moment is not written over.
     const touchesModel = [providerId, modelId, reasoningEffort].some(
       (value) => value !== undefined,
     );
@@ -121,7 +108,6 @@ export const botsService = {
   },
 };
 
-// The model a change leads to, once its provider is the person's and its effort the model's.
 async function checkedModel(userId: string, current: BotModel, change: ModelChange) {
   if (change.providerId) await requireOwnProvider(userId, change.providerId);
   const model = modelAfter(current, change);
@@ -132,9 +118,6 @@ async function checkedModel(userId: string, current: BotModel, change: ModelChan
 type BotModel = Pick<BotRow, "providerId" | "modelId" | "reasoningEffort">;
 type ModelChange = Pick<UpdateBotBody, "providerId" | "modelId" | "reasoningEffort">;
 
-// What the bot's model is after a change, and what was left out of it stays. A bot on the default
-// has no model or effort of its own. A model, and its effort, belong to the provider they were
-// chosen from: a changed one starts without them unless the same change names them.
 function modelAfter(current: BotModel, change: ModelChange): BotModel {
   const providerId = change.providerId === undefined ? current.providerId : change.providerId;
   if (!providerId) return { providerId: null, modelId: null, reasoningEffort: null };
@@ -148,7 +131,6 @@ function modelAfter(current: BotModel, change: ModelChange): BotModel {
   };
 }
 
-// An effort the model does not take is refused here, in words, not when the bot next speaks.
 async function requireEffortOf(userId: string, model: BotModel) {
   if (!model.providerId || !model.reasoningEffort) return;
   await resolveModel(userId, {

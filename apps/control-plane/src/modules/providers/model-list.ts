@@ -16,10 +16,8 @@ function requireApiKey({ apiKey }: ModelSource) {
   return apiKey;
 }
 
-// Where a provider's model list is and how to ask for it.
 function modelsRequest(source: ModelSource) {
   if (source.kind === "azure") {
-    // The resource's own deployments (decision 0025); its v1 `/models` lists what could be deployed.
     if (!source.baseUrl) throw new ModelListError("A resource URL is needed to list models");
     const origin = azureEndpoint.safeParse(source.baseUrl);
     if (!origin.success) throw new ModelListError("An Azure resource URL must be https");
@@ -34,7 +32,6 @@ function modelsRequest(source: ModelSource) {
     );
   }
   if (source.kind === "bedrock") {
-    // Bedrock's own OpenAI-compatible list; `bedrock-runtime` has none. The key goes only to AWS.
     if (!source.baseUrl) throw new ModelListError("A region is needed to list models");
     const endpoint = bedrockEndpoint.safeParse(source.baseUrl);
     if (!endpoint.success) throw new ModelListError("Not a Bedrock endpoint");
@@ -65,8 +62,6 @@ function modelsRequest(source: ModelSource) {
   return { url: `${source.baseUrl.replace(/\/+$/, "")}/models`, headers };
 }
 
-// Google lists `{ models: [{ name: "models/gemini-2.5-pro", supportedGenerationMethods }] }`: the
-// ones that can generate content, by the name after `models/`.
 function parseGeminiModelIds(models: unknown) {
   if (!Array.isArray(models)) throw new ModelListError("The provider returned no model list");
   const ids = models.flatMap((item: { name?: unknown; supportedGenerationMethods?: unknown }) => {
@@ -84,7 +79,6 @@ function parseModelIds(json: unknown) {
   if (models !== undefined) return parseGeminiModelIds(models);
   const data = (json as { data?: unknown } | null)?.data;
   if (!Array.isArray(data)) throw new ModelListError("The provider returned no model list");
-  // A deployment that has not finished (or failed) provisioning cannot be called yet.
   const ids = data.flatMap((item: { id?: unknown; status?: unknown }) =>
     typeof item?.id === "string" && (item.status === undefined || item.status === "succeeded")
       ? [item.id]
@@ -93,8 +87,6 @@ function parseModelIds(json: unknown) {
   return [...new Set(ids)].sort();
 }
 
-// Asks the provider itself which models the key can use (`GET <base>/models`). `fetchFn` is
-// injectable so tests never hit the network.
 export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = fetch) {
   const { url, headers } = modelsRequest(source);
   let res: Response;
@@ -107,16 +99,12 @@ export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = f
   return parseModelIds(await res.json().catch(() => null));
 }
 
-// A provider's models that can drive the agent (see `model-catalog.ts`).
 export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetch) {
   const ids = await fetchModels(source, fetchFn);
   return modelCatalog.chatModels(source.kind, ids);
 }
 
-// The levels a model of a server the person runs says it accepts: a gateway lists them itself,
-// models.dev knows nothing of such a server.
 async function listedEfforts(source: ModelSource, modelId: string) {
-  // Bedrock and Vertex AI list no levels, and a model there may reject one it does not know.
   if (source.kind === "bedrock" || source.kind === "vertex") return null;
   if (source.kind === "openai-compatible") {
     if (!source.baseUrl) return null;
@@ -125,9 +113,6 @@ async function listedEfforts(source: ModelSource, modelId: string) {
   return modelCatalog.efforts(source.kind, modelId);
 }
 
-// A model's effort levels: the SDK's own list, or for a model newer than the SDK, or served by a
-// gateway, the ones models.dev or the gateway lists (`effortLevels`, which the model must then be
-// built with for the SDK to accept it).
 export async function effortsFor(source: ModelSource, modelId: string | undefined) {
   const sdk = reasoningControlsFor({ provider: source.kind, modelId });
   if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
@@ -138,7 +123,6 @@ export async function effortsFor(source: ModelSource, modelId: string | undefine
   };
 }
 
-// The effort levels of each listed model that has any; models without the control are left out.
 export async function effortsByModel(source: ModelSource, ids: string[]) {
   const entries = await Promise.all(
     ids.map(async (id) => [id, (await effortsFor(source, id)).controls] as const),

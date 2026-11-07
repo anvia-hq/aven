@@ -21,14 +21,11 @@ type Props = {
   filters: CenterFilters;
   onChange: (change: CenterSearch) => void;
   onOpen: (project: Project, number: number) => void;
-  /** For one project: its branches, as the card's other tab. */
   branches?: { count: string; panel: ReactNode };
   view: PullsView;
   onView: (view: PullsView) => void;
 };
 
-// The pull requests of the projects shown, with their search and filters in the card's own header and
-// what is filtered as chips under it. For one project the card also holds its branches, as a tab.
 export function CenterPulls({
   pulls,
   loading,

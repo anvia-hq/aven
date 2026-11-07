@@ -4,8 +4,6 @@ import { attempt, postJson } from "@/lib/api";
 import type { Thread, ThreadVisibility } from "../types";
 import { useThreads } from "./use-threads";
 
-// Sharing a thread lets every member of the workspace read it, and only read it (decision 0084);
-// only the person who made it can change that.
 export function useShareThread() {
   const { refresh } = useThreads();
 

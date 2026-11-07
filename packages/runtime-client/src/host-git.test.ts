@@ -21,7 +21,6 @@ import { searchWorkspace } from "./workspace-files";
 const dirs: string[] = [];
 afterAll(() => Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true }))));
 
-// A workspace with one commit, and a script that leaves `ran` beside it when anything runs it.
 async function workspace() {
   const base = await mkdtemp(join(tmpdir(), "aven-host-git-"));
   dirs.push(base);
@@ -40,7 +39,6 @@ async function workspace() {
   return { base, root, sh, script, ran, marker };
 }
 
-// What the agent can do from its container: write the workspace's git configuration and files.
 describe("git the runner runs on a workspace", () => {
   test("does not run a clean filter the workspace's configuration names", async () => {
     const { root, sh, script, ran } = await workspace();
@@ -121,7 +119,6 @@ describe("git the runner runs on a workspace", () => {
     await writeFile(join(root, ".git", "remotes", "elsewhere"), `URL: file://${source}\n`);
     await sh("config", "core.repositoryformatversion", "1");
     await sh("config", "extensions.partialClone", "elsewhere");
-    // Plain git would fetch the object from where the workspace says.
     expect((await sh("cat-file", "-e", blob)).code).toBe(0);
     await rm(join(root, ".git", "objects", blob.slice(0, 2), blob.slice(2)), { force: true });
     await rm(join(root, ".git", "objects", "pack"), { recursive: true, force: true });
