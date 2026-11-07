@@ -38,6 +38,7 @@ function kindOf(name: string): Kind {
     case "read_process_logs":
     case "stop_process":
     case "wait_for_port":
+    case "wait_for_process":
     case "list_ports":
       return processes;
     case "edit":

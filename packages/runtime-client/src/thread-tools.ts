@@ -2,6 +2,7 @@ import type { AnyTool } from "@anvia/core";
 import { createSandboxTools, type SandboxRuntime } from "@anvia/sandbox";
 import { SANDBOX_TOOL_NAMES } from "@aven/agents/sandbox-tools";
 import { createEditTool } from "@aven/agents/tools/edit";
+import { createWaitForProcessTool } from "@aven/agents/tools/wait-for-process";
 import { createShowArtifactTool } from "@aven/agents/tools/show-artifact";
 
 import type { ArtifactStore } from "./artifacts";
@@ -13,6 +14,8 @@ const EXEC_DEFAULT_TIMEOUT_MS = 2 * 60_000;
 // sandbox's policy would otherwise stop at 2000 and fail a read the schema invited. How much comes
 // back in one read is still limited in bytes.
 const READ_FILE_MAX_LINES = 10_000;
+// How much of a process's output `wait_for_process` gives back from each stream: its end.
+const WAIT_TAIL_BYTES = 8 * 1024;
 
 // What an agent can do in a thread's sandbox: everything @anvia/sandbox offers on files, commands
 // and processes (a command can be run in the background), plus `edit` (the sandbox has no in-place edit) built on its file calls, and
@@ -34,6 +37,20 @@ export function sandboxTools(
       tool.name === "exec_command" && start ? withBackground(tool, start) : tool,
     ),
     createEditTool(sandbox),
+    // Waits for a background process with a name, instead of the agent's `sleep` in a command.
+    createWaitForProcessTool({
+      status: async (processId) => {
+        const found = (await sandbox.listProcesses()).find((info) => info.id === processId);
+        if (!found)
+          throw new Error(`No process ${processId}: list_processes shows what is running`);
+        return { status: found.status, exitCode: found.exitCode };
+      },
+      tail: async (processId) => {
+        const logs = await sandbox.readProcessLogs({ processId, tailBytes: WAIT_TAIL_BYTES });
+        const text = new TextDecoder();
+        return { stdout: text.decode(logs.stdout), stderr: text.decode(logs.stderr) };
+      },
+    }),
     createShowArtifactTool({
       readFile: (options) => sandbox.readFile(options),
       save: (bytes, mediaType) => thread.artifacts.save(thread.id, bytes, mediaType),

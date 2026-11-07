@@ -51,4 +51,24 @@ describe("the agent's file and command tools", () => {
     expect(String(ran.stdout)).toContain("THE-END");
     expect(ran.stdoutTruncated).toBe(true);
   });
+
+  test("wait_for_process waits for a background process the agent started and gives its output (decision 0137)", async () => {
+    const tools = await agentTools(async () => undefined);
+    expect(tools.map((tool) => tool.name)).toContain("wait_for_process");
+
+    const started = await call(tools, "start_process", {
+      command: "sh",
+      args: ["-c", "echo working; sleep 1; echo finished; exit 3"],
+    });
+    const waited = await call(tools, "wait_for_process", {
+      processId: String(started.processId ?? started.id),
+      timeoutSeconds: 20,
+    });
+
+    expect(waited).toMatchObject({ status: "ended", exitCode: 3, matched: false });
+    expect(String(waited.stdout)).toContain("finished");
+    await expect(call(tools, "wait_for_process", { processId: "no-such" })).rejects.toThrow(
+      "No process no-such",
+    );
+  });
 });

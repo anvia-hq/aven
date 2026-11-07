@@ -28,6 +28,7 @@ const meta: Record<string, Meta> = {
   exec_command: { icon: Terminal, running: "Running", done: "Ran" },
   start_process: { icon: Terminal, running: "Starting", done: "Started" },
   list_processes: { icon: Terminal, running: "Listing processes", done: "Listed processes" },
+  wait_for_process: { icon: Terminal, running: "Waiting for", done: "Waited for" },
   read_process_logs: { icon: Terminal, running: "Reading logs of", done: "Read logs of" },
   stop_process: { icon: Terminal, running: "Stopping", done: "Stopped" },
   wait_for_port: { icon: Terminal, running: "Waiting for port", done: "Port ready" },
