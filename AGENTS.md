@@ -25,7 +25,7 @@ bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
 createdb aven          # one-time: uses your local Postgres (localhost:5432)
-bun run test:e2e       # Playwright (root). Own ports 8100/5174 and database aven_e2e
+bun run test:e2e       # Playwright (root). Own ports 8100/5174 and database aven_e2e; serves a production build of the platform (a dev server compiles every module again for every test, and the browser is what costs the CPU), with reduced motion
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 ```
 

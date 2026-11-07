@@ -27,6 +27,7 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: WEB_URL,
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
   },
   // E2E_CHANNEL=chrome runs the tests in the system's Chrome instead of Playwright's own build.
@@ -88,7 +89,7 @@ export default defineConfig({
       env: { FAKE_MODEL_PORT: String(MODEL_PORT) },
     },
     {
-      command: "bun run --cwd apps/platform dev",
+      command: "bunx --cwd apps/platform vite build && bun run --cwd apps/platform preview",
       url: WEB_URL,
       reuseExistingServer: false,
       env: { WEB_PORT: String(WEB_PORT), API_URL },
