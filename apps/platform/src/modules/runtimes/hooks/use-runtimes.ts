@@ -77,7 +77,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     if (revoked !== null) toast.add({ title: "Runtime revoked", description: runtime.name });
   }
 
-  // Only an owner or an admin updates a runner; the control plane says the same (decision 0145).
+  // Only an owner or an admin updates a runner; the control plane says the same (decision 0146).
   const { data: member } = authClient.useActiveMember();
   const canUpdate = isOwnerOrAdminRole(member?.role);
   const [updating, setUpdating] = useAtom(updatingAtom);

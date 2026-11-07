@@ -1,4 +1,4 @@
-# 0145: An owner or an admin updates a runner from the platform
+# 0146: An owner or an admin updates a runner from the platform
 
 Status: accepted. Builds on decision 0073 (install and update with a script).
 

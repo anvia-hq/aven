@@ -83,7 +83,7 @@ export type RuntimeOptions = {
   build?: string;
   /**
    * Starts the machine's `aven update` to a release (this server's, or the latest without one),
-   * outside this process, which the update restarts (decision 0145). Given only by an installed
+   * outside this process, which the update restarts (decision 0146). Given only by an installed
    * `aven`: without it the control plane is told the runner cannot update itself.
    */
   update?: (release: string | undefined) => void;

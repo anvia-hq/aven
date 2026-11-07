@@ -30,7 +30,7 @@ export type RunnerCallsContext = {
   boxes: Map<string, ThreadSandbox>;
   viewers: Pick<DesktopViewers, "call">;
   idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
-  /** Updates the machine's `aven`, when this runner is one that can (decision 0145). */
+  /** Updates the machine's `aven`, when this runner is one that can (decision 0146). */
   update?: {
     start(release: string | undefined): void;
     /** Why now is not a moment to restart the runner, when it is not. */
@@ -124,7 +124,7 @@ export function createRunnerCalls({
     return viewers.call("desktop.status", { threadId });
   }
 
-  // The answer goes back before the update starts: it restarts this runner (decision 0145).
+  // The answer goes back before the update starts: it restarts this runner (decision 0146).
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
     const { release } = runnerUpdateParams(params);
     if (!update) return { status: "unsupported" };

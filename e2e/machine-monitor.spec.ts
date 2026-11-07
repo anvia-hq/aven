@@ -117,7 +117,7 @@ test.describe("machine monitor", () => {
     await expect(page).toHaveURL(/\/settings\/runtimes$/);
   });
 
-  test("a runner behind the server has an Update button that asks it, and says Updating (decision 0145)", async ({
+  test("a runner behind the server has an Update button that asks it, and says Updating (decision 0146)", async ({
     page,
   }) => {
     await registerUser(page, "upd", "Update User");

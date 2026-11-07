@@ -28,7 +28,7 @@ export const runtimesRouter = (hub: RuntimeHub) =>
             // The release the runner says it is, and whether it is behind this server's.
             build,
             outdated: isBehind(build ?? undefined, server),
-            // An installed `aven` that can update itself when asked (decision 0145).
+            // An installed `aven` that can update itself when asked (decision 0146).
             canUpdate: hub.canUpdateOf(runtime.id),
             // How loaded its machine was when it last said; null while offline or if it never does.
             stats: hub.statsOf(runtime.id) ?? null,
@@ -63,7 +63,7 @@ export const runtimesRouter = (hub: RuntimeHub) =>
       },
       { auth: true, org: true, params: runtimeParams },
     )
-    // An owner or an admin has the runner update itself to this server's release (decision 0145).
+    // An owner or an admin has the runner update itself to this server's release (decision 0146).
     // Answered when the runner has agreed, before it starts: the update restarts it.
     .post(
       "/:id/update",

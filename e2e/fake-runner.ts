@@ -421,7 +421,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
   }
   if (call.method === "runner.update") {
-    // Asked to update itself (decision 0145): it agrees, or with FAKE_UPDATE_BUSY says why not.
+    // Asked to update itself (decision 0146): it agrees, or with FAKE_UPDATE_BUSY says why not.
     return reply(
       process.env.FAKE_UPDATE_BUSY
         ? { status: "busy", reason: process.env.FAKE_UPDATE_BUSY }

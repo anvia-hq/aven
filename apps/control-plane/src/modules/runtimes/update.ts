@@ -12,7 +12,7 @@ const answer = z.discriminatedUnion("status", [
 /** How long a runner has to agree: it answers before it starts, so this is quick. */
 const AGREE_MS = 15_000;
 
-// Has an online runner update itself to `release` (this server's, when it knows it), decision 0145.
+// Has an online runner update itself to `release` (this server's, when it knows it), decision 0146.
 // What the runner answers is parsed; a refusal becomes a 409 that says why.
 export async function requestUpdate(
   hub: RuntimeHub,

@@ -120,7 +120,7 @@ export class RuntimeConnection {
     return this.#build;
   }
 
-  /** The runner is an installed `aven` that can update itself (decision 0145). */
+  /** The runner is an installed `aven` that can update itself (decision 0146). */
   get canUpdate() {
     return this.#canUpdate;
   }
@@ -492,7 +492,7 @@ export class RuntimeHub {
     return this.get(runtimeId)?.build;
   }
 
-  /** Whether an online runtime can update itself when asked (decision 0145). */
+  /** Whether an online runtime can update itself when asked (decision 0146). */
   canUpdateOf(runtimeId: string) {
     return this.get(runtimeId)?.canUpdate ?? false;
   }

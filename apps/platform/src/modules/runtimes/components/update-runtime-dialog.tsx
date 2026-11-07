@@ -15,7 +15,7 @@ import {
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
 
-// The Update button of a runner that is behind the server (decision 0145), for an owner or an admin,
+// The Update button of a runner that is behind the server (decision 0146), for an owner or an admin,
 // with what it will do said first; while it works, the row says Updating. The sidebar's row is
 // `compact`; Settings has the plain one.
 export function UpdateRuntimeDialog({

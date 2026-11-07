@@ -192,7 +192,7 @@ type SandboxCallMethod = "sandbox.release";
 
 /**
  * What the control plane asks of the runner itself: `runner.update` takes `{ release? }`, a release
- * number, and has the machine's `aven` update itself to it (decision 0145). The answer comes before
+ * number, and has the machine's `aven` update itself to it (decision 0146). The answer comes before
  * the update starts, since the update restarts the runner.
  */
 type RunnerSelfCallMethod = "runner.update";
@@ -437,7 +437,7 @@ export type RuntimeToControlPlane =
    * `runs` are the runs this runtime still holds, ended ones the control plane has not acknowledged
    * included. `build` is the release of the `aven` the runner is, so Settings can say when it is
    * behind the server (decision 0073); a runner that is not a release leaves it out. `canUpdate` says it is an
-   * installed `aven` that can update itself when asked (decision 0145).
+   * installed `aven` that can update itself when asked (decision 0146).
    */
   | { type: "hello"; version: number; runs: string[]; build?: string; canUpdate?: boolean }
   /**

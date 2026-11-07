@@ -104,7 +104,7 @@ export async function runnerRun() {
     base,
     token,
     build: release,
-    // An installed release can update itself when the control plane asks (decision 0145).
+    // An installed release can update itself when the control plane asks (decision 0146).
     update: release ? (to) => void startDetachedUpdate(to) : undefined,
   });
   // The runner keeps the process alive with its connection.

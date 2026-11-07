@@ -35,10 +35,12 @@ test.describe("runtimes", () => {
     await page.getByRole("button", { name: "Done" }).click();
 
     const row = page
-      .getByRole("list", { name: "Runtimes" })
-      .getByRole("listitem")
+      .getByRole("table", { name: "Runtimes" })
+      .getByRole("row")
       .filter({ hasText: "e2e-laptop" });
     await expect(row).toContainText("Offline");
+    // The token is not shown on the page.
+    await expect(row).not.toContainText("token");
 
     // The address and token the command shows, through the platform's /api proxy, WebSocket included.
     runtime = spawn("bun", ["apps/runtime/src/main.ts"], {
