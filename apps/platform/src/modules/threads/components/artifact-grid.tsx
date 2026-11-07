@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Refresh } from "@mynaui/icons-react";
+import { Image as ImageIcon, Refresh } from "@mynaui/icons-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
 
 import type { ToolArtifact } from "../types";
+import { ImageViewer } from "./image-viewer";
 
 const isVideo = (artifact: ToolArtifact) => artifact.mediaType.startsWith("video/");
 const sourceOf = (threadId: string, artifact: ToolArtifact) =>
@@ -99,61 +99,6 @@ function Tile({
   );
 }
 
-function Viewer({
-  threadId,
-  images,
-  index,
-  onIndex,
-  onClose,
-}: {
-  threadId: string;
-  images: ToolArtifact[];
-  index: number | null;
-  onIndex: (index: number) => void;
-  onClose: () => void;
-}) {
-  const open = index !== null;
-  const current = open ? images[index] : undefined;
-
-  const step = (by: number) => {
-    if (open) onIndex((index + by + images.length) % images.length);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        className="w-fit max-w-[calc(100%-2rem)] gap-0 p-2 sm:max-w-[min(72rem,calc(100%-4rem))]"
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft") step(-1);
-          if (event.key === "ArrowRight") step(1);
-        }}
-      >
-        <DialogTitle className="sr-only">{current ? labelOf(current) : "Image"}</DialogTitle>
-        {current && (
-          <img
-            src={sourceOf(threadId, current)}
-            alt={labelOf(current)}
-            className="max-h-[85vh] max-w-full rounded-lg object-contain"
-          />
-        )}
-        {open && images.length > 1 && (
-          <div className="flex items-center justify-between gap-2 pt-2 text-xs text-muted-foreground">
-            <Button variant="ghost" size="icon-sm" aria-label="Previous" onClick={() => step(-1)}>
-              <ChevronLeft />
-            </Button>
-            <span className="tabular-nums">
-              {index + 1} of {images.length}
-            </span>
-            <Button variant="ghost" size="icon-sm" aria-label="Next" onClick={() => step(1)}>
-              <ChevronRight />
-            </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function ArtifactGrid({
   threadId,
   artifacts,
@@ -184,9 +129,11 @@ export function ArtifactGrid({
           />
         ))}
       </div>
-      <Viewer
-        threadId={threadId}
-        images={images}
+      <ImageViewer
+        images={images.map((artifact) => ({
+          src: sourceOf(threadId, artifact),
+          label: labelOf(artifact),
+        }))}
         index={viewing}
         onIndex={setViewing}
         onClose={() => setViewing(null)}

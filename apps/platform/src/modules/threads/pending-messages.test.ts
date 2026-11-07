@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { pendingMessage, settlePending, withoutPending } from "./pending-messages";
+import { isLocalPreview, pendingMessage, settlePending, withoutPending } from "./pending-messages";
 import type { OutgoingMessage, PendingMessage } from "./types";
 import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
@@ -21,6 +21,24 @@ const user = (text: string): ChatMessage => ({
 });
 
 describe("pendingMessage", () => {
+  test("gives an image a preview made from its own bytes, and no other file", () => {
+    const { message: shown } = sent("a", "Look", {
+      attachments: [
+        { name: "shot.png", mediaType: "image/png", data: "aGVsbG8=" },
+        { name: "logo.svg", mediaType: "image/svg+xml", data: "aGVsbG8=" },
+        { name: "notes.txt", mediaType: "text/plain", data: "aGVsbG8=" },
+        { name: "blob", data: "aGVsbG8=" },
+      ],
+    });
+    const [png, svg, text, blob] = shown.attachments!;
+    expect(png!.image).toBe("data:image/png;base64,aGVsbG8=");
+    expect(isLocalPreview(png!.image!)).toBe(true);
+    expect(svg!.image).toBeUndefined();
+    expect(text!.image).toBeUndefined();
+    expect(blob!.image).toBeUndefined();
+    expect(isLocalPreview("0b3e6a1e.png")).toBe(false);
+  });
+
   test("shows the prompt with an id of its own on this browser", () => {
     const { message: shown } = sent("a", "Fix the tests");
     expect(shown.role).toBe("user");

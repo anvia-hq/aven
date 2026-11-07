@@ -88,3 +88,5 @@ export type ThreadPanels = ReturnType<typeof useThreadPanels>;
 export type Mentionable = Pick<MessageMention, "type" | "name">;
 
 export type PendingMessage = { id: string; message: ChatMessage };
+
+export type ViewerImage = { src: string; label: string };
