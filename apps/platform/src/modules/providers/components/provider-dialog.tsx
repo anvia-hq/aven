@@ -17,7 +17,6 @@ import { TextField } from "@/components/text-field";
 import { useProviderForm } from "../hooks/use-provider-form";
 import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
-import { CompatiblePresets } from "./compatible-presets";
 import { ModelField } from "./model-field";
 
 function loadModelsLabel(loading: boolean, loaded: boolean) {
@@ -50,14 +49,15 @@ type Props = {
   kind: ProviderKind;
   /** Given one, the dialog edits it; without, it adds a provider. */
   provider?: Provider;
+  /** A service with its own panel: its name and address are fixed, and only the key and model are asked. */
+  preset?: CompatiblePreset;
   /** The trigger's label: "Add" for a kind with many, "Set up" or "Edit" for one with a single. */
   label: string;
 };
 
-export function ProviderDialog({ kind, provider, label }: Props) {
+export function ProviderDialog({ kind, provider, preset, label }: Props) {
   const [open, setOpen] = useState(false);
-  const [preset, setPreset] = useState<CompatiblePreset | null>(null);
-  const form = useProviderForm(kind, provider, () => setOpen(false));
+  const form = useProviderForm(kind, provider, () => setOpen(false), preset);
   const { compatible, azure, bedrock, vertex } = form;
   const typedModel = typedModels[kind];
   const keyOptional = compatible && preset?.needsKey !== true;
@@ -72,7 +72,6 @@ export function ProviderDialog({ kind, provider, label }: Props) {
         setOpen(next);
         if (!next) {
           form.reset();
-          setPreset(null);
         }
       }}
     >
@@ -81,31 +80,27 @@ export function ProviderDialog({ kind, provider, label }: Props) {
         <Form ref={form.formRef} onSubmit={form.submit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit" : label} {PROVIDER_LABELS[kind]}
+              {editing ? "Edit" : label} {preset?.name ?? PROVIDER_LABELS[kind]}
             </DialogTitle>
             <DialogDescription>
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
-          {compatible && !editing && <CompatiblePresets selected={preset} onSelect={setPreset} />}
-          {(compatible || bedrock || vertex) && (
+          {((compatible && !preset) || bedrock || vertex) && (
             <TextField
-              // A preset replaces the name and the address, so the fields start again with its own.
-              key={`name-${preset?.id}`}
               label="Name"
               name="name"
-              defaultValue={preset?.name ?? provider?.name}
+              defaultValue={provider?.name}
               placeholder={PROVIDER_LABELS[kind]}
             />
           )}
-          {(compatible || azure) && (
+          {((compatible && !preset) || azure) && (
             <TextField
-              key={`url-${preset?.id}`}
               label={azure ? "Resource URL" : "Base URL"}
               name="baseUrl"
               type="url"
               required
-              defaultValue={preset?.baseUrl ?? provider?.baseUrl ?? undefined}
+              defaultValue={provider?.baseUrl ?? undefined}
               placeholder={
                 azure ? "https://my-resource.openai.azure.com" : "http://localhost:11434/v1"
               }

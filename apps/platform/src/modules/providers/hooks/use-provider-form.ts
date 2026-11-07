@@ -1,6 +1,7 @@
 import { bedrockBaseUrl, vertexBaseUrl } from "@aven/protocol/providers";
 import { useRef, useState, type FormEvent } from "react";
 
+import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { useProviders } from "./use-providers";
 
@@ -11,6 +12,7 @@ export function useProviderForm(
   kind: ProviderKind,
   provider: Provider | undefined,
   onDone: () => void,
+  preset?: CompatiblePreset,
 ) {
   const [submitting, setSubmitting] = useState(false);
   const [models, setModels] = useState<string[] | null>(null);
@@ -38,6 +40,7 @@ export function useProviderForm(
       const location = readTrimmedField("location");
       return project && location ? vertexBaseUrl(project, location) : undefined;
     }
+    if (preset) return preset.baseUrl;
     return compatible || azure ? readTrimmedField("baseUrl") : undefined;
   }
 
@@ -67,7 +70,8 @@ export function useProviderForm(
     event.preventDefault();
     setSubmitting(true);
     const chosenModel = (models ? modelId : readTrimmedField("modelId")) || undefined;
-    const name = readTrimmedField("name") ?? provider?.name ?? PROVIDER_LABELS[kind];
+    const name =
+      readTrimmedField("name") ?? provider?.name ?? preset?.name ?? PROVIDER_LABELS[kind];
     const baseUrl = readBaseUrl();
     const apiKey = readTrimmedField("apiKey");
     const done = provider

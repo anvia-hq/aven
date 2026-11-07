@@ -129,7 +129,7 @@ test.describe("settings", () => {
     ).toBeVisible();
   });
 
-  test("the kinds with an address make it from what the form asks, and a preset fills a compatible server", async ({
+  test("the kinds with an address make it from what the form asks, and each compatible service has its own panel", async ({
     page,
   }) => {
     await registerUser(page, "ws", "Workspace User");
@@ -174,23 +174,39 @@ test.describe("settings", () => {
     await expect(gemini.getByRole("button", { name: "Set up" })).toHaveCount(0);
     await expect(connected).toBeVisible();
 
-    // A preset fills the name and the address, and can be let go.
-    await page
-      .getByRole("listitem", { name: "OpenAI-compatible" })
-      .getByRole("button", { name: "Add" })
-      .click();
-    await page.getByRole("button", { name: "Groq" }).click();
-    await expect(page.getByLabel("Name")).toHaveValue("Groq");
-    await expect(page.getByLabel("Base URL")).toHaveValue("https://api.groq.com/openai/v1");
+    // Each service has a panel of its own, with its address fixed, and goes once it is set up.
+    const groq = page.getByRole("listitem", { name: "Groq" });
+    await expect(groq).toContainText("Fast open models");
+    await groq.getByRole("button", { name: "Set up" }).click();
+    await expect(page.getByLabel("Base URL")).toHaveCount(0);
     await expect(page.getByLabel("API key")).toHaveAttribute("required", "");
-    await page.getByRole("button", { name: "Ollama" }).click();
-    await expect(page.getByLabel("Base URL")).toHaveValue("http://localhost:11434/v1");
+    await page.getByLabel("API key").fill("gsk-secret-7777");
+    await page.getByLabel("Model", { exact: true }).fill("llama-3.3-70b-versatile");
+    await page.getByRole("button", { name: "Add provider" }).click();
+    await expect(page.getByRole("listitem", { name: "Groq" })).toContainText(
+      "https://api.groq.com/openai/v1 · llama-3.3-70b-versatile · …7777",
+    );
+    await expect(
+      page.getByRole("listitem", { name: "Groq" }).getByRole("button", { name: "Set up" }),
+    ).toHaveCount(0);
+
+    // Ollama needs no key.
+    await page
+      .getByRole("listitem", { name: "Ollama" })
+      .getByRole("button", { name: "Set up" })
+      .click();
     await expect(page.getByLabel("API key (optional)")).not.toHaveAttribute("required", "");
     await page.getByLabel("Model", { exact: true }).fill("llama3.1");
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText(
       "http://localhost:11434/v1 · llama3.1",
     );
+    // The OpenAI-compatible panel stays for any other server.
+    await expect(
+      page
+        .getByRole("listitem", { name: "OpenAI-compatible" })
+        .getByRole("button", { name: "Add" }),
+    ).toBeVisible();
   });
 
   test("invite and remove a member", async ({ page }) => {

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/components/badge";
 
+import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";
 import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
@@ -12,6 +13,10 @@ import { ProviderLogo } from "./provider-logo";
 // OpenAI, Anthropic, Gemini and Azure have one credential each; a server, a Bedrock region or a Vertex
 // AI project can be added as often as the person has them.
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
+
+// A service with its own panel has one credential, like OpenAI: the panel goes once it is set up.
+const connectedPresets = (providers: Provider[]) =>
+  new Set(providers.map((provider) => presetOf(provider)?.id));
 
 const detail = (provider: Provider) =>
   [provider.baseUrl, provider.modelId, provider.keyHint && `…${provider.keyHint}`]
@@ -49,6 +54,9 @@ export function ProvidersList() {
     (kind) => MANY.has(kind) || !providers.some((provider) => provider.kind === kind),
   );
 
+  const taken = connectedPresets(providers);
+  const presets = COMPATIBLE_PRESETS.filter((preset) => !taken.has(preset.id));
+
   return (
     <div className="flex flex-col gap-8">
       {providers.length > 0 && (
@@ -72,8 +80,13 @@ export function ProvidersList() {
               <ProviderActions
                 provider={provider}
                 edit={
-                  provider.kind === "openai-compatible" ? undefined : (
-                    <ProviderDialog kind={provider.kind} provider={provider} label="Edit" />
+                  provider.kind === "openai-compatible" && !presetOf(provider) ? undefined : (
+                    <ProviderDialog
+                      kind={provider.kind}
+                      provider={provider}
+                      preset={presetOf(provider)}
+                      label="Edit"
+                    />
                   )
                 }
               />
@@ -96,6 +109,20 @@ export function ProvidersList() {
               </span>
             </div>
             <ProviderDialog kind={kind} label={MANY.has(kind) ? "Add" : "Set up"} />
+          </li>
+        ))}
+        {presets.map((preset) => (
+          <li
+            key={preset.id}
+            aria-label={preset.name}
+            className="flex items-center gap-3.5 px-4 py-3.5"
+          >
+            <Tile kind="openai-compatible" />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
+              <span className="text-sm font-medium">{preset.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{preset.description}</span>
+            </div>
+            <ProviderDialog kind="openai-compatible" preset={preset} label="Set up" />
           </li>
         ))}
       </Group>

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { COMPATIBLE_PRESETS } from "./presets";
+import { COMPATIBLE_PRESETS, presetOf } from "./presets";
 
 describe("COMPATIBLE_PRESETS", () => {
   test("are the six services, each with its own id, name and address", () => {
@@ -31,5 +31,22 @@ describe("COMPATIBLE_PRESETS", () => {
     expect(COMPATIBLE_PRESETS.filter((preset) => !preset.needsKey).map((p) => p.id)).toEqual([
       "ollama",
     ]);
+  });
+});
+
+describe("presetOf", () => {
+  const saved = (kind: string, baseUrl: string | null) => ({ kind, baseUrl });
+
+  test("finds the panel a saved compatible provider belongs to, by its address", () => {
+    expect(presetOf(saved("openai-compatible", "https://api.groq.com/openai/v1"))?.id).toBe("groq");
+    expect(presetOf(saved("openai-compatible", "https://api.groq.com/openai/v1/"))?.id).toBe(
+      "groq",
+    );
+  });
+
+  test("leaves other servers and other kinds to the generic panel", () => {
+    expect(presetOf(saved("openai-compatible", "https://my.vllm.example/v1"))).toBeUndefined();
+    expect(presetOf(saved("openai-compatible", null))).toBeUndefined();
+    expect(presetOf(saved("openai", "https://api.groq.com/openai/v1"))).toBeUndefined();
   });
 });

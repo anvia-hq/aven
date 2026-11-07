@@ -21,7 +21,7 @@ A provider is what runs the person's agents: it holds a kind, an API key and, fo
 
 ### Presets for OpenAI-compatible services
 
-These have no kind of their own: they are `openai-compatible` providers with a known address. In Settings > Providers > **Add** under OpenAI-compatible, pressing the service's button under "Start from" fills the name and address. A bot gives the same address with `add_provider` (kind `openai-compatible`) and the name shown here.
+These have no kind of their own: they are `openai-compatible` providers with a known address. Each has a panel of its own in Settings > Providers (**Set up**, like OpenAI), which asks only for the key and the model and fixes the name and address; once set up, its panel goes. A bot gives the same address with `add_provider` (kind `openai-compatible`) and the name shown here.
 
 | Service    | Name       | Base URL                         | Key                                                                            |
 | ---------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------ |
@@ -34,7 +34,7 @@ These have no kind of their own: they are `openai-compatible` providers with a k
 
 The model is still required: with the key saved, the form's Load models button (or `list_provider_models`) lists what the service offers.
 
-OpenAI, Anthropic, Google Gemini and Azure can each be added once. Amazon Bedrock can be added once for each region, and Vertex AI once for each project and location. Bedrock takes only a Bedrock API key (not AWS access keys), reaches the models AWS serves on its `bedrock-mantle` `/v1` endpoint and offers no reasoning effort. Vertex AI takes a service account key (the account needs the Vertex AI User role): Aven trades it for a one-hour access token as each run needs one, so the key is the only thing to give. A pasted access token also works but stops after an hour. Vertex has no reasoning effort and no model list, so `list_provider_models` only shows the saved model. A Gemini key comes from Google AI Studio (https://aistudio.google.com/apikey) and is not a Vertex AI credential. An OpenAI-compatible server can be added many times, one for each server.
+OpenAI, Anthropic, Google Gemini, Azure and each of the services above can be added once. Amazon Bedrock can be added once for each region, and Vertex AI once for each project and location. Bedrock takes only a Bedrock API key (not AWS access keys), reaches the models AWS serves on its `bedrock-mantle` `/v1` endpoint and offers no reasoning effort. Vertex AI takes a service account key (the account needs the Vertex AI User role): Aven trades it for a one-hour access token as each run needs one, so the key is the only thing to give. A pasted access token also works but stops after an hour. Vertex has no reasoning effort and no model list, so `list_provider_models` only shows the saved model. A Gemini key comes from Google AI Studio (https://aistudio.google.com/apikey) and is not a Vertex AI credential. An OpenAI-compatible server can be added many times, one for each server.
 
 ## 1. Find out what they want
 
