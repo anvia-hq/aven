@@ -15,7 +15,7 @@ import {
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
 
-// The Update button of a runner that is behind the server (decision 0146), for an owner or an admin,
+// The Update button of a runner that is behind the server, or of the control plane's own runner when GitHub has a newer release (decisions 0146 and 0148), for an owner or an admin,
 // with what it will do said first; while it works, the row says Updating. The sidebar's row is
 // `compact`; Settings has the plain one.
 export function UpdateRuntimeDialog({
@@ -36,11 +36,12 @@ export function UpdateRuntimeDialog({
       <Badge variant="outline">Updating…</Badge>
     );
   }
-  if (!canUpdate || !runtime.online || !runtime.outdated || !runtime.canUpdate) return null;
+  if (!canUpdate || !runtime.online || !runtime.updateTo || !runtime.canUpdate) return null;
 
   // The control plane's own runner is on the machine that has the server: its update is the whole
   // `aven update` there, which restarts the server too.
   const withServer = runtime.ownerId === null;
+  const from = runtime.build ?? "its release";
 
   async function handleUpdate() {
     setWorking(true);
@@ -68,8 +69,8 @@ export function UpdateRuntimeDialog({
             <DialogTitle>Update {runtime.name}?</DialogTitle>
             <DialogDescription>
               {withServer
-                ? `It goes from ${runtime.build ?? "its release"} to the server's release, and the server on that machine updates too: Aven is unavailable for a few seconds while it restarts.`
-                : `It goes from ${runtime.build ?? "its release"} to the server's release and restarts for a moment.`}{" "}
+                ? `It goes from ${from} to ${runtime.updateTo}, and the server on that machine updates too: Aven is unavailable for a few seconds while it restarts.`
+                : `It goes from ${from} to the server's release, ${runtime.updateTo}, and restarts for a moment.`}{" "}
               It will not update while a run is going on it.
             </DialogDescription>
           </DialogHeader>

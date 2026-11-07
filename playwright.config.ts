@@ -55,6 +55,8 @@ export default defineConfig({
         AVEN_LOCAL_RUNNER: "off",
         // A release, so a runner on an older one shows as behind (decision 0146).
         AVEN_VERSION: "9.9.9",
+        // Never ask GitHub for the newest release from a test.
+        AVEN_RELEASES_URL: "http://127.0.0.1:9/releases",
         // The bots' computers are on the runner e2e/bot-runner.ts connects as.
         AVEN_BOT_RUNNER: BOT_RUNNER_ID,
         // GitHub is the fake one below, so importing a repository never reaches the real one.

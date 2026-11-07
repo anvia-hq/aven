@@ -5,13 +5,15 @@ import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
 import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
+import { createLatestRelease, type LatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
 import { createRuntimeBody, runtimeParams } from "./schema";
 import { requestUpdate } from "./update";
-import { runtimesService } from "./service";
+import { updateTarget } from "./update-target";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 
-export const runtimesRouter = (hub: RuntimeHub) =>
+export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) =>
   new Elysia({ prefix: "/runtimes" })
     .use(authRouter)
     .use(connectRouter(hub))
@@ -20,20 +22,29 @@ export const runtimesRouter = (hub: RuntimeHub) =>
       async ({ organizationId }) => {
         const rows = await runtimesService.list(organizationId);
         const server = serverBuild();
-        return rows.map((runtime) => {
-          const build = hub.buildOf(runtime.id) ?? null;
-          return {
-            ...runtime,
-            online: hub.isOnline(runtime.id),
-            // The release the runner says it is, and whether it is behind this server's.
-            build,
-            outdated: isBehind(build ?? undefined, server),
-            // An installed `aven` that can update itself when asked (decision 0146).
-            canUpdate: hub.canUpdateOf(runtime.id),
-            // How loaded its machine was when it last said; null while offline or if it never does.
-            stats: hub.statsOf(runtime.id) ?? null,
-          };
-        });
+        return Promise.all(
+          rows.map(async (runtime) => {
+            const build = hub.buildOf(runtime.id) ?? null;
+            return {
+              ...runtime,
+              online: hub.isOnline(runtime.id),
+              // The release the runner says it is, and whether it is behind this server's.
+              build,
+              outdated: isBehind(build ?? undefined, server),
+              // The release its Update button would take it to: the server's, or for the control
+              // plane's own runner a newer one on GitHub.
+              updateTo: await updateTarget(
+                { build: build ?? undefined, isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
+                server,
+                latest,
+              ),
+              // An installed `aven` that can update itself when asked (decision 0146).
+              canUpdate: hub.canUpdateOf(runtime.id),
+              // How loaded its machine was when it last said; null while offline or if it never does.
+              stats: hub.statsOf(runtime.id) ?? null,
+            };
+          }),
+        );
       },
       { auth: true, org: true },
     )
@@ -74,7 +85,13 @@ export const runtimesRouter = (hub: RuntimeHub) =>
           await runtimesService.get(organizationId, params.id),
           "Runtime not found",
         );
-        const result = await requestUpdate(hub, runtime.id, serverBuild());
+        const release =
+          (await updateTarget(
+            { build: hub.buildOf(runtime.id), isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
+            serverBuild(),
+            latest,
+          )) ?? serverBuild();
+        const result = await requestUpdate(hub, runtime.id, release);
         set.status = 202;
         return result;
       },
