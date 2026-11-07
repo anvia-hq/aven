@@ -459,6 +459,15 @@ export class Sandboxes implements ThreadWorkspaces {
     await mkdir(dir, { recursive: true });
     const root = await realpath(dir);
     if (await isCloned(root)) return root;
+    // A fork starts as a copy of its parent's workspace when this runner still has it; otherwise it
+    // is a thread like any other and clones the repository (decision 0135).
+    if (thread.forkOf) {
+      const parent = this.#workspaceDir(thread.forkOf);
+      if (await isCloned(parent)) {
+        await this.#environments.fork(thread, await realpath(parent), thread.forkOf, root);
+        return root;
+      }
+    }
     await this.#environments.fill(thread, root, await repo());
     return root;
   }

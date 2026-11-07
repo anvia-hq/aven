@@ -53,4 +53,47 @@ describe("toolsForRun", () => {
     expect(given[0]).not.toContain("memory");
     expect(given[0]).not.toContain("cockpit");
   });
+
+  test("the fork tools are the run's agent's alone, and only when the host gives them (decision 0135)", async () => {
+    const given: string[][] = [];
+    const createSubagent: CreateSubagent = ({ tools }) => {
+      given.push(tools.map((tool) => tool.name));
+      return createCodingAgent({
+        model: scriptedModel([[text("done")]]),
+        tools,
+        webSearch: false,
+        questions: false,
+      }).agent;
+    };
+    const base = {
+      sandbox,
+      thread: { id: "t1", organizationId: "o1" },
+      tools: [],
+      current: () => [],
+      attended: true,
+      repoAccess: async () => ({ cloneUrl: "", defaultBranch: "main", token: "" }),
+      defineGoal: () => undefined,
+      createSubagent,
+      emit: () => undefined,
+    };
+    const forks = {
+      start: async () => ({ id: "x", title: "x" }),
+      status: async () => {
+        throw new Error("unused");
+      },
+      take: async () => ({ empty: true as const }),
+    };
+    const without = toolsForRun(base).map((tool) => tool.name);
+    expect(without).not.toContain("fork_thread");
+
+    const tools = toolsForRun({ ...base, forks });
+    expect(tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(["fork_thread", "fork_status", "take_fork_changes"]),
+    );
+    const spawn = tools.find((tool) => tool.name === "spawn_agent") as AnyTool & {
+      call(input: unknown): Promise<unknown>;
+    };
+    await spawn.call({ tasks: [{ description: "task", prompt: "look", type: "general" }] });
+    expect(given[0]).not.toContain("fork_thread");
+  });
 });

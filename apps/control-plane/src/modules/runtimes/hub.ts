@@ -21,6 +21,7 @@ import type {
 } from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
+import type { ThreadForks } from "../threads/forks";
 import type { CockpitCaller } from "../cockpit/commands";
 import type { MemoryCaller } from "../memory/commands";
 import { PendingCalls } from "./pending-calls";
@@ -307,6 +308,7 @@ export class RuntimeConnection {
         repoAccess: this.hub.repoAccess,
         skillArchive: this.hub.skillArchive,
         mcpReport: this.hub.mcpReport,
+        forks: this.hub.forks,
       });
       this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
@@ -364,6 +366,16 @@ export class RuntimeHub {
     /** Keeps how a run's MCP servers connected (decision 0085). */
     readonly mcpReport: (results: McpConnectResult[]) => Promise<void> = async () => undefined,
   ) {}
+
+  /**
+   * What the agent of a run does with forks of its thread (decision 0135). Set once the thread
+   * messages exist, which are made from the runs this hub serves.
+   */
+  forks: ThreadForks = {
+    start: () => Promise.reject(new Error("Forks are not available")),
+    status: () => Promise.reject(new Error("Forks are not available")),
+    ended: async () => undefined,
+  };
 
   // A runtime that reconnects replaces its previous connection.
   attach(

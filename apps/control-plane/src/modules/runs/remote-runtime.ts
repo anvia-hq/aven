@@ -4,6 +4,7 @@ import type {
   RunIdentityCredential,
   RunModel,
   RunOutcome,
+  RunThreadInfo,
 } from "@aven/protocol/runtime-wire";
 import type { ModelConfig } from "@aven/agents/model";
 import { z } from "zod";
@@ -102,7 +103,7 @@ export class RemoteRuntime implements Runtime {
     return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.start",
       runId,
-      thread: { id: thread.id, organizationId: thread.organizationId },
+      thread: forkable(thread),
       prompt,
       compact: compact || undefined,
       attachments: attachments?.length ? attachments : undefined,
@@ -135,7 +136,7 @@ export class RemoteRuntime implements Runtime {
     return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
       type: "run.resume",
       runId,
-      thread: { id: thread.id, organizationId: thread.organizationId },
+      thread: forkable(thread),
       continuation,
       response,
       skills: skills?.length ? skills : undefined,
@@ -244,4 +245,13 @@ export class RemoteRuntime implements Runtime {
       throw error;
     }
   }
+}
+
+// What the runner is told of a run's thread, with the thread it was forked from (decision 0135).
+function forkable(thread: RunThread): RunThreadInfo {
+  return {
+    id: thread.id,
+    organizationId: thread.organizationId,
+    forkOf: thread.parentThreadId ?? undefined,
+  };
 }

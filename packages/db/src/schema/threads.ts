@@ -1,4 +1,12 @@
-import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  jsonb,
+  type AnyPgColumn,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { projects } from "./projects";
@@ -31,6 +39,13 @@ export const threads = pgTable(
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
+    /**
+     * The thread this one was forked from: its agent made it to work apart, from a copy of its
+     * workspace (decision 0135). Null for every other thread; kept when the parent is archived.
+     */
+    parentThreadId: uuid("parent_thread_id").references((): AnyPgColumn => threads.id, {
+      onDelete: "set null",
+    }),
     /**
      * Who may see the thread: only its creator (`private`), or every member of its organization,
      * read-only (`workspace`; decision 0084).

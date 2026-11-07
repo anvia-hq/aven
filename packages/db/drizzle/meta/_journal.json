@@ -330,6 +330,13 @@
       "when": 1793958008554,
       "tag": "0046_first_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794014821832,
+      "tag": "0047_jittery_mentor",
+      "breakpoints": true
     }
   ]
 }

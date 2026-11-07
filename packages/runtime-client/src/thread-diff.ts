@@ -10,6 +10,8 @@ import { trackPushes } from "./track-pushes";
 
 // Where the working tree stood when the thread's latest run began (decision 0030).
 const TURN_REF = "refs/aven/turn";
+// Where the working tree stood when a forked thread was made (decision 0135).
+const FORK_REF = "refs/aven/fork-base";
 // A patch past this is cut at a line, so one huge change cannot fill the wire or the page.
 const MAX_PATCH_BYTES = 2 * 1024 * 1024;
 const IDENTITY = {
@@ -35,19 +37,24 @@ async function workingTree(root: string, run: Git) {
   }
 }
 
-/** Remembers the working tree as the start of a turn; false when `root` holds no repository. */
-export async function markTurn(root: string, run: Git = git) {
+// Keeps the working tree as it is now under `ref`; false when `root` holds no repository.
+async function markTree(root: string, ref: string, message: string, run: Git) {
   const host = hostGit(run);
   const tree = await workingTree(root, host);
   if (!tree) return false;
-  const commit = await host(["commit-tree", tree, "-m", "Start of a turn"], {
-    cwd: root,
-    env: IDENTITY,
-  });
+  const commit = await host(["commit-tree", tree, "-m", message], { cwd: root, env: IDENTITY });
   if (commit.code !== 0) return false;
-  const saved = await host(["update-ref", TURN_REF, commit.stdout.trim()], { cwd: root });
+  const saved = await host(["update-ref", ref, commit.stdout.trim()], { cwd: root });
   return saved.code === 0;
 }
+
+/** Remembers the working tree as the start of a turn; false when `root` holds no repository. */
+export const markTurn = (root: string, run: Git = git) =>
+  markTree(root, TURN_REF, "Start of a turn", run);
+
+/** Remembers the working tree as what a fork started from, for `forkChanges` (decision 0135). */
+export const markFork = (root: string, run: Git = git) =>
+  markTree(root, FORK_REF, "Start of a fork", run);
 
 // Where the thread's branch left the default branch; HEAD when there is no remote branch to compare with.
 async function branchPoint(root: string, run: Git) {
@@ -108,6 +115,25 @@ export async function threadDiff(
   if (!now) return null;
   const from = await diffStart(root, scope, host, run);
   if (!from) return { patch: "", truncated: false };
+  return patchBetween(root, from, now, host);
+}
+
+/**
+ * Everything a forked thread changed since it was made, commits and uncommitted work alike, as a
+ * patch against the tree it started from. Null when `root` is no repository or was never forked.
+ */
+export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
+  const host = hostGit(run);
+  const now = await workingTree(root, host);
+  if (!now) return null;
+  const start = await host(["rev-parse", "--verify", "--quiet", `${FORK_REF}^{tree}`], {
+    cwd: root,
+  });
+  if (start.code !== 0) return null;
+  return patchBetween(root, start.stdout.trim(), now, host);
+}
+
+async function patchBetween(root: string, from: string, now: string, host: Git) {
   const diff = await host(
     [
       "-c",

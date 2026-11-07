@@ -59,7 +59,7 @@ async function cloneDirectory(from: string, to: string) {
 
 // A copy that shares the disk blocks where the file system can (APFS, btrfs, xfs), and a plain one
 // where it cannot: a project with a large `node_modules` should not be written twice.
-async function copyTree(from: string, to: string) {
+export async function copyTree(from: string, to: string) {
   if (await cloneDirectory(from, to)) return;
   await mkdir(to, { recursive: true });
   const attempts =

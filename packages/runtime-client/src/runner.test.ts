@@ -1567,9 +1567,21 @@ describe("startRuntime runs", () => {
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
     // Every agent of the run can fetch (decision 0042) and hand tasks to subagents (decision 0057);
-    // only the one with a person to talk to may define a goal, and only it may ask questions.
+    // only the one with a person to talk to may define a goal and fork its thread (decision 0135),
+    // and only it may ask questions.
     expect(made).toEqual([
-      { id: "run-run-1", attended: true, tools: ["git_fetch", "spawn_agent", "define_goal"] },
+      {
+        id: "run-run-1",
+        attended: true,
+        tools: [
+          "git_fetch",
+          "spawn_agent",
+          "fork_thread",
+          "fork_status",
+          "take_fork_changes",
+          "define_goal",
+        ],
+      },
       { id: "goal-run-1", attended: false, tools: ["git_fetch", "spawn_agent"] },
       { id: "run-run-1-report", attended: false, tools: ["git_fetch", "spawn_agent"] },
     ]);

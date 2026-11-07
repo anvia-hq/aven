@@ -1,5 +1,6 @@
 import type { AnyTool } from "@anvia/core";
 import { createDefineGoalTool, type GoalRequest } from "@aven/agents/tools/define-goal";
+import { createForkTools, type ForkHost } from "@aven/agents/tools/forks";
 import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
 import { createCockpitTool, type CockpitHost } from "@aven/agents/tools/cockpit";
 import { createMemoryTool, type MemoryHost } from "@aven/agents/tools/memory";
@@ -34,6 +35,8 @@ export type RunToolsInput = {
   emit: (event: RunEvent) => void;
   /** Works the person's memory, when the run has one (decision 0102). */
   memory?: MemoryHost;
+  /** Forks the thread and takes a fork's work, when the agent may (decision 0135). */
+  forks?: ForkHost;
   /** Reads the sender's cockpit, when the run may (decision 0109). */
   cockpit?: CockpitHost;
 };
@@ -52,6 +55,7 @@ export function toolsForRun({
   createSubagent,
   emit,
   memory,
+  forks,
   cockpit,
 }: RunToolsInput): AnyTool[] {
   // For a person who has not connected GitHub, so the sandbox cannot fetch itself: it is done
@@ -80,7 +84,9 @@ export function toolsForRun({
   const notes = memory ? [createMemoryTool(memory)] : [];
   // A thread's agent only reads the person's cockpit (decision 0109); its subagents do not.
   const reading = cockpit ? [createCockpitTool(cockpit, "read")] : [];
-  const withSubagents = [...bound, spawnAgent, ...notes, ...reading];
+  // Subagents cannot fork, so what they are given does not include it (decision 0135).
+  const forking = forks ? createForkTools(forks) : [];
+  const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking];
   // Only an agent with a person to set the repository up with may save its environment,
   // which can take many minutes (decision 0043); a runner without snapshots has no tool.
   const saveEnvironment = sandbox.saveEnvironment
