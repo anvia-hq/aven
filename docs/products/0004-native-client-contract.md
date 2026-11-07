@@ -33,7 +33,7 @@ snapshot    { messages: Message[], running: bool, usage?: Usage, runningMs?: num
 run_start   { prompt, attachments?: Attachment[], mentions?: Mention[] }
 text        { delta }
 tool_start  { tool: Tool }
-tool_end    { id, status: "done" | "error", output?, image?: Image }
+tool_end    { id, status: "done" | "error", output?, artifacts?: Artifact[] }
 run_resume  {}   the question was answered and the run continues in the same assistant message
 usage       { turn: Tokens, context?: Context }   one model call's tokens, and how full the context is; not part of the transcript; add `turn` to the totals
 subagent    { index, event: SubagentEvent }   what one subagent of the running `spawn_agent` call does (decision 0057); a client may ignore it
@@ -45,10 +45,10 @@ error       { message }
 Message = { id, role: "user" | "assistant", parts: Part[], attachments?: Attachment[], mentions?: Mention[] }   attachments and mentions only on a user message
 Mention = { type: "file" | "skill", name, from, to }   where the token is in the message's text
 Part    = { type: "text", text } | { type: "tool", tool: Tool }
-Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output?, questions?: Question[], image?: Image, subagents?: Subagent[] }
+Tool    = { id, name, target, status: "running" | "done" | "error", diff?: DiffLine[], output?, questions?: Question[], artifacts?: Artifact[], subagents?: Subagent[] }
 Subagent = { index, description, type, status: "running" | "done" | "error", tools: Tool[], output? }   on a `spawn_agent` tool: its tasks, working from the start; `tools` have no output or diff
 SubagentEvent = { type: "tool_start", tool: Tool } | { type: "tool_end", id, status: "done" | "error" } | { type: "end", status: "done" | "error", output? }
-Image   = { name, mediaType, caption? }   an image the agent showed; GET /threads/:id/artifacts/:name serves it (decision 0033)
+Artifact = { name, mediaType, caption? }   an image or a video (`video/mp4`, `video/webm`) the agent showed, up to twelve to a call, to be shown together; GET /threads/:id/artifacts/:name serves it and answers a `Range` request (decisions 0033 and 0136)
 Attachment = { name, mediaType, size, image? }   a file sent with a message; `image` is the name GET /threads/:id/artifacts/:name serves it by (decision 0034)
 Question = { id, text, choices?: [{ label, value }], allowCustom?: bool }
 Context  = { usedTokens, contextWindow }

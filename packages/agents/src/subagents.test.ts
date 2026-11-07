@@ -18,7 +18,7 @@ const named = (name: string): AnyTool =>
 const parentTools = [
   ...SANDBOX_TOOL_NAMES,
   "edit",
-  "show_image",
+  "show_artifact",
   "git_fetch",
   "define_goal",
   "save_environment",
@@ -56,7 +56,7 @@ describe("subagentTools", () => {
       "request_secret",
       "define_goal",
       "save_environment",
-      "show_image",
+      "show_artifact",
       "spawn_agent",
     ])
       expect(names).not.toContain(forbidden);

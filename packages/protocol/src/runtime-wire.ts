@@ -105,14 +105,21 @@ export type FileContent =
   | { kind: "binary"; size: number }
   | { kind: "missing" };
 
-/** What the control plane asks of a runner for an image the agent showed (decision 0033); params are `{ threadId, name }`. */
+/** What the control plane asks of a runner for an image or video the agent showed (decisions 0033 and 0136); params are `{ threadId, name }`. */
 type ArtifactsCallMethod = "artifacts.read";
 
 /** An image a runner keeps, its bytes in base64; null on the wire when there is no such image. */
 export type ArtifactContent = { mediaType: string; data: string };
 
-/** The types of image a runner keeps; SVG is not one, since it can carry script. */
-export const ARTIFACT_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+/** The types of image and video a runner keeps; SVG is not one, since it can carry script. */
+export const ARTIFACT_MEDIA_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+] as const;
 
 /** The extension a kept image's name ends in, by its type. */
 export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
@@ -120,11 +127,13 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
   "image/jpeg": "jpg",
   "image/gif": "gif",
   "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 /** The names a runner gives the images it keeps: a uuid and the extension of its type. */
 export const ARTIFACT_NAME =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm)$/;
 
 /**
  * What the control plane asks of a runner about the processes the agent left running in a thread's
@@ -763,4 +772,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 43;
+export const WIRE_VERSION = 44;

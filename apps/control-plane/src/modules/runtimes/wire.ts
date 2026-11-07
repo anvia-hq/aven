@@ -7,6 +7,7 @@ import {
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
 } from "@aven/protocol/goals";
+import { MAX_ARTIFACTS_PER_CALL } from "@aven/protocol/events";
 import { FORK_TEXT_MAX } from "@aven/protocol/forks";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { MEMORY_NOTE_MAX, type MemoryCommand } from "@aven/protocol/memory";
@@ -83,8 +84,8 @@ const callMethods = [
 // A bot's message is at most what `send_message` takes; a runner cannot say more than the bot may.
 const BOT_SAY_MAX = 2000;
 
-// An image the agent showed: a name the runner gave it, so a client can only ask for it by that.
-const toolImage = z.object({
+// An image or video the agent showed: a name the runner gave it, so a client can only ask for it by that.
+const toolArtifact = z.object({
   name: z.string().regex(ARTIFACT_NAME),
   mediaType: z.enum(ARTIFACT_MEDIA_TYPES),
   caption: z.string().max(500).optional(),
@@ -126,7 +127,7 @@ const toolPart = z.object({
       }),
     )
     .optional(),
-  image: toolImage.optional(),
+  artifacts: z.array(toolArtifact).max(MAX_ARTIFACTS_PER_CALL).optional(),
   subagents: z.array(subagentPart).optional(),
 });
 
@@ -145,7 +146,7 @@ const runEvent = z.discriminatedUnion("type", [
     id: z.string(),
     status: z.enum(["done", "error"]),
     output: z.string().optional(),
-    image: toolImage.optional(),
+    artifacts: z.array(toolArtifact).max(MAX_ARTIFACTS_PER_CALL).optional(),
   }),
   z.object({
     type: z.literal("subagent"),

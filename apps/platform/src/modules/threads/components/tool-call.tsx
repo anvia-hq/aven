@@ -33,6 +33,8 @@ const meta: Record<string, Meta> = {
   wait_for_port: { icon: Terminal, running: "Waiting for port", done: "Port ready" },
   list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
   web_search: { icon: Search, running: "Searching", done: "Searched" },
+  show_artifact: { icon: ImageIcon, running: "Showing", done: "Showed" },
+  // The tool that showed one image before show_artifact: a thread may still hold its calls.
   show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
   git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
   save_environment: {

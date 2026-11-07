@@ -150,4 +150,31 @@ run("the images a thread's agent showed (real postgres, real WebSocket)", async 
     expect((await get(`/threads/${thread.id}/artifacts/a.svg`, owner.token)).status).toBe(422);
     expect(calls).toEqual([]);
   });
+
+  test("serves a video in pieces, as a browser asks for it, and refuses a range outside it", async () => {
+    const video = "00000000-0000-4000-8000-000000000002.mp4";
+    const { thread } = await setup(() => ({
+      ok: true,
+      result: { mediaType: "video/mp4", data: Buffer.from("0123456789").toString("base64") },
+    }));
+    const path = `/threads/${thread.id}/artifacts/${video}`;
+    const piece = await fetch(`http://${base}${path}`, {
+      headers: { authorization: `Bearer ${owner.token}`, range: "bytes=2-5" },
+    });
+    expect(piece.status).toBe(206);
+    expect(piece.headers.get("content-range")).toBe("bytes 2-5/10");
+    expect(piece.headers.get("content-type")).toBe("video/mp4");
+    expect(await piece.text()).toBe("2345");
+
+    const whole = await get(path, owner.token);
+    expect(whole.status).toBe(200);
+    expect(whole.headers.get("accept-ranges")).toBe("bytes");
+    expect(await whole.text()).toBe("0123456789");
+
+    const outside = await fetch(`http://${base}${path}`, {
+      headers: { authorization: `Bearer ${owner.token}`, range: "bytes=50-" },
+    });
+    expect(outside.status).toBe(416);
+    expect(outside.headers.get("content-range")).toBe("bytes */10");
+  });
 });

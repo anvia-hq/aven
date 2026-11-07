@@ -2,7 +2,7 @@ import type { AnyTool } from "@anvia/core";
 import { createSandboxTools, type SandboxRuntime } from "@anvia/sandbox";
 import { SANDBOX_TOOL_NAMES } from "@aven/agents/sandbox-tools";
 import { createEditTool } from "@aven/agents/tools/edit";
-import { createShowImageTool } from "@aven/agents/tools/show-image";
+import { createShowArtifactTool } from "@aven/agents/tools/show-artifact";
 
 import type { ArtifactStore } from "./artifacts";
 import { withBackground } from "./background-command";
@@ -16,7 +16,7 @@ const READ_FILE_MAX_LINES = 10_000;
 
 // What an agent can do in a thread's sandbox: everything @anvia/sandbox offers on files, commands
 // and processes (a command can be run in the background), plus `edit` (the sandbox has no in-place edit) built on its file calls, and
-// `show_image`, which keeps what it shows in `artifacts` (decision 0033).
+// `show_artifact`, which keeps what it shows in `artifacts` (decisions 0033 and 0136).
 export function sandboxTools(
   sandbox: SandboxRuntime,
   thread: { id: string; artifacts: ArtifactStore },
@@ -34,7 +34,7 @@ export function sandboxTools(
       tool.name === "exec_command" && start ? withBackground(tool, start) : tool,
     ),
     createEditTool(sandbox),
-    createShowImageTool({
+    createShowArtifactTool({
       readFile: (options) => sandbox.readFile(options),
       save: (bytes, mediaType) => thread.artifacts.save(thread.id, bytes, mediaType),
     }),

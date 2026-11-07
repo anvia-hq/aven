@@ -8,7 +8,7 @@ import type {
   QuestionAnswer,
   QuestionPrompt,
   SubagentPart,
-  ToolImage,
+  ToolArtifact,
   ToolPart,
 } from "@aven/protocol/events";
 
@@ -23,7 +23,7 @@ export type {
   QuestionAnswer,
   QuestionPrompt,
   SubagentPart,
-  ToolImage,
+  ToolArtifact,
   ToolPart,
 };
 

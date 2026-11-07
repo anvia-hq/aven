@@ -70,6 +70,6 @@ test("the agent is told to show proof of its work, and a goal's session too", ()
     const text = codingInstructions(200, canHandOff);
     expect(text).toContain("<proof>");
     expect(text).toContain("show proof that it works");
-    expect(text).toContain("show_image");
+    expect(text).toContain("show_artifact");
   }
 });

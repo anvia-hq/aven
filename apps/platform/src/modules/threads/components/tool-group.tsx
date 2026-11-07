@@ -24,7 +24,7 @@ const search: Kind = {
   label: (count) => (count === 1 ? "searched once" : `searched ${count} times`),
 };
 const desktop: Kind = { label: (count) => plural(count, "desktop action") };
-const image: Kind = { label: (count) => `showed ${plural(count, "image")}` };
+const artifacts: Kind = { label: () => "showed files" };
 const fetch: Kind = { label: () => "fetched from GitHub" };
 const environment: Kind = { label: () => "saved the environment" };
 const other: Kind = { label: (count) => `used ${plural(count, "tool")}` };
@@ -49,8 +49,9 @@ function kindOf(name: string): Kind {
       return list;
     case "web_search":
       return search;
+    case "show_artifact":
     case "show_image":
-      return image;
+      return artifacts;
     case "git_fetch":
       return fetch;
     case "save_environment":
