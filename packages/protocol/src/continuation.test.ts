@@ -11,7 +11,7 @@ const base = {
   earlier: 0,
 };
 
-describe("a thread continued on another runner (decision 0150)", () => {
+describe("a thread continued on another runner (decision 0152)", () => {
   test("starts with one line for the person, and tells the agent how to bring the changes over", () => {
     const text = continuationPrompt({
       ...base,

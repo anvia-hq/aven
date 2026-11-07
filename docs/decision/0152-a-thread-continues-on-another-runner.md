@@ -1,4 +1,4 @@
-# 0150: A thread can be continued on another runner
+# 0152: A thread can be continued on another runner
 
 Status: accepted. Builds on 0093 (a project moves to another runner; a started thread stays), 0135 (forks) and 0030 (the diff).
 
