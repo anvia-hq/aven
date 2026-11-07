@@ -310,6 +310,14 @@ describe("createBotAgent", () => {
     );
   });
 
+  test("a bot that writes to another bot is told to say so to the person, naming the bot and the task", () => {
+    for (const handle of ["main", "scout"]) {
+      const told = botInstructions({ ...base, handle });
+      expect(told).toContain("always tell the person, in a message to them in the same reply");
+      expect(told).toContain("I have asked Scout to research");
+    }
+  });
+
   test("a bot given a way to ask the person has the tool and is told to stop after asking; one that is not has neither", async () => {
     const asked: unknown[] = [];
     const agent = createBotAgent({
