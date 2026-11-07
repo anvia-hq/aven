@@ -6,8 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { builtinSkills } from "./builtins";
 import { packSkill, skillFolder } from "./package";
 import type { UploadSkillBody } from "./schema";
-
-export type SkillView = Omit<SkillRow, "archive" | "userId">;
+import type { SkillView } from "./types";
 
 function view({ archive: _archive, userId: _userId, ...row }: SkillRow): SkillView {
   return row;

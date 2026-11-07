@@ -1,19 +1,14 @@
 import type {
-  FileContent,
-  FileEntry,
   FilesCallMethod,
   FilesCallParams,
   FilesSearchParams,
 } from "@aven/protocol/runtime-wire";
 import type { z } from "zod";
 
-import { runnerFor, type Available } from "../runtimes/ask-runner";
+import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { fileAnswer, folderAnswer, searchAnswer } from "./schema";
-
-export type FolderResult = Available<{ entries: FileEntry[] }>;
-export type FileResult = Available<FileContent>;
-export type SearchResult = Available<{ paths: string[] }>;
+import type { FileResult, FolderResult, SearchResult } from "./types";
 
 export function createFilesService(hub: RuntimeHub) {
   const runner = runnerFor(hub);

@@ -1,9 +1,9 @@
 import type { DesktopInfo } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import type { Available, Refusal, Runner } from "../runtimes/ask-runner";
-import type { ViewerSink } from "../runtimes/viewer-streams";
 import { desktopControl, desktopInfo } from "./schema";
+import type { DesktopStatus } from "./types";
+import type { Refusal, Runner, ViewerSink } from "../runtimes/types";
 
 const TAKEOVER_LEASE_MS = 60_000;
 
@@ -20,15 +20,6 @@ class DesktopTakenError extends ConflictError {
     super("Someone else is controlling the desktop");
   }
 }
-
-export type DesktopStatus = Available<{
-  state: DesktopInfo["state"];
-  width: number;
-  height: number;
-  held: boolean;
-  heldByMe: boolean;
-  expiresAt?: string;
-}>;
 
 const refused = (what: string): Refusal => ({
   logged: `The desktop ${what} was refused:`,

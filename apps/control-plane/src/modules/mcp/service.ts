@@ -7,8 +7,7 @@ import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { ConflictError, UnprocessableError } from "../../errors";
 import type { CreateMcpBody, UpdateMcpBody } from "./schema";
-
-export type McpServerView = Omit<McpServerRow, "headers" | "userId">;
+import type { McpServerView } from "./types";
 
 function view({ headers: _headers, userId: _userId, ...row }: McpServerRow): McpServerView {
   return row;

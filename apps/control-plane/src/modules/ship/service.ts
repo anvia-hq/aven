@@ -6,11 +6,13 @@ import { ConflictError } from "../../errors";
 import { createFilesService } from "../files/service";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
-import type { ModelSelection } from "../providers/resolve-model";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
-import { threadsService, type ThreadPullRequest } from "../threads/service";
-import { SETUP_FILE, SHIP_PROMPT_FILE, shipPrompt, type ShipMode } from "./prompt";
+import { threadsService } from "../threads/service";
+import { SETUP_FILE, SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
+import type { ModelSelection } from "../providers/types";
+import type { ShipMode } from "./types";
+import type { ThreadPullRequest } from "../threads/types";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {

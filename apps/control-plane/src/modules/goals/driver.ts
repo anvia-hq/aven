@@ -96,5 +96,3 @@ export function createGoalDriver(options: {
     },
   };
 }
-
-export type GoalDriver = ReturnType<typeof createGoalDriver>;

@@ -1,12 +1,9 @@
 import { db } from "@aven/db/client";
 import { botThreads } from "@aven/db/schema/bot-threads";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import type { WatchedRun, Watcher } from "./types";
 
 export const BOT_THREAD_FOLLOW_UPS = 3;
-
-export type Watcher = { botId: string; userId: string };
-
-export type WatchedRun = number | null;
 
 const at = (run: WatchedRun) => (run === null ? null : new Date(run));
 

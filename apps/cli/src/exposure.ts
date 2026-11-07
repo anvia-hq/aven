@@ -1,4 +1,4 @@
-export type ExposureReport = { ok: boolean; detail: string };
+import type { ExposureReport } from "./types";
 
 type Env = Record<string, string | undefined>;
 

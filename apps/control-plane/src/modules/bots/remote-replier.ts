@@ -17,7 +17,6 @@ import type {
   BotScheduled,
   BotScheduleParams,
   BotSendParams,
-  BotSent,
   BotMcped,
   BotMcpParams,
   BotNotesParams,
@@ -27,57 +26,24 @@ import type {
   BotThreadParams,
   BotSkillParams,
   BotUpdateParams,
-  RunSkill,
 } from "@aven/protocol/runtime-wire";
-import { isGoalRoundNote, type BotGoalView, type GoalAction } from "@aven/protocol/goals";
-import type { MemoryCommand, MemoryFolder } from "@aven/protocol/memory";
-import type { BotScheduleView } from "@aven/protocol/schedules";
+import { isGoalRoundNote } from "@aven/protocol/goals";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
-import type { BotLetter } from "./chats";
 import { answerBotMemory } from "./memory-answer";
-import type { BotReplier, BotReplyInput } from "./runner";
-import type { UpdateBotBody } from "./schema";
-import type { GoalInput } from "../goals/service";
-import type { BotMcp } from "../mcp/bot-access";
 import { runCockpitCommand } from "../cockpit/commands";
-import type { MemoryCaller } from "../memory/commands";
-import type { MemoryOwner } from "../memory/service";
-import type { BotProviders } from "../providers/bot-access";
-import type { BotThreads } from "../threads/bot-access";
-import type { SchedulePatch, ScheduleInput } from "../schedules/service";
-import type { NewBot } from "./service";
-
-export type BotKeeper = {
-  list(userId: string): Promise<Bot[]>;
-  create(userId: string, bot: NewBot): Promise<Bot>;
-  update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
-  deliver(letter: BotLetter): Promise<BotSent>;
-  timezone(userId: string): Promise<string>;
-  schedules: {
-    list(userId: string): Promise<BotScheduleView[]>;
-    create(userId: string, selfId: string, input: ScheduleInput): Promise<BotScheduleView>;
-    update(userId: string, id: string, patch: SchedulePatch): Promise<BotScheduleView>;
-    remove(userId: string, id: string): Promise<void>;
-  };
-  goals: {
-    get(botId: string): Promise<BotGoalView | null>;
-    start(userId: string, botId: string, input: GoalInput): Promise<BotGoalView>;
-    update(botId: string, action: GoalAction, reason?: string): Promise<BotGoalView | null>;
-  };
-  greet(userId: string, botId: string, hops: number): Promise<void>;
-};
-
-export type BotMemoryNotes = {
-  folders(owner: MemoryOwner): Promise<MemoryFolder[]>;
-  run(caller: MemoryCaller, command: MemoryCommand): Promise<string>;
-};
-
-export type BotSkills = {
-  forRun(userId: string): Promise<RunSkill[]>;
-  archive(digest: string): Promise<Uint8Array | undefined>;
-};
+import type {
+  BotKeeper,
+  BotMemoryNotes,
+  BotReplier,
+  BotReplyInput,
+  BotSkills,
+  NewBot,
+} from "./types";
+import type { BotMcp } from "../mcp/types";
+import type { BotProviders } from "../providers/types";
+import type { BotThreads } from "../threads/types";
 
 function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
   const line = (text: string) => text.replace(/\s+/g, " ").trim();

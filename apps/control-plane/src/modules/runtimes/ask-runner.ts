@@ -11,15 +11,8 @@ import type { z } from "zod";
 
 import { describeError, UnavailableError } from "../../errors";
 import { threadsService } from "../threads/service";
-import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "./hub";
-
-export type Available<T> = { available: false } | ({ available: true } & T);
-
-export type Refusal = {
-  logged: string;
-  message: string;
-  instead?: (reason: string) => Error | undefined;
-};
+import { RuntimeOfflineError, type RuntimeHub } from "./hub";
+import type { FindRunner, Refusal } from "./types";
 
 function refuse(refusal: Refusal, error: unknown): never {
   const reason = describeError(error);
@@ -34,8 +27,6 @@ type CallParams =
   | FilesCallParams
   | FilesSearchParams
   | ProcessesCallParams;
-
-export type FindRunner = (scope: string, id: string) => Promise<RuntimeConnection>;
 
 export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
   return {
@@ -58,8 +49,6 @@ export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
     },
   };
 }
-
-export type Runner = ReturnType<typeof runnerVia>;
 
 export const runnerFor = (hub: RuntimeHub) =>
   runnerVia(async (organizationId, threadId) => {

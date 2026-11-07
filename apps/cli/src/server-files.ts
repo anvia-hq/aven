@@ -1,7 +1,8 @@
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { newServerEnv, type ServerEnvOptions } from "./env-file";
+import { newServerEnv } from "./env-file";
+import type { ServerEnvOptions } from "./types";
 
 export async function writeServerFiles(
   dir: string,

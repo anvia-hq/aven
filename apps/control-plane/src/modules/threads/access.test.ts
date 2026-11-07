@@ -19,9 +19,9 @@ import type { RunManager } from "../runs/service";
 import { shipRouter } from "../ship/router";
 import { terminalRouter } from "../terminal/router";
 import { createShipService } from "../ship/service";
-import type { ThreadMessages } from "./messages";
 import { threadsRouter } from "./router";
 import { threadsService } from "./service";
+import type { ThreadMessages } from "./types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

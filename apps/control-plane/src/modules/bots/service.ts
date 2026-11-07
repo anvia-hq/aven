@@ -8,12 +8,12 @@ import {
   MAIN_BOT_HANDLE,
   type Bot,
 } from "@aven/protocol/bots";
-import type { BotCreateParams } from "@aven/protocol/runtime-wire";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
 import type { UpdateBotBody } from "./schema";
+import type { NewBot } from "./types";
 
 const MAIN_BOT = {
   name: "Aven",
@@ -37,8 +37,6 @@ const view = (row: BotRow): Bot => ({
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
-
-export type NewBot = Omit<BotCreateParams, "replyId">;
 
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
 

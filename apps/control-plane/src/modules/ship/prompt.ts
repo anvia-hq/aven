@@ -1,6 +1,7 @@
 import type { FileContent } from "@aven/protocol/runtime-wire";
 
 import { UnprocessableError } from "../../errors";
+import type { ShipMode } from "./types";
 
 export const SHIP_PROMPT_FILE = ".aven/ship.md";
 
@@ -9,8 +10,6 @@ export const SETUP_FILE = ".aven/setup";
 export const MAX_SHIP_PROMPT_CHARS = 10_000;
 
 export class ShipPromptError extends UnprocessableError {}
-
-export type ShipMode = "first" | "update" | "new";
 
 type PullRequest = { number: number; state: string; branch: string; title: string };
 

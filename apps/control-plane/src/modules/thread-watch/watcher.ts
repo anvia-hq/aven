@@ -1,10 +1,9 @@
 import type { BotThreadDetail } from "@aven/protocol/threads";
 
 import { describeError } from "../../errors";
-import type { RunEnding } from "../runs/service";
-import { threadWatchService, type WatchedRun, type Watcher } from "./service";
-
-export type NoteEnding = RunEnding | { outcome: "unknown" };
+import { threadWatchService } from "./service";
+import type { RunEnding } from "../runs/types";
+import type { NoteEnding, WatchedRun, Watcher } from "./types";
 
 export const QUIET_ALERT_MS = 15 * 60_000;
 
@@ -186,5 +185,3 @@ export function createThreadWatcher(options: {
     },
   };
 }
-
-export type ThreadWatcher = ReturnType<typeof createThreadWatcher>;

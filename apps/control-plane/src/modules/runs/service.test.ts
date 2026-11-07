@@ -25,8 +25,8 @@ import { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import { RunGateway } from "../runtimes/gateway";
 import { RemoteRuntime } from "./remote-runtime";
-import type { RunThread } from "./runtime";
-import { RunBusyError, RunManager, type RunEnding } from "./service";
+import { RunBusyError, RunManager } from "./service";
+import type { RunEnding, RunThread } from "./types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

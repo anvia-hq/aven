@@ -8,6 +8,7 @@ import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { effortsFor } from "./model-list";
 import { providersService } from "./service";
+import type { ModelSelection } from "./types";
 
 export const ENV_KEYS: Partial<Record<Provider, string>> = {
   anthropic: "ANTHROPIC_API_KEY",
@@ -30,8 +31,6 @@ export function environmentModel(): ModelConfig {
 export class InvalidSelectionError extends UnprocessableError {}
 
 type ProviderKind = ModelConfig["provider"];
-
-export type ModelSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
 
 export async function resolveModel(
   userId: string,

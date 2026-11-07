@@ -1,19 +1,18 @@
-import type { ModelConfig } from "@aven/agents/model";
 import type { MessageMention, QueuedSteer, RunEvent } from "@aven/protocol/events";
-import type { RunMemory } from "@aven/protocol/memory";
-
-import type { CockpitCaller } from "../cockpit/commands";
-import type { MemoryCaller } from "../memory/commands";
-import type { RunIdentity } from "../workload-identity/grants";
 import type {
   RunAttachment,
   RunEnvVar,
   RunGithub,
+  RunMcpServer,
   RunOutcome,
   RunSkill,
-  RunMcpServer,
   SteerResult,
 } from "@aven/protocol/runtime-wire";
+import type { CockpitCaller } from "../cockpit/types";
+import type { ModelConfig } from "@aven/agents/model";
+import type { MemoryCaller } from "../memory/types";
+import type { RunMemory } from "@aven/protocol/memory";
+import type { RunIdentity } from "../workload-identity/types";
 
 export type RunThread = {
   id: string;
@@ -82,3 +81,21 @@ export interface Runtime {
   resume(input: ResumeRunInput): RuntimeRun;
   dispose(): void;
 }
+
+export type ContinuationStore = {
+  save(threadId: string, continuation: unknown): Promise<void>;
+  clear(threadId: string): Promise<void>;
+};
+
+export type FailureStore = {
+  record(threadId: string, message: string | null): Promise<void>;
+  read(threadId: string): Promise<string | null>;
+};
+
+export type RunEnding =
+  | { outcome: "done" }
+  | { outcome: "failed"; error: string }
+  | { outcome: "question" }
+  | { outcome: "cancelled" };
+
+export type FinishedRun = { startedAt: number };

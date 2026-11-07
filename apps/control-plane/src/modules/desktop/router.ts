@@ -4,10 +4,10 @@ import { bytesOf } from "../../bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
 import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";
-import type { ViewerHandle } from "../runtimes/viewer-streams";
 import { threadParams } from "../threads/schema";
 import { runnerFor } from "../runtimes/ask-runner";
 import { createDesktopService } from "./service";
+import type { ViewerHandle } from "../runtimes/types";
 
 const VIEWER_SUBPROTOCOL = "binary";
 

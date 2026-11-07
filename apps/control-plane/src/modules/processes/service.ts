@@ -1,10 +1,9 @@
-import type { ProcessLogs, ProcessView } from "@aven/protocol/runtime-wire";
+import type { ProcessLogs } from "@aven/protocol/runtime-wire";
 
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { logsAnswer, processesAnswer } from "./schema";
-
-export type ProcessesResult = { processes: ProcessView[] };
+import type { ProcessesResult } from "./types";
 
 export function createProcessesService(hub: RuntimeHub) {
   const runner = runnerFor(hub);

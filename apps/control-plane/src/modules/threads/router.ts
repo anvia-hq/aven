@@ -11,9 +11,8 @@ import {
   threadParams,
   updateThreadBody,
 } from "./schema";
-import type { ThreadMessages } from "./messages";
-import type { PutAwayThread } from "./put-away";
 import { threadsService } from "./service";
+import type { PutAwayThread, ThreadMessages } from "./types";
 
 export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAway: PutAwayThread) =>
   new Elysia({ prefix: "/threads" })

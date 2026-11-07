@@ -13,16 +13,7 @@ import { NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
 import { preferencesService } from "../preferences/service";
 import { checkTimezone, CronError, describeTime, minimumGapMinutes, nextRun } from "./cron";
-
-export type ScheduleInput = {
-  name: string;
-  cron: string;
-  prompt: string;
-  timezone?: string;
-  bot?: string;
-};
-
-export type SchedulePatch = Partial<ScheduleInput & { enabled: boolean }>;
+import type { ScheduleInput, SchedulePatch } from "./types";
 
 function checkExpression(cron: string, timezone: string, now: Date) {
   try {

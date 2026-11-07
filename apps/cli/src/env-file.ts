@@ -1,4 +1,5 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
+import type { ServerEnvOptions } from "./types";
 
 export function parseEnv(text: string) {
   const values: Record<string, string> = {};
@@ -45,18 +46,6 @@ export function addMissingKeys(existing: string, template: string) {
     if (!(key in have)) missing[key] = secrets[key] ?? SETTINGS_BEFORE[key] ?? value;
   return setEnv(existing, missing);
 }
-
-export type ServerEnvOptions = {
-  origin: string;
-  port: number;
-  version: string;
-  ownerEmail?: string;
-  domain?: string;
-  httpsPort?: number;
-  apiPort?: number;
-  bind?: string;
-  registration?: "open" | "closed";
-};
 
 export function newServerEnv(template: string, options: ServerEnvOptions) {
   const values: Record<string, string> = {

@@ -4,12 +4,8 @@ import type { RunGithub } from "@aven/protocol/runtime-wire";
 import { and, eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "../../crypto";
-import type { GithubUserGrant } from "./client";
-import { githubClients, PLATFORM_APP, type GithubClients } from "./clients";
-
-export type GithubIdentity = { id: number; login: string; name: string | null };
-
-export type GithubUserToken = { token: string; identity: GithubIdentity };
+import { githubClients, PLATFORM_APP } from "./clients";
+import type { GithubClients, GithubIdentity, GithubUserGrant, GithubUserToken } from "./types";
 
 const RUN_MIN_REMAINING_MS = 2 * 60 * 60_000;
 

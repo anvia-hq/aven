@@ -4,7 +4,7 @@ import { BotReplies, type CreateBotReplyAgent } from "@aven/runtime-client/bot-r
 import { noProcesses } from "@aven/runtime-client/thread-processes";
 
 import { answerBotMemory } from "../memory-answer";
-import type { BotReplier } from "../runner";
+import type { BotReplier } from "../types";
 
 export function loopbackReplier(options: {
   store: MemoryStore;

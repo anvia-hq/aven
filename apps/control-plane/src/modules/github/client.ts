@@ -2,25 +2,6 @@ import { createSign } from "node:crypto";
 
 import { ConflictError, UnavailableError } from "../../errors";
 
-export type GithubConfig = {
-  appId: string;
-  privateKey: string;
-  slug: string;
-  clientId: string;
-  clientSecret: string;
-  apiUrl: string;
-  webUrl: string;
-};
-
-export type GithubRepo = {
-  id: number;
-  fullName: string;
-  private: boolean;
-  defaultBranch: string;
-  cloneUrl: string;
-  description: string | null;
-};
-
 export class GithubNotConfiguredError extends UnavailableError {
   constructor() {
     super("GitHub is not configured on this control plane");
@@ -85,14 +66,6 @@ const PAGE_SIZE = 100;
 const MAX_PAGES = 5;
 const TOKEN_MARGIN_MS = 5 * 60_000;
 
-export type GithubPullRequest = {
-  number: number;
-  url: string;
-  title: string;
-  branch: string;
-  state: "open" | "closed" | "merged";
-};
-
 type PullPayload = {
   number: number;
   html_url: string;
@@ -106,15 +79,6 @@ function pullState(pull: PullPayload): GithubPullRequest["state"] {
   if (pull.merged_at) return "merged";
   return pull.state === "open" ? "open" : "closed";
 }
-
-export type GithubUserGrant = {
-  accessToken: string;
-  expiresAt: number | null;
-  refreshToken: string | null;
-  refreshExpiresAt: number | null;
-};
-
-export type GithubUserProfile = { id: number; login: string; name: string | null };
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -136,83 +100,36 @@ const toRepo = (repo: RepoPayload): GithubRepo => ({
   description: repo.description,
 });
 
-import {
-  BRANCH_CALLS_AT_ONCE,
-  BRANCHES_SUMMARIZED,
-  mapLimit,
-  pullsByBranch,
-  type GithubBranchSummary,
-  type OpenPullPayload,
-} from "./branches";
-import {
-  checksOf,
-  latestReviews,
-  shapeFiles,
-  TEXT_MAX_CHARS,
-  type CheckRunPayload,
-  type FilePayload,
-  type GithubCommitDetail,
-  type GithubPullDetail,
-  type ReviewPayload,
-} from "./detail";
-
-export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
-
-export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };
+import { BRANCH_CALLS_AT_ONCE, BRANCHES_SUMMARIZED, mapLimit, pullsByBranch } from "./branches";
+import { checksOf, latestReviews, shapeFiles, TEXT_MAX_CHARS } from "./detail";
+import type {
+  CheckRunPayload,
+  FilePayload,
+  GithubBranchSummary,
+  GithubCommitDetail,
+  GithubCommitFilters,
+  GithubCommitPage,
+  GithubConfig,
+  GithubPullDetail,
+  GithubPullRequest,
+  GithubReadme,
+  GithubRepo,
+  GithubTrackedFilters,
+  GithubTrackedItem,
+  GithubTrackedKind,
+  GithubTrackedPage,
+  GithubTrackedState,
+  GithubTreeEntry,
+  GithubUserGrant,
+  GithubUserProfile,
+  OpenPullPayload,
+  ReviewPayload,
+} from "./types";
 
 export const README_MAX_CHARS = 200_000;
 
-export type GithubCommit = {
-  sha: string;
-  message: string;
-  author: string | null;
-  authorAvatar: string | null;
-  date: string;
-  parents: string[];
-  refs: string[];
-  tags: string[];
-};
-
-export type GithubCommitPage = { commits: GithubCommit[]; hasMore: boolean };
-
-export type GithubCommitFilters = {
-  author?: string;
-  since?: string;
-  until?: string;
-  path?: string;
-  branch?: string;
-};
-
 export const COMMITS_PER_PAGE = 10;
 const COMMIT_MESSAGE_MAX = 200;
-
-export type GithubTrackedKind = "pull" | "issue";
-export type GithubTrackedState = "open" | "closed" | "merged" | "all";
-
-export type GithubTrackedFilters = {
-  author?: string;
-  reviewRequested?: string;
-  review?: "required" | "approved" | "changes_requested";
-  checks?: "success" | "failure" | "pending";
-  label?: string;
-  draft?: boolean;
-  staleDays?: number;
-  text?: string;
-  sort?: "updated" | "oldest" | "created" | "comments";
-};
-
-export type GithubTrackedItem = {
-  number: number;
-  title: string;
-  url: string;
-  author: string | null;
-  status: "open" | "draft" | "merged" | "closed";
-  comments: number;
-  updatedAt: string;
-  labels: string[];
-};
-
-export type GithubTrackedPage = { items: GithubTrackedItem[]; total: number; hasMore: boolean };
 
 export const TRACKED_PER_PAGE = 10;
 const SEARCH_MAX_RESULTS = 1000;

@@ -8,6 +8,7 @@ import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-or
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
+import type { ThreadPullRequest, Viewer } from "./types";
 
 export class ProjectNotFoundError extends UnprocessableError {}
 export class ThreadNotFoundError extends NotFoundError {
@@ -15,14 +16,6 @@ export class ThreadNotFoundError extends NotFoundError {
     super("Thread not found");
   }
 }
-
-export type ThreadPullRequest = {
-  number: number;
-  url: string;
-  branch: string;
-  title: string;
-  state: "open" | "closed" | "merged";
-};
 
 const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads);
 const columns = {
@@ -41,8 +34,6 @@ const columns = {
     where ${threadPullRequests.threadId} = "threads"."id"
   ), '[]'::json)`,
 };
-
-export type Viewer = { organizationId: string; userId: string };
 
 const seenBy = ({ organizationId, userId }: Viewer) =>
   and(

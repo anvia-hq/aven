@@ -10,8 +10,7 @@ import {
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
-
-export type GoalInput = { objective: string; checks: string[]; maxRounds?: number };
+import type { GoalInput } from "./types";
 
 const FROM: Record<GoalAction, GoalPhase[]> = {
   complete: ["active", "paused", "blocked"],

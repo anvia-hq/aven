@@ -19,20 +19,7 @@ import { and, asc, count, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { botsService } from "../bots/service";
 import { projectsService } from "../projects/service";
-
-export type MemoryOwner = { userId: string; projectId?: string; botId?: string };
-
-export type MemoryPlace = {
-  userId: string;
-  scope: MemoryScope;
-  projectId?: string;
-  botId?: string;
-};
-
-export type MemoryActor =
-  | { source: "person" }
-  | { source: "thread"; threadId: string }
-  | { source: "bot"; botId: string };
+import type { MemoryActor, MemoryOwner, MemoryPlace } from "./types";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

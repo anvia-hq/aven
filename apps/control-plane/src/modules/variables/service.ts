@@ -13,24 +13,11 @@ import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { isOwnerOrAdmin } from "../auth/members";
 import { projectsService } from "../projects/service";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";
+import type { Scope } from "./types";
 
 const HINT_MIN_LENGTH = 12;
 
 export class TooManyVariablesError extends UnprocessableError {}
-
-export type Scope =
-  | {
-      kind: "workspace";
-      organizationId: string;
-      actorId: string;
-    }
-  | {
-      kind: "project";
-      organizationId: string;
-      projectId: string;
-      actorId: string;
-    }
-  | { kind: "personal"; organizationId: string; userId: string };
 
 const SCOPE_LABEL = { workspace: "workspace", project: "project", personal: "person" } as const;
 

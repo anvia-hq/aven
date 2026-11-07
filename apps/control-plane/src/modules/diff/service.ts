@@ -1,10 +1,9 @@
-import type { DiffScope, ThreadDiff } from "@aven/protocol/runtime-wire";
+import type { DiffScope } from "@aven/protocol/runtime-wire";
 
-import { runnerFor, type Available } from "../runtimes/ask-runner";
+import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadDiff } from "./schema";
-
-export type DiffResult = Available<ThreadDiff>;
+import type { DiffResult } from "./types";
 
 const refusal = { logged: "The diff was refused:", message: "The changes could not be read" };
 

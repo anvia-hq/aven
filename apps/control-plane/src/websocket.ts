@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 
 import { trustedOrigins } from "./modules/auth/service";
-import type { ViewerSink } from "./modules/runtimes/viewer-streams";
+import type { ViewerSink } from "./modules/runtimes/types";
 
 export const CloseCode = {
   GoingAway: 1001,

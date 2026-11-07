@@ -15,12 +15,12 @@ import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "..
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
-  Runtime,
   RunResult,
   RunThread,
+  Runtime,
   RuntimeRun,
   StartRunInput,
-} from "./runtime";
+} from "./types";
 
 const STEER_TIMEOUT_MS = 10_000;
 

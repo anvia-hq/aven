@@ -1,7 +1,7 @@
 import { NotFoundError } from "../../errors";
-import type { Runner } from "../runtimes/ask-runner";
 import { byteRange } from "./range";
 import { artifactAnswer } from "./schema";
+import type { Runner } from "../runtimes/types";
 
 const IMAGE_HEADERS = {
   "cache-control": "private, max-age=31536000, immutable",

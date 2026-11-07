@@ -14,19 +14,14 @@ import type {
   RunSkill,
 } from "@aven/protocol/runtime-wire";
 
-import type { BotMcp } from "../mcp/bot-access";
-import type { BotProviders } from "../providers/bot-access";
 import { ModelUnavailableError } from "../providers/resolve-model";
-import type { BotThreads } from "../threads/bot-access";
-import { RuntimeOfflineError, type BotReplySink, type RuntimeHub } from "../runtimes/hub";
-import type { BotLetter } from "./chats";
-import {
-  RemoteBotReplier,
-  type BotKeeper,
-  type BotMemoryNotes,
-  type BotSkills,
-} from "./remote-replier";
-import type { NewBot } from "./service";
+import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import { RemoteBotReplier } from "./remote-replier";
+import type { BotKeeper, BotLetter, BotMemoryNotes, BotSkills, NewBot } from "./types";
+import type { BotMcp } from "../mcp/types";
+import type { BotProviders } from "../providers/types";
+import type { BotReplySink } from "../runtimes/types";
+import type { BotThreads } from "../threads/types";
 
 const bot: Bot = {
   id: "b1",

@@ -8,7 +8,7 @@ import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";
 import { readKey } from "./crypto";
 import { isGoogleCredential, parseServiceAccount } from "./google-auth";
-import { effortsByModel, listAgentModels, ModelListError, type ModelSource } from "./model-list";
+import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
 import {
   azureEndpoint,
   bedrockEndpoint,
@@ -17,6 +17,7 @@ import {
   type KeylessProviderBody,
   type UpdateProviderBody,
 } from "./schema";
+import type { ModelSource, ProviderView } from "./types";
 
 class InvalidProviderError extends UnprocessableError {}
 
@@ -28,8 +29,6 @@ const hasBaseUrl = (
   kind: ProviderKind,
 ): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
   kind === "openai-compatible" || kind === "azure" || kind === "bedrock" || kind === "vertex";
-
-export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
 
 function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): ProviderView {
   return { ...row, hasKey: apiKeyEncrypted !== null };

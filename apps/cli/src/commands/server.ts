@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
-import { stringFlag, type Args } from "../args";
+import { stringFlag } from "../args";
 import { composeCommand, dockerProblem, run } from "../compose";
 import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
@@ -11,6 +11,7 @@ import { serverDir } from "../home";
 import { API_PORT, planServer } from "../server-plan";
 import { writeServerFiles } from "../server-files";
 import { version } from "../version";
+import type { Args } from "../types";
 
 async function readServerEnv(dir: string) {
   const text = await readFile(join(dir, ".env"), "utf8").catch(() => undefined);

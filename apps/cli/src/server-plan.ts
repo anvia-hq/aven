@@ -1,17 +1,5 @@
 import { isIPv4 } from "node:net";
-
-import type { ServerEnvOptions } from "./env-file";
-
-export type ServerPlanInput = {
-  port?: string;
-  httpsPort?: string;
-  apiPort?: string;
-  domain?: string;
-  origin?: string;
-  release: string;
-  ownerEmail?: string;
-  bind?: string;
-};
+import type { ServerEnvOptions, ServerPlanInput } from "./types";
 
 export const WEB_PORT = 2836;
 export const API_PORT = 2837;

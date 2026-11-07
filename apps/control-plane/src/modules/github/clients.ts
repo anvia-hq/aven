@@ -1,16 +1,9 @@
 import { NotFoundError } from "../../errors";
 import { loadAppById, loadOrganizationApp } from "./app-store";
-import { github as platformClient, GithubClient, type GithubConfig } from "./client";
+import { github as platformClient, GithubClient } from "./client";
+import type { GithubClients, GithubConfig } from "./types";
 
 export const PLATFORM_APP = "platform";
-
-export type AppClient = { key: string; client: GithubClient };
-
-export type GithubClients = {
-  forKey(appKey: string): Promise<GithubClient>;
-  forOrganization(organizationId: string): Promise<AppClient>;
-  forget(organizationId: string): void;
-};
 
 export class GithubAppNotFoundError extends NotFoundError {
   constructor() {

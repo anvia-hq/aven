@@ -2,7 +2,8 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { githubService } from "../github/service";
 import { projectsService } from "../projects/service";
-import { threadsService, type ThreadPullRequest } from "./service";
+import { threadsService } from "./service";
+import type { ThreadPullRequest } from "./types";
 
 type Deps = {
   thread: (organizationId: string, id: string) => Promise<{ projectId: string } | null>;

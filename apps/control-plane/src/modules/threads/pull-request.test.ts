@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createPullRequestSync } from "./pull-request";
-import type { ThreadPullRequest } from "./service";
+import type { ThreadPullRequest } from "./types";
 
 const thread = { id: "abcdef12-0000-4000-8000-000000000000", organizationId: "org-1" };
 const project = { githubInstallationId: "inst-1", repoFullName: "acme/app" };

@@ -9,8 +9,9 @@ import type { Bot, BotEvent } from "@aven/protocol/bots";
 import type { RunAttachment } from "@aven/protocol/runtime-wire";
 
 import { ConflictError, UnavailableError } from "../../errors";
-import { BotRunner, type BotReplier, type BotReplyInput } from "./runner";
-import { inProcessReplier, type CreateBotAgent } from "./testing/in-process-replier";
+import { BotRunner } from "./runner";
+import { inProcessReplier } from "./testing/in-process-replier";
+import type { BotReplier, BotReplyInput, CreateBotAgent } from "./types";
 
 const USER = "u1";
 const model: ModelConfig = { provider: "openai" };

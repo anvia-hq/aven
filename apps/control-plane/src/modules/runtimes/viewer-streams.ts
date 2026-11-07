@@ -2,20 +2,7 @@ import { type ControlPlaneToRuntime } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { UnavailableError } from "../../errors";
-
-export type ViewerSink = {
-  data(bytes: Uint8Array): void;
-  closed(reason: string): void;
-};
-
-export type ViewerHandle = {
-  write(bytes: Uint8Array): void;
-  close(): void;
-};
-
-export type TerminalHandle = ViewerHandle & {
-  resize(cols: number, rows: number): void;
-};
+import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
 
 type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" };
 

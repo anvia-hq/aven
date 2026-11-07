@@ -1,9 +1,8 @@
 import { describeError } from "../../errors";
 import type { RuntimeHub } from "../runtimes/hub";
+import type { PutAwayThread } from "./types";
 
 const RELEASE_TIMEOUT_MS = 30_000;
-
-export type PutAwayThread = (thread: { id: string; runtimeId: string }) => void;
 
 export function createPutAwayThread({
   cancel,

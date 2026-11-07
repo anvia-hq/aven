@@ -104,5 +104,3 @@ export function createScheduler(options: {
     },
   };
 }
-
-export type Scheduler = ReturnType<typeof createScheduler>;
