@@ -4,7 +4,6 @@ import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import type { ChatMessage, QueuedSteer } from "../types";
 import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
-import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
   threadId: string;
@@ -15,8 +14,6 @@ type Props = {
   steers?: QueuedSteer[];
   /** The agent is writing the last message. */
   running?: boolean;
-  /** When the run in progress started (`Date.now()`), for the time shown beside the indicator. */
-  startedAt?: number | null;
   error?: string | null;
   /** Stays beside the conversation while it scrolls, so the scrollbar is at the panel's edge. */
   aside?: ReactNode;
@@ -28,7 +25,6 @@ export function ThreadMessages({
   pending = [],
   steers = [],
   running = false,
-  startedAt = null,
   error,
   aside,
 }: Props) {
@@ -38,8 +34,9 @@ export function ThreadMessages({
     <div ref={scrollRef} className="h-full overflow-y-auto">
       <div className="flex">
         <div className="min-w-0 flex-1">
-          {/* The bottom padding clears the composer; WorkingIndicator's `bottom-48` matches it. */}
-          <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-48">
+          {/* The bottom padding clears the composer and the working line above it, whose height
+              the page gives as `--composer-height`; 12rem is the guess before it is known. */}
+          <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)]">
             {messages.length === 0 && pending.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
@@ -57,7 +54,6 @@ export function ThreadMessages({
             {steers.map((steer) => (
               <QueuedMessage key={steer.id} message={steer} />
             ))}
-            {running && <WorkingIndicator startedAt={startedAt} />}
             {error && (
               <p
                 role="alert"

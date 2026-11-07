@@ -494,6 +494,62 @@ test.describe("threads", () => {
   });
 });
 
+// The working line sits above the composer, outside the scrolling text: it never covers a line,
+// whatever the text or the composer does.
+test.describe("the working line", () => {
+  test("stays above the composer and never covers the text, scrolled or not", async ({ page }) => {
+    const messages = Array.from({ length: 24 }, (_, index) => ({
+      id: `m-${index}`,
+      role: index % 2 === 0 ? "user" : "assistant",
+      parts: [
+        { type: "text", text: `Line number ${index} of a long conversation, with some words.` },
+      ],
+    }));
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\ndata: ${JSON.stringify({ type: "snapshot", running: true, runningMs: 5000, messages })}\n\n`,
+      }),
+    );
+    await registerUser(page, "thr", "Thread User");
+    await startThread(page, "long task");
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    const working = page.getByRole("status").filter({ hasText: "Working…" }).locator("..");
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const last = page.getByText("Line number 23");
+    await expect(last).toBeVisible();
+
+    const boxes = async () => ({
+      line: await working.boundingBox(),
+      prompt: await composer.boundingBox(),
+      text: await last.boundingBox(),
+    });
+    // At the end: the last line is above the working line, which is above the composer.
+    const end = await boxes();
+    expect(end.text!.y + end.text!.height).toBeLessThanOrEqual(end.line!.y + 1);
+    expect(end.line!.y + end.line!.height).toBeLessThanOrEqual(end.prompt!.y + 1);
+
+    // Scrolled up, the line has not moved.
+    await page.mouse.move(640, 300);
+    await page.mouse.wheel(0, -400);
+    expect(Math.abs((await boxes()).line!.y - end.line!.y)).toBeLessThan(1);
+    await page.mouse.wheel(0, 4000);
+
+    // A taller composer (a long message being written) pushes the line up, and the conversation
+    // leaves room for both: the last line is still clear of the line.
+    await composer.fill(Array.from({ length: 9 }, (_, index) => `word ${index}`).join("\n"));
+    await expect(async () => {
+      const tall = await boxes();
+      expect(tall.prompt!.height).toBeGreaterThan(end.prompt!.height + 60);
+      expect(tall.line!.y).toBeLessThan(end.line!.y - 60);
+      expect(tall.text!.y + tall.text!.height).toBeLessThanOrEqual(tall.line!.y + 1);
+    }).toPass({ timeout: 5000 });
+  });
+});
+
 // A message that starts a run is in the conversation at once, before the server has it
 // (decision 0117): the words do not sit in the composer for the round trip.
 test.describe("a message sent to an idle agent", () => {

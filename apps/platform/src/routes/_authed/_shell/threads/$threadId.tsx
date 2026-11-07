@@ -16,9 +16,11 @@ import { AnswerForm } from "@/modules/threads/components/answer-form";
 import { SharedNotice } from "@/modules/threads/components/shared-notice";
 import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
+import { WorkingIndicator } from "@/modules/threads/components/working-indicator";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
+import { useElementHeight } from "@/modules/threads/hooks/use-element-height";
 import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
@@ -68,6 +70,11 @@ function ThreadPage() {
     storage: safeStorage,
   });
 
+  const { source: composer, target: conversation } = useElementHeight<
+    HTMLDivElement,
+    HTMLDivElement
+  >("--composer-height", loaded && thread !== undefined);
+
   if (!loaded) return null;
 
   if (!thread) {
@@ -88,14 +95,13 @@ function ThreadPage() {
             <div className="@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-r-xl md:border-y md:border-r md:border-sidebar-border">
               <ThreadHeader thread={thread} panels={panels} owned={owned} />
               {/* The conversation scrolls the full height of the panel, behind the composer. */}
-              <div className="relative min-h-0 flex-1">
+              <div ref={conversation} className="relative min-h-0 flex-1">
                 <ThreadMessages
                   threadId={thread.id}
                   messages={messages}
                   pending={pending}
                   steers={steers}
                   running={running}
-                  startedAt={startedAt}
                   error={error}
                   aside={
                     overview.open && (
@@ -114,6 +120,7 @@ function ThreadPage() {
                   }
                 />
                 <div
+                  ref={composer}
                   className={cn(
                     "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3",
                     // Keep the composer under the messages, not under the overview.
@@ -121,6 +128,7 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
+                    <WorkingIndicator running={running} startedAt={startedAt} />
                     {owned && <ShipBar thread={thread} unshipped={unshipped} />}
                     {!owned && <SharedNotice thread={thread} />}
                     {owned &&
