@@ -18,6 +18,15 @@ const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 const connectedPresets = (providers: Provider[]) =>
   new Set(providers.map((provider) => presetOf(provider)?.id));
 
+type Row = {
+  key: string;
+  kind: ProviderKind;
+  preset?: CompatiblePreset;
+  title: string;
+  description: string;
+  label: string;
+};
+
 const detail = (provider: Provider) =>
   [provider.baseUrl, provider.modelId, provider.keyHint && `…${provider.keyHint}`]
     .filter(Boolean)
@@ -64,6 +73,26 @@ export function ProvidersList() {
 
   const taken = connectedPresets(providers);
   const presets = COMPATIBLE_PRESETS.filter((preset) => !taken.has(preset.id));
+  // The kinds, then the services with a panel of their own, and the generic server panel last.
+  const kindRow = (kind: ProviderKind): Row => ({
+    key: kind,
+    kind,
+    title: PROVIDER_LABELS[kind],
+    description: PROVIDER_DESCRIPTIONS[kind],
+    label: MANY.has(kind) ? "Add" : "Set up",
+  });
+  const rows: Row[] = [
+    ...available.filter((kind) => kind !== "openai-compatible").map(kindRow),
+    ...presets.map((preset): Row => ({
+      key: preset.id,
+      kind: "openai-compatible",
+      preset,
+      title: preset.name,
+      description: preset.description,
+      label: "Set up",
+    })),
+    ...available.filter((kind) => kind === "openai-compatible").map(kindRow),
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -103,34 +132,18 @@ export function ProvidersList() {
         </Group>
       )}
       <Group title={providers.length > 0 ? "Add a provider" : "Set up a provider"}>
-        {available.map((kind) => (
+        {rows.map((row) => (
           <li
-            key={kind}
-            aria-label={PROVIDER_LABELS[kind]}
+            key={row.key}
+            aria-label={row.title}
             className="flex items-center gap-3.5 px-4 py-3.5"
           >
-            <Tile kind={kind} />
+            <Tile kind={row.kind} preset={row.preset?.id} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
-              <span className="text-sm font-medium">{PROVIDER_LABELS[kind]}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {PROVIDER_DESCRIPTIONS[kind]}
-              </span>
+              <span className="text-sm font-medium">{row.title}</span>
+              <span className="truncate text-xs text-muted-foreground">{row.description}</span>
             </div>
-            <ProviderDialog kind={kind} label={MANY.has(kind) ? "Add" : "Set up"} />
-          </li>
-        ))}
-        {presets.map((preset) => (
-          <li
-            key={preset.id}
-            aria-label={preset.name}
-            className="flex items-center gap-3.5 px-4 py-3.5"
-          >
-            <Tile kind="openai-compatible" preset={preset.id} />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
-              <span className="text-sm font-medium">{preset.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{preset.description}</span>
-            </div>
-            <ProviderDialog kind="openai-compatible" preset={preset} label="Set up" />
+            <ProviderDialog kind={row.kind} preset={row.preset} label={row.label} />
           </li>
         ))}
       </Group>

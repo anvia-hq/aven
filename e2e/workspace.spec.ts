@@ -175,6 +175,11 @@ test.describe("settings", () => {
     await expect(connected).toBeVisible();
 
     // Each service has a panel of its own, with its address fixed, and goes once it is set up.
+    // The generic server panel is the last one.
+    const addRows = page
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("button", { name: /^(Add|Set up)$/ }) });
+    await expect(addRows.last()).toHaveAccessibleName("OpenAI-compatible");
     const groq = page.getByRole("listitem", { name: "Groq" });
     await expect(groq).toContainText("Fast open models");
     await groq.getByRole("button", { name: "Set up" }).click();
