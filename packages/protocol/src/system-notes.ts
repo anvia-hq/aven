@@ -1,6 +1,10 @@
-const NOTE = /^\[(process|fork)\] ([^\n]+)/;
+const NOTE = /^\[(process|fork|continued)\] ([^\n]+)/;
 
-export function systemNoteOf(text: string): { kind: "process" | "fork"; line: string } | null {
+export function systemNoteOf(
+  text: string,
+): { kind: "process" | "fork" | "continued"; line: string } | null {
   const found = NOTE.exec(text.trimStart());
-  return found ? { kind: found[1] as "process" | "fork", line: found[2]!.trim() } : null;
+  return found
+    ? { kind: found[1] as "process" | "fork" | "continued", line: found[2]!.trim() }
+    : null;
 }

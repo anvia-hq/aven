@@ -14,7 +14,8 @@ const AGREE_MS = 15_000;
 export async function requestUpdate(
   hub: RuntimeHub,
   runtimeId: string,
-  release: string | undefined,
+  release: string | null,
+  shown?: string,
 ) {
   const runner = hub.get(runtimeId);
   if (!runner) throw new UnavailableError("The runner is offline");
@@ -22,6 +23,10 @@ export async function requestUpdate(
     throw new ConflictError(
       "This runner was not installed with aven, so it cannot update itself: run aven update on its machine",
     );
+  }
+  if (!release) throw new ConflictError("This runner is already up to date");
+  if (shown && shown !== release) {
+    throw new ConflictError(`The release to update to is now ${release}: reload and try again`);
   }
   const result = await runner
     .call("runner.update", { release }, AGREE_MS)

@@ -164,7 +164,7 @@ export const threadsService = {
     organizationId: string,
     userId: string,
     body: CreateThreadBody,
-    fork?: { parentThreadId: string; runtimeId: string },
+    placement?: { parentThreadId?: string; runtimeId: string },
   ) {
     const project = await projectsService.get(organizationId, body.projectId);
     if (!project) throw new ProjectNotFoundError("Project not found");
@@ -174,8 +174,8 @@ export const threadsService = {
         organizationId,
         projectId: project.id,
         createdBy: userId,
-        runtimeId: fork?.runtimeId ?? project.runtimeId,
-        parentThreadId: fork?.parentThreadId,
+        runtimeId: placement?.runtimeId ?? project.runtimeId,
+        parentThreadId: placement?.parentThreadId,
         title: body.title ?? project.name,
       })
       .returning(columns);

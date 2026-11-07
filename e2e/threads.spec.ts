@@ -431,7 +431,7 @@ test.describe("threads", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
   });
 
-  test("a running thread shows it is working, and its composer offers Stop, with Send beside it once there is something to say", async ({
+  test("a running thread shows it is working, and its composer offers Stop alone, even once there is something to say", async ({
     page,
   }) => {
     await page.route("**/api/threads/*/events", (route) =>
@@ -461,7 +461,7 @@ test.describe("threads", () => {
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
     await page.getByRole("textbox", { name: "Prompt" }).fill("one more thing");
-    await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await page.getByRole("button", { name: "Stop" }).click();
     await expect.poll(() => cancelled).toBe(true);
@@ -558,6 +558,52 @@ test.describe("a message sent to an idle agent", () => {
     await expect(shown).not.toHaveAttribute("aria-busy", "true", { timeout: 8000 });
     await expect(shown).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+  });
+
+  test("an image shows at once as a picture, before the server has the message", async ({
+    page,
+  }) => {
+    await idleThread(page);
+    await page.route("**/api/threads/*/messages", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return route.continue();
+    });
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles({ name: "shot.png", mimeType: "image/png", buffer: png });
+    await page.getByRole("textbox", { name: "Prompt" }).fill("what is this?");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    const shown = page.locator('[data-role="user"]');
+    await expect(shown).toHaveAttribute("aria-busy", "true", { timeout: 500 });
+    await expect(shown.getByRole("img", { name: "shot.png" })).toHaveAttribute(
+      "src",
+      /^data:image\/png;base64,/,
+    );
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await shown.getByRole("button", { name: "Open shot.png" }).click();
+    const dialog = page.getByRole("dialog", { name: "shot.png" });
+    await expect(dialog.getByRole("img", { name: "shot.png" })).toHaveAttribute("src", /^data:/);
+    await expect.poll(async () => (await dialog.boundingBox())?.width).toBeCloseTo(1200 * 0.8, -1);
+    await expect.poll(async () => (await dialog.boundingBox())?.height).toBeCloseTo(800 * 0.8, -1);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+
+    await expect(shown).not.toHaveAttribute("aria-busy", "true", { timeout: 8000 });
+    await expect(shown.getByRole("img", { name: "shot.png" })).toHaveAttribute(
+      "src",
+      /\/artifacts\//,
+    );
+    await shown.getByRole("button", { name: "Open shot.png" }).click();
+    await expect(dialog.getByRole("img", { name: "shot.png" })).toHaveAttribute(
+      "src",
+      /\/artifacts\//,
+    );
   });
 
   test("a message the server refuses is taken back and the words return to the composer", async ({

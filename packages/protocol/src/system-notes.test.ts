@@ -12,6 +12,10 @@ test("a process or fork note is its first line, and an ordinary message is not a
     kind: "fork",
     line: 'Your fork "A" (x) is done.',
   });
+  expect(systemNoteOf('[continued] Continued from "A", now on box\n\nYou continue...')).toEqual({
+    kind: "continued",
+    line: 'Continued from "A", now on box',
+  });
   expect(systemNoteOf("please fix the [process] docs")).toBeNull();
   expect(systemNoteOf("[from main] hi")).toBeNull();
 });

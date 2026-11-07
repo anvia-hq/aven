@@ -176,7 +176,7 @@ export function startRuntime(options: RuntimeOptions) {
     finished: (threadId, ended) => {
       idle.schedule(threadId);
       if (ended === "response") processEnds.settle(threadId);
-      else processEnds.disarm(threadId);
+      else processEnds.suspend(threadId);
     },
     stopped: () => stopped,
   });

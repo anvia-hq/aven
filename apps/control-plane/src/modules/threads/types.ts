@@ -1,5 +1,7 @@
 import type { RunEnding } from "../runs/types";
+import type { createThreadContinuation } from "./continuation";
 import type { createThreadMessages } from "./messages";
+import type { SendMessageBody } from "./schema";
 import type {
   BotProjectView,
   BotThreadDetail,
@@ -62,3 +64,12 @@ export type ThreadPullRequest = {
 };
 
 export type Viewer = { organizationId: string; userId: string };
+
+export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;
+
+export type PatchOf = (
+  organizationId: string,
+  threadId: string,
+) => Promise<{ patch: string; truncated: boolean } | null>;
+
+export type ThreadContinuation = ReturnType<typeof createThreadContinuation>;

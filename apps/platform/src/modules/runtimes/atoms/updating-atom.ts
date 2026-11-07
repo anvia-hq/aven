@@ -1,6 +1,8 @@
 import { atomWithStorage } from "jotai/utils";
 
-export const updatingAtom = atomWithStorage<Record<string, { from: string | null; at: number }>>(
+import type { UpdateAsked } from "../types";
+
+export const updatingAtom = atomWithStorage<Record<string, UpdateAsked>>(
   "aven.runtimes.updating",
   {},
 );

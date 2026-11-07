@@ -1,5 +1,5 @@
 import type { AttachmentUpload, OutgoingMessage, PendingMessage } from "./types";
-import type { ChatMessage, RunEvent } from "@aven/protocol/types";
+import type { ChatMessage, MessageAttachment, RunEvent } from "@aven/protocol/types";
 
 function textOf(message: ChatMessage) {
   return message.parts.map((part) => (part.type === "text" ? part.text : "")).join("");
@@ -11,8 +11,20 @@ function uploadedSize(data: string) {
   else if (data.endsWith("=")) padding = 1;
   return Math.floor((data.length * 3) / 4) - padding;
 }
+const PREVIEW_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+export const isLocalPreview = (image: string) => image.startsWith("data:");
+
 function attachmentOf({ name, mediaType, data }: AttachmentUpload) {
-  return { name, mediaType: mediaType ?? "application/octet-stream", size: uploadedSize(data) };
+  const attachment: MessageAttachment = {
+    name,
+    mediaType: mediaType ?? "application/octet-stream",
+    size: uploadedSize(data),
+  };
+  if (mediaType && PREVIEW_TYPES.has(mediaType)) {
+    attachment.image = `data:${mediaType};base64,${data}`;
+  }
+  return attachment;
 }
 
 export function pendingMessage(id: string, message: OutgoingMessage): PendingMessage {

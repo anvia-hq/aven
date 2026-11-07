@@ -25,6 +25,8 @@ import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
 import { skillsService } from "./modules/skills/service";
 import { createBotThreads } from "./modules/threads/bot-access";
+import { createDiffService } from "./modules/diff/service";
+import { createThreadContinuation } from "./modules/threads/continuation";
 import { createThreadForks } from "./modules/threads/forks";
 import { createProcessEnds } from "./modules/threads/process-ends";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -72,6 +74,18 @@ export const threadMessages = createThreadMessages(runsService);
 runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessages });
 
 runtimeHub.processEnds = createProcessEnds({ messages: threadMessages });
+
+const diffService = createDiffService(runtimeHub);
+export const threadContinuation = createThreadContinuation({
+  runs: runsService,
+  hub: runtimeHub,
+  messages: threadMessages,
+  putAway: (thread) => putAwayThread(thread),
+  patchOf: async (organizationId, threadId) => {
+    const diff = await diffService.get(organizationId, threadId, "all");
+    return diff.available ? { patch: diff.patch, truncated: diff.truncated } : null;
+  },
+});
 
 export const putAwayThread = createPutAwayThread({
   cancel: (threadId) => runsService.cancel(threadId),

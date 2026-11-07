@@ -83,3 +83,9 @@ test("the agent is told to end its turn and be woken when a process ends, and ne
 test("the agent is told its commands already start in /workspace, so it does not cd there each time", () => {
   expect(codingInstructions(200, true)).toContain("do not begin one with cd /workspace");
 });
+
+test("the agent is pointed at the setup-env skill instead of building a service by hand in /tmp", () => {
+  const text = codingInstructions(200, true);
+  expect(text).toContain("setup-env skill");
+  expect(text).toContain("do not build it by hand in /tmp");
+});

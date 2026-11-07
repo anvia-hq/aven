@@ -35,7 +35,7 @@ test.describe("steering a running agent", () => {
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     await prompt.click();
     await page.keyboard.type("use the other API");
-    await page.getByRole("button", { name: "Send" }).click();
+    await page.keyboard.press("Enter");
 
     const queued = page.locator("[data-queued]");
     await expect(queued).toContainText("use the other API");
@@ -82,12 +82,12 @@ test.describe("steering a running agent", () => {
     await expect(page.getByText("No thanks").first()).toBeVisible();
   });
 
-  test("Enter sends it, and Stop is still there", async ({ page }) => {
+  test("Enter sends it, and only Stop is shown while it works", async ({ page }) => {
     const { events } = await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" });
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     await prompt.click();
     await page.keyboard.type("and add tests");
-    await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
     await page.keyboard.press("Enter");
 
     await expect(page.locator("[data-queued]")).toContainText("and add tests");

@@ -21,7 +21,7 @@ import { terminalRouter } from "../terminal/router";
 import { createShipService } from "../ship/service";
 import { threadsRouter } from "./router";
 import { threadsService } from "./service";
-import type { ThreadMessages } from "./types";
+import type { ThreadContinuation, ThreadMessages } from "./types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -43,7 +43,11 @@ run("a thread's access (real postgres)", async () => {
   const putAway: { id: string; runtimeId: string }[] = [];
   const server = new Elysia()
     .use(errorsRouter)
-    .use(threadsRouter(runs, messages, (thread) => void putAway.push(thread)))
+    .use(
+      threadsRouter(runs, messages, (thread) => void putAway.push(thread), {
+        continueOn: async () => ({}),
+      } as unknown as ThreadContinuation),
+    )
     .use(filesRouter(hub))
     .use(diffRouter(hub))
     .use(artifactsRouter(hub))

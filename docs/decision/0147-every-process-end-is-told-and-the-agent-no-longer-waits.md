@@ -8,9 +8,9 @@ The agent kept using `wait_for_process`, which holds the turn open and shows the
 
 ## Decision
 
-- The runner watches a thread from the start of every run (`ProcessEndWatch.arm`), for the processes started since, looking every three seconds. A process that ended between two looks, or before the run did, is told of too (`settle` looks at once when the run ends normally).
+- The runner watches a thread from the start of every run (`ProcessEndWatch.arm`), looking every three seconds, for the processes the sandbox did not have when the watch began: they are told apart by process id, never by a clock, since the sandbox's clock is not the host's. A process that ended between two looks, or before the run did, is told of too (`settle` looks at once when the run ends normally).
 - `process.ended` is sent when any of them ends, whether the thread has a run or not. The control plane sends the note as before (`messages.send`, not the person's word): a run that is going takes it at its next step as a steer, an idle thread starts a run with it.
-- The watch ends when the thread has no run and none of its processes is running, and a run that is stopped, fails or stops for a question tells nothing. A process the person stops is not told of, and one an earlier, stopped run left running is not this watch's.
+- The watch ends when the thread has no run and none of its processes is running. A run that is stopped, fails or stops for a question only suspends it (`suspend`): nothing is told while the thread waits, and the next run follows a process still running and tells of it if it ended meanwhile. A process the person stops is not told of.
 - `wait_for_process` is removed from the agent's tools, and the instructions tell it to start a long job in the background, say what it will do when it ends, and end its turn. A transcript that used the tool is still drawn. `wait_for_port` stays for a server that never ends, and `read_process_logs` and `list_processes` look without waiting.
 
 ## Consequences

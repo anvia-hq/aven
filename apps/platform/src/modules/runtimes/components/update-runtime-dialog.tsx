@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
@@ -14,6 +14,7 @@ import {
 
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
+import { updateEnd } from "../updating";
 
 export function UpdateRuntimeDialog({
   runtime,
@@ -22,9 +23,26 @@ export function UpdateRuntimeDialog({
   runtime: Runtime;
   compact?: boolean;
 }) {
-  const { canUpdate, update, isUpdating } = useRuntimes();
+  const { canUpdate, update, isUpdating, asked, finishUpdating, updateWaitMs } = useRuntimes();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
+
+  const latest = useRef(runtime);
+  latest.current = runtime;
+  const was = asked(runtime);
+  const finished = updateEnd(was, runtime, Date.now()) === "done";
+  useEffect(() => {
+    if (!was) return;
+    if (finished) {
+      finishUpdating(latest.current);
+      return;
+    }
+    const timer = setTimeout(
+      () => finishUpdating(latest.current),
+      Math.max(0, was.at + updateWaitMs - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [was?.at, finished]);
 
   if (isUpdating(runtime)) {
     return compact ? (
@@ -35,7 +53,7 @@ export function UpdateRuntimeDialog({
   }
   if (!canUpdate || !runtime.online || !runtime.updateTo || !runtime.canUpdate) return null;
 
-  const withServer = runtime.ownerId === null;
+  const withServer = runtime.isControlPlane;
   const from = runtime.build ?? "its release";
 
   async function handleUpdate() {

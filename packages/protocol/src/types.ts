@@ -888,3 +888,5 @@ export type BotThreadDetail = BotThreadView & {
   earlier: number;
   question?: string;
 };
+
+export type ContinuationPatch = "attached" | "none" | "unavailable";

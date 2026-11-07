@@ -6,15 +6,21 @@ import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
   compactBody,
+  continueBody,
   createThreadBody,
   sendMessageBody,
   threadParams,
   updateThreadBody,
 } from "./schema";
 import { threadsService } from "./service";
-import type { PutAwayThread, ThreadMessages } from "./types";
+import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
-export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAway: PutAwayThread) =>
+export const threadsRouter = (
+  runs: RunManager,
+  messages: ThreadMessages,
+  putAway: PutAwayThread,
+  continuation: ThreadContinuation,
+) =>
   new Elysia({ prefix: "/threads" })
     .use(threadAccess)
     .get(
@@ -72,6 +78,19 @@ export const threadsRouter = (runs: RunManager, messages: ThreadMessages, putAwa
         return status(202, { ok: true });
       },
       { thread: "own", params: threadParams, body: compactBody },
+    )
+    .post(
+      "/:id/continue",
+      ({ params, body, organizationId, user }) => {
+        const { runtimeId, ...selection } = body;
+        return continuation.continueOn(
+          { organizationId, userId: user.id },
+          params.id,
+          runtimeId,
+          selection,
+        );
+      },
+      { thread: "own", params: threadParams, body: continueBody },
     )
     .post(
       "/:id/answer",
