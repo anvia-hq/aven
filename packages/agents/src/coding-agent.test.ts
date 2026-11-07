@@ -52,6 +52,15 @@ describe("createCodingAgent", () => {
     );
   });
 
+  test("tells the agent how to fork its thread only when the host gives it the tools (decision 0135)", () => {
+    const base = { provider: "openai", apiKey: "test-key", tools: [], webSearch: false } as const;
+    expect(createCodingAgent(base).agent.instructions).not.toContain("<forks>");
+    const told = createCodingAgent({ ...base, forks: true }).agent.instructions;
+    expect(told).toContain("<forks>");
+    expect(told).toContain("only when the user's own message asks");
+    expect(told).toContain("</forks>");
+  });
+
   test("a question suspends the run and the answer resumes it", async () => {
     const model = scriptedModel([
       [

@@ -32,6 +32,7 @@ import type { RunOutbox, Source } from "./run-outbox";
 import { redactingTools, secretRedactor } from "./secret-redaction";
 import { awaitingReady } from "./late-bound-tools";
 import type { RunRecord, RunRecords } from "./run-records";
+import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "./sandbox";
 import { connectMcpServers, type ConnectedMcp } from "./mcp-servers";
@@ -54,6 +55,8 @@ export type CreateRuntimeAgent = (input: {
   mcp?: McpNote;
   /** The person's memory the run was given, for the instructions (decision 0102); not a subagent's. */
   memory?: RunMemory;
+  /** The agent can fork its thread, and is told how (decision 0135). */
+  forks?: boolean;
   model?: RunModel;
   /** Set for a subagent, which is told what its type is for instead of what the coding agent is (decision 0057). */
   role?: SubagentType;
@@ -431,10 +434,12 @@ export function createRunDriver(context: DriverContext) {
       build(id, attended) {
         const skills = state.record.skillListing;
         const envNames = env?.map(({ name }) => name);
+        const forking = attended && !thread.forkOf;
         const { agent, compaction } = context.createAgent({
           thread,
           id,
           attended,
+          forks: forking,
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
@@ -466,6 +471,17 @@ export function createRunDriver(context: DriverContext) {
                 const answer = await context.call("cockpit.read", { runId, command });
                 return redact ? redact(answer) : answer;
               }),
+            // A thread's agent forks its thread only for a person to ask, and a fork cannot fork
+            // (decision 0135).
+            forks: forking
+              ? createForkHost({
+                  runId,
+                  thread,
+                  sandbox: context.sandbox,
+                  call: context.call,
+                  redact,
+                })
+              : undefined,
             // A subagent is not in the journal, so what it does is sent as it happens.
             emit: (event) => forward(event),
             // Nobody is there to answer a subagent, and it is not journaled: its agent id only
