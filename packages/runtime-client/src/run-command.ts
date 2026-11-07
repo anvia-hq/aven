@@ -8,19 +8,31 @@ export async function runCommand(
   const spawnOptions: {
     cwd?: string;
     env?: Record<string, string | undefined>;
-    timeout?: number;
     stdout: "pipe";
     stderr: "pipe";
   } = { stdout: "pipe", stderr: "pipe" };
   if (cwd !== undefined) spawnOptions.cwd = cwd;
   if (env !== undefined) spawnOptions.env = env;
-  if (timeoutMs !== undefined) spawnOptions.timeout = timeoutMs;
   const proc = Bun.spawn(argv, spawnOptions);
+  let timedOut = false;
+  const timer =
+    timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => {
+          timedOut = true;
+          proc.kill("SIGKILL");
+        }, timeoutMs);
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  const timedOut = timeoutMs !== undefined && proc.signalCode !== null;
-  return { code, stdout, stderr: timedOut ? `${stderr}\ntimed out after ${timeoutMs} ms` : stderr };
+  clearTimeout(timer);
+  if (!timedOut) return { code, stdout, stderr };
+  return {
+    code,
+    stdout,
+    stderr: `${stderr}\ntimed out after ${timeoutMs} ms`,
+    timedOut: true,
+  };
 }
