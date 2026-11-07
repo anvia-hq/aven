@@ -94,10 +94,321 @@
   --sidebar-ring: oklch(0.5 0.02 160);
 }
 
+/* Color themes (decision 0153): well-known developer color schemes, each with a light and a dark mode. Mint, the default, is :root and .dark above. */
+
+:root[data-theme="catppuccin"] {
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #e6e9ef;
+  --card-foreground: #4c4f69;
+  --popover: #e6e9ef;
+  --popover-foreground: #4c4f69;
+  --primary: #1e66f5;
+  --primary-foreground: #eff1f5;
+  --secondary: #dce0e8;
+  --secondary-foreground: #4c4f69;
+  --muted: #dce0e8;
+  --muted-foreground: #6c6f85;
+  --accent: #ccd0da;
+  --accent-foreground: #4c4f69;
+  --frame: #e6e9ef;
+  --border: #ccd0da;
+  --input: #bcc0cc;
+  --ring: #1e66f5;
+  --effort: #8839ef;
+  --sidebar: #e6e9ef;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #1e66f5;
+  --sidebar-primary-foreground: #eff1f5;
+  --sidebar-accent: #ccd0da;
+  --sidebar-accent-foreground: #4c4f69;
+  --sidebar-border: #ccd0da;
+  --sidebar-ring: #1e66f5;
+}
+
+:root[data-theme="catppuccin"].dark {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #181825;
+  --card-foreground: #cdd6f4;
+  --popover: #181825;
+  --popover-foreground: #cdd6f4;
+  --primary: #89b4fa;
+  --primary-foreground: #1e1e2e;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --muted: #313244;
+  --muted-foreground: #a6adc8;
+  --accent: #313244;
+  --accent-foreground: #cdd6f4;
+  --frame: #181825;
+  --border: #313244;
+  --input: #45475a;
+  --ring: #89b4fa;
+  --effort: #cba6f7;
+  --sidebar: #181825;
+  --sidebar-foreground: #cdd6f4;
+  --sidebar-primary: #89b4fa;
+  --sidebar-primary-foreground: #1e1e2e;
+  --sidebar-accent: #313244;
+  --sidebar-accent-foreground: #cdd6f4;
+  --sidebar-border: #313244;
+  --sidebar-ring: #89b4fa;
+}
+
+:root[data-theme="tokyo-night"] {
+  --background: #e1e2e7;
+  --foreground: #3760bf;
+  --card: #d5d6db;
+  --card-foreground: #3760bf;
+  --popover: #e9e9ec;
+  --popover-foreground: #3760bf;
+  --primary: #2e7de9;
+  --primary-foreground: #e1e2e7;
+  --secondary: #d5d6db;
+  --secondary-foreground: #3760bf;
+  --muted: #d5d6db;
+  --muted-foreground: #6172b0;
+  --accent: #c4c8da;
+  --accent-foreground: #3760bf;
+  --frame: #d0d5e3;
+  --border: #c4c8da;
+  --input: #b4b5b9;
+  --ring: #2e7de9;
+  --effort: #9854f1;
+  --sidebar: #d0d5e3;
+  --sidebar-foreground: #3760bf;
+  --sidebar-primary: #2e7de9;
+  --sidebar-primary-foreground: #e1e2e7;
+  --sidebar-accent: #c4c8da;
+  --sidebar-accent-foreground: #3760bf;
+  --sidebar-border: #c4c8da;
+  --sidebar-ring: #2e7de9;
+}
+
+:root[data-theme="tokyo-night"].dark {
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+  --card: #1f2335;
+  --card-foreground: #c0caf5;
+  --popover: #24283b;
+  --popover-foreground: #c0caf5;
+  --primary: #7aa2f7;
+  --primary-foreground: #1a1b26;
+  --secondary: #24283b;
+  --secondary-foreground: #c0caf5;
+  --muted: #1f2335;
+  --muted-foreground: #787c99;
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --frame: #16161e;
+  --border: #292e42;
+  --input: #3b4261;
+  --ring: #7aa2f7;
+  --effort: #bb9af7;
+  --sidebar: #16161e;
+  --sidebar-foreground: #c0caf5;
+  --sidebar-primary: #7aa2f7;
+  --sidebar-primary-foreground: #1a1b26;
+  --sidebar-accent: #292e42;
+  --sidebar-accent-foreground: #c0caf5;
+  --sidebar-border: #292e42;
+  --sidebar-ring: #7aa2f7;
+}
+
+:root[data-theme="github"] {
+  --background: #ffffff;
+  --foreground: #1f2328;
+  --card: #f6f8fa;
+  --card-foreground: #1f2328;
+  --popover: #ffffff;
+  --popover-foreground: #1f2328;
+  --primary: #0969da;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f8fa;
+  --secondary-foreground: #1f2328;
+  --muted: #f6f8fa;
+  --muted-foreground: #656d76;
+  --accent: #eaeef2;
+  --accent-foreground: #1f2328;
+  --frame: #f6f8fa;
+  --border: #d0d7de;
+  --input: #d0d7de;
+  --ring: #0969da;
+  --effort: #8250df;
+  --sidebar: #f6f8fa;
+  --sidebar-foreground: #1f2328;
+  --sidebar-primary: #0969da;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaeef2;
+  --sidebar-accent-foreground: #1f2328;
+  --sidebar-border: #d0d7de;
+  --sidebar-ring: #0969da;
+}
+
+:root[data-theme="github"].dark {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: #161b22;
+  --card-foreground: #e6edf3;
+  --popover: #161b22;
+  --popover-foreground: #e6edf3;
+  --primary: #58a6ff;
+  --primary-foreground: #0d1117;
+  --secondary: #21262d;
+  --secondary-foreground: #e6edf3;
+  --muted: #161b22;
+  --muted-foreground: #8b949e;
+  --accent: #21262d;
+  --accent-foreground: #e6edf3;
+  --frame: #010409;
+  --border: #30363d;
+  --input: #30363d;
+  --ring: #58a6ff;
+  --effort: #d2a8ff;
+  --sidebar: #010409;
+  --sidebar-foreground: #e6edf3;
+  --sidebar-primary: #58a6ff;
+  --sidebar-primary-foreground: #0d1117;
+  --sidebar-accent: #21262d;
+  --sidebar-accent-foreground: #e6edf3;
+  --sidebar-border: #30363d;
+  --sidebar-ring: #58a6ff;
+}
+
+:root[data-theme="one-dark"] {
+  --background: #fafafa;
+  --foreground: #383a42;
+  --card: #f0f0f1;
+  --card-foreground: #383a42;
+  --popover: #ffffff;
+  --popover-foreground: #383a42;
+  --primary: #4078f2;
+  --primary-foreground: #fafafa;
+  --secondary: #e5e5e6;
+  --secondary-foreground: #383a42;
+  --muted: #eaeaeb;
+  --muted-foreground: #696c77;
+  --accent: #e5e5e6;
+  --accent-foreground: #383a42;
+  --frame: #f0f0f1;
+  --border: #dbdbdc;
+  --input: #c9c9ca;
+  --ring: #4078f2;
+  --effort: #a626a4;
+  --sidebar: #f0f0f1;
+  --sidebar-foreground: #383a42;
+  --sidebar-primary: #4078f2;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #e5e5e6;
+  --sidebar-accent-foreground: #383a42;
+  --sidebar-border: #dbdbdc;
+  --sidebar-ring: #4078f2;
+}
+
+:root[data-theme="one-dark"].dark {
+  --background: #282c34;
+  --foreground: #abb2bf;
+  --card: #21252b;
+  --card-foreground: #abb2bf;
+  --popover: #2c313a;
+  --popover-foreground: #abb2bf;
+  --primary: #61afef;
+  --primary-foreground: #282c34;
+  --secondary: #2c313a;
+  --secondary-foreground: #abb2bf;
+  --muted: #2c313a;
+  --muted-foreground: #7f848e;
+  --accent: #3e4451;
+  --accent-foreground: #d7dae0;
+  --frame: #21252b;
+  --border: #181a1f;
+  --input: #3e4451;
+  --ring: #61afef;
+  --effort: #c678dd;
+  --sidebar: #21252b;
+  --sidebar-foreground: #abb2bf;
+  --sidebar-primary: #61afef;
+  --sidebar-primary-foreground: #282c34;
+  --sidebar-accent: #3e4451;
+  --sidebar-accent-foreground: #d7dae0;
+  --sidebar-border: #181a1f;
+  --sidebar-ring: #61afef;
+}
+
+:root[data-theme="solarized"] {
+  --background: #fdf6e3;
+  --foreground: #657b83;
+  --card: #eee8d5;
+  --card-foreground: #657b83;
+  --popover: #fdf6e3;
+  --popover-foreground: #657b83;
+  --primary: #268bd2;
+  --primary-foreground: #fdf6e3;
+  --secondary: #eee8d5;
+  --secondary-foreground: #657b83;
+  --muted: #eee8d5;
+  --muted-foreground: #93a1a1;
+  --accent: #e4ddc8;
+  --accent-foreground: #586e75;
+  --frame: #eee8d5;
+  --border: #e0dac4;
+  --input: #c8c1ab;
+  --ring: #268bd2;
+  --effort: #2aa198;
+  --sidebar: #eee8d5;
+  --sidebar-foreground: #657b83;
+  --sidebar-primary: #268bd2;
+  --sidebar-primary-foreground: #fdf6e3;
+  --sidebar-accent: #e4ddc8;
+  --sidebar-accent-foreground: #586e75;
+  --sidebar-border: #e0dac4;
+  --sidebar-ring: #268bd2;
+}
+
+:root[data-theme="solarized"].dark {
+  --background: #002b36;
+  --foreground: #839496;
+  --card: #073642;
+  --card-foreground: #839496;
+  --popover: #073642;
+  --popover-foreground: #839496;
+  --primary: #268bd2;
+  --primary-foreground: #fdf6e3;
+  --secondary: #073642;
+  --secondary-foreground: #839496;
+  --muted: #073642;
+  --muted-foreground: #657b83;
+  --accent: #0a4a57;
+  --accent-foreground: #93a1a1;
+  --frame: #00212b;
+  --border: #073642;
+  --input: #586e75;
+  --ring: #268bd2;
+  --effort: #2aa198;
+  --sidebar: #00212b;
+  --sidebar-foreground: #839496;
+  --sidebar-primary: #268bd2;
+  --sidebar-primary-foreground: #fdf6e3;
+  --sidebar-accent: #0a4a57;
+  --sidebar-accent-foreground: #93a1a1;
+  --sidebar-border: #073642;
+  --sidebar-ring: #268bd2;
+}
+
 /* The dots of the working indicator run from pale mint to green (modules/threads/components/working-indicator.tsx). */
 :root {
   --working-from: oklch(0.88 0.1 160);
   --working-to: oklch(0.62 0.17 152);
+}
+
+/* The Aven mark keeps Mint's neutral in every color theme (decision 0154): the palette blocks never set --brand. */
+:root {
+  --brand: oklch(0.22 0.01 160);
+}
+
+.dark {
+  --brand: oklch(0.93 0.006 160);
 }
 
 /* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
@@ -107,7 +418,15 @@
 }
 
 @theme inline {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(
+    --app-font,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif
+  );
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -137,6 +456,7 @@
   --color-effort: var(--effort);
   --color-frame: var(--frame);
   --color-avatar-face: var(--avatar-face);
+  --color-brand: var(--brand);
   --color-avatar-eye: var(--avatar-eye);
   --color-border: var(--border);
   --color-input: var(--input);
