@@ -11,6 +11,142 @@ describe("providerOptionsFor", () => {
     expect(providerOptionsFor("openai")).toBeUndefined();
     expect(providerOptionsFor("openai-compatible")).toBeUndefined();
     expect(providerOptionsFor("azure")).toBeUndefined();
+    expect(providerOptionsFor("gemini")).toBeUndefined();
+    expect(providerOptionsFor("bedrock")).toBeUndefined();
+    expect(providerOptionsFor("vertex")).toBeUndefined();
+  });
+});
+
+describe("createModel bedrock", () => {
+  const bedrock = {
+    provider: "bedrock",
+    baseUrl: "https://bedrock-mantle.us-east-1.api.aws/v1",
+  } as const;
+
+  test("needs an endpoint, a model and a key", () => {
+    expect(() => createModel({ provider: "bedrock", modelId: "m", apiKey: "k" })).toThrow(
+      "regional endpoint",
+    );
+    expect(() => createModel({ ...bedrock, apiKey: "k" })).toThrow("model id");
+    expect(() => createModel({ ...bedrock, modelId: "m" })).toThrow("API key");
+    expect(createModel({ ...bedrock, modelId: "m", apiKey: "k" }).modelId).toBe("m");
+  });
+
+  test("offers an effort control only from levels the host supplies", () => {
+    const config = { ...bedrock, modelId: "openai.gpt-oss-120b" };
+    expect(reasoningControlsFor(config)).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: ["low", "high"] })?.options).toEqual([
+      "low",
+      "high",
+    ]);
+  });
+
+  test("sends chat completions to the endpoint with the key as a bearer token", async () => {
+    const seen: { path: string; auth: string | null }[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push({ path: new URL(req.url).pathname, auth: req.headers.get("authorization") });
+        return Response.json({ error: { message: "stop" } }, { status: 400 });
+      },
+    });
+    try {
+      const { agent } = createCodingAgent({
+        tools: [],
+        ...bedrock,
+        baseUrl: `http://localhost:${server.port}/v1`,
+        modelId: "openai.gpt-oss-120b",
+        apiKey: "bedrock-key",
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      expect(seen[0]).toEqual({ path: "/v1/chat/completions", auth: "Bearer bedrock-key" });
+    } finally {
+      server.stop(true);
+    }
+  });
+});
+
+describe("createModel vertex", () => {
+  const vertex = {
+    provider: "vertex",
+    baseUrl: "https://aiplatform.googleapis.com/v1/projects/p/locations/global/endpoints/openapi",
+  } as const;
+
+  test("needs an endpoint, a model and a credential", () => {
+    expect(() => createModel({ provider: "vertex", modelId: "m", apiKey: "k" })).toThrow(
+      "project endpoint",
+    );
+    expect(() => createModel({ ...vertex, apiKey: "k" })).toThrow("model id");
+    expect(() => createModel({ ...vertex, modelId: "m" })).toThrow("credential");
+    expect(
+      createModel({ ...vertex, modelId: "google/gemini-2.5-flash", apiKey: "k" }).modelId,
+    ).toBe("google/gemini-2.5-flash");
+  });
+
+  test("offers an effort control only from levels the host supplies", () => {
+    const config = { ...vertex, modelId: "google/gemini-2.5-flash" };
+    expect(reasoningControlsFor(config)).toBeNull();
+    expect(reasoningControlsFor({ ...config, effortLevels: ["low", "high"] })?.options).toEqual([
+      "low",
+      "high",
+    ]);
+  });
+});
+
+describe("createModel gemini", () => {
+  const saved = process.env.GEMINI_API_KEY;
+  afterAll(() => {
+    if (saved === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = saved;
+  });
+
+  test("needs a key, from the config or GEMINI_API_KEY, and has a default model", () => {
+    delete process.env.GEMINI_API_KEY;
+    expect(() => createModel({ provider: "gemini" })).toThrow("GEMINI_API_KEY is not set");
+    const model = createModel({ provider: "gemini", apiKey: "k" });
+    expect(model.provider).toBe("gemini");
+    expect(model.modelId).toBe("gemini-2.5-pro");
+    process.env.GEMINI_API_KEY = "from-env";
+    expect(createModel({ provider: "gemini", modelId: "gemini-2.5-flash" }).modelId).toBe(
+      "gemini-2.5-flash",
+    );
+  });
+
+  test("reports the SDK's effort levels per model", () => {
+    expect(
+      reasoningControlsFor({ provider: "gemini", modelId: "gemini-2.5-pro" })?.options,
+    ).toEqual(["low", "medium", "high"]);
+    expect(reasoningControlsFor({ provider: "gemini", modelId: "gemini-2.0-flash" })).toBeNull();
+  });
+
+  test("a base URL is where the SDK sends its requests, with the key in x-goog-api-key", async () => {
+    const seen: { path: string; key: string | null }[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push({ path: new URL(req.url).pathname, key: req.headers.get("x-goog-api-key") });
+        return Response.json(
+          { error: { code: 400, message: "stop", status: "INVALID_ARGUMENT" } },
+          { status: 400 },
+        );
+      },
+    });
+    try {
+      const { agent } = createCodingAgent({
+        tools: [],
+        provider: "gemini",
+        modelId: "gemini-2.5-flash",
+        apiKey: "gw-token",
+        baseUrl: `http://localhost:${server.port}/prefix`,
+      });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      expect(seen[0]).toEqual({
+        path: "/prefix/v1beta/models/gemini-2.5-flash:generateContent",
+        key: "gw-token",
+      });
+    } finally {
+      server.stop(true);
+    }
   });
 });
 

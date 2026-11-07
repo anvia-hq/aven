@@ -5,6 +5,9 @@ export type ProviderKind = WireProvider;
 export const PROVIDER_LABELS: Record<ProviderKind, string> = {
   openai: "OpenAI",
   anthropic: "Anthropic",
+  gemini: "Google Gemini",
+  bedrock: "Amazon Bedrock",
+  vertex: "Google Vertex AI",
   azure: "Azure OpenAI",
   "openai-compatible": "OpenAI-compatible",
 };
@@ -13,6 +16,9 @@ export const PROVIDER_LABELS: Record<ProviderKind, string> = {
 export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
   openai: "GPT models through the OpenAI API.",
   anthropic: "Claude models through the Anthropic API.",
+  gemini: "Gemini models through the Google AI Studio API.",
+  bedrock: "Models served by Amazon Bedrock, with a Bedrock API key.",
+  vertex: "Gemini and other models in a Google Cloud project, through a service account.",
   azure: "Models you have deployed in an Azure OpenAI resource.",
   "openai-compatible": "Any server that speaks the OpenAI API, such as Ollama or vLLM.",
 };

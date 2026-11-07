@@ -1,5 +1,7 @@
+import { bedrockBaseUrl, vertexBaseUrl } from "@aven/protocol/providers";
 import { useRef, useState, type FormEvent } from "react";
 
+import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { useProviders } from "./use-providers";
 
@@ -10,6 +12,7 @@ export function useProviderForm(
   kind: ProviderKind,
   provider: Provider | undefined,
   onDone: () => void,
+  preset?: CompatiblePreset,
 ) {
   const [submitting, setSubmitting] = useState(false);
   const [models, setModels] = useState<string[] | null>(null);
@@ -19,9 +22,27 @@ export function useProviderForm(
   const { create, update, listModels, listSavedModels } = useProviders();
   const compatible = kind === "openai-compatible";
   const azure = kind === "azure";
+  const bedrock = kind === "bedrock";
+  const vertex = kind === "vertex";
 
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
+
+  // The address the form stands for: typed for a server or an Azure resource, derived from the
+  // region for Bedrock and from the project and location for Vertex AI.
+  function readBaseUrl() {
+    if (bedrock) {
+      const region = readTrimmedField("region");
+      return region ? bedrockBaseUrl(region) : undefined;
+    }
+    if (vertex) {
+      const project = readTrimmedField("project");
+      const location = readTrimmedField("location");
+      return project && location ? vertexBaseUrl(project, location) : undefined;
+    }
+    if (preset) return preset.baseUrl;
+    return compatible || azure ? readTrimmedField("baseUrl") : undefined;
+  }
 
   // A model list belongs to one key and URL, so closing the dialog drops it.
   function reset() {
@@ -37,7 +58,7 @@ export function useProviderForm(
     const list =
       provider && !apiKey
         ? await listSavedModels(provider)
-        : await listModels({ kind, apiKey, baseUrl: readTrimmedField("baseUrl") });
+        : await listModels({ kind, apiKey, baseUrl: readBaseUrl() });
     setLoadingModels(false);
     if (list) {
       setModels(list);
@@ -49,8 +70,9 @@ export function useProviderForm(
     event.preventDefault();
     setSubmitting(true);
     const chosenModel = (models ? modelId : readTrimmedField("modelId")) || undefined;
-    const name = readTrimmedField("name") ?? provider?.name ?? PROVIDER_LABELS[kind];
-    const baseUrl = compatible || azure ? readTrimmedField("baseUrl") : undefined;
+    const name =
+      readTrimmedField("name") ?? provider?.name ?? preset?.name ?? PROVIDER_LABELS[kind];
+    const baseUrl = readBaseUrl();
     const apiKey = readTrimmedField("apiKey");
     const done = provider
       ? await update(provider, { name, apiKey, baseUrl, modelId: chosenModel ?? null })
@@ -66,6 +88,8 @@ export function useProviderForm(
     formRef,
     compatible,
     azure,
+    bedrock,
+    vertex,
     models,
     modelId,
     loadingModels,

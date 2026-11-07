@@ -44,7 +44,7 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
           />
         }
       >
-        {provider && <ProviderLogo kind={provider.kind} />}
+        {provider && <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />}
         <span className="truncate">
           {provider ? (modelId ?? "Provider default") : "Default model"}
         </span>

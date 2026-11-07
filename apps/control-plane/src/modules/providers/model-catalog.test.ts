@@ -165,3 +165,95 @@ describe("contextWindow", () => {
     expect(await models.contextWindow("openai", "deepseek-v4.1-flash")).toBeNull();
   });
 });
+
+describe("gemini in the catalog", () => {
+  const google = {
+    ...catalog,
+    google: {
+      models: {
+        "gemini-2.5-pro": {
+          tool_call: true,
+          modalities: { input: ["text", "image"], output: ["text"] },
+          limit: { context: 1048576 },
+        },
+        "gemini-live-x": { tool_call: false, modalities: { output: ["audio"] } },
+      },
+    },
+  };
+
+  test("is read from models.dev's google entry", async () => {
+    const models = createModelCatalog(serving(google), () => 0, url);
+    expect(await models.chatModels("gemini", ["gemini-2.5-pro", "gemini-live-x"])).toEqual([
+      "gemini-2.5-pro",
+    ]);
+    expect(await models.contextWindow("gemini", "gemini-2.5-pro")).toBe(1048576);
+    expect(await models.canRun("gemini", "gemini-live-x")).toBe(false);
+  });
+
+  test("falls back to a name check for models it does not list", () => {
+    expect(looksLikeChatModel("gemini", "gemini-3.5-flash")).toBe(true);
+    for (const id of [
+      "gemini-embedding-001",
+      "gemini-2.5-flash-preview-tts",
+      "gemini-3-pro-image",
+    ]) {
+      expect(looksLikeChatModel("gemini", id)).toBe(false);
+    }
+    expect(looksLikeChatModel("gemini", "text-bison")).toBe(false);
+  });
+});
+
+describe("bedrock in the catalog", () => {
+  test("keeps chat models by name, takes windows from models.dev and offers no efforts", async () => {
+    const models = createModelCatalog(
+      serving({
+        ...catalog,
+        "amazon-bedrock": {
+          models: {
+            "openai.gpt-oss-120b-1:0": {
+              tool_call: true,
+              modalities: { output: ["text"] },
+              limit: { context: 128000 },
+              reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+            },
+          },
+        },
+      }),
+      () => 0,
+      url,
+    );
+    expect(await models.contextWindow("bedrock", "openai.gpt-oss-120b-1:0")).toBe(128000);
+    expect(await models.efforts("bedrock", "openai.gpt-oss-120b-1:0")).toBeNull();
+    expect(
+      await models.chatModels("bedrock", ["openai.gpt-oss-120b-1:0", "amazon.titan-embed-text-v2"]),
+    ).toEqual(["openai.gpt-oss-120b-1:0"]);
+    expect(looksLikeChatModel("bedrock", "us.anthropic.claude-sonnet-4-6")).toBe(true);
+    expect(looksLikeChatModel("bedrock", "stability.stable-image-core")).toBe(false);
+  });
+});
+
+describe("vertex in the catalog", () => {
+  test("finds a model by its name without the publisher", async () => {
+    const models = createModelCatalog(
+      serving({
+        ...catalog,
+        "google-vertex": {
+          models: {
+            "gemini-2.5-flash": {
+              tool_call: true,
+              modalities: { input: ["text", "image"], output: ["text"] },
+              limit: { context: 1048576 },
+            },
+            "gemini-live": { tool_call: false, modalities: { output: ["audio"] } },
+          },
+        },
+      }),
+      () => 0,
+      url,
+    );
+    expect(await models.contextWindow("vertex", "google/gemini-2.5-flash")).toBe(1048576);
+    expect(await models.canRun("vertex", "google/gemini-live")).toBe(false);
+    expect(await models.canRun("vertex", "meta/llama-4")).toBe(true);
+    expect(await models.efforts("vertex", "google/gemini-2.5-flash")).toBeNull();
+  });
+});

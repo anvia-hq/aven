@@ -36,19 +36,21 @@ const modelId = z
   .min(1)
   .max(200)
   .describe(
-    "The model it runs by default. For Azure, the name of a deployment in the resource. Check it with list_provider_models once the key is saved.",
+    "The model it runs by default. For Azure, the name of a deployment in the resource; for Vertex AI, a model such as google/gemini-2.5-flash. Check it with list_provider_models once the key is saved.",
   );
 const baseUrl = z
   .string()
   .trim()
   .max(500)
   .describe(
-    "Azure: the resource URL, https://<resource>.openai.azure.com. An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai or anthropic.",
+    "Azure: the resource URL, https://<resource>.openai.azure.com. Google Vertex AI: the project's endpoint, https://<location>-aiplatform.googleapis.com/v1/projects/<project>/locations/<location>/endpoints/openapi (aiplatform.googleapis.com for the global location). Amazon Bedrock: its regional endpoint, https://bedrock-mantle.<region>.api.aws/v1 (a change of region is a change of address, so the key is asked again). An OpenAI-compatible server: its root, such as https://gateway.example.com/v1. Not used by openai, anthropic or gemini.",
   );
 const id = z.uuid().describe("The provider id from list_providers.");
 
 const addSchema = z.object({
-  kind: z.enum(PROVIDERS).describe("openai, anthropic, azure or openai-compatible."),
+  kind: z
+    .enum(PROVIDERS)
+    .describe("openai, anthropic, gemini, bedrock, vertex, azure or openai-compatible."),
   name,
   baseUrl: baseUrl.optional(),
   modelId: modelId.optional(),

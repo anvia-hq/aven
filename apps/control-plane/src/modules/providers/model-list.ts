@@ -3,7 +3,7 @@ import { reasoningControlsFor, type ModelConfig, type ReasoningControls } from "
 import { UnprocessableError } from "../../errors";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
-import { azureEndpoint } from "./schema";
+import { azureEndpoint, bedrockEndpoint } from "./schema";
 
 export class ModelListError extends UnprocessableError {}
 
@@ -28,10 +28,31 @@ function modelsRequest(source: ModelSource) {
       headers: { "api-key": requireApiKey(source) },
     };
   }
+  if (source.kind === "vertex") {
+    throw new ModelListError(
+      "Vertex AI has no model list: type the model id, such as google/gemini-2.5-flash",
+    );
+  }
+  if (source.kind === "bedrock") {
+    // Bedrock's own OpenAI-compatible list; `bedrock-runtime` has none. The key goes only to AWS.
+    if (!source.baseUrl) throw new ModelListError("A region is needed to list models");
+    const endpoint = bedrockEndpoint.safeParse(source.baseUrl);
+    if (!endpoint.success) throw new ModelListError("Not a Bedrock endpoint");
+    return {
+      url: `${endpoint.data}/models`,
+      headers: { authorization: `Bearer ${requireApiKey(source)}` },
+    };
+  }
   if (source.kind === "anthropic") {
     return {
       url: "https://api.anthropic.com/v1/models?limit=1000",
       headers: { "x-api-key": requireApiKey(source), "anthropic-version": "2023-06-01" },
+    };
+  }
+  if (source.kind === "gemini") {
+    return {
+      url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+      headers: { "x-goog-api-key": requireApiKey(source) },
     };
   }
   const headers: Record<string, string> = {};
@@ -44,7 +65,23 @@ function modelsRequest(source: ModelSource) {
   return { url: `${source.baseUrl.replace(/\/+$/, "")}/models`, headers };
 }
 
+// Google lists `{ models: [{ name: "models/gemini-2.5-pro", supportedGenerationMethods }] }`: the
+// ones that can generate content, by the name after `models/`.
+function parseGeminiModelIds(models: unknown) {
+  if (!Array.isArray(models)) throw new ModelListError("The provider returned no model list");
+  const ids = models.flatMap((item: { name?: unknown; supportedGenerationMethods?: unknown }) => {
+    const methods = item?.supportedGenerationMethods;
+    const canGenerate = Array.isArray(methods) && methods.includes("generateContent");
+    return typeof item?.name === "string" && canGenerate
+      ? [item.name.replace(/^models\//, "")]
+      : [];
+  });
+  return [...new Set(ids)].sort();
+}
+
 function parseModelIds(json: unknown) {
+  const models = (json as { models?: unknown } | null)?.models;
+  if (models !== undefined) return parseGeminiModelIds(models);
   const data = (json as { data?: unknown } | null)?.data;
   if (!Array.isArray(data)) throw new ModelListError("The provider returned no model list");
   // A deployment that has not finished (or failed) provisioning cannot be called yet.
@@ -79,6 +116,8 @@ export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetc
 // The levels a model of a server the person runs says it accepts: a gateway lists them itself,
 // models.dev knows nothing of such a server.
 async function listedEfforts(source: ModelSource, modelId: string) {
+  // Bedrock and Vertex AI list no levels, and a model there may reject one it does not know.
+  if (source.kind === "bedrock" || source.kind === "vertex") return null;
   if (source.kind === "openai-compatible") {
     if (!source.baseUrl) return null;
     return (await gatewayModel(source.baseUrl, source.apiKey, modelId)).effortLevels;

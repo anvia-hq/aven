@@ -1,8 +1,10 @@
 import { AnthropicClient } from "@anvia/anthropic";
 import { defineCompletionModelControls, type CompletionModelControls } from "@anvia/core";
 import { AzureOpenAIClient } from "@anvia/azure";
+import { GeminiClient } from "@anvia/gemini";
 import { OpenAIClient } from "@anvia/openai";
 import type { Provider } from "@aven/protocol/runtime-wire";
+import { GoogleGenAI } from "@google/genai";
 
 import { DEFAULT_MODEL_IDS } from "./model-defaults";
 import { nullFreeStream } from "./null-free-stream";
@@ -13,10 +15,10 @@ export type ModelConfig = {
   provider: Provider;
   /** Defaults per provider. For `azure` it is the deployment name, and has no default. */
   modelId?: string;
-  /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. */
+  /** Defaults to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`. */
   apiKey?: string;
   /**
-   * Required for `openai-compatible` and `azure`: the API root, e.g. http://localhost:11434/v1 or
+   * Required for `openai-compatible`, `azure`, `bedrock` and `vertex`: the API root, e.g. http://localhost:11434/v1 or
    * https://my-resource.openai.azure.com/openai/v1.
    * For the other providers it overrides the API root, which is how a runtime reaches the
    * control plane's gateway instead of the vendor.
@@ -75,6 +77,35 @@ export function createModel(config: ModelConfig) {
     });
   }
 
+  if (config.provider === "bedrock") {
+    if (!config.baseUrl) throw new Error("A Bedrock provider needs its regional endpoint");
+    if (!config.modelId) throw new Error("A Bedrock provider needs a model id");
+    if (!config.apiKey) throw new Error("A Bedrock provider needs an API key");
+    // Bedrock's OpenAI-compatible endpoint takes the Bedrock API key as a bearer token. Its models
+    // are served on chat completions; not every one is on the Responses API.
+    return new OpenAIClient({ apiKey: config.apiKey, baseUrl: config.baseUrl }).completionModel({
+      modelId: config.modelId,
+      api: "chat",
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
+  if (config.provider === "vertex") {
+    if (!config.baseUrl) throw new Error("A Vertex AI provider needs its project endpoint");
+    if (!config.modelId) throw new Error("A Vertex AI provider needs a model id");
+    if (!config.apiKey) throw new Error("A Vertex AI provider needs a credential");
+    // Vertex's OpenAI-compatible API takes a Google access token as the bearer token and serves
+    // chat completions. A runtime holds only a gateway token; the control plane makes the real
+    // access token from the provider's service account.
+    return new OpenAIClient({ apiKey: config.apiKey, baseUrl: config.baseUrl }).completionModel({
+      modelId: config.modelId,
+      api: "chat",
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
   if (config.provider === "azure") {
     if (!config.baseUrl) throw new Error("An Azure provider needs a resource URL");
     if (!config.modelId) throw new Error("An Azure provider needs a deployment name");
@@ -103,6 +134,22 @@ export function createModel(config: ModelConfig) {
     });
   }
 
+  if (config.provider === "gemini") {
+    const apiKey = config.apiKey ?? process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+    // The Gemini SDK takes no root of its own, so it is given a Google client that has one; a
+    // runtime points it at the control plane's gateway, which `httpOptions.baseUrl` makes it call.
+    const client = new GoogleGenAI({
+      apiKey,
+      httpOptions: config.baseUrl ? { baseUrl: config.baseUrl } : undefined,
+    });
+    return new GeminiClient({ client }).completionModel({
+      modelId: config.modelId ?? DEFAULT_MODEL_IDS.gemini,
+      controls: controlsFromLevels(config.effortLevels),
+      contextLimits: contextLimitsFor(config),
+    });
+  }
+
   const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
   return new AnthropicClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
@@ -124,14 +171,16 @@ export function providerOptionsFor(provider: Provider) {
 export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
 
 // The reasoning effort levels a model accepts, read from the SDK's own per-model controls, or null
-// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server unless the
+// when it has none (older Anthropic and OpenAI models, and an OpenAI-compatible server or Bedrock or Vertex AI unless the
 // host passes the levels the server itself lists, since it may reject a `reasoning_effort` it does
 // not know). Builds the model offline with a placeholder key, so nothing leaves the process.
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
 ): ReasoningControls | null {
   if (
-    config.provider === "openai-compatible" &&
+    (config.provider === "openai-compatible" ||
+      config.provider === "bedrock" ||
+      config.provider === "vertex") &&
     (!config.effortLevels?.length || !config.modelId)
   ) {
     return null;

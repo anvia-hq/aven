@@ -1,3 +1,4 @@
+import { bedrockRegionOf, vertexPartsOf } from "@aven/protocol/providers";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -14,6 +15,7 @@ import { Form } from "@/components/form";
 import { TextField } from "@/components/text-field";
 
 import { useProviderForm } from "../hooks/use-provider-form";
+import type { CompatiblePreset } from "../presets";
 import { PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ModelField } from "./model-field";
 
@@ -25,22 +27,42 @@ function loadModelsLabel(loading: boolean, loaded: boolean) {
 const keyPlaceholders: Record<ProviderKind, string> = {
   openai: "sk-…",
   anthropic: "sk-ant-…",
+  gemini: "AIza…",
+  bedrock: "Amazon Bedrock API key",
+  vertex: "Service account JSON key, or an access token",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
+};
+
+// Azure and Vertex AI have no list to load: their model is typed.
+const typedModels: Partial<Record<ProviderKind, { label: string; placeholder: string }>> = {
+  azure: { label: "Deployment name", placeholder: "my-gpt-deployment" },
+  vertex: { label: "Model id", placeholder: "google/gemini-2.5-flash" },
+};
+
+const modelPlaceholders: Partial<Record<ProviderKind, string>> = {
+  bedrock: "openai.gpt-oss-120b",
+  "openai-compatible": "llama3.1",
 };
 
 type Props = {
   kind: ProviderKind;
   /** Given one, the dialog edits it; without, it adds a provider. */
   provider?: Provider;
+  /** A service with its own panel: its name and address are fixed, and only the key and model are asked. */
+  preset?: CompatiblePreset;
   /** The trigger's label: "Add" for a kind with many, "Set up" or "Edit" for one with a single. */
   label: string;
 };
 
-export function ProviderDialog({ kind, provider, label }: Props) {
+export function ProviderDialog({ kind, provider, preset, label }: Props) {
   const [open, setOpen] = useState(false);
-  const form = useProviderForm(kind, provider, () => setOpen(false));
-  const { compatible, azure } = form;
+  const form = useProviderForm(kind, provider, () => setOpen(false), preset);
+  const { compatible, azure, bedrock, vertex } = form;
+  const typedModel = typedModels[kind];
+  const keyOptional = compatible && preset?.needsKey !== true;
+  const keyLabel = (vertex && "Credential") || (keyOptional ? "API key (optional)" : "API key");
+  const vertexParts = vertexPartsOf(provider?.baseUrl);
   const editing = provider !== undefined;
 
   return (
@@ -48,7 +70,9 @@ export function ProviderDialog({ kind, provider, label }: Props) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) form.reset();
+        if (!next) {
+          form.reset();
+        }
       }}
     >
       <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
@@ -56,13 +80,13 @@ export function ProviderDialog({ kind, provider, label }: Props) {
         <Form ref={form.formRef} onSubmit={form.submit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit" : label} {PROVIDER_LABELS[kind]}
+              {editing ? "Edit" : label} {preset?.name ?? PROVIDER_LABELS[kind]}
             </DialogTitle>
             <DialogDescription>
               Keys are encrypted and never shown again. They follow you across workspaces.
             </DialogDescription>
           </DialogHeader>
-          {compatible && (
+          {((compatible && !preset) || bedrock || vertex) && (
             <TextField
               label="Name"
               name="name"
@@ -70,7 +94,7 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               placeholder={PROVIDER_LABELS[kind]}
             />
           )}
-          {(compatible || azure) && (
+          {((compatible && !preset) || azure) && (
             <TextField
               label={azure ? "Resource URL" : "Base URL"}
               name="baseUrl"
@@ -82,26 +106,55 @@ export function ProviderDialog({ kind, provider, label }: Props) {
               }
             />
           )}
+          {bedrock && (
+            <TextField
+              label="Region"
+              name="region"
+              required
+              pattern="[a-z]{2}(-[a-z]+)+-[0-9]+"
+              defaultValue={bedrockRegionOf(provider?.baseUrl) ?? undefined}
+              placeholder="us-east-1"
+            />
+          )}
+          {vertex && (
+            <>
+              <TextField
+                label="Project ID"
+                name="project"
+                required
+                pattern="[a-z][a-z0-9\-]{4,28}[a-z0-9]"
+                defaultValue={vertexParts?.project}
+                placeholder="my-project-123"
+              />
+              <TextField
+                label="Location"
+                name="location"
+                required
+                pattern="global|[a-z]+(-[a-z0-9]+)+"
+                defaultValue={vertexParts?.location ?? "global"}
+                placeholder="global"
+              />
+            </>
+          )}
           <TextField
-            label={compatible ? "API key (optional)" : "API key"}
+            label={keyLabel}
             name="apiKey"
             type="password"
             autoComplete="off"
-            required={!compatible && !editing}
+            required={(!compatible || preset?.needsKey === true) && !editing}
             placeholder={
               editing && provider.keyHint
                 ? `Leave blank to keep …${provider.keyHint}`
-                : keyPlaceholders[kind]
+                : (preset?.keyPlaceholder ?? keyPlaceholders[kind])
             }
           />
-          {azure ? (
-            // Azure names models by deployment, and has no list to load.
+          {typedModel ? (
             <TextField
-              label="Deployment name"
+              label={typedModel.label}
               name="modelId"
               required
               defaultValue={provider?.modelId ?? undefined}
-              placeholder="my-gpt-deployment"
+              placeholder={typedModel.placeholder}
             />
           ) : (
             <div className="flex items-end gap-2">
@@ -110,9 +163,11 @@ export function ProviderDialog({ kind, provider, label }: Props) {
                   models={form.models}
                   value={form.modelId}
                   onChange={form.selectModel}
-                  required={compatible}
+                  required={compatible || bedrock}
                   defaultValue={provider?.modelId ?? undefined}
-                  placeholder={compatible ? "llama3.1" : "Provider default"}
+                  placeholder={
+                    preset?.exampleModel ?? modelPlaceholders[kind] ?? "Provider default"
+                  }
                 />
               </div>
               <Button

@@ -16,7 +16,7 @@ A thread is one agent session, stored in `threads`, scoped to an organization an
 
 ## Configuration
 
-The model comes from the provider the sender chose, or their default (decision 0006); with none, `AGENT_PROVIDER` (`anthropic` default, or `openai`), optional `AGENT_MODEL`, and the matching API key on the control plane. Without a key, sending a message fails with a clear error and nothing is stored. A runner needs Docker and the sandbox image (`AVEN_SANDBOX_IMAGE`).
+The model comes from the provider the sender chose, or their default (decision 0006); with none, `AGENT_PROVIDER` (`anthropic` default, `openai` or `gemini`), optional `AGENT_MODEL`, and the matching API key on the control plane. Without a key, sending a message fails with a clear error and nothing is stored. A runner needs Docker and the sandbox image (`AVEN_SANDBOX_IMAGE`).
 
 ## Not built
 

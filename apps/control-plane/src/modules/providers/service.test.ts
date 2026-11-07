@@ -9,6 +9,7 @@ run("providersService (postgres)", async () => {
   const { UnavailableError } = await import("../../errors");
   const { providersService } = await import("./service");
   const { effortsByModel } = await import("./model-list");
+  const { bedrockEndpoint } = await import("./schema");
   const { InvalidSelectionError, resolveModel } = await import("./resolve-model");
 
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -226,6 +227,135 @@ run("providersService (postgres)", async () => {
     } as const;
     await providersService.create(alice, { ...compat, name: "C3" });
     await providersService.create(alice, { ...compat, name: "C4" });
+  });
+
+  test("a Gemini provider takes a key, runs the default model and is connected once", async () => {
+    const gemini = await providersService.create(alice, {
+      kind: "gemini",
+      name: "Gemini",
+      apiKey: "AIza-secret-wxyz",
+    });
+    expect(gemini).toMatchObject({ kind: "gemini", baseUrl: null, modelId: null, hasKey: true });
+    expect(JSON.stringify(gemini)).not.toContain("AIza-secret");
+    await expect(
+      providersService.create(alice, { kind: "gemini", name: "Again", apiKey: "k" }),
+    ).rejects.toThrow("already connected");
+    // A Gemini provider has no address of its own to change.
+    await expect(
+      providersService.update(alice, gemini.id, { baseUrl: "https://x.test" }),
+    ).rejects.toThrow("base URL");
+    await providersService.update(alice, gemini.id, {
+      isDefault: true,
+      modelId: "gemini-2.5-flash",
+    });
+    expect(await resolveModel(alice)).toEqual({
+      provider: "gemini",
+      modelId: "gemini-2.5-flash",
+      baseUrl: undefined,
+      apiKey: "AIza-secret-wxyz",
+      contextWindow: undefined,
+    });
+    // The first provider Alice added is the one her other tests expect as the default.
+    const [first] = await providersService.list(alice);
+    await providersService.update(alice, first!.id, { isDefault: true });
+    await providersService.remove(alice, gemini.id);
+  });
+
+  test("a Bedrock provider keeps its regional endpoint, refuses any other host and can be added per region", async () => {
+    const east = "https://bedrock-mantle.us-east-1.api.aws/v1";
+    const body = {
+      kind: "bedrock",
+      modelId: "openai.gpt-oss-120b",
+      apiKey: "bedrock-key-4321",
+    } as const;
+    const created = await providersService.create(alice, {
+      ...body,
+      name: "Bedrock east",
+      baseUrl: bedrockEndpoint.parse(`${east}/`),
+    });
+    expect(created).toMatchObject({ kind: "bedrock", baseUrl: east, hasKey: true });
+    await providersService.create(alice, {
+      ...body,
+      name: "Bedrock west",
+      baseUrl: "https://bedrock-mantle.us-west-2.api.aws/v1",
+    });
+    // The key is only ever sent to AWS's own host.
+    for (const baseUrl of [
+      "https://evil.example.com/v1",
+      "https://bedrock-mantle.us-east-1.api.aws.evil.com/v1",
+      "http://bedrock-mantle.us-east-1.api.aws/v1",
+    ]) {
+      await expect(providersService.update(alice, created.id, { baseUrl })).rejects.toThrow(
+        "Bedrock endpoint",
+      );
+    }
+    await expect(providersService.update(alice, created.id, { modelId: null })).rejects.toThrow(
+      "model id",
+    );
+    expect(
+      await providersService.update(alice, created.id, {
+        baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1",
+        modelId: "openai.gpt-oss-20b",
+      }),
+    ).toMatchObject({ baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1" });
+    const config = await resolveModel(alice, { providerId: created.id });
+    expect(config).toMatchObject({
+      provider: "bedrock",
+      baseUrl: "https://bedrock-mantle.eu-west-1.api.aws/v1",
+      modelId: "openai.gpt-oss-20b",
+      apiKey: "bedrock-key-4321",
+    });
+    await providersService.remove(alice, created.id);
+  });
+
+  test("a Vertex AI provider keeps its project endpoint, takes a service account key and offers its model", async () => {
+    const endpoint =
+      "https://europe-west4-aiplatform.googleapis.com/v1/projects/my-project-123/locations/europe-west4/endpoints/openapi";
+    const account = JSON.stringify({
+      type: "service_account",
+      client_email: "a@my-project-123.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+      private_key_id: "0123456789abcdef",
+    });
+    const created = await providersService.create(alice, {
+      kind: "vertex",
+      name: "Vertex EU",
+      baseUrl: endpoint,
+      modelId: "google/gemini-2.5-flash",
+      apiKey: account,
+    });
+    expect(created).toMatchObject({
+      kind: "vertex",
+      baseUrl: endpoint,
+      hasKey: true,
+      keyHint: "cdef",
+    });
+    expect(JSON.stringify(created)).not.toContain("BEGIN PRIVATE KEY");
+    expect(await providersService.listModels(alice, created.id)).toMatchObject({
+      models: ["google/gemini-2.5-flash"],
+    });
+    // Only Google's own host, in the region the path says.
+    for (const baseUrl of [
+      "https://evil.example.com/v1/projects/my-project-123/locations/global/endpoints/openapi",
+      "https://us-central1-aiplatform.googleapis.com/v1/projects/my-project-123/locations/europe-west4/endpoints/openapi",
+      "https://aiplatform.googleapis.com.evil.com/v1/projects/my-project-123/locations/global/endpoints/openapi",
+    ]) {
+      await expect(providersService.update(alice, created.id, { baseUrl })).rejects.toThrow(
+        "Vertex AI endpoint",
+      );
+    }
+    await expect(
+      providersService.update(alice, created.id, { apiKey: "two words" }),
+    ).rejects.toThrow("service account");
+    await providersService.update(alice, created.id, { apiKey: "ya29.pasted-token" });
+    const config = await resolveModel(alice, { providerId: created.id });
+    expect(config).toMatchObject({
+      provider: "vertex",
+      baseUrl: endpoint,
+      modelId: "google/gemini-2.5-flash",
+      apiKey: "ya29.pasted-token",
+    });
+    await providersService.remove(alice, created.id);
   });
 
   test("model efforts come from the SDK and leave out models without the control", async () => {

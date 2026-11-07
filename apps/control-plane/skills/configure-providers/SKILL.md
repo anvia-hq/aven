@@ -1,6 +1,6 @@
 ---
 name: configure-providers
-description: Add, change, switch or remove the person's model providers (OpenAI, Anthropic, Azure OpenAI, an OpenAI-compatible server) and pick models. Use when the user wants to connect a provider, change a key or a model, make one the default, or says there is no model, a model is missing, or a provider does not work.
+description: Add, change, switch or remove the person's model providers (OpenAI, Anthropic, Google Gemini, Amazon Bedrock, Google Vertex AI, Azure OpenAI, an OpenAI-compatible server) and pick models. Use when the user wants to connect a provider, change a key or a model, make one the default, or says there is no model, a model is missing, or a provider does not work.
 ---
 
 # Configuring model providers
@@ -9,14 +9,32 @@ A provider is what runs the person's agents: it holds a kind, an API key and, fo
 
 ## What each kind needs
 
-| Kind                                                 | Address                                                                                                  | Model                                                                          | Key      |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------- |
-| OpenAI                                               | none                                                                                                     | optional                                                                       | required |
-| Anthropic                                            | none                                                                                                     | optional                                                                       | required |
-| Azure OpenAI                                         | the resource URL, `https://<resource>.openai.azure.com` (https only, anything after the host is dropped) | the **deployment name** in that resource, which is not always the model's name | required |
-| OpenAI-compatible (Ollama, vLLM, LiteLLM, a gateway) | the server's root, such as `https://gateway.example.com/v1`                                              | required                                                                       | optional |
+| Kind                                                 | Address                                                                                                                                                                                                                                                     | Model                                                                                        | Key                                    |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| OpenAI                                               | none                                                                                                                                                                                                                                                        | optional                                                                                     | required                               |
+| Anthropic                                            | none                                                                                                                                                                                                                                                        | optional                                                                                     | required                               |
+| Google Gemini                                        | none                                                                                                                                                                                                                                                        | optional                                                                                     | required                               |
+| Amazon Bedrock                                       | the region, such as `us-east-1`: the form makes `https://bedrock-mantle.<region>.api.aws/v1`; a bot gives that address                                                                                                                                      | required: a Bedrock model id such as `openai.gpt-oss-120b` (the form lists them)             | required: a Bedrock API key            |
+| Google Vertex AI                                     | the project id and location (`global`, `us-central1`, ...): the form makes `https://<location>-aiplatform.googleapis.com/v1/projects/<project>/locations/<location>/endpoints/openapi` (`aiplatform.googleapis.com` for `global`); a bot gives that address | required: `<publisher>/<model>`, such as `google/gemini-2.5-flash`, typed (there is no list) | required: a service account's JSON key |
+| Azure OpenAI                                         | the resource URL, `https://<resource>.openai.azure.com` (https only, anything after the host is dropped)                                                                                                                                                    | the **deployment name** in that resource, which is not always the model's name               | required                               |
+| OpenAI-compatible (Ollama, vLLM, LiteLLM, a gateway) | the server's root, such as `https://gateway.example.com/v1`                                                                                                                                                                                                 | required                                                                                     | optional                               |
 
-OpenAI and Anthropic and Azure can each be added once. An OpenAI-compatible server can be added many times, one for each server.
+### Presets for OpenAI-compatible services
+
+These have no kind of their own: they are `openai-compatible` providers with a known address. Each has a panel of its own in Settings > Providers (**Set up**, like OpenAI), which asks only for the key and the model and fixes the name and address; once set up, its panel goes. A bot gives the same address with `add_provider` (kind `openai-compatible`) and the name shown here.
+
+| Service    | Name       | Base URL                         | Key                                                                            |
+| ---------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| OpenRouter | OpenRouter | `https://openrouter.ai/api/v1`   | required                                                                       |
+| Groq       | Groq       | `https://api.groq.com/openai/v1` | required                                                                       |
+| DeepSeek   | DeepSeek   | `https://api.deepseek.com`       | required                                                                       |
+| Mistral    | Mistral    | `https://api.mistral.ai/v1`      | required                                                                       |
+| xAI        | xAI        | `https://api.x.ai/v1`            | required                                                                       |
+| Ollama     | Ollama     | `http://localhost:11434/v1`      | none (runs on your own machine, which the control plane must be able to reach) |
+
+The model is still required: with the key saved, the form's Load models button (or `list_provider_models`) lists what the service offers.
+
+OpenAI, Anthropic, Google Gemini, Azure and each of the services above can be added once. Amazon Bedrock can be added once for each region, and Vertex AI once for each project and location. Bedrock takes only a Bedrock API key (not AWS access keys), reaches the models AWS serves on its `bedrock-mantle` `/v1` endpoint and offers no reasoning effort. Vertex AI takes a service account key (the account needs the Vertex AI User role): Aven trades it for a one-hour access token as each run needs one, so the key is the only thing to give. A pasted access token also works but stops after an hour. Vertex has no reasoning effort and no model list, so `list_provider_models` only shows the saved model. A Gemini key comes from Google AI Studio (https://aistudio.google.com/apikey) and is not a Vertex AI credential. An OpenAI-compatible server can be added many times, one for each server.
 
 ## 1. Find out what they want
 
@@ -39,7 +57,7 @@ If the person pastes a key into the chat anyway, do not use or repeat it. Tell t
 
 Send the person to Settings > Providers and give them each value:
 
-1. Open Settings > Providers and press **Set up** on the kind's row (or **Add** under OpenAI-compatible).
+1. Open Settings > Providers and press **Set up** on the kind's row (or **Add** under Amazon Bedrock, Google Vertex AI and OpenAI-compatible).
 2. Fill in: name, address, model or deployment, and the key (they paste it themselves).
 3. The form can list the models the key can use; pick one.
 4. Use the row's menu to make it the default.
@@ -50,6 +68,8 @@ Send the person to Settings > Providers and give them each value:
 - **"X has no API key yet"**: the provider was made without its key. Give it one: Settings > Providers > Edit, or ask a bot to show the key form.
 - **"This Azure provider has no API key"**: the same, for Azure.
 - **A model is missing from the list**: for Azure the list is the resource's deployments, so create the deployment in Azure first; for other kinds only models that can drive an agent are shown.
+- **Bedrock says a model is not supported on this route, or it is missing from the list**: Aven reaches the `bedrock-mantle` `/v1` endpoint of the region; a model AWS serves only under another path, or in another region, is not reachable. Pick another model or add the other region. A short-term Bedrock key that expired answers 401: give a new key.
+- **Vertex says the credential was refused, or 502 "Google refused the service account key"**: the key is revoked or malformed. Give a new JSON key. A 401/403 from Vertex itself means the account lacks the Vertex AI User role, or the API is not enabled in the project.
 - **Azure says the deployment was not found**: the deployment name, not the model name, goes in the model field.
 - **The context card is empty for a compatible server**: it learns the model's window from the server's `GET <address>/model/info` (LiteLLM answers it); without it no window is known and history is kept whole.
 - **A reasoning effort is refused**: the model does not take that level. Pick another, or none.

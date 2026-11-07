@@ -21,7 +21,15 @@ export type RunThreadInfo = {
 };
 
 /** The kinds of model provider, in the order a client lists them. */
-export const PROVIDERS = ["openai", "anthropic", "azure", "openai-compatible"] as const;
+export const PROVIDERS = [
+  "openai",
+  "anthropic",
+  "gemini",
+  "bedrock",
+  "vertex",
+  "azure",
+  "openai-compatible",
+] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 /** How a run ended: `response` is a normal finish, `error` means the run threw. */
@@ -772,4 +780,4 @@ export const CloseCode = {
 } as const;
 
 // What each version added is in docs/products/0005-runtime-wire-versions.md; add a line there when it goes up.
-export const WIRE_VERSION = 44;
+export const WIRE_VERSION = 47;

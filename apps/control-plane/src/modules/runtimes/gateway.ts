@@ -5,19 +5,26 @@ import { errorMessage } from "@aven/agents/values";
 import type { RunModel } from "@aven/protocol/runtime-wire";
 
 import { defaultModelId } from "../providers/default-model";
+import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
 import { bearerToken } from "./bearer";
 
 const TOKEN_PREFIX = "avgw_";
 
-const DEFAULT_UPSTREAMS = {
+type Upstreams = { anthropic: string; openai: string; gemini?: string };
+
+const DEFAULT_UPSTREAMS: Upstreams = {
   anthropic: "https://api.anthropic.com",
   openai: "https://api.openai.com/v1",
+  gemini: "https://generativelanguage.googleapis.com",
 };
 
 const SEGMENTS = {
   anthropic: "anthropic",
   openai: "openai",
+  gemini: "gemini",
+  bedrock: "bedrock",
+  vertex: "vertex",
   azure: "azure",
   "openai-compatible": "compatible",
 } as const satisfies Record<Provider, string>;
@@ -27,9 +34,19 @@ const SEGMENTS = {
 const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
   anthropic: ["/v1/messages"],
   openai: ["/responses", "/chat/completions"],
+  // Gemini names the model in the path, so its calls are matched by `GEMINI_PATH` instead.
+  gemini: [],
+  bedrock: ["/chat/completions"],
+  vertex: ["/chat/completions"],
   azure: ["/responses", "/chat/completions"],
   "openai-compatible": ["/chat/completions"],
 };
+
+// Gemini's API: the model and the call are one path segment, `models/<id>:streamGenerateContent`.
+const GEMINI_PATH = /^\/v1(?:beta)?\/models\/[^/:?]+:(generateContent|streamGenerateContent)$/;
+
+const allowed = (provider: Provider, path: string) =>
+  provider === "gemini" ? GEMINI_PATH.test(path) : ALLOWED_PATHS[provider].includes(path);
 
 const PASS_REQUEST_HEADERS = ["accept", "anthropic-version", "anthropic-beta"];
 const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-request-id"];
@@ -54,7 +71,11 @@ export class RunGateway {
   #grants = new Map<string, Grant>();
   #tokens = new Map<string, string>();
 
-  constructor(private upstreams: { anthropic: string; openai: string } = DEFAULT_UPSTREAMS) {}
+  // `accessToken` turns a Vertex AI provider's credential into the token Google takes.
+  constructor(
+    private upstreams: Upstreams = DEFAULT_UPSTREAMS,
+    private accessToken: (credential: string) => Promise<string> = googleAccessToken,
+  ) {}
 
   // The key the model is reached with: the provider's own, else the environment's. Throws when
   // there is none, so a person is told before anything starts.
@@ -63,6 +84,12 @@ export class RunGateway {
     const key = config.apiKey ?? (envKey && process.env[envKey]);
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
+    }
+    if (!key && config.provider === "bedrock") {
+      throw new ModelUnavailableError("This Bedrock provider has no API key");
+    }
+    if (!key && config.provider === "vertex") {
+      throw new ModelUnavailableError("This Vertex AI provider has no credential");
     }
     if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
     return key;
@@ -104,13 +131,16 @@ export class RunGateway {
   }
 
   async forward(request: Request, segment: string, path: string): Promise<Response> {
-    const presented = bearerToken(request.headers) ?? request.headers.get("x-api-key");
+    const presented =
+      bearerToken(request.headers) ??
+      request.headers.get("x-api-key") ??
+      request.headers.get("x-goog-api-key");
     const grant = presented ? this.#grants.get(presented) : undefined;
     if (!grant) return reject("Unauthorized", 401);
     const { provider } = grant.model;
     if (SEGMENTS[provider] !== segment) return reject("Wrong provider for this run", 403);
     const upstreamPath = `/${path}`;
-    if (request.method !== "POST" || !ALLOWED_PATHS[provider].includes(upstreamPath)) {
+    if (request.method !== "POST" || !allowed(provider, upstreamPath)) {
       return reject("Not allowed", 404);
     }
 
@@ -118,10 +148,24 @@ export class RunGateway {
     if (typeof body !== "object" || body === null) return reject("Invalid JSON", 400);
     pin(body as Record<string, unknown>, grant.model, upstreamPath);
 
+    let credential = grant;
+    if (provider === "vertex" && grant.key) {
+      try {
+        credential = { ...grant, key: await this.accessToken(grant.key) };
+      } catch (error) {
+        const reason = error instanceof GoogleAuthError ? error.message : errorMessage(error);
+        console.warn(
+          `Model gateway: no Google access token for model ${grant.model.modelId}:`,
+          reason,
+        );
+        return reject(reason, 502);
+      }
+    }
+
     try {
-      const upstream = await fetch(this.#upstreamUrl(grant.model, upstreamPath), {
+      const upstream = await fetch(this.#upstreamUrl(grant.model, upstreamPath, request), {
         method: "POST",
-        headers: upstreamHeaders(request, grant),
+        headers: upstreamHeaders(request, credential),
         body: JSON.stringify(body),
         signal: request.signal,
       });
@@ -142,7 +186,15 @@ export class RunGateway {
     }
   }
 
-  #upstreamUrl(model: ModelConfig, path: string) {
+  #upstreamUrl(model: ModelConfig, path: string, request: Request) {
+    if (model.provider === "gemini") {
+      // The sender's model replaces the one the runtime named in the path; `alt=sse` is the only
+      // query it may add (it is what makes the answer stream).
+      const call = path.slice(path.lastIndexOf(":"));
+      const id = encodeURIComponent(model.modelId ?? defaultModelId("gemini") ?? "");
+      const sse = new URL(request.url).searchParams.get("alt") === "sse" ? "?alt=sse" : "";
+      return `${this.upstreams.gemini ?? DEFAULT_UPSTREAMS.gemini}/v1beta/models/${id}${call}${sse}`;
+    }
     if (model.provider === "anthropic") return `${this.upstreams.anthropic}${path}`;
     if (model.provider === "openai") return `${this.upstreams.openai}${path}`;
     // The resource's v1 API, the same root `@anvia/azure` builds from a resource URL.
@@ -168,6 +220,7 @@ function upstreamHeaders(request: Request, grant: Grant) {
   headers.set("content-type", "application/json");
   if (!grant.key) return headers;
   if (grant.model.provider === "anthropic") headers.set("x-api-key", grant.key);
+  else if (grant.model.provider === "gemini") headers.set("x-goog-api-key", grant.key);
   else headers.set("authorization", `Bearer ${grant.key}`);
   if (grant.model.provider === "azure") headers.set("api-key", grant.key);
   return headers;
@@ -178,6 +231,8 @@ const record = (value: unknown) =>
 
 // The runtime picks neither the model nor the reasoning effort: the sender's choice wins.
 function pin(body: Record<string, unknown>, model: ModelConfig, path: string) {
+  // Gemini's request has no model field: it is in the URL, which `#upstreamUrl` sets.
+  if (model.provider === "gemini") return;
   body.model = model.modelId ?? defaultModelId(model.provider) ?? body.model;
   if (model.provider === "anthropic") pinAnthropicEffort(body, model.reasoningEffort);
   if (model.provider === "openai" || model.provider === "azure")
