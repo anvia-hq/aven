@@ -31,7 +31,7 @@ bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
 
 ## Constraints
 
-- **License: AGPL-3.0-only** (decision 0167). `LICENSE` has the text and every `package.json` says so; add no dependency under a license the AGPL cannot include without raising it first.
+- **License: MIT** (decision 0167). `LICENSE` has the text and every `package.json` says so; raise it before adding a dependency whose license asks more of Aven than MIT does (a copyleft one).
 - **Bun only.** Use `bun`/`bunx`. Do not use npm, yarn, or pnpm, and do not commit other lockfiles.
 - **Prefer Bun built-ins** (`Bun.serve`, `Bun.file`, `bun:test`, `bun:sqlite`) over third-party equivalents.
 - **TypeScript strict.** Avoid `any`; where it cannot be avoided, say why in the pull request. Extend the root `tsconfig.json`.

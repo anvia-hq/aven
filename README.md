@@ -54,4 +54,4 @@ How installs and releases work: [docs/decision/0073](docs/decision/0073-install-
 
 ## License
 
-Aven is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). If you run a modified Aven as a service others use over a network, you must offer them its source under the same license.
+Aven is free software under the [MIT License](LICENSE).

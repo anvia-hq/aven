@@ -25,7 +25,7 @@ RUN bunx vite build
 
 FROM caddy:2-alpine
 LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
-LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
+LABEL org.opencontainers.image.licenses="MIT"
 COPY LICENSE /LICENSE
 COPY apps/platform/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/platform/dist /srv
