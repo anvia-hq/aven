@@ -1,4 +1,4 @@
-import { BOT_MAX_HOPS, personPrompt } from "@aven/protocol/bots";
+import { BOT_MAX_HOPS } from "@aven/protocol/bots";
 
 import { prepareAttachments, type AttachmentBody } from "../../attachments";
 import { orNotFound, UnprocessableError } from "../../errors";
@@ -27,7 +27,7 @@ export const createBotChats = (runner: BotRunner) => ({
     const attachments = prepareAttachments(files);
     const model = await modelOf(userId, bot);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
-    await runner.send(bot, userId, personPrompt(text), model, attachments);
+    await runner.send(bot, userId, text, model, attachments);
   },
 
   async deliver({

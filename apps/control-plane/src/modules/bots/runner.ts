@@ -1,6 +1,13 @@
 import type { MemoryStore } from "@anvia/core";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
-import { applyBotEvent, botMessageId, botNote, botPrompt, isTyping } from "@aven/protocol/bots";
+import {
+  applyBotEvent,
+  botMessageId,
+  botNote,
+  botPrompt,
+  isTyping,
+  personPrompt,
+} from "@aven/protocol/bots";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError } from "../../errors";
@@ -56,7 +63,7 @@ export class BotRunner {
       bot,
       userId,
       model,
-      prompt: text,
+      prompt: personPrompt(text),
       attachments,
       hops: 0,
       onPersonsWord: true,
