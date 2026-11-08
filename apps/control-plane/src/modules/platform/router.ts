@@ -14,6 +14,14 @@ export const platformRouter = new Elysia({ prefix: "/platform" })
       isOwner: session ? await platformService.isOwner(session.user) : false,
     };
   })
+  .get(
+    "/users",
+    async ({ user }) => {
+      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+      return platformService.listPeople();
+    },
+    { auth: true },
+  )
   .patch(
     "/settings",
     async ({ body, user }) => {
