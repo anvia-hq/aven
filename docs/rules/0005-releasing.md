@@ -14,7 +14,7 @@ How a release is made, what it contains, and what a change must keep true so tha
    git push origin v0.2.0
    ```
 
-3. `.github/workflows/release.yml` runs on the tag (about as long as the sandbox image takes to build, which is the slow part) and produces:
+3. `.github/workflows/release.yml` runs on the tag (about as long as the sandbox image takes to build, which is the slow part; it is built with no layer cache, since the GitHub Actions cache (10 GB for the whole repository) never held it long enough to be read, and writing it cost about three minutes a build) and produces:
    - `ghcr.io/anvia-hq/aven-server`, `aven-web` and `aven-sandbox`, each for amd64 and arm64, tagged `0.2.0` and `0.2`, and `latest` unless the tag is a prerelease;
    - `aven-0.2.0-<os>-<arch>.tar.gz` for darwin and linux on arm64 and amd64, with `checksums.txt` (built by `apps/cli/scripts/build-release.sh`, which sets the binary's version from the tag);
    - a GitHub Release with generated notes, with those files attached.

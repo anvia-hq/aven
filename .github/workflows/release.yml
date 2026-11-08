@@ -81,8 +81,8 @@ jobs:
           file: ${{ matrix.file }}
           platforms: linux/${{ matrix.arch }}
           outputs: type=image,name=${{ env.REGISTRY }}/aven-${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.arch }}
+          cache-from: ${{ matrix.image != 'sandbox' && format('type=gha,scope={0}-{1}', matrix.image, matrix.arch) || '' }}
+          cache-to: ${{ matrix.image != 'sandbox' && format('type=gha,mode=max,scope={0}-{1}', matrix.image, matrix.arch) || '' }}
       - name: Keep the digest
         run: |
           mkdir -p "${{ runner.temp }}/digests"
