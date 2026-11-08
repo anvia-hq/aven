@@ -19,7 +19,6 @@ export function UsageCard({
             <Skeleton key={index} className="h-4 w-full" />
           ))}
         </div>
-        <Skeleton className="h-4 w-40" />
       </OverviewCard>
     );
   }
