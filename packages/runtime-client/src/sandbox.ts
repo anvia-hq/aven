@@ -53,7 +53,7 @@ type Docker = DockerRun;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_ARCHIVED_KEEP_DAYS = 7;
+const DEFAULT_ARCHIVED_KEEP_DAYS = 1;
 const FIRST_SWEEP_MS = 60_000;
 const SWEEP_MS = 60 * 60 * 1000;
 const CONNECT_POLL_MS = 50;
