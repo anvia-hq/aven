@@ -66,7 +66,7 @@ function resolveModel(source: ModelSource) {
     return { model: source.model, providerOptions: undefined, controls: undefined };
   return {
     model: withUniqueToolCallIds(
-      withoutEmptyAssistantText(withHistoryItOwns(createModel(source), source)),
+      withoutEmptyAssistantText(withHistoryItOwns(createModel(source, source.apiKey), source)),
     ),
     providerOptions: providerOptionsFor(source.provider),
     controls: source.reasoningEffort ? { reasoningEffort: source.reasoningEffort } : undefined,

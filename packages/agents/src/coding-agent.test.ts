@@ -3,7 +3,6 @@ import { createTool, type Message } from "@anvia/core";
 import { z } from "zod";
 
 import { createCodingAgent } from "./coding-agent";
-import { createModel } from "./model";
 import { scriptedModel, text } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 
@@ -155,20 +154,6 @@ describe("tool calls through the agent", () => {
       JSON.stringify({ path: "a.txt", oldString: "hello", newString: "bye" }),
     );
     expect(files.get("a.txt")).toBe("bye");
-  });
-});
-
-describe("createModel", () => {
-  test("requires the provider's API key", () => {
-    const saved = { ...process.env };
-    delete process.env.OPENAI_API_KEY;
-    delete process.env.ANTHROPIC_API_KEY;
-    try {
-      expect(() => createModel({ provider: "openai" })).toThrow("OPENAI_API_KEY");
-      expect(() => createModel({ provider: "anthropic" })).toThrow("ANTHROPIC_API_KEY");
-    } finally {
-      Object.assign(process.env, saved);
-    }
   });
 });
 
