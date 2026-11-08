@@ -75,6 +75,29 @@ describe("a thread's changes", () => {
     expect(later).not.toContain("b.txt");
   });
 
+  test("nothing is unshipped once the branch holds nothing beyond the default branch", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    const commit = (message: string) =>
+      sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await sh(join(root, "..", "remote"), "config", "receive.denyCurrentBranch", "updateInstead");
+    await threadDiff(root, "unshipped");
+    await writeFile(join(root, "b.txt"), "new\n");
+    await sh(root, "add", ".");
+    await commit("work");
+    await sh(root, "push", "-q", "-u", "origin", "HEAD");
+    await writeFile(join(root, "d.txt"), "x\n");
+    await sh(root, "add", ".");
+    await commit("more");
+    await sh(root, "push", "-q", "origin", "HEAD:main");
+    await sh(root, "fetch", "-q", "origin");
+    await sh(root, "reset", "-q", "--hard", "origin/main");
+    await sh(root, "checkout", "-q", "-B", "aven/test", "origin/main");
+    await sh(root, "branch", "-q", "-u", "origin/aven/test");
+
+    expect((await threadDiff(root, "all"))?.patch).toBe("");
+    expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
+  });
+
   test("the whole branch shows every change, new files included", async () => {
     const { root } = await workspace();
     await writeFile(join(root, "a.txt"), "one\nthree\n");
