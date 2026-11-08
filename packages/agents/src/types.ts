@@ -19,6 +19,8 @@ export type McpNote = {
   failed: readonly { name: string; reason: string }[];
 };
 
+export type ModelApiKey = string | undefined;
+
 export type ModelConfig = {
   provider: Provider;
   modelId?: string;

@@ -4,6 +4,7 @@ import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
 import { azureApiFor, createModel, providerOptionsFor, reasoningControlsFor } from "./model";
+import type { ModelConfig } from "./types";
 
 describe("providerOptionsFor", () => {
   test("only anthropic gets automatic prompt caching", () => {
@@ -24,12 +25,12 @@ describe("createModel bedrock", () => {
   } as const;
 
   test("needs an endpoint, a model and a key", () => {
-    expect(() => createModel({ provider: "bedrock", modelId: "m", apiKey: "k" })).toThrow(
+    expect(() => createModel({ provider: "bedrock", modelId: "m" }, "k")).toThrow(
       "regional endpoint",
     );
-    expect(() => createModel({ ...bedrock, apiKey: "k" })).toThrow("model id");
-    expect(() => createModel({ ...bedrock, modelId: "m" })).toThrow("API key");
-    expect(createModel({ ...bedrock, modelId: "m", apiKey: "k" }).modelId).toBe("m");
+    expect(() => createModel(bedrock, "k")).toThrow("model id");
+    expect(() => createModel({ ...bedrock, modelId: "m" }, undefined)).toThrow("API key");
+    expect(createModel({ ...bedrock, modelId: "m" }, "k").modelId).toBe("m");
   });
 
   test("offers an effort control only from levels the host supplies", () => {
@@ -73,14 +74,14 @@ describe("createModel vertex", () => {
   } as const;
 
   test("needs an endpoint, a model and a credential", () => {
-    expect(() => createModel({ provider: "vertex", modelId: "m", apiKey: "k" })).toThrow(
+    expect(() => createModel({ provider: "vertex", modelId: "m" }, "k")).toThrow(
       "project endpoint",
     );
-    expect(() => createModel({ ...vertex, apiKey: "k" })).toThrow("model id");
-    expect(() => createModel({ ...vertex, modelId: "m" })).toThrow("credential");
-    expect(
-      createModel({ ...vertex, modelId: "google/gemini-2.5-flash", apiKey: "k" }).modelId,
-    ).toBe("google/gemini-2.5-flash");
+    expect(() => createModel(vertex, "k")).toThrow("model id");
+    expect(() => createModel({ ...vertex, modelId: "m" }, undefined)).toThrow("credential");
+    expect(createModel({ ...vertex, modelId: "google/gemini-2.5-flash" }, "k").modelId).toBe(
+      "google/gemini-2.5-flash",
+    );
   });
 
   test("offers an effort control only from levels the host supplies", () => {
@@ -94,20 +95,12 @@ describe("createModel vertex", () => {
 });
 
 describe("createModel gemini", () => {
-  const saved = process.env.GEMINI_API_KEY;
-  afterAll(() => {
-    if (saved === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = saved;
-  });
-
-  test("needs a key, from the config or GEMINI_API_KEY, and has a default model", () => {
-    delete process.env.GEMINI_API_KEY;
-    expect(() => createModel({ provider: "gemini" })).toThrow("GEMINI_API_KEY is not set");
-    const model = createModel({ provider: "gemini", apiKey: "k" });
+  test("needs a key and has a default model", () => {
+    expect(() => createModel({ provider: "gemini" }, undefined)).toThrow("API key");
+    const model = createModel({ provider: "gemini" }, "k");
     expect(model.provider).toBe("gemini");
     expect(model.modelId).toBe("gemini-2.5-pro");
-    process.env.GEMINI_API_KEY = "from-env";
-    expect(createModel({ provider: "gemini", modelId: "gemini-2.5-flash" }).modelId).toBe(
+    expect(createModel({ provider: "gemini", modelId: "gemini-2.5-flash" }, "k").modelId).toBe(
       "gemini-2.5-flash",
     );
   });
@@ -154,12 +147,10 @@ describe("createModel azure", () => {
   const azure = { provider: "azure", baseUrl: "https://r.openai.azure.com/openai/v1" } as const;
 
   test("needs a resource URL, a deployment and a key", () => {
-    expect(() => createModel({ provider: "azure", modelId: "d", apiKey: "k" })).toThrow(
-      "resource URL",
-    );
-    expect(() => createModel({ ...azure, apiKey: "k" })).toThrow("deployment");
-    expect(() => createModel({ ...azure, modelId: "d" })).toThrow("API key");
-    expect(createModel({ ...azure, modelId: "d", apiKey: "k" }).provider).toBe("azure-openai");
+    expect(() => createModel({ provider: "azure", modelId: "d" }, "k")).toThrow("resource URL");
+    expect(() => createModel(azure, "k")).toThrow("deployment");
+    expect(() => createModel({ ...azure, modelId: "d" }, undefined)).toThrow("API key");
+    expect(createModel({ ...azure, modelId: "d" }, "k").provider).toBe("azure-openai");
   });
 
   test("OpenAI's models use the Responses API and the rest chat completions, which streams them", () => {
@@ -324,14 +315,74 @@ describe("openai-compatible request", () => {
 
 describe("createModel", () => {
   test("a model the SDK does not know reports context only when given its window", () => {
-    const unknown = {
-      provider: "anthropic",
-      modelId: "claude-not-yet-known",
-      apiKey: "x",
-    } as const;
-    expect(createModel(unknown).contextLimits).toBeUndefined();
-    expect(createModel({ ...unknown, contextWindow: 200_000 }).contextLimits).toEqual({
+    const unknown = { provider: "anthropic", modelId: "claude-not-yet-known" } as const;
+    expect(createModel(unknown, "x").contextLimits).toBeUndefined();
+    expect(createModel({ ...unknown, contextWindow: 200_000 }, "x").contextLimits).toEqual({
       contextWindow: 200_000,
     });
+  });
+
+  test("uses no key from the environment, only the one it is given", () => {
+    const saved = {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    };
+    const restore = () => {
+      for (const [name, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    };
+    try {
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.GEMINI_API_KEY;
+      expect(() => createModel({ provider: "openai" }, undefined)).toThrow("API key");
+      expect(() => createModel({ provider: "anthropic" }, undefined)).toThrow("API key");
+      expect(() => createModel({ provider: "gemini" }, undefined)).toThrow("API key");
+      process.env.OPENAI_API_KEY = "ambient-openai";
+      process.env.ANTHROPIC_API_KEY = "ambient-anthropic";
+      process.env.GEMINI_API_KEY = "ambient-gemini";
+      expect(() => createModel({ provider: "openai" }, undefined)).toThrow("API key");
+      expect(() => createModel({ provider: "anthropic" }, undefined)).toThrow("API key");
+      expect(() => createModel({ provider: "gemini" }, undefined)).toThrow("API key");
+      expect(createModel({ provider: "openai" }, "k").provider).toBe("openai");
+      expect(createModel({ provider: "anthropic" }, "k").provider).toBe("anthropic");
+      expect(createModel({ provider: "gemini" }, "k").provider).toBe("gemini");
+    } finally {
+      restore();
+    }
+  });
+
+  test("sends the key it was given, not the ambient one", async () => {
+    const seen: (string | null)[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        seen.push(request.headers.get("authorization"));
+        return Response.json({ error: { message: "stop" } }, { status: 400 });
+      },
+    });
+    const saved = process.env.OPENAI_API_KEY;
+    try {
+      process.env.OPENAI_API_KEY = "ambient-openai";
+      const model = createModel(
+        { provider: "openai", modelId: "gpt-4o", baseUrl: `http://localhost:${server.port}/v1` },
+        "explicit-key",
+      );
+      const agent = new Agent({ id: "t", model, instructions: "be brief" });
+      await agent.generate({ prompt: "hi" }).catch(() => undefined);
+      expect(seen[0]).toBe("Bearer explicit-key");
+    } finally {
+      if (saved === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = saved;
+      server.stop(true);
+    }
+  });
+
+  test("an unknown provider throws instead of falling back to anthropic", () => {
+    const unknown = { provider: "mystery" } as unknown as ModelConfig;
+    expect(() => createModel(unknown, "k")).toThrow("Unknown model provider");
   });
 });

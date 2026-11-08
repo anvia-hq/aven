@@ -26,7 +26,12 @@ export function environmentModel(): ModelConfig {
       `AGENT_PROVIDER must be "openai", "anthropic" or "gemini", got "${provider}"`,
     );
   }
-  return { provider, modelId: process.env.AGENT_MODEL || undefined };
+  const envKey = ENV_KEYS[provider];
+  return {
+    provider,
+    modelId: process.env.AGENT_MODEL || undefined,
+    apiKey: envKey ? process.env[envKey] : undefined,
+  };
 }
 
 export class InvalidSelectionError extends UnprocessableError {}
