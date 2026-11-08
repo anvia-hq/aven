@@ -45,6 +45,11 @@ export type BotMood = "idle" | "working";
 
 export type BotPanels = ReturnType<typeof useBotPanels>;
 
+export type BotsWorkingStore = {
+  subscribe: (listener: () => void) => () => void;
+  snapshot: () => ReadonlySet<string>;
+};
+
 export type MentionPart =
   | { type: "text"; text: string }
   | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> }
