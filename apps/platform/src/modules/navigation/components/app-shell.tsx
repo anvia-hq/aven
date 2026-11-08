@@ -84,7 +84,7 @@ export function AppShell({ user, sidebar }: Props) {
           collapsible="icon"
           className={cn(
             "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-l-xl md:rounded-l-xl md:border-y md:border-l md:border-sidebar-border",
-            drawsOwnCards && "md:border-y-frame md:bg-background",
+            drawsOwnCards && "md:bg-background",
           )}
         >
           <SidebarHeader>
