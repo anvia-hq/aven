@@ -79,6 +79,40 @@ test.describe("runtimes", () => {
   });
 });
 
+test.describe("the built-in runtime", () => {
+  test("is listed with an icon and does not break the page", async ({ page }) => {
+    await registerUser(page, "rtbuiltin", "Built In Viewer");
+    await page.route("**/api/runtimes", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            json: [
+              {
+                id: "00000000-0000-4000-8000-000000000001",
+                name: "Control plane",
+                ownerId: null,
+                tokenHint: "",
+                online: true,
+                build: null,
+                outdated: false,
+                updateTo: null,
+                isControlPlane: true,
+                canUpdate: false,
+                stats: null,
+                lastSeenAt: null,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          })
+        : route.continue(),
+    );
+    await page.goto("/settings/runtimes");
+    const table = page.getByRole("table", { name: "Runtimes" });
+    await expect(table.getByRole("row", { name: /Control plane/ })).toBeVisible();
+    await expect(table.getByRole("img", { name: "Built in" })).toBeVisible();
+    await expect(page.getByText("Something went wrong")).toHaveCount(0);
+  });
+});
+
 test.describe("renaming a runtime", () => {
   test("changes its label in the list and on the server, and a blank name cannot be saved", async ({
     page,

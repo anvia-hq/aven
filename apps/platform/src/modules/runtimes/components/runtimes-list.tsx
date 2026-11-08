@@ -85,13 +85,14 @@ export function RuntimesList() {
                 <span className="flex items-center gap-2 font-medium">
                   {runtime.name}
                   {runtime.ownerId === null && (
-                    <Servers
+                    <span
                       role="img"
                       aria-label="Built in"
-                      className="size-4 shrink-0 text-muted-foreground"
+                      title="Built in: the runner of the control plane"
+                      className="flex shrink-0 text-muted-foreground"
                     >
-                      <title>Built in: the runner of the control plane</title>
-                    </Servers>
+                      <Servers className="size-4" />
+                    </span>
                   )}
                 </span>
               </td>
