@@ -319,6 +319,77 @@ describe("Sandboxes starting a container", () => {
     await sandboxes.dispose();
     await rm(home, { recursive: true, force: true });
   });
+
+  describe("a thread's project's variables (decision 0045)", () => {
+    const variables = [
+      { name: "DATABASE_URL", value: "postgres://in-container" },
+      { name: "STRIPE_KEY", value: "sk-live-1234567890", secret: true },
+    ];
+    const containers = (calls: string[][]) => calls.filter((args) => args[0] === "run");
+
+    const daemonFor = async (calls: string[][], index = 0) => {
+      while (containers(calls).length <= index) await Bun.sleep(10);
+      const args = containers(calls)[index]!;
+      const value = (name: string) =>
+        args.find((arg) => arg.startsWith(`${name}=`))!.slice(name.length + 1);
+      const port = new URL(value("ANVIA_CONTROL_URL")).port;
+      const init = { headers: { authorization: `Bearer ${value("ANVIA_SANDBOX_TOKEN")}` } };
+      const daemon = new WebSocket(`ws://127.0.0.1:${port}/daemon`, init as unknown as string[]);
+      await new Promise<void>((resolve, reject) => {
+        daemon.addEventListener("open", () => resolve(), { once: true });
+        daemon.addEventListener("error", () => reject(new Error("no daemon")), { once: true });
+      });
+      daemon.send(
+        JSON.stringify({
+          type: "hello",
+          protocolVersion: 1,
+          daemonVersion: "test",
+          workdir: "/workspace",
+          capabilities: [],
+        }),
+      );
+      return daemon;
+    };
+
+    const start = async () => {
+      const { calls, docker } = fakeDocker();
+      const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+      const sandboxes = await Sandboxes.start({
+        image: "img",
+        home,
+        docker,
+        git: fakeGit,
+        connectTimeoutMs: 1_000,
+      });
+      return { calls, sandboxes, home };
+    };
+
+    test("stay with the container after a run is torn down and go when it is released", async () => {
+      const { calls, sandboxes, home } = await start();
+      sandboxes.setProjectEnv("t-env", variables);
+
+      await expect(sandboxes.acquire({ id: "t-env" }, repo)).rejects.toThrow("did not connect");
+      expect(sandboxes.projectEnv("t-env")).toEqual({
+        DATABASE_URL: variables[0]!.value,
+        STRIPE_KEY: variables[1]!.value,
+      });
+
+      const acquiring = sandboxes.acquire({ id: "t-env" }, repo);
+      const daemon = await daemonFor(calls, 1);
+      await acquiring;
+
+      const shell = sandboxes.shell("t-env", "session-1");
+      expect(shell?.env.DATABASE_URL).toBe(variables[0]!.value);
+      expect(shell?.argv).toContain("STRIPE_KEY");
+
+      await sandboxes.release("t-env");
+      expect(sandboxes.projectEnv("t-env")).toBeUndefined();
+
+      daemon.close();
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    }, 30_000);
+  });
 });
 
 const verbOf = (args: string[]) => {
