@@ -1,3 +1,4 @@
+import { useFixProcess } from "../hooks/use-fix-process";
 import { useThreadProcesses } from "../hooks/use-thread-processes";
 import { BackgroundProcess } from "./background-process";
 import { OverviewCard } from "./overview-card";
@@ -14,6 +15,7 @@ function shown(processes: ProcessView[]) {
 
 export function BackgroundTasksCard({ threadId, running }: { threadId: string; running: boolean }) {
   const { processes, stopping, stop } = useThreadProcesses(threadId, running);
+  const { fixing, fix } = useFixProcess(threadId);
   const rows = shown(processes);
   if (rows.length === 0) return null;
 
@@ -28,6 +30,8 @@ export function BackgroundTasksCard({ threadId, running }: { threadId: string; r
               process={process}
               stopping={stopping.has(process.id)}
               onStop={() => void stop(process.id)}
+              fixing={fixing === process.id}
+              onFix={running ? undefined : () => void fix(process)}
             />
           ))}
         </div>

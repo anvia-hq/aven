@@ -25,6 +25,9 @@ export function processView(info: SandboxProcessInfo): ProcessView {
 }
 
 export const noProcesses: ThreadProcesses = {
+  start: async () => {
+    throw new Error("The sandbox is not running");
+  },
   list: async () => [],
   stop: async () => {
     throw new Error("No such process");
@@ -47,6 +50,13 @@ export function threadProcesses(
     isUp() ? hidden((await sandbox.listProcesses()).map((info) => processView(info))) : [];
   return {
     list,
+    async start(command) {
+      requireUp();
+      const started = await sandbox.startProcess({ command: "sh", args: ["-c", command] });
+      const info = (await sandbox.listProcesses()).find((process) => process.id === started.id);
+      if (!info) throw new Error("The command did not start");
+      return hidden(processView(info));
+    },
     async stop(processId) {
       requireUp();
       await sandbox.stopProcess({ processId });

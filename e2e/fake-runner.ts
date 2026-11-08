@@ -301,6 +301,18 @@ if (AVEN_FILES.includes("ship")) {
   WORKSPACE_FILES[".aven/ship.md"] = "Commit, push, then open it with gh pr create --draft.\n";
 }
 
+if (AVEN_FILES.includes("actions")) {
+  WORKSPACE_FILES[".aven/actions.yml"] = [
+    "actions:",
+    "  - name: Test",
+    "    run: bun test",
+    "  - name: Typecheck",
+    "    run: bun run typecheck",
+    "  - name: Tidy up",
+    "    prompt: Remove dead code and unused imports",
+  ].join("\n");
+}
+
 type PretendProcess = {
   id: string;
   command: string;
@@ -378,6 +390,21 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         ? { kind: "missing" }
         : { kind: "text", text, size: text.length, truncated: false },
     );
+  }
+  if (call.method === "actions.run") {
+    const { command } = call.params as { command: string };
+    const failing = command.includes("typecheck");
+    const started = {
+      id: `a${PROCESSES.length + 1}`,
+      command,
+      status: "exited" as const,
+      exitCode: failing ? 2 : 0,
+      startedAt: ago(4_000),
+      endedAt: ago(1_000),
+    };
+    PROCESSES.push(started);
+    PROCESS_LOGS[started.id] = failing ? "src/greeting.ts(2,3): error TS2322\n" : "7 pass\n";
+    return reply({ process: started });
   }
   if (call.method === "processes.list") return reply({ processes: PROCESSES });
   if (call.method === "processes.stop") {

@@ -13,6 +13,8 @@ type Props = {
   process: ProcessView;
   stopping: boolean;
   onStop: () => void;
+  fixing: boolean;
+  onFix?: () => void;
 };
 
 function statusText({ status, exitCode, startedAt, endedAt }: ProcessView) {
@@ -39,7 +41,7 @@ function StatusMark({ process }: { process: ProcessView }) {
   return <Check className="size-4 text-muted-foreground" aria-hidden />;
 }
 
-export function BackgroundProcess({ threadId, process, stopping, onStop }: Props) {
+export function BackgroundProcess({ threadId, process, stopping, onStop, fixing, onFix }: Props) {
   const [open, setOpen] = useState(false);
   const running = process.status === "running";
   const { logs, problem } = useProcessLogs(threadId, process.id, open, running);
@@ -58,6 +60,17 @@ export function BackgroundProcess({ threadId, process, stopping, onStop }: Props
             {statusText(process)}
           </span>
         </CollapsibleTrigger>
+        {onFix && process.status === "exited" && process.exitCode ? (
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={fixing}
+            aria-label={`Ask the agent to fix ${process.command}`}
+            onClick={onFix}
+          >
+            {fixing ? "Asking…" : "Ask agent to fix"}
+          </Button>
+        ) : null}
         {running && (
           <Button
             variant="outline"

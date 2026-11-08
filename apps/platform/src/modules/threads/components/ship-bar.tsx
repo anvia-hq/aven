@@ -2,6 +2,7 @@ import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import type { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 
 import type { Thread } from "../types";
+import { ActionButtons } from "./action-buttons";
 import { ShipButton } from "./ship-button";
 
 type Props = {
@@ -17,6 +18,7 @@ export function ShipBar({ thread, unshipped }: Props) {
         additions={unshipped.additions}
         deletions={unshipped.deletions}
       />
+      <ActionButtons thread={thread} />
       <ShipButton
         thread={thread}
         upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}

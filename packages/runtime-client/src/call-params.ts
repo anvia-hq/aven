@@ -8,6 +8,7 @@ import type {
   FilesCallParams,
   FilesSearchParams,
   MessageMention,
+  ActionRunParams,
   ProcessesCallParams,
   RunnerUpdateParams,
   SandboxReleaseParams,
@@ -48,6 +49,13 @@ export function processesCallParams(params: unknown): ProcessesCallParams {
   if (typeof threadId !== "string") throw invalid();
   if (processId !== undefined && typeof processId !== "string") throw invalid();
   return { threadId, processId };
+}
+
+export function actionRunParams(params: unknown): ActionRunParams {
+  const { threadId, command } = asRecord(params);
+  if (typeof threadId !== "string") throw invalid();
+  if (typeof command !== "string" || command.trim() === "") throw invalid();
+  return { threadId, command };
 }
 
 export function runnerUpdateParams(params: unknown): RunnerUpdateParams {
