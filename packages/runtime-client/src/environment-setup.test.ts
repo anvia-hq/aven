@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { setupEnvironment, setupRunArgs, scriptState } from "./environment-setup";
-import type { DockerRun } from "./types";
+import type { CommandOutput, DockerRun } from "./types";
 
 const dirs: string[] = [];
 async function temp() {
@@ -19,14 +19,23 @@ afterEach(async () => {
 type Call = { args: string[]; timeoutMs?: number };
 
 function fakeDocker(
-  answers: Record<string, { code?: number; stdout?: string; stderr?: string }> = {},
+  answers: Record<
+    string,
+    { code?: number; stdout?: string; stderr?: string; timedOut?: true }
+  > = {},
 ) {
   const calls: Call[] = [];
   const docker: DockerRun = async (args, options) => {
     calls.push({ args, timeoutMs: options?.timeoutMs });
     const key = args[0] === "image" ? "inspect" : args[0]!;
     const answer = answers[key] ?? {};
-    return { code: answer.code ?? 0, stdout: answer.stdout ?? "", stderr: answer.stderr ?? "" };
+    const output: CommandOutput = {
+      code: answer.code ?? 0,
+      stdout: answer.stdout ?? "",
+      stderr: answer.stderr ?? "",
+    };
+    if (answer.timedOut) output.timedOut = true;
+    return output;
   };
   return {
     docker,
@@ -108,7 +117,9 @@ describe("running a repository's setup", () => {
   });
 
   test("a script that runs too long is stopped and says so", async () => {
-    const fake = fakeDocker({ exec: { code: 143, stderr: "\ntimed out after 60000 ms" } });
+    const fake = fakeDocker({
+      exec: { code: 143, stderr: "\ntimed out after 60000 ms", timedOut: true },
+    });
 
     const error = await setupEnvironment(await input(fake.docker, { timeoutMs: 60_000 })).catch(
       (thrown: Error) => thrown,
@@ -116,6 +127,20 @@ describe("running a repository's setup", () => {
 
     expect((error as Error).message).toBe(".aven/setup did not finish within 1 minutes");
     expect(fake.calls.find((call) => call.args[0] === "exec")!.timeoutMs).toBe(60_000);
+    expect(fake.verbs()).not.toContain("commit");
+  });
+
+  test("a script whose own stderr says it timed out is reported with its exit status and log", async () => {
+    const fake = fakeDocker({
+      exec: { code: 1, stderr: "curl: (28) Operation timed out after 300000 milliseconds" },
+    });
+
+    const error = await setupEnvironment(await input(fake.docker, { timeoutMs: 60_000 })).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect((error as Error).message).toContain(".aven/setup failed (exit 1)");
+    expect((error as Error).message).toContain("curl: (28) Operation timed out");
     expect(fake.verbs()).not.toContain("commit");
   });
 

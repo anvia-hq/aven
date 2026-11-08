@@ -19,6 +19,7 @@ describe("runCommand", () => {
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain("timed out after 100 ms");
+    expect(result.timedOut).toBe(true);
   });
 
   test("a timeout returns near its time even when a background child keeps the output open", async () => {

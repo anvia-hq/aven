@@ -70,9 +70,11 @@ export async function runCommand(
     collect(proc.stderr, stderrStop.promise),
     exited,
   ]);
+  if (!timedOut) return { code, stdout, stderr };
   return {
     code,
     stdout,
-    stderr: timedOut ? `${stderr}\ntimed out after ${timeoutMs} ms` : stderr,
+    stderr: `${stderr}\ntimed out after ${timeoutMs} ms`,
+    timedOut: true,
   };
 }
