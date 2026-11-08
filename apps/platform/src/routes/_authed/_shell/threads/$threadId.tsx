@@ -36,6 +36,10 @@ function ThreadPage() {
     owned,
     loaded,
     messages,
+    earlier,
+    hidden,
+    loadingEarlier,
+    loadEarlier,
     pending,
     steers,
     running,
@@ -90,6 +94,10 @@ function ThreadPage() {
                 <ThreadMessages
                   threadId={thread.id}
                   messages={messages}
+                  earlier={earlier}
+                  hidden={hidden}
+                  loadingEarlier={loadingEarlier}
+                  onLoadEarlier={() => void loadEarlier()}
                   pending={pending}
                   steers={steers}
                   running={running}

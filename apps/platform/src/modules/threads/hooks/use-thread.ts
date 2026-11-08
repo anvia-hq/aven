@@ -18,7 +18,7 @@ import type {
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
-import type { RunEvent, ThreadUsage } from "@aven/protocol/types";
+import type { MessagesPage, RunEvent, ThreadUsage } from "@aven/protocol/types";
 
 function newSteerId() {
   return (
@@ -43,6 +43,10 @@ export function useThread(threadId: string) {
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [earlier, setEarlier] = useState<ChatMessage[]>([]);
+  const [hidden, setHidden] = useState(0);
+  const hiddenRef = useRef(0);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [running, setRunning] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [usage, setUsage] = useState<ThreadUsage | null>(null);
@@ -66,6 +70,9 @@ export function useThread(threadId: string) {
     changeSteers(() => []);
     changePending(() => []);
     setMessages([]);
+    setEarlier([]);
+    hiddenRef.current = 0;
+    setHidden(0);
     setRunning(false);
     setStartedAt(null);
     setUsage(null);
@@ -103,6 +110,9 @@ export function useThread(threadId: string) {
           break;
         }
         case "snapshot":
+          hiddenRef.current = event.hidden ?? 0;
+          setHidden(hiddenRef.current);
+          setEarlier([]);
           changeSteers(() => event.steers ?? []);
           setError(event.error ?? null);
           setThreadRunning(threadId, event.running);
@@ -141,6 +151,19 @@ export function useThread(threadId: string) {
     };
     return () => source.close();
   }, [threadId, setThreadRunning, refresh, changeSteers, changePending]);
+
+  const loadEarlier = useCallback(async () => {
+    const before = hiddenRef.current;
+    if (before === 0) return;
+    setLoadingEarlier(true);
+    const page = await attempt("Could not load earlier messages", () =>
+      api<MessagesPage>(`/threads/${threadId}/messages?before=${before}`),
+    ).finally(() => setLoadingEarlier(false));
+    if (!page || hiddenRef.current !== before) return;
+    hiddenRef.current = page.hidden;
+    setHidden(page.hidden);
+    setEarlier((current) => [...page.messages, ...current]);
+  }, [threadId]);
 
   const send = useCallback(
     async (message: OutgoingMessage, selection: RunSelection = {}) => {
@@ -201,6 +224,10 @@ export function useThread(threadId: string) {
     owned,
     loaded: loaded && (session != null || !isPending),
     messages,
+    earlier,
+    hidden,
+    loadingEarlier,
+    loadEarlier,
     pending: pending.map((item) => item.message),
     steers,
     running,
