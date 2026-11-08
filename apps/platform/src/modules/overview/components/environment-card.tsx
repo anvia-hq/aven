@@ -3,7 +3,6 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
-import { runtimeLabel } from "@/modules/runtimes/runtime-label";
 import { ContinueThreadDialog } from "@/modules/threads/components/continue-thread-dialog";
 import type { Thread } from "@/modules/threads/types";
 
@@ -15,23 +14,43 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
 
   return (
     <OverviewCard title="Environment">
-      <Row icon={<Servers />}>{runtime ? runtimeLabel(runtime) : "Runner revoked"}</Row>
+      <Row
+        icon={
+          <Servers
+            aria-label={runtime?.online ? "Online" : "Offline"}
+            className={runtime?.online ? "text-success!" : undefined}
+          />
+        }
+        action={
+          owned && thread.state !== "archived" ? <ContinueThreadDialog thread={thread} /> : null
+        }
+      >
+        {runtime ? runtime.name : "Runner revoked"}
+      </Row>
       {project && (
         <Row icon={<Folder />}>
           {project.name} <span className="text-muted-foreground">· {project.repoFullName}</span>
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
-      {owned && thread.state !== "archived" && <ContinueThreadDialog thread={thread} />}
     </OverviewCard>
   );
 }
 
-function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Row({
+  icon,
+  action,
+  children,
+}: {
+  icon: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <p className="flex min-w-0 items-center gap-2 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
       {icon}
       <span className="min-w-0 truncate">{children}</span>
+      {action}
     </p>
   );
 }
