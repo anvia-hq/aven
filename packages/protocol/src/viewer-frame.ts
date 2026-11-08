@@ -1,6 +1,6 @@
 const VIEWER_ID_BYTES = 16;
 
-export function encodeViewerFrame(viewerId: string, payload: Uint8Array): Uint8Array {
+export function encodeViewerFrame(viewerId: string, payload: Uint8Array): Uint8Array<ArrayBuffer> {
   const frame = new Uint8Array(VIEWER_ID_BYTES + payload.length);
   frame.set(Uint8Array.fromHex(viewerId.replaceAll("-", "")));
   frame.set(payload, VIEWER_ID_BYTES);

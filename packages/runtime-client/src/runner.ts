@@ -105,7 +105,7 @@ export function startRuntime(options: RuntimeOptions) {
     return true;
   };
 
-  const sendBinary = (frame: Uint8Array) => {
+  const sendBinary = (frame: Uint8Array<ArrayBuffer>) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(frame);
   };
 
