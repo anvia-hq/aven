@@ -24,6 +24,7 @@ import {
 } from "@aven/agents/tools/threads";
 import { join } from "node:path";
 
+import { parseActions } from "../actions/parse";
 import { BUILTIN_SKILLS_DIR } from "./builtins";
 
 describe("the built-in skills", () => {
@@ -38,6 +39,7 @@ describe("the built-in skills", () => {
       "configure-providers",
       "configure-variables",
       "connect-github-and-runners",
+      "setup-actions",
       "setup-env",
       "setup-ship",
       "use-identity-tokens",
@@ -50,6 +52,14 @@ describe("the built-in skills", () => {
   });
 
   const text = (name: string) => Bun.file(join(BUILTIN_SKILLS_DIR, name, "SKILL.md")).text();
+
+  test("the example of the actions skill is a file the actions parser accepts", async () => {
+    const example = /```yaml\n([\s\S]*?)```/.exec(await text("setup-actions"))?.[1];
+    const parsed = parseActions(example ?? "");
+
+    expect(parsed.problem).toBeNull();
+    expect(parsed.actions.map((action) => action.kind)).toEqual(["run", "run", "prompt"]);
+  });
 
   test("the provider and MCP skills name the tools a bot has", async () => {
     const providers = await text("configure-providers");

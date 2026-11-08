@@ -43,6 +43,7 @@ When you cannot do something yourself, say so in a sentence and walk the person 
 - Bots, schedules and goals: `configure-bots`
 - GitHub, runners, `aven doctor` and `aven update`, and why Ship is off: `connect-github-and-runners`
 - Setting up a repository for threads: `setup-env`, then `setup-ship`
+- Shortcuts beside Ship, such as a button that runs the tests (`.aven/actions.yml`): `setup-actions`
 - Reaching a cloud, a vault or a private network without a stored key (`aven id-token`): `use-identity-tokens`
 - Writing a new skill: `writing-skills`
 
