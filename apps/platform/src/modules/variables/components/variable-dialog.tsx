@@ -14,7 +14,9 @@ import { Form } from "@/components/form";
 import { Switch } from "@/components/switch";
 import { TextField } from "@/components/text-field";
 
+import { looksLikeEnv } from "../parse-env";
 import { useVariableForm } from "../hooks/use-variable-form";
+import { EnvPaste } from "./env-paste";
 import {
   MAX_NAME_LENGTH,
   MAX_VALUE_LENGTH,
@@ -34,6 +36,11 @@ export function VariableDialog({ scope, variable, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useVariableForm(scope, variable, () => setOpen(false));
   const editing = variable !== undefined;
+  const bulk = form.pasted !== null;
+  const count = form.parsed.entries.length;
+  let submitLabel = "Add variable";
+  if (editing) submitLabel = "Save changes";
+  else if (bulk) submitLabel = count === 1 ? "Add 1 variable" : `Add ${count} variables`;
 
   return (
     <Dialog
@@ -53,9 +60,23 @@ export function VariableDialog({ scope, variable, label }: Props) {
               secret is encrypted and never shown again.
             </DialogDescription>
           </DialogHeader>
-          {!editing && (
+          {bulk && (
+            <EnvPaste
+              value={form.pasted ?? ""}
+              parsed={form.parsed}
+              secret={form.secret}
+              onChange={form.setPasted}
+            />
+          )}
+          {!editing && !bulk && (
             <TextField
               label="Name"
+              onPaste={(event) => {
+                const text = event.clipboardData.getData("text");
+                if (!looksLikeEnv(text)) return;
+                event.preventDefault();
+                form.setPasted(text);
+              }}
               name="name"
               required
               autoComplete="off"
@@ -64,16 +85,29 @@ export function VariableDialog({ scope, variable, label }: Props) {
               placeholder="DATABASE_URL"
             />
           )}
-          <TextField
-            label="Value"
-            name="value"
-            type={form.secret ? "password" : "text"}
-            autoComplete="off"
-            maxLength={MAX_VALUE_LENGTH}
-            required={form.secret || variable?.secret}
-            defaultValue={variable?.value ?? undefined}
-            placeholder={editing && variable.secret ? "Enter the value again" : undefined}
-          />
+          {!bulk && (
+            <TextField
+              label="Value"
+              name="value"
+              type={form.secret ? "password" : "text"}
+              autoComplete="off"
+              maxLength={MAX_VALUE_LENGTH}
+              required={form.secret || variable?.secret}
+              defaultValue={variable?.value ?? undefined}
+              placeholder={editing && variable.secret ? "Enter the value again" : undefined}
+            />
+          )}
+          {!editing && !bulk && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="self-start text-muted-foreground"
+              onClick={() => form.setPasted("")}
+            >
+              Paste a .env
+            </Button>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <Switch
               size="sm"
@@ -90,8 +124,8 @@ export function VariableDialog({ scope, variable, label }: Props) {
             </p>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={form.submitting}>
-              {editing ? "Save changes" : "Add variable"}
+            <Button type="submit" disabled={form.submitting || (bulk && count === 0)}>
+              {submitLabel}
             </Button>
           </DialogFooter>
         </Form>
