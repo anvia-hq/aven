@@ -141,7 +141,7 @@ export const platformService = {
       .limit(1);
     if (sharedProject) {
       throw new ConflictError(
-        `${person.name} imported the project ${sharedProject.name}, and other people have threads in it. Archive those threads or have the project imported by someone else first`,
+        `${person.name} imported the project ${sharedProject.name}, and other people have threads in it, archived ones too, which would be deleted with it. Have someone else import the project first`,
       );
     }
 
