@@ -4,6 +4,9 @@ import type {
   BotReplyInfo,
   CockpitAccess,
   ControlPlaneToRuntime,
+  DockerLeftovers,
+  DockerRemoveParams,
+  DockerRemoveResult,
   McpConnectResult,
   MessageMention,
   ProcessLogs,
@@ -233,6 +236,15 @@ export type CommandResult = {
   output: string;
 };
 
+export type LeftoversOptions = {
+  docker: DockerRun;
+  runner: string;
+  image: string;
+  home: string;
+  inUse(threadId: string): boolean;
+  now?: () => number;
+};
+
 export type IdleReleaseContext = {
   sandbox: Pick<ThreadWorkspaces, "release">;
   boxes: Map<string, ThreadSandbox>;
@@ -418,6 +430,8 @@ export interface ThreadWorkspaces {
   workspace(threadId: string): Promise<string | undefined>;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
+  leftovers?(): Promise<DockerLeftovers>;
+  removeLeftovers?(request: DockerRemoveParams): Promise<DockerRemoveResult>;
   running?(): number;
   signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
   signInIdentity?(

@@ -12,6 +12,7 @@ import { ArtifactStore } from "./artifacts";
 import { homeRepairArgs } from "./container-home";
 import { RESUME_SCRIPT, containerBaseArgs, hostUser, scriptState } from "./environment-setup";
 import { ArchivedCleanup } from "./archived-cleanup";
+import { Leftovers } from "./leftovers";
 import { Environments } from "./environments";
 import { git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
@@ -28,7 +29,13 @@ import { terminalShell } from "./terminal-shell";
 import { threadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
-import type { RepoAccess, RunEnvVar, RunGithub, RunIdentityCredential } from "@aven/protocol/types";
+import type {
+  DockerRemoveParams,
+  RepoAccess,
+  RunEnvVar,
+  RunGithub,
+  RunIdentityCredential,
+} from "@aven/protocol/types";
 import type {
   AcquireOptions,
   ContainerBase,
@@ -112,6 +119,7 @@ export class Sandboxes implements ThreadWorkspaces {
   #host: string;
   #environments: Environments;
   #archived: ArchivedCleanup;
+  #leftovers: Leftovers;
   #sweeper: Timer | undefined;
   #hub: RemoteSandboxHub;
   #port: number;
@@ -158,6 +166,14 @@ export class Sandboxes implements ThreadWorkspaces {
       inUse: (threadId) =>
         this.#running.has(threadId) || this.#starting.has(threadId) || this.#roots.has(threadId),
     });
+    this.#leftovers = new Leftovers({
+      docker: commands.docker,
+      runner: this.#containers.runner,
+      image: config.image,
+      home: runtimeHome(config.home),
+      inUse: (threadId) =>
+        this.#running.has(threadId) || this.#starting.has(threadId) || this.#roots.has(threadId),
+    });
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -190,6 +206,14 @@ export class Sandboxes implements ThreadWorkspaces {
     setTimeout(sweep, FIRST_SWEEP_MS).unref();
     this.#sweeper = setInterval(sweep, SWEEP_MS);
     this.#sweeper.unref();
+  }
+
+  leftovers() {
+    return this.#leftovers.list();
+  }
+
+  removeLeftovers(request: DockerRemoveParams) {
+    return this.#leftovers.remove(request);
   }
 
   async putAway(threadId: string) {

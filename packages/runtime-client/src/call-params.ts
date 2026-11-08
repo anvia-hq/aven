@@ -5,6 +5,7 @@ import type {
   DesktopCallParams,
   DiffGetParams,
   DiffScope,
+  DockerRemoveParams,
   FilesCallParams,
   FilesSearchParams,
   MessageMention,
@@ -24,6 +25,19 @@ export function diffGetParams(params: unknown): DiffGetParams {
   const { threadId, scope } = asRecord(params);
   if (typeof threadId !== "string" || !isDiffScope(scope)) throw invalid();
   return { threadId, scope };
+}
+
+const refs = (value: unknown) => {
+  if (!Array.isArray(value) || value.length > 500) throw invalid();
+  return value.map((item) => {
+    if (typeof item !== "string" || item === "" || item.length > 300) throw invalid();
+    return item;
+  });
+};
+
+export function dockerRemoveParams(params: unknown): DockerRemoveParams {
+  const { containers, images } = asRecord(params);
+  return { containers: refs(containers), images: refs(images) };
 }
 
 export function filesCallParams(params: unknown): FilesCallParams {
