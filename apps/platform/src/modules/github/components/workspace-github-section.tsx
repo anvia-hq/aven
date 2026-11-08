@@ -5,7 +5,6 @@ import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { SettingsSection } from "@/components/settings-section";
 import { Switch } from "@/components/switch";
-import { TextField } from "@/components/text-field";
 import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "@/modules/projects/hooks/use-create-github-app";
 import type { GithubStatus } from "@/modules/projects/types";
@@ -41,7 +40,6 @@ function standingOf({ configured, own, canSetUpWorkspace }: GithubStatus): Stand
 export function WorkspaceGithubSection() {
   const status = useRequest<GithubStatus>("/github");
   const { create, working } = useCreateGithubApp();
-  const [organization, setOrganization] = useState("");
   const [anyAccount, setAnyAccount] = useState(false);
 
   const github = status?.data;
@@ -79,20 +77,6 @@ export function WorkspaceGithubSection() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <TextField
-                label="Organization (optional)"
-                placeholder="acme"
-                className="max-w-sm"
-                value={organization}
-                onChange={(event) => setOrganization(event.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                To have a GitHub organization own the app, give its name. Left empty, your own
-                account owns it.
-              </p>
-            </div>
-
             <div className="flex items-center gap-4 rounded-lg bg-muted/50 p-3">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium">
@@ -118,7 +102,6 @@ export function WorkspaceGithubSection() {
                 onClick={() =>
                   void create({
                     workspace: true,
-                    organization: organization.trim() || undefined,
                     public: anyAccount,
                   })
                 }
