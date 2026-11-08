@@ -96,7 +96,6 @@ describe("a run with the person's MCP servers", () => {
     port: 0,
     fetch: (request) => {
       requests++;
-
       return handler.fetch(request);
     },
   });
