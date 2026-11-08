@@ -47,4 +47,5 @@ export type BotPanels = ReturnType<typeof useBotPanels>;
 
 export type MentionPart =
   | { type: "text"; text: string }
-  | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> };
+  | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> }
+  | { type: "thread"; id: string; title: string };

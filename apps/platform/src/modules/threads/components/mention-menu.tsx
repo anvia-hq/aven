@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 const NOTHING_MATCHES: Record<string, string> = {
   file: "No file matches",
   skill: "No skill matches",
-  bot: "No bot matches",
+  bot: "No bot or thread matches",
 };
 
 function emptyMenu({ loading, trigger }: ComposerTriggerState) {
