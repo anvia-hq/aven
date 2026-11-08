@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
 
+import { fakeRunnerProcessEnv } from "./fake-runner-config";
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
 const API_URL = "http://localhost:8100";
@@ -37,7 +38,7 @@ test.describe("continuing a thread on another runner (decision 0152)", () => {
     const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
     children.push(
       spawn("bun", ["e2e/fake-runner.ts"], {
-        env: { ...process.env, AVEN_URL: API_URL, AVEN_RUNTIME_TOKEN: token },
+        env: fakeRunnerProcessEnv({ ...process.env, AVEN_URL: API_URL, AVEN_RUNTIME_TOKEN: token }),
         stdio: "ignore",
       }),
     );
