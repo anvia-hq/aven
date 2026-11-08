@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { networkInterfaces } from "node:os";
 
 import { startIdentityRelay } from "./identity-relay";
 
@@ -28,6 +29,31 @@ const relay = (controlPlane: string) => {
   const started = startIdentityRelay(controlPlane);
   stops.push(started.stop);
   return `http://localhost:${started.port}`;
+};
+
+const otherAddresses = () =>
+  Array.from(
+    new Set([
+      "127.0.0.2",
+      ...Object.values(networkInterfaces())
+        .flatMap((entries) => entries ?? [])
+        .filter((entry) => entry.family === "IPv4" && !entry.internal)
+        .map((entry) => entry.address),
+    ]),
+  );
+
+const statusAt = async (address: string, port: number) => {
+  try {
+    const response = await fetch(`http://${address}:${port}/workload-identity/token`, {
+      method: "POST",
+      body: "{}",
+      signal: AbortSignal.timeout(2_000),
+    });
+    await response.text();
+    return response.status;
+  } catch {
+    return undefined;
+  }
 };
 
 describe("the identity relay", () => {
@@ -67,5 +93,22 @@ describe("the identity relay", () => {
     });
 
     expect(response.status).toBe(502);
+  });
+
+  test("binds the loopback address only, so the machine's other addresses cannot reach it", async () => {
+    const control = target();
+    const started = startIdentityRelay(control.url);
+    stops.push(started.stop);
+
+    const answers: { address: string; status: number | undefined }[] = [];
+    for (const address of ["127.0.0.1", ...otherAddresses()]) {
+      answers.push({ address, status: await statusAt(address, started.port) });
+    }
+
+    expect(answers).toEqual([
+      { address: "127.0.0.1", status: 201 },
+      ...otherAddresses().map((address) => ({ address, status: undefined })),
+    ]);
+    expect(control.asked).toHaveLength(1);
   });
 });
