@@ -222,7 +222,7 @@ export function startRuntime(options: RuntimeOptions) {
         return;
       case "run.attach":
         for (const missed of outbox.attach(message.runId, message.after)) send(missed);
-        void driver.restore(message.runId);
+        void driver.restore(message.runId, message.secrets);
         return;
       case "run.ack":
         outbox.ack(message.runId);
