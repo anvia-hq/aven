@@ -6,7 +6,7 @@ How a release is made, what it contains, and what a change must keep true so tha
 
 ## Making a release
 
-1. On `main`, with everything committed: `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun test apps packages` and `bun run test:e2e` pass.
+1. On `main`, with everything committed (`.github/workflows/ci.yml` runs the same checks on every pull request and push to `main`): `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun test apps packages` and `bun run test:e2e` pass.
 2. Tag and push. The tag is the version; there is no version in any `package.json` to bump.
 
    ```sh
