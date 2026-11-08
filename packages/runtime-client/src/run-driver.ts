@@ -454,6 +454,7 @@ export function createRunDriver(context: DriverContext) {
       cursorOf: (durableId) => outbox.cursor(runId, durableId),
     });
     run.followed = working;
+    if (run.cancelReason) void working.cancel();
     const goalEnd = await working.done;
     if (goalEnd.type === "error") {
       save({ goal: undefined });
