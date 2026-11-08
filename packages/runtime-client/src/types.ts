@@ -493,3 +493,5 @@ export type ThreadProcesses = {
 export type Timing = {
   mark(step: string): void;
 };
+
+export type IdentityRelay = { port: number; stop: () => void };
