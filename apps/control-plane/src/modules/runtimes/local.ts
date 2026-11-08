@@ -3,7 +3,7 @@ import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 import { sandboxConfigFromEnv } from "@aven/runtime-client/sandbox-config";
 
 import { describeError } from "../../errors";
-import { runtimesService } from "./service";
+import { localRunnerToken, runtimesService } from "./service";
 import type { LocalRunnerMode } from "./types";
 
 export const MODES = ["on", "off", "host"] as const;
@@ -17,9 +17,8 @@ export function localRunnerMode(env: string | undefined): LocalRunnerMode {
 export async function startLocalRunner(port: number) {
   const mode = localRunnerMode(process.env.AVEN_LOCAL_RUNNER);
   if (mode === "off") return undefined;
+  localRunnerToken(process.env.AVEN_LOCAL_RUNNER_TOKEN, mode);
   if (mode === "host") {
-    if (!process.env.AVEN_LOCAL_RUNNER_TOKEN)
-      throw new Error("AVEN_LOCAL_RUNNER=host needs AVEN_LOCAL_RUNNER_TOKEN");
     await runtimesService.ensureLocal();
     return undefined;
   }

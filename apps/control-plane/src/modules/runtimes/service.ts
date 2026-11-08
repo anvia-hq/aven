@@ -9,18 +9,34 @@ import type { RuntimeRow } from "@aven/db/schema/types";
 
 const TOKEN_PREFIX = "avrt_";
 
+const LOCAL_RUNNER_OFF = "off";
+
 export const LOCAL_RUNTIME_ID = "00000000-0000-4000-8000-000000000001";
 
-export function localRunnerToken(configured: string | undefined) {
-  if (!configured) return `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
-  if (!configured.startsWith(TOKEN_PREFIX) || configured.length < 32)
+const TOKEN_RULE = `${TOKEN_PREFIX} prefix and at least 32 characters`;
+
+const TOKEN_COMMAND = `echo "${TOKEN_PREFIX}$(openssl rand -hex 24)"`;
+
+export function localRunnerToken(configured: string | undefined, localRunner: string | undefined) {
+  if (configured) {
+    if (!configured.startsWith(TOKEN_PREFIX) || configured.length < 32)
+      throw new Error(
+        `AVEN_LOCAL_RUNNER_TOKEN must start with ${TOKEN_PREFIX} and be at least 32 characters long`,
+      );
+    return configured;
+  }
+  if (localRunner !== LOCAL_RUNNER_OFF)
     throw new Error(
-      `AVEN_LOCAL_RUNNER_TOKEN must start with ${TOKEN_PREFIX} and be at least 32 characters long`,
+      `AVEN_LOCAL_RUNNER_TOKEN is required while the built-in runner is on, since a token made up here would exist in this process alone: make one with ${TOKEN_COMMAND} (${TOKEN_RULE}), or set AVEN_LOCAL_RUNNER=${LOCAL_RUNNER_OFF} to run only with the runners you attach`,
     );
-  return configured;
+  return `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
 }
 
-const localToken = localRunnerToken(process.env.AVEN_LOCAL_RUNNER_TOKEN);
+const configuredLocalToken = process.env.AVEN_LOCAL_RUNNER_TOKEN;
+
+const localToken = configuredLocalToken
+  ? localRunnerToken(configuredLocalToken, process.env.AVEN_LOCAL_RUNNER)
+  : localRunnerToken(undefined, LOCAL_RUNNER_OFF);
 
 const visibleTo = (organizationId: string) =>
   or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
