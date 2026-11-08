@@ -29,6 +29,7 @@ import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
+import { Route as AuthedSettingsDockerRouteImport } from './routes/_authed/settings/docker'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsGithubRouteImport } from './routes/_authed/settings/github'
 import { Route as AuthedSettingsMcpRouteImport } from './routes/_authed/settings/mcp'
@@ -145,6 +146,11 @@ const AuthedSettingsBotsRoute = AuthedSettingsBotsRouteImport.update({
   path: '/bots',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsDockerRoute = AuthedSettingsDockerRouteImport.update({
+  id: '/docker',
+  path: '/docker',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsEnvironmentVariablesRoute =
   AuthedSettingsEnvironmentVariablesRouteImport.update({
     id: '/environment-variables',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
+  '/settings/docker': typeof AuthedSettingsDockerRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
+  '/settings/docker': typeof AuthedSettingsDockerRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
+  '/_authed/settings/docker': typeof AuthedSettingsDockerRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/github': typeof AuthedSettingsGithubRoute
   '/_authed/settings/mcp': typeof AuthedSettingsMcpRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
+    | '/settings/docker'
     | '/settings/environment-variables'
     | '/settings/github'
     | '/settings/mcp'
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
     | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
+    | '/settings/docker'
     | '/settings/environment-variables'
     | '/settings/github'
     | '/settings/mcp'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
+    | '/_authed/settings/docker'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/github'
     | '/_authed/settings/mcp'
@@ -595,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/bots'
       fullPath: '/settings/bots'
       preLoaderRoute: typeof AuthedSettingsBotsRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/docker': {
+      id: '/_authed/settings/docker'
+      path: '/docker'
+      fullPath: '/settings/docker'
+      preLoaderRoute: typeof AuthedSettingsDockerRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/settings/environment-variables': {
@@ -778,6 +797,7 @@ const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
 
 interface AuthedSettingsRouteChildren {
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
+  AuthedSettingsDockerRoute: typeof AuthedSettingsDockerRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
   AuthedSettingsGithubRoute: typeof AuthedSettingsGithubRoute
   AuthedSettingsMcpRoute: typeof AuthedSettingsMcpRoute
@@ -795,6 +815,7 @@ interface AuthedSettingsRouteChildren {
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
+  AuthedSettingsDockerRoute: AuthedSettingsDockerRoute,
   AuthedSettingsEnvironmentVariablesRoute:
     AuthedSettingsEnvironmentVariablesRoute,
   AuthedSettingsGithubRoute: AuthedSettingsGithubRoute,

@@ -1,3 +1,5 @@
+import type { DockerLeftoverContainer, DockerLeftoverImage } from "@aven/protocol/types";
+
 export type PlatformConfig = {
   registrationEnabled: boolean;
   isOwner: boolean;
@@ -12,4 +14,18 @@ export type PlatformPerson = {
   lastActiveAt: string | null;
   owner: boolean;
   workspaces: { id: string; name: string; role: string }[];
+};
+
+export type RunnerLeftovers = {
+  runtimeId: string;
+  name: string;
+  status: "ok" | "offline" | "unsupported";
+  containers: DockerLeftoverContainer[];
+  images: DockerLeftoverImage[];
+};
+
+export type RemovedLeftovers = {
+  removedContainers: number;
+  removedImages: number;
+  failed: { ref: string; reason: string }[];
 };
