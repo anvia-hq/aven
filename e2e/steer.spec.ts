@@ -11,7 +11,7 @@ test.describe("steering a running agent", () => {
     runner = undefined;
   });
 
-  async function runningThread(page: Page, env: Record<string, string> = {}) {
+  async function runningThread(page: Page, env: Record<string, string> = {}, attach = false) {
     await registerUser(page, "str", "Steer User");
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
@@ -23,6 +23,17 @@ test.describe("steering a running agent", () => {
     });
     runner = child;
     await page.goto(`/threads/${threadId}`);
+    if (attach) {
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "shot.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==",
+          "base64",
+        ),
+      });
+      await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
+    }
     await page.request.post(`/api/threads/${threadId}/messages`, { data: { prompt: "build it" } });
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     return { events, threadId };
@@ -115,6 +126,24 @@ test.describe("steering a running agent", () => {
 
     await page.goto(`/threads/${threadId}`);
     await expect(page.locator("[data-queued]")).toContainText("remember this");
+  });
+
+  test("a file attached before the run stays in the draft while the words steer it", async ({
+    page,
+  }) => {
+    const { events } = await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" }, true);
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    await prompt.click();
+    await page.keyboard.type("use the other API");
+    await page.keyboard.press("Enter");
+
+    await expect(page.locator("[data-queued]")).toContainText("use the other API");
+    await expect
+      .poll(() =>
+        events.some((event) => event.type === "steer" && event.prompt === "use the other API"),
+      )
+      .toBe(true);
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
   });
 
   test("files cannot go with it: attaching is off while the agent works", async ({ page }) => {
