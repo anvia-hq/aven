@@ -1,0 +1,43 @@
+name: AvenMobile
+options:
+  bundleIdPrefix: dev.anvia.aven
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  AvenKit:
+    path: ../../macos/AvenKit
+targets:
+  AvenMobile:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: AvenKit
+    settings:
+      base:
+        PRODUCT_NAME: Aven
+        PRODUCT_BUNDLE_IDENTIFIER: dev.anvia.aven.mobile
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_BackgroundColor: LaunchBackground
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_KEY_CFBundleDisplayName: Aven
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+  AvenMobileUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: AvenMobile
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        PRODUCT_BUNDLE_IDENTIFIER: dev.anvia.aven.mobile.uitests

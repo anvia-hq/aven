@@ -42,7 +42,8 @@ public final class APIClient: @unchecked Sendable {
         self.session = session
     }
 
-    /// Accepts what a person types: `localhost:8000`, `https://aven.example.com/`.
+    /// Accepts what a person types: `localhost:8000`, `https://aven.example.com/`. A server that is not
+    /// local and has no port or path is the platform's address, whose API is under `/api`.
     public static func normalize(server: String) throws -> URL {
         var text = server.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw APIError.invalidServer }
@@ -51,7 +52,11 @@ public final class APIClient: @unchecked Sendable {
             text = (local ? "http://" : "https://") + text
         }
         while text.hasSuffix("/") { text.removeLast() }
-        guard let url = URL(string: text), url.host != nil else { throw APIError.invalidServer }
+        guard let url = URL(string: text), let host = url.host else { throw APIError.invalidServer }
+        let local = host == "localhost" || host == "127.0.0.1"
+        if !local && url.port == nil && url.path.isEmpty {
+            return url.appendingPathComponent("api")
+        }
         return url
     }
 

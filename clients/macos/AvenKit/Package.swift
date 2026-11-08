@@ -6,7 +6,7 @@ import PackageDescription
 // packages, so it builds and tests with just the Swift toolchain: `swift test`.
 let package = Package(
     name: "AvenKit",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [.library(name: "AvenKit", targets: ["AvenKit"])],
     targets: [
         .target(name: "AvenKit", swiftSettings: [.swiftLanguageMode(.v5)]),

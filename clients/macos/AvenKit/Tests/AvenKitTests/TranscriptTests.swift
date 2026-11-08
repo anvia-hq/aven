@@ -84,7 +84,10 @@ private func fixtures() throws -> [Fixture] {
         #expect(try APIClient.normalize(server: "localhost:8000").absoluteString == "http://localhost:8000")
         #expect(
             try APIClient.normalize(server: " aven.example.com/ ").absoluteString
-                == "https://aven.example.com")
+                == "https://aven.example.com/api")
+        #expect(
+            try APIClient.normalize(server: "https://aven.example.com:2837").absoluteString
+                == "https://aven.example.com:2837")
         #expect(
             try APIClient.normalize(server: "https://aven.example.com/x/").absoluteString
                 == "https://aven.example.com/x")
