@@ -117,7 +117,7 @@
   --input: #bcc0cc;
   --ring: #1e66f5;
   --effort: #8839ef;
-  --sidebar: #e6e9ef;
+  --sidebar: var(--background);
   --sidebar-foreground: #4c4f69;
   --sidebar-primary: #1e66f5;
   --sidebar-primary-foreground: #eff1f5;
@@ -148,7 +148,7 @@
   --input: #45475a;
   --ring: #89b4fa;
   --effort: #cba6f7;
-  --sidebar: #181825;
+  --sidebar: var(--background);
   --sidebar-foreground: #cdd6f4;
   --sidebar-primary: #89b4fa;
   --sidebar-primary-foreground: #1e1e2e;
@@ -179,7 +179,7 @@
   --input: #b4b5b9;
   --ring: #2e7de9;
   --effort: #9854f1;
-  --sidebar: #d0d5e3;
+  --sidebar: var(--background);
   --sidebar-foreground: #3760bf;
   --sidebar-primary: #2e7de9;
   --sidebar-primary-foreground: #e1e2e7;
@@ -210,7 +210,7 @@
   --input: #3b4261;
   --ring: #7aa2f7;
   --effort: #bb9af7;
-  --sidebar: #16161e;
+  --sidebar: var(--background);
   --sidebar-foreground: #c0caf5;
   --sidebar-primary: #7aa2f7;
   --sidebar-primary-foreground: #1a1b26;
@@ -241,7 +241,7 @@
   --input: #d0d7de;
   --ring: #0969da;
   --effort: #8250df;
-  --sidebar: #f6f8fa;
+  --sidebar: var(--background);
   --sidebar-foreground: #1f2328;
   --sidebar-primary: #0969da;
   --sidebar-primary-foreground: #ffffff;
@@ -272,7 +272,7 @@
   --input: #30363d;
   --ring: #58a6ff;
   --effort: #d2a8ff;
-  --sidebar: #010409;
+  --sidebar: var(--background);
   --sidebar-foreground: #e6edf3;
   --sidebar-primary: #58a6ff;
   --sidebar-primary-foreground: #0d1117;
@@ -303,7 +303,7 @@
   --input: #c9c9ca;
   --ring: #4078f2;
   --effort: #a626a4;
-  --sidebar: #f0f0f1;
+  --sidebar: var(--background);
   --sidebar-foreground: #383a42;
   --sidebar-primary: #4078f2;
   --sidebar-primary-foreground: #fafafa;
@@ -334,7 +334,7 @@
   --input: #3e4451;
   --ring: #61afef;
   --effort: #c678dd;
-  --sidebar: #21252b;
+  --sidebar: var(--background);
   --sidebar-foreground: #abb2bf;
   --sidebar-primary: #61afef;
   --sidebar-primary-foreground: #282c34;
@@ -365,7 +365,7 @@
   --input: #c8c1ab;
   --ring: #268bd2;
   --effort: #2aa198;
-  --sidebar: #eee8d5;
+  --sidebar: var(--background);
   --sidebar-foreground: #657b83;
   --sidebar-primary: #268bd2;
   --sidebar-primary-foreground: #fdf6e3;
@@ -396,7 +396,7 @@
   --input: #586e75;
   --ring: #268bd2;
   --effort: #2aa198;
-  --sidebar: #00212b;
+  --sidebar: var(--background);
   --sidebar-foreground: #839496;
   --sidebar-primary: #268bd2;
   --sidebar-primary-foreground: #fdf6e3;
