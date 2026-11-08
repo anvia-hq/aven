@@ -2,7 +2,7 @@ import { Field } from "@base-ui/react/field";
 
 import { Textarea } from "@/components/textarea";
 
-import type { ParsedEnv } from "../parse-env";
+import type { ParsedEnv } from "../types";
 
 type Props = {
   value: string;

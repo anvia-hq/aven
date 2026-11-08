@@ -1,8 +1,5 @@
+import type { EnvIssue, ParsedEnv } from "./types";
 import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES, isReservedName } from "./types";
-
-export type ParsedEntry = { name: string; value: string };
-export type EnvIssue = { line: number; text: string; reason: string };
-export type ParsedEnv = { entries: ParsedEntry[]; issues: EnvIssue[] };
 
 const LINE = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$/;
 
@@ -24,7 +21,6 @@ function unquote(raw: string) {
   return (comment === -1 ? text : text.slice(0, comment)).trim();
 }
 
-/** Parses the text of a .env file. A later line with the same name wins. */
 export function parseEnv(source: string): ParsedEnv {
   const entries = new Map<string, string>();
   const issues: EnvIssue[] = [];
@@ -36,7 +32,6 @@ export function parseEnv(source: string): ParsedEnv {
     const line = index + 1;
 
     const opening = LINE.exec(text);
-    // A quoted value may run over several lines until its closing quote.
     if (opening && /^["']/.test(opening[2]!.trim())) {
       const quote = opening[2]!.trim()[0]!;
       while (
@@ -80,6 +75,5 @@ export function parseEnv(source: string): ParsedEnv {
   return { entries: list.slice(0, MAX_VARIABLES), issues };
 }
 
-/** True when pasted text is more than one name or value, so it is probably a .env. */
 export const looksLikeEnv = (text: string) =>
   /\r?\n/.test(text.trim()) ? parseEnv(text).entries.length > 0 : LINE.test(text.trim());
