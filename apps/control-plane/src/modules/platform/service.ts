@@ -1,11 +1,15 @@
 import { db } from "@aven/db/client";
+import { threads } from "@aven/db/schema/threads";
 import { invitations } from "@aven/db/schema/invitations";
 import { members } from "@aven/db/schema/members";
 import { organizations } from "@aven/db/schema/organizations";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { sessions } from "@aven/db/schema/sessions";
 import { users } from "@aven/db/schema/users";
-import { and, asc, eq, gt, max, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, max, ne, sql } from "drizzle-orm";
+
+import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
+import type { PutAwayThread } from "../threads/types";
 
 const REGISTRATION_KEY = "registration_enabled";
 
@@ -71,6 +75,50 @@ export const platformService = {
         .filter((membership) => membership.userId === person.id)
         .map(({ id, name, role }) => ({ id, name, role })),
     }));
+  },
+
+  async removePerson(actor: { id: string }, personId: string, putAway: PutAwayThread) {
+    if (personId === actor.id) throw new ForbiddenError("You cannot remove your own account");
+    const [person] = await db.select().from(users).where(eq(users.id, personId));
+    if (!person) throw new NotFoundError("There is no such account");
+    if (await this.isOwner(person)) throw new ForbiddenError("A platform owner cannot be removed");
+
+    const memberships = await db
+      .select({
+        organizationId: members.organizationId,
+        name: organizations.name,
+        role: members.role,
+      })
+      .from(members)
+      .innerJoin(organizations, eq(organizations.id, members.organizationId))
+      .where(eq(members.userId, personId));
+    const aloneIn: string[] = [];
+    for (const membership of memberships) {
+      const [others] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(members)
+        .where(
+          and(eq(members.organizationId, membership.organizationId), ne(members.userId, personId)),
+        );
+      if (!others?.count) aloneIn.push(membership.organizationId);
+      else if (membership.role === "owner") {
+        throw new ConflictError(
+          `${person.name} owns the workspace ${membership.name}, which has other members. Remove them from it or give it to someone else first`,
+        );
+      }
+    }
+
+    const running = await db
+      .select({ id: threads.id, runtimeId: threads.runtimeId })
+      .from(threads)
+      .where(and(eq(threads.createdBy, personId), ne(threads.state, "archived")));
+
+    await db.transaction(async (tx) => {
+      if (aloneIn.length > 0)
+        await tx.delete(organizations).where(inArray(organizations.id, aloneIn));
+      await tx.delete(users).where(eq(users.id, personId));
+    });
+    for (const thread of running) putAway(thread);
   },
 
   async isRegistrationEnabled() {

@@ -9,6 +9,7 @@ import {
   Sparkles,
   Terminal,
   Users,
+  UsersGroup,
   BookmarkUser,
 } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -48,7 +49,10 @@ const groups = [
 
 const platformGroup = {
   label: "Platform",
-  items: [{ to: "/settings/platform", label: "Platform", icon: Servers }],
+  items: [
+    { to: "/settings/platform", label: "Platform", icon: Servers },
+    { to: "/settings/people", label: "People", icon: UsersGroup },
+  ],
 } as const;
 
 export function SettingsSidebar() {
