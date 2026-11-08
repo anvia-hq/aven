@@ -14,14 +14,14 @@ export function ShipBar({ thread, unshipped }: Props) {
   return (
     <div className="flex items-center justify-between gap-2 pb-2">
       <div className="flex items-center gap-2">
+        <ShipButton
+          thread={thread}
+          upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
+        />
         <ChangesBadge
           empty={unshipped.files.length === 0}
           additions={unshipped.additions}
           deletions={unshipped.deletions}
-        />
-        <ShipButton
-          thread={thread}
-          upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
         />
       </div>
       <div className="flex items-center gap-2">
