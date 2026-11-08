@@ -72,7 +72,7 @@ export function BotChat({ bot }: { bot: Bot }) {
               botId={bot.id}
               main={bot.isMain}
               onSend={send}
-              placeholder={`Message ${bot.name}`}
+              placeholder={`Message ${bot.name}, @ to mention ${bot.isMain ? "a bot or thread" : "a thread"}, / for a skill`}
             />
           </div>
         </div>

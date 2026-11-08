@@ -437,6 +437,21 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Aven → Scout A, B and C");
   });
 
+  test("a / in the bot chat offers the skills and puts the picked one in the message as a chip", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-skill-mention", "Skill Mention Person");
+    await page.goto("/bot");
+    const message = page.getByRole("textbox", { name: "Message" });
+    await message.click();
+    await page.keyboard.type("/setup-e");
+    const menu = page.getByRole("listbox", { name: "Mention" });
+    await expect(menu.getByRole("option", { name: /setup-env/ })).toBeVisible();
+    await expect(menu.getByRole("option", { name: /setup-ship/ })).toHaveCount(0);
+    await page.keyboard.press("Enter");
+    await expect(message.locator('[data-mention="skill"]')).toHaveText("setup-env");
+  });
+
   test("the person mentions a thread, and it goes to the bot with its id and shows as a chip that opens it", async ({
     page,
   }) => {
@@ -459,11 +474,20 @@ test.describe("bots", () => {
       });
       expect(renamed.ok()).toBe(true);
 
+      const setState = (state: string) =>
+        page.request.patch(`/api/threads/${threadId}`, { data: { state } });
+      expect((await setState("archived")).ok()).toBe(true);
       await page.goto("/bot");
       const message = page.getByRole("textbox", { name: "Message" });
       await message.click();
       await page.keyboard.type("@export");
       const menu = page.getByRole("listbox", { name: "Mention" });
+      await expect(menu.getByRole("option", { name: /Fix the export button/ })).toHaveCount(0);
+      expect((await setState("open")).ok()).toBe(true);
+
+      await page.goto("/bot");
+      await message.click();
+      await page.keyboard.type("How is @export");
       await expect(menu.getByRole("option", { name: /Fix the export button/ })).toBeVisible();
       await page.keyboard.press("Enter");
       await expect(message.locator('[data-mention="thread"]')).toHaveText("Fix the export button");
@@ -474,20 +498,11 @@ test.describe("bots", () => {
         .locator('[data-slot="bubble-content"], [data-role="user"]')
         .filter({ hasText: "going?" });
       const chip = sent.locator('[data-mention="thread"]');
-      const setState = (state: string) =>
-        page.request.patch(`/api/threads/${threadId}`, { data: { state } });
-      expect((await setState("archived")).ok()).toBe(true);
       await expect(chip).toHaveText("Fix the export button");
       await expect(chip).toHaveAttribute("href", `/threads/${threadId}`);
       await expect(sent).not.toContainText("thread:");
       await expect(message).toHaveText("");
 
-      await expect(menu.getByRole("option", { name: /Fix the export button/ })).toHaveCount(0);
-      expect((await setState("open")).ok()).toBe(true);
-
-      await page.goto("/bot");
-      await message.click();
-      await page.keyboard.type("How is @export");
       await page.reload();
       await expect(
         page.locator('[data-mention="thread"]').filter({ hasText: "Fix the export button" }),
@@ -625,7 +640,7 @@ test.describe("bots", () => {
     await expect(page.getByText("Keeps you company.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
       "data-placeholder",
-      "Message Pip",
+      /^Message Pip, /,
     );
 
     await page.getByRole("button", { name: "Bot settings" }).click();
@@ -676,7 +691,7 @@ test.describe("bots", () => {
     await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
       "data-placeholder",
-      "Message Pip",
+      /^Message Pip, /,
     );
 
     await page.reload();

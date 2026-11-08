@@ -20,8 +20,9 @@ import { toast } from "@/components/toast";
 
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { BotMentionChip } from "./bot-mention-chip";
-import { ThreadMentionChip } from "./thread-mention-chip";
+import { MentionChip } from "@/modules/threads/components/mention-chip";
 import { MentionIcon } from "./mention-icon";
+import { ThreadMentionChip } from "./thread-mention-chip";
 
 const SINGLE_LINE_HEIGHT = 40;
 
@@ -45,6 +46,7 @@ function kindOf(data: ComposerInputEntity["data"]) {
 }
 
 const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) => {
+  if (triggerId === "skill") return <MentionChip type="skill" name={id} />;
   if (triggerId !== "bot") return null;
   if (kindOf(data) === "thread") return <ThreadMentionChip id={id} title={label} />;
   return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} />;
