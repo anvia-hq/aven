@@ -25,10 +25,12 @@ type Remove = (
 
 const countOf = (runner: RunnerLeftovers) => runner.containers.length + runner.images.length;
 
-function RemoveAll({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove }) {
+type Shared = { runner: RunnerLeftovers; onRemove: Remove; busy: boolean };
+
+function RemoveAll({ runner, onRemove, busy }: Shared) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+      <AlertDialogTrigger render={<Button variant="destructive" size="sm" disabled={busy} />}>
         Remove all
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -45,6 +47,7 @@ function RemoveAll({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Re
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
+            disabled={busy}
             onClick={() =>
               void onRemove(runner, {
                 containers: runner.containers.map((container) => container.ref),
@@ -60,7 +63,7 @@ function RemoveAll({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Re
   );
 }
 
-function Rows({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove }) {
+function Rows({ runner, onRemove, busy }: Shared) {
   return (
     <SettingsList label={`Leftovers of ${runner.name}`}>
       {runner.containers.map((container) => (
@@ -77,6 +80,7 @@ function Rows({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove 
             <Button
               variant="ghost"
               size="icon-sm"
+              disabled={busy}
               aria-label={`Remove container ${container.name}`}
               onClick={() => void onRemove(runner, { containers: [container.ref], images: [] })}
             >
@@ -99,6 +103,7 @@ function Rows({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove 
             <Button
               variant="ghost"
               size="icon-sm"
+              disabled={busy}
               aria-label={`Remove image ${image.ref}`}
               onClick={() => void onRemove(runner, { containers: [], images: [image.ref] })}
             >
@@ -111,7 +116,7 @@ function Rows({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove 
   );
 }
 
-function Body({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove }) {
+function Body({ runner, onRemove, busy }: Shared) {
   if (runner.status === "offline") {
     return <p className="text-sm text-muted-foreground">The runner is offline.</p>;
   }
@@ -123,21 +128,28 @@ function Body({ runner, onRemove }: { runner: RunnerLeftovers; onRemove: Remove 
       </p>
     );
   }
+  if (runner.status === "failed") {
+    return (
+      <p className="text-sm text-destructive">
+        This runner could not list its leftovers: {runner.error}
+      </p>
+    );
+  }
   if (countOf(runner) === 0) {
     return <p className="text-sm text-muted-foreground">Nothing is left over.</p>;
   }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-end">
-        <RemoveAll runner={runner} onRemove={onRemove} />
+        <RemoveAll runner={runner} onRemove={onRemove} busy={busy} />
       </div>
-      <Rows runner={runner} onRemove={onRemove} />
+      <Rows runner={runner} onRemove={onRemove} busy={busy} />
     </div>
   );
 }
 
 export function LeftoversSection() {
-  const { runners, error, refresh, remove } = useLeftovers();
+  const { runners, error, refresh, remove, removing } = useLeftovers();
 
   return (
     <>
@@ -151,7 +163,7 @@ export function LeftoversSection() {
           title={runner.name}
           description={runner.status === "ok" ? `${countOf(runner)} to remove` : undefined}
         >
-          <Body runner={runner} onRemove={remove} />
+          <Body runner={runner} onRemove={remove} busy={removing} />
         </SettingsSection>
       ))}
       {runners && (
