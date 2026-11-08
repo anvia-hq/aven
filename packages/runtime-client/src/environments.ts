@@ -129,6 +129,7 @@ export class Environments {
 
   async #build(threadId: string, root: string, key: string, baseImageId: string) {
     const image = this.snapshots.imageFor(key);
+    const previous = await this.#imageId(image);
     await setupEnvironment({
       docker: this.#config.docker,
       key,
@@ -147,7 +148,15 @@ export class Environments {
     await this.snapshots.publish(key, { image, baseImageId, workspace: root });
     await rm(this.#spareDir(key), { recursive: true, force: true });
     await this.#pinImage(threadId, image);
+    if (previous && previous !== (await this.#imageId(image))) {
+      await this.#config.docker(["rmi", previous]);
+    }
     return { image };
+  }
+
+  async #imageId(image: string) {
+    const inspected = await this.#config.docker(["image", "inspect", "--format", "{{.Id}}", image]);
+    return inspected.code === 0 ? inspected.stdout.trim() : "";
   }
 
   #imageFile(threadId: string) {
