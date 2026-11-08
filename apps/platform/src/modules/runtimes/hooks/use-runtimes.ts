@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { createListStore } from "@/lib/list-store";
 
 import { isOwnerOrAdminRole } from "@/lib/member-role";
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import { updatingAtom } from "../atoms/updating-atom";
@@ -60,6 +61,13 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     );
   }
 
+  async function rename(runtime: Runtime, name: string) {
+    const renamed = await change("Could not rename runtime", () =>
+      postJson<Runtime>(`/runtimes/${runtime.id}`, { name }, "PATCH"),
+    );
+    return renamed !== null;
+  }
+
   async function revoke(runtime: Runtime) {
     const revoked = await change("Could not revoke runtime", () =>
       api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" }),
@@ -69,6 +77,11 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
 
   const { data: member } = authClient.useActiveMember();
   const canUpdate = isOwnerOrAdminRole(member?.role);
+  const { config } = usePlatformConfig();
+  const canRename = (runtime: Runtime) =>
+    runtime.isControlPlane
+      ? config?.isOwner === true
+      : isOwnedByMe(runtime) || isOwnerOrAdminRole(member?.role);
   const [updating, setUpdating] = useAtom(updatingAtom);
 
   async function update(runtime: Runtime) {
@@ -111,6 +124,8 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     refresh,
     create,
     rotate,
+    rename,
+    canRename,
     revoke,
     canUpdate,
     update,

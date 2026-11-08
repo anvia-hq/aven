@@ -86,6 +86,15 @@ export const runtimesService = {
     return { runtime: publicRuntime(row!), token };
   },
 
+  async rename(organizationId: string, id: string, name: string) {
+    const [row] = await db
+      .update(runtimes)
+      .set({ name })
+      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)))
+      .returning();
+    return row ? publicRuntime(row) : null;
+  },
+
   async revoke(organizationId: string, ownerId: string, id: string) {
     const [row] = await db
       .update(runtimes)
