@@ -127,6 +127,66 @@ run("runCockpitCommand (postgres)", async () => {
     await expect(runCockpitCommand(bot, { command: "drop" })).rejects.toThrow();
   });
 
+  test("a bot converts an inbox item into a task that keeps its body, and the item is marked done", async () => {
+    const blocks = JSON.stringify([
+      {
+        type: "paragraph",
+        props: {},
+        content: [{ type: "text", text: "Call the bank", styles: { bold: true } }],
+        children: [],
+      },
+    ]);
+    const item = await cockpitService.inbox.create(person.userId, {
+      title: "Sort the loan",
+      body: blocks,
+      tags: ["money"],
+    });
+
+    const converted = await runCockpitCommand(bot, {
+      command: "convert",
+      id: item.id,
+      fields: { priority: "high", status: "todo", dueDate: "2026-12-01" },
+    });
+    expect(converted).toStartWith("Converted Sort the loan into T-");
+    const task = (await cockpitService.tasks.list(person.userId)).find(
+      (each) => each.title === "Sort the loan",
+    );
+    expect(task).toMatchObject({
+      description: blocks,
+      tags: ["money"],
+      priority: "high",
+      status: "todo",
+      dueDate: "2026-12-01",
+    });
+    const after = (await cockpitService.inbox.list(person.userId)).find(
+      (each) => each.id === item.id,
+    );
+    expect(after?.done).toBe(true);
+
+    await expect(runCockpitCommand(bot, { command: "convert", id: item.id })).rejects.toThrow(
+      "already done",
+    );
+    await expect(runCockpitCommand(thread, { command: "convert", id: item.id })).rejects.toThrow(
+      "only read",
+    );
+    await expect(runCockpitCommand(bot, { command: "convert", id: "nope" })).rejects.toThrow(
+      "There is no inbox record",
+    );
+  });
+
+  test("a converted item takes the title, tags and markdown body the bot gives instead", async () => {
+    const item = await cockpitService.inbox.create(person.userId, { title: "Vague", tags: ["a"] });
+    await runCockpitCommand(bot, {
+      command: "convert",
+      id: item.id,
+      fields: { title: "Renew the passport", tags: ["Admin"], body: "- [ ] photos" },
+    });
+    const task = (await cockpitService.tasks.list(person.userId)).find(
+      (each) => each.title === "Renew the passport",
+    );
+    expect(task).toMatchObject({ tags: ["admin"], description: "- [ ] photos" });
+  });
+
   test("another person's records are not there", async () => {
     const [note] = await cockpitService.notes.list(person.userId);
     const theirs = { userId: other.userId, access: "write" as const, onPersonsWord: true };

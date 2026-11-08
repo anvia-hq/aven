@@ -19,3 +19,7 @@ The cockpit was for the person only. They want their bots to keep it with them (
 - A thread's tool calls are in its transcript, so a thread shared with the workspace (0084) shows what its agent read of the person's cockpit.
 - Rewriting a body the person formatted in the editor through markdown keeps what markdown has and loses the rest (colours, alignment).
 - `cockpit` on `run.start`, `run.resume` and `bot.reply`, and the calls `cockpit.read` and `bot.cockpit`, are wire version 42: a runner must `aven update`.
+
+## Note: converting an inbox item into a task
+
+A bot has a `convert` command (`{ command: "convert", id, fields? }`, write access only): it makes a task from an inbox item, keeping its title, tags and body exactly (the editor's blocks are copied, not turned into markdown and back), with `title`, `tags`, `body`, `status`, `priority` and `dueDate` given overriding what it copies, and marks the inbox item **done** rather than deleting it, so it needs no word from the person and can be undone. An item that is already done is refused, since it was probably converted already (set it to not done to convert it again). The two writes are not one transaction: if the second fails, the task exists and the item stays open, and the answer says so.

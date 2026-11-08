@@ -29,6 +29,21 @@ describe("cockpit", () => {
     ]);
   });
 
+  test("converting an inbox item names its id and only the overrides given, and a thread cannot", async () => {
+    const asked: CockpitCommand[] = [];
+    const tool = createCockpitTool(async (command) => (asked.push(command), "ok"), "write");
+    await call(tool, { command: "convert", id: "i1", priority: "high", status: "todo" });
+    await call(tool, { command: "convert", id: "i2" });
+    await expect(call(tool, { command: "convert" })).rejects.toThrow("convert needs id");
+    expect(asked).toEqual([
+      { command: "convert", id: "i1", fields: { priority: "high", status: "todo" } },
+      { command: "convert", id: "i2", fields: {} },
+    ]);
+
+    const reader = createCockpitTool(async () => "ok", "read");
+    await expect(call(reader, { command: "convert", id: "i1" })).rejects.toThrow();
+  });
+
   test("a thread's tool only reads: a write is refused before the host is asked", async () => {
     const asked: CockpitCommand[] = [];
     const tool = createCockpitTool(async (command) => (asked.push(command), "ok"), "read");
