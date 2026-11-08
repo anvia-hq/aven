@@ -42,6 +42,7 @@ import type {
   ContainerBase,
   DockerRun,
   HostCommands,
+  IdentityRelay,
   SandboxConfig,
   ThreadRef,
   ThreadSandbox,
