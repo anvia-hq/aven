@@ -91,8 +91,13 @@ export function createThreadWatcher(options: {
   const { get, lastError, activity, wake, intervalMs, now = Date.now } = options;
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking: Promise<void> | undefined;
-  const alerted = new Map<string, number>();
+  const alerted = new Map<string, WatchedRun>();
   const ending = new Set<string>();
+
+  function forget(threadId: string) {
+    alerted.delete(threadId);
+    ending.delete(threadId);
+  }
 
   async function tell(threadId: string, watcher: Watcher, how: NoteEnding) {
     try {
@@ -114,13 +119,12 @@ export function createThreadWatcher(options: {
     before: Promise<unknown> = Promise.resolve(),
   ) {
     ending.add(threadId);
-    alerted.delete(threadId);
     try {
       await before.catch(() => undefined);
       const watcher = await threadWatchService.claim(threadId, startedAt);
       if (watcher) await tell(threadId, watcher, how);
     } finally {
-      ending.delete(threadId);
+      forget(threadId);
     }
   }
 
@@ -128,15 +132,17 @@ export function createThreadWatcher(options: {
     threadId: string,
     watcher: Watcher,
     run: { startedAt: number; lastEventAt: number },
+    known?: BotThreadDetail,
   ) {
     const quietMs = now() - run.lastEventAt;
     if (quietMs < QUIET_ALERT_MS || alerted.get(threadId) === run.startedAt) return;
     alerted.set(threadId, run.startedAt);
     try {
-      const thread = await get(watcher.userId, threadId);
+      const thread = known ?? (await get(watcher.userId, threadId));
       const note = quietNote(thread, Math.floor(quietMs / 60_000));
       await wake(watcher.userId, watcher.botId, note, threadId);
     } catch (error) {
+      alerted.delete(threadId);
       console.warn(
         `Bot ${watcher.botId} could not be told thread ${threadId} has gone quiet:`,
         describeError(error),
@@ -144,10 +150,32 @@ export function createThreadWatcher(options: {
     }
   }
 
+  function quietSince(thread: BotThreadDetail) {
+    return thread.lastActivityAt ? Date.parse(thread.lastActivityAt) : undefined;
+  }
+
+  async function stillGoing(
+    row: Watcher & { threadId: string; run: WatchedRun },
+    thread: BotThreadDetail,
+  ) {
+    const seen = quietSince(thread);
+    if (seen === undefined) return;
+    await alertIfQuiet(
+      row.threadId,
+      row,
+      { startedAt: row.run ?? seen, lastEventAt: seen },
+      thread,
+    );
+  }
+
   async function check(row: Watcher & { threadId: string; run: WatchedRun }) {
     if (ending.has(row.threadId)) return;
     const current = activity(row.threadId);
     if (current && current.startedAt === row.run) return alertIfQuiet(row.threadId, row, current);
+    if (!current) {
+      const thread = await get(row.userId, row.threadId);
+      if (thread.running) return stillGoing(row, thread);
+    }
     alerted.delete(row.threadId);
     const watcher = await threadWatchService.claim(row.threadId, row.run);
     if (watcher) await tell(row.threadId, watcher, { outcome: "unknown" });
@@ -171,6 +199,9 @@ export function createThreadWatcher(options: {
   return {
     ended,
     tick,
+    pending() {
+      return { alerted: [...alerted.keys()], ending: [...ending] };
+    },
     start() {
       if (timer) return;
       void guarded();

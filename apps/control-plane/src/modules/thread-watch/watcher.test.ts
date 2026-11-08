@@ -136,11 +136,19 @@ run("createThreadWatcher (postgres)", async () => {
     const woken: { botId: string; note: string }[] = [];
     const state = {
       run: undefined as { startedAt: number; lastEventAt: number } | undefined,
+      running: false,
+      lastActivityAt: undefined as string | undefined,
       refuse: false,
       clock: 1_000_000_000,
     };
     const watcher = createThreadWatcher({
-      get: async (_userId, id) => detail({ id, title: "Watched" }),
+      get: async (_userId, id) =>
+        detail({
+          id,
+          title: "Watched",
+          running: state.running,
+          lastActivityAt: state.lastActivityAt,
+        }),
       lastError: async () => null,
       activity: (id) => (id === thread.id ? state.run : undefined),
       wake: async (_userId, botId, note, threadId) => {
@@ -258,5 +266,86 @@ run("createThreadWatcher (postgres)", async () => {
     await watcher.ended(thread.id, RUN, { outcome: "done" });
     expect(woken.at(-1)!.note).toContain("has finished.");
     expect(woken).toHaveLength(2);
+  });
+
+  test("a run that ends abnormally, stopped or failed, leaves nothing behind", async () => {
+    const { thread, watcher, woken, state } = await setup();
+    state.run = { startedAt: RUN, lastEventAt: state.clock };
+    state.clock += QUIET_ALERT_MS;
+    await watcher.tick();
+    expect(watcher.pending()).toEqual({ alerted: [thread.id], ending: [] });
+    state.run = undefined;
+    await watcher.ended(thread.id, RUN, { outcome: "cancelled" });
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    expect(woken.at(-1)!.note).toContain("was stopped before it finished");
+    await watching(thread.id);
+    state.run = { startedAt: RUN, lastEventAt: state.clock };
+    state.clock += QUIET_ALERT_MS;
+    await watcher.tick();
+    expect(watcher.pending()).toEqual({ alerted: [thread.id], ending: [] });
+    state.run = undefined;
+    await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    await watcher.tick();
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    expect(woken).toHaveLength(4);
+    expect(woken.at(-1)!.note).toContain("boom");
+  });
+
+  test("a run that ends while its note cannot be delivered is not left on its way", async () => {
+    const { thread, watcher, woken, state } = await setup();
+    state.refuse = true;
+    await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    state.refuse = false;
+    await watching(thread.id);
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+    expect(woken[0]!.note).toContain("how its run ended was not heard");
+  });
+
+  test("a quiet note that could not be delivered is tried again, and cleared with the run", async () => {
+    const { thread, watcher, woken, state } = await setup();
+    state.run = { startedAt: RUN, lastEventAt: state.clock };
+    state.clock += QUIET_ALERT_MS;
+    state.refuse = true;
+    await watcher.tick();
+    expect(woken).toEqual([]);
+    state.refuse = false;
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+    expect(woken[0]!.note).toContain("has shown nothing for 15 minutes");
+    state.run = undefined;
+    await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    expect(woken).toHaveLength(2);
+    expect(woken[1]!.note).toContain("boom");
+  });
+
+  test("after a restart, a thread with nothing in memory but a live run is not told as gone", async () => {
+    const { watcher, woken, state } = await setup();
+    state.running = true;
+    state.lastActivityAt = new Date(state.clock - 60_000).toISOString();
+    await watcher.tick();
+    await watcher.tick();
+    expect(woken).toEqual([]);
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    state.clock += QUIET_ALERT_MS;
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+    expect(woken[0]!.note).toContain("has shown nothing for 16 minutes");
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+  });
+
+  test("a thread that says its run is no longer going is told as gone", async () => {
+    const { watcher, woken, state } = await setup();
+    state.running = false;
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
+    expect(woken[0]!.note).toContain("is no longer working, and how its run ended was not heard");
+    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
+    await watcher.tick();
+    expect(woken).toHaveLength(1);
   });
 });
