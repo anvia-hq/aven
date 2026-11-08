@@ -1,12 +1,92 @@
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+
+const LEGACY_PROJECT = "aven";
+const PROJECT_HASH_LENGTH = 8;
+const NAME_LINE = /^name:[ \t]*(.+?)[ \t]*$/m;
+
+type ComposeProject = { Name: string; ConfigFiles: string };
+
+const absolutePath = (path: string) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+};
+
+const composeFile = (dir: string) => join(dir, "docker-compose.yml");
+
+export const projectName = (home: string) =>
+  `${LEGACY_PROJECT}-${createHash("sha256")
+    .update(resolve(home))
+    .digest("hex")
+    .slice(0, PROJECT_HASH_LENGTH)}`;
+
+function captured(command: string[]) {
+  try {
+    const child = Bun.spawnSync({ cmd: command, stdout: "pipe", stderr: "ignore" });
+    return child.exitCode === 0 ? child.stdout.toString().trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const isComposeProject = (value: unknown): value is ComposeProject =>
+  typeof value === "object" &&
+  value !== null &&
+  "Name" in value &&
+  "ConfigFiles" in value &&
+  typeof value.Name === "string" &&
+  typeof value.ConfigFiles === "string";
+
+function composeProjects() {
+  const listed = captured(["docker", "compose", "ls", "--all", "--format", "json"]);
+  if (listed === undefined) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(listed);
+    return Array.isArray(parsed) ? parsed.filter(isComposeProject) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const adoptedProject = (dir: string, projects: ComposeProject[] | undefined) => {
+  const file = absolutePath(composeFile(dir));
+  const here = (projects ?? []).filter((project) =>
+    project.ConfigFiles.split(",").some((one) => absolutePath(one.trim()) === file),
+  );
+  return (here.find((project) => project.Name === LEGACY_PROJECT) ?? here[0])?.Name;
+};
+
+const declaredProject = (dir: string) => {
+  let text: string | undefined;
+  try {
+    text = readFileSync(composeFile(dir), "utf8");
+  } catch {
+    return undefined;
+  }
+  const declared = NAME_LINE.exec(text)?.[1]
+    ?.replace(/\s+#.*$/, "")
+    .replace(/^["']|["']$/g, "");
+  return declared === undefined || declared.includes("${") ? undefined : declared;
+};
+
+export const composeProject = (
+  dir: string,
+  projects: ComposeProject[] | undefined = composeProjects(),
+) => adoptedProject(dir, projects) ?? declaredProject(dir) ?? projectName(dirname(resolve(dir)));
 
 export const composeCommand = (dir: string, args: string[]) => [
   "docker",
   "compose",
+  "--project-name",
+  composeProject(dir),
   "--project-directory",
   dir,
   "-f",
-  join(dir, "docker-compose.yml"),
+  composeFile(dir),
   ...args,
 ];
 
