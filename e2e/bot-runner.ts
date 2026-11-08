@@ -6,6 +6,7 @@ import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
 import type { ThreadWorkspaces } from "../packages/runtime-client/src/types";
 
 const url = process.env.AVEN_URL ?? "http://localhost:8100";
+const healthPort = Number(process.env.E2E_BOT_RUNNER_PORT ?? BOT_RUNNER_HEALTH_PORT);
 
 type Desktop = NonNullable<ReturnType<ThreadWorkspaces["desktop"]>>;
 
@@ -59,7 +60,7 @@ const runtime = startRuntime({
 });
 await runtime.ready;
 
-Bun.serve({ port: BOT_RUNNER_HEALTH_PORT, fetch: () => new Response("ok") });
+Bun.serve({ port: healthPort, fetch: () => new Response("ok") });
 console.log(`bot runner connected to ${url}`);
 
 const stop = async () => {
