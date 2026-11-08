@@ -24,8 +24,7 @@ export async function connectMcpServers(
   options: { signal?: AbortSignal; resolve?: ResolveHost } = {},
 ): Promise<ConnectedMcp> {
   const { signal, resolve } = options;
-  const clients: McpClient[] = [];
-  const servers: McpServer[] = [];
+  const connections: (Connection | undefined)[] = configs.map(() => undefined);
   const results: McpConnectResult[] = [];
   const failed: McpNote["failed"][number][] = [];
 
@@ -35,7 +34,7 @@ export async function connectMcpServers(
   };
 
   await Promise.all(
-    configs.map(async (config) => {
+    configs.map(async (config, index) => {
       if (!config.allowLocal) {
         try {
           await refusePrivateHost(config.url, resolve);
@@ -57,19 +56,37 @@ export async function connectMcpServers(
       });
       const timeout = AbortSignal.timeout(MCP_CONNECT_TIMEOUT_MS);
       try {
-        servers.push(
-          await client.connect({
-            abortSignal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-          }),
-        );
-        clients.push(client);
-        results.push({ id: config.id });
+        const server = await client.connect({
+          abortSignal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+        });
+        connections[index] = { config, client, server };
       } catch (error) {
         fail(config, errorMessage(error));
         await client.close().catch(() => undefined);
       }
     }),
   );
+
+  const clients: McpClient[] = [];
+  const servers: McpServer[] = [];
+  const taken = new Map<string, string>();
+  for (const connection of connections) {
+    if (!connection) continue;
+    const { config, client, server } = connection;
+    const clash = server.tools.map((tool) => tool.name).find((name) => taken.has(name));
+    if (clash !== undefined) {
+      fail(
+        config,
+        `Its tool ${clash} has the same name as a tool of the server ${taken.get(clash)}; rename one of the two servers`,
+      );
+      await client.close().catch(() => undefined);
+      continue;
+    }
+    for (const tool of server.tools) taken.set(tool.name, config.name);
+    clients.push(client);
+    servers.push(server);
+    results.push({ id: config.id });
+  }
 
   return {
     tools: servers.flatMap((server) => server.tools.map(asLocalTool)),
@@ -83,3 +100,5 @@ export async function connectMcpServers(
     },
   };
 }
+
+type Connection = { config: RunMcpServer; client: McpClient; server: McpServer };
