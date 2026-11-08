@@ -117,7 +117,6 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
-                    <WorkingIndicator running={running} startedAt={startedAt} />
                     {owned && <ShipBar thread={thread} unshipped={unshipped} />}
                     {!owned && <SharedNotice thread={thread} />}
                     {owned &&
@@ -136,7 +135,12 @@ function ThreadPage() {
                           onCompact={compact}
                           placeholder="Reply to the agent…"
                           onSubmit={send}
-                          tools={<ProjectInfo projectId={thread.projectId} />}
+                          tools={
+                            <>
+                              <ProjectInfo projectId={thread.projectId} />
+                              <WorkingIndicator running={running} startedAt={startedAt} />
+                            </>
+                          }
                         />
                       ))}
                   </div>
