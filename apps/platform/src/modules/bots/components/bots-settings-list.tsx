@@ -1,6 +1,7 @@
 import { SettingsEmpty, SettingsRow, SettingsSection } from "@/components/settings-section";
 
 import { useBots } from "../hooks/use-bots";
+import { BotAvatar } from "./bot-avatar";
 import { BotCompactionRow } from "./bot-compaction-row";
 import { BotEffortRow } from "./bot-effort-row";
 import { BotModelSelect } from "./bot-model-select";
@@ -16,6 +17,7 @@ export function BotsSettingsList() {
         <SettingsSection
           key={bot.id}
           title={bot.name}
+          leading={<BotAvatar bot={bot} className="size-12" />}
           description={bot.isMain ? "Your main bot" : undefined}
         >
           <div role="list" aria-label={`${bot.name} settings`} className="flex flex-col">
