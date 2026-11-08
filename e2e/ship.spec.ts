@@ -109,6 +109,29 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("button", { name: "Ship", exact: true })).toHaveCount(0);
   });
 
+  test("is not shown while the thread's changes are still loading", async ({ page }) => {
+    await registerUser(page, "shp", "Ship User");
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
+    runner = child;
+    const held = Promise.withResolvers<void>();
+    await page.route("**/api/threads/*/diff*", async (route) => {
+      await held.promise;
+      await route.fallback();
+    });
+    const answered = page.waitForResponse(
+      (response) => response.url().includes("/ship") && response.ok(),
+    );
+    try {
+      await page.goto(`/threads/${threadId}`);
+      await answered;
+      await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Ship", exact: true })).toHaveCount(0);
+    } finally {
+      held.resolve();
+    }
+    await expect(page.getByRole("button", { name: "Ship", exact: true })).toBeEnabled();
+  });
+
   test.describe("a repository that is not set up to ship", () => {
     async function threadWith(page: Page, files: string) {
       await registerUser(page, "shp", "Ship User");

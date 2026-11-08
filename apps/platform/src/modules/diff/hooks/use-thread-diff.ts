@@ -9,7 +9,7 @@ const POLL_MS = 4_000;
 
 export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running: boolean) {
   const answer = useRequest<ThreadDiffResponse>(`/threads/${threadId}/diff?scope=${scope}`, {
-    key: scope,
+    key: `${threadId}/${scope}`,
     pollMs: running ? POLL_MS : undefined,
     resetOn: threadId,
   });

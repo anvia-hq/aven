@@ -19,6 +19,7 @@ export function ShipBar({ thread, unshipped }: Props) {
       />
       <ShipButton
         thread={thread}
+        changesKnown={unshipped.loaded}
         upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
       />
     </div>
