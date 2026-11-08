@@ -2,14 +2,29 @@ import { Elysia } from "elysia";
 
 import { auth, authService } from "./service";
 
-const sessions = new WeakMap<Request, ReturnType<typeof authService.getSession>>();
+type AuthSession = Awaited<ReturnType<typeof authService.getSession>>;
 
-function sessionOf(request: Request) {
+const sessions = new WeakMap<Request, AuthSession>();
+const pending = new WeakMap<Request, Promise<AuthSession>>();
+
+async function lookUp(request: Request) {
+  try {
+    const session = await authService.getSession(request.headers);
+    sessions.set(request, session);
+    return session;
+  } finally {
+    pending.delete(request);
+  }
+}
+
+async function sessionOf(request: Request) {
   const cached = sessions.get(request);
-  if (cached) return cached;
-  const session = authService.getSession(request.headers);
-  sessions.set(request, session);
-  return session;
+  if (cached !== undefined) return cached;
+  const inFlight = pending.get(request);
+  if (inFlight) return inFlight;
+  const lookup = lookUp(request);
+  pending.set(request, lookup);
+  return lookup;
 }
 
 export const authRouter = new Elysia({ name: "auth" })
