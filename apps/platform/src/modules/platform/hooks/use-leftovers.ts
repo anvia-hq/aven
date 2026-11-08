@@ -10,15 +10,18 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 
 export function useLeftovers() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [removing, setRemoving] = useState(false);
   const answer = useRequest<RunnerLeftovers[]>("/platform/leftovers", { refreshKey });
 
   async function remove(
     runner: RunnerLeftovers,
     request: { containers: string[]; images: string[] },
   ) {
+    if (removing) return;
+    setRemoving(true);
     const result = await attempt("Could not remove them", () =>
       postJson<RemovedLeftovers>(`/platform/leftovers/${runner.runtimeId}/remove`, request),
-    );
+    ).finally(() => setRemoving(false));
     if (!result) return;
     const removed = [
       result.removedContainers > 0 && plural(result.removedContainers, "container"),
@@ -46,5 +49,6 @@ export function useLeftovers() {
     error: answer?.error ?? null,
     refresh: () => setRefreshKey((key) => key + 1),
     remove,
+    removing,
   };
 }

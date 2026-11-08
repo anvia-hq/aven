@@ -19,7 +19,8 @@ export type PlatformPerson = {
 export type RunnerLeftovers = {
   runtimeId: string;
   name: string;
-  status: "ok" | "offline" | "unsupported";
+  status: "ok" | "offline" | "unsupported" | "failed";
+  error?: string;
   containers: DockerLeftoverContainer[];
   images: DockerLeftoverImage[];
 };

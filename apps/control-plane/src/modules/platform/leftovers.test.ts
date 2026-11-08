@@ -14,8 +14,8 @@ type Call = { method: string; params: unknown };
 
 run("the Docker leftovers of every runner (real postgres)", () => {
   const tag = crypto.randomUUID().slice(0, 8);
-  const [online, offline, old, gone] = [0, 1, 2, 3].map(() => crypto.randomUUID());
-  const ids: string[] = [online, offline, old];
+  const [online, offline, old, gone, broken] = [0, 1, 2, 3, 4].map(() => crypto.randomUUID());
+  const ids: string[] = [online, offline, old, broken];
   const calls: Call[] = [];
 
   const leftovers = {
@@ -52,6 +52,13 @@ run("the Docker leftovers of every runner (real postgres)", () => {
           },
         };
       }
+      if (id === broken) {
+        return {
+          call: async () => {
+            throw new Error("Cannot connect to the Docker daemon");
+          },
+        };
+      }
       return undefined;
     },
   } as unknown as RuntimeHub;
@@ -64,6 +71,7 @@ run("the Docker leftovers of every runner (real postgres)", () => {
         [online, "online"],
         [offline, "offline"],
         [old, "old"],
+        [broken, "broken"],
       ].map(([id, name]) => ({
         id: id as string,
         name: `${name}-${tag}`,
@@ -74,7 +82,7 @@ run("the Docker leftovers of every runner (real postgres)", () => {
   });
 
   afterAll(async () => {
-    await db.delete(runtimes).where(inArray(runtimes.id, [online, offline, old]));
+    await db.delete(runtimes).where(inArray(runtimes.id, ids));
   });
 
   test("asks each online runner, and says which are offline or cannot answer", async () => {
@@ -83,7 +91,9 @@ run("the Docker leftovers of every runner (real postgres)", () => {
       [`online-${tag}`, "ok"],
       [`offline-${tag}`, "offline"],
       [`old-${tag}`, "unsupported"],
+      [`broken-${tag}`, "failed"],
     ]);
+    expect(rows[3]?.error).toContain("Docker daemon");
     expect(rows[0]?.containers).toEqual(leftovers.containers);
     expect(rows[1]?.containers).toEqual([]);
   });
@@ -103,5 +113,6 @@ run("the Docker leftovers of every runner (real postgres)", () => {
     await expect(service.remove(gone, request)).rejects.toBeInstanceOf(NotFoundError);
     await expect(service.remove(offline, request)).rejects.toBeInstanceOf(UnavailableError);
     await expect(service.remove(old, request)).rejects.toThrow("aven update");
+    await expect(service.remove(broken, request)).rejects.toThrow("Docker daemon");
   });
 });
