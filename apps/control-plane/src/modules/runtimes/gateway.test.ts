@@ -327,9 +327,14 @@ describe("RunGateway", () => {
     expect((await post("anthropic/v1/messages", run.gatewayToken, {})).status).toBe(401);
   });
 
-  test("a thread's token is the same for every run, and only works while a run holds it", async () => {
+  test("every run gets a token of its own, even on the same thread", () => {
     const first = gateway.issue(
       "r-first",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-1",
+    );
+    const second = gateway.issue(
+      "r-second",
       { provider: "anthropic", apiKey: "sk-real" },
       "thread-1",
     );
@@ -338,20 +343,24 @@ describe("RunGateway", () => {
       { provider: "anthropic", apiKey: "sk-real" },
       "thread-2",
     );
-    expect(other.gatewayToken).not.toBe(first.gatewayToken);
-
+    expect(new Set([first.gatewayToken, second.gatewayToken, other.gatewayToken]).size).toBe(3);
     gateway.revoke("r-first");
-    expect((await post("anthropic/v1/messages", first.gatewayToken, {})).status).toBe(401);
-
-    const second = gateway.issue(
-      "r-second",
-      { provider: "anthropic", apiKey: "sk-real" },
-      "thread-1",
-    );
-    expect(second.gatewayToken).toBe(first.gatewayToken);
-    expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).not.toBe(401);
     gateway.revoke("r-second");
     gateway.revoke("r-other");
+  });
+
+  test("revoking a run takes away that run's token only", async () => {
+    const first = gateway.issue("r-a", { provider: "anthropic", apiKey: "sk-real" }, "thread-3");
+    const second = gateway.issue("r-b", { provider: "anthropic", apiKey: "sk-real" }, "thread-3");
+    expect((await post("anthropic/v1/messages", first.gatewayToken, {})).status).not.toBe(401);
+    expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).not.toBe(401);
+
+    gateway.revoke("r-a");
+    expect((await post("anthropic/v1/messages", first.gatewayToken, {})).status).toBe(401);
+    expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).not.toBe(401);
+
+    gateway.revoke("r-b");
+    expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).toBe(401);
   });
 
   test("the vendor's streamed answer passes through untouched", async () => {
@@ -434,5 +443,20 @@ describe("RunGateway", () => {
     expect(warned).toHaveLength(1);
     expect(warned[0]).toContain("openai model some-model");
     expect(warned[0]).not.toContain("sk-secret-key");
+  });
+
+  test("with no token secret the gateway cannot start, and says which one to set", async () => {
+    const encryptionKey = process.env.PROVIDER_ENCRYPTION_KEY;
+    const authSecret = process.env.BETTER_AUTH_SECRET;
+    delete process.env.PROVIDER_ENCRYPTION_KEY;
+    delete process.env.BETTER_AUTH_SECRET;
+    try {
+      await expect(import(`./gateway.ts?no-secret=${crypto.randomUUID()}`)).rejects.toThrow(
+        "The model gateway has no token secret: set PROVIDER_ENCRYPTION_KEY or BETTER_AUTH_SECRET",
+      );
+    } finally {
+      if (encryptionKey !== undefined) process.env.PROVIDER_ENCRYPTION_KEY = encryptionKey;
+      if (authSecret !== undefined) process.env.BETTER_AUTH_SECRET = authSecret;
+    }
   });
 });
