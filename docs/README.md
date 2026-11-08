@@ -25,6 +25,6 @@ rules/0001-typescript-strict.md
 bugs/0001-somelib-crash-on-empty-input.md
 ```
 
-- Numbers are per folder, start at `0001`, and are never reused or renumbered.
-- Do not delete outdated docs. Mark them `Status: superseded by 000X`.
+- Numbers are per folder, start at `0001`, and run without gaps.
+- A doc that is no longer true (its bug is fixed upstream, or its workaround is gone) is deleted, and the folder renumbered. Fix the links to the docs that moved.
 - Start each doc with a `# Title` and a `Status:` line.

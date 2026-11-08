@@ -4,6 +4,7 @@ import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { WatchedRun, Watcher } from "./types";
 
 export const BOT_THREAD_FOLLOW_UPS = 3;
+export const BOT_THREAD_FOLLOW_UPS_CEILING = 12;
 
 const at = (run: WatchedRun) => (run === null ? null : new Date(run));
 
@@ -42,9 +43,16 @@ export const threadWatchService = {
     const [counted] = await db
       .update(botThreads)
       .set({ followUps: sql`${botThreads.followUps} + 1` })
-      .where(and(ofBot(threadId, botId), lt(botThreads.followUps, BOT_THREAD_FOLLOW_UPS)))
-      .returning({ threadId: botThreads.threadId });
-    if (counted) return "ok";
+      .where(and(ofBot(threadId, botId), lt(botThreads.followUps, BOT_THREAD_FOLLOW_UPS_CEILING)))
+      .returning({ followUps: botThreads.followUps });
+    if (counted) {
+      if (counted.followUps > BOT_THREAD_FOLLOW_UPS) {
+        console.warn(
+          `Bot ${botId} follows up thread ${threadId} for the ${counted.followUps}th time without the person's word, past the usual ${BOT_THREAD_FOLLOW_UPS}; allowed up to ${BOT_THREAD_FOLLOW_UPS_CEILING}.`,
+        );
+      }
+      return "ok";
+    }
     const [row] = await db
       .select({ botId: botThreads.botId })
       .from(botThreads)

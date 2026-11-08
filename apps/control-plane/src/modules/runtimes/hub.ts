@@ -24,6 +24,7 @@ import type {
   RunMemory,
   RunModel,
   RunnerCallMethod,
+  RunSecrets,
   RunSkill,
   RunThreadInfo,
   RuntimeToControlPlane,
@@ -44,6 +45,7 @@ type Run = {
   mcp: Set<string>;
   memory?: MemoryCaller;
   cockpit?: CockpitCaller;
+  secrets?: RunSecrets;
   cancel?: string;
 };
 
@@ -106,6 +108,7 @@ export class RuntimeConnection {
     mcp: string[] = [],
     memory?: MemoryCaller,
     cockpit?: CockpitCaller,
+    secrets?: RunSecrets,
   ) {
     this.#runs.set(runId, {
       thread,
@@ -116,6 +119,7 @@ export class RuntimeConnection {
       mcp: new Set(mcp),
       memory,
       cockpit,
+      secrets,
     });
   }
 
@@ -148,7 +152,7 @@ export class RuntimeConnection {
 
   adopt(runId: string, run: Run) {
     this.#runs.set(runId, run);
-    this.post({ type: "run.attach", runId, after: run.lastSeq });
+    this.post({ type: "run.attach", runId, after: run.lastSeq, secrets: run.secrets });
     if (run.cancel) this.post({ type: "run.cancel", runId, reason: run.cancel });
   }
 
