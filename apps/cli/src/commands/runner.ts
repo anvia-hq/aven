@@ -10,6 +10,7 @@ import { parseEnv } from "../env-file";
 import { loadRunnerEnv, writeRunnerEnv } from "../runner-config";
 import { selfCommand } from "../self";
 import { serviceManager } from "../service-manager";
+import { serviceUnitState } from "../service-unit";
 import { version } from "../version";
 import type { Args, ServiceDefinition } from "../types";
 
@@ -35,12 +36,21 @@ function serviceDefinition(): ServiceDefinition {
   };
 }
 
+async function storedSettings() {
+  const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
+  if (text === undefined) return undefined;
+  const env = parseEnv(text);
+  if (!env.AVEN_URL || !env.AVEN_RUNTIME_TOKEN) return undefined;
+  return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN };
+}
+
 export async function runnerInstall(args: Args) {
-  const url = stringFlag(args, "url");
-  const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN;
+  const stored = await storedSettings();
+  const url = stringFlag(args, "url") ?? stored?.url;
+  const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN ?? stored?.token;
   if (!url || !token)
     throw new Error(
-      "Usage: aven runner install --url <control plane address> --token <token> (or AVEN_RUNTIME_TOKEN)",
+      `Usage: aven runner install --url <control plane address> --token <token> (or AVEN_RUNTIME_TOKEN). The settings in ${runnerEnvFile()} are used when they are given nowhere.`,
     );
   if (!/^https?:\/\//.test(url)) throw new Error("--url must start with http:// or https://");
   if (!token.startsWith("avrt_"))
@@ -65,6 +75,12 @@ export async function runnerInstall(args: Args) {
 
   await writeRunnerEnv(runnerEnvFile(), { url: base, token, image });
   const logSize = (await stat(logFile()).catch(() => undefined))?.size ?? 0;
+  const unit = await serviceUnitState({
+    platform: process.platform,
+    names,
+    execPath: process.execPath,
+  });
+  if (unit?.problem) console.log(`Rewriting the runner service: ${unit.problem}`);
   await manager().install(serviceDefinition());
   console.log(`The runner is installed as a service. Its log: ${logFile()}`);
   console.log(await outcome(logSize));
