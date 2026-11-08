@@ -243,6 +243,68 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     });
   });
 
+  test("an answer whose history fails to load keeps the question, so the same answer can be sent again", async () => {
+    let armed = false;
+    const flaky = new Proxy(store, {
+      get: (target, key) => {
+        if (key !== "load") return Reflect.get(target, key, target);
+        return async (...args: Parameters<typeof target.load>) => {
+          if (armed) {
+            armed = false;
+            throw new Error("database is down");
+          }
+          return target.load(...args);
+        };
+      },
+    });
+    const manager = await managerWith(
+      [
+        [
+          text("One thing."),
+          {
+            type: "tool-call",
+            toolCallId: "q2",
+            toolName: "ask_user",
+            input: {
+              questions: [
+                {
+                  id: "color",
+                  text: "Which color?",
+                  choices: [
+                    { label: "Red", value: "red" },
+                    { label: "Blue", value: "blue" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+        [text("Going with red.")],
+      ],
+      { store: flaky },
+    );
+    const thread = newThread();
+    const client = attach(manager, thread);
+    await until(() => client.events.length > 0);
+    await manager.start(thread, "paint it");
+    await until(() => client.events.some((event) => event.type === "done"));
+    await manager.history(thread);
+    const continuation = continuations.saved.get(thread.id);
+    expect(continuation).toBeDefined();
+
+    armed = true;
+    await expect(
+      manager.answer(thread, continuation, [{ questionId: "color", value: "red" }]),
+    ).rejects.toThrow("try again shortly");
+    expect(continuations.saved.get(thread.id)).toEqual(continuation);
+
+    const before = client.events.length;
+    await manager.answer(thread, continuation, [{ questionId: "color", value: "red" }]);
+    await until(() => client.events.slice(before).some((event) => event.type === "done"));
+    await client.detach();
+    expect(continuations.saved.has(thread.id)).toBe(false);
+  });
+
   test("a client that joins mid-run gets the transcript so far, then the rest", async () => {
     const manager = await managerWith([
       [toolCall("exec_command", { command: "sleep 0.6; echo slow" }, "c1")],

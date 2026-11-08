@@ -91,6 +91,9 @@ export const mcpService = {
       changes.slug = mcpSlug(body.name);
     }
     if (body.url !== undefined) changes.url = body.url;
+    if (body.url !== undefined && body.url !== current.url && body.allowLocal === undefined) {
+      changes.allowLocal = false;
+    }
     if (body.target !== undefined) changes.target = body.target;
     if (body.enabled !== undefined) changes.enabled = body.enabled;
     if (body.allowLocal !== undefined) changes.allowLocal = body.allowLocal;

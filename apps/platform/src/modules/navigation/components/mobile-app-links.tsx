@@ -49,7 +49,7 @@ export function MobileAppLinks() {
         label="Threads"
         active={pathname.startsWith("/threads") || pathname.startsWith("/projects")}
       >
-        <AvenMark className="w-5 text-primary" />
+        <AvenMark className="w-5 text-brand" />
       </AppLink>
       <AppLink to="/bot" label="Bot" active={pathname.startsWith("/bot")}>
         {main ? (

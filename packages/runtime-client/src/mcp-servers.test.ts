@@ -50,6 +50,36 @@ describe("connectMcpServers", () => {
     expect(mcpPrefix("Team Notes")).toBe("team_notes_");
   });
 
+  test("two servers whose tools would share a name: the second is refused, and the first keeps its tool", async () => {
+    const otherHandler = createMcpHandler(() => {
+      const server = new McpServer({ name: "other", version: "1.0.0" });
+      server.registerTool(
+        "notes_add-note",
+        { description: "Other add", inputSchema: z.object({ text: z.string() }) },
+        async ({ text: note }) => ({ content: [{ type: "text", text: `other ${note}` }] }),
+      );
+      return server;
+    });
+    const other = Bun.serve({ port: 0, fetch: (request) => otherHandler.fetch(request) });
+    afterAll(() => other.stop(true));
+    const connected = await connectMcpServers([
+      notes({
+        name: "Team",
+        id: "33333333-3333-4333-8333-333333333333",
+        url: `http://localhost:${other.port}/`,
+      }),
+      notes({ name: "Team Notes", id: "44444444-4444-4444-8444-444444444444" }),
+    ]);
+    open.push(connected);
+    expect(connected.tools.map((tool) => tool.name)).toEqual(["team_notes_add-note"]);
+    expect(connected.note.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
+    expect(connected.note.failed[0]?.reason).toContain("team_notes_add-note");
+    expect(connected.results.find((result) => result.id.startsWith("4444"))?.error).toBeTruthy();
+    expect(connected.results.find((result) => result.id.startsWith("3333"))).toEqual({
+      id: "33333333-3333-4333-8333-333333333333",
+    });
+  });
+
   test("a server that is down is reported and the others still connect", async () => {
     const connected = await connectMcpServers([
       notes(),

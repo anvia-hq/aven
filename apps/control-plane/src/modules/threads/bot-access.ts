@@ -118,13 +118,12 @@ export function createBotThreads({
     },
 
     async list(userId, { projectId, archived = false }) {
-      const found = await threadsService.listForPerson(userId, 500);
+      const found = await threadsService.listForPerson(userId, BOT_THREADS_LISTED, {
+        archived,
+        projectId,
+      });
       const repository = await repositories(userId);
-      return found
-        .filter((thread) => (thread.state === "archived") === archived)
-        .filter((thread) => projectId === undefined || thread.projectId === projectId)
-        .slice(0, BOT_THREADS_LISTED)
-        .map((thread) => viewOf(userId, thread, repository.get(thread.projectId) ?? ""));
+      return found.map((thread) => viewOf(userId, thread, repository.get(thread.projectId) ?? ""));
     },
 
     async get(userId, id) {

@@ -261,7 +261,7 @@ export type ProcessEndWatchContext = {
 
 export type BotMemoryCall = (params: BotMemoryParams) => Promise<unknown>;
 
-export type CommandOutput = { code: number; stdout: string; stderr: string };
+export type CommandOutput = { code: number; stdout: string; stderr: string; timedOut?: true };
 
 export type CreateRuntimeAgent = (input: {
   thread: RunThreadInfo;
