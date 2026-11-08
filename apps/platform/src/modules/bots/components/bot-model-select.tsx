@@ -13,7 +13,7 @@ import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 
 export function BotModelSelect({ bot }: { bot: Bot }) {
-  const { providers, loaded, choices, loading, provider, modelId } = useBotModel(bot);
+  const { providers, loaded, choices, loading, provider, modelId, labelOf } = useBotModel(bot);
   const { update } = useBots();
   const [open, setOpen] = useState(false);
 
@@ -24,6 +24,9 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
       </Link>
     );
   }
+
+  let shown = "Default model";
+  if (provider) shown = modelId ? labelOf(provider.id, modelId) : "Provider default";
 
   async function choose(change: { providerId: string | null; modelId?: string }) {
     setOpen(false);
@@ -43,9 +46,7 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
         }
       >
         {provider && <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />}
-        <span className="truncate">
-          {provider ? (modelId ?? "Provider default") : "Default model"}
-        </span>
+        <span className="truncate">{shown}</span>
         <ChevronDown />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-2xl p-0">

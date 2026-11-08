@@ -7,7 +7,7 @@ import { UnprocessableError } from "../../errors";
 import { encryptSecret } from "../../crypto";
 import { readKey } from "./crypto";
 import { isGoogleCredential, parseServiceAccount } from "./google-auth";
-import { effortsByModel, listAgentModels, ModelListError } from "./model-list";
+import { effortsByModel, labelsByModel, listAgentModels, ModelListError } from "./model-list";
 import {
   azureEndpoint,
   bedrockEndpoint,
@@ -207,7 +207,11 @@ export const providersService = {
     if (!row) return null;
     const source = sourceOf(row);
     const models = await modelsOf(row, source);
-    return { models, efforts: await effortsByModel(source, models) };
+    const [efforts, labels] = await Promise.all([
+      effortsByModel(source, models),
+      labelsByModel(source, models),
+    ]);
+    return { models, efforts, labels };
   },
 
   async forRun(userId: string, providerId: string | undefined) {

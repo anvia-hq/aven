@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { NotFoundError, orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
-import { listAgentModels } from "./model-list";
+import { labelsByModel, listAgentModels } from "./model-list";
 import { providersService } from "./service";
 
 export const providersRouter = new Elysia({ prefix: "/providers" })
@@ -13,10 +13,14 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     auth: true,
     body: createProviderBody,
   })
-  .post("/models", async ({ body }) => ({ models: await listAgentModels(body) }), {
-    auth: true,
-    body: listModelsBody,
-  })
+  .post(
+    "/models",
+    async ({ body }) => {
+      const models = await listAgentModels(body);
+      return { models, labels: await labelsByModel(body, models) };
+    },
+    { auth: true, body: listModelsBody },
+  )
   .get(
     "/:id/models",
     async ({ params, user }) =>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/badge";
 
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";
+import { useProvidersModels } from "../hooks/use-provider-models";
 import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
@@ -25,8 +26,8 @@ type Row = {
   label: string;
 };
 
-const detail = (provider: Provider) =>
-  [provider.baseUrl, provider.modelId, provider.keyHint && `…${provider.keyHint}`]
+const detail = (provider: Provider, label: string | undefined) =>
+  [provider.baseUrl, label ?? provider.modelId, provider.keyHint && `…${provider.keyHint}`]
     .filter(Boolean)
     .join(" · ");
 
@@ -59,6 +60,7 @@ function Tile({
 
 export function ProvidersList() {
   const { providers, loaded } = useProviders();
+  const { byProvider } = useProvidersModels(providers.map((item) => item.id));
 
   if (!loaded) return null;
 
@@ -105,7 +107,12 @@ export function ProvidersList() {
                   {provider.isDefault && <Badge variant="secondary">Default</Badge>}
                 </div>
                 <p className="truncate font-mono text-xs text-muted-foreground">
-                  {detail(provider)}
+                  {detail(
+                    provider,
+                    provider.modelId
+                      ? byProvider[provider.id]?.labels?.[provider.modelId]
+                      : undefined,
+                  )}
                 </p>
               </div>
               <ProviderActions

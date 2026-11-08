@@ -43,7 +43,7 @@ export function rememberModelSelection(threadId: string, selection: RunSelection
 }
 
 export function useModelSelection(threadId?: string) {
-  const { providers, loaded, byProvider, choices, loading } = useModelChoices();
+  const { providers, loaded, byProvider, choices, loading, labelOf } = useModelChoices();
   const last = useAtomValue(modelSelectionAtom);
   const threads = useAtomValue(threadModelSelectionsAtom);
   const saved = (threadId ? threads[threadId] : undefined) ?? last;
@@ -74,6 +74,7 @@ export function useModelSelection(threadId?: string) {
     loaded,
     provider,
     modelId,
+    modelLabel: modelId && provider ? labelOf(provider.id, modelId) : null,
     choices,
     loadingModels: loading,
     levels,

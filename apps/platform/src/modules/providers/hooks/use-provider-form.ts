@@ -71,14 +71,15 @@ export function useProviderForm(
     const request = ++latest.current;
     setModelsState((current) => ({ ...current, status: "loading", error: undefined }));
     try {
-      const listed = saved
-        ? await listSavedModels(provider)
-        : await listModels({ kind, apiKey, baseUrl });
+      const listed = await (saved
+        ? listSavedModels(provider)
+        : listModels({ kind, apiKey, baseUrl }));
       if (request !== latest.current) return;
-      const list = [...new Set([provider?.modelId ?? "", ...listed])].filter(Boolean).sort();
+      const list = [...new Set([provider?.modelId ?? "", ...listed.models])].filter(Boolean).sort();
       setModelsState({
         status: list.length ? "ready" : "error",
         models: list,
+        labels: listed.labels,
         error: list.length ? undefined : "No models found",
       });
       setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));

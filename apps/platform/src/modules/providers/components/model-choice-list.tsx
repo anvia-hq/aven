@@ -39,13 +39,13 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
               .map((choice) => (
                 <CommandItem
                   key={choice.modelId}
-                  value={`${choice.modelId} ${item.name} ${item.id}`}
+                  value={`${choice.label} ${choice.modelId} ${item.name} ${item.id}`}
                   data-checked={
                     item.id === selected?.providerId && choice.modelId === selected.modelId
                   }
                   onSelect={() => onSelect(choice)}
                 >
-                  <span className="truncate">{choice.modelId}</span>
+                  <span className="truncate">{choice.label}</span>
                 </CommandItem>
               ))}
           </CommandGroup>

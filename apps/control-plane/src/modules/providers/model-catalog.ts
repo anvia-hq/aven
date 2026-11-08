@@ -6,6 +6,7 @@ type Entry = {
   efforts: string[];
   contextWindow: number | null;
   images: boolean | null;
+  label: string | null;
 };
 
 const CATALOG_KEYS: Partial<Record<Provider, string>> = {
@@ -22,6 +23,7 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
 
 type CatalogModel = {
+  name?: string;
   tool_call?: boolean;
   modalities?: { input?: string[]; output?: string[] };
   status?: string;
@@ -112,6 +114,8 @@ export function createModelCatalog(
                   efforts: effortsOf(info),
                   contextWindow: contextWindowOf(info),
                   images: imagesOf(info),
+                  label:
+                    typeof info.name === "string" && info.name.trim() ? info.name.trim() : null,
                 },
               ];
             }),
@@ -169,6 +173,10 @@ export function createModelCatalog(
       const own = (await lookup(kind))?.get(catalogId(kind, id))?.contextWindow ?? null;
       if (own !== null || kind !== "azure") return own;
       return commonWindow(windows.get(id.toLowerCase()));
+    },
+    async label(kind: Provider, id: string) {
+      if (kind === "openai-compatible") return null;
+      return (await lookup(kind))?.get(catalogId(kind, id))?.label ?? null;
     },
     async seesImages(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
