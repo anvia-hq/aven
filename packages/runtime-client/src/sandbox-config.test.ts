@@ -12,6 +12,7 @@ describe("sandboxConfigFromEnv", () => {
       memoryMb: undefined,
       cpus: undefined,
       pidsLimit: undefined,
+      archivedKeepDays: undefined,
     });
   });
 
@@ -24,6 +25,7 @@ describe("sandboxConfigFromEnv", () => {
       AVEN_SANDBOX_MEMORY_MB: "4096",
       AVEN_SANDBOX_CPUS: "2",
       AVEN_SANDBOX_PIDS_LIMIT: "512",
+      AVEN_ARCHIVED_KEEP_DAYS: "3",
     });
     expect(config).toEqual({
       image: "img",
@@ -33,7 +35,14 @@ describe("sandboxConfigFromEnv", () => {
       memoryMb: 4096,
       cpus: 2,
       pidsLimit: 512,
+      archivedKeepDays: 3,
     });
+  });
+
+  test("takes 0 days to keep archived workspaces for ever, and refuses a bad number", () => {
+    expect(sandboxConfigFromEnv({ AVEN_ARCHIVED_KEEP_DAYS: "0" }).archivedKeepDays).toBe(0);
+    expect(() => sandboxConfigFromEnv({ AVEN_ARCHIVED_KEEP_DAYS: "-1" })).toThrow();
+    expect(() => sandboxConfigFromEnv({ AVEN_ARCHIVED_KEEP_DAYS: "soon" })).toThrow();
   });
 
   test("refuses a limit that is not a positive number", () => {

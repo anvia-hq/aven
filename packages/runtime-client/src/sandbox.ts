@@ -11,6 +11,7 @@ import { SKILLS_DIR } from "@aven/agents/skills";
 import { ArtifactStore } from "./artifacts";
 import { homeRepairArgs } from "./container-home";
 import { RESUME_SCRIPT, containerBaseArgs, hostUser, scriptState } from "./environment-setup";
+import { ArchivedCleanup } from "./archived-cleanup";
 import { Environments } from "./environments";
 import { git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
@@ -51,6 +52,10 @@ export const runnerLabel = (home?: string) =>
 type Docker = DockerRun;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_ARCHIVED_KEEP_DAYS = 7;
+const FIRST_SWEEP_MS = 60_000;
+const SWEEP_MS = 60 * 60 * 1000;
 const CONNECT_POLL_MS = 50;
 const RESUME_TIMEOUT_MS = 10_000;
 const SIGN_IN_TIMEOUT_MS = 30_000;
@@ -106,6 +111,8 @@ export class Sandboxes implements ThreadWorkspaces {
   #containers: { runner: string; memoryMb: number; cpus: number; pidsLimit: number };
   #host: string;
   #environments: Environments;
+  #archived: ArchivedCleanup;
+  #sweeper: Timer | undefined;
   #hub: RemoteSandboxHub;
   #port: number;
   #tokens: Map<string, string>;
@@ -144,6 +151,13 @@ export class Sandboxes implements ThreadWorkspaces {
       git: commands.git,
     });
     this.snapshots = this.#environments.snapshots;
+    this.#archived = new ArchivedCleanup({
+      home: runtimeHome(config.home),
+      keepMs: (config.archivedKeepDays ?? DEFAULT_ARCHIVED_KEEP_DAYS) * DAY_MS,
+      docker: commands.docker,
+      inUse: (threadId) =>
+        this.#running.has(threadId) || this.#starting.has(threadId) || this.#roots.has(threadId),
+    });
     this.#hub = hub;
     this.#port = port;
     this.#tokens = tokens;
@@ -164,7 +178,22 @@ export class Sandboxes implements ThreadWorkspaces {
     const { port } = await hub.listen({ host: "0.0.0.0", port: 0, path: "/daemon" });
     const sandboxes = new Sandboxes(config, commands, hub, port, tokens);
     await sandboxes.#removeStale();
+    sandboxes.#startSweeping();
     return sandboxes;
+  }
+
+  #startSweeping() {
+    const sweep = () =>
+      void this.#archived.sweep().catch((error: unknown) => {
+        console.warn("Could not clean up archived threads:", error);
+      });
+    setTimeout(sweep, FIRST_SWEEP_MS).unref();
+    this.#sweeper = setInterval(sweep, SWEEP_MS);
+    this.#sweeper.unref();
+  }
+
+  async putAway(threadId: string) {
+    await this.#archived.mark(threadId);
   }
 
   async acquire(
@@ -172,6 +201,7 @@ export class Sandboxes implements ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
     { lazy = false }: AcquireOptions = {},
   ): Promise<ThreadSandbox> {
+    await this.#archived.clear(thread.id);
     let preparing: Promise<void> | undefined;
     const prepare = async () => {
       const root = await this.#workspace(thread, repo);
@@ -250,6 +280,7 @@ export class Sandboxes implements ThreadWorkspaces {
   }
 
   async dispose() {
+    clearInterval(this.#sweeper);
     const threads = new Set([...this.#running, ...this.#starting.keys()]);
     const released = [...threads].map((id) =>
       this.release(id).catch((error: unknown) => {

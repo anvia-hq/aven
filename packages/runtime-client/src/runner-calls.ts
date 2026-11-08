@@ -106,7 +106,10 @@ export function createRunnerCalls({
       return processesOf(method, params);
     if (method === "sandbox.release") {
       const { threadId } = sandboxReleaseParams(params);
-      return idle.releaseNow(threadId).then((released) => ({ released }));
+      return idle.releaseNow(threadId).then(async (released) => {
+        await sandbox.putAway?.(threadId);
+        return { released };
+      });
     }
     return viewers.call(method, params);
   };
