@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { expect, type Page } from "@playwright/test";
 
@@ -38,13 +41,23 @@ export async function importRepository(page: Page, name: string) {
   await expect(page.getByText("Repository imported")).toBeVisible();
 }
 
-const API_URL = "http://localhost:8100";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:8100";
+
+export function tempRuntimeHome() {
+  return mkdtempSync(join(tmpdir(), "aven-e2e-runner-"));
+}
 
 export async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) {
   const created = await page.request.post("/api/runtimes", { data: { name: "fake desktop" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
   const child = spawn("bun", ["e2e/fake-runner.ts"], {
-    env: { ...process.env, AVEN_URL: API_URL, AVEN_RUNTIME_TOKEN: token, ...env },
+    env: {
+      ...process.env,
+      AVEN_RUNTIME_HOME: tempRuntimeHome(),
+      AVEN_URL: API_URL,
+      AVEN_RUNTIME_TOKEN: token,
+      ...env,
+    },
   });
   const events: { type: string; [key: string]: unknown }[] = [];
   child.stdout.on("data", (chunk: Buffer) => {
