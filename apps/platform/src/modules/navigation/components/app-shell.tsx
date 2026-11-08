@@ -63,7 +63,7 @@ export function AppShell({ user, sidebar }: Props) {
             tooltip="Aven · threads"
             active={pathname.startsWith("/threads") || pathname.startsWith("/projects")}
           >
-            <AvenMark className="w-5 text-primary" />
+            <AvenMark className="w-5 text-brand" />
           </RailLink>
           <span aria-hidden="true" className="my-2.5 h-px w-4.5 bg-input" />
           <div className="flex flex-col items-center gap-1.5">
