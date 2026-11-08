@@ -1,43 +1,53 @@
 import { WIRE_VERSION } from "../packages/protocol/src/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
 import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
+import { readFakeRunnerConfig } from "./fake-runner-config";
 import type { ControlPlaneToRuntime } from "../packages/protocol/src/types";
+import type { FakeRunnerRun } from "./types";
 
 const base = process.env.AVEN_URL!;
 const token = process.env.AVEN_RUNTIME_TOKEN!;
-let sandboxRunning = process.env.NO_SANDBOX !== "1";
+const config = readFakeRunnerConfig(process.env);
 
-const QUESTIONS = [
-  {
-    id: "color",
-    text: "Which color should it be?",
-    choices: [
-      { label: "Red", value: "red" },
-      { label: "Blue", value: "blue" },
-    ],
-    allowCustom: true,
-  },
-];
-const SECRET = process.env.FAKE_SECRET === "1";
-const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
-const SUBAGENTS = process.env.FAKE_SUBAGENTS === "1";
-const STREAM_LINES = Number(process.env.FAKE_STREAM_LINES ?? 0);
-const STREAM_MS = Number(process.env.FAKE_STREAM_MS ?? 500);
-const streamed = new Map<string, number>();
-const STREAM_WORDS = Number(process.env.FAKE_STREAM_WORDS ?? 0);
-const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
-const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";
-if (process.env.FAKE_QUESTION === "2") {
-  QUESTIONS.unshift({
-    id: "size",
-    text: "How big is it?",
-    choices: [
-      { label: "Small", value: "small" },
-      { label: "Large", value: "large" },
-    ],
-    allowCustom: false,
-  });
+type Asked = {
+  id: string;
+  text: string;
+  choices?: { label: string; value: string }[];
+  allowCustom?: boolean;
+};
+
+const COLOR_QUESTION: Asked = {
+  id: "color",
+  text: "Which color should it be?",
+  choices: [
+    { label: "Red", value: "red" },
+    { label: "Blue", value: "blue" },
+  ],
+  allowCustom: true,
+};
+const SIZE_QUESTION: Asked = {
+  id: "size",
+  text: "How big is it?",
+  choices: [
+    { label: "Small", value: "small" },
+    { label: "Large", value: "large" },
+  ],
+  allowCustom: false,
+};
+const SECRET_QUESTION: Asked = { id: "STRIPE_API_KEY", text: "What is the Stripe test key?" };
+
+const askedOf = (count: 1 | 2) =>
+  count === 2 ? [SIZE_QUESTION, COLOR_QUESTION] : [COLOR_QUESTION];
+
+function askedBy(run: FakeRunnerRun): { name: string; questions: Asked[] } | null {
+  if (run.kind === "secret") return { name: "request_secret", questions: [SECRET_QUESTION] };
+  if (run.kind === "questions") return { name: "ask_user", questions: askedOf(run.count) };
+  return null;
 }
+
+const asking = askedBy(config.run);
+const stream = config.run.kind === "stream" ? config.run : null;
+const plain = config.run.kind === "plain" ? config.run : null;
 
 const event = (value: object) => console.log(`EVENT ${JSON.stringify(value)}`);
 const text = (value: string) => new TextEncoder().encode(value);
@@ -52,6 +62,7 @@ const terminals = new Map<string, { line: string }>();
 const send = (message: object) => ws.send(JSON.stringify(message));
 
 const seqs = new Map<string, number>();
+const streamed = new Map<string, number>();
 const ended = new Set<string>();
 const numbered = (runId: string) => {
   const seq = (seqs.get(runId) ?? 0) + 1;
@@ -59,16 +70,32 @@ const numbered = (runId: string) => {
   return seq;
 };
 
+type Lease = { holder: string; expiresAt: string };
+
+type Sandbox = {
+  running: boolean;
+  lease: Lease | null;
+};
+
+const sandboxes = new Map<string, Sandbox>();
+
+function sandboxFor(threadId: string): Sandbox {
+  const known = sandboxes.get(threadId);
+  if (known) return known;
+  const made: Sandbox = { running: config.sandboxStartsRunning, lease: null };
+  sandboxes.set(threadId, made);
+  return made;
+}
+
 ws.onopen = () => {
   send({
     type: "hello",
     version: WIRE_VERSION,
     runs: [],
-    build: process.env.FAKE_BUILD,
-    canUpdate: process.env.FAKE_CAN_UPDATE ? true : undefined,
+    build: config.self.build,
+    canUpdate: config.self.canUpdate ? true : undefined,
   });
-  if (process.env.FAKE_STATS)
-    send({ type: "host.stats", stats: JSON.parse(process.env.FAKE_STATS) });
+  if (config.self.stats) send({ type: "host.stats", stats: JSON.parse(config.self.stats) });
 };
 ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
@@ -92,8 +119,8 @@ ws.onmessage = ({ data }) => {
   }
   const message = JSON.parse(String(data)) as ControlPlaneToRuntime;
   if (message.type === "desktop.open") {
-    const { viewerId } = message;
-    if (!sandboxRunning) {
+    const { viewerId, threadId } = message;
+    if (!sandboxFor(threadId).running) {
       send({ type: "desktop.closed", viewerId, reason: "The sandbox is not running" });
       return;
     }
@@ -105,8 +132,8 @@ ws.onmessage = ({ data }) => {
   } else if (message.type === "desktop.close") {
     viewers.delete(message.viewerId);
   } else if (message.type === "terminal.open") {
-    const { viewerId, cols, rows } = message;
-    if (!sandboxRunning) {
+    const { viewerId, threadId, cols, rows } = message;
+    if (!sandboxFor(threadId).running) {
       send({ type: "terminal.closed", viewerId, reason: "The sandbox is not running" });
       return;
     }
@@ -131,7 +158,7 @@ ws.onmessage = ({ data }) => {
       outcome: "error",
       error: "Cancelled by user",
     });
-  } else if (message.type === "run.start" && SUBAGENTS) {
+  } else if (message.type === "run.start" && config.run.kind === "subagents") {
     const { runId } = message;
     const say = (event: unknown) =>
       send({ type: "run.event", runId, seq: numbered(runId), event } as never);
@@ -181,12 +208,12 @@ ws.onmessage = ({ data }) => {
     say({ type: "tool_end", id: "s1", status: "done", output: "1 finished, 1 failed" });
     say({ type: "text", delta: "Auth is in src/auth.ts; the test could not be written." });
     send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
-  } else if (message.type === "run.start" && STREAM_WORDS > 0) {
+  } else if (message.type === "run.start" && stream?.unit === "word") {
     const { runId } = message;
     const timer = setInterval(() => {
       const word = (streamed.get(runId) ?? 0) + 1;
       streamed.set(runId, word);
-      if (word > STREAM_WORDS) {
+      if (word > stream.count) {
         clearInterval(timer);
         send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
         return;
@@ -200,13 +227,13 @@ ws.onmessage = ({ data }) => {
         seq: numbered(runId),
         event: { type: "text", delta: `${gap}word${word}-streams` },
       });
-    }, STREAM_MS);
-  } else if (message.type === "run.start" && STREAM_LINES > 0) {
+    }, stream.everyMs);
+  } else if (message.type === "run.start" && stream?.unit === "line") {
     const { runId } = message;
     const timer = setInterval(() => {
       const line = (streamed.get(runId) ?? 0) + 1;
       streamed.set(runId, line);
-      if (line > STREAM_LINES) {
+      if (line > stream.count) {
         clearInterval(timer);
         send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
         return;
@@ -220,8 +247,8 @@ ws.onmessage = ({ data }) => {
           delta: `${line === 1 ? "Here is the plan, one step per line.\n\n" : ""}- Step ${line}: checking the next file and noting what it does.\n`,
         },
       });
-    }, STREAM_MS);
-  } else if (message.type === "run.start" && !ASKING) {
+    }, stream.everyMs);
+  } else if (message.type === "run.start" && plain) {
     event({
       type: "started",
       prompt: message.prompt,
@@ -232,9 +259,14 @@ ws.onmessage = ({ data }) => {
       const { runId } = message;
       if (ended.has(runId)) return;
       ended.add(runId);
-      if (process.env.FAKE_RUN_FAILS) {
-        const error = process.env.FAKE_RUN_FAILS;
-        send({ type: "run.end", runId, seq: numbered(runId), outcome: "error", error });
+      if (plain.failure) {
+        send({
+          type: "run.end",
+          runId,
+          seq: numbered(runId),
+          outcome: "error",
+          error: plain.failure,
+        });
         return;
       }
       send({
@@ -245,17 +277,16 @@ ws.onmessage = ({ data }) => {
       });
       send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
     };
-    if (process.env.FAKE_RUN_ENDS) finish();
-    else if (process.env.FAKE_RUN_ENDS_AFTER)
-      setTimeout(finish, Number(process.env.FAKE_RUN_ENDS_AFTER));
-  } else if (message.type === "run.start" && ASKING) {
+    if (plain.ending.kind === "at-once") finish();
+    else if (plain.ending.kind === "after") setTimeout(finish, plain.ending.ms);
+  } else if (message.type === "run.start" && asking) {
     const { runId } = message;
     const ask = {
       id: "q1",
-      name: ASKED_TOOL,
+      name: asking.name,
       target: "",
       status: "running",
-      questions: ASKED,
+      questions: asking.questions,
     };
     send({
       type: "run.event",
@@ -281,15 +312,15 @@ ws.onmessage = ({ data }) => {
         interaction: {
           type: "tool-question",
           id: "i1",
-          toolName: ASKED_TOOL,
+          toolName: asking.name,
           toolCallId: "q1",
           internalCallId: "c1",
-          questions: ASKED,
+          questions: asking.questions,
         },
         state: {},
       },
     });
-  } else if (message.type === "run.resume" && ASKING) {
+  } else if (message.type === "run.resume" && asking) {
     const { runId, response } = message;
     event({ type: "answered", response, env: message.env });
     const output = JSON.stringify({ answers: (response as { answers: unknown }).answers });
@@ -339,13 +370,12 @@ const WORKSPACE_FILES: Record<string, string> = {
   "README.md": "# Notes\n",
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
-const AVEN_FILES = (process.env.FAKE_AVEN_FILES ?? "").split(",");
-if (AVEN_FILES.includes("setup")) WORKSPACE_FILES[".aven/setup"] = "#!/bin/sh\nbun install\n";
-if (AVEN_FILES.includes("ship")) {
+if (config.avenFiles.includes("setup")) WORKSPACE_FILES[".aven/setup"] = "#!/bin/sh\nbun install\n";
+if (config.avenFiles.includes("ship")) {
   WORKSPACE_FILES[".aven/ship.md"] = "Commit, push, then open it with gh pr create --draft.\n";
 }
 
-if (AVEN_FILES.includes("actions")) {
+if (config.avenFiles.includes("actions")) {
   WORKSPACE_FILES[".aven/actions.yml"] = [
     "actions:",
     "  - name: Test",
@@ -366,28 +396,26 @@ type PretendProcess = {
   endedAt?: string;
 };
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-const PROCESSES: PretendProcess[] =
-  process.env.FAKE_PROCESSES === "1"
-    ? [
-        { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
-        {
-          id: "p2",
-          command: "bun test",
-          status: "exited",
-          exitCode: 1,
-          startedAt: ago(600_000),
-          endedAt: ago(540_000),
-        },
-      ]
-    : [];
+const PROCESSES: PretendProcess[] = config.backgroundProcesses
+  ? [
+      { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
+      {
+        id: "p2",
+        command: "bun test",
+        status: "exited",
+        exitCode: 1,
+        startedAt: ago(600_000),
+        endedAt: ago(540_000),
+      },
+    ]
+  : [];
 const PROCESS_LOGS: Record<string, string> = {
   p1: "ready on http://localhost:3000\n",
   p2: "1 fail\n",
 };
 
-let held: { holder: string; expiresAt: string } | null = null;
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
-  const params = call.params as { holder?: string; leaseMs?: number };
+  const params = call.params as { threadId?: string; holder?: string; leaseMs?: number };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
   if (call.method === "run.steer") {
     const { runId, steerId, prompt } = call.params as {
@@ -396,8 +424,8 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       prompt: string;
     };
     event({ type: "steer", prompt });
-    if (process.env.FAKE_STEER_REFUSES) {
-      return reply({ status: "refused", reason: process.env.FAKE_STEER_REFUSES });
+    if (config.steering.refuseReason) {
+      return reply({ status: "refused", reason: config.steering.refuseReason });
     }
     setTimeout(
       () =>
@@ -407,7 +435,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
           seq: numbered(runId),
           event: { type: "steer_applied", id: steerId },
         }),
-      Number(process.env.FAKE_STEER_APPLIES_AFTER ?? 400),
+      config.steering.appliesAfterMs,
     );
     return reply({ status: "queued" });
   }
@@ -463,30 +491,32 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
   }
   if (call.method === "runner.update") {
+    const { updateBusyReason } = config.self;
     return reply(
-      process.env.FAKE_UPDATE_BUSY
-        ? { status: "busy", reason: process.env.FAKE_UPDATE_BUSY }
-        : { status: "started" },
+      updateBusyReason ? { status: "busy", reason: updateBusyReason } : { status: "started" },
     );
   }
   if (call.method === "sandbox.release") {
     const { threadId } = call.params as { threadId: string };
     event({ type: "sandbox.release", threadId });
-    sandboxRunning = false;
+    const released = sandboxFor(threadId);
+    released.running = false;
+    released.lease = null;
     return reply({ released: true });
   }
-  if (call.method === "desktop.wake") sandboxRunning = true;
-  if (!sandboxRunning) return reply(null);
+  const sandbox = sandboxFor(params.threadId ?? "");
+  if (call.method === "desktop.wake") sandbox.running = true;
+  if (!sandbox.running) return reply(null);
   if (call.method === "desktop.takeover") {
-    held = {
+    sandbox.lease = {
       holder: params.holder!,
       expiresAt: new Date(Date.now() + params.leaseMs!).toISOString(),
     };
-    event({ type: "takeover", holder: held.holder });
-    return reply({ held: true, ...held });
+    event({ type: "takeover", holder: sandbox.lease.holder });
+    return reply({ held: true, ...sandbox.lease });
   }
   if (call.method === "desktop.release") {
-    held = null;
+    sandbox.lease = null;
     event({ type: "release", holder: params.holder });
     return reply({ held: false });
   }
@@ -494,7 +524,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     state: "running",
     width: WIDTH,
     height: HEIGHT,
-    control: held ? { held: true, ...held } : { held: false },
+    control: sandbox.lease ? { held: true, ...sandbox.lease } : { held: false },
   });
 }
 

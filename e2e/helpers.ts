@@ -5,6 +5,8 @@ import { join } from "node:path";
 
 import { expect, type Page } from "@playwright/test";
 
+import { fakeRunnerProcessEnv } from "./fake-runner-config";
+
 export async function registerUser(page: Page, prefix: string, name = "E2E User") {
   const email = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
   await page.goto("/register");
@@ -51,13 +53,15 @@ export async function threadOnFakeRunner(page: Page, env: Record<string, string>
   const created = await page.request.post("/api/runtimes", { data: { name: "fake desktop" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
   const child = spawn("bun", ["e2e/fake-runner.ts"], {
-    env: {
-      ...process.env,
-      AVEN_RUNTIME_HOME: tempRuntimeHome(),
-      AVEN_URL: API_URL,
-      AVEN_RUNTIME_TOKEN: token,
-      ...env,
-    },
+    env: fakeRunnerProcessEnv(
+      {
+        ...process.env,
+        AVEN_RUNTIME_HOME: tempRuntimeHome(),
+        AVEN_URL: API_URL,
+        AVEN_RUNTIME_TOKEN: token,
+      },
+      env,
+    ),
   });
   const events: { type: string; [key: string]: unknown }[] = [];
   child.stdout.on("data", (chunk: Buffer) => {
