@@ -294,12 +294,11 @@ test.describe("bots", () => {
       ]);
     await expect(send).toBeEnabled();
     await send.click();
-    await expect(page.getByText("plan.md", { exact: true })).toBeVisible();
-    await expect(
-      page
-        .locator('[data-slot="bubble-content"], [data-role="user"]')
-        .filter({ hasText: "/uploads/plan.md" }),
-    ).toBeVisible();
+    // The message is the file alone: it stays in the chat as one attachment, the bot answers it,
+    // and the composer is empty again. (The /uploads path is a note for the model, not shown.)
+    await expect(page.getByText("Hey there!")).toBeVisible();
+    await expect(page.getByText("plan.md", { exact: true })).toHaveCount(1);
+    await expect(send).toBeDisabled();
   });
 
   test("the main bot makes a new bot when asked, and it has a chat of its own", async ({
