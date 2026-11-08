@@ -2,25 +2,55 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { checkSandboxReach } from "@aven/runtime-client/host-reach";
-
+import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import { capture, dockerProblem, exec } from "../compose";
 import { parseEnv } from "../env-file";
 import { describeExposure, describeSignups } from "../exposure";
 import { waitForHealthy } from "../health";
-import { runnerEnvFile, serverDir } from "../home";
+import { avenHome, runnerEnvFile, serverDir } from "../home";
+import { pendingUpdateFile, readPendingUpdate } from "../pending-update";
 import { serviceManager } from "../service-manager";
+import { serviceUnitState } from "../service-unit";
 import { API_PORT } from "../server-plan";
 import { version } from "../version";
 
 type Check = { name: string; ok: boolean; detail: string; warn?: boolean };
 
+const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
+
 export async function doctor() {
+  const checks = await diagnose();
+  for (const { name, ok, detail, warn } of checks) {
+    let label = "FAIL";
+    if (ok) label = "ok  ";
+    else if (warn) label = "warn";
+    console.log(`${label} ${name.padEnd(14)} ${detail}`);
+  }
+  if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
+}
+
+export async function diagnose(
+  options: {
+    home?: string;
+    binary?: string;
+    execPath?: string;
+    platform?: NodeJS.Platform;
+  } = {},
+): Promise<Check[]> {
+  const home = options.home ?? avenHome();
+  const binary = options.binary ?? version;
+  const platform = options.platform ?? process.platform;
+  const execPath = options.execPath ?? process.execPath;
+
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
   const warnUnless = (name: string, ok: boolean, detail: string) =>
     checks.push({ name, ok, detail, warn: true });
 
-  add("aven", true, version);
+  add("aven", true, `${binary} at ${execPath}`);
+  const pending = await readPendingUpdate(pendingUpdateFile(home));
+  if (pending) warnUnless("update", false, pendingUpdateDetail(pending));
+
   const docker = await dockerProblem();
   add("docker", docker === undefined, docker ?? (await capture(["docker", "--version"])) ?? "");
   const git = await capture(["git", "--version"]);
@@ -30,8 +60,10 @@ export async function doctor() {
     git ?? "Not installed. A runner clones each project's repository with it.",
   );
 
-  const serverEnv = await readEnv(join(serverDir(), ".env"));
+  const dir = serverDir(home);
+  const serverEnv = await readEnv(join(dir, ".env"));
   if (serverEnv) {
+    for (const check of await releaseChecks(dir, serverEnv, binary)) checks.push(check);
     const url = `http://localhost:${serverEnv.AVEN_API_PORT || API_PORT}/health`;
     const answers = await waitForHealthy(url, { timeoutMs: 0 });
     add(
@@ -50,13 +82,12 @@ export async function doctor() {
     }
   }
 
-  const runnerEnv = await readEnv(runnerEnvFile());
+  const runnerEnv = await readEnv(runnerEnvFile(home));
   if (runnerEnv) {
-    const status = await serviceManager({
-      launchdLabel: "dev.anvia.aven-runner",
-      systemdUnit: "aven-runner",
-    }).status();
+    const status = await serviceManager(names).status();
     add("runner", status.startsWith("running"), `${status}, connects to ${runnerEnv.AVEN_URL}`);
+    const unit = await runnerUnitCheck({ platform, execPath, home });
+    if (unit) checks.push(unit);
     const image = runnerEnv.AVEN_SANDBOX_IMAGE ?? "";
     const has = (await exec(["docker", "image", "inspect", image])).code === 0;
     add(
@@ -75,14 +106,67 @@ export async function doctor() {
   }
   if (!serverEnv && !runnerEnv)
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");
+  return checks;
+}
 
-  for (const { name, ok, detail, warn } of checks) {
-    let label = "FAIL";
-    if (ok) label = "ok  ";
-    else if (warn) label = "warn";
-    console.log(`${label} ${name.padEnd(14)} ${detail}`);
+async function releaseChecks(
+  dir: string,
+  serverEnv: Record<string, string>,
+  binary: string,
+): Promise<Check[]> {
+  const checks: Check[] = [];
+  const release = serverEnv.AVEN_VERSION;
+  if (release !== undefined && binary !== "dev") {
+    const ok = release === binary;
+    checks.push({
+      name: "server release",
+      ok,
+      warn: !ok,
+      detail: ok
+        ? `${release}, as this aven`
+        : `The server runs ${release} but this aven is ${binary}. Run: aven update`,
+    });
   }
-  if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
+  const installed = await readFile(join(dir, "docker-compose.yml"), "utf8").catch(() => undefined);
+  if (installed !== undefined) {
+    const ok = installed === compose;
+    checks.push({
+      name: "compose file",
+      ok,
+      warn: !ok,
+      detail: ok
+        ? "is this aven's own"
+        : `The compose file in ${dir} is not this aven's. Run: aven update`,
+    });
+  }
+  return checks;
+}
+
+async function runnerUnitCheck(options: {
+  platform: NodeJS.Platform;
+  execPath: string;
+  home: string;
+}): Promise<Check | undefined> {
+  const state = await serviceUnitState({
+    platform: options.platform,
+    names,
+    execPath: options.execPath,
+    home: options.home,
+  });
+  if (state === undefined) return undefined;
+  if (state.problem === undefined)
+    return { name: "runner unit", ok: true, detail: `${state.program} (${state.file})` };
+  return {
+    name: "runner unit",
+    ok: false,
+    warn: true,
+    detail: `${state.problem}. Run: aven runner install`,
+  };
+}
+
+function pendingUpdateDetail(pending: { to: string; at: string }) {
+  const began = pending.at === "" ? "" : ` that began at ${pending.at}`;
+  return `An update to aven ${pending.to}${began} did not finish, so the server and the runner are still behind. Run: aven update`;
 }
 
 async function registrationIsOpen(env: Record<string, string>) {
