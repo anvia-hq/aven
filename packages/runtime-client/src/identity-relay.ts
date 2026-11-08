@@ -1,6 +1,6 @@
-const TOKEN_PATH = "/workload-identity/token";
+import type { IdentityRelay } from "./types";
 
-export type IdentityRelay = { port: number; stop: () => void };
+const TOKEN_PATH = "/workload-identity/token";
 
 export function startIdentityRelay(
   controlPlane: string,

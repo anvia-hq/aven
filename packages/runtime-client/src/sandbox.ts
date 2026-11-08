@@ -16,7 +16,7 @@ import { Leftovers } from "./leftovers";
 import { Environments } from "./environments";
 import { git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
-import { startIdentityRelay, type IdentityRelay } from "./identity-relay";
+import { startIdentityRelay } from "./identity-relay";
 import { identitySignInCommand, isLoopback, originOf } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
