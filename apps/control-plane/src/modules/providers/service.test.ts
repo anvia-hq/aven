@@ -2,6 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
+const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
+process.env.PROVIDER_ALLOWED_HOSTS = "my-resource.openai.azure.com";
+afterAll(() => {
+  if (allowedBefore === undefined) delete process.env.PROVIDER_ALLOWED_HOSTS;
+  else process.env.PROVIDER_ALLOWED_HOSTS = allowedBefore;
+});
+
 run("providersService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");

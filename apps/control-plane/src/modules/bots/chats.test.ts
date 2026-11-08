@@ -27,7 +27,11 @@ run("createBotChats (postgres)", async () => {
   const alice = `u-alice-${suffix}`;
   const bob = `u-bob-${suffix}`;
 
+  let previousCatalogUrl: string | undefined;
+
   beforeAll(async () => {
+    previousCatalogUrl = process.env.MODEL_CATALOG_URL;
+    process.env.MODEL_CATALOG_URL = "";
     await db.insert(users).values([
       { id: alice, name: "Alice", email: `${alice}@aven.test` },
       { id: bob, name: "Bob", email: `${bob}@aven.test` },
@@ -35,6 +39,8 @@ run("createBotChats (postgres)", async () => {
   });
 
   afterAll(async () => {
+    if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -503,7 +509,6 @@ run("createBotChats (postgres)", async () => {
   });
 
   test("the bot runs on the model it was given, else the person's default", async () => {
-    process.env.MODEL_CATALOG_URL = "";
     const [mine] = await botsService.list(alice);
     const [provider] = await db
       .insert(providers)
@@ -547,7 +552,6 @@ run("createBotChats (postgres)", async () => {
   });
 
   test("the bot's effort and its compaction size reach the agent", async () => {
-    process.env.MODEL_CATALOG_URL = "";
     const [mine] = await botsService.list(alice);
     const [openai] = await db
       .insert(providers)

@@ -154,7 +154,9 @@ export class RemoteRuntime implements Runtime {
       identity,
       memory,
       cockpit,
-    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit">,
+      github,
+      env,
+    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env">,
     message: (
       runId: string,
       runModel: RunModel,
@@ -168,6 +170,7 @@ export class RemoteRuntime implements Runtime {
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
 
+    const credential = identity && { credential: this.identities.issue(runId, identity) };
     connection.startRun(
       runId,
       thread,
@@ -176,8 +179,13 @@ export class RemoteRuntime implements Runtime {
       mcp?.map((server) => server.id),
       memory?.caller,
       cockpit,
+      {
+        github,
+        env: env?.length ? env : undefined,
+        identity: credential,
+        mcp: mcp?.length ? mcp : undefined,
+      },
     );
-    const credential = identity && { credential: this.identities.issue(runId, identity) };
     this.#post(connection, runId, message(runId, runModel, credential));
 
     return {

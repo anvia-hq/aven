@@ -97,7 +97,12 @@ export async function threadDiff(
   if (!now) return null;
   const from = await diffStart(root, scope, host, run);
   if (!from) return { patch: "", truncated: false };
-  return patchBetween(root, from, now, host);
+  const diff = await patchBetween(root, from, now, host);
+  if (scope === "unshipped" && diff.patch !== "") {
+    const whole = await patchBetween(root, await branchPoint(root, host), now, host);
+    if (whole.patch === "") return whole;
+  }
+  return diff;
 }
 
 export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
