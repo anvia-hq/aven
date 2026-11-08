@@ -106,25 +106,30 @@ export class RunManager {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
 
-    const handle = this.#runtime.start({
-      thread,
-      prompt,
-      compact,
-      attachments,
-      mentions,
-      skills,
-      mcp,
-      github,
-      env,
-      identity,
-      memory,
-      cockpit,
-      model: model ?? undefined,
-    });
-    const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
-    if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
-    if (mentions.length > 0) opening.mentions = mentions;
-    await this.#begin(channel, handle, opening);
+    try {
+      const handle = this.#runtime.start({
+        thread,
+        prompt,
+        compact,
+        attachments,
+        mentions,
+        skills,
+        mcp,
+        github,
+        env,
+        identity,
+        memory,
+        cockpit,
+        model: model ?? undefined,
+      });
+      const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
+      if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
+      if (mentions.length > 0) opening.mentions = mentions;
+      await this.#begin(channel, handle, opening);
+    } catch (error) {
+      this.#release(channel);
+      throw error;
+    }
   }
 
   async answer(
@@ -145,34 +150,39 @@ export class RunManager {
     const channel = this.#channel(thread);
     if (channel.run) throw new RunBusyError();
 
-    const saved = parseSaved(continuation);
-    const response = { type: "tool-question", answers } as const;
     try {
-      assertAgentInteractionResponse(saved.interaction, response);
-    } catch (error) {
-      throw new UnprocessableError(errorMessage(error));
-    }
+      const saved = parseSaved(continuation);
+      const response = { type: "tool-question", answers } as const;
+      try {
+        assertAgentInteractionResponse(saved.interaction, response);
+      } catch (error) {
+        throw new UnprocessableError(errorMessage(error));
+      }
 
-    await this.#store.load({ scope: this.#scope(thread) }).catch((error: unknown) => {
-      console.warn(`Could not load the history of thread ${thread.id}:`, error);
-      throw new UnavailableError("The thread's history could not be loaded; try again shortly");
-    });
-    const handle = this.#runtime.resume({
-      thread,
-      continuation: saved,
-      response,
-      skills,
-      mcp,
-      github,
-      env,
-      identity,
-      memory,
-      cockpit,
-      model: model ?? undefined,
-    });
-    await this.#begin(channel, handle, { type: "run_resume" }, () =>
-      this.#continuations.clear(thread.id),
-    );
+      await this.#store.load({ scope: this.#scope(thread) }).catch((error: unknown) => {
+        console.warn(`Could not load the history of thread ${thread.id}:`, error);
+        throw new UnavailableError("The thread's history could not be loaded; try again shortly");
+      });
+      const handle = this.#runtime.resume({
+        thread,
+        continuation: saved,
+        response,
+        skills,
+        mcp,
+        github,
+        env,
+        identity,
+        memory,
+        cockpit,
+        model: model ?? undefined,
+      });
+      await this.#begin(channel, handle, { type: "run_resume" }, () =>
+        this.#continuations.clear(thread.id),
+      );
+    } catch (error) {
+      this.#release(channel);
+      throw error;
+    }
   }
 
   async #begin(
@@ -227,8 +237,10 @@ export class RunManager {
 
   async steer(thread: RunThread, message: QueuedSteer): Promise<"queued" | "ended"> {
     const channel = this.#channels.get(thread.id);
-    const run = channel?.run;
-    if (!channel || !run) return "ended";
+    if (!channel) return "ended";
+    channel.thread = thread;
+    const run = channel.run;
+    if (!run) return "ended";
     if (run.steerIds.has(message.id)) throw new ConflictError("That message was sent already");
     run.steerIds.add(message.id);
     run.steers.set(message.id, message);
@@ -279,6 +291,7 @@ export class RunManager {
       }
     } finally {
       channel.subscribers.delete(listener);
+      this.#release(channel);
     }
   }
 
@@ -307,11 +320,19 @@ export class RunManager {
 
   #channel(thread: RunThread): Channel {
     const existing = this.#channels.get(thread.id);
-    if (existing) return existing;
+    if (existing) {
+      existing.thread = thread;
+      return existing;
+    }
 
     const channel: Channel = { thread, subscribers: new Set() };
     this.#channels.set(thread.id, channel);
     return channel;
+  }
+
+  #release(channel: Channel) {
+    if (channel.run || channel.subscribers.size > 0) return;
+    this.#channels.delete(channel.thread.id);
   }
 
   async #attach(channel: Channel, queue: RunEvent[]) {
@@ -430,6 +451,7 @@ export class RunManager {
     Promise.resolve(this.#onRunFinished(channel.thread, ending, finished)).catch((error) => {
       console.warn(`Could not update thread ${channel.thread.id} after its run:`, error);
     });
+    this.#release(channel);
   }
 }
 
