@@ -23,7 +23,10 @@ const theme = new MutationObserver(() => listeners.forEach((listener) => listene
 
 export function onThemeChange(listener: () => void) {
   if (listeners.size === 0) {
-    theme.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    theme.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme", "style"],
+    });
   }
   listeners.add(listener);
   return () => {
