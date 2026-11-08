@@ -66,8 +66,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       token,
       sandbox: workspaces,
       journalPath: journalPath(),
-      createAgent: ({ id, tools }) =>
-        createCodingAgent({ id, tools, webSearch: false, model, retries: false }),
+      createAgent: ({ id, tools }) => createCodingAgent({ id, tools, model, retries: false }),
     });
     clients.push(client);
     await client.ready;

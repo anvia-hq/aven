@@ -23,7 +23,7 @@ function scripted(steps: Record<string, AssistantContentPart[][]>) {
   const create: CreateSubagent = ({ id, tools }) => {
     made.push({ id, tools: tools.map((tool) => tool.name) });
     const model = scriptedModel(steps[id] ?? [[text(`no script for ${id}`)]]);
-    return createCodingAgent({ model, tools, webSearch: false, questions: false }).agent;
+    return createCodingAgent({ model, tools, questions: false }).agent;
   };
   return { create, made };
 }
@@ -103,7 +103,6 @@ describe("subagentRunner", () => {
       createCodingAgent({
         model: scriptedModel([]),
         tools,
-        webSearch: false,
         questions: false,
       }).agent;
     const told: RunEvent[] = [];
@@ -124,7 +123,6 @@ describe("subagentRunner", () => {
       createCodingAgent({
         model: scriptedModel([]),
         tools,
-        webSearch: false,
         questions: false,
       }).agent;
     const run = subagentRunner(parentTools, create, () => {});
@@ -163,7 +161,6 @@ describe("subagentRunner", () => {
         },
       ]),
       tools: [spawn],
-      webSearch: false,
       questions: false,
     }).agent;
 

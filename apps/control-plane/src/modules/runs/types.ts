@@ -13,6 +13,7 @@ import type {
   RunMemory,
   RunOutcome,
   RunSkill,
+  RunWebSearch,
   SteerResult,
 } from "@aven/protocol/types";
 
@@ -32,6 +33,7 @@ export type RunExtras = Pick<
   | "github"
   | "env"
   | "identity"
+  | "webSearch"
   | "compact"
   | "memory"
   | "cockpit"
@@ -50,6 +52,7 @@ export type StartRunInput = {
   github?: RunGithub;
   env?: RunEnvVar[];
   identity?: RunIdentity;
+  webSearch?: RunWebSearch;
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;
@@ -64,6 +67,7 @@ export type ResumeRunInput = {
   github?: RunGithub;
   env?: RunEnvVar[];
   identity?: RunIdentity;
+  webSearch?: RunWebSearch;
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;

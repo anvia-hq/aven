@@ -35,11 +35,11 @@ type TavilyResponse = {
 };
 
 type WebSearchOptions = {
-  apiKey?: string;
+  apiKey: string;
   fetch?: typeof fetch;
 };
 
-export function createWebSearchTool(options: WebSearchOptions = {}) {
+export function createWebSearchTool(options: WebSearchOptions) {
   const request = options.fetch ?? fetch;
 
   return createTool({
@@ -48,12 +48,12 @@ export function createWebSearchTool(options: WebSearchOptions = {}) {
       "Search the web for current information. Returns a short synthesized answer and the top results (title, url, content). Cite urls when you use them.",
     inputSchema: webSearchInput,
     async execute(args, context): Promise<WebSearchOutput> {
-      const apiKey = options.apiKey ?? process.env.TAVILY_API_KEY;
-      if (!apiKey) throw new Error("TAVILY_API_KEY is not set");
-
       const response = await request(TAVILY_SEARCH_URL, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${options.apiKey}`,
+        },
         body: JSON.stringify({
           query: args.query,
           topic: args.topic ?? "general",

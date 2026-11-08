@@ -523,6 +523,8 @@ export type RunEnvVar = { name: string; value: string; secret?: boolean };
 
 export type RunIdentityCredential = { credential: string };
 
+export type RunWebSearch = { apiKey: string };
+
 export type RunSecrets = {
   env?: RunEnvVar[];
   github?: RunGithub;
@@ -558,6 +560,7 @@ export type ControlPlaneToRuntime =
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
+      webSearch?: RunWebSearch;
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
@@ -573,6 +576,7 @@ export type ControlPlaneToRuntime =
       github?: RunGithub;
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
+      webSearch?: RunWebSearch;
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;

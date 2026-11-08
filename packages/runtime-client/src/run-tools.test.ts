@@ -18,7 +18,6 @@ describe("toolsForRun", () => {
       return createCodingAgent({
         model: scriptedModel([[text("done")]]),
         tools,
-        webSearch: false,
         questions: false,
       }).agent;
     };
@@ -59,7 +58,6 @@ describe("toolsForRun", () => {
       return createCodingAgent({
         model: scriptedModel([[text("done")]]),
         tools,
-        webSearch: false,
         questions: false,
       }).agent;
     };
