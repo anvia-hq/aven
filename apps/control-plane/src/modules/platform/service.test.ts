@@ -51,6 +51,19 @@ run("who owns the platform (real postgres)", () => {
     expect(await platformService.isOwner(first)).toBe(true);
     expect(await platformService.isOwner(second)).toBe(false);
   });
+
+  test("lists every account, in the order they were made, with who owns the platform", async () => {
+    process.env.PLATFORM_OWNER_EMAILS = listed.email;
+    const people = await platformService.listPeople();
+    const mine = people.filter((person) => [first.id, second.id, listed.id].includes(person.id));
+    expect(mine.map((person) => [person.id, person.owner])).toEqual([
+      [first.id, true],
+      [second.id, false],
+      [listed.id, true],
+    ]);
+    expect(mine.every((person) => person.workspaces.length === 0)).toBe(true);
+    expect(mine.every((person) => person.lastActiveAt === null)).toBe(true);
+  });
 });
 
 describe("whether registration starts open", () => {

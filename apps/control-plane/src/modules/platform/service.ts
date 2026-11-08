@@ -1,8 +1,11 @@
 import { db } from "@aven/db/client";
 import { invitations } from "@aven/db/schema/invitations";
+import { members } from "@aven/db/schema/members";
+import { organizations } from "@aven/db/schema/organizations";
 import { platformSettings } from "@aven/db/schema/platform-settings";
+import { sessions } from "@aven/db/schema/sessions";
 import { users } from "@aven/db/schema/users";
-import { and, asc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, max, sql } from "drizzle-orm";
 
 const REGISTRATION_KEY = "registration_enabled";
 
@@ -31,6 +34,43 @@ export function registrationDefault(env: Record<string, string | undefined> = pr
 export const platformService = {
   async isOwner(person: { id: string; email: string }) {
     return isListedOwner(person.email) || (await firstUserId()) === person.id;
+  },
+
+  async listPeople() {
+    const everyone = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        image: users.image,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(asc(users.createdAt), asc(users.id));
+    const memberships = await db
+      .select({
+        userId: members.userId,
+        id: organizations.id,
+        name: organizations.name,
+        role: members.role,
+      })
+      .from(members)
+      .innerJoin(organizations, eq(organizations.id, members.organizationId))
+      .orderBy(asc(organizations.name));
+    const seen = await db
+      .select({ userId: sessions.userId, at: max(sessions.updatedAt) })
+      .from(sessions)
+      .groupBy(sessions.userId);
+    const lastSeen = new Map(seen.map((row) => [row.userId, row.at]));
+    const first = everyone[0]?.id;
+    return everyone.map((person) => ({
+      ...person,
+      owner: person.id === first || isListedOwner(person.email),
+      lastActiveAt: lastSeen.get(person.id) ?? null,
+      workspaces: memberships
+        .filter((membership) => membership.userId === person.id)
+        .map(({ id, name, role }) => ({ id, name, role })),
+    }));
   },
 
   async isRegistrationEnabled() {
