@@ -153,6 +153,10 @@ export class BotRunner {
       .map((channel) => channel.botId);
   }
 
+  isWatching(userId: string) {
+    return this.#watchers.has(userId);
+  }
+
   working(userId: string, signal: AbortSignal): AsyncGenerator<string[] | null> {
     return this.#follow<string[]>(
       (listener) => {
@@ -160,7 +164,10 @@ export class BotRunner {
         const watchers = this.#watchers.get(userId) ?? new Set();
         watchers.add(watcher);
         this.#watchers.set(userId, watchers);
-        return () => void watchers.delete(watcher);
+        return () => {
+          watchers.delete(watcher);
+          if (watchers.size === 0) this.#watchers.delete(userId);
+        };
       },
       this.workingOf(userId),
       signal,
@@ -174,14 +181,15 @@ export class BotRunner {
   ): AsyncGenerator<T | null> {
     const queue: T[] = [];
     let wake: (() => void) | undefined;
-    const detach = attach((item) => {
-      queue.push(item);
-      wake?.();
-    });
-    const aborted = new Promise<undefined>((resolve) => {
-      signal.addEventListener("abort", () => resolve(undefined), { once: true });
-    });
+    let detach: (() => void) | undefined;
     try {
+      detach = attach((item) => {
+        queue.push(item);
+        wake?.();
+      });
+      const aborted = new Promise<undefined>((resolve) => {
+        signal.addEventListener("abort", () => resolve(undefined), { once: true });
+      });
       yield first;
       while (!signal.aborted) {
         const item = queue.shift();
@@ -198,7 +206,7 @@ export class BotRunner {
         if (woke === null && queue.length === 0 && !signal.aborted) yield null;
       }
     } finally {
-      detach();
+      detach?.();
     }
   }
 

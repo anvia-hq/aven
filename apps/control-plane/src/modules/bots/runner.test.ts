@@ -697,6 +697,32 @@ describe("BotRunner", () => {
       await watching.stop();
     });
 
+    test("a person is forgotten once the last of their watchers goes away", async () => {
+      const runner = runnerWith({ store: fakeStore() });
+      expect(runner.isWatching(USER)).toBe(false);
+
+      const first = await follow(runner, USER);
+      const second = await follow(runner, USER);
+      expect(runner.isWatching(USER)).toBe(true);
+
+      await first.stop();
+      expect(runner.isWatching(USER)).toBe(true);
+
+      await second.stop();
+      expect(runner.isWatching(USER)).toBe(false);
+    });
+
+    test("a watcher that leaves the stream is forgotten too", async () => {
+      const runner = runnerWith({ store: fakeStore() });
+      const controller = new AbortController();
+      for await (const told of runner.working(USER, controller.signal)) {
+        expect(told).toEqual([]);
+        expect(runner.isWatching(USER)).toBe(true);
+        break;
+      }
+      expect(runner.isWatching(USER)).toBe(false);
+    });
+
     test("a person is told of their own bots only", async () => {
       const gate = Promise.withResolvers<void>();
       const runner = runnerWith({
