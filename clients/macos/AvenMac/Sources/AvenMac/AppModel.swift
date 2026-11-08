@@ -30,14 +30,14 @@ final class AppModel {
         let url = try APIClient.normalize(server: server)
         let candidate = APIClient(baseURL: url)
         let token = try await candidate.signIn(email: email, password: password, name: name)
-        tokens.save(token, for: url.absoluteString)
-        UserDefaults.standard.set(server, forKey: Self.serverKey)
-        self.server = server
+        try tokens.save(token, for: url.absoluteString)
+        UserDefaults.standard.set(url.absoluteString, forKey: Self.serverKey)
+        self.server = url.absoluteString
         client = candidate
     }
 
     func signOut() {
-        if let url = client?.baseURL { tokens.remove(for: url.absoluteString) }
+        tokens.removeAll()
         client = nil
         projects = []
         threads = []
