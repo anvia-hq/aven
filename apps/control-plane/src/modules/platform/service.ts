@@ -1,12 +1,15 @@
 import { db } from "@aven/db/client";
 import { threads } from "@aven/db/schema/threads";
 import { invitations } from "@aven/db/schema/invitations";
+import { githubInstallations } from "@aven/db/schema/github-installations";
 import { members } from "@aven/db/schema/members";
 import { organizations } from "@aven/db/schema/organizations";
+import { projects } from "@aven/db/schema/projects";
 import { platformSettings } from "@aven/db/schema/platform-settings";
+import { runtimes } from "@aven/db/schema/runtimes";
 import { sessions } from "@aven/db/schema/sessions";
 import { users } from "@aven/db/schema/users";
-import { and, asc, eq, gt, inArray, max, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, max, ne, notInArray, sql } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
 import type { PutAwayThread } from "../threads/types";
@@ -108,6 +111,8 @@ export const platformService = {
       }
     }
 
+    await this.refuseWhatOthersUse(person, aloneIn);
+
     const running = await db
       .select({ id: threads.id, runtimeId: threads.runtimeId })
       .from(threads)
@@ -119,6 +124,60 @@ export const platformService = {
       await tx.delete(users).where(eq(users.id, personId));
     });
     for (const thread of running) putAway(thread);
+  },
+
+  async refuseWhatOthersUse(person: { id: string; name: string }, aloneIn: string[]) {
+    const [sharedProject] = await db
+      .select({ name: projects.name })
+      .from(projects)
+      .innerJoin(threads, eq(threads.projectId, projects.id))
+      .where(
+        and(
+          eq(projects.createdBy, person.id),
+          ne(threads.createdBy, person.id),
+          aloneIn.length > 0 ? notInArray(projects.organizationId, aloneIn) : undefined,
+        ),
+      )
+      .limit(1);
+    if (sharedProject) {
+      throw new ConflictError(
+        `${person.name} imported the project ${sharedProject.name}, and other people have threads in it. Archive those threads or have the project imported by someone else first`,
+      );
+    }
+
+    const owned = db
+      .select({ id: runtimes.id })
+      .from(runtimes)
+      .where(eq(runtimes.ownerId, person.id));
+    const [usedProject] = await db
+      .select({ runner: runtimes.name })
+      .from(projects)
+      .innerJoin(runtimes, eq(runtimes.id, projects.runtimeId))
+      .where(and(inArray(projects.runtimeId, owned), ne(projects.createdBy, person.id)))
+      .limit(1);
+    const [usedThread] = await db
+      .select({ runner: runtimes.name })
+      .from(threads)
+      .innerJoin(runtimes, eq(runtimes.id, threads.runtimeId))
+      .where(and(inArray(threads.runtimeId, owned), ne(threads.createdBy, person.id)))
+      .limit(1);
+    const [usedInstallation] = await db
+      .select({ account: githubInstallations.accountLogin })
+      .from(projects)
+      .innerJoin(githubInstallations, eq(githubInstallations.id, projects.githubInstallationId))
+      .where(and(eq(githubInstallations.connectedBy, person.id), ne(projects.createdBy, person.id)))
+      .limit(1);
+    if (usedInstallation) {
+      throw new ConflictError(
+        `${person.name} connected the GitHub account ${usedInstallation.account}, which other people's projects use. Have someone else connect it and import those projects again first`,
+      );
+    }
+    const used = usedProject ?? usedThread;
+    if (used) {
+      throw new ConflictError(
+        `${person.name} added the runner ${used.runner}, which other people's projects or threads use. Move them to another runner first`,
+      );
+    }
   },
 
   async isRegistrationEnabled() {
