@@ -152,6 +152,10 @@ export class RunManager {
       throw new UnprocessableError(errorMessage(error));
     }
 
+    await this.#store.load({ scope: this.#scope(thread) }).catch((error: unknown) => {
+      console.warn(`Could not load the history of thread ${thread.id}:`, error);
+      throw new UnavailableError("The thread's history could not be loaded; try again shortly");
+    });
     const handle = this.#runtime.resume({
       thread,
       continuation: saved,
@@ -190,12 +194,13 @@ export class RunManager {
       finished: Promise.withResolvers<void>(),
     };
     channel.run = run;
-    const loaded = prepare()
-      .then(() => this.#store.load({ scope: this.#scope(thread) }))
+    const loaded = this.#store
+      .load({ scope: this.#scope(thread) })
       .then((history) => {
         run.messages = messagesToChat(history);
         run.usage = usageFromHistory(history);
-      });
+      })
+      .then(prepare);
     run.ready = loaded.catch(() => undefined);
     try {
       await loaded;

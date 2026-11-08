@@ -1,6 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 
 import { createGatewayInfo } from "./gateway-info";
+
+const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
+process.env.PROVIDER_ALLOWED_HOSTS = "gw.test";
+afterAll(() => {
+  if (allowedBefore === undefined) delete process.env.PROVIDER_ALLOWED_HOSTS;
+  else process.env.PROVIDER_ALLOWED_HOSTS = allowedBefore;
+});
 
 const info = (...models: { name: string; info: Record<string, unknown> }[]) => ({
   data: models.map(({ name, info }) => ({ model_name: name, model_info: info })),

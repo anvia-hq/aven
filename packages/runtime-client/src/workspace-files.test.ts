@@ -63,6 +63,27 @@ describe("browsing a workspace", () => {
     expect(await listDirectory(root, "src/..")).toEqual(await listDirectory(root, ""));
   });
 
+  test("refuses a .git folder at any depth, for reads and listings", async () => {
+    const { root } = await workspace();
+    await mkdir(join(root, "sub", ".git"), { recursive: true });
+    await writeFile(join(root, "sub", ".git", "config"), "[remote]\nurl = https://x:token@h/r\n");
+    await mkdir(join(root, "sub", "deep", ".git"), { recursive: true });
+    await writeFile(join(root, "sub", "deep", ".git", "config"), "[core]\n");
+    await writeFile(join(root, "sub", "keep.txt"), "visible\n");
+    await mkdir(join(root, ".github"));
+    await writeFile(join(root, ".github", "ci.yml"), "name: ci\n");
+
+    expect(await readWorkspaceFile(root, "sub/.git/config")).toEqual({ kind: "missing" });
+    expect(await readWorkspaceFile(root, "sub/deep/.git/config")).toEqual({ kind: "missing" });
+    expect(await listDirectory(root, "sub/.git")).toEqual([]);
+    expect(await listDirectory(root, "sub")).toEqual([
+      { name: "deep", type: "directory" },
+      { name: "keep.txt", type: "file" },
+    ]);
+    expect(await listDirectory(root, "sub/deep")).toEqual([]);
+    expect(await readWorkspaceFile(root, ".github/ci.yml")).toMatchObject({ kind: "text" });
+  });
+
   test("calls binary files binary, and cuts a large text file", async () => {
     const { root } = await workspace();
     await writeFile(join(root, "logo.bin"), new Uint8Array([1, 0, 2]));

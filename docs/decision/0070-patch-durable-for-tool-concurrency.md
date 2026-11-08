@@ -1,6 +1,6 @@
 # Patch `@anvia/durable` so a thread's agent can run tool calls side by side
 
-Status: accepted, temporary. Remove the patch when Anvia has the setting upstream (`docs/bugs/0005-anvia-durable-has-no-tool-concurrency.md`).
+Status: accepted, temporary. Remove the patch when Anvia has the setting upstream (`docs/bugs/0003-anvia-durable-has-no-tool-concurrency.md`).
 
 ## Context
 
