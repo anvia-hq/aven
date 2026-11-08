@@ -8,7 +8,7 @@ The repository had no license, which leaves everyone without the right to use, c
 
 ## Decision
 
-- The project is under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`): `LICENSE` has the license's text, each `package.json` says `"license": "AGPL-3.0-only"`, the server and web images carry `org.opencontainers.image.licenses`, and the README says so.
+- The project is under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`): `LICENSE` has the license's text, each `package.json` says `"license": "AGPL-3.0-only"`, the server and web images carry `org.opencontainers.image.licenses`, and the README says so. The server and web images carry the text at `/LICENSE` and each release archive holds it beside `aven` (`aven update` and the installer take only `aven` from it). The sandbox image is left out: it is built from its own folder and is mostly other people's software.
 - The AGPL differs from the GPL in one thing that matters here: a person who runs a modified Aven for others over a network must offer those users its source. Running an unmodified Aven for oneself or a team, as the install guide describes, asks nothing more.
 
 ## Consequences
