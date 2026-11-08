@@ -13,14 +13,20 @@ import { createMemoryStore } from "../../memory-store";
 import { auth, authService } from "../auth/service";
 import { RuntimeHub } from "./hub";
 import { runtimesRouter } from "./router";
+import type { LatestRelease } from "./types";
 import { runtimesService } from "./service";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
+
+const noReleases: LatestRelease = { get: async () => undefined };
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("asking a runner to update itself (real postgres, real WebSocket)", () => {
   const hub = new RuntimeHub(createMemoryStore(db));
-  const server = new Elysia().use(errorsRouter).use(runtimesRouter(hub)).listen({ port: 0 });
+  const server = new Elysia()
+    .use(errorsRouter)
+    .use(runtimesRouter(hub, noReleases))
+    .listen({ port: 0 });
   const base = `localhost:${server.server?.port}`;
   const sockets: WebSocket[] = [];
   const emails: string[] = [];
