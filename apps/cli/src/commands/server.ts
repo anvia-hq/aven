@@ -9,7 +9,7 @@ import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
 import { API_PORT, planServer } from "../server-plan";
-import { writeServerFiles } from "../server-files";
+import { envChangeLines, installEnvValues, writeServerFiles } from "../server-files";
 import { version } from "../version";
 import type { Args } from "../types";
 
@@ -57,7 +57,14 @@ export async function serverInstall(args: Args) {
       `Port ${taken} is in use. Pick another with --port, --https-port or --api-port.`,
     );
 
-  await writeServerFiles(dir, { compose, envTemplate }, options);
+  const values = installEnvValues(args, options);
+  const { changed } = await writeServerFiles(dir, { compose, envTemplate }, options, values);
+  if (changed.length > 0) {
+    console.log(`\nUpdated ${join(dir, ".env")}:`);
+    for (const line of envChangeLines(changed)) console.log(`  ${line}`);
+  } else if (Object.keys(values).length > 0) {
+    console.log(`\nNothing in ${join(dir, ".env")} changed.`);
+  }
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);
   const env = await readServerEnv(dir);
