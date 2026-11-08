@@ -9,13 +9,10 @@ const LINES = 12;
 type Sample = {
   present: boolean;
   lines: number;
-  // Distance from the bottom of the last assistant line to the top of the indicator.
   gap: number | null;
-  // The indicator's top in the scrolling content's own coordinates (ignores scrolling).
   contentY: number | null;
 };
 
-// Recorded on purpose: the video is the proof this spec leaves behind.
 test.use({
   viewport: { width: 1000, height: 700 },
   video: { mode: "on", size: { width: 1000, height: 700 } },
@@ -78,7 +75,6 @@ test.describe("the working indicator while a reply streams", () => {
       requestAnimationFrame(frame);
     });
 
-    // Screenshot while the reply is part way through.
     await expect.poll(lineCount, { timeout: 15_000 }).toBeGreaterThanOrEqual(5);
     await page.screenshot({ path: testInfo.outputPath("mid-stream.png") });
 
@@ -101,17 +97,14 @@ test.describe("the working indicator while a reply streams", () => {
       description: `${samples.length} frames, ${streaming.length} while streaming`,
     });
     expect(streaming.length).toBeGreaterThan(10);
-    // The indicator is there for every frame of the stream.
     expect(streaming.every((sample) => sample.present)).toBe(true);
 
     const gaps = streaming.map((sample) => sample.gap);
     const contentYs = streaming.map((sample) => sample.contentY);
-    // Glued to the last line: the gap never changes while lines are added.
     expect(Math.max(...(gaps as number[])) - Math.min(...(gaps as number[]))).toBeLessThanOrEqual(
       1,
     );
     expect(Math.max(...(gaps as number[]))).toBeLessThan(40);
-    // Never moves up in the content, and only moves down as lines are added.
     for (let index = 1; index < contentYs.length; index += 1) {
       expect(contentYs[index]!).toBeGreaterThanOrEqual(contentYs[index - 1]! - 0.5);
     }
@@ -137,8 +130,6 @@ test.describe("the working indicator while a reply streams", () => {
       const frames: Frame[] = [];
       (window as unknown as { __frames: Frame[] }).__frames = frames;
       const scroller = document.querySelector<HTMLElement>(".overflow-y-auto")!;
-      // Registered after the page's own scroll observer, so it runs after that observer's
-      // scroll and before paint: each record is a state that really gets painted.
       new ResizeObserver(() => {
         const indicator = document.querySelector<HTMLElement>('[data-role="working"]');
         const all = document.querySelectorAll<HTMLElement>('[data-role="assistant"]');
@@ -182,8 +173,6 @@ test.describe("the working indicator while a reply streams", () => {
       }),
     );
     expect(painted.length).toBeGreaterThan(15);
-    // Every painted state: the list is scrolled to its very end (nothing painted a frame late)
-    // and the indicator is the same distance under the last line.
     for (const frame of painted) expect(Math.round(frame.fromEnd)).toBe(0);
     const gaps = painted.map((frame) => frame.bottomGap);
     expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);

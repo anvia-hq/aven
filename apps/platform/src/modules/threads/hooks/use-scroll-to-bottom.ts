@@ -25,8 +25,6 @@ export function useScrollToBottom(count: number) {
       if (distance < FOLLOW_DISTANCE) following.current = true;
     };
     element.addEventListener("scroll", onScroll, { passive: true });
-    // Scroll inside the observer, not in a later animation frame: it runs after layout and
-    // before paint, so the bottom never shows for a frame at its old scroll position.
     const observer = new ResizeObserver(() => stick(element));
     const content = element.firstElementChild;
     if (content) observer.observe(content);

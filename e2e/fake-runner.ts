@@ -21,11 +21,9 @@ const QUESTIONS = [
 const SECRET = process.env.FAKE_SECRET === "1";
 const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
 const SUBAGENTS = process.env.FAKE_SUBAGENTS === "1";
-// Streams a multi-line reply one list item at a time, FAKE_STREAM_MS apart.
 const STREAM_LINES = Number(process.env.FAKE_STREAM_LINES ?? 0);
 const STREAM_MS = Number(process.env.FAKE_STREAM_MS ?? 500);
 const streamed = new Map<string, number>();
-// Streams prose word by word instead (wrapping paragraphs), FAKE_STREAM_WORDS words in all.
 const STREAM_WORDS = Number(process.env.FAKE_STREAM_WORDS ?? 0);
 const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
 const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";

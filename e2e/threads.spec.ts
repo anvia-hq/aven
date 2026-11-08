@@ -503,7 +503,6 @@ test.describe("the working line", () => {
       text: await last.boundingBox(),
     });
     const end = await boxes();
-    // Under the last line, and above the composer.
     expect(end.line!.y).toBeGreaterThanOrEqual(end.text!.y + end.text!.height - 1);
     expect(end.line!.y + end.line!.height).toBeLessThanOrEqual(end.prompt!.y + 1);
 
@@ -512,7 +511,6 @@ test.describe("the working line", () => {
       const tall = await boxes();
       expect(tall.prompt!.height).toBeGreaterThan(end.prompt!.height + 60);
       expect(tall.text!.y + tall.text!.height).toBeLessThanOrEqual(tall.prompt!.y + 1);
-      // Auto-scroll moves the whole conversation with the composer; the gap to the last line stays.
       const gap = (box: typeof end) => box.line!.y - (box.text!.y + box.text!.height);
       expect(Math.abs(gap(tall) - gap(end))).toBeLessThan(2);
     }).toPass({ timeout: 5000 });
