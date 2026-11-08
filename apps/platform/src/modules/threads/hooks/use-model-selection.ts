@@ -27,12 +27,6 @@ function save(threadId: string | undefined, selection: SavedSelection) {
   if (threadId) store.set(threadModelSelectionsAtom, (all) => withThread(all, threadId, selection));
 }
 
-export function resetModelSelection() {
-  const store = getDefaultStore();
-  store.set(modelSelectionAtom, null);
-  store.set(threadModelSelectionsAtom, {});
-}
-
 export function rememberModelSelection(threadId: string, selection: RunSelection) {
   if (!selection.providerId) return;
   save(threadId, {

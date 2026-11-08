@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
+
+import { authClient } from "@/lib/auth-client";
+import { accountKey, registerUserState } from "@/lib/user-state";
+
 import type { HighlightedLine } from "../types";
 
 const KEPT = 50;
 
 const made = new Map<string, HighlightedLine[]>();
 
-const keyOf = (text: string, path: string) => `${path}\0${text}`;
+const keyOf = (account: string | null, text: string, path: string) =>
+  accountKey(account, `${path}\0${text}`);
 
 function remember(key: string, lines: HighlightedLine[]) {
   made.delete(key);
@@ -15,8 +20,11 @@ function remember(key: string, lines: HighlightedLine[]) {
 
 type KeptLines = { key: string; lines: HighlightedLine[] };
 
+registerUserState(() => made.clear());
+
 export function useHighlightedLines(text: string, path: string): HighlightedLine[] | null {
-  const key = keyOf(text, path);
+  const { data: session } = authClient.useSession();
+  const key = keyOf(session?.user.id ?? null, text, path);
   const [kept, setKept] = useState<KeptLines | null>(() => {
     const lines = made.get(key);
     return lines ? { key, lines } : null;
