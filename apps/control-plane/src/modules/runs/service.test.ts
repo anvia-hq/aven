@@ -320,12 +320,15 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       [text("finished")],
     ]);
     const thread = newThread();
+    const early = attach(manager, thread);
     await manager.start(thread, "go");
+    await until(() => early.events.some((event) => event.type === "usage"));
     await Bun.sleep(150);
 
     const late = attach(manager, thread);
     await until(() => late.events.some((event) => event.type === "done"));
     await late.detach();
+    await early.detach();
 
     const snapshot = late.events[0]!;
     expect(snapshot).toMatchObject({ type: "snapshot", running: true });
