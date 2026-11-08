@@ -47,7 +47,6 @@ export function UsageCard({
           </div>
         ))}
       </dl>
-      <p className="text-xs text-muted-foreground">Across all model calls in this thread.</p>
     </OverviewCard>
   );
 }
