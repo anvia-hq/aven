@@ -1,4 +1,4 @@
-# 0153: A provider's address reaches only public hosts unless the server owner allows the host
+# 0158: A provider's address reaches only public hosts unless the server owner allows the host
 
 Status: accepted.
 
