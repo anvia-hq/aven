@@ -16,7 +16,6 @@ import { AnswerForm } from "@/modules/threads/components/answer-form";
 import { SharedNotice } from "@/modules/threads/components/shared-notice";
 import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
-import { WorkingIndicator } from "@/modules/threads/components/working-indicator";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
@@ -101,6 +100,7 @@ function ThreadPage() {
                   pending={pending}
                   steers={steers}
                   running={running}
+                  startedAt={startedAt}
                   error={error}
                   aside={
                     overview.open && (
@@ -144,12 +144,7 @@ function ThreadPage() {
                           onCompact={compact}
                           placeholder="Reply to the agent…"
                           onSubmit={send}
-                          tools={
-                            <>
-                              <ProjectInfo projectId={thread.projectId} />
-                              <WorkingIndicator running={running} startedAt={startedAt} />
-                            </>
-                          }
+                          tools={<ProjectInfo projectId={thread.projectId} />}
                         />
                       ))}
                   </div>

@@ -21,6 +21,10 @@ const QUESTIONS = [
 const SECRET = process.env.FAKE_SECRET === "1";
 const ASKING = Boolean(process.env.FAKE_QUESTION) || SECRET;
 const SUBAGENTS = process.env.FAKE_SUBAGENTS === "1";
+// Streams a multi-line reply one list item at a time, FAKE_STREAM_MS apart.
+const STREAM_LINES = Number(process.env.FAKE_STREAM_LINES ?? 0);
+const STREAM_MS = Number(process.env.FAKE_STREAM_MS ?? 500);
+const streamed = new Map<string, number>();
 const ASKED = SECRET ? [{ id: "STRIPE_API_KEY", text: "What is the Stripe test key?" }] : QUESTIONS;
 const ASKED_TOOL = SECRET ? "request_secret" : "ask_user";
 if (process.env.FAKE_QUESTION === "2") {
@@ -177,6 +181,26 @@ ws.onmessage = ({ data }) => {
     say({ type: "tool_end", id: "s1", status: "done", output: "1 finished, 1 failed" });
     say({ type: "text", delta: "Auth is in src/auth.ts; the test could not be written." });
     send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
+  } else if (message.type === "run.start" && STREAM_LINES > 0) {
+    const { runId } = message;
+    const timer = setInterval(() => {
+      const line = (streamed.get(runId) ?? 0) + 1;
+      streamed.set(runId, line);
+      if (line > STREAM_LINES) {
+        clearInterval(timer);
+        send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
+        return;
+      }
+      send({
+        type: "run.event",
+        runId,
+        seq: numbered(runId),
+        event: {
+          type: "text",
+          delta: `${line === 1 ? "Here is the plan, one step per line.\n\n" : ""}- Step ${line}: checking the next file and noting what it does.\n`,
+        },
+      });
+    }, STREAM_MS);
   } else if (message.type === "run.start" && !ASKING) {
     event({
       type: "started",

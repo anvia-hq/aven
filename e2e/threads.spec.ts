@@ -469,7 +469,7 @@ test.describe("threads", () => {
 });
 
 test.describe("the working line", () => {
-  test("is in the composer beside the project and the conversation never runs under the composer", async ({
+  test("sits under the last line of the conversation, not in the composer, and does not move when the composer grows", async ({
     page,
   }) => {
     const messages = Array.from({ length: 24 }, (_, index) => ({
@@ -492,29 +492,29 @@ test.describe("the working line", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
 
     const working = page.getByRole("status").filter({ hasText: "Working…" }).locator("..");
-    const project = page.getByTitle("The project of this thread");
     const composer = page.getByRole("textbox", { name: "Prompt" });
     const last = page.getByText("Line number 23");
     await expect(last).toBeVisible();
+    await expect(working).toBeVisible();
 
     const boxes = async () => ({
       line: await working.boundingBox(),
-      project: await project.boundingBox(),
       prompt: await composer.boundingBox(),
       text: await last.boundingBox(),
     });
     const end = await boxes();
-    expect(end.text!.y + end.text!.height).toBeLessThanOrEqual(end.prompt!.y + 1);
-    expect(end.line!.y).toBeGreaterThanOrEqual(end.prompt!.y + end.prompt!.height - 1);
-    expect(Math.abs(end.line!.y - end.project!.y)).toBeLessThan(4);
-    expect(end.line!.x).toBeGreaterThan(end.project!.x + end.project!.width);
+    // Under the last line, and above the composer.
+    expect(end.line!.y).toBeGreaterThanOrEqual(end.text!.y + end.text!.height - 1);
+    expect(end.line!.y + end.line!.height).toBeLessThanOrEqual(end.prompt!.y + 1);
 
     await composer.fill(Array.from({ length: 9 }, (_, index) => `word ${index}`).join("\n"));
     await expect(async () => {
       const tall = await boxes();
       expect(tall.prompt!.height).toBeGreaterThan(end.prompt!.height + 60);
       expect(tall.text!.y + tall.text!.height).toBeLessThanOrEqual(tall.prompt!.y + 1);
-      expect(Math.abs(tall.line!.y - end.line!.y)).toBeLessThan(2);
+      // Auto-scroll moves the whole conversation with the composer; the gap to the last line stays.
+      const gap = (box: typeof end) => box.line!.y - (box.text!.y + box.text!.height);
+      expect(Math.abs(gap(tall) - gap(end))).toBeLessThan(2);
     }).toPass({ timeout: 5000 });
   });
 });
