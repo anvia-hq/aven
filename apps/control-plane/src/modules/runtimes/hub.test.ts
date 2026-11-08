@@ -9,11 +9,14 @@ import { createMemoryStore } from "../../memory-store";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { signUp } from "../../testing/sign-up";
 import { runtimesRouter } from "./router";
+import type { LatestRelease } from "./types";
 import { connectRouter } from "./connect";
 import { RuntimeHub } from "./hub";
 import { threadCockpit } from "../cockpit/commands";
 import { runtimesService } from "./service";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
+
+const noReleases: LatestRelease = { get: async () => undefined };
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -44,7 +47,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     },
   );
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
-  const full = new Elysia().use(errorsRouter).use(runtimesRouter(hub)).listen({ port: 0 });
+  const full = new Elysia()
+    .use(errorsRouter)
+    .use(runtimesRouter(hub, noReleases))
+    .listen({ port: 0 });
   const owner = await signUp("owner");
   const outsider = await signUp("outsider");
   const sockets: WebSocket[] = [];
