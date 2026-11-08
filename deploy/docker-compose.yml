@@ -5,7 +5,12 @@
 #
 #   cp env.example .env   # then fill it in; the installer does this for you
 #   docker compose up -d
-name: aven
+#
+# Every install is a Docker project of its own, `aven-<short hash of AVEN_HOME>`, which `aven` passes
+# with --project-name: a second install on the machine, a test one for instance, then never recreates
+# or brings down this one's containers, nor its Postgres volume. Run by hand, the project is
+# COMPOSE_PROJECT_NAME, else `aven` as it was before every install had a name of its own.
+name: ${COMPOSE_PROJECT_NAME:-aven}
 
 services:
   postgres:
