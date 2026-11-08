@@ -51,12 +51,8 @@ jobs:
       - run: bun test apps packages
 
   e2e:
-    name: e2e ${{ matrix.shard }}/3
+    name: e2e
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:17
@@ -73,10 +69,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
-      - run: bun run test:e2e --shard=${{ matrix.shard }}/3
+      - run: bun run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-traces-${{ matrix.shard }}
+          name: playwright-traces
           path: test-results
           retention-days: 7
