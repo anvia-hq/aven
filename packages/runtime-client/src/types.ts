@@ -400,6 +400,7 @@ export type SandboxConfig = {
   pidsLimit?: number;
   hostName?: string;
   connectTimeoutMs?: number;
+  reachCheckAfterMs?: number;
   git?: Git;
   docker?: DockerRun;
   archivedKeepDays?: number;
@@ -495,3 +496,5 @@ export type Timing = {
 };
 
 export type IdentityRelay = { port: number; stop: () => void };
+
+export type HostReach = { ok: boolean; detail: string; skipped?: boolean };

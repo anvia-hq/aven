@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { checkSandboxReach } from "@aven/runtime-client/host-reach";
+
 import { capture, dockerProblem, exec } from "../compose";
 import { parseEnv } from "../env-file";
 import { describeExposure, describeSignups } from "../exposure";
@@ -62,6 +64,14 @@ export async function doctor() {
       has,
       has ? image : `${image} is not on this machine. Pull it: docker pull ${image}`,
     );
+    if (has) {
+      const reach = await checkSandboxReach({
+        image,
+        platform: runnerEnv.AVEN_SANDBOX_PLATFORM,
+        runtime: runnerEnv.AVEN_SANDBOX_RUNTIME,
+      });
+      add("sandbox reach", reach.ok, reach.detail);
+    }
   }
   if (!serverEnv && !runnerEnv)
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");

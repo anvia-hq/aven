@@ -15,6 +15,7 @@ import { ArchivedCleanup } from "./archived-cleanup";
 import { Leftovers } from "./leftovers";
 import { Environments } from "./environments";
 import { git, isCloned } from "./git-clone";
+import { containerReachesHost, reachAdvice } from "./host-reach";
 import { signInCommand } from "./github-signin";
 import { startIdentityRelay } from "./identity-relay";
 import { identitySignInCommand, isLoopback, originOf } from "./identity-signin";
@@ -61,6 +62,7 @@ export const runnerLabel = (home?: string) =>
 type Docker = DockerRun;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
+const DEFAULT_REACH_CHECK_AFTER_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_ARCHIVED_KEEP_DAYS = 1;
 const FIRST_SWEEP_MS = 60_000;
@@ -519,10 +521,25 @@ export class Sandboxes implements ThreadWorkspaces {
   async #awaitDaemon(threadId: string) {
     const timeoutMs = this.#config.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
     const deadline = Date.now() + timeoutMs;
+    const reachAt = Date.now() + (this.#config.reachCheckAfterMs ?? DEFAULT_REACH_CHECK_AFTER_MS);
+    let reachChecked = false;
     while (!this.#hub.isConnected(threadId)) {
       if (Date.now() >= deadline) {
         await this.#teardown(threadId);
         throw new Error(`The sandbox did not connect within ${Math.round(timeoutMs / 1000)}s`);
+      }
+      if (!reachChecked && Date.now() >= reachAt) {
+        reachChecked = true;
+        const reaches = await containerReachesHost(
+          this.#run,
+          this.#name(threadId),
+          this.#host,
+          this.#port,
+        );
+        if (!reaches && !this.#hub.isConnected(threadId)) {
+          await this.#teardown(threadId);
+          throw new Error(reachAdvice(this.#host, this.#port));
+        }
       }
       await Bun.sleep(CONNECT_POLL_MS);
     }

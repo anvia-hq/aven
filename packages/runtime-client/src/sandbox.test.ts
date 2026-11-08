@@ -258,6 +258,52 @@ describe("Sandboxes starting a container", () => {
     await rm(home, { recursive: true, force: true });
   });
 
+  test("fails at once, saying why, when the container cannot reach the runner", async () => {
+    const { calls, docker: base } = fakeDocker();
+    const docker: typeof base = async (args) => {
+      if (args[0] === "exec") return { code: 124, stdout: "", stderr: "" };
+      return base(args);
+    };
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: fakeGit,
+      connectTimeoutMs: 5000,
+      reachCheckAfterMs: 50,
+    });
+    const startedAt = Date.now();
+    const failure = await sandboxes.acquire({ id: "t-fw" }, repo).catch((error: unknown) => error);
+
+    expect(String(failure)).toContain("cannot reach the runner");
+    expect(String(failure)).toContain("sudo ufw allow in on docker0");
+    expect(Date.now() - startedAt).toBeLessThan(2000);
+    expect(calls.some((args) => args[0] === "rm" && args.includes("aven-sandbox-t-fw"))).toBe(true);
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+  });
+
+  test("keeps waiting for a daemon that is slow when the container does reach the runner", async () => {
+    const { docker } = fakeDocker();
+    const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
+    const sandboxes = await Sandboxes.start({
+      image: "img",
+      home,
+      docker,
+      git: fakeGit,
+      connectTimeoutMs: 300,
+      reachCheckAfterMs: 50,
+    });
+    const failure = await sandboxes
+      .acquire({ id: "t-slow" }, repo)
+      .catch((error: unknown) => error);
+
+    expect(String(failure)).toContain("did not connect within");
+    await sandboxes.dispose();
+    await rm(home, { recursive: true, force: true });
+  });
+
   test("gives up on a container whose daemon never connects and removes it", async () => {
     const { calls, docker } = fakeDocker();
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
