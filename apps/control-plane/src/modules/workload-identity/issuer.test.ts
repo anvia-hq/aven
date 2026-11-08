@@ -1,8 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { Issuer } from "./issuer";
+import { db } from "@aven/db/client";
+import { platformSettings } from "@aven/db/schema/platform-settings";
+import { eq } from "drizzle-orm";
+
+import { Issuer, workloadIdentityKeyStore } from "./issuer";
+import type { IssuerKeyStore } from "./types";
 
 const url = "https://aven.example/api/workload-identity";
+const setting = "workload_identity_private_key";
+const run = process.env.DATABASE_URL ? describe : describe.skip;
 const decode = (part: string) => JSON.parse(Buffer.from(part, "base64url").toString());
 
 async function verify(token: string, jwks: ReturnType<Issuer["jwks"]>) {
@@ -22,6 +29,37 @@ async function verify(token: string, jwks: ReturnType<Issuer["jwks"]>) {
     Buffer.from(signature, "base64url"),
     new TextEncoder().encode(`${header}.${payload}`),
   );
+}
+
+async function makePem() {
+  const { privateKey } = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const der = Buffer.from(await crypto.subtle.exportKey("pkcs8", privateKey)).toString("base64");
+  const pem = `-----BEGIN PRIVATE KEY-----\n${der}\n-----END PRIVATE KEY-----`;
+  return { pem, oneLine: pem.replaceAll("\n", "\\n") };
+}
+
+function memoryStore(pem: string | null = null) {
+  const kept = { pem };
+  const store: IssuerKeyStore = {
+    load: async () => kept.pem,
+    save: async (made: string) => (kept.pem ??= made),
+  };
+  return { kept, store };
+}
+
+async function withEnvKey<T>(key: string, body: () => Promise<T>) {
+  const before = process.env.WORKLOAD_IDENTITY_PRIVATE_KEY;
+  process.env.WORKLOAD_IDENTITY_PRIVATE_KEY = key;
+  try {
+    return await body();
+  } finally {
+    if (before === undefined) delete process.env.WORKLOAD_IDENTITY_PRIVATE_KEY;
+    else process.env.WORKLOAD_IDENTITY_PRIVATE_KEY = before;
+  }
 }
 
 describe("Issuer", () => {
@@ -48,17 +86,10 @@ describe("Issuer", () => {
   });
 
   test("a configured key keeps its key id across instances", async () => {
-    const { privateKey } = await crypto.subtle.generateKey(
-      { name: "ECDSA", namedCurve: "P-256" },
-      true,
-      ["sign", "verify"],
-    );
-    const der = Buffer.from(await crypto.subtle.exportKey("pkcs8", privateKey)).toString("base64");
-    const pem = `-----BEGIN PRIVATE KEY-----\n${der}\n-----END PRIVATE KEY-----`;
-    const oneLine = pem.replaceAll("\n", "\\n");
+    const { pem, oneLine } = await makePem();
 
-    const first = await Issuer.create(url, pem);
-    const second = await Issuer.create(url, oneLine);
+    const first = await Issuer.create(url, { privateKey: pem });
+    const second = await Issuer.create(url, { privateKey: oneLine });
 
     expect(second.jwks()).toEqual(first.jwks());
     expect(await verify(await second.sign({ sub: "x" }), first.jwks())).toBe(true);
@@ -78,5 +109,63 @@ describe("Issuer", () => {
     const [a, b] = await Promise.all([Issuer.create(url), Issuer.create(url)]);
 
     expect(a.jwks().keys[0]!.kid).not.toBe(b.jwks().keys[0]!.kid);
+  });
+
+  test("two issuers made from one store share the key it keeps", async () => {
+    const { kept, store } = memoryStore();
+
+    const first = await Issuer.create(url, { store });
+    const second = await Issuer.create(url, { store });
+
+    expect(kept.pem).toContain("BEGIN PRIVATE KEY");
+    expect(second.jwks()).toEqual(first.jwks());
+    expect(await verify(await second.sign({ sub: "thread:1" }), first.jwks())).toBe(true);
+  });
+
+  test("a configured key wins over the one the store keeps", async () => {
+    const { pem, oneLine } = await makePem();
+    const { kept, store } = memoryStore(pem);
+
+    const issuer = await withEnvKey(oneLine, () => Issuer.create(url, { store }));
+    const expected = await Issuer.create(url, { privateKey: pem });
+
+    expect(kept.pem).toBe(pem);
+    expect(issuer.jwks()).toEqual(expected.jwks());
+  });
+});
+
+run("the kept signing key (real postgres)", () => {
+  const keptRow = () => db.select().from(platformSettings).where(eq(platformSettings.key, setting));
+
+  beforeAll(() => db.delete(platformSettings).where(eq(platformSettings.key, setting)));
+  afterAll(() => db.delete(platformSettings).where(eq(platformSettings.key, setting)));
+
+  test("is made once, encrypted, and two issuers share its key id", async () => {
+    const first = await Issuer.create(url, { store: workloadIdentityKeyStore });
+    const second = await Issuer.create(url, { store: workloadIdentityKeyStore });
+
+    expect(second.jwks()).toEqual(first.jwks());
+    expect(await verify(await second.sign({ sub: "thread:1" }), first.jwks())).toBe(true);
+
+    const [row] = await keptRow();
+    expect(row!.value).not.toContain("BEGIN PRIVATE KEY");
+    expect(await workloadIdentityKeyStore.load()).toContain("BEGIN PRIVATE KEY");
+  });
+
+  test("is put back after a restart, and a configured key still wins", async () => {
+    const kept = await Issuer.create(url, { store: workloadIdentityKeyStore });
+    const { pem, oneLine } = await makePem();
+
+    const restarted = await Issuer.create(url, { store: workloadIdentityKeyStore });
+    const configured = await withEnvKey(oneLine, () =>
+      Issuer.create(url, { store: workloadIdentityKeyStore }),
+    );
+
+    expect(restarted.jwks()).toEqual(kept.jwks());
+    expect(configured.jwks()).not.toEqual(kept.jwks());
+    expect((await Issuer.create(url, { privateKey: pem })).jwks()).toEqual(configured.jwks());
+    expect((await Issuer.create(url, { store: workloadIdentityKeyStore })).jwks()).toEqual(
+      kept.jwks(),
+    );
   });
 });
