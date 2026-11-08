@@ -27,31 +27,29 @@ run("a thread's forks (postgres)", async () => {
     { id: "1", role: "user", parts: [{ type: "text", text: "Try it" }] },
     { id: "2", role: "assistant", parts: [{ type: "text", text: "Done: it works." }] },
   ];
-  const forks = createThreadForks({
-    runs: { isRunning: (id: string) => running.has(id), history: async () => transcript } as never,
-    messages: {
-      send: async (
-        _org: string,
-        _user: string,
-        thread: string,
-        { prompt }: { prompt: string },
-        options?: { onPersonsWord?: boolean },
-      ) => {
-        if (asking.has(thread)) throw new ConflictError("Answer the agent's question first");
-        told.push({ thread, prompt, onWord: options?.onPersonsWord });
-        return { steered: true };
-      },
-      start: async (
-        _org: string,
-        _user: string,
-        thread: string,
-        { prompt }: { prompt: string },
-      ) => {
-        if (failSend) throw new Error("no runner");
-        sent.push({ thread, prompt });
-      },
+  const runs = {
+    isRunning: (id: string) => running.has(id),
+    history: async () => transcript,
+  };
+  const messages = {
+    send: async (
+      _org: string,
+      _user: string,
+      thread: string,
+      { prompt }: { prompt: string },
+      options?: { onPersonsWord?: boolean },
+    ) => {
+      if (asking.has(thread)) throw new ConflictError("Answer the agent's question first");
+      told.push({ thread, prompt, onWord: options?.onPersonsWord });
+      return { steered: true };
     },
-  });
+    start: async (_org: string, _user: string, thread: string, { prompt }: { prompt: string }) => {
+      if (failSend) throw new Error("no runner");
+      sent.push({ thread, prompt });
+    },
+  };
+  const forks = createThreadForks({ runs: runs as never, messages });
+  const fewNotes = createThreadForks({ runs: runs as never, messages, waitingLimit: 2 });
   const parent = async () => {
     const thread = await threadsService.create(orgA, userId, {
       projectId: project.id,
@@ -145,11 +143,6 @@ run("a thread's forks (postgres)", async () => {
     asking.delete(main.id);
     await forks.ended(
       { id: main.id, organizationId: orgA, parentThreadId: null },
-      { outcome: "cancelled" },
-    );
-    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
-    await forks.ended(
-      { id: main.id, organizationId: orgA, parentThreadId: null },
       { outcome: "done" },
     );
     const delivered = told.filter((entry) => entry.thread === main.id);
@@ -162,6 +155,73 @@ run("a thread's forks (postgres)", async () => {
       { outcome: "done" },
     );
     expect(told.filter((entry) => entry.thread === main.id)).toHaveLength(1);
+    told.length = 0;
+  });
+
+  test("a note queued for a parent whose run is cancelled is flushed, not lost", async () => {
+    const main = await parent();
+    const finished = await forks.start(main, input);
+    asking.add(main.id);
+    running = new Set();
+
+    await forks.ended(
+      { id: finished.id, organizationId: orgA, parentThreadId: main.id },
+      { outcome: "done" },
+    );
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
+
+    asking.delete(main.id);
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "cancelled" },
+    );
+    const delivered = told.filter((entry) => entry.thread === main.id);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]?.prompt).toContain(finished.id);
+    expect(delivered[0]?.onWord).toBe(false);
+
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "cancelled" },
+    );
+    expect(told.filter((entry) => entry.thread === main.id)).toHaveLength(1);
+    told.length = 0;
+  });
+
+  test("keeps the notes it holds to a limit, dropping the oldest", async () => {
+    const mains = [await parent(), await parent(), await parent()];
+    const made: string[] = [];
+    running = new Set();
+    for (const main of mains) asking.add(main.id);
+    for (const main of mains) {
+      const fork = await fewNotes.start(main, input);
+      made.push(fork.id);
+      await fewNotes.ended(
+        { id: fork.id, organizationId: orgA, parentThreadId: main.id },
+        { outcome: "done" },
+      );
+    }
+    for (const main of mains) asking.delete(main.id);
+
+    await fewNotes.ended(
+      { id: mains[0]!.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "done" },
+    );
+    expect(told.filter((entry) => entry.thread === mains[0]!.id)).toEqual([]);
+
+    await fewNotes.ended(
+      { id: mains[2]!.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "done" },
+    );
+    const delivered = told.filter((entry) => entry.thread === mains[2]!.id);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]?.prompt).toContain(made[2]!);
+
+    await fewNotes.ended(
+      { id: mains[1]!.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "done" },
+    );
+    expect(told.filter((entry) => entry.thread === mains[1]!.id)).toHaveLength(1);
     told.length = 0;
   });
 

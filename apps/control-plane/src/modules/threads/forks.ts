@@ -8,12 +8,16 @@ import { threadsService } from "./service";
 import type { ThreadForks, ThreadMessages } from "./types";
 import type { RunThreadInfo } from "@aven/protocol/types";
 
+const WAITING_NOTES_MAX = 512;
+
 export function createThreadForks({
   runs,
   messages,
+  waitingLimit = WAITING_NOTES_MAX,
 }: {
   runs: RunManager;
   messages: Pick<ThreadMessages, "start" | "send">;
+  waitingLimit?: number;
 }): ThreadForks {
   const forkOf = async (thread: RunThreadInfo, id: string) => {
     const fork = await threadsService.get(thread.organizationId, id);
@@ -24,6 +28,21 @@ export function createThreadForks({
   };
 
   const waiting = new Map<string, string[]>();
+  const queueNote = (threadId: string, prompt: string) => {
+    const queued = waiting.get(threadId) ?? [];
+    queued.push(prompt);
+    waiting.delete(threadId);
+    waiting.set(threadId, queued);
+    while (waiting.size > waitingLimit) {
+      const oldest = waiting.keys().next().value;
+      if (oldest === undefined) return;
+      const dropped = waiting.get(oldest)?.length ?? 0;
+      waiting.delete(oldest);
+      console.warn(
+        `Dropped ${dropped} note(s) waiting for thread ${oldest}: ${waitingLimit} threads were already waiting`,
+      );
+    }
+  };
   const sendNote = async (
     parent: { id: string; organizationId: string; createdBy: string },
     prompt: string,
@@ -41,20 +60,14 @@ export function createThreadForks({
         console.warn(`Could not tell thread ${parent.id} about a fork:`, error);
         return;
       }
-      const queued = waiting.get(parent.id) ?? [];
-      queued.push(prompt);
-      waiting.set(parent.id, queued);
+      queueNote(parent.id, prompt);
     }
   };
-  const deliverWaiting = async (
-    thread: { id: string; organizationId: string },
-    outcome: string,
-  ) => {
-    if (outcome !== "done" && outcome !== "failed") return;
+  const deliverWaiting = async (thread: { id: string; organizationId: string }) => {
     const prompts = waiting.get(thread.id);
     if (!prompts?.length) return;
     const parent = await threadsService.get(thread.organizationId, thread.id);
-    if (!parent || parent.awaitingAnswer) return;
+    if (!parent || parent.awaitingAnswer || parent.state === "archived") return;
     waiting.delete(thread.id);
     for (const prompt of prompts) await sendNote(parent, prompt);
   };
@@ -107,7 +120,7 @@ export function createThreadForks({
 
     async ended(fork, ending) {
       if (!fork.parentThreadId) {
-        await deliverWaiting(fork, ending.outcome);
+        await deliverWaiting(fork);
         return;
       }
       if (ending.outcome === "cancelled") return;
