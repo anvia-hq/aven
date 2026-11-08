@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { isStreamingCompletionModel } from "@anvia/core/completion";
 
+import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { compactionFor, outputLimitFor, resolveAgentModel } from "./agent-model";
 import { scriptedModel } from "./testing/scripted-model";
 
@@ -208,6 +209,39 @@ describe("compactionFor", () => {
 
     expect(bodies[0]).toBeDefined();
     expect(bodies[0]).not.toHaveProperty("temperature");
+  });
+
+  test("the summary request carries the instructions it is given, else Anvia's own", async () => {
+    const bodies: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push(JSON.stringify(await request.json()));
+        return Response.json({ error: { message: "stop here" } }, { status: 400 });
+      },
+    });
+    try {
+      const source = {
+        provider: "openai",
+        apiKey: "k",
+        modelId: "gpt-5",
+        baseUrl: `http://localhost:${server.port}/v1`,
+        contextWindow: 100_000,
+      } as const;
+      const { model: provider } = resolveAgentModel(source);
+      const messages = [{ role: "user", content: "hello" }] as never;
+      for (const instructions of [CODING_SUMMARY_INSTRUCTIONS, undefined]) {
+        await compactionFor(source, provider, undefined, instructions)!
+          .compactor({ messages, abortSignal: undefined } as never)
+          .catch(() => undefined);
+      }
+    } finally {
+      await server.stop(true);
+    }
+
+    expect(bodies[0]).toContain("Files and commands");
+    expect(bodies[1]).not.toContain("Files and commands");
+    expect(bodies[1]).toContain("future agent memory");
   });
 
   test("with neither there is nothing to measure against, so history is left whole", () => {

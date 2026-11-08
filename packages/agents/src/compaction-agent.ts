@@ -12,6 +12,7 @@ import {
   isMemoryCompactionMessage,
 } from "@anvia/core/memory";
 
+import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { outputLimitFor, resolveAgentModel } from "./agent-model";
 import type { ModelSource } from "./types";
 
@@ -67,6 +68,7 @@ export function createCompactionAgent(options: ModelSource & { id: string }) {
   const summarize = createSummaryMemoryCompactor({
     model,
     maxTokens: outputLimitFor(options),
+    instructions: CODING_SUMMARY_INSTRUCTIONS,
   });
   let spent = Usage.empty();
   const agent = new Agent({

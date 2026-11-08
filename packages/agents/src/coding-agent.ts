@@ -8,6 +8,7 @@ import { memoryInstructions } from "./memory";
 import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
+import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 import type { McpNote, ModelSource, SkillListing } from "./types";
@@ -54,5 +55,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
     tools,
   });
 
-  return { agent, compaction: compactionFor(options, agentModel.model) };
+  return {
+    agent,
+    compaction: compactionFor(options, agentModel.model, undefined, CODING_SUMMARY_INSTRUCTIONS),
+  };
 }

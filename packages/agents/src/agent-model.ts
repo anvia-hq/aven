@@ -33,7 +33,12 @@ export function resolveAgentModel(source: ModelSource) {
   };
 }
 
-export function compactionFor(source: ModelSource, model: CompletionModel, afterTokens?: number) {
+export function compactionFor(
+  source: ModelSource,
+  model: CompletionModel,
+  afterTokens?: number,
+  instructions?: string,
+) {
   const contextWindow = "contextWindow" in source ? source.contextWindow : undefined;
   const trigger =
     afterTokens ?? (contextWindow ? Math.floor(contextWindow * COMPACT_AT) : undefined);
@@ -43,6 +48,7 @@ export function compactionFor(source: ModelSource, model: CompletionModel, after
     compactor: createSummaryMemoryCompactor({
       model,
       maxTokens: outputLimitFor(source),
+      instructions,
     }),
   };
 }
