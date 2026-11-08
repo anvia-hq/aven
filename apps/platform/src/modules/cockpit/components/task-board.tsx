@@ -142,7 +142,7 @@ export function TaskBoard({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="ml-auto"
+                className="ml-auto size-8 md:size-6"
                 aria-label={`New task in ${STATUS_LABELS[status]}`}
                 onClick={() => onNew({ status, tags: tag ? [tag] : [] })}
               >

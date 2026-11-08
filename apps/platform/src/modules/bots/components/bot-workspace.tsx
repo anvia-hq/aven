@@ -24,7 +24,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
   });
 
   return (
-    <div className="flex h-[calc(100svh-2.5rem)] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
+    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup
           orientation={wide ? "horizontal" : "vertical"}

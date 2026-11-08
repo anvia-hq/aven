@@ -9,6 +9,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The mobile frame (modules/navigation/components/mobile-app-bar.tsx and mobile-tab-bar.tsx):
+   an app bar above the page and a tab bar fixed below it, both measured with the phone's own safe
+   area so nothing hides under a notch or a home indicator. Screens that fill the height subtract
+   --mobile-chrome; scrolling screens make room for it at their end (app-shell.tsx). */
+:root {
+  --mobile-app-bar: 3rem;
+  --mobile-tab-bar: calc(3.5rem + env(safe-area-inset-bottom));
+  --mobile-chrome: calc(var(--mobile-app-bar) + var(--mobile-tab-bar));
+}
+
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;

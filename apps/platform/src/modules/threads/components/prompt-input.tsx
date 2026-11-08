@@ -129,14 +129,19 @@ function Composer({
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
           {running && (
-            <Button size="icon-sm" className="rounded-full" aria-label="Stop" onClick={onStop}>
+            <Button
+              size="icon-sm"
+              className="size-9 rounded-full md:size-7"
+              aria-label="Stop"
+              onClick={onStop}
+            >
               <StopSolid />
             </Button>
           )}
           {!running && (
             <Button
               size="icon-sm"
-              className="rounded-full"
+              className="size-9 rounded-full md:size-7"
               aria-label="Send"
               disabled={!canSend}
               onClick={() => void submit()}
