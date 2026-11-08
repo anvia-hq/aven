@@ -112,7 +112,13 @@ export function createCollection<T extends Item, Create, Update>(options: {
       ? list.refresh()
       : undefined;
 
-  return { create, update, remove, useItems, reset: list.reset, refreshLoaded };
+  function reset() {
+    waiting.clear();
+    removing.clear();
+    list.reset();
+  }
+
+  return { create, update, remove, useItems, reset, refreshLoaded };
 }
 
 export function resetCockpitTags() {
