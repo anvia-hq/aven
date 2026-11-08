@@ -97,10 +97,14 @@ run("removing an account (real postgres)", () => {
 
   beforeAll(async () => {
     process.env.PLATFORM_OWNER_EMAILS = owner.email;
-    const now = new Date();
-    await db
-      .insert(users)
-      .values(everyone.map((person) => ({ ...person, name: person.id, createdAt: now })));
+    const now = Date.now();
+    await db.insert(users).values(
+      everyone.map((person, index) => ({
+        ...person,
+        name: person.id,
+        createdAt: new Date(now + index * 1000),
+      })),
+    );
     await db.insert(organizations).values([
       { id: shared, name: "Shared", slug: shared },
       { id: solo, name: "Solo", slug: solo },
