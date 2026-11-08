@@ -9,12 +9,12 @@ export function PalettePicker() {
 
   return (
     <Select value={palette} onValueChange={(value) => value && setPalette(value as Palette)}>
-      <SelectTrigger aria-label="Theme" className="w-48">
+      <SelectTrigger aria-label="Theme">
         <SelectValue>
           {(value: Palette) => PALETTES.find((option) => option.id === value)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-auto min-w-(--anchor-width)">
         {PALETTES.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.label}
