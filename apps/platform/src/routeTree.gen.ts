@@ -34,6 +34,7 @@ import { Route as AuthedSettingsGithubRouteImport } from './routes/_authed/setti
 import { Route as AuthedSettingsMcpRouteImport } from './routes/_authed/settings/mcp'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsMemoryRouteImport } from './routes/_authed/settings/memory'
+import { Route as AuthedSettingsPeopleRouteImport } from './routes/_authed/settings/people'
 import { Route as AuthedSettingsPlatformRouteImport } from './routes/_authed/settings/platform'
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/settings/providers'
@@ -170,6 +171,11 @@ const AuthedSettingsMemoryRoute = AuthedSettingsMemoryRouteImport.update({
   path: '/memory',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsPeopleRoute = AuthedSettingsPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsPlatformRoute = AuthedSettingsPlatformRouteImport.update({
   id: '/platform',
   path: '/platform',
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/settings/mcp': typeof AuthedSettingsMcpRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
+  '/settings/people': typeof AuthedSettingsPeopleRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/settings/mcp': typeof AuthedSettingsMcpRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
+  '/settings/people': typeof AuthedSettingsPeopleRoute
   '/settings/platform': typeof AuthedSettingsPlatformRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/_authed/settings/mcp': typeof AuthedSettingsMcpRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/memory': typeof AuthedSettingsMemoryRoute
+  '/_authed/settings/people': typeof AuthedSettingsPeopleRoute
   '/_authed/settings/platform': typeof AuthedSettingsPlatformRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/providers': typeof AuthedSettingsProvidersRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/settings/mcp'
     | '/settings/members'
     | '/settings/memory'
+    | '/settings/people'
     | '/settings/platform'
     | '/settings/profile'
     | '/settings/providers'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/settings/mcp'
     | '/settings/members'
     | '/settings/memory'
+    | '/settings/people'
     | '/settings/platform'
     | '/settings/profile'
     | '/settings/providers'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/mcp'
     | '/_authed/settings/members'
     | '/_authed/settings/memory'
+    | '/_authed/settings/people'
     | '/_authed/settings/platform'
     | '/_authed/settings/profile'
     | '/_authed/settings/providers'
@@ -620,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsMemoryRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/people': {
+      id: '/_authed/settings/people'
+      path: '/people'
+      fullPath: '/settings/people'
+      preLoaderRoute: typeof AuthedSettingsPeopleRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/platform': {
       id: '/_authed/settings/platform'
       path: '/platform'
@@ -764,6 +783,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsMcpRoute: typeof AuthedSettingsMcpRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
   AuthedSettingsMemoryRoute: typeof AuthedSettingsMemoryRoute
+  AuthedSettingsPeopleRoute: typeof AuthedSettingsPeopleRoute
   AuthedSettingsPlatformRoute: typeof AuthedSettingsPlatformRoute
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsProvidersRoute: typeof AuthedSettingsProvidersRoute
@@ -781,6 +801,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsMcpRoute: AuthedSettingsMcpRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
   AuthedSettingsMemoryRoute: AuthedSettingsMemoryRoute,
+  AuthedSettingsPeopleRoute: AuthedSettingsPeopleRoute,
   AuthedSettingsPlatformRoute: AuthedSettingsPlatformRoute,
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsProvidersRoute: AuthedSettingsProvidersRoute,
