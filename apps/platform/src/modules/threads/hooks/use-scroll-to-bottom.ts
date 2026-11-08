@@ -25,20 +25,12 @@ export function useScrollToBottom(count: number) {
       if (distance < FOLLOW_DISTANCE) following.current = true;
     };
     element.addEventListener("scroll", onScroll, { passive: true });
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        stick(element);
-      });
-    });
+    const observer = new ResizeObserver(() => stick(element));
     const content = element.firstElementChild;
     if (content) observer.observe(content);
     return () => {
       element.removeEventListener("scroll", onScroll);
       observer.disconnect();
-      cancelAnimationFrame(frame);
     };
   }, [stick]);
 

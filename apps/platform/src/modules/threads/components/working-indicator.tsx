@@ -76,7 +76,10 @@ type Props = {
 export function WorkingIndicator({ running, startedAt = null }: Props & { running: boolean }) {
   if (!running) return null;
   return (
-    <div className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground">
+    <div
+      data-role="working"
+      className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
+    >
       <WorkingDots />
       <WorkingWord />
       {startedAt !== null && (

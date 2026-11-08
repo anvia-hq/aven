@@ -6,6 +6,7 @@ import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import type { ChatMessage, QueuedSteer } from "../types";
 import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
+import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
   threadId: string;
@@ -17,6 +18,7 @@ type Props = {
   pending?: ChatMessage[];
   steers?: QueuedSteer[];
   running?: boolean;
+  startedAt?: number | null;
   error?: string | null;
   aside?: ReactNode;
 };
@@ -31,6 +33,7 @@ export function ThreadMessages({
   pending = [],
   steers = [],
   running = false,
+  startedAt = null,
   error,
   aside,
 }: Props) {
@@ -73,6 +76,7 @@ export function ThreadMessages({
             {steers.map((steer) => (
               <QueuedMessage key={steer.id} message={steer} />
             ))}
+            <WorkingIndicator running={running} startedAt={startedAt} />
             {error && (
               <p
                 role="alert"
