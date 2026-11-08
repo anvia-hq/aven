@@ -3,7 +3,7 @@ import {
   type ComposerTriggerItem,
   type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 const NOTHING_MATCHES: Record<string, string> = {
   file: "No file matches",
@@ -20,10 +20,12 @@ function MentionOption({
   item,
   index,
   selected,
+  icon,
 }: {
   item: ComposerTriggerItem;
   index: number;
   selected: boolean;
+  icon?: (item: ComposerTriggerItem) => ReactNode;
 }) {
   const label = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -34,6 +36,7 @@ function MentionOption({
       index={index}
       className="flex min-w-0 shrink-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-left data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground"
     >
+      {icon?.(item) ? <span className="flex shrink-0 self-center">{icon(item)}</span> : null}
       <span ref={label} className="shrink-0 font-mono">
         {item.label}
       </span>
@@ -44,7 +47,7 @@ function MentionOption({
   );
 }
 
-export function MentionMenu() {
+export function MentionMenu({ icon }: { icon?: (item: ComposerTriggerItem) => ReactNode }) {
   return (
     <ComposerPrimitive.TriggerMenu
       aria-label="Mention"
@@ -61,6 +64,7 @@ export function MentionMenu() {
               item={item}
               index={index}
               selected={index === trigger.selectedIndex}
+              icon={icon}
             />
           ))
         )
