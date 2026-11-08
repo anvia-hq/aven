@@ -11,22 +11,19 @@ const SIGN_OUT = `rm -f "$HOME/.config/aven/identity"
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-export function reachableFromContainer(controlPlane: string, host: string) {
+export const isLoopback = (controlPlane: string) => LOOPBACK.has(new URL(controlPlane).hostname);
+
+export function originOf(controlPlane: string) {
   const url = new URL(controlPlane);
-  if (LOOPBACK.has(url.hostname)) url.hostname = host;
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
-export function identitySignInCommand(
-  identity: RunIdentityCredential | undefined,
-  controlPlane: string,
-  host: string,
-) {
+export function identitySignInCommand(identity: RunIdentityCredential | undefined, origin: string) {
   if (!identity) return { script: SIGN_OUT, env: {} as Record<string, string> };
   return {
     script: SIGN_IN,
     env: {
-      AVEN_IDENTITY_URL: reachableFromContainer(controlPlane, host),
+      AVEN_IDENTITY_URL: origin,
       AVEN_IDENTITY_CREDENTIAL: identity.credential,
     },
   };

@@ -16,7 +16,8 @@ import { Leftovers } from "./leftovers";
 import { Environments } from "./environments";
 import { git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
-import { identitySignInCommand } from "./identity-signin";
+import { startIdentityRelay, type IdentityRelay } from "./identity-relay";
+import { identitySignInCommand, isLoopback, originOf } from "./identity-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { ensureLocalExcludes } from "./local-excludes";
 import { runCommand } from "./run-command";
@@ -122,6 +123,7 @@ export class Sandboxes implements ThreadWorkspaces {
   #leftovers: Leftovers;
   #sweeper: Timer | undefined;
   #hub: RemoteSandboxHub;
+  #identityRelay: IdentityRelay | undefined;
   #port: number;
   #tokens: Map<string, string>;
   #run: Docker;
@@ -312,6 +314,7 @@ export class Sandboxes implements ThreadWorkspaces {
       }),
     );
     await Promise.all(released);
+    this.#identityRelay?.stop();
     await this.#hub.close();
   }
 
@@ -391,8 +394,14 @@ export class Sandboxes implements ThreadWorkspaces {
     return this.#signIn(
       threadId,
       "identity",
-      identitySignInCommand(identity, controlPlane, this.#host),
+      identitySignInCommand(identity, this.#identityOrigin(identity, controlPlane)),
     );
+  }
+
+  #identityOrigin(identity: RunIdentityCredential | undefined, controlPlane: string) {
+    if (!identity || !isLoopback(controlPlane)) return originOf(controlPlane);
+    this.#identityRelay ??= startIdentityRelay(controlPlane);
+    return `http://${this.#host}:${this.#identityRelay.port}`;
   }
 
   async #signIn(

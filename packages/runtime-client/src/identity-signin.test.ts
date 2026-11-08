@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { identitySignInCommand, reachableFromContainer } from "./identity-signin";
+import { identitySignInCommand, isLoopback, originOf } from "./identity-signin";
 import { runCommand } from "./run-command";
 
 const homes: string[] = [];
@@ -31,20 +31,18 @@ async function signIn(dir: string, ...args: Parameters<typeof identitySignInComm
 const aven = (dir: string, ...args: string[]) =>
   runCommand([CLI, ...args], { env: { PATH: process.env.PATH, HOME: dir } });
 
-describe("reaching the control plane from a container", () => {
-  test("a loopback address becomes the host's name, any other stays", () => {
-    const host = "host.docker.internal";
+describe("the control plane's address", () => {
+  test("knows a loopback address, which a container cannot reach, from any other", () => {
+    expect(isLoopback("http://localhost:8000")).toBe(true);
+    expect(isLoopback("http://127.0.0.1:2837/")).toBe(true);
+    expect(isLoopback("https://aven.example")).toBe(false);
+    expect(isLoopback("https://192.168.1.5:8000")).toBe(false);
+  });
 
-    expect(reachableFromContainer("http://localhost:8000", host)).toBe(
-      "http://host.docker.internal:8000",
-    );
-    expect(reachableFromContainer("http://127.0.0.1:8000/", host)).toBe(
-      "http://host.docker.internal:8000",
-    );
-    expect(reachableFromContainer("https://aven.example", host)).toBe("https://aven.example");
-    expect(reachableFromContainer("https://aven.example/api", host)).toBe(
-      "https://aven.example/api",
-    );
+  test("is its origin and path, with no trailing slash", () => {
+    expect(originOf("https://aven.example/")).toBe("https://aven.example");
+    expect(originOf("https://aven.example/api/")).toBe("https://aven.example/api");
+    expect(originOf("http://localhost:8000")).toBe("http://localhost:8000");
   });
 });
 
@@ -52,22 +50,22 @@ describe("signing a container in to mint identity tokens", () => {
   test("keeps the credential in a file only the container's user reads, and replaces it each run", async () => {
     const dir = await home();
 
-    await signIn(dir, { credential: "avid_first" }, "https://aven.example", "host");
+    await signIn(dir, { credential: "avid_first" }, "https://aven.example");
     expect(await readFile(file(dir), "utf8")).toBe(
       "AVEN_IDENTITY_URL='https://aven.example'\nAVEN_IDENTITY_CREDENTIAL='avid_first'\n",
     );
     expect((await stat(file(dir))).mode & 0o077).toBe(0);
 
-    await signIn(dir, { credential: "avid_second" }, "https://aven.example", "host");
+    await signIn(dir, { credential: "avid_second" }, "https://aven.example");
     expect(await readFile(file(dir), "utf8")).toContain("avid_second");
     expect(await readFile(file(dir), "utf8")).not.toContain("avid_first");
   });
 
   test("a run with no identity leaves none", async () => {
     const dir = await home();
-    await signIn(dir, { credential: "avid_first" }, "https://aven.example", "host");
+    await signIn(dir, { credential: "avid_first" }, "https://aven.example");
 
-    await signIn(dir, undefined, "https://aven.example", "host");
+    await signIn(dir, undefined, "https://aven.example");
 
     expect(await Bun.file(file(dir)).exists()).toBe(false);
   });
@@ -88,7 +86,7 @@ describe.skipIf(!Bun.which("jq") || !Bun.which("curl"))("aven id-token", () => {
 
   const signedIn = async (credential: string) => {
     const dir = await home();
-    await signIn(dir, { credential }, `http://localhost:${server.port}`, "localhost");
+    await signIn(dir, { credential }, `http://localhost:${server.port}`);
     return dir;
   };
 
