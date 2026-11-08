@@ -428,6 +428,39 @@ export type SandboxCallMethod = "sandbox.release";
 
 export type RunnerSelfCallMethod = "runner.update";
 
+export type DockerCallMethod = "docker.leftovers" | "docker.remove";
+
+export type DockerLeftoverContainer = {
+  ref: string;
+  name: string;
+  state: string;
+  image: string;
+  thread: string | null;
+  createdAt: string;
+  reason: string;
+};
+
+export type DockerLeftoverImage = {
+  ref: string;
+  id: string;
+  size: string;
+  createdAt: string;
+  reason: string;
+};
+
+export type DockerLeftovers = {
+  containers: DockerLeftoverContainer[];
+  images: DockerLeftoverImage[];
+};
+
+export type DockerRemoveParams = { containers: string[]; images: string[] };
+
+export type DockerRemoveResult = {
+  removedContainers: number;
+  removedImages: number;
+  failed: { ref: string; reason: string }[];
+};
+
 export type RunnerUpdateParams = { release?: string };
 
 export type RunnerUpdateResult =
@@ -448,6 +481,7 @@ export type RunnerCallMethod =
   | ActionsCallMethod
   | RunCallMethod
   | SandboxCallMethod
+  | DockerCallMethod
   | RunnerSelfCallMethod;
 
 export type DesktopCallParams = {

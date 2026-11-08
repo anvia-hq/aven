@@ -3,6 +3,7 @@ import {
   artifactsReadParams,
   desktopCallParams,
   diffGetParams,
+  dockerRemoveParams,
   filesCallParams,
   filesSearchParams,
   processesCallParams,
@@ -116,6 +117,14 @@ export function createRunnerCalls({
     if (method === "files.search") return searchOf(params);
     if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
       return processesOf(method, params);
+    if (method === "docker.leftovers") {
+      if (!sandbox.leftovers) throw new Error("This runner cannot list Docker leftovers");
+      return sandbox.leftovers();
+    }
+    if (method === "docker.remove") {
+      if (!sandbox.removeLeftovers) throw new Error("This runner cannot remove Docker leftovers");
+      return sandbox.removeLeftovers(dockerRemoveParams(params));
+    }
     if (method === "sandbox.release") {
       const { threadId } = sandboxReleaseParams(params);
       return idle.releaseNow(threadId).then(async (released) => {
