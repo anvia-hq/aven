@@ -18,7 +18,7 @@ import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
 import { markTurn } from "./thread-diff";
 import { timing } from "./timing";
-import type { RunMcpServer, RunThreadInfo, SteerResult } from "@aven/protocol/types";
+import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
   ConnectedMcp,
   DriverContext,
@@ -70,10 +70,10 @@ async function prepareRun(
   sandbox: ThreadWorkspaces,
   runId: string,
   threadId: string,
-  message: RunMessage | undefined,
+  secrets: RunSecrets | undefined,
   controlPlane: string,
 ) {
-  const { github, identity, env } = message ?? {};
+  const { github, identity, env } = secrets ?? {};
   await Promise.all([
     sandbox.signInGithub?.(threadId, github).catch((error: unknown) => {
       console.warn(`Run ${runId} could not sign in to GitHub:`, errorMessage(error));
@@ -120,8 +120,8 @@ export function createRunDriver(context: DriverContext) {
   }, MCP_SWEEP_MS);
   sweeper.unref();
 
-  async function connectMcp(run: Live, runId: string, threadId: string, message?: RunMessage) {
-    const configs = message?.mcp ?? [];
+  async function connectMcp(run: Live, runId: string, threadId: string, secrets: RunSecrets) {
+    const configs = secrets.mcp ?? [];
     if (!configs.length) return undefined;
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
@@ -147,7 +147,11 @@ export function createRunDriver(context: DriverContext) {
     return connected;
   }
 
-  async function execute(initial: RunRecord, message?: RunMessage) {
+  async function execute(
+    initial: RunRecord,
+    message?: RunMessage,
+    secrets: RunSecrets = message ?? {},
+  ) {
     const { runId, thread } = initial;
     const clock = timing(`run ${runId}`);
     const state = { record: initial };
@@ -165,7 +169,7 @@ export function createRunDriver(context: DriverContext) {
         });
       }
       clock.mark("attachments");
-      const scope = await acquire(initial, state, run, message, clock);
+      const scope = await acquire(initial, state, run, secrets, clock);
       const end = await phases(scope, message);
       ended = run.cancelReason ? undefined : end.type;
       finish(runId, end, run.cancelReason);
@@ -231,15 +235,15 @@ export function createRunDriver(context: DriverContext) {
     initial: RunRecord,
     state: { record: RunRecord },
     run: Live,
-    message: RunMessage | undefined,
+    secrets: RunSecrets,
     clock: Timing,
   ): Promise<RunScope> {
-    const { env } = message ?? {};
+    const { env } = secrets;
     const { runId, thread, model } = initial;
     if (initial.compact) return compactionScope(initial, state, run, clock);
     const repoAccess = () => context.call("repo.access", { runId });
     await context.starting(thread.id);
-    run.mcpGoing = connectMcp(run, runId, thread.id, message);
+    run.mcpGoing = connectMcp(run, runId, thread.id, secrets);
     run.mcpGoing.catch(() => undefined);
     const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
     context.boxes.set(thread.id, box);
@@ -247,7 +251,7 @@ export function createRunDriver(context: DriverContext) {
       await box.start?.();
       clock.mark("sandbox");
       if (run.cancelReason) throw new Error(run.cancelReason);
-      await prepareRun(context.sandbox, runId, thread.id, message, context.controlPlane);
+      await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
       clock.mark("sign-in");
       if (state.record.kind === "start" && !state.record.durableId) {
         const root = await context.sandbox.workspace(thread.id);
@@ -535,10 +539,10 @@ export function createRunDriver(context: DriverContext) {
       return execute(record, message);
     },
 
-    restore(runId: string) {
+    restore(runId: string, secrets?: RunSecrets) {
       const record = records.get(runId);
       if (!record || record.done || live.has(runId)) return;
-      return execute(record);
+      return execute(record, undefined, secrets ?? {});
     },
 
     async steer({ runId, steerId, prompt, mentions }: SteerParams): Promise<SteerResult> {

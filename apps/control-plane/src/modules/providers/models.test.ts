@@ -2,6 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { effortsByModel, effortsFor, fetchModels, ModelListError } from "./model-list";
 
+const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
+process.env.PROVIDER_ALLOWED_HOSTS = "localhost";
+afterAll(() => {
+  if (allowedBefore === undefined) delete process.env.PROVIDER_ALLOWED_HOSTS;
+  else process.env.PROVIDER_ALLOWED_HOSTS = allowedBefore;
+});
+
 const respond = (body: unknown, init?: ResponseInit) =>
   (async () => Response.json(body, init)) as unknown as typeof fetch;
 
@@ -90,7 +97,7 @@ describe("fetchModels", () => {
       throw new Error("ECONNREFUSED");
     }) as unknown as typeof fetch;
     await expect(
-      fetchModels({ kind: "openai-compatible", baseUrl: "http://x/v1" }, down),
+      fetchModels({ kind: "openai-compatible", baseUrl: "http://localhost:1/v1" }, down),
     ).rejects.toThrow("Could not reach");
   });
 });

@@ -1,6 +1,7 @@
 import { reasoningControlsFor } from "@aven/agents/model";
 
 import { UnprocessableError } from "../../errors";
+import { assertProviderAddress } from "./address-guard";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, bedrockEndpoint } from "./schema";
@@ -87,9 +88,10 @@ function parseModelIds(json: unknown) {
 
 export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = fetch) {
   const { url, headers } = modelsRequest(source);
+  await assertProviderAddress(source.kind, url);
   let res: Response;
   try {
-    res = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000) });
+    res = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000), redirect: "error" });
   } catch {
     throw new ModelListError("Could not reach the provider");
   }
