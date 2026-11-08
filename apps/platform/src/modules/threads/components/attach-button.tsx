@@ -29,6 +29,7 @@ export function AttachButton({
       <Button
         variant="ghost"
         size="icon-sm"
+        className="size-9 rounded-full md:size-7"
         aria-label="Attach files"
         title={title}
         disabled={disabled}

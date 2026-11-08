@@ -1,4 +1,23 @@
-import { Folder, GitDiff, List, Monitor, Terminal } from "@mynaui/icons-react";
+import {
+  Check,
+  Folder,
+  GitDiff,
+  LayoutPanelLeft,
+  List,
+  Monitor,
+  Terminal,
+} from "@mynaui/icons-react";
+import type { ComponentType } from "react";
+
+import { cn } from "cn";
+
+import { Button } from "@/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
 import { PanelToggle } from "@/components/panel-toggle";
 
 import type { Thread, ThreadPanels } from "../types";
@@ -10,21 +29,30 @@ type Props = {
   owned: boolean;
 };
 
+type Toggle = {
+  label: string;
+  icon: ComponentType;
+  panel: ThreadPanels["overview"];
+  show: boolean;
+};
+
 export function ThreadHeader({ thread, panels, owned }: Props) {
-  const toggles = [
+  const toggles: Toggle[] = [
     { label: "Overview", icon: List, panel: panels.overview, show: true },
     { label: "Desktop", icon: Monitor, panel: panels.desktop, show: owned },
     { label: "Changes", icon: GitDiff, panel: panels.diff, show: true },
     { label: "Files", icon: Folder, panel: panels.files, show: true },
     { label: "Terminal", icon: Terminal, panel: panels.terminal, show: owned },
   ];
+  const shown = toggles.filter((toggle) => toggle.show);
+
   return (
-    <header className="flex items-center gap-2 h-10 shrink-0 border-b px-4">
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10 md:px-4">
       <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</h1>
       {owned && <ThreadShare thread={thread} />}
-      {toggles
-        .filter((toggle) => toggle.show)
-        .map(({ label, icon, panel }) => (
+      {/* A phone has no room for five buttons beside the title, so it keeps them in one menu. */}
+      <div className="hidden items-center gap-1 sm:flex">
+        {shown.map(({ label, icon, panel }) => (
           <PanelToggle
             key={label}
             label={label}
@@ -33,6 +61,37 @@ export function ThreadHeader({ thread, panels, owned }: Props) {
             onToggle={panel.toggle}
           />
         ))}
+      </div>
+      <PanelsMenu toggles={shown} className="sm:hidden" />
     </header>
+  );
+}
+
+function PanelsMenu({ toggles, className }: { toggles: Toggle[]; className?: string }) {
+  const open = toggles.filter((toggle) => toggle.panel.open).length;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className={cn("size-9 aria-expanded:bg-accent md:size-7", className)}
+            aria-label={open > 0 ? `Panels, ${open} open` : "Panels"}
+          />
+        }
+      >
+        <LayoutPanelLeft />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {toggles.map(({ label, icon: Icon, panel }) => (
+          <DropdownMenuItem key={label} onClick={panel.toggle}>
+            <Icon />
+            <span className="flex-1">{label}</span>
+            {panel.open && <Check className="size-4 text-muted-foreground" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

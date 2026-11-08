@@ -61,16 +61,28 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(rail).toBeHidden();
   await expect(page.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+  // A phone changes apps from a tab bar that is always there, one tap from any screen.
   const apps = page.getByRole("navigation", { name: "Apps" });
-  await expect(apps.getByRole("link", { name: "Threads" })).toBeVisible();
-  await apps.getByRole("link", { name: "Bot" }).click();
-  await expect(page).toHaveURL(/\/bot/);
-  await expect(apps).toBeHidden();
-  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
-  await page
-    .getByRole("navigation", { name: "Apps" })
-    .getByRole("link", { name: "Cockpit" })
-    .click();
+  await expect(apps).toBeVisible();
+  for (const link of await apps.getByRole("link").all()) {
+    const box = (await link.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  await apps.getByRole("link", { name: "Bot", exact: true }).click();
+  await expect(page).toHaveURL(/\/bot$/);
+  await expect(apps.getByRole("link", { name: "Bot", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await apps.getByRole("link", { name: "Cockpit", exact: true }).click();
   await expect(page).toHaveURL(/\/cockpit\/inbox$/);
+  await expect(apps.locator('[aria-current="page"]')).toHaveAccessibleName("Cockpit");
+
+  // The sidebar opens over the page as a sheet, with a way out of it.
+  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+  const close = page.getByRole("button", { name: "Close navigation" });
+  await expect(close).toBeVisible();
+  await close.click();
+  await expect(close).toBeHidden();
 });

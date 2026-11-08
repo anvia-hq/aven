@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -22,8 +23,13 @@ function NewThread() {
   const startThread = useStartThread();
   const { projects, loaded } = useProjects();
   const { threads, shared } = useThreads();
-  const recent = threads.filter((thread) => thread.state === "open").slice(0, 3);
-  const sharedRecent = shared.filter((thread) => thread.state === "open").slice(0, 3);
+  // On a phone this page is what the Threads tab opens, so it lists every thread you have; on a
+  // wider screen the sidebar holds them all and this is the few most recent.
+  const wide = useMediaQuery("(min-width: 768px)");
+  const open = threads.filter((thread) => thread.state === "open");
+  const openShared = shared.filter((thread) => thread.state === "open");
+  const recent = wide ? open.slice(0, 3) : open;
+  const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
@@ -32,7 +38,7 @@ function NewThread() {
     startThread(projectId, message, selection);
 
   return (
-    <div className="flex min-h-svh flex-col md:min-h-[calc(100svh-1rem-2px)]">
+    <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-1rem-2px)]">
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {loaded && projects.length > 0 && (

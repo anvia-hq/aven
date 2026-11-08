@@ -83,13 +83,13 @@ export function InboxPane({
           variant="ghost"
           size="icon-sm"
           aria-label="New item"
-          className="text-muted-foreground"
+          className="size-9 text-muted-foreground md:size-7"
           onClick={onNew}
         >
           <Plus />
         </Button>
         <Tabs value={shown} onValueChange={(value) => onShow(value === "done" ? "done" : "open")}>
-          <TabsList variant="line" aria-label="Show" className="h-7">
+          <TabsList variant="line" aria-label="Show" className="h-9 md:h-7">
             <TabsTrigger value="open" className="text-xs">
               Open{open > 0 && <span className="text-muted-foreground">{open}</span>}
             </TabsTrigger>

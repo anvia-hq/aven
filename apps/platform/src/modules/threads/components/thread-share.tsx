@@ -52,9 +52,17 @@ export function ThreadShare({ thread }: { thread: Thread }) {
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button size="sm" />}>
+      <DialogTrigger
+        render={
+          <Button
+            size="sm"
+            className="h-8 md:h-7"
+            aria-label={shared ? "Shared to workspace" : "Share"}
+          />
+        }
+      >
         {shared ? <Globe /> : <Share />}
-        {shared ? "Shared to workspace" : "Share"}
+        <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <div className="flex flex-col gap-4">

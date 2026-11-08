@@ -14,7 +14,6 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/sidebar";
 import { TooltipProvider } from "@/components/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
@@ -28,7 +27,8 @@ import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
 import { CommandMenu } from "./command-menu";
-import { MobileAppLinks } from "./mobile-app-links";
+import { MobileAppBar, MobileSidebarClose } from "./mobile-app-bar";
+import { MobileTabBar } from "./mobile-tab-bar";
 import { SidebarResizer } from "./sidebar-resizer";
 
 type Props = {
@@ -97,13 +97,14 @@ export function AppShell({ user, sidebar }: Props) {
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Search"
+                  className="size-9 md:size-7"
                   onClick={() => setCommandOpen(true)}
                 >
                   <Search />
                 </Button>
+                <MobileSidebarClose />
               </div>
             </div>
-            <MobileAppLinks />
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
@@ -113,7 +114,7 @@ export function AppShell({ user, sidebar }: Props) {
                 variant="ghost"
                 size="sm"
                 aria-label="Settings"
-                className="min-w-0 flex-1 justify-start group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:p-0"
+                className="h-9 min-w-0 flex-1 justify-start md:h-7 group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:p-0"
                 onClick={() => navigate({ to: "/settings/profile" })}
               >
                 <Cog />
@@ -125,15 +126,16 @@ export function AppShell({ user, sidebar }: Props) {
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
         <SidebarInset
-          className={cn(drawsOwnCards ? "md:bg-transparent" : "md:min-h-0 md:overflow-y-auto")}
+          className={cn(
+            "pb-(--mobile-tab-bar) md:pb-0",
+            drawsOwnCards ? "md:bg-transparent" : "md:min-h-0 md:overflow-y-auto",
+          )}
         >
-          <div className="flex h-10 shrink-0 items-center gap-1 border-b px-2 md:hidden">
-            <SidebarTrigger />
-            <span className="text-sm font-medium">Aven</span>
-          </div>
+          <MobileAppBar />
           <Outlet />
         </SidebarInset>
       </div>
+      <MobileTabBar />
       <CommandMenu />
     </SidebarProvider>
   );

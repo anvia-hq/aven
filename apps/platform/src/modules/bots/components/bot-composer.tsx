@@ -147,8 +147,8 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
         />
         <div className="flex h-9 shrink-0 items-center [grid-area:send]">
           <Button
-            size="icon"
-            className="rounded-full"
+            size="icon-sm"
+            className="size-9 rounded-full md:size-7"
             aria-label="Send"
             disabled={!canSend}
             onClick={() => void submit()}
