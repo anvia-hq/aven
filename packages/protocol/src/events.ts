@@ -139,7 +139,7 @@ function updateLastAssistant(
 export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessage[] {
   switch (event.type) {
     case "snapshot":
-      return event.messages;
+      return [...event.messages];
     case "run_start": {
       const user: ChatMessage = {
         id: messageId(messages.length),
