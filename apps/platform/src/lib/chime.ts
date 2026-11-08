@@ -20,7 +20,7 @@ export function playChime() {
       oscillator.type = "sine";
       oscillator.frequency.value = frequency;
       gain.gain.setValueAtTime(0, at);
-      gain.gain.linearRampToValueAtTime(0.05, at + 0.03);
+      gain.gain.linearRampToValueAtTime(0.075, at + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.38);
       oscillator.connect(gain).connect(audio.destination);
       oscillator.start(at);
