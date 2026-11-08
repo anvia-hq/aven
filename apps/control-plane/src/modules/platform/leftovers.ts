@@ -1,0 +1,82 @@
+import { db } from "@aven/db/client";
+import { runtimes } from "@aven/db/schema/runtimes";
+import { asc, isNull } from "drizzle-orm";
+import { z } from "zod";
+
+import { describeError, NotFoundError, UnavailableError } from "../../errors";
+import type { RuntimeHub } from "../runtimes/hub";
+import type { RunnerLeftovers } from "./types";
+import type { DockerRemoveParams } from "@aven/protocol/types";
+
+const LIST_MS = 20_000;
+const REMOVE_MS = 180_000;
+
+const listed = z.object({
+  containers: z.array(
+    z.object({
+      ref: z.string(),
+      name: z.string(),
+      state: z.string(),
+      image: z.string(),
+      thread: z.string().nullable(),
+      createdAt: z.string(),
+      reason: z.string(),
+    }),
+  ),
+  images: z.array(
+    z.object({
+      ref: z.string(),
+      id: z.string(),
+      size: z.string(),
+      createdAt: z.string(),
+      reason: z.string(),
+    }),
+  ),
+});
+
+const removed = z.object({
+  removedContainers: z.number(),
+  removedImages: z.number(),
+  failed: z.array(z.object({ ref: z.string(), reason: z.string() })),
+});
+
+export function createLeftoversService(hub: RuntimeHub) {
+  async function ask(runtimeId: string, name: string): Promise<RunnerLeftovers> {
+    const base = { runtimeId, name, containers: [], images: [] };
+    const runner = hub.get(runtimeId);
+    if (!runner) return { ...base, status: "offline" };
+    try {
+      const answer = listed.parse(await runner.call("docker.leftovers", {}, LIST_MS));
+      return { ...base, ...answer, status: "ok" };
+    } catch (error) {
+      console.warn(`Runner ${runtimeId} did not list its Docker leftovers:`, describeError(error));
+      return { ...base, status: "unsupported" };
+    }
+  }
+
+  return {
+    async list() {
+      const rows = await db
+        .select({ id: runtimes.id, name: runtimes.name })
+        .from(runtimes)
+        .where(isNull(runtimes.revokedAt))
+        .orderBy(asc(runtimes.createdAt));
+      return Promise.all(rows.map((row) => ask(row.id, row.name)));
+    },
+
+    async remove(runtimeId: string, request: DockerRemoveParams) {
+      const [known] = (
+        await db.select({ id: runtimes.id }).from(runtimes).where(isNull(runtimes.revokedAt))
+      ).filter((row) => row.id === runtimeId);
+      if (!known) throw new NotFoundError("There is no such runner");
+      const runner = hub.get(runtimeId);
+      if (!runner) throw new UnavailableError("The runner is offline");
+      try {
+        return removed.parse(await runner.call("docker.remove", request, REMOVE_MS));
+      } catch (error) {
+        console.warn(`Runner ${runtimeId} did not remove its leftovers:`, describeError(error));
+        throw new UnavailableError("The runner could not remove them: it may need aven update");
+      }
+    },
+  };
+}

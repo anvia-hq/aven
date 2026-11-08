@@ -2,12 +2,15 @@ import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { authService } from "../auth/service";
-import { personParams, updateSettingsBody } from "./schema";
+import type { RuntimeHub } from "../runtimes/hub";
 import type { PutAwayThread } from "../threads/types";
+import { createLeftoversService } from "./leftovers";
+import { personParams, removeLeftoversBody, runtimeParams, updateSettingsBody } from "./schema";
 import { platformService } from "./service";
 
-export const platformRouter = (putAway: PutAwayThread) =>
-  new Elysia({ prefix: "/platform" })
+export const platformRouter = (putAway: PutAwayThread, hub: RuntimeHub) => {
+  const leftovers = createLeftoversService(hub);
+  return new Elysia({ prefix: "/platform" })
     .use(authRouter)
     .get("/config", async ({ request }) => {
       const session = await authService.getSession(request.headers);
@@ -33,6 +36,22 @@ export const platformRouter = (putAway: PutAwayThread) =>
       },
       { auth: true, params: personParams },
     )
+    .get(
+      "/leftovers",
+      async ({ user }) => {
+        if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+        return leftovers.list();
+      },
+      { auth: true },
+    )
+    .post(
+      "/leftovers/:id/remove",
+      async ({ params, body, user }) => {
+        if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+        return leftovers.remove(params.id, body);
+      },
+      { auth: true, params: runtimeParams, body: removeLeftoversBody },
+    )
     .patch(
       "/settings",
       async ({ body, user }) => {
@@ -42,3 +61,4 @@ export const platformRouter = (putAway: PutAwayThread) =>
       },
       { auth: true, body: updateSettingsBody },
     );
+};
