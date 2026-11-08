@@ -13,7 +13,7 @@ import { createControlPlaneCalls } from "./control-plane-calls";
 import { DesktopViewers } from "./desktop-viewers";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
-import { ProcessEndWatch } from "./process-end-watch";
+import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
@@ -140,13 +140,16 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
   });
 
-  const processEnds = new ProcessEndWatch({
-    box: (threadId) => boxes.get(threadId),
-    send,
-    hasRun: (threadId) => [...driver.live.values()].some((run) => run.threadId === threadId),
-    stopped: () => stopped,
-    pollMs: options.processPollMs,
-  });
+  const processEnds = new ProcessEndWatch(
+    {
+      box: (threadId) => boxes.get(threadId),
+      send,
+      hasRun: (threadId) => [...driver.live.values()].some((run) => run.threadId === threadId),
+      stopped: () => stopped,
+      pollMs: options.processPollMs,
+    },
+    new ProcessWatchRecords(state),
+  );
 
   const bots = new BotReplies({
     sandbox: options.sandbox,
