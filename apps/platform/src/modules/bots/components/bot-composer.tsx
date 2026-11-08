@@ -5,7 +5,8 @@ import {
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
 import { ArrowUp } from "@mynaui/icons-react";
-import { useState, type KeyboardEvent } from "react";
+import { cn } from "cn";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/button";
 import { AttachButton } from "@/modules/threads/components/attach-button";
@@ -20,6 +21,8 @@ import { toast } from "@/components/toast";
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { BotMentionChip } from "./bot-mention-chip";
 import { ThreadMentionChip } from "./thread-mention-chip";
+
+const SINGLE_LINE_HEIGHT = 40;
 
 type Props = {
   botId: string;
@@ -67,8 +70,20 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const [sending, setSending] = useState(false);
+  const editor = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
   const message = composer.input.trim();
   const canSend = (message.length > 0 || attachments.files.length > 0) && !sending;
+
+  useEffect(() => {
+    if (composer.input.length === 0) {
+      setExpanded(false);
+      return;
+    }
+    const box = editor.current;
+    if (!box) return;
+    if (composer.input.includes("\n") || box.scrollHeight > SINGLE_LINE_HEIGHT) setExpanded(true);
+  }, [composer.input]);
 
   const submit = async () => {
     if (!canSend) return;
@@ -106,21 +121,28 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
       onKeyDownCapture={onKeyDown}
     >
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
-      <div className="flex items-end gap-1 py-2 pr-2 pl-2">
+      <div
+        data-expanded={expanded || undefined}
+        className="grid grid-cols-[auto_1fr_auto] items-end gap-x-1 py-2 pr-2 pl-2 [grid-template-areas:'attach_input_send'] data-expanded:[grid-template-areas:'input_input_input''attach_._send']"
+      >
         <MentionMenu />
-        <div className="flex h-9 shrink-0 items-center">
+        <div className="flex h-9 shrink-0 items-center [grid-area:attach]">
           <AttachButton
             onPick={attachments.add}
             title="Attach files: images are shown to the bot, every file is copied to its computer"
           />
         </div>
         <ComposerPrimitive.Input
+          ref={editor}
           aria-label="Message"
           placeholder={placeholder}
           renderEntity={renderEntity}
-          className="max-h-48 min-h-9 flex-1 overflow-y-auto py-1.5 text-sm leading-6"
+          className={cn(
+            "max-h-48 min-h-9 min-w-0 overflow-y-auto py-1.5 text-sm leading-6 [grid-area:input]",
+            expanded && "px-2",
+          )}
         />
-        <div className="flex h-9 shrink-0 items-center">
+        <div className="flex h-9 shrink-0 items-center [grid-area:send]">
           <Button
             size="icon"
             className="rounded-full"

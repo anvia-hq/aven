@@ -294,12 +294,11 @@ test.describe("bots", () => {
       ]);
     await expect(send).toBeEnabled();
     await send.click();
-    await expect(page.getByText("plan.md", { exact: true })).toBeVisible();
-    await expect(
-      page
-        .locator('[data-slot="bubble-content"], [data-role="user"]')
-        .filter({ hasText: "/uploads/plan.md" }),
-    ).toBeVisible();
+    // The message is the file alone: it stays in the chat as one attachment, the bot answers it,
+    // and the composer is empty again. (The /uploads path is a note for the model, not shown.)
+    await expect(page.getByText("Hey there!")).toBeVisible();
+    await expect(page.getByText("plan.md", { exact: true })).toHaveCount(1);
+    await expect(send).toBeDisabled();
   });
 
   test("the main bot makes a new bot when asked, and it has a chat of its own", async ({
@@ -910,5 +909,33 @@ test.describe("bots", () => {
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
       800,
     );
+  });
+
+  test("a message of several lines moves the input above the buttons, and back when it is sent", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-multiline", "Multiline Person");
+    await page.getByRole("link", { name: "Bot", exact: true }).click();
+    await expect(page).toHaveURL(/\/bot$/);
+
+    const input = page.getByRole("textbox", { name: "Message" });
+    const send = page.getByRole("button", { name: "Send" });
+    const top = async (locator: typeof input) => (await locator.boundingBox())!.y;
+
+    await input.fill("one line");
+    expect(Math.abs((await top(input)) - (await top(send)))).toBeLessThan(20);
+
+    await input.press("Shift+Enter");
+    await input.pressSequentially("second line");
+    await expect.poll(async () => (await top(send)) - (await top(input))).toBeGreaterThan(30);
+    await page.screenshot({
+      path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/multi.png` : undefined,
+    });
+
+    await input.press("ControlOrMeta+a");
+    await input.press("Backspace");
+    await expect
+      .poll(async () => Math.abs((await top(input)) - (await top(send))))
+      .toBeLessThan(20);
   });
 });
