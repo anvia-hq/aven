@@ -2281,6 +2281,21 @@ describe("startRuntime runs", () => {
       );
       expect(filed).toEqual([2, 1]);
     });
+
+    test("a run this runner has no record of is reported gone", async () => {
+      const { sandbox, up } = slowSandbox();
+      up();
+      const { plane, runtime } = connect({ sandbox });
+      await runtime.ready;
+
+      plane.send({ type: "run.attach", runId: "run-gone", after: 0 });
+
+      await until(() => ended(plane).length === 1);
+      expect(ended(plane)[0]).toMatchObject({
+        outcome: "error",
+        error: "The run is gone: this runner has no record of it",
+      });
+    });
   });
 });
 
