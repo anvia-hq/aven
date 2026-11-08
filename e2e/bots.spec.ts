@@ -425,8 +425,9 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).click();
     await page.keyboard.type("@Av");
     await expect(page.getByRole("textbox", { name: "Message" })).toContainText("@Av");
-    await page.waitForTimeout(300);
-    await expect(page.getByRole("listbox", { name: "Mention" })).toHaveCount(0);
+    const menuHere = page.getByRole("listbox", { name: "Mention" });
+    await expect(menuHere).toContainText("No bot or thread matches");
+    await expect(menuHere.getByRole("option")).toHaveCount(0);
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");
 
@@ -435,6 +436,57 @@ test.describe("bots", () => {
     await expect(activity).toContainText("2 messages with");
     await activity.getByRole("button").click();
     await expect(activity).toContainText("Aven → Scout A, B and C");
+  });
+
+  test("the person mentions a thread, and it goes to the bot with its id and shows as a chip that opens it", async ({
+    page,
+  }) => {
+    let runner: ChildProcess | undefined;
+    try {
+      await registerUser(page, "bot-thread-mention", "Thread Mention Person");
+      const provider = await page.request.post("/api/providers", {
+        data: {
+          kind: "openai-compatible",
+          name: "Fake",
+          baseUrl: "http://localhost:8102/v1",
+          modelId: "fake-model",
+        },
+      });
+      expect(provider.ok()).toBe(true);
+      const { child, threadId } = await threadOnFakeRunner(page);
+      runner = child;
+      const renamed = await page.request.patch(`/api/threads/${threadId}`, {
+        data: { title: "Fix the export button" },
+      });
+      expect(renamed.ok()).toBe(true);
+
+      await page.goto("/bot");
+      const message = page.getByRole("textbox", { name: "Message" });
+      await message.click();
+      await page.keyboard.type("How is @export");
+      const menu = page.getByRole("listbox", { name: "Mention" });
+      await expect(menu.getByRole("option", { name: /Fix the export button/ })).toBeVisible();
+      await page.keyboard.press("Enter");
+      await expect(message.locator('[data-mention="thread"]')).toHaveText("Fix the export button");
+      await page.keyboard.type(" going?");
+      await page.keyboard.press("Enter");
+
+      const sent = page
+        .locator('[data-slot="bubble-content"], [data-role="user"]')
+        .filter({ hasText: "going?" });
+      const chip = sent.locator('[data-mention="thread"]');
+      await expect(chip).toHaveText("Fix the export button");
+      await expect(chip).toHaveAttribute("href", `/threads/${threadId}`);
+      await expect(sent).not.toContainText("thread:");
+      await expect(message).toHaveText("");
+
+      await page.reload();
+      await expect(
+        page.locator('[data-mention="thread"]').filter({ hasText: "Fix the export button" }),
+      ).toBeVisible();
+    } finally {
+      runner?.kill();
+    }
   });
 
   test("a bot asks the person to decide, and hears the answer", async ({ page }) => {
