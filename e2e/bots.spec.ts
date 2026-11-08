@@ -859,4 +859,32 @@ test.describe("bots", () => {
       800,
     );
   });
+
+  test("a message of several lines moves the input above the buttons, and back when it is sent", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-multiline", "Multiline Person");
+    await page.getByRole("link", { name: "Bot", exact: true }).click();
+    await expect(page).toHaveURL(/\/bot$/);
+
+    const input = page.getByRole("textbox", { name: "Message" });
+    const send = page.getByRole("button", { name: "Send" });
+    const top = async (locator: typeof input) => (await locator.boundingBox())!.y;
+
+    await input.fill("one line");
+    expect(Math.abs((await top(input)) - (await top(send)))).toBeLessThan(20);
+
+    await input.press("Shift+Enter");
+    await input.pressSequentially("second line");
+    await expect.poll(async () => (await top(send)) - (await top(input))).toBeGreaterThan(30);
+    await page.screenshot({
+      path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/multi.png` : undefined,
+    });
+
+    await input.press("ControlOrMeta+a");
+    await input.press("Backspace");
+    await expect
+      .poll(async () => Math.abs((await top(input)) - (await top(send))))
+      .toBeLessThan(20);
+  });
 });
