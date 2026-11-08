@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import type { Provider } from "@aven/agents/model";
 import { errorMessage } from "@aven/agents/values";
@@ -51,13 +51,20 @@ const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-r
 
 type Grant = { model: ModelConfig; key: string | undefined };
 
-const TOKEN_SECRET =
-  process.env.PROVIDER_ENCRYPTION_KEY ||
-  process.env.BETTER_AUTH_SECRET ||
-  randomBytes(32).toString("base64");
+const TOKEN_SECRET = process.env.PROVIDER_ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
+if (!TOKEN_SECRET) {
+  throw new Error(
+    "The model gateway has no token secret: set PROVIDER_ENCRYPTION_KEY or BETTER_AUTH_SECRET",
+  );
+}
 
-const tokenFor = (scope: string) =>
-  `${TOKEN_PREFIX}${createHmac("sha256", TOKEN_SECRET).update(`run-gateway:${scope}`).digest("base64url")}`;
+const tokenFor = (runId: string, scope: string | undefined) => {
+  const subject = scope ? `${scope}:${runId}` : runId;
+  const digest = createHmac("sha256", TOKEN_SECRET)
+    .update(`run-gateway:${subject}`)
+    .digest("base64url");
+  return `${TOKEN_PREFIX}${digest}`;
+};
 
 export class RunGateway {
   #grants = new Map<string, Grant>();
@@ -90,9 +97,8 @@ export class RunGateway {
 
   issue(runId: string, config: ModelConfig, scope?: string): RunModel {
     const key = this.#keyOf(config);
-    const token = scope
-      ? tokenFor(scope)
-      : `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
+    const token = tokenFor(runId, scope);
+    this.revoke(runId);
     this.#grants.set(token, { model: config, key });
     this.#tokens.set(runId, token);
     return {
