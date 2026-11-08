@@ -1,29 +1,22 @@
 import { Search, X } from "@mynaui/icons-react";
-import { useRouterState } from "@tanstack/react-router";
 
 import { Button } from "@/components/button";
 import { SidebarTrigger, useSidebar } from "@/components/sidebar";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
-import { sectionTitleOf } from "../sections";
 
 /**
  * The bar over every page on a phone: the way into the sidebar (the threads, the app's own list,
- * Settings and the theme) and into search, and the name of the app you are in, since the page's own
- * header says the finer thing. It stays put while the page scrolls under it.
+ * Settings and the theme) and into search. It carries no title of its own: the tab bar under the
+ * page says which app you are in, and the page says what it is, so a name here would only repeat
+ * one of them. It stays put while the page scrolls under it.
  */
 export function MobileAppBar() {
   const { setOpen: setCommandOpen } = useCommandMenu();
-  const pathname = useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname,
-  });
 
   return (
-    <div className="sticky top-0 z-20 flex h-(--mobile-app-bar) shrink-0 items-center gap-0.5 border-b bg-background/95 pr-1.5 pl-1 backdrop-blur-sm md:hidden">
+    <div className="sticky top-0 z-20 flex h-(--mobile-app-bar) shrink-0 items-center justify-between border-b bg-background/95 px-1.5 backdrop-blur-sm md:hidden">
       <SidebarTrigger className="size-10 [&_svg:not([class*='size-'])]:size-5" />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
-        {sectionTitleOf(pathname)}
-      </span>
       <Button
         variant="ghost"
         size="icon"

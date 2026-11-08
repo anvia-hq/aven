@@ -48,8 +48,10 @@ function NewThread() {
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
         <div className="flex flex-col gap-1.5 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">What should we build?</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+            What should we build?
+          </h2>
+          <p className="hidden text-sm text-muted-foreground md:block">
             Start a thread inside a project. The agent reads, edits and runs code there.
           </p>
         </div>

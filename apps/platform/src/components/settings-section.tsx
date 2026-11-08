@@ -9,12 +9,16 @@ type PageProps = {
 
 export function SettingsPage({ title, description, actions, children }: PageProps) {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-8 md:py-14">
-      <header className="flex items-start justify-between gap-4 pb-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-6 md:py-14">
+      <header className="flex items-start justify-between gap-4 pb-4 md:pb-6">
         <div className="flex min-w-0 flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
+          {/* The sentence that says what the page is for is three lines on a phone and one on a
+              wide screen: it shows from md up (decision 0172). */}
           {description && (
-            <p className="max-w-2xl text-sm text-pretty text-muted-foreground">{description}</p>
+            <p className="hidden max-w-2xl text-sm text-pretty text-muted-foreground md:block">
+              {description}
+            </p>
           )}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -35,7 +39,7 @@ export function SettingsSection({ title, description, leading, children }: Secti
   return (
     <section
       aria-label={title}
-      className="grid gap-4 border-t py-8 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-10"
+      className="grid gap-3 border-t py-6 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-10 md:py-8"
     >
       <div className="flex flex-col gap-1">
         {leading && <div className="mb-2">{leading}</div>}

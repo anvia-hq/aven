@@ -1,4 +1,4 @@
-# The mobile shell is a tab bar, with the page's own name over it
+# The mobile shell is a tab bar, with one title a screen
 
 Status: accepted.
 
@@ -20,9 +20,10 @@ behind one button at the top.
   Threads, Bot, Cockpit and Center, each an icon over its name, one tap from any screen, the
   current one marked with `aria-current="page"` and a tinted circle behind its icon. It is still the
   `Apps` navigation the e2e specs look for.
-- `navigation/components/mobile-app-bar.tsx` is the bar over the page: the menu button, the name of
-  the app you are in (from `navigation/sections.ts`), and a search button that opens the command
-  menu, which used to be only in the drawer. It sticks to the top while the page scrolls under it.
+- `navigation/components/mobile-app-bar.tsx` is the bar over the page: the menu button and a search
+  button that opens the command menu, which used to be only in the drawer. It sticks to the top
+  while the page scrolls under it. It carries no title: the tab bar says which app you are in and
+  the page says what it is, so a name here only repeated one of them.
 - The drawer keeps the user, the search, the threads and projects, the runners, Settings and the
   theme, and gains a Close button in its header. The row of app links is gone from it.
 - `index.css` measures the frame as `--mobile-app-bar`, `--mobile-tab-bar` (which adds

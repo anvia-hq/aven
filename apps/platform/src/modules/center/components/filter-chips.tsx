@@ -17,7 +17,7 @@ export function FilterChips({
     <div
       role="group"
       aria-label={name}
-      className="flex flex-wrap items-center gap-1.5 border-b px-4 py-2"
+      className="flex flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-4 py-2 md:flex-wrap"
     >
       {chips.map((chip) => (
         <Button
@@ -27,14 +27,19 @@ export function FilterChips({
           onClick={chip.remove}
           aria-label={`Remove the filter ${chip.label}`}
           title="Remove this filter"
-          className="h-6 gap-1 rounded-full pr-1.5"
+          className="h-6 shrink-0 gap-1 rounded-full pr-1.5"
         >
           {chip.label}
           <X className="size-3" />
         </Button>
       ))}
       {chips.length > 1 && (
-        <Button variant="ghost" size="xs" onClick={onClear} className="h-6 text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={onClear}
+          className="h-6 shrink-0 text-muted-foreground"
+        >
           Clear all
         </Button>
       )}
