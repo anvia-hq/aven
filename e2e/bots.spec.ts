@@ -462,7 +462,7 @@ test.describe("bots", () => {
       await page.goto("/bot");
       const message = page.getByRole("textbox", { name: "Message" });
       await message.click();
-      await page.keyboard.type("How is @export");
+      await page.keyboard.type("@export");
       const menu = page.getByRole("listbox", { name: "Mention" });
       await expect(menu.getByRole("option", { name: /Fix the export button/ })).toBeVisible();
       await page.keyboard.press("Enter");
@@ -474,11 +474,20 @@ test.describe("bots", () => {
         .locator('[data-slot="bubble-content"], [data-role="user"]')
         .filter({ hasText: "going?" });
       const chip = sent.locator('[data-mention="thread"]');
+      const setState = (state: string) =>
+        page.request.patch(`/api/threads/${threadId}`, { data: { state } });
+      expect((await setState("archived")).ok()).toBe(true);
       await expect(chip).toHaveText("Fix the export button");
       await expect(chip).toHaveAttribute("href", `/threads/${threadId}`);
       await expect(sent).not.toContainText("thread:");
       await expect(message).toHaveText("");
 
+      await expect(menu.getByRole("option", { name: /Fix the export button/ })).toHaveCount(0);
+      expect((await setState("open")).ok()).toBe(true);
+
+      await page.goto("/bot");
+      await message.click();
+      await page.keyboard.type("How is @export");
       await page.reload();
       await expect(
         page.locator('[data-mention="thread"]').filter({ hasText: "Fix the export button" }),
