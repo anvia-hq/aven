@@ -45,6 +45,7 @@ function ThreadPage() {
     error,
     question,
     send,
+    showShip,
     answer,
     cancel,
   } = useThread(threadId);
@@ -117,7 +118,7 @@ function ThreadPage() {
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
-                    {owned && <ShipBar thread={thread} unshipped={unshipped} />}
+                    {owned && <ShipBar thread={thread} unshipped={unshipped} showShip={showShip} />}
                     {!owned && <SharedNotice thread={thread} />}
                     {owned &&
                       (question ? (

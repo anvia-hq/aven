@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { isLocalPreview, pendingMessage, settlePending, withoutPending } from "./pending-messages";
+import {
+  isLocalPreview,
+  pendingMessage,
+  pendingShip,
+  settlePending,
+  withoutPending,
+} from "./pending-messages";
+import { wrapShipRequest } from "@aven/protocol/ship-request";
+
 import type { OutgoingMessage, PendingMessage } from "./types";
 import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
@@ -128,5 +136,29 @@ describe("withoutPending", () => {
   test("drops the message it names only", () => {
     const list: PendingMessage[] = [sent("a", "One"), sent("b", "Two")];
     expect(withoutPending(list, "a").map(({ id }) => id)).toEqual(["b"]);
+  });
+});
+
+describe("a ship card shown before the server has the request", () => {
+  const request = wrapShipRequest("Commit, push, then open it with gh pr create --draft.");
+  const started = (prompt: string): RunEvent => ({ type: "run_start", prompt }) as RunEvent;
+
+  test("is settled by the run that starts with the real ship prompt, whatever its text", () => {
+    const pending = [pendingShip("s1")];
+    expect(settlePending(pending, started(request))).toEqual([]);
+    expect(settlePending(pending, started("an ordinary message"))).toEqual(pending);
+  });
+
+  test("is settled by a snapshot that has the ship request, and by no other message", () => {
+    const pending = [pendingShip("s1")];
+    const snapshot = (...texts: string[]) =>
+      ({ type: "snapshot", messages: texts.map(user) }) as unknown as RunEvent;
+    expect(settlePending(pending, snapshot("hello", request))).toEqual([]);
+    expect(settlePending(pending, snapshot(request, "hello"))).toEqual(pending);
+  });
+
+  test("leaves a message typed meanwhile in place", () => {
+    const pending = [pendingShip("s1"), sent("a", "and also this")];
+    expect(settlePending(pending, started(request)).map(({ id }) => id)).toEqual(["a"]);
   });
 });

@@ -1,3 +1,5 @@
+import { shipRequestOf, wrapShipRequest } from "@aven/protocol/ship-request";
+
 import type { AttachmentUpload, OutgoingMessage, PendingMessage } from "./types";
 import type { ChatMessage, MessageAttachment, RunEvent } from "@aven/protocol/types";
 
@@ -38,6 +40,22 @@ export function pendingMessage(id: string, message: OutgoingMessage): PendingMes
   return { id, message: user };
 }
 
+export function pendingShip(id: string): PendingMessage {
+  return {
+    id,
+    message: {
+      id: `pending-${id}`,
+      role: "user",
+      parts: [{ type: "text", text: wrapShipRequest("Ship this thread") }],
+    },
+  };
+}
+
+const isShipRequest = (message: ChatMessage) => shipRequestOf(textOf(message)) !== null;
+
+const sameRequest = (pending: ChatMessage, sent: string) =>
+  textOf(pending) === sent || (isShipRequest(pending) && shipRequestOf(sent) !== null);
+
 export function withoutPending(pending: PendingMessage[], id: string): PendingMessage[] {
   return pending.filter((item) => item.id !== id);
 }
@@ -46,7 +64,7 @@ export function settlePending(pending: PendingMessage[], event: RunEvent): Pendi
   if (pending.length === 0) return pending;
   switch (event.type) {
     case "run_start": {
-      const at = pending.findIndex(({ message }) => textOf(message) === event.prompt);
+      const at = pending.findIndex(({ message }) => sameRequest(message, event.prompt));
       return at === -1 ? pending : pending.filter((_, index) => index !== at);
     }
     case "steer":
@@ -56,7 +74,7 @@ export function settlePending(pending: PendingMessage[], event: RunEvent): Pendi
     case "snapshot": {
       const sent = event.messages.filter((message) => message.role === "user").map(textOf);
       const recent = sent.slice(Math.max(0, sent.length - pending.length));
-      return pending.filter(({ message }) => !recent.includes(textOf(message)));
+      return pending.filter(({ message }) => !recent.some((text) => sameRequest(message, text)));
     }
     default:
       return pending;

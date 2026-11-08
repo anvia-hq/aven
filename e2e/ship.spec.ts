@@ -52,6 +52,34 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("link", { name: /#7/ })).toBeVisible();
   });
 
+  test("shows the ship card at once, before the server has answered", async ({ page }) => {
+    await registerUser(page, "shp", "Ship User");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS: "1",
+      FAKE_AVEN_FILES: "setup,ship",
+    });
+    runner = child;
+    await page.goto(`/threads/${threadId}`);
+    const held = Promise.withResolvers<void>();
+    await page.route("**/api/threads/*/ship", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await held.promise;
+      return route.fallback();
+    });
+    try {
+      await page.getByRole("button", { name: "Ship", exact: true }).click();
+      await expect(page.getByText("Ship this thread")).toBeVisible({ timeout: 500 });
+    } finally {
+      held.resolve();
+    }
+    await expect.poll(() => page.getByText("Ship this thread").count()).toBe(1);
+    await expect(page.getByText("The agent is working on it in this thread")).toBeVisible();
+  });
+
   test("a thread with an open pull request ships the rest as a separate one, and lists both", async ({
     page,
   }) => {

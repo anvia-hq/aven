@@ -22,3 +22,7 @@ A message sent to an agent that is already working has been shown at once since 
 - Two tabs of the same person both drive a thread; each shows its own message at once and settles it on the events, matching by words (and by id for steers). A message sent from the other tab arrives as the server's own, with nothing pending here.
 - The conversation scrolls to its end on the optimistic message, the same as on a real one, because `useScrollToBottom` counts messages.
 - Bots' chats are not covered: their replies are not runs, and a bot's chat is written by the server.
+
+## Note: the ship card shows at once too
+
+Pressing Ship used to show the card only once the server had sent the ship prompt (the button read "Shipping…" meanwhile). The card now goes into the same pending list as a typed message, as a ship request whose text is only a placeholder, since the real prompt is made by the control plane; the run that starts with any ship request settles it (`pendingShip`, `useThread`'s `showShip`). A ship the server refuses takes the card back.
