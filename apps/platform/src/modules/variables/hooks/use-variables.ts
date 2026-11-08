@@ -10,10 +10,12 @@ import { variablesPath, type Variable, type VariableInput, type VariableScope } 
 const store = getDefaultStore();
 let generation = 0;
 const inflight = new Map<string, Promise<Variable[]>>();
+const scopeGenerations = new Map<string, number>();
 
 export function resetVariables() {
   generation += 1;
   inflight.clear();
+  scopeGenerations.clear();
   store.set(variablesAtom, {});
 }
 
@@ -22,20 +24,32 @@ const path = (scope: VariableScope, name?: string) =>
 
 const keyOf = (scope: VariableScope) => (scope.kind === "project" ? scope.projectId : scope.kind);
 
+const scopeGeneration = (key: string) => scopeGenerations.get(key) ?? 0;
+
+function invalidate(key: string) {
+  inflight.delete(key);
+  scopeGenerations.set(key, scopeGeneration(key) + 1);
+}
+
 async function load(scope: VariableScope) {
   const key = keyOf(scope);
   const startedIn = generation;
+  const startedAt = scopeGeneration(key);
   const known = store.get(variablesAtom)[key] !== undefined;
   let request = inflight.get(key);
   if (!request) {
-    request = api<Variable[]>(path(scope)).finally(() => inflight.delete(key));
-    inflight.set(key, request);
+    const started = api<Variable[]>(path(scope)).finally(() => {
+      if (inflight.get(key) === started) inflight.delete(key);
+    });
+    inflight.set(key, started);
+    request = started;
   }
   try {
     const list = await request;
-    if (startedIn === generation) store.set(variablesAtom, (all) => ({ ...all, [key]: list }));
+    if (startedIn !== generation || startedAt !== scopeGeneration(key)) return;
+    store.set(variablesAtom, (all) => ({ ...all, [key]: list }));
   } catch (failure) {
-    if (startedIn !== generation) return;
+    if (startedIn !== generation || startedAt !== scopeGeneration(key)) return;
     if (!known) {
       toast.add({
         title: "Could not load variables",
@@ -62,6 +76,7 @@ export function useVariables(scope: VariableScope) {
       return true;
     });
     if (!changed) return false;
+    invalidate(keyOf(scope));
     await load(scope);
     return true;
   }
