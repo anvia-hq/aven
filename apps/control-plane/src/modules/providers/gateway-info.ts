@@ -1,3 +1,4 @@
+import { assertPublicProviderUrl } from "./address-guard";
 import type { GatewayModel } from "./types";
 
 const TIMEOUT_MS = 3_000;
@@ -47,9 +48,11 @@ export function createGatewayInfo(options: { fetch?: Fetch; now?: () => number }
 
   async function load(url: string, apiKey: string | undefined) {
     try {
+      await assertPublicProviderUrl(url);
       const response = await request(url, {
         headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
         signal: AbortSignal.timeout(TIMEOUT_MS),
+        redirect: "error",
       });
       if (!response.ok) return null;
       const models = modelsOf(await response.json());

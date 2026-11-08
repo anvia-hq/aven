@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/switch";
 
 import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
+import { FontPicker } from "@/modules/theme/components/font-picker";
+import { PalettePicker } from "@/modules/theme/components/palette-picker";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 import { useTimezone } from "../hooks/use-timezone";
@@ -22,6 +24,18 @@ export function PreferencesSection() {
   return (
     <>
       <SettingsSection title="Appearance" description="Only affects this device.">
+        <SettingsRow
+          title="Theme"
+          description="The colors of the app. Each has a light and a dark mode."
+        >
+          <PalettePicker />
+        </SettingsRow>
+        <SettingsRow
+          title="Interface font"
+          description="The font for the app's text. Code keeps its monospace font."
+        >
+          <FontPicker />
+        </SettingsRow>
         <SettingsRow title="Dark mode" description="Use the dark theme across the app.">
           <Switch
             aria-label="Dark mode"
