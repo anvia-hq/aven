@@ -191,31 +191,31 @@
 
 :root[data-theme="tokyo-night"].dark {
   --background: #1a1b26;
-  --foreground: #c0caf5;
+  --foreground: #d9dffb;
   --card: #1f2335;
-  --card-foreground: #c0caf5;
+  --card-foreground: #d9dffb;
   --popover: #24283b;
-  --popover-foreground: #c0caf5;
+  --popover-foreground: #d9dffb;
   --primary: #7aa2f7;
   --code: var(--primary);
   --primary-foreground: #1a1b26;
   --secondary: #24283b;
-  --secondary-foreground: #c0caf5;
+  --secondary-foreground: #d9dffb;
   --muted: #1f2335;
-  --muted-foreground: #787c99;
+  --muted-foreground: #a3abd1;
   --accent: #292e42;
-  --accent-foreground: #c0caf5;
+  --accent-foreground: #d9dffb;
   --frame: #16161e;
   --border: #292e42;
   --input: #3b4261;
   --ring: #7aa2f7;
   --effort: #bb9af7;
   --sidebar: var(--background);
-  --sidebar-foreground: #c0caf5;
+  --sidebar-foreground: #d9dffb;
   --sidebar-primary: #7aa2f7;
   --sidebar-primary-foreground: #1a1b26;
   --sidebar-accent: #292e42;
-  --sidebar-accent-foreground: #c0caf5;
+  --sidebar-accent-foreground: #d9dffb;
   --sidebar-border: #292e42;
   --sidebar-ring: #7aa2f7;
 }
