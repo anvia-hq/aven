@@ -9,10 +9,11 @@ function withoutNulls(value: unknown): unknown {
 }
 
 function cleanLine(line: string) {
-  const match = /^data: ?(.*)$/.exec(line);
+  const eol = line.endsWith("\r") ? "\r" : "";
+  const match = /^data: ?(.*)$/.exec(eol ? line.slice(0, -1) : line);
   if (!match || match[1] === "[DONE]") return line;
   try {
-    return `data: ${JSON.stringify(withoutNulls(JSON.parse(match[1] ?? "")))}`;
+    return `data: ${JSON.stringify(withoutNulls(JSON.parse(match[1] ?? "")))}${eol}`;
   } catch {
     return line;
   }
