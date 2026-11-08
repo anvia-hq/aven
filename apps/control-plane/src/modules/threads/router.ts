@@ -8,6 +8,7 @@ import {
   compactBody,
   continueBody,
   createThreadBody,
+  messagesBeforeQuery,
   sendMessageBody,
   threadParams,
   updateThreadBody,
@@ -43,13 +44,26 @@ export const threadsRouter = (
           { organizationId, userId: user.id },
           params.id,
         );
+        const shown = await runs.latest(thread);
         return {
           ...thread,
           running: runs.isRunning(thread.id),
-          messages: await runs.history(thread),
+          messages: shown.messages,
+          hidden: shown.hidden,
         };
       },
       { thread: "read", params: threadParams },
+    )
+    .get(
+      "/:id/messages",
+      async ({ params, query, organizationId, user }) => {
+        const thread = await threadsService.readable(
+          { organizationId, userId: user.id },
+          params.id,
+        );
+        return runs.before(thread, query.before);
+      },
+      { thread: "read", params: threadParams, query: messagesBeforeQuery },
     )
     .patch(
       "/:id",

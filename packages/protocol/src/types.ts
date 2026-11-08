@@ -195,12 +195,15 @@ export type ChatMessage = {
   mentions?: MessageMention[];
 };
 
+export type MessagesPage = { messages: ChatMessage[]; hidden: number };
+
 export type QueuedSteer = { id: string; prompt: string; mentions?: MessageMention[] };
 
 export type RunEvent =
   | {
       type: "snapshot";
       messages: ChatMessage[];
+      hidden?: number;
       running: boolean;
       usage?: ThreadUsage;
       runningMs?: number;
