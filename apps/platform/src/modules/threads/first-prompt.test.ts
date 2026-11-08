@@ -36,7 +36,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const threadId of handed.splice(0)) takeFirstPrompt(threadId);
   reports.mockRestore();
-  setSystemTime(new Date());
+  setSystemTime();
 });
 
 test("the thread page takes a handed over prompt once, as it was given", () => {
