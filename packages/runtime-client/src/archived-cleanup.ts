@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { SNAPSHOT_MAX_AGE_MS } from "./snapshots";
@@ -7,6 +7,11 @@ import type { ArchivedCleanupOptions } from "./types";
 const SAFE_NAME = /^[\w-]+$/;
 
 const read = (path: string) => readFile(path, "utf8").catch(() => "");
+const exists = (path: string) =>
+  access(path).then(
+    () => true,
+    () => false,
+  );
 
 export class ArchivedCleanup {
   constructor(private options: ArchivedCleanupOptions) {}
@@ -42,6 +47,7 @@ export class ArchivedCleanup {
         removed.push(threadId);
       }
     }
+    await this.#pruneComputers();
     await this.#pruneEnvironments();
     return removed;
   }
@@ -51,8 +57,20 @@ export class ArchivedCleanup {
       rm(this.#path("workspaces", threadId), { recursive: true, force: true }),
       rm(this.#path("environments", `${threadId}.image`), { force: true }),
       rm(this.#path("skills", "threads", threadId), { recursive: true, force: true }),
+      rm(this.#path("uploads", threadId), { recursive: true, force: true }),
+      rm(this.#path("artifacts", threadId), { recursive: true, force: true }),
+      rm(this.#path("bot-computers", threadId), { force: true }),
     ]);
     await this.clear(threadId);
+  }
+
+  async #pruneComputers() {
+    const marks = await readdir(this.#path("bot-computers")).catch(() => [] as string[]);
+    for (const id of marks) {
+      if (!SAFE_NAME.test(id) || this.options.inUse(id)) continue;
+      if (await exists(this.#path("workspaces", id))) continue;
+      await rm(this.#path("bot-computers", id), { force: true });
+    }
   }
 
   async #pinned() {
