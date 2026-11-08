@@ -117,7 +117,8 @@ export type CockpitCommand =
   | { command: "tags" }
   | { command: "create"; kind: CockpitKind; fields: CockpitFields & { title: string } }
   | { command: "update"; kind: CockpitKind; id: string; fields: CockpitFields }
-  | { command: "delete"; kind: CockpitKind; id: string };
+  | { command: "delete"; kind: CockpitKind; id: string }
+  | { command: "convert"; id: string; fields?: CockpitFields };
 
 export type GraphCommit = { sha: string; parents: readonly string[] };
 
