@@ -9,12 +9,12 @@ export function FontPicker() {
 
   return (
     <Select value={font} onValueChange={(value) => value && setFont(value as SansFont)}>
-      <SelectTrigger aria-label="Interface font" className="w-56">
+      <SelectTrigger aria-label="Interface font">
         <SelectValue>
           {(value: SansFont) => SANS_FONTS.find((option) => option.id === value)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-auto min-w-(--anchor-width)">
         {SANS_FONTS.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             <span style={{ fontFamily: option.family }}>{option.label}</span>

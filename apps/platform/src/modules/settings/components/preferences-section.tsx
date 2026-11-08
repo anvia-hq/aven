@@ -66,10 +66,10 @@ export function PreferencesSection() {
           description="The clock your bots use when you ask for something at a time, such as every morning."
         >
           <Select value={timezone} onValueChange={(value) => value && void save(String(value))}>
-            <SelectTrigger aria-label="Timezone" className="w-64">
+            <SelectTrigger aria-label="Timezone">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-auto min-w-(--anchor-width)">
               {zones(timezone).map((zone) => (
                 <SelectItem key={zone} value={zone}>
                   {zone}
