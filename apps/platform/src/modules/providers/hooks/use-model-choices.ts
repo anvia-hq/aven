@@ -10,8 +10,15 @@ export function useModelChoices() {
     const listed = byProvider[item.id]?.models ?? [];
     return [...new Set([item.modelId, ...listed])]
       .filter((id): id is string => Boolean(id))
-      .map((id) => ({ provider: item, modelId: id }));
+      .map((id) => ({
+        provider: item,
+        modelId: id,
+        label: byProvider[item.id]?.labels?.[id] ?? id,
+      }));
   });
 
-  return { providers, loaded, byProvider, choices, loading };
+  const labelOf = (providerId: string | undefined, modelId: string) =>
+    (providerId ? byProvider[providerId]?.labels?.[modelId] : undefined) ?? modelId;
+
+  return { providers, loaded, byProvider, choices, loading, labelOf };
 }

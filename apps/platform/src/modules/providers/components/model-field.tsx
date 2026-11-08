@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function ModelField({ label, state, value, onChange, waiting }: Props) {
-  const { status, models, error } = state;
+  const { status, models, labels, error } = state;
   let placeholder = waiting;
   if (status === "loading") placeholder = "Loading models…";
   if (status === "error") placeholder = error ?? "Could not load models";
@@ -19,7 +19,7 @@ export function ModelField({ label, state, value, onChange, waiting }: Props) {
     <div className="flex flex-col gap-1">
       <LabeledSelect
         label={label}
-        options={(models ?? []).map((id) => ({ value: id, label: id }))}
+        options={(models ?? []).map((id) => ({ value: id, label: labels?.[id] ?? id }))}
         value={value}
         onChange={onChange}
         placeholder={placeholder}

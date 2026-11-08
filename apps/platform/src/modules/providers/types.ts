@@ -34,7 +34,7 @@ export type Provider = {
   createdAt: string;
 };
 
-export type ModelChoice = { provider: Provider; modelId: string };
+export type ModelChoice = { provider: Provider; modelId: string; label: string };
 
 export type ProviderPatch = {
   name?: string;
@@ -53,7 +53,13 @@ export type NewProvider = {
 
 type ModelEfforts = { options: string[]; defaultValue: string | null };
 
-export type ProviderModels = { models: string[]; efforts: Record<string, ModelEfforts> };
+export type ProviderModels = {
+  models: string[];
+  efforts: Record<string, ModelEfforts>;
+  labels?: Record<string, string>;
+};
+
+export type ListedModels = { models: string[]; labels?: Record<string, string> };
 
 export type CompatiblePreset = {
   id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
@@ -68,5 +74,6 @@ export type CompatiblePreset = {
 export type ModelsState = {
   status: "idle" | "loading" | "ready" | "error";
   models: string[] | null;
+  labels?: Record<string, string>;
   error?: string;
 };

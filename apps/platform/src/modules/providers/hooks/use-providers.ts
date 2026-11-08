@@ -7,7 +7,7 @@ import { createListStore } from "@/lib/list-store";
 
 import { providerModelsAtom } from "../atoms/provider-models-atom";
 import { providersAtom } from "../atoms/providers-atom";
-import type { NewProvider, Provider, ProviderPatch } from "../types";
+import type { ListedModels, NewProvider, Provider, ProviderPatch } from "../types";
 
 const providersStore = createListStore<Provider>({
   path: "/providers",
@@ -51,7 +51,7 @@ export function useProviders() {
   }
 
   async function listModels(input: Pick<NewProvider, "kind" | "apiKey" | "baseUrl">) {
-    return (await postJson<{ models: string[] }>("/providers/models", input)).models;
+    return postJson<ListedModels>("/providers/models", input);
   }
 
   async function update(provider: Provider, patch: ProviderPatch) {
@@ -64,7 +64,7 @@ export function useProviders() {
   }
 
   async function listSavedModels(provider: Provider) {
-    return (await api<{ models: string[] }>(`/providers/${provider.id}/models`)).models;
+    return api<ListedModels>(`/providers/${provider.id}/models`);
   }
 
   async function makeDefault(provider: Provider) {

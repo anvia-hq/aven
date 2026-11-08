@@ -137,3 +137,12 @@ export async function effortsByModel(source: ModelSource, ids: string[]) {
     entries.filter((entry): entry is readonly [string, ReasoningControls] => entry[1] !== null),
   );
 }
+
+export async function labelsByModel(source: ModelSource, ids: string[]) {
+  const entries = await Promise.all(
+    ids.map(async (id) => [id, await modelCatalog.label(source.kind, id)] as const),
+  );
+  return Object.fromEntries(
+    entries.filter((entry): entry is readonly [string, string] => entry[1] !== null),
+  );
+}

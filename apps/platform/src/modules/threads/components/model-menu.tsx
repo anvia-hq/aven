@@ -13,7 +13,8 @@ import { EffortSlider, effortName } from "./effort-slider";
 type Props = { model: ReturnType<typeof useModelSelection> };
 
 export function ModelMenu({ model }: Props) {
-  const { providers, provider, modelId, choices, loadingModels, levels, effort } = model;
+  const { providers, provider, modelId, modelLabel, choices, loadingModels, levels, effort } =
+    model;
   const [choosing, setChoosing] = useState(false);
 
   if (!provider) {
@@ -40,7 +41,7 @@ export function ModelMenu({ model }: Props) {
       >
         <ProviderLogo kind={provider.kind} />
         <span className="truncate font-medium text-foreground">
-          {modelId ?? "Provider default"}
+          {modelLabel ?? "Provider default"}
         </span>
         {efforts && <span className="shrink-0">{effortName(effort)}</span>}
       </PopoverTrigger>
@@ -87,7 +88,7 @@ export function ModelMenu({ model }: Props) {
               onClick={() => setChoosing(true)}
             >
               <ProviderLogo kind={provider.kind} />
-              <span className="truncate">{modelId ?? "Provider default"}</span>
+              <span className="truncate">{modelLabel ?? "Provider default"}</span>
               <ChevronRight />
             </Button>
             {efforts && (
