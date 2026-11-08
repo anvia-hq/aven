@@ -22,6 +22,7 @@ COPY packages/runtime-client/package.json packages/runtime-client/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./
+COPY LICENSE /LICENSE
 COPY apps/control-plane apps/control-plane
 COPY packages packages
 
