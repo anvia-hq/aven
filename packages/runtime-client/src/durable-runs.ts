@@ -17,6 +17,7 @@ import { dirname } from "node:path";
 
 import { createDurableEventMapper } from "./durable-events";
 import { defineAvenGoal, startGoal } from "./durable-goals";
+import { openRunDatabase } from "./run-outbox";
 import type { SandboxToolName } from "@aven/agents/types";
 import type {
   DurableEnd,
@@ -46,7 +47,40 @@ const SAFE_TOOLS = new Set<string>([
 
 const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
 
-const held = new Set<string>();
+const held = new Map<string, DurableRuns>();
+
+class TranscriptTurns {
+  #db: Database;
+
+  constructor(db: Database) {
+    this.#db = db;
+    db.run(
+      "create table if not exists transcript_turns (run_id text primary key, turn integer not null)",
+    );
+  }
+
+  from(runId: string) {
+    return (
+      this.#db
+        .query<{ turn: number }, [string]>("select turn from transcript_turns where run_id = ?")
+        .get(runId)?.turn ?? 0
+    );
+  }
+
+  to(runId: string, turn: number) {
+    this.#db
+      .query("insert or replace into transcript_turns (run_id, turn) values (?, ?)")
+      .run(runId, turn);
+  }
+
+  forget(runId: string) {
+    this.#db.query("delete from transcript_turns where run_id = ?").run(runId);
+  }
+
+  close() {
+    this.#db.close();
+  }
+}
 
 function releaseOwnLease(databasePath: string) {
   if (!existsSync(databasePath)) return;
@@ -71,8 +105,8 @@ const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 
 export class DurableRuns {
   #runtime: DurableRuntime;
   #goals: GoalJournal;
-  #sent = new Map<string, number>();
-  readonly #path: string;
+  #turns: TranscriptTurns;
+  #open = true;
 
   private constructor(
     runtime: DurableRuntime,
@@ -80,7 +114,7 @@ export class DurableRuns {
     contexts: Map<string, GoalContext>,
     path: string,
   ) {
-    this.#path = path;
+    this.#turns = new TranscriptTurns(openRunDatabase(`${path}.state`));
     this.#runtime = runtime;
     this.#goals = {
       runtime,
@@ -99,7 +133,10 @@ export class DurableRuns {
     onFatalError?: (error: unknown) => void,
   ) {
     mkdirSync(dirname(databasePath), { recursive: true });
-    if (held.has(databasePath)) throw new Error(`The run journal ${databasePath} is already open`);
+    const owner = held.get(databasePath);
+    if (owner !== undefined && owner.#open)
+      throw new Error(`The run journal ${databasePath} is already open`);
+    held.delete(databasePath);
     releaseOwnLease(databasePath);
     const contexts = new Map<string, GoalContext>();
     const goal = defineAvenGoal(contexts);
@@ -109,10 +146,17 @@ export class DurableRuns {
       limits: { maxPayloadBytes: MAX_PAYLOAD_BYTES },
       onFatalError: (error) => (onFatalError ?? console.error)(error),
     });
-    held.add(databasePath);
-    const runs = new DurableRuns(runtime, goal, contexts, databasePath);
-    await runs.#endInterrupted(keepAgents);
-    return runs;
+    let runs: DurableRuns | undefined;
+    try {
+      runs = new DurableRuns(runtime, goal, contexts, databasePath);
+      held.set(databasePath, runs);
+      await runs.#endInterrupted(keepAgents);
+      return runs;
+    } catch (error) {
+      held.delete(databasePath);
+      await (runs?.close() ?? runtime.close()).catch(() => undefined);
+      throw error;
+    }
   }
 
   async #endInterrupted(keepAgents: ReadonlySet<string>) {
@@ -240,9 +284,9 @@ export class DurableRuns {
   }
 
   transcriptTurn(durableId: string, end: Exclude<DurableEnd, { type: "error" }>) {
-    const from = this.#sent.get(durableId) ?? 0;
-    if (end.type === "interaction") this.#sent.set(durableId, from + end.messages.length);
-    else this.#sent.delete(durableId);
+    const from = this.#turns.from(durableId);
+    if (end.type === "interaction") this.#turns.to(durableId, from + end.messages.length);
+    else this.#turns.forget(durableId);
     return from;
   }
 
@@ -271,8 +315,12 @@ export class DurableRuns {
   }
 
   async close() {
-    await this.#runtime.close();
-    held.delete(this.#path);
+    this.#open = false;
+    try {
+      await this.#runtime.close();
+    } finally {
+      this.#turns.close();
+    }
   }
 
   #registerOrKeep(input: RunInput) {

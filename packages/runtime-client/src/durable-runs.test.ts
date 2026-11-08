@@ -15,6 +15,7 @@ import {
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
+import { mkdirSync, rmSync } from "node:fs";
 import { hostname } from "node:os";
 import { z } from "zod";
 
@@ -201,6 +202,48 @@ describe("DurableRuns after a reload in the same process", () => {
     const path = journalPath();
     await opened(path);
     await expect(DurableRuns.open(path)).rejects.toThrow("already open");
+  });
+
+  test("an open that failed does not leave the journal held", async () => {
+    const path = journalPath();
+    mkdirSync(`${path}.state`);
+    await expect(DurableRuns.open(path)).rejects.toThrow("unable to open database file");
+    rmSync(`${path}.state`, { recursive: true });
+
+    const runs = await opened(path);
+    expect(await runs.asked("thread-1")).toBeUndefined();
+  });
+
+  test("a journal that was closed in this process opens again", async () => {
+    const path = journalPath();
+    const before = await opened(path);
+    await closed(before);
+
+    const after = await opened(path);
+    expect(await after.asked("thread-1")).toBeUndefined();
+  });
+});
+
+describe("DurableRuns transcript turns", () => {
+  test("a run taken up again by another process files its turns where it left off", async () => {
+    const path = journalPath();
+    const before = await opened(path);
+    const asked = await before.start(
+      "run-1",
+      "thread-1",
+      "paint it",
+      input("run-1", question),
+      () => {},
+    );
+    const end = await asked.done;
+    expect(end.type).toBe("interaction");
+    if (end.type !== "interaction") return;
+    expect(end.messages.length).toBeGreaterThan(0);
+    expect(before.transcriptTurn(asked.durableId, end)).toBe(0);
+    await closed(before);
+
+    const after = await opened(path);
+    expect(after.transcriptTurn(asked.durableId, end)).toBe(end.messages.length);
   });
 });
 
