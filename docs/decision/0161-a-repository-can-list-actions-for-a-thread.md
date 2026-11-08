@@ -16,6 +16,8 @@ Running the tests or the typecheck from a thread meant typing it to the agent, w
 - **A command that exits with a code other than 0 has an Ask agent to fix button** in Background tasks, which sends the agent the command, its exit code and the end of its output (6,000 characters). It is off while the agent works.
 - **One Actions button, at the right of the bar**, opens a popover that lists them, with Ship and the changes badge at the left. A star on a row makes that action a button of its own beside Actions; the choice is kept per project in localStorage.
 
+- **`/setup-actions`**, a built-in skill like `/setup-ship`, reads the repository's scripts and CI, asks which actions the person wants and writes the file; its example is parsed by the real parser in `builtins.test.ts`, so it cannot drift from the rules above.
+
 ## Consequences
 
 - A runner needs `aven update` for `actions.run`; an older one is refused by the wire version.
