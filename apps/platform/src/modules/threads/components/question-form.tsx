@@ -45,7 +45,7 @@ export function Question({
           {prompt.choices?.map((choice) => (
             <Label
               key={choice.value}
-              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-accent"
+              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-success has-data-checked:bg-success/10"
             >
               <RadioGroupItem value={choice.value} className="absolute size-px opacity-0" />
               {choice.label}
@@ -59,7 +59,11 @@ export function Question({
           placeholder={hasChoices ? "Or write your own answer" : "Your answer"}
           value={current.custom}
           onChange={(event) => onChange({ choice: "", custom: event.target.value })}
-          className="h-9"
+          className={cn(
+            "h-auto rounded-lg px-3 py-2.5 font-normal hover:bg-muted/50",
+            current.custom.trim() &&
+              "border-success bg-success/10 hover:bg-success/10 dark:bg-success/10",
+          )}
         />
       )}
     </div>
