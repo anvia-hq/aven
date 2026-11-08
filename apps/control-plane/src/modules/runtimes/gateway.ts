@@ -3,6 +3,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import type { Provider } from "@aven/agents/model";
 import { errorMessage } from "@aven/agents/values";
 
+import { assertProviderAddress } from "../providers/address-guard";
 import { defaultModelId } from "../providers/default-model";
 import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
@@ -145,7 +146,10 @@ export class RunGateway {
     }
 
     try {
-      const upstream = await fetch(this.#upstreamUrl(grant.model, upstreamPath, request), {
+      const upstreamUrl = this.#upstreamUrl(grant.model, upstreamPath, request);
+      await assertProviderAddress(provider, upstreamUrl);
+      const upstream = await fetch(upstreamUrl, {
+        redirect: "error",
         method: "POST",
         headers: upstreamHeaders(request, credential),
         body: JSON.stringify(body),
