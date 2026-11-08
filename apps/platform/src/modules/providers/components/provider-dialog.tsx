@@ -73,7 +73,7 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
           ref={form.formRef}
           onSubmit={form.submit}
           onChange={form.scheduleLoad}
-          className="flex flex-col gap-4"
+          className="flex min-w-0 flex-col gap-4"
         >
           <DialogHeader>
             <DialogTitle>

@@ -13,7 +13,7 @@ type Props = {
 
 export function LabeledSelect({ label, options, value, onChange, placeholder, disabled }: Props) {
   return (
-    <div className="flex flex-col gap-1 text-sm">
+    <div className="flex min-w-0 flex-col gap-1 text-sm">
       <span>{label}</span>
       <Select
         items={options}
@@ -22,7 +22,7 @@ export function LabeledSelect({ label, options, value, onChange, placeholder, di
         onValueChange={(next) => next && onChange(next)}
       >
         <SelectTrigger aria-label={label} className="w-full">
-          <SelectValue placeholder={placeholder} />
+          <SelectValue className="min-w-0 truncate" placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
