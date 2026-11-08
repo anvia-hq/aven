@@ -2,7 +2,7 @@
   "name": "@aven/db",
   "version": "0.0.0",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "exports": {
     "./client": "./src/client.ts",
