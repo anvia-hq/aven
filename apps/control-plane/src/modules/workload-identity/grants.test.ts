@@ -77,6 +77,16 @@ describe("RunIdentities", () => {
     expect(await identities.mint(credential, request())).toBeNull();
   });
 
+  test("issuing a run a new credential ends the earlier one, and revoking the run ends every one", async () => {
+    const { identities, credential: first } = await setup();
+    const second = identities.issue("run-1", identity);
+    expect(await identities.mint(first, request())).toBeNull();
+    expect(await identities.mint(second, request())).not.toBeNull();
+    identities.revoke("run-1");
+    expect(await identities.mint(second, request())).toBeNull();
+    expect(await identities.mint(first, request())).toBeNull();
+  });
+
   test("revoking one run leaves another's credential working", async () => {
     const { identities, credential } = await setup();
     const other = identities.issue("run-2", { ...identity, threadId: "thread-2" });
