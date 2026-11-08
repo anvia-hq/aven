@@ -39,7 +39,7 @@ function WorkingWord() {
       <span role="status" className="sr-only">
         Working…
       </span>
-      <span className="relative inline-block min-w-[12ch]" aria-hidden>
+      <span className="relative inline-block" aria-hidden>
         {previous && (
           <span
             key={`out-${previous}`}
@@ -80,7 +80,12 @@ export function WorkingIndicator({ running, startedAt = null }: Props & { runnin
         <>
           <WorkingDots />
           <WorkingWord />
-          {startedAt !== null && <WorkingTime startedAt={startedAt} />}
+          {startedAt !== null && (
+            <>
+              <span aria-hidden>·</span>
+              <WorkingTime startedAt={startedAt} />
+            </>
+          )}
         </>
       )}
     </div>
