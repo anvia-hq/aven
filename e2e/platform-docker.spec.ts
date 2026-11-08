@@ -55,7 +55,7 @@ test.describe("the Docker page of the platform owner", () => {
     await registerUser(stranger, "stranger", "Stranger");
     expect((await stranger.request.get("/api/platform/leftovers")).status()).toBe(403);
     await stranger.goto("/settings/docker");
-    await expect(stranger).toHaveURL(/\/settings\/profile$/);
+    await expect(stranger).toHaveURL(/\/settings\/general$/);
     await other.close();
 
     let removals: unknown[] = [];

@@ -32,6 +32,7 @@ import { github } from "./modules/github/client";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { preferencesRouter } from "./modules/preferences/router";
+import { profileRouter } from "./modules/profile/router";
 import { projectsRouter } from "./modules/projects/router";
 import { providersRouter } from "./modules/providers/router";
 import { runtimesRouter } from "./modules/runtimes/router";
@@ -65,6 +66,7 @@ export const app = new Elysia()
   .use(githubRouter())
   .use(platformRouter(putAwayThread, runtimeHub))
   .use(preferencesRouter)
+  .use(profileRouter)
   .use(projectsRouter(putAwayThread))
   .use(providersRouter)
   .use(runtimesRouter(runtimeHub))

@@ -18,7 +18,7 @@ import { useCommandMenu } from "../hooks/use-command-menu";
 const pages = [
   { label: "New thread", to: "/threads" },
   { label: "Projects", to: "/projects" },
-  { label: "Personal settings", to: "/settings/profile" },
+  { label: "Personal settings", to: "/settings/general" },
   { label: "Workspace members", to: "/settings/members" },
 ] as const;
 
@@ -37,7 +37,7 @@ export function CommandMenu() {
       }
       if (event.key === ",") {
         event.preventDefault();
-        void navigate({ to: "/settings/profile" });
+        void navigate({ to: "/settings/general" });
       }
     };
     window.addEventListener("keydown", onKeyDown);

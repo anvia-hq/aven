@@ -51,8 +51,8 @@ test.describe("settings", () => {
 
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
     await page.getByRole("menuitem", { name: /Personal settings/ }).click();
-    await expect(page).toHaveURL(/\/settings\/profile$/);
-    await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
+    await expect(page).toHaveURL(/\/settings\/general$/);
+    await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
 
     await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
@@ -65,7 +65,7 @@ test.describe("settings", () => {
 
   test("the profile name saves and the dark mode switch changes the theme", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
-    await page.goto("/settings/profile");
+    await page.goto("/settings/general");
     await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
 
     await page.getByLabel("Name").fill("Renamed Person");
@@ -81,10 +81,11 @@ test.describe("settings", () => {
   test("settings navigation reaches every page", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/settings\/profile$/);
+    await expect(page).toHaveURL(/\/settings\/general$/);
 
     const nav = page.getByRole("navigation", { name: "Settings" });
     for (const [name, url] of [
+      ["General", /general$/],
       ["Providers", /providers$/],
       ["Members", /members$/],
       ["Runtimes", /runtimes$/],
