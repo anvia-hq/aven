@@ -45,7 +45,9 @@ export function useBotMentions(selfId: string, main: boolean) {
             ? others.current.filter((bot) => bot.name.toLowerCase().includes(wanted)).map(itemOf)
             : [];
           const threadItems = mine.current
-            .filter((thread) => thread.title.toLowerCase().includes(wanted))
+            .filter(
+              (thread) => thread.state === "open" && thread.title.toLowerCase().includes(wanted),
+            )
             .slice(0, THREAD_CHOICES)
             .map(threadItem);
           return [...botItems, ...threadItems];
