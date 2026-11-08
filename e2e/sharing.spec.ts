@@ -43,7 +43,7 @@ test.describe("sharing a thread", () => {
     await expect(mate.page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
 
     await page.goto(`/threads/${thread.id}`);
-    const share = page.getByRole("button", { name: "Share", exact: true });
+    const share = page.getByRole("button", { name: /^(Share|Shared to workspace)$/ });
     const dialog = page.getByRole("dialog", { name: "Share this thread" });
     const choose = async (name: RegExp) => {
       await share.click();
@@ -74,7 +74,9 @@ test.describe("sharing a thread", () => {
     await expect(mate.page).toHaveURL(new RegExp(`/threads/${thread.id}$`));
     await expect(mate.page.getByText(/Shared by/)).toContainText("Owner Person");
     await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
-    await expect(mate.page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
+    await expect(
+      mate.page.getByRole("button", { name: /^(Share|Shared to workspace)$/ }),
+    ).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Desktop" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Terminal" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Files" })).toBeVisible();

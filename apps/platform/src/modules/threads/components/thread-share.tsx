@@ -52,11 +52,11 @@ export function ThreadShare({ thread }: { thread: Thread }) {
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+      <DialogTrigger render={<Button size="sm" />}>
         {shared ? <Globe /> : <Share />}
-        Share
+        {shared ? "Shared to workspace" : "Share"}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <div className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>Share this thread</DialogTitle>
