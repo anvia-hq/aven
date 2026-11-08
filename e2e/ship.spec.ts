@@ -4,8 +4,19 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
+const GITHUB_URL = `http://localhost:${process.env.E2E_GITHUB_PORT ?? 8101}`;
+
 test.describe("shipping a thread", () => {
   let runner: ChildProcess | undefined;
+  let testKey: string;
+  const pullsUrl = () => `${GITHUB_URL}/repos/acme/shiny-app/pulls?test=${testKey}`;
+
+  test.beforeEach(async ({ page }, testInfo) => {
+    testKey = `ship-${testInfo.testId}`;
+    const reset = await page.request.post(`${GITHUB_URL}/__reset?test=${testKey}`);
+    expect(reset.ok()).toBe(true);
+  });
+
   test.afterEach(() => {
     runner?.kill();
     runner = undefined;
@@ -29,7 +40,7 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("link", { name: /#7/ })).toHaveCount(0);
     await expect(page.getByTitle("Changes not shipped yet")).toHaveText("+2 -1");
 
-    await page.request.post("http://localhost:8101/repos/acme/shiny-app/pulls", {
+    await page.request.post(pullsUrl(), {
       data: { head: `aven/${threadId.slice(0, 8)}`, title: "Add the export button" },
     });
     await page.getByRole("button", { name: "Ship", exact: true }).click();
@@ -94,15 +105,16 @@ test.describe("shipping a thread", () => {
     });
     runner = child;
     const branch = `aven/${threadId.slice(0, 8)}`;
-    const pulls = "http://localhost:8101/repos/acme/shiny-app/pulls";
 
     await page.goto(`/threads/${threadId}`);
-    await page.request.post(pulls, { data: { head: branch, title: "Add the export button" } });
+    await page.request.post(pullsUrl(), { data: { head: branch, title: "Add the export button" } });
     await page.getByRole("button", { name: "Ship", exact: true }).click();
     await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Update PR" })).toBeVisible();
 
-    await page.request.post(pulls, { data: { head: `${branch}-docs`, title: "Fix the docs" } });
+    await page.request.post(pullsUrl(), {
+      data: { head: `${branch}-docs`, title: "Fix the docs" },
+    });
     await page.getByRole("button", { name: "More ways to ship" }).click();
     await page.getByRole("menuitem", { name: "Ship as a new PR" }).click();
     await expect.poll(() => events.filter((event) => event.type === "started")).toHaveLength(2);

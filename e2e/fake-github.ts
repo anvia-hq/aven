@@ -20,7 +20,18 @@ type Pull = {
   merged_at: string | null;
   head: { ref: string; repo: { full_name: string } };
 };
-const pullRequests = new Map<string, Pull[]>();
+
+type StoredPull = { test: string; pull: Pull };
+
+const SHARED_TEST = "shared";
+const pullRequests = new Map<string, StoredPull[]>();
+
+const testOf = (url: URL, headers: Headers): string | null =>
+  url.searchParams.get("test") ?? headers.get("x-fake-github-test");
+
+const pullsOf = (repository: string): StoredPull[] => pullRequests.get(repository) ?? [];
+
+const threadOf = (branch: string) => branch.split("-")[0];
 
 function searchTitles(pulls: boolean, open: boolean) {
   if (pulls && open) return Array.from({ length: 12 }, (_, i) => `Open pull request ${12 - i}`);
@@ -42,9 +53,24 @@ const changedFiles = [
 Bun.serve({
   port,
   async fetch(request) {
-    const { pathname } = new URL(request.url);
-    if (/^\/repos\/acme\/[\w.-]+\/pulls$/.test(pathname)) {
-      const list = pullRequests.get(pathname) ?? [];
+    const url = new URL(request.url);
+    const { pathname } = url;
+    if (pathname === "/__reset" && request.method === "POST") {
+      const test = testOf(url, request.headers);
+      const repository = url.searchParams.get("repo");
+      for (const key of pullRequests.keys()) {
+        if (repository !== null && key !== repository) continue;
+        const kept = test === null ? [] : pullsOf(key).filter((entry) => entry.test !== test);
+        if (kept.length === 0) pullRequests.delete(key);
+        else pullRequests.set(key, kept);
+      }
+      return Response.json({ reset: true });
+    }
+    const pulls = pathname.match(/^\/repos\/acme\/([\w.-]+)\/pulls$/);
+    if (pulls) {
+      const repository = `acme/${pulls[1]}`;
+      const test = testOf(url, request.headers);
+      const list = pullsOf(repository);
       if (request.method === "POST") {
         const { head = "", title = "A pull request" } = (await request
           .json()
@@ -52,20 +78,25 @@ Bun.serve({
           head?: string;
           title?: string;
         };
-        const thread = (branch: string) => branch.split("-")[0];
-        const number = 7 + list.filter((pull) => thread(pull.head.ref) === thread(head)).length;
+        const owner = test ?? SHARED_TEST;
+        const number =
+          7 +
+          list.filter(
+            (entry) => entry.test === owner && threadOf(entry.pull.head.ref) === threadOf(head),
+          ).length;
         const made: Pull = {
           number,
           html_url: `https://github.com/acme/pull/${number}`,
           title,
           state: "open",
           merged_at: null,
-          head: { ref: head, repo: { full_name: pathname.split("/").slice(2, 4).join("/") } },
+          head: { ref: head, repo: { full_name: repository } },
         };
-        pullRequests.set(pathname, [...list, made]);
+        pullRequests.set(repository, [...list, { test: owner, pull: made }]);
         return Response.json(made, { status: 201 });
       }
-      return Response.json([...list].reverse());
+      const visible = test === null ? list : list.filter((entry) => entry.test === test);
+      return Response.json(visible.map((entry) => entry.pull).reverse());
     }
     if (pathname === "/health") return new Response("ok");
     if (pathname === "/login/oauth/authorize") {
