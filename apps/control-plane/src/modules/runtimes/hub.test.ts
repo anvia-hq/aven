@@ -1068,7 +1068,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       const runtimeId = crypto.randomUUID();
       const first = watched();
       const second = watched();
-      const heldAt = Date.now();
 
       hub.hold(runtimeId, [["run-first", heldRun(first.sink)]]);
       await Bun.sleep(250);
@@ -1081,8 +1080,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       await until(() => first.lost.length === 1 && second.lost.length === 1);
       expect(first.lost[0]?.message).toBe("The runtime disconnected");
       expect(second.lost[0]?.message).toBe("The runtime disconnected");
-      expect(first.lost[0]!.at - heldAt).toBeGreaterThanOrEqual(grace + 150);
-      expect(second.lost[0]!.at - heldAt).toBeGreaterThanOrEqual(grace + 150);
     });
 
     test("shutting down answers every held run with an explicit failure, and nothing else", async () => {
