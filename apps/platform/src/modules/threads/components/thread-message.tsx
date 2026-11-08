@@ -90,6 +90,7 @@ export const ThreadMessage = memo(function ThreadMessage({
     const note = systemNoteOf(
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
     );
+    if (note?.kind === "process") return null;
     if (note) {
       return (
         <p className="my-6 text-center text-sm text-muted-foreground" data-role="note">
