@@ -50,6 +50,7 @@ export default defineConfig({
         AVEN_VERSION: "9.9.9",
         AVEN_RELEASES_URL: "http://127.0.0.1:9/releases",
         AVEN_BOT_RUNNER: BOT_RUNNER_ID,
+        PROVIDER_ALLOWED_HOSTS: "localhost,127.0.0.1",
         GITHUB_APP_ID: "1",
         GITHUB_APP_SLUG: "aven-e2e",
         GITHUB_APP_CLIENT_ID: "Iv1.e2e",

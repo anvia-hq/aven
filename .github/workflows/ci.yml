@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: typecheck, lint, format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run format:check
+
+  test:
+    name: unit tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aven
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven
+      BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      BETTER_AUTH_URL: http://localhost:5173
+      PROVIDER_ENCRYPTION_KEY: ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: bun packages/db/src/migrate.ts
+      - run: bun test apps packages
+
+  e2e:
+    name: e2e ${{ matrix.shard }}/3
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-${{ matrix.shard }}
+          path: test-results
+          retention-days: 7
