@@ -231,7 +231,6 @@ run("createThreadWatcher (postgres)", async () => {
     const { thread } = await setup();
     const other = await botsService.create(userId, { name: "Another", instruction: "x" });
     expect(await threadWatchService.followUp(thread.id, other.id)).toBe("unwatched");
-    // Past the usual limit of three the follow-up still goes ahead, up to the ceiling.
     for (let i = 0; i < BOT_THREAD_FOLLOW_UPS_CEILING; i++) {
       expect(await threadWatchService.followUp(thread.id, bot.id)).toBe("ok");
     }

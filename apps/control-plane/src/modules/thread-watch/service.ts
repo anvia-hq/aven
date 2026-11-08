@@ -3,11 +3,7 @@ import { botThreads } from "@aven/db/schema/bot-threads";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { WatchedRun, Watcher } from "./types";
 
-// A bot may follow a thread up this many times without the person's word before each further
-// follow-up is logged as going past the usual limit.
 export const BOT_THREAD_FOLLOW_UPS = 3;
-// The hard ceiling on follow-ups without the person's word. It stays, so a bot cannot run a thread
-// on forever with no word from the person.
 export const BOT_THREAD_FOLLOW_UPS_CEILING = 12;
 
 const at = (run: WatchedRun) => (run === null ? null : new Date(run));
