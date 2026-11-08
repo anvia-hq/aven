@@ -94,7 +94,7 @@
   --sidebar-ring: oklch(0.5 0.02 160);
 }
 
-/* Color themes (decision 0153): well-known developer color schemes, each with a light and a dark mode. Mint, the default, is :root and .dark above. */
+/* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Mint, the default, is :root and .dark above. */
 
 :root[data-theme="catppuccin"] {
   --background: #eff1f5;
@@ -402,7 +402,7 @@
   --working-to: oklch(0.62 0.17 152);
 }
 
-/* The Aven mark keeps Mint's neutral in every color theme (decision 0154): the palette blocks never set --brand. */
+/* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
 :root {
   --brand: oklch(0.22 0.01 160);
 }
