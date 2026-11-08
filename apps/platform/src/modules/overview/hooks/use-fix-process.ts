@@ -9,13 +9,15 @@ const OUTPUT_CHARS = 6_000;
 
 export function fixPrompt(process: ProcessView, logs: ProcessLogs) {
   const output = `${logs.stdout}${logs.stderr}`.trimEnd().slice(-OUTPUT_CHARS);
+  const longest = Math.max(0, ...[...output.matchAll(/`+/g)].map((run) => run[0].length));
+  const fence = "`".repeat(Math.max(3, longest + 1));
   return [
     `\`${process.command}\` failed with exit code ${process.exitCode}. Find the cause and fix it, then run it again to check.`,
     "",
     "Its output (the end of it):",
-    "```",
+    fence,
     output || "(nothing printed)",
-    "```",
+    fence,
   ].join("\n");
 }
 

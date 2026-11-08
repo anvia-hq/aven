@@ -1,4 +1,5 @@
 import { NotFoundError } from "../../errors";
+import { WAKE_TIMEOUT_MS } from "../desktop/service";
 import { createFilesService } from "../files/service";
 import { runnerFor } from "../runtimes/ask-runner";
 import { ACTIONS_FILE, parseActions } from "./parse";
@@ -6,12 +7,14 @@ import { actionRunAnswer } from "./schema";
 import type { RuntimeHub } from "../runtimes/hub";
 import type { ActionStarted, ActionsDeps, ParsedActions, StartActionInput } from "./types";
 
-export function createActionsService(hub: RuntimeHub, { send }: ActionsDeps) {
-  const files = createFilesService(hub);
+export function createActionsService(
+  hub: RuntimeHub,
+  { send, readFile = createFilesService(hub).read }: ActionsDeps,
+) {
   const runner = runnerFor(hub);
 
   async function read(organizationId: string, threadId: string): Promise<ParsedActions> {
-    const file = await files.read(organizationId, threadId, ACTIONS_FILE);
+    const file = await readFile(organizationId, threadId, ACTIONS_FILE);
     if (!file.available || file.kind === "missing") return { actions: [], problem: null };
     if (file.kind !== "text" || file.truncated) {
       return { actions: [], problem: "The file is not readable text or is too long" };
@@ -44,6 +47,7 @@ export function createActionsService(hub: RuntimeHub, { send }: ActionsDeps) {
         { threadId, command: action.body },
         actionRunAnswer,
         { logged: "The actions.run call was refused:", message: "The action could not be started" },
+        WAKE_TIMEOUT_MS,
       );
       return { kind: "run", process };
     },

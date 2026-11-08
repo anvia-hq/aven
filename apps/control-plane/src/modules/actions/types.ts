@@ -1,3 +1,4 @@
+import type { FileResult } from "../files/types";
 import type { ModelSelection } from "../providers/types";
 import type { ActionRunResult, ThreadAction } from "@aven/protocol/types";
 
@@ -6,6 +7,7 @@ export type ThreadActionBody = ThreadAction & { body: string };
 export type ParsedActions = { actions: ThreadActionBody[]; problem: string | null };
 
 export type ActionsDeps = {
+  readFile?: (organizationId: string, threadId: string, path: string) => Promise<FileResult>;
   send: (
     organizationId: string,
     userId: string,
