@@ -1,4 +1,5 @@
 import { Search } from "@mynaui/icons-react";
+import { useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
@@ -17,23 +18,61 @@ type Props = {
   onChange: (next: ProjectsSearch) => void;
 };
 
+const SEARCH_WAIT_MS = 250;
+
+function SearchField({
+  query,
+  onCommit,
+}: {
+  query: string | undefined;
+  onCommit: (q?: string) => void;
+}) {
+  const [text, setText] = useState(query ?? "");
+  const sent = useRef(query);
+  const commit = useRef(onCommit);
+  commit.current = onCommit;
+
+  useEffect(() => {
+    if (query === sent.current) return;
+    sent.current = query;
+    setText(query ?? "");
+  }, [query]);
+  useEffect(() => {
+    if (text === (sent.current ?? "")) return;
+    const timer = setTimeout(() => {
+      sent.current = text || undefined;
+      commit.current(text || undefined);
+    }, SEARCH_WAIT_MS);
+    return () => clearTimeout(timer);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  return (
+    <div className="relative">
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
+      />
+      <Input
+        type="search"
+        aria-label="Search projects"
+        placeholder="Search projects"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={() => {
+          sent.current = text || undefined;
+          commit.current(text || undefined);
+        }}
+        className="h-8 pl-8"
+      />
+    </div>
+  );
+}
+
 export function ProjectFilterBar({ filters, counts, runtimes, onChange }: Props) {
   return (
     <div className="flex shrink-0 flex-col gap-2">
-      <div className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          aria-label="Search projects"
-          placeholder="Search projects"
-          value={filters.query ?? ""}
-          onChange={(event) => onChange({ q: event.target.value || undefined })}
-          className="h-8 pl-8"
-        />
-      </div>
+      <SearchField query={filters.query} onCommit={(q) => onChange({ q })} />
       <div className="flex items-center gap-2">
         <Tabs
           value={filters.view}
