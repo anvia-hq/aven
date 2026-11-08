@@ -476,6 +476,13 @@ export type RunEnvVar = { name: string; value: string; secret?: boolean };
 
 export type RunIdentityCredential = { credential: string };
 
+export type RunSecrets = {
+  env?: RunEnvVar[];
+  github?: RunGithub;
+  identity?: RunIdentityCredential;
+  mcp?: RunMcpServer[];
+};
+
 export type BotReplyInfo = {
   id: string;
   name: string;
@@ -537,7 +544,7 @@ export type ControlPlaneToRuntime =
       cockpit?: CockpitAccess;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
-  | { type: "run.attach"; runId: string; after: number }
+  | { type: "run.attach"; runId: string; after: number; secrets?: RunSecrets }
   | { type: "run.ack"; runId: string }
   | { type: "desktop.open"; viewerId: string; threadId: string }
   | { type: "desktop.close"; viewerId: string }
