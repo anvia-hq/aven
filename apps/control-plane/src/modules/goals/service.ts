@@ -101,7 +101,7 @@ export const goalsService = {
         blockedReason: null,
         maxRounds:
           goal.roundsStarted >= goal.maxRounds
-            ? goal.roundsStarted + GOAL_DEFAULT_ROUNDS
+            ? Math.min(goal.roundsStarted + GOAL_DEFAULT_ROUNDS, GOAL_MAX_ROUNDS)
             : goal.maxRounds,
       });
     }

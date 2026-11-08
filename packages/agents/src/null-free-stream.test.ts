@@ -38,6 +38,15 @@ describe("nullFreeStream", () => {
     expect(done).toBe("data: [DONE]");
   });
 
+  test("drops the null properties on CRLF-terminated lines too, and keeps the line endings", async () => {
+    const body = 'data: {"a":null,"b":1}\r\n\r\ndata: [DONE]\r\n\r\n';
+    const wrapped = nullFreeStream(
+      async () => new Response(body, { headers: { "content-type": "text/event-stream" } }),
+    );
+    const text = await (await wrapped("https://x.test")).text();
+    expect(text).toBe('data: {"b":1}\r\n\r\ndata: [DONE]\r\n\r\n');
+  });
+
   test("leaves other responses and non-JSON lines as they are", async () => {
     const json = Response.json({ id: null });
     const same = await nullFreeStream(async () => json)("https://x.test");

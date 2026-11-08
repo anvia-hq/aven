@@ -10,9 +10,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { bearer, organization } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { platformService } from "../platform/service";
+import { parseOrigins } from "./origins";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
@@ -34,7 +35,7 @@ export async function ensurePersonalOrganization(userId: string) {
   return organizationId;
 }
 
-export const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "http://localhost:5173").split(",");
+export const trustedOrigins = parseOrigins(process.env.TRUSTED_ORIGINS ?? "http://localhost:5173");
 
 export const auth = betterAuth({
   secret,
@@ -80,4 +81,12 @@ export const auth = betterAuth({
 
 export const authService = {
   getSession: (headers: Headers) => auth.api.getSession({ headers }),
+  isMember: async (userId: string, organizationId: string) => {
+    const [member] = await db
+      .select({ id: members.id })
+      .from(members)
+      .where(and(eq(members.userId, userId), eq(members.organizationId, organizationId)))
+      .limit(1);
+    return member !== undefined;
+  },
 };

@@ -146,7 +146,33 @@ run("goalsService (postgres)", async () => {
     await goalsService.block(id, "It reached its limit.");
     expect(await goalsService.update(id, "resume")).toMatchObject({
       round: GOAL_MAX_ROUNDS,
-      maxRounds: GOAL_MAX_ROUNDS + GOAL_DEFAULT_ROUNDS,
+      maxRounds: GOAL_MAX_ROUNDS,
+    });
+
+    await goalsService.update(id, "pause");
+    expect(await goalsService.update(id, "resume")).toMatchObject({
+      round: GOAL_MAX_ROUNDS,
+      maxRounds: GOAL_MAX_ROUNDS,
+    });
+  });
+
+  test("resuming a goal that used its rounds gives it the usual extension, never past the most a goal may have", async () => {
+    const id = await botFor(alice);
+    await goalsService.start(alice, id, { ...input, maxRounds: 10 });
+    for (let round = 0; round < 10; round++) await goalsService.claimRound(id);
+    await goalsService.block(id, "Out of rounds.");
+    expect(await goalsService.update(id, "resume")).toMatchObject({
+      round: 10,
+      maxRounds: 10 + GOAL_DEFAULT_ROUNDS,
+    });
+
+    await goalsService.update(id, "clear");
+    await goalsService.start(alice, id, { ...input, maxRounds: GOAL_MAX_ROUNDS - 5 });
+    for (let round = 0; round < GOAL_MAX_ROUNDS - 5; round++) await goalsService.claimRound(id);
+    await goalsService.block(id, "Out of rounds.");
+    expect(await goalsService.update(id, "resume")).toMatchObject({
+      round: GOAL_MAX_ROUNDS - 5,
+      maxRounds: GOAL_MAX_ROUNDS,
     });
   });
 

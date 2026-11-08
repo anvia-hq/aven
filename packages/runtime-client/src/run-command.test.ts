@@ -19,6 +19,20 @@ describe("runCommand", () => {
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain("timed out after 100 ms");
+    expect(result.timedOut).toBe(true);
+  });
+
+  test("a timeout returns near its time even when a background child keeps the output open", async () => {
+    const started = Date.now();
+
+    const result = await runCommand(["sh", "-c", "sleep 20 & echo started; sleep 20"], {
+      timeoutMs: 300,
+    });
+
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toBe("started\n");
+    expect(result.stderr).toContain("timed out after 300 ms");
   });
 
   test("a command that finishes in time is not marked", async () => {
