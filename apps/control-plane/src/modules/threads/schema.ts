@@ -6,6 +6,8 @@ import { attachmentBody } from "../../attachments";
 
 export const threadParams = z.object({ id: z.uuid() });
 
+export const messagesBeforeQuery = z.object({ before: z.coerce.number().int().min(0) });
+
 export const createThreadBody = z.object({
   projectId: z.uuid(),
   title: z.string().trim().min(1).max(200).optional(),

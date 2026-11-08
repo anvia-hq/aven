@@ -157,11 +157,21 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       "usage",
       "done",
     ]);
-    expect(client.events[0]).toMatchObject({ type: "snapshot", running: false, messages: [] });
+    expect(client.events[0]).toMatchObject({
+      type: "snapshot",
+      running: false,
+      messages: [],
+      hidden: 0,
+    });
     expect(client.events[0]).not.toHaveProperty("runningMs");
 
     const history = await manager.history(thread);
     expect(history.map((message) => message.role)).toEqual(["user", "assistant"]);
+    expect(await manager.latest(thread)).toEqual({ messages: history, hidden: 0 });
+    expect(await manager.before(thread, 1)).toEqual({
+      messages: [{ ...history[0]!, id: "e-0" }],
+      hidden: 0,
+    });
     expect(history[1]!.parts.map((part) => part.type)).toEqual(["text", "tool", "text"]);
     expect(history[1]!.parts[1]).toMatchObject({
       type: "tool",

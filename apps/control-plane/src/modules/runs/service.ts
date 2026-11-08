@@ -1,5 +1,6 @@
 import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { messagesToChat } from "@aven/agents/projection";
+import { latestMessages, messagesBefore } from "@aven/protocol/message-window";
 import { usageFromHistory } from "@aven/agents/usage";
 import { applyEvent, applyUsage } from "@aven/protocol/events";
 
@@ -287,6 +288,14 @@ export class RunManager {
     return messagesToChat(await this.#store.load({ scope: this.#scope(thread) }));
   }
 
+  async latest(thread: RunThread) {
+    return latestMessages(await this.history(thread));
+  }
+
+  async before(thread: RunThread, before: number) {
+    return messagesBefore(await this.history(thread), before);
+  }
+
   dispose() {
     for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
     this.#runtime.dispose();
@@ -312,8 +321,10 @@ export class RunManager {
         await run.ready;
         if (channel.run !== run) continue;
         queue.length = 0;
+        const shown = latestMessages(run.messages);
         return {
-          messages: run.messages,
+          messages: shown.messages,
+          hidden: shown.hidden,
           running: true,
           usage: run.usage,
           runningMs: Date.now() - run.startedAt,
@@ -326,8 +337,10 @@ export class RunManager {
       ]);
       if (channel.run) continue;
       queue.length = 0;
+      const shown = latestMessages(messagesToChat(history));
       const snapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
-        messages: messagesToChat(history),
+        messages: shown.messages,
+        hidden: shown.hidden,
         running: false,
         usage: usageFromHistory(history),
       };
