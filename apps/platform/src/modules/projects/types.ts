@@ -11,6 +11,26 @@ export type Project = {
   updatedAt: string;
 };
 
+export type ProjectsView = "all" | "mine" | "working";
+
+export type ProjectsSearch = {
+  project?: string;
+  q?: string;
+  view?: ProjectsView;
+  runner?: string;
+};
+
+export type ProjectFilters = {
+  query?: string;
+  view: ProjectsView;
+  runnerId?: string;
+};
+
+export type ProjectFilterContext = {
+  me?: string;
+  running: ReadonlySet<string>;
+};
+
 export type ImportStage =
   | { kind: "failed"; message: string }
   | { kind: "not-configured" }

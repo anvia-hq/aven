@@ -22,7 +22,7 @@ test.describe("importing a repository", () => {
     await addRunner(page);
     await connectGithub(page);
     await importRepository(page, "shiny-app");
-    await expect(page.getByRole("link", { name: /shiny-app/ })).toContainText("acme/shiny-app");
+    await expect(page.getByRole("button", { name: /shiny-app/ })).toContainText("acme/shiny-app");
 
     await page.getByRole("button", { name: "Import repository" }).click();
     await page.getByRole("combobox", { name: "Repository" }).click();
