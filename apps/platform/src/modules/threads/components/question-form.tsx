@@ -45,9 +45,9 @@ export function Question({
           {prompt.choices?.map((choice) => (
             <Label
               key={choice.value}
-              className="cursor-pointer gap-3 rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-accent"
+              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-accent"
             >
-              <RadioGroupItem value={choice.value} />
+              <RadioGroupItem value={choice.value} className="absolute size-px opacity-0" />
               {choice.label}
             </Label>
           ))}
