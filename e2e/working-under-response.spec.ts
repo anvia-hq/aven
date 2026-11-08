@@ -116,4 +116,76 @@ test.describe("the working indicator while a reply streams", () => {
       expect(contentYs[index]!).toBeGreaterThanOrEqual(contentYs[index - 1]! - 0.5);
     }
   });
+
+  test("stays put while prose wraps onto new lines", async ({ page }, testInfo) => {
+    await registerUser(page, "wup", "Wrapping Person");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_STREAM_WORDS: "240",
+      FAKE_STREAM_MS: "60",
+    });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    await page.waitForSelector(".overflow-y-auto");
+    await page.evaluate(() => {
+      type Frame = { top: number; bottomGap: number; fromEnd: number; present: boolean };
+      const frames: Frame[] = [];
+      (window as unknown as { __frames: Frame[] }).__frames = frames;
+      const scroller = document.querySelector<HTMLElement>(".overflow-y-auto")!;
+      // Registered after the page's own scroll observer, so it runs after that observer's
+      // scroll and before paint: each record is a state that really gets painted.
+      new ResizeObserver(() => {
+        const indicator = document.querySelector<HTMLElement>('[data-role="working"]');
+        const all = document.querySelectorAll<HTMLElement>('[data-role="assistant"]');
+        const last = all[all.length - 1];
+        if (!indicator || !last) return;
+        frames.push({
+          present: true,
+          top: indicator.getBoundingClientRect().top,
+          bottomGap: indicator.getBoundingClientRect().top - last.getBoundingClientRect().bottom,
+          fromEnd: scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight,
+        });
+      }).observe(scroller.firstElementChild!);
+    });
+
+    await page.getByRole("textbox", { name: "Prompt" }).fill("tell me a long story");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.locator('[data-role="working"]')).toHaveCount(1, { timeout: 15_000 });
+    await expect
+      .poll(() => page.locator('[data-role="assistant"]').innerText(), { timeout: 20_000 })
+      .toContain("word100-");
+    await page.screenshot({ path: testInfo.outputPath("wrapped-mid-stream.png") });
+    await expect(page.getByRole("status").filter({ hasText: "Working" })).toHaveCount(0, {
+      timeout: 40_000,
+    });
+
+    const frames = await page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __frames: { top: number; bottomGap: number; fromEnd: number }[];
+          }
+        ).__frames,
+    );
+    const painted = frames.filter((frame) => frame.bottomGap >= 0);
+    console.log(
+      "WRAP",
+      JSON.stringify({
+        painted: painted.length,
+        fromEnd: [...new Set(painted.map((frame) => Math.round(frame.fromEnd)))],
+        gap: [...new Set(painted.map((frame) => Math.round(frame.bottomGap)))],
+      }),
+    );
+    expect(painted.length).toBeGreaterThan(15);
+    // Every painted state: the list is scrolled to its very end (nothing painted a frame late)
+    // and the indicator is the same distance under the last line.
+    for (const frame of painted) expect(Math.round(frame.fromEnd)).toBe(0);
+    const gaps = painted.map((frame) => frame.bottomGap);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
+  });
 });

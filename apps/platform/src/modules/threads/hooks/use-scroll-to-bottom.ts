@@ -25,20 +25,14 @@ export function useScrollToBottom(count: number) {
       if (distance < FOLLOW_DISTANCE) following.current = true;
     };
     element.addEventListener("scroll", onScroll, { passive: true });
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        stick(element);
-      });
-    });
+    // Scroll inside the observer, not in a later animation frame: it runs after layout and
+    // before paint, so the bottom never shows for a frame at its old scroll position.
+    const observer = new ResizeObserver(() => stick(element));
     const content = element.firstElementChild;
     if (content) observer.observe(content);
     return () => {
       element.removeEventListener("scroll", onScroll);
       observer.disconnect();
-      cancelAnimationFrame(frame);
     };
   }, [stick]);
 
