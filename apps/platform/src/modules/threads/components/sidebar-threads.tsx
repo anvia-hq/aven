@@ -205,7 +205,7 @@ export function SidebarThreads() {
             <SidebarMenuButton
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
-              className={cn(nested && "pl-8")}
+              className={cn("pr-11", nested && "pl-8")}
             >
               <SidebarProjectTile
                 thread={thread}
@@ -251,7 +251,7 @@ export function SidebarThreads() {
                 <SidebarMenuButton
                   render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
                   isActive={pathname === `/threads/${thread.id}`}
-                  className="pr-8"
+                  className="pr-11"
                 >
                   <SidebarProjectTile
                     thread={thread}
