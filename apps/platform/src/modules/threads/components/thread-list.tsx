@@ -9,13 +9,20 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 
 import type { Thread } from "../types";
 
-export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: string }) {
+type Props = {
+  threads: Thread[];
+  empty?: string;
+  showProject?: boolean;
+  compact?: boolean;
+};
+
+export function ThreadList({ threads, empty, showProject = false, compact = false }: Props) {
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
   const { data: session } = authClient.useSession();
 
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul className={compact ? "flex flex-col" : "flex flex-col gap-0.5"}>
       {threads.map((thread) => {
         const project = projects.find((candidate) => candidate.id === thread.projectId);
         return (
@@ -23,28 +30,56 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
             <Link
               to="/threads/$threadId"
               params={{ threadId: thread.id }}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
+              className={
+                compact
+                  ? "flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/50"
+                  : "flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
+              }
             >
               {project ? (
                 <span title={project.name} className="flex shrink-0">
-                  <ProjectTile projectId={project.id} palette={palettes.get(project.id)} />
+                  <ProjectTile
+                    projectId={project.id}
+                    palette={palettes.get(project.id)}
+                    working={thread.running}
+                    className={compact ? "size-4" : undefined}
+                  />
                   <span className="sr-only">{project.name}</span>
                 </span>
               ) : (
-                <span className="size-5 shrink-0" aria-hidden />
+                <span className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
               )}
-              <span className="min-w-0 flex-1 truncate text-sm">{thread.title}</span>
-              {thread.createdBy !== session?.user.id && (
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm">{thread.title}</span>
+                {showProject && project && !compact && (
+                  <span className="truncate text-xs text-muted-foreground">{project.name}</span>
+                )}
+              </span>
+              {showProject && compact && project && (
+                <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">
+                  {project.name}
+                </span>
+              )}
+              {!compact && thread.createdBy !== session?.user.id && (
                 <span className="shrink-0 truncate text-xs text-muted-foreground">
                   {thread.createdByName}
                 </span>
               )}
               {thread.state !== "open" && (
-                <Badge variant="secondary" className="capitalize">
+                <Badge
+                  variant="secondary"
+                  className={compact ? "h-4 px-1.5 text-[10px] capitalize" : "capitalize"}
+                >
                   {thread.state}
                 </Badge>
               )}
-              <span className="shrink-0 text-right text-xs whitespace-nowrap text-muted-foreground">
+              <span
+                className={
+                  compact
+                    ? "shrink-0 text-right text-[11px] whitespace-nowrap text-muted-foreground"
+                    : "shrink-0 text-right text-xs whitespace-nowrap text-muted-foreground"
+                }
+              >
                 {timeAgo(thread.updatedAt, true)}
               </span>
             </Link>
@@ -52,7 +87,15 @@ export function ThreadList({ threads, empty }: { threads: Thread[]; empty?: stri
         );
       })}
       {threads.length === 0 && empty && (
-        <li className="p-3 text-sm text-muted-foreground">{empty}</li>
+        <li
+          className={
+            compact
+              ? "px-2 py-1.5 text-sm text-muted-foreground"
+              : "p-3 text-sm text-muted-foreground"
+          }
+        >
+          {empty}
+        </li>
       )}
     </ul>
   );
