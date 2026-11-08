@@ -30,7 +30,7 @@ export function ProjectFilterBar({ filters, counts, runtimes, onChange }: Props)
           aria-label="Search projects"
           placeholder="Search projects"
           value={filters.query ?? ""}
-          onChange={(event) => onChange({ q: event.target.value.trim() || undefined })}
+          onChange={(event) => onChange({ q: event.target.value || undefined })}
           className="h-8 pl-8"
         />
       </div>
