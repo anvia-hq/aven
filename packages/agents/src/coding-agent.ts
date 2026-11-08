@@ -12,11 +12,11 @@ import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 import type { McpNote, ModelSource, SkillListing } from "./types";
-import type { RunMemory } from "@aven/protocol/types";
+import type { RunMemory, RunWebSearch } from "@aven/protocol/types";
 
 type CodingAgentOptions = ModelSource & {
   tools: readonly AnyTool[];
-  webSearch?: boolean;
+  webSearch?: RunWebSearch;
   questions?: boolean;
   maxTurns?: number;
   retries?: RetrySetting;
@@ -31,7 +31,7 @@ type CodingAgentOptions = ModelSource & {
 
 export function createCodingAgent(options: CodingAgentOptions) {
   const tools = [...options.tools];
-  if (options.webSearch ?? Boolean(process.env.TAVILY_API_KEY)) tools.push(createWebSearchTool());
+  if (options.webSearch) tools.push(createWebSearchTool({ apiKey: options.webSearch.apiKey }));
 
   if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());
 

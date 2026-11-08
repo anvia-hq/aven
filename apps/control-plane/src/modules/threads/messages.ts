@@ -7,6 +7,7 @@ import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
+import { webSearchForRun } from "../runs/web-search";
 import { mcpService } from "../mcp/service";
 import { threadCockpit } from "../cockpit/commands";
 import { memoryService } from "../memory/service";
@@ -59,7 +60,7 @@ async function threadExtras(
   const memory = await runMemory(thread, userId, onPersonsWord);
   await threadsService.markRunBy(thread.id, userId);
   const cockpit = threadCockpit(userId);
-  return { env, identity, memory, cockpit };
+  return { env, identity, memory, cockpit, webSearch: webSearchForRun };
 }
 
 async function runMemory(

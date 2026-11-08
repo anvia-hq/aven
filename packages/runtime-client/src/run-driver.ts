@@ -351,6 +351,7 @@ export function createRunDriver(context: DriverContext) {
                 skills,
                 envNames,
                 mcp: mcp?.note,
+                webSearch: state.record.webSearch,
                 model,
                 role: type,
               }).agent,
@@ -359,6 +360,7 @@ export function createRunDriver(context: DriverContext) {
           envNames,
           mcp: mcp?.note,
           memory: state.record.memory,
+          webSearch: state.record.webSearch,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
@@ -529,6 +531,7 @@ export function createRunDriver(context: DriverContext) {
         mentions: message.type === "run.start" ? message.mentions : undefined,
         skills: message.skills,
         memory: message.memory,
+        webSearch: message.webSearch,
         cockpit: message.cockpit,
         agentId: `run-${message.runId}`,
         turn: 0,

@@ -21,7 +21,6 @@ describe("createCodingAgent", () => {
         provider,
         apiKey: "test-key",
         tools: [echo],
-        webSearch: false,
         questions: false,
       });
       expect(agent.tools.map((tool) => tool.name)).toEqual(["echo"]);
@@ -29,7 +28,7 @@ describe("createCodingAgent", () => {
   );
 
   test("gives the agent ask_user and request_secret unless turned off", () => {
-    const base = { provider: "openai", apiKey: "test-key", tools: [], webSearch: false } as const;
+    const base = { provider: "openai", apiKey: "test-key", tools: [] } as const;
     expect(createCodingAgent(base).agent.tools.map((tool) => tool.name)).toEqual([
       "ask_user",
       "request_secret",
@@ -42,7 +41,6 @@ describe("createCodingAgent", () => {
       provider: "openai",
       apiKey: "test-key",
       tools: [],
-      webSearch: false,
       questions: false,
     } as const;
     expect(createCodingAgent(base).agent.instructions).toContain("<role>");
@@ -52,7 +50,7 @@ describe("createCodingAgent", () => {
   });
 
   test("tells the agent how to fork its thread only when the host gives it the tools (decision 0135)", () => {
-    const base = { provider: "openai", apiKey: "test-key", tools: [], webSearch: false } as const;
+    const base = { provider: "openai", apiKey: "test-key", tools: [] } as const;
     expect(createCodingAgent(base).agent.instructions).not.toContain("<forks>");
     const told = createCodingAgent({ ...base, forks: true }).agent.instructions;
     expect(told).toContain("<forks>");
@@ -83,7 +81,7 @@ describe("createCodingAgent", () => {
       ],
       [text("Going with red")],
     ]);
-    const { agent } = createCodingAgent({ model, tools: [], webSearch: false });
+    const { agent } = createCodingAgent({ model, tools: [] });
 
     const first = agent.stream({ prompt: "paint it" });
     for await (const _event of first);
@@ -101,15 +99,32 @@ describe("createCodingAgent", () => {
     expect(done.type).toBe("response");
   });
 
-  test("adds web_search when enabled", () => {
+  test("adds web_search when the caller passes a key", () => {
     const { agent } = createCodingAgent({
       provider: "openai",
       apiKey: "test-key",
       tools: [echo],
-      webSearch: true,
+      webSearch: { apiKey: "tvly-test" },
       questions: false,
     });
     expect(agent.tools.map((tool) => tool.name)).toEqual(["echo", "web_search"]);
+  });
+
+  test("leaves web_search out when no key is passed, even if the environment has one", () => {
+    const previous = process.env.TAVILY_API_KEY;
+    process.env.TAVILY_API_KEY = "tvly-from-env";
+    try {
+      const { agent } = createCodingAgent({
+        provider: "openai",
+        apiKey: "test-key",
+        tools: [echo],
+        questions: false,
+      });
+      expect(agent.tools.map((tool) => tool.name)).toEqual(["echo"]);
+    } finally {
+      if (previous === undefined) delete process.env.TAVILY_API_KEY;
+      else process.env.TAVILY_API_KEY = previous;
+    }
   });
 
   test("tells the agent to use processes, not foreground commands, for servers", () => {
@@ -117,7 +132,6 @@ describe("createCodingAgent", () => {
       provider: "openai",
       apiKey: "test-key",
       tools: [],
-      webSearch: false,
     });
     expect(agent.instructions).toContain("start_process");
     expect(agent.instructions).not.toContain("notified");
@@ -128,7 +142,6 @@ describe("createCodingAgent", () => {
       provider: "openai",
       apiKey: "test-key",
       tools: [],
-      webSearch: false,
     });
     expect(agent.instructions).toContain("aven id-token --audience");
   });
@@ -140,7 +153,6 @@ describe("tool calls through the agent", () => {
     const { agent } = createCodingAgent({
       provider: "anthropic",
       apiKey: "test-key",
-      webSearch: false,
       tools: [
         createEditTool({
           workdir: "/workspace",
@@ -188,7 +200,6 @@ describe("history from earlier runs", () => {
         apiKey: "sk-local",
         baseUrl: `http://localhost:${server.port}`,
         tools: [],
-        webSearch: false,
       });
       const stream = agent.stream({ messages });
       await (async () => {

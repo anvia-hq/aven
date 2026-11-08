@@ -34,7 +34,6 @@ async function run(prompt: string) {
   files.set("a.txt", "hello");
   const { agent } = createCodingAgent({
     tools: [readFile, edit],
-    webSearch: false,
     model: scriptedModel([
       [text("Let me look."), toolCall("read_file", { path: "a.txt" }, "c1")],
       [
@@ -95,7 +94,6 @@ describe("projection", () => {
     files.set("a.txt", "hello");
     const { agent } = createCodingAgent({
       tools: [readFile],
-      webSearch: false,
       questions: false,
       model: scriptedModel([
         [reasoning("Need the file first."), toolCall("read_file", { path: "a.txt" }, "c1")],
@@ -321,7 +319,6 @@ describe("subagents", () => {
   test("a subagent's stream tells a client its tools and its usage, not its text", async () => {
     const { agent } = createCodingAgent({
       tools: [readFile],
-      webSearch: false,
       questions: false,
       model: scriptedModel([
         [text("Looking."), toolCall("read_file", { path: "a.txt" }, "c1")],
@@ -359,7 +356,6 @@ describe("subagents", () => {
     });
     const { agent } = createCodingAgent({
       tools: [spawn],
-      webSearch: false,
       questions: false,
       model: scriptedModel([
         [

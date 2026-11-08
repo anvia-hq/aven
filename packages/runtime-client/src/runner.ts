@@ -31,7 +31,20 @@ import type {
 
 export const defaultCreateAgent =
   (origin: string): CreateRuntimeAgent =>
-  ({ id, attended, tools, skills, envNames, mcp, memory, forks, model, role, compact }) => {
+  ({
+    id,
+    attended,
+    tools,
+    skills,
+    envNames,
+    mcp,
+    memory,
+    webSearch,
+    forks,
+    model,
+    role,
+    compact,
+  }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
     if (compact) {
       return createCompactionAgent({
@@ -63,6 +76,7 @@ export const defaultCreateAgent =
       envNames,
       mcp,
       memory,
+      webSearch,
       forks,
     });
   };

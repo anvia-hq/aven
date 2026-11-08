@@ -121,6 +121,19 @@ describe("a run's message to its runtime", () => {
     expect(JSON.stringify(posted)).not.toContain(identity.email);
   });
 
+  test("carries the web search key the control plane was given, and none without one", () => {
+    const { posted, remote } = runtime();
+    const webSearch = { apiKey: "tvly-control-plane" };
+
+    remote.start({ thread, prompt: "hi", webSearch });
+    remote.resume({ thread, continuation: {}, response: {}, webSearch });
+    remote.start({ thread, prompt: "hi" });
+
+    expect(posted[0]).toMatchObject({ type: "run.start", webSearch });
+    expect(posted[1]).toMatchObject({ type: "run.resume", webSearch });
+    expect(posted[2]).not.toHaveProperty("webSearch", expect.anything());
+  });
+
   test("ends the credential when the run cannot be posted", () => {
     const { revoked, remote } = runtime({ failPost: true });
 

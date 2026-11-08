@@ -20,6 +20,7 @@ import type {
   RunModel,
   RunSkill,
   RunThreadInfo,
+  RunWebSearch,
   RuntimeCalls,
   RuntimeToControlPlane,
   SteerResult,
@@ -162,6 +163,8 @@ export type RunInput = {
   contextWindow?: number;
 };
 
+export type ToolConcurrencyProbe = (registration: DurableAgentRegistration) => void;
+
 export type FollowOptions = {
   agentId?: string;
   after?: number;
@@ -284,6 +287,7 @@ export type CreateRuntimeAgent = (input: {
   envNames?: readonly string[];
   mcp?: McpNote;
   memory?: RunMemory;
+  webSearch?: RunWebSearch;
   forks?: boolean;
   model?: RunModel;
   role?: SubagentType;
@@ -328,6 +332,7 @@ export type RunRecord = {
   skills?: RunSkill[];
   skillListing?: SkillListing[];
   memory?: RunMemory;
+  webSearch?: RunWebSearch;
   cockpit?: CockpitAccess;
   agentId: string;
   durableId?: string;

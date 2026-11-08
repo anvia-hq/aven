@@ -56,15 +56,17 @@ describe("web_search", () => {
     expect((failure as Error).message).toBe("Tavily search failed with 401");
   });
 
-  test("requires an API key", async () => {
+  test("uses the key it is given, not one in the environment", async () => {
     const previous = process.env.TAVILY_API_KEY;
-    delete process.env.TAVILY_API_KEY;
+    process.env.TAVILY_API_KEY = "tvly-from-env";
     try {
-      const { impl } = fakeFetch(() => Response.json({}));
-      const tool = createWebSearchTool({ fetch: impl });
-      await expect(tool.call({ query: "x" })).rejects.toThrow("TAVILY_API_KEY is not set");
+      const { impl, calls } = fakeFetch(() => Response.json({}));
+      const tool = createWebSearchTool({ apiKey: "tvly-given", fetch: impl });
+      await tool.call({ query: "x" });
+      expect(calls[0]!.headers.get("authorization")).toBe("Bearer tvly-given");
     } finally {
-      if (previous !== undefined) process.env.TAVILY_API_KEY = previous;
+      if (previous === undefined) delete process.env.TAVILY_API_KEY;
+      else process.env.TAVILY_API_KEY = previous;
     }
   });
 });
