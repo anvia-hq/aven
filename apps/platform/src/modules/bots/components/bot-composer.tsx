@@ -75,8 +75,6 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
   const message = composer.input.trim();
   const canSend = (message.length > 0 || attachments.files.length > 0) && !sending;
 
-  // Text on more than one line moves the input to its own row above the buttons. It stays that
-  // way until the box is empty, so the input does not jump back as the row gets wider again.
   useEffect(() => {
     if (composer.input.length === 0) {
       setExpanded(false);
