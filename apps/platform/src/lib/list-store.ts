@@ -12,17 +12,14 @@ type ListStoreOptions<T> = {
 
 export function createListStore<T>({ path, atom, label }: ListStoreOptions<T>) {
   const store = getDefaultStore();
-  let inflight: Promise<T[]> | undefined;
   let generation = 0;
 
   async function refresh() {
+    generation += 1;
     const startedIn = generation;
     const hadData = store.get(atom) !== null;
-    inflight ??= api<T[]>(path).finally(() => {
-      inflight = undefined;
-    });
     try {
-      const result = await inflight;
+      const result = await api<T[]>(path);
       if (startedIn === generation) store.set(atom, result);
     } catch (failure) {
       if (startedIn !== generation) return;
@@ -38,7 +35,6 @@ export function createListStore<T>({ path, atom, label }: ListStoreOptions<T>) {
   }
 
   function reset() {
-    inflight = undefined;
     generation += 1;
     store.set(atom, null);
   }
