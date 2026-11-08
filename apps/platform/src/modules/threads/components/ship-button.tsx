@@ -12,10 +12,11 @@ import { ShipMenu } from "./ship-menu";
 
 type Props = {
   thread: Thread;
+  changesKnown: boolean;
   upToDate: boolean;
 };
 
-export function ShipButton({ thread, upToDate }: Props) {
+export function ShipButton({ thread, changesKnown, upToDate }: Props) {
   const { shipping, ship } = useShipThread(thread);
   const { gate, appKey } = useShipReadiness(thread.id, thread.running);
   const account = useGithubAccount(appKey);
@@ -25,7 +26,7 @@ export function ShipButton({ thread, upToDate }: Props) {
   const label = shipLabel(latest);
   const notSetUp = gate.kind === "missing" || gate.kind === "checking";
   const blocked = thread.running || shipping || gate.kind !== "ready";
-  if (notSetUp || (upToDate && !shipping)) {
+  if (notSetUp || !changesKnown || (upToDate && !shipping)) {
     return latest ? <PullRequestLink pullRequest={latest} /> : null;
   }
   if (account?.data && !account.data.connected) {
