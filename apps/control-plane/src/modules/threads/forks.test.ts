@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { FORKS_PER_THREAD } from "@aven/protocol/forks";
 
+import { ConflictError } from "../../errors";
 import { runtimesService } from "../runtimes/service";
 import { createThreadForks } from "./forks";
 import { threadsService } from "./service";
@@ -21,6 +22,7 @@ run("a thread's forks (postgres)", async () => {
   const told: { thread: string; prompt: string; onWord: boolean | undefined }[] = [];
   let failSend = false;
   let running = new Set<string>();
+  const asking = new Set<string>();
   const transcript: ChatMessage[] = [
     { id: "1", role: "user", parts: [{ type: "text", text: "Try it" }] },
     { id: "2", role: "assistant", parts: [{ type: "text", text: "Done: it works." }] },
@@ -35,6 +37,7 @@ run("a thread's forks (postgres)", async () => {
         { prompt }: { prompt: string },
         options?: { onPersonsWord?: boolean },
       ) => {
+        if (asking.has(thread)) throw new ConflictError("Answer the agent's question first");
         told.push({ thread, prompt, onWord: options?.onPersonsWord });
         return { steered: true };
       },
@@ -119,6 +122,47 @@ run("a thread's forks (postgres)", async () => {
     await expect(
       forks.status({ id: main.id, organizationId: orgB }, crypto.randomUUID()),
     ).rejects.toThrow();
+  });
+
+  test("a fork's note that comes while the parent awaits an answer is sent once the answer's run ends, not lost", async () => {
+    const main = await parent();
+    const finished = await forks.start(main, input);
+    const ofParent = { id: finished.id, organizationId: orgA, parentThreadId: main.id };
+    await threadsService.saveContinuation(main.id, { waiting: true });
+    asking.add(main.id);
+    running = new Set();
+
+    await forks.ended(ofParent, { outcome: "done" });
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
+
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "question" },
+    );
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
+
+    await threadsService.clearContinuation(main.id);
+    asking.delete(main.id);
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "cancelled" },
+    );
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "done" },
+    );
+    const delivered = told.filter((entry) => entry.thread === main.id);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]?.prompt).toContain(finished.id);
+    expect(delivered[0]?.prompt).toContain("is done");
+
+    await forks.ended(
+      { id: main.id, organizationId: orgA, parentThreadId: null },
+      { outcome: "done" },
+    );
+    expect(told.filter((entry) => entry.thread === main.id)).toHaveLength(1);
+    told.length = 0;
   });
 
   test("tells a working parent at once, and wakes an idle one when its last fork has ended (decision 0142)", async () => {
