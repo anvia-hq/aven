@@ -104,6 +104,7 @@
   --popover: #e6e9ef;
   --popover-foreground: #4c4f69;
   --primary: #1e66f5;
+  --code: var(--primary);
   --primary-foreground: #eff1f5;
   --secondary: #dce0e8;
   --secondary-foreground: #4c4f69;
@@ -134,6 +135,7 @@
   --popover: #181825;
   --popover-foreground: #cdd6f4;
   --primary: #89b4fa;
+  --code: var(--primary);
   --primary-foreground: #1e1e2e;
   --secondary: #313244;
   --secondary-foreground: #cdd6f4;
@@ -164,6 +166,7 @@
   --popover: #e9e9ec;
   --popover-foreground: #3760bf;
   --primary: #2e7de9;
+  --code: var(--primary);
   --primary-foreground: #e1e2e7;
   --secondary: #d5d6db;
   --secondary-foreground: #3760bf;
@@ -194,6 +197,7 @@
   --popover: #24283b;
   --popover-foreground: #c0caf5;
   --primary: #7aa2f7;
+  --code: var(--primary);
   --primary-foreground: #1a1b26;
   --secondary: #24283b;
   --secondary-foreground: #c0caf5;
@@ -224,6 +228,7 @@
   --popover: #ffffff;
   --popover-foreground: #1f2328;
   --primary: #0969da;
+  --code: var(--primary);
   --primary-foreground: #ffffff;
   --secondary: #f6f8fa;
   --secondary-foreground: #1f2328;
@@ -254,6 +259,7 @@
   --popover: #161b22;
   --popover-foreground: #e6edf3;
   --primary: #58a6ff;
+  --code: var(--primary);
   --primary-foreground: #0d1117;
   --secondary: #21262d;
   --secondary-foreground: #e6edf3;
@@ -284,6 +290,7 @@
   --popover: #ffffff;
   --popover-foreground: #383a42;
   --primary: #4078f2;
+  --code: var(--primary);
   --primary-foreground: #fafafa;
   --secondary: #e5e5e6;
   --secondary-foreground: #383a42;
@@ -314,6 +321,7 @@
   --popover: #2c313a;
   --popover-foreground: #abb2bf;
   --primary: #61afef;
+  --code: var(--primary);
   --primary-foreground: #282c34;
   --secondary: #2c313a;
   --secondary-foreground: #abb2bf;
@@ -344,6 +352,7 @@
   --popover: #fdf6e3;
   --popover-foreground: #657b83;
   --primary: #268bd2;
+  --code: var(--primary);
   --primary-foreground: #fdf6e3;
   --secondary: #eee8d5;
   --secondary-foreground: #657b83;
@@ -374,6 +383,7 @@
   --popover: #073642;
   --popover-foreground: #839496;
   --primary: #268bd2;
+  --code: var(--primary);
   --primary-foreground: #fdf6e3;
   --secondary: #073642;
   --secondary-foreground: #839496;
