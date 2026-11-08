@@ -4,6 +4,7 @@
 # AVEN_LOCAL_RUNNER=off; compose sets host, and runners connect to the server (decision 0073).
 FROM oven/bun:1.4.4
 LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 WORKDIR /app
 
 # Workspace manifests and patches first so the dependency layer is cached. Every workspace has to be
