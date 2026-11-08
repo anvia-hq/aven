@@ -9,7 +9,7 @@ test.describe("providers", () => {
       data: { kind: "openai", name: "Work", apiKey: "sk-test-1234" },
     });
 
-    const lists = [["gpt-4o", "o3"], ["gpt-4o", "o3", "gpt-5"], null];
+    const lists = [["gpt-4o"], ["gpt-4o", "o3"], ["gpt-4o", "o3", "gpt-5"], null];
     let asked = 0;
     await page.route("**/api/providers/*/models", (route) => {
       const list = lists[asked++];
@@ -30,7 +30,7 @@ test.describe("providers", () => {
     await refetch.click();
     await expect(page.getByText("Could not list the models of Work")).toBeVisible();
     await expect(refetch).toBeEnabled();
-    expect(asked).toBe(3);
+    expect(asked).toBe(4);
   });
 });
 
