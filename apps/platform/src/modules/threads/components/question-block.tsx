@@ -3,6 +3,8 @@ import { CheckCircle } from "@mynaui/icons-react";
 import { questionAnswers, SECRET_TOOL_NAME } from "@aven/protocol/events";
 import type { ToolPart } from "@aven/protocol/types";
 
+import { answerShown } from "../question-answers";
+
 function headline(tool: ToolPart, count: number) {
   if (tool.name === SECRET_TOOL_NAME) {
     return "A secret was asked for; you answered privately";
@@ -36,7 +38,9 @@ export function QuestionBlock({ tool }: { tool: ToolPart }) {
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <p className="text-xs text-muted-foreground">{prompt.text}</p>
               {answers.has(prompt.id) && (
-                <p className="font-medium break-words">{answers.get(prompt.id)}</p>
+                <p className="font-medium break-words">
+                  {answerShown(prompt, answers.get(prompt.id) ?? "")}
+                </p>
               )}
             </div>
           </li>
