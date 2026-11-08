@@ -12,6 +12,16 @@ function positiveNumber(env: Env, name: string) {
   return parsed;
 }
 
+function days(env: Env, name: string) {
+  const value = env[name];
+  if (value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a number of days, 0 or more, got "${value}".`);
+  }
+  return parsed;
+}
+
 export function sandboxConfigFromEnv(env: Env = process.env): SandboxConfig {
   return {
     image: env.AVEN_SANDBOX_IMAGE || "aven-sandbox-desktop:dev",
@@ -21,5 +31,6 @@ export function sandboxConfigFromEnv(env: Env = process.env): SandboxConfig {
     memoryMb: positiveNumber(env, "AVEN_SANDBOX_MEMORY_MB"),
     cpus: positiveNumber(env, "AVEN_SANDBOX_CPUS"),
     pidsLimit: positiveNumber(env, "AVEN_SANDBOX_PIDS_LIMIT"),
+    archivedKeepDays: days(env, "AVEN_ARCHIVED_KEEP_DAYS"),
   };
 }

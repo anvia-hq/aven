@@ -22,3 +22,7 @@ While the agent worked, the composer had Stop and no Send, and the API refused a
 - Steering consumes the run's turn limit (200) and does not extend it.
 - The composer's placeholder stays the same while the agent works: Anvia's tiptap editor is made again when its placeholder changes, which broke a message sent just as a run began (found by this work's e2e run). `/` now waits (up to 3 seconds) for the skills to load instead of offering none.
 - Tested in `durable-runs.test.ts` (the model's next request has the message after the tool's result; a finished run takes none), `runner.test.ts` (through the wire, while the sandbox starts, refused for a compaction), `runs/service.test.ts` (against a real runner and Postgres, live transcript equal to the reloaded one, a refusal, a stop), `runs/start.test.ts` (a finishing agent, an unreachable runner) and `e2e/steer.spec.ts` (queued at once, becoming the message, refused, reload).
+
+## Note: a file in the draft does not stop the words
+
+A file attached before the run started used to make Enter do nothing while the agent worked, with no sign why (Send is not shown then). Enter now sends the words alone as a steer and leaves the file in the draft for the next message.

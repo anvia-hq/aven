@@ -1,3 +1,4 @@
+import { ArrowRight } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -11,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
@@ -36,9 +38,25 @@ export function ContinueThreadDialog({ thread }: { thread: Thread }) {
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next || !working) && setOpen(next)}>
-      <DialogTrigger render={<Button variant="outline" size="xs" className="self-start" />}>
-        Continue on another runner
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DialogTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="shrink-0"
+                  aria-label="Continue on another runner"
+                />
+              }
+            />
+          }
+        >
+          <ArrowRight />
+        </TooltipTrigger>
+        <TooltipContent>Continue on another runner</TooltipContent>
+      </Tooltip>
       <DialogContent className="sm:max-w-md">
         <div className="flex flex-col gap-4">
           <DialogHeader>

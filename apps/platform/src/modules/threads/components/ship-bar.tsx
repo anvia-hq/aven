@@ -16,6 +16,7 @@ export function ShipBar({ thread, unshipped }: Props) {
       <div className="flex items-center gap-2">
         <ShipButton
           thread={thread}
+          changesKnown={unshipped.loaded}
           upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
         />
         <ChangesBadge

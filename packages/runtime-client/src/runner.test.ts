@@ -156,6 +156,28 @@ describe("startRuntime updating itself (decision 0146)", () => {
   });
 });
 
+describe("startRuntime putting a thread away", () => {
+  test("a sandbox release, which only an archived thread gets, tells the workspaces", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const putAway: string[] = [];
+    const { plane, runtime } = connect({
+      sandbox: { ...workspaces, putAway: async (threadId: string) => void putAway.push(threadId) },
+    });
+    await runtime.ready;
+
+    plane.send({
+      type: "call",
+      id: "r",
+      method: "sandbox.release",
+      params: { threadId: "t1" },
+    } as never);
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "r"));
+
+    expect(putAway).toEqual(["t1"]);
+  });
+});
+
 describe("startRuntime processes", () => {
   test("lists, reads and stops the processes of a thread's sandbox, and never starts one", async () => {
     const workspaces = directoryWorkspaces();

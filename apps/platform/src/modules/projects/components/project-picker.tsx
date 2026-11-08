@@ -26,7 +26,11 @@ export function ProjectPicker({ value, onChange }: Props) {
         <Folder />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false} align="start">
+      <SelectContent
+        alignItemWithTrigger={false}
+        align="start"
+        className="w-auto min-w-(--anchor-width)"
+      >
         {projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>
             <span className="flex min-w-0 items-center gap-2">

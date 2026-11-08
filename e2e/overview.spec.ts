@@ -44,7 +44,8 @@ test.describe("a thread's overview", () => {
     await page.goto(`/threads/${threadId}`);
 
     const environment = page.getByRole("region", { name: "Environment" });
-    await expect(environment).toContainText("runner · offline");
+    await expect(environment).toContainText("runner");
+    await expect(environment.getByLabel("Offline")).toBeVisible();
     await expect(environment).toContainText("docs-site");
     await expect(environment).toContainText("acme/docs-site");
     await expect(environment).toContainText(`aven/${threadId.slice(0, 8)}`);

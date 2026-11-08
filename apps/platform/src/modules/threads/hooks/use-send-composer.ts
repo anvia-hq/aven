@@ -46,8 +46,9 @@ export function useSendComposer({
   const [sending, setSending] = useState(false);
   const latest = useRef(composer);
   latest.current = composer;
-  const hasContent = composer.input.trim().length > 0 || attachments.files.length > 0;
-  const canSend = hasContent && !sending && !(running && attachments.files.length > 0);
+  const hasText = composer.input.trim().length > 0;
+  const hasContent = hasText || attachments.files.length > 0;
+  const canSend = (running ? hasText : hasContent) && !sending;
 
   async function submit() {
     if (!canSend) return;
@@ -75,13 +76,14 @@ export function useSendComposer({
     const draft = { input: composer.input, entities: composer.entities };
     composer.setInput("");
     composer.setEntities([]);
-    const optimistic = running && attachments.files.length === 0;
-    if (!optimistic) setSending(true);
+    const steering = running;
+    if (!steering) setSending(true);
     try {
-      const files = await attachments.encode();
+      const files = steering ? [] : await attachments.encode();
       const sent = await onSubmit({ prompt, attachments: files, mentions }, selection);
-      if (sent) attachments.clear();
-      else restore(draft, prompt);
+      if (sent) {
+        if (!steering) attachments.clear();
+      } else restore(draft, prompt);
     } catch (error) {
       restore(draft, prompt);
       toast.add({

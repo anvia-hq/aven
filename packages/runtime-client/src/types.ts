@@ -390,6 +390,7 @@ export type SandboxConfig = {
   connectTimeoutMs?: number;
   git?: Git;
   docker?: DockerRun;
+  archivedKeepDays?: number;
 };
 
 export type AcquireOptions = {
@@ -416,6 +417,7 @@ export interface ThreadWorkspaces {
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
   release(threadId: string): Promise<void>;
+  putAway?(threadId: string): Promise<void>;
   running?(): number;
   signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
   signInIdentity?(
@@ -430,6 +432,14 @@ export interface ThreadWorkspaces {
   readonly skills?: SkillStore;
   dispose(): Promise<void>;
 }
+
+export type ArchivedCleanupOptions = {
+  home: string;
+  keepMs: number;
+  docker: DockerRun;
+  inUse(threadId: string): boolean;
+  now?: () => number;
+};
 
 export type FetchSkill = (digest: string) => Promise<Uint8Array>;
 
