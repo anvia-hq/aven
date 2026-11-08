@@ -14,7 +14,7 @@ Running the tests or the typecheck from a thread meant typing it to the agent, w
 - **The platform sends only the action's name.** The control plane reads the file again through the runner and runs what it finds, so a client cannot run a command the repository does not list.
 - **Only the thread's creator** sees and starts actions, as with Ship.
 - **A command that exits with a code other than 0 has an Ask agent to fix button** in Background tasks, which sends the agent the command, its exit code and the end of its output (6,000 characters). It is off while the agent works.
-- **The first two actions are buttons beside Ship**, the rest are in a menu.
+- **One Actions button, at the right of the bar**, opens a popover that lists them, with Ship and the changes badge at the left. A star on a row makes that action a button of its own beside Actions; the choice is kept per project in localStorage.
 
 ## Consequences
 

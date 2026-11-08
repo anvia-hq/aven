@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useRequest } from "@/hooks/use-request";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
@@ -9,7 +10,11 @@ import { useModelSelection } from "./use-model-selection";
 
 type Answer = { actions: ThreadAction[]; problem: string | null };
 
-export function useThreadActions(threadId: string, running: boolean) {
+export function useThreadActions(threadId: string, projectId: string, running: boolean) {
+  const [favorites, setFavorites] = useLocalStorage<string[]>(
+    `aven.actions.favorites.${projectId}`,
+    [],
+  );
   const [starting, setStarting] = useState<string | null>(null);
   const { selection } = useModelSelection(threadId);
   const answer = useRequest<Answer>(`/threads/${threadId}/actions`, {
@@ -37,7 +42,15 @@ export function useThreadActions(threadId: string, running: boolean) {
     });
   }
 
+  function toggleFavorite(name: string) {
+    setFavorites((current) =>
+      current.includes(name) ? current.filter((kept) => kept !== name) : [...current, name],
+    );
+  }
+
   return {
+    favorites,
+    toggleFavorite,
     actions: answer?.data?.actions ?? [],
     problem: answer?.data?.problem ?? null,
     starting,

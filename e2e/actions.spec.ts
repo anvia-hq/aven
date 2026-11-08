@@ -26,16 +26,31 @@ test.describe("a repository's actions", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await expect(page.getByRole("button", { name: "Test", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Typecheck" })).toBeVisible();
+    await expect(
+      page.getByTestId("conversation").getByRole("button", { name: "Test", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Actions", exact: true }).click();
+    await page.getByRole("button", { name: "Show Test as a button" }).click();
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByTestId("conversation").getByRole("button", { name: "Test", exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByTestId("conversation").getByRole("button", { name: "Test", exact: true }),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: "Test", exact: true }).click();
+    await page
+      .getByTestId("conversation")
+      .getByRole("button", { name: "Test", exact: true })
+      .click();
     await expect(page.getByText("Running in the sandbox, under Background tasks")).toBeVisible();
     await expect(page.getByText("Finished", { exact: false }).first()).toBeVisible({
       timeout: 15_000,
     });
 
-    await page.getByRole("button", { name: "Typecheck" }).click();
+    await page.getByRole("button", { name: "Actions", exact: true }).click();
+    await page.getByRole("button", { name: "Typecheck", exact: true }).click();
     await expect(page.getByText("Exited with code 2")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /Ask the agent to fix bun run typecheck/ }).click();
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
@@ -57,8 +72,8 @@ test.describe("a repository's actions", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await page.getByRole("button", { name: "More actions" }).click();
-    await page.getByRole("menuitem", { name: "Tidy up" }).click();
+    await page.getByRole("button", { name: "Actions", exact: true }).click();
+    await page.getByRole("button", { name: "Tidy up", exact: true }).click();
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
     expect(String(events.find((event) => event.type === "started")?.prompt)).toBe(
       "Remove dead code and unused imports",

@@ -1,22 +1,21 @@
-import { ChevronDown, Play } from "@mynaui/icons-react";
+import { Play, Star, StarSolid } from "@mynaui/icons-react";
+import { useState } from "react";
 
 import { Button } from "@/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import type { ThreadAction } from "@aven/protocol/types";
 
 import { useThreadActions } from "../hooks/use-thread-actions";
 import type { Thread } from "../types";
 
-const BUTTONS = 2;
-
 export function ActionButtons({ thread }: { thread: Thread }) {
-  const { actions, problem, starting, start } = useThreadActions(thread.id, thread.running);
+  const { actions, problem, starting, start, favorites, toggleFavorite } = useThreadActions(
+    thread.id,
+    thread.projectId,
+    thread.running,
+  );
+  const [open, setOpen] = useState(false);
   if (problem) {
     return (
       <Tooltip>
@@ -30,11 +29,11 @@ export function ActionButtons({ thread }: { thread: Thread }) {
   if (actions.length === 0) return null;
   const disabled = (action: ThreadAction) =>
     starting !== null || (action.kind === "prompt" && thread.running);
-  const rest = actions.slice(BUTTONS);
+  const pinned = actions.filter((action) => favorites.includes(action.name));
 
   return (
     <>
-      {actions.slice(0, BUTTONS).map((action) => (
+      {pinned.map((action) => (
         <Button
           key={action.name}
           variant="outline"
@@ -47,33 +46,47 @@ export function ActionButtons({ thread }: { thread: Thread }) {
           {starting === action.name ? `${action.name}…` : action.name}
         </Button>
       ))}
-      {rest.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="shadow-md"
-                aria-label="More actions"
-              />
-            }
-          >
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            {rest.map((action) => (
-              <DropdownMenuItem
-                key={action.name}
-                disabled={disabled(action)}
-                onClick={() => void start(action)}
-              >
-                <Play /> {action.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger render={<Button variant="outline" size="sm" className="shadow-md" />}>
+          <Play />
+          Actions
+        </PopoverTrigger>
+        <PopoverContent align="end" side="top" className="w-64 gap-0.5 p-1.5">
+          {actions.map((action) => {
+            const favorite = favorites.includes(action.name);
+            return (
+              <div key={action.name} className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-w-0 flex-1 justify-start"
+                  disabled={disabled(action)}
+                  onClick={() => {
+                    setOpen(false);
+                    void start(action);
+                  }}
+                >
+                  <Play />
+                  <span className="truncate">{action.name}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-pressed={favorite}
+                  aria-label={
+                    favorite
+                      ? `Remove ${action.name} from the buttons`
+                      : `Show ${action.name} as a button`
+                  }
+                  onClick={() => toggleFavorite(action.name)}
+                >
+                  {favorite ? <StarSolid className="text-primary" /> : <Star />}
+                </Button>
+              </div>
+            );
+          })}
+        </PopoverContent>
+      </Popover>
     </>
   );
 }

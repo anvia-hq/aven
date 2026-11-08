@@ -12,17 +12,21 @@ type Props = {
 
 export function ShipBar({ thread, unshipped }: Props) {
   return (
-    <div className="flex items-center justify-end gap-2 pb-2">
-      <ChangesBadge
-        empty={unshipped.files.length === 0}
-        additions={unshipped.additions}
-        deletions={unshipped.deletions}
-      />
-      <ActionButtons thread={thread} />
-      <ShipButton
-        thread={thread}
-        upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
-      />
+    <div className="flex items-center justify-between gap-2 pb-2">
+      <div className="flex items-center gap-2">
+        <ChangesBadge
+          empty={unshipped.files.length === 0}
+          additions={unshipped.additions}
+          deletions={unshipped.deletions}
+        />
+        <ShipButton
+          thread={thread}
+          upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <ActionButtons thread={thread} />
+      </div>
     </div>
   );
 }
