@@ -66,6 +66,8 @@ const FIRST_OUTPUT = new Set(["text", "reasoning", "tool_start"]);
 
 const MCP_SWEEP_MS = 60_000;
 
+const RUN_GONE = "The run is gone: this runner has no record of it";
+
 async function prepareRun(
   sandbox: ThreadWorkspaces,
   runId: string,
@@ -544,7 +546,12 @@ export function createRunDriver(context: DriverContext) {
 
     restore(runId: string, secrets?: RunSecrets) {
       const record = records.get(runId);
-      if (!record || record.done || live.has(runId)) return;
+      if (!record) {
+        outbox.open(runId);
+        finish(runId, { type: "error", error: RUN_GONE });
+        return;
+      }
+      if (record.done || live.has(runId)) return;
       return execute(record, undefined, secrets ?? {});
     },
 
