@@ -45,6 +45,17 @@ async function setup({
     await mkdir(join(home, "environments"), { recursive: true });
     await writeFile(join(home, "environments", `${id}.image`), `aven-env-${id.slice(0, 4)}`);
   };
+  const computer = async (id: string) => {
+    await mkdir(join(home, "bot-computers"), { recursive: true });
+    await writeFile(join(home, "bot-computers", id), "");
+  };
+  const files = async (id: string) => {
+    await mkdir(join(home, "uploads", id), { recursive: true });
+    await writeFile(join(home, "uploads", id, "notes.txt"), "x");
+    await mkdir(join(home, "artifacts", id), { recursive: true });
+    await writeFile(join(home, "artifacts", id, "image.png"), "x");
+    await computer(id);
+  };
   const snapshot = async (key: string, ageMs: number) => {
     await mkdir(join(home, "snapshots", key, "workspace"), { recursive: true });
     await writeFile(
@@ -61,6 +72,8 @@ async function setup({
     cleanup,
     removedImages,
     workspace,
+    files,
+    computer,
     snapshot,
     advance: (ms: number) => void (now += ms),
     has: (...parts: string[]) => existsSync(join(home, ...parts)),
@@ -120,6 +133,49 @@ describe("a thread put away", () => {
     const t = await setup();
     await t.cleanup.mark("../outside");
     expect(t.has("archived")).toBe(false);
+  });
+});
+
+describe("what a thread leaves on the runner", () => {
+  test("its uploads, its artifacts and its computer mark go too, and an open thread keeps its own", async () => {
+    const t = await setup();
+    await t.workspace("aaaa-1");
+    await t.workspace("bbbb-2");
+    await t.files("aaaa-1");
+    await t.files("bbbb-2");
+    await t.computer("bot-1");
+    await t.cleanup.mark("aaaa-1");
+
+    t.advance(8 * DAY);
+    expect(await t.cleanup.sweep()).toEqual(["aaaa-1"]);
+
+    expect(t.has("uploads", "aaaa-1")).toBe(false);
+    expect(t.has("artifacts", "aaaa-1")).toBe(false);
+    expect(t.has("bot-computers", "aaaa-1")).toBe(false);
+
+    expect(t.has("uploads", "bbbb-2", "notes.txt")).toBe(true);
+    expect(t.has("artifacts", "bbbb-2", "image.png")).toBe(true);
+    expect(t.has("bot-computers", "bbbb-2")).toBe(true);
+  });
+
+  test("a computer mark left with no computer here is pruned, whoever wrote it", async () => {
+    const t = await setup();
+    await t.workspace("bbbb-2");
+    await t.computer("bbbb-2");
+    await t.computer("bot-1");
+
+    expect(await t.cleanup.sweep()).toEqual([]);
+
+    expect(t.has("bot-computers", "bbbb-2")).toBe(true);
+    expect(t.has("bot-computers", "bot-1")).toBe(false);
+  });
+
+  test("no computer mark goes for a thread that is still in use", async () => {
+    const t = await setup({ inUse: new Set(["aaaa-1"]) });
+    await t.computer("aaaa-1");
+
+    expect(await t.cleanup.sweep()).toEqual([]);
+    expect(t.has("bot-computers", "aaaa-1")).toBe(true);
   });
 });
 
