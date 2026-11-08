@@ -27,8 +27,9 @@ const context = { me: "person-a", running: nobody };
 describe("parseProjectsSearch", () => {
   test("keeps the selection, the query and the filters", () => {
     expect(
-      parseProjectsSearch({ project: "2", q: " docs ", view: "mine", runner: "runner-2" }),
-    ).toEqual({ project: "2", q: "docs", view: "mine", runner: "runner-2" });
+      parseProjectsSearch({ project: "2", q: "docs site", view: "mine", runner: "runner-2" }),
+    ).toEqual({ project: "2", q: "docs site", view: "mine", runner: "runner-2" });
+    expect(parseProjectsSearch({ q: " docs " }).q).toBe(" docs ");
   });
 
   test("drops empty and unknown values", () => {
@@ -49,6 +50,12 @@ describe("parseProjectsSearch", () => {
 describe("filterProjects", () => {
   test("lists every project by default", () => {
     expect(filterProjects(projects, filtersOf({}), context)).toHaveLength(3);
+  });
+
+  test("keeps spaces as they are typed, and matches a query with a trailing one", () => {
+    expect(parseProjectsSearch({ q: "docs " }).q).toBe("docs ");
+    const typed = filterProjects(projects, filtersOf(parseProjectsSearch({ q: "docs " })), context);
+    expect(typed.map((entry) => entry.name)).toEqual(["docs-site"]);
   });
 
   test("matches the name or the repository, in any case", () => {

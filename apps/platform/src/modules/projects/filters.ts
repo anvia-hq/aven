@@ -17,11 +17,14 @@ export const PROJECT_VIEWS: { id: ProjectsView; label: string }[] = [
 const text = (value: unknown) =>
   typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
 
+const typed = (value: unknown) =>
+  typeof value === "string" && value.trim() !== "" ? value : undefined;
+
 export function parseProjectsSearch(search: Record<string, unknown>): ProjectsSearch {
   const view = VIEWS.find((candidate) => candidate === search.view);
   return {
     project: text(search.project),
-    q: text(search.q),
+    q: typed(search.q),
     view: view === "all" ? undefined : view,
     runner: text(search.runner),
   };
@@ -36,7 +39,7 @@ export function filterProjects(
   filters: ProjectFilters,
   { me, running }: ProjectFilterContext,
 ): Project[] {
-  const query = filters.query?.toLowerCase();
+  const query = filters.query?.trim().toLowerCase();
   return projects.filter((project) => {
     if (query && !`${project.name} ${project.repoFullName}`.toLowerCase().includes(query)) {
       return false;
@@ -49,5 +52,5 @@ export function filterProjects(
 }
 
 export function anyFilterSet(filters: ProjectFilters) {
-  return Boolean(filters.query || filters.runnerId) || filters.view !== "all";
+  return Boolean(filters.query?.trim() || filters.runnerId) || filters.view !== "all";
 }

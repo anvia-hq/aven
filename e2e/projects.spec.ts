@@ -59,10 +59,17 @@ test.describe("projects browser", () => {
     await page.getByRole("button", { name: "All projects" }).click();
     await expect(threads.getByRole("link", { name: /Write the readme/ })).toBeVisible();
 
-    await page.getByRole("searchbox", { name: "Search projects" }).fill("docs");
+    const search = page.getByRole("searchbox", { name: "Search projects" });
+    await search.fill("docs");
     await expect(projects.getByRole("button", { name: "docs-site" })).toBeVisible();
     await expect(projects.getByRole("button", { name: "shiny-app" })).toHaveCount(0);
-    await page.getByRole("searchbox", { name: "Search projects" }).fill("nothing here");
+
+    await search.fill("");
+    await search.pressSequentially("docs ");
+    await expect(search).toHaveValue("docs ");
+    await expect(projects.getByRole("button", { name: "docs-site" })).toBeVisible();
+
+    await search.fill("nothing here");
     await expect(projects.getByText("No projects match these filters.")).toBeVisible();
     await projects.getByRole("button", { name: "Clear filters" }).click();
     await expect(projects.getByRole("button", { name: "shiny-app" })).toBeVisible();
