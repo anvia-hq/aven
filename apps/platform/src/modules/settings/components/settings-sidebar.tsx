@@ -4,6 +4,7 @@ import {
   Cog,
   Github,
   Key,
+  Package,
   Puzzle,
   Servers,
   Sparkles,
@@ -52,6 +53,7 @@ const platformGroup = {
   items: [
     { to: "/settings/platform", label: "Platform", icon: Servers },
     { to: "/settings/people", label: "People", icon: UsersGroup },
+    { to: "/settings/docker", label: "Docker", icon: Package },
   ],
 } as const;
 

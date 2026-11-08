@@ -67,3 +67,15 @@ export async function threadOnFakeRunner(page: Page, env: Record<string, string>
   const thread = (await made.json()) as { id: string };
   return { child, events, threadId: thread.id };
 }
+
+export async function registerPlatformOwner(page: Page, index: number) {
+  const email = (process.env.E2E_PLATFORM_OWNERS ?? "").split(",")[index];
+  if (!email) throw new Error(`There is no platform owner number ${index}`);
+  await page.goto("/register");
+  await page.getByLabel("Name").fill(`Platform Owner ${index}`);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("password123");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/threads$/);
+  return email;
+}

@@ -15,7 +15,9 @@ const MODEL_URL = `http://localhost:${MODEL_PORT}`;
 const GITHUB_APP_PRIVATE_KEY = generateKeyPairSync("rsa", { modulusLength: 2048 })
   .privateKey.export({ type: "pkcs8", format: "pem" })
   .toString();
-process.env.E2E_PLATFORM_OWNER ??= `platform-owner-${Date.now()}@aven.test`;
+process.env.E2E_PLATFORM_OWNERS ??= [0, 1, 2]
+  .map((index) => `platform-owner-${index}-${Date.now()}@aven.test`)
+  .join(",");
 const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? "postgres://localhost:5432/aven_e2e";
 
 export default defineConfig({
@@ -47,7 +49,7 @@ export default defineConfig({
         ANTHROPIC_API_KEY: "",
         PROVIDER_ENCRYPTION_KEY: "ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=",
         MODEL_CATALOG_URL: "",
-        PLATFORM_OWNER_EMAILS: process.env.E2E_PLATFORM_OWNER,
+        PLATFORM_OWNER_EMAILS: process.env.E2E_PLATFORM_OWNERS,
         AVEN_LOCAL_RUNNER: "off",
         AVEN_VERSION: "9.9.9",
         AVEN_RELEASES_URL: "http://127.0.0.1:9/releases",
