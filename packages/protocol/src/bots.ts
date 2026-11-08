@@ -40,18 +40,19 @@ export const botPrompt = (fromHandle: string, text: string) => `[from ${fromHand
 
 export const botNote = (text: string) => `[note] ${text}`;
 
-const ZERO_WIDTH_SPACE = "\u200B";
+const PERSON_MARK = "\u200B";
 
 export const personPrompt = (text: string) => {
   const { from, note } = parseBotPrompt(text);
-  return from !== undefined || note ? `${ZERO_WIDTH_SPACE}${text}` : text;
+  return from === undefined && !note ? text : `${PERSON_MARK}${text}`;
 };
 
 export function parseBotPrompt(prompt: string): { from?: string; note?: boolean; text: string } {
   const bot = FROM_BOT.exec(prompt);
   if (bot) return { from: bot[1]!, text: bot[2]! };
   const note = NOTE.exec(prompt);
-  return note ? { note: true, text: note[1]! } : { text: prompt };
+  if (note) return { note: true, text: note[1]! };
+  return { text: prompt.startsWith(PERSON_MARK) ? prompt.slice(PERSON_MARK.length) : prompt };
 }
 
 export const BOT_MAX_HOPS = 8;
