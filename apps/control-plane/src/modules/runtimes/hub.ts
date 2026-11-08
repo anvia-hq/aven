@@ -392,11 +392,12 @@ export class RuntimeHub {
     if (held) held.cancel = reason;
   }
 
-  #giveUp(runtimeId: string) {
+  #giveUp(runtimeId: string, message = "The runtime disconnected") {
     const held = this.#held.get(runtimeId);
+    if (!held) return;
+    clearTimeout(held.timer);
     this.#held.delete(runtimeId);
-    for (const run of held?.runs.values() ?? [])
-      run.sink.lost(new Error("The runtime disconnected"));
+    for (const run of held.runs.values()) run.sink.lost(new Error(message));
   }
 
   detach(connection: RuntimeConnection) {
@@ -432,11 +433,9 @@ export class RuntimeHub {
   }
 
   closeAll() {
+    for (const runtimeId of this.#held.keys())
+      this.#giveUp(runtimeId, "The control plane shut down");
     for (const connection of this.#connections.values())
       connection.close(undefined, undefined, true);
-    for (const runtimeId of this.#held.keys()) {
-      clearTimeout(this.#held.get(runtimeId)?.timer);
-      this.#giveUp(runtimeId);
-    }
   }
 }

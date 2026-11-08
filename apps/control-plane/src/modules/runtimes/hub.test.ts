@@ -1039,4 +1039,74 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       expect(stored).toHaveLength(1);
     });
   });
+
+  describe("a run held for a runtime that is away", () => {
+    const watched = () => {
+      const lost: { message: string; at: number }[] = [];
+      return {
+        lost,
+        sink: {
+          event: () => undefined,
+          end: () => undefined,
+          lost: (error: Error) => lost.push({ message: error.message, at: Date.now() }),
+        },
+      };
+    };
+
+    const heldRun = (sink: ReturnType<typeof watched>["sink"]) => ({
+      thread: { id: crypto.randomUUID(), organizationId: seed.orgA },
+      sink,
+      lastSeq: 0,
+      appended: new Set<number>(),
+      skills: new Set<string>(),
+      mcp: new Set<string>(),
+    });
+
+    test("the same runtime held twice is given one grace, so the runs of both holds are lost once each", async () => {
+      const grace = 300;
+      const hub = new RuntimeHub(store, undefined, grace);
+      const runtimeId = crypto.randomUUID();
+      const first = watched();
+      const second = watched();
+      const heldAt = Date.now();
+
+      hub.hold(runtimeId, [["run-first", heldRun(first.sink)]]);
+      await Bun.sleep(250);
+      hub.hold(runtimeId, [["run-second", heldRun(second.sink)]]);
+      await Bun.sleep(200);
+
+      expect(first.lost).toEqual([]);
+      expect(second.lost).toEqual([]);
+
+      await until(() => first.lost.length === 1 && second.lost.length === 1);
+      expect(first.lost[0]?.message).toBe("The runtime disconnected");
+      expect(second.lost[0]?.message).toBe("The runtime disconnected");
+      expect(first.lost[0]!.at - heldAt).toBeGreaterThanOrEqual(grace + 150);
+      expect(second.lost[0]!.at - heldAt).toBeGreaterThanOrEqual(grace + 150);
+    });
+
+    test("shutting down answers every held run with an explicit failure, and nothing else", async () => {
+      const hub = new RuntimeHub(store, undefined, 60_000);
+      const away = watched();
+      const elsewhere = watched();
+
+      hub.hold(crypto.randomUUID(), [["run-away", heldRun(away.sink)]]);
+      hub.hold(crypto.randomUUID(), [
+        ["run-elsewhere-1", heldRun(elsewhere.sink)],
+        ["run-elsewhere-2", heldRun(elsewhere.sink)],
+      ]);
+
+      hub.closeAll();
+
+      expect(away.lost.map((entry) => entry.message)).toEqual(["The control plane shut down"]);
+      expect(elsewhere.lost.map((entry) => entry.message)).toEqual([
+        "The control plane shut down",
+        "The control plane shut down",
+      ]);
+
+      await Bun.sleep(50);
+      expect(away.lost).toHaveLength(1);
+      expect(elsewhere.lost).toHaveLength(2);
+    });
+  });
 });
