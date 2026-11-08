@@ -27,6 +27,23 @@ describe("applyEvent", () => {
   }
 });
 
+describe("applyEvent with a snapshot", () => {
+  test("the messages are a copy, so changing them leaves the event's own alone", () => {
+    const event: RunEvent = {
+      type: "snapshot",
+      running: true,
+      messages: [{ id: "m-0", role: "user", parts: [{ type: "text", text: "go" }] }],
+    };
+
+    const messages = applyEvent([], event);
+    messages.push({ id: "m-1", role: "assistant", parts: [] });
+
+    expect(messages).not.toBe(event.messages);
+    expect(event.messages).toHaveLength(1);
+    expect(messages.map(({ id }) => id)).toEqual(["m-0", "m-1"]);
+  });
+});
+
 describe("applyEvent with blank text", () => {
   test("blank text before a tool call is not a part, so the calls stay together", () => {
     const tool = (id: string) => ({
