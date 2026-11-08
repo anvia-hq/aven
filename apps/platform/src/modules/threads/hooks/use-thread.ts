@@ -6,7 +6,7 @@ import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
-import { pendingMessage, settlePending, withoutPending } from "../pending-messages";
+import { pendingMessage, pendingShip, settlePending, withoutPending } from "../pending-messages";
 import type {
   ChatMessage,
   OutgoingMessage,
@@ -172,6 +172,12 @@ export function useThread(threadId: string) {
     [threadId, running, changeSteers, changePending, wasArchived, refresh],
   );
 
+  const showShip = useCallback(() => {
+    const id = newSteerId();
+    changePending((current) => [...current, pendingShip(id)]);
+    return () => changePending((current) => withoutPending(current, id));
+  }, [changePending]);
+
   const answer = useCallback(
     async (answers: QuestionAnswer[], selection: RunSelection = {}, secret?: SecretChoice) => {
       const sent = await attempt("Could not send answer", async () => {
@@ -204,6 +210,7 @@ export function useThread(threadId: string) {
     error,
     question,
     send,
+    showShip,
     answer,
     cancel,
   };

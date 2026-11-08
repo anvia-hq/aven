@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { splitBotMentions } from "./mentions";
+import { splitBotMentions, splitMentions, threadMentionText } from "./mentions";
 import type { Bot } from "./types";
 
 const bot = (id: string, name: string): Bot => ({
@@ -76,5 +76,44 @@ describe("splitBotMentions", () => {
     expect(splitBotMentions("hello @Scout", [])).toEqual([{ type: "text", text: "hello @Scout" }]);
     expect(splitBotMentions("hello", [scout])).toEqual([{ type: "text", text: "hello" }]);
     expect(splitBotMentions("", [scout])).toEqual([{ type: "text", text: "" }]);
+  });
+});
+
+const THREAD = "0b3e6a1e-52c4-4f5b-9a0d-3a5f6f0c9d11";
+
+describe("a thread mention", () => {
+  test("is written with the thread's id and a title with no brackets or line breaks", () => {
+    expect(threadMentionText(THREAD, "Fix the export button")).toBe(
+      `@[Fix the export button](thread:${THREAD})`,
+    );
+    expect(threadMentionText(THREAD, "Fix [the] (export)\nbutton")).toBe(
+      `@[Fix the export button](thread:${THREAD})`,
+    );
+    expect(threadMentionText(THREAD, "  ")).toBe(`@[Untitled thread](thread:${THREAD})`);
+    expect(threadMentionText(THREAD, "x".repeat(200))).toBe(
+      `@[${"x".repeat(60)}](thread:${THREAD})`,
+    );
+  });
+
+  test("is found in a message next to a bot's name, and the rest is kept", () => {
+    const text = `Ask @Scout about ${threadMentionText(THREAD, "Fix the export button")} please`;
+    expect(splitMentions(text, [scout])).toEqual([
+      { type: "text", text: "Ask " },
+      { type: "mention", bot: scout },
+      { type: "text", text: " about " },
+      { type: "thread", id: THREAD, title: "Fix the export button" },
+      { type: "text", text: " please" },
+    ]);
+  });
+
+  test("is not one when the id is not a thread's or the link is broken", () => {
+    for (const text of [
+      "@[Title](thread:not-an-id)",
+      `@[Title](thread:${THREAD.toUpperCase()}`,
+      `[Title](thread:${THREAD})`,
+      `@[](thread:${THREAD})`,
+    ]) {
+      expect(splitMentions(text, [])).toEqual([{ type: "text", text }]);
+    }
   });
 });

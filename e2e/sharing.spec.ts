@@ -43,25 +43,24 @@ test.describe("sharing a thread", () => {
     await expect(mate.page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
 
     await page.goto(`/threads/${thread.id}`);
-    const share = page.getByRole("button", { name: "Who can see this thread" });
+    const share = page.getByRole("button", { name: "Share", exact: true });
+    const dialog = page.getByRole("dialog", { name: "Share this thread" });
     const choose = async (name: RegExp) => {
       await share.click();
-      await page.getByRole("menuitemradio", { name }).click();
-      await expect(page.getByRole("menu")).toHaveCount(0);
+      await dialog.getByRole("radio", { name }).click();
+      await dialog.getByRole("button", { name: "Done" }).click();
+      await expect(dialog).toHaveCount(0);
     };
     await choose(/Everyone in the workspace/);
     await expect(page.getByText("Shared with the workspace")).toBeVisible();
-    await expect(share).toContainText("Shared");
     expect((await mate.page.request.get(`/api/threads/${thread.id}`)).status()).toBe(200);
 
     await choose(/Only me/);
     await expect(page.getByText("Only you can see it now")).toBeVisible();
-    await expect(share).toContainText("Private");
     await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(0);
     expect((await mate.page.request.get(`/api/threads/${thread.id}`)).status()).toBe(404);
 
     await choose(/Everyone in the workspace/);
-    await expect(share).toContainText("Shared");
     await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(1);
 
     await mate.page.goto("/threads");
@@ -75,7 +74,7 @@ test.describe("sharing a thread", () => {
     await expect(mate.page).toHaveURL(new RegExp(`/threads/${thread.id}$`));
     await expect(mate.page.getByText(/Shared by/)).toContainText("Owner Person");
     await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
-    await expect(mate.page.getByRole("button", { name: "Who can see this thread" })).toHaveCount(0);
+    await expect(mate.page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Desktop" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Terminal" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Files" })).toBeVisible();

@@ -8,14 +8,16 @@ import { ShipButton } from "./ship-button";
 type Props = {
   thread: Thread;
   unshipped: ReturnType<typeof useThreadDiff>;
+  showShip: () => () => void;
 };
 
-export function ShipBar({ thread, unshipped }: Props) {
+export function ShipBar({ thread, unshipped, showShip }: Props) {
   return (
     <div className="flex items-center justify-between gap-2 pb-2">
       <div className="flex items-center gap-2">
         <ShipButton
           thread={thread}
+          showShip={showShip}
           changesKnown={unshipped.loaded}
           upToDate={unshipped.loaded && !unshipped.problem && unshipped.files.length === 0}
         />

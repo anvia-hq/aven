@@ -44,7 +44,7 @@ test.describe("the agent's question", () => {
     await expect(form).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
     await expect(
-      page.getByRole("region", { name: "Answered questions" }).getByText("blue"),
+      page.getByRole("region", { name: "Answered questions" }).getByText("Blue", { exact: true }),
     ).toBeVisible();
     await expect(async () => {
       expect(events.find((entry) => entry.type === "answered")).toMatchObject({

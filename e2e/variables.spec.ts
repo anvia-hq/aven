@@ -84,6 +84,51 @@ test.describe("project environment variables", () => {
     await expect(section).toContainText("None yet");
   });
 
+  test("pasting a .env into the name field adds every variable in it", async ({ page }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await page.getByLabel("Name").focus();
+    await page.evaluate(() => {
+      const data = new DataTransfer();
+      data.setData(
+        "text",
+        '# app\nDATABASE_URL=postgres://localhost/app\nexport PORT=3000\nNAME="two words"\nGIT_DIR=x\n',
+      );
+      document.activeElement?.dispatchEvent(
+        new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    });
+
+    const list = page.getByRole("list", { name: "Variables to add" });
+    await expect(list).toContainText("DATABASE_URL");
+    await expect(list).toContainText("PORT");
+    await expect(list).toContainText("two words");
+    await expect(page.getByRole("list", { name: "Skipped lines" })).toContainText("GIT_DIR");
+
+    await page.getByRole("button", { name: "Add 3 variables" }).click();
+    await expect(page.getByText("3 variables saved")).toBeVisible();
+    await expect(section).toContainText("postgres://localhost/app");
+    await expect(section).toContainText("3000");
+    await expect(section).toContainText("two words");
+  });
+
+  test("the Paste a .env button takes text typed into the box, and secret hides the values", async ({
+    page,
+  }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Paste a .env" }).click();
+    await page.getByLabel(".env contents").fill("TOKEN=a-long-secret-value-9876");
+    await page.getByRole("switch", { name: "Secret" }).click();
+    await expect(page.getByRole("list", { name: "Variables to add" })).not.toContainText(
+      "a-long-secret",
+    );
+    await page.getByRole("button", { name: "Add 1 variable" }).click();
+    await expect(page.getByText("Variable saved")).toBeVisible();
+    await expect(section).toContainText("••••••9876");
+    await expect(page.getByText("a-long-secret")).toHaveCount(0);
+  });
+
   test("an unknown project has no variables to read", async ({ page }) => {
     await openProject(page);
     const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];

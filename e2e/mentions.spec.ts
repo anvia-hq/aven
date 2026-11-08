@@ -53,6 +53,8 @@ test.describe("mentions in the composer", () => {
     const sent = page.locator('[data-role="user"]');
     await expect(sent.locator('[data-mention="file"]')).toHaveText("src/greeting.ts");
     await expect(sent.locator('[data-mention="skill"]')).toHaveText("writing-skills");
+    await expect(sent.locator('[data-mention="skill"] svg')).toHaveCount(0);
+    await expect(sent.locator('[data-mention="file"] svg')).toHaveCount(1);
     await expect(prompt).toHaveText("");
   });
 

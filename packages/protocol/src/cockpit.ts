@@ -27,4 +27,4 @@ export const TAG_COLOR = /^#[0-9a-f]{6}$/;
 export const TAGS_DEFINED_MAX = 200;
 
 export const COCKPIT_KINDS = ["inbox", "tasks", "notes"] as const;
-export const COCKPIT_WRITES = ["create", "update", "delete"] as const;
+export const COCKPIT_WRITES = ["create", "update", "delete", "convert"] as const;

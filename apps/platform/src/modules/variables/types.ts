@@ -37,3 +37,7 @@ export const MIN_REDACTED_LENGTH = 8;
 const RESERVED = /^(PATH|HOME|USER|SHELL|PWD|LD_.*|AVEN_.*|GH_.*|GITHUB_.*|GIT_.*)$/i;
 
 export const isReservedName = (name: string) => RESERVED.test(name);
+
+export type ParsedEntry = { name: string; value: string };
+export type EnvIssue = { line: number; text: string; reason: string };
+export type ParsedEnv = { entries: ParsedEntry[]; issues: EnvIssue[] };

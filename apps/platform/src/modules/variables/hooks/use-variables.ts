@@ -74,6 +74,22 @@ export function useVariables(scope: VariableScope) {
     return saved;
   }
 
+  async function saveMany(entries: { name: string; value: string }[], secret: boolean) {
+    const saved = await change("Could not save variables", async () => {
+      for (const { name, value } of entries) {
+        await postJson<Variable>(path(scope, name), { value, secret }, "PUT");
+      }
+    });
+    if (saved) {
+      toast.add({
+        title: entries.length === 1 ? "Variable saved" : `${entries.length} variables saved`,
+        description: entries.map((entry) => entry.name).join(", "),
+        type: "success",
+      });
+    }
+    return saved;
+  }
+
   async function remove(variable: Variable) {
     const removed = await change("Could not remove variable", () =>
       api<void>(path(scope, variable.name), { method: "DELETE" }),
@@ -81,5 +97,5 @@ export function useVariables(scope: VariableScope) {
     if (removed) toast.add({ title: "Variable removed", description: variable.name });
   }
 
-  return { variables: variables ?? [], loaded: variables !== undefined, save, remove };
+  return { variables: variables ?? [], loaded: variables !== undefined, save, saveMany, remove };
 }

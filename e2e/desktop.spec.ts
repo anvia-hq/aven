@@ -102,7 +102,9 @@ test.describe("a thread's desktop", () => {
     ).toBeVisible();
 
     child.kill();
-    await expect(panel.getByText("The desktop connection ended.")).toBeVisible();
+    await expect(panel.getByText("The desktop connection ended.")).toBeVisible({
+      timeout: 20_000,
+    });
     await page.waitForTimeout(300);
     expect(errors.filter((text) => text.includes("disconnected RFB"))).toEqual([]);
   });

@@ -20,6 +20,7 @@ import { toast } from "@/components/toast";
 
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { BotMentionChip } from "./bot-mention-chip";
+import { ThreadMentionChip } from "./thread-mention-chip";
 
 const SINGLE_LINE_HEIGHT = 40;
 
@@ -36,8 +37,17 @@ function avatarOf(data: ComposerInputEntity["data"]) {
   return typeof avatar === "string" ? avatar : "";
 }
 
-const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) =>
-  triggerId === "bot" ? <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} /> : null;
+function kindOf(data: ComposerInputEntity["data"]) {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return "";
+  const { kind } = data as { kind?: unknown };
+  return kind;
+}
+
+const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) => {
+  if (triggerId !== "bot") return null;
+  if (kindOf(data) === "thread") return <ThreadMentionChip id={id} title={label} />;
+  return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} />;
+};
 
 export function BotComposer({ botId, main, ...props }: Props) {
   const chat = useComposerChat();

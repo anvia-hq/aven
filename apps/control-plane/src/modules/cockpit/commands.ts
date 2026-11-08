@@ -63,6 +63,7 @@ const command = z.discriminatedUnion("command", [
   z.object({ command: z.literal("create"), kind, fields: fields.extend({ title: z.string() }) }),
   z.object({ command: z.literal("update"), kind, id: z.string(), fields }),
   z.object({ command: z.literal("delete"), kind, id: z.string() }),
+  z.object({ command: z.literal("convert"), id: z.string(), fields: fields.optional() }),
 ]) satisfies z.ZodType<CockpitCommand>;
 
 const KIND_FIELDS: Record<CockpitKind, readonly string[]> = {
@@ -231,6 +232,24 @@ async function update(
   return cockpitService.inbox.update(userId, record.id, parse(updateInboxBody, values));
 }
 
+async function convert(userId: string, id: string, given: CockpitFields = {}) {
+  const item = (await find("inbox", userId, id)) as InboxItem;
+  if (item.done) {
+    throw new UnprocessableError(
+      `${label("inbox", item)} is already done, so it was probably converted; look for its task, or set it to not done first.`,
+    );
+  }
+  const values = shape("tasks", {
+    ...given,
+    title: given.title ?? item.title,
+    body: given.body ?? item.body,
+    tags: given.tags ?? item.tags,
+  });
+  const task = await cockpitService.tasks.create(userId, parse(createTaskBody, values));
+  await cockpitService.inbox.update(userId, item.id, { done: true });
+  return `Converted ${label("inbox", item)} into ${label("tasks", task)} (id ${task.id}); the inbox item is marked done.`;
+}
+
 export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
   const parsed = command.safeParse(raw);
   if (!parsed.success) throw invalid(parsed.error);
@@ -262,6 +281,8 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
       const changed = await update(userId, cmd.kind, record, cmd.fields);
       return `Updated ${label(cmd.kind, changed)}.`;
     }
+    case "convert":
+      return convert(userId, cmd.id, cmd.fields);
     case "delete": {
       if (!caller.onPersonsWord) {
         throw new UnprocessableError(

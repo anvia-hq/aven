@@ -8,7 +8,7 @@ import type { Thread } from "../types";
 
 const RUN_WAIT_MS = 6_000;
 
-export function useShipThread(thread: Thread) {
+export function useShipThread(thread: Thread, showShip: () => () => void) {
   const [shipping, setShipping] = useState(false);
   const { selection } = useModelSelection(thread.id);
 
@@ -26,6 +26,7 @@ export function useShipThread(thread: Thread) {
 
   async function ship(mode?: "new") {
     setShipping(true);
+    const dropCard = showShip();
     const started = await attempt("Could not ship the thread", () =>
       postJson<{ ok: true }>(`/threads/${thread.id}/ship`, { ...selection, mode }),
     );
@@ -37,6 +38,7 @@ export function useShipThread(thread: Thread) {
       });
     }
     setShipping(false);
+    if (!started) dropCard();
     if (started) {
       setPullRequestsAtShip(thread.pullRequests.length);
       setWaitingForRun(true);

@@ -12,12 +12,13 @@ import { ShipMenu } from "./ship-menu";
 
 type Props = {
   thread: Thread;
+  showShip: () => () => void;
   changesKnown: boolean;
   upToDate: boolean;
 };
 
-export function ShipButton({ thread, changesKnown, upToDate }: Props) {
-  const { shipping, ship } = useShipThread(thread);
+export function ShipButton({ thread, showShip, changesKnown, upToDate }: Props) {
+  const { shipping, ship } = useShipThread(thread, showShip);
   const { gate, appKey } = useShipReadiness(thread.id, thread.running);
   const account = useGithubAccount(appKey);
   const [latest] = thread.pullRequests;

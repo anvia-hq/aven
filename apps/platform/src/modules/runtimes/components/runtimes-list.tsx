@@ -1,4 +1,4 @@
-import { Trash } from "@mynaui/icons-react";
+import { Servers, Trash } from "@mynaui/icons-react";
 import { cn } from "cn";
 
 import { Badge } from "@/components/badge";
@@ -10,6 +10,7 @@ import { useRuntimes } from "../hooks/use-runtimes";
 import { isStale, machineMetrics } from "../machine-metrics";
 import type { Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
+import { RenameRuntimeDialog } from "./rename-runtime-dialog";
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
 import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
@@ -57,7 +58,7 @@ function Load({ runtime }: { runtime: Runtime }) {
 }
 
 export function RuntimesList() {
-  const { runtimes, loaded, revoke, isOwnedByMe } = useRuntimes({ poll: true });
+  const { runtimes, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
 
   if (!loaded) return null;
   if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
@@ -81,12 +82,18 @@ export function RuntimesList() {
           {runtimes.map((runtime) => (
             <tr key={runtime.id} aria-label={runtime.name}>
               <td className="px-3 py-3">
-                <div className="flex flex-col">
-                  <span className="font-medium">{runtime.name}</span>
+                <span className="flex items-center gap-2 font-medium">
+                  {runtime.name}
                   {runtime.ownerId === null && (
-                    <span className="text-xs text-muted-foreground">Built in</span>
+                    <Servers
+                      role="img"
+                      aria-label="Built in"
+                      className="size-4 shrink-0 text-muted-foreground"
+                    >
+                      <title>Built in: the runner of the control plane</title>
+                    </Servers>
                   )}
-                </div>
+                </span>
               </td>
               <td className="px-3 py-3">
                 <Status runtime={runtime} />
@@ -113,6 +120,7 @@ export function RuntimesList() {
               <td className="px-3 py-3">
                 <span className="flex items-center justify-end gap-1">
                   <UpdateRuntimeDialog runtime={runtime} />
+                  {canRename(runtime) && <RenameRuntimeDialog runtime={runtime} />}
                   {isOwnedByMe(runtime) && (
                     <>
                       <RotateRuntimeDialog runtime={runtime} />

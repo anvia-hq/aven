@@ -24,3 +24,29 @@ export function splitBotMentions(text: string, bots: readonly Bot[]): MentionPar
     parts.push({ type: "text", text: text.slice(last) });
   return parts;
 }
+
+const THREAD_TITLE_CHARS = 60;
+const THREAD_MENTION =
+  /@\[([^\][()\n]{1,80})\]\(thread:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/g;
+
+export function threadMentionText(id: string, title: string) {
+  const plain = title
+    .replace(/[\][()\s]+/g, " ")
+    .trim()
+    .slice(0, THREAD_TITLE_CHARS)
+    .trim();
+  return `@[${plain || "Untitled thread"}](thread:${id})`;
+}
+
+export function splitMentions(text: string, bots: readonly Bot[]): MentionPart[] {
+  const parts: MentionPart[] = [];
+  let last = 0;
+  for (const match of text.matchAll(THREAD_MENTION)) {
+    if (match.index > last) parts.push(...splitBotMentions(text.slice(last, match.index), bots));
+    parts.push({ type: "thread", id: match[2]!, title: match[1]! });
+    last = match.index + match[0].length;
+  }
+  if (last === 0) return splitBotMentions(text, bots);
+  if (last < text.length) parts.push(...splitBotMentions(text.slice(last), bots));
+  return parts;
+}

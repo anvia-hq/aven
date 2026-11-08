@@ -78,3 +78,33 @@ test.describe("runtimes", () => {
     await expect(page.getByText("No runtimes yet.")).toBeVisible();
   });
 });
+
+test.describe("renaming a runtime", () => {
+  test("changes its label in the list and on the server, and a blank name cannot be saved", async ({
+    page,
+  }) => {
+    await registerUser(page, "rtname", "Runtime Namer");
+    const created = await page.request.post("/api/runtimes", { data: { name: "devscalelabs-1" } });
+    expect(created.ok()).toBe(true);
+    await page.goto("/settings/runtimes");
+
+    const table = page.getByRole("table", { name: "Runtimes" });
+    await expect(table.getByRole("row", { name: /devscalelabs-1/ })).toBeVisible();
+    await expect(table).not.toContainText("Built in");
+
+    await page.getByRole("button", { name: "Rename devscalelabs-1" }).click();
+    const dialog = page.getByRole("dialog", { name: "Rename runtime" });
+    const save = dialog.getByRole("button", { name: "Save" });
+    await expect(save).toBeDisabled();
+    await dialog.getByLabel("Runtime name").fill("   ");
+    await expect(save).toBeDisabled();
+    await dialog.getByLabel("Runtime name").fill("Homelab VPS");
+    await save.click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(table.getByRole("row", { name: /Homelab VPS/ })).toBeVisible();
+    await expect(table).not.toContainText("devscalelabs-1");
+    const listed = (await (await page.request.get("/api/runtimes")).json()) as { name: string }[];
+    expect(listed.map((runtime) => runtime.name)).toEqual(["Homelab VPS"]);
+  });
+});
