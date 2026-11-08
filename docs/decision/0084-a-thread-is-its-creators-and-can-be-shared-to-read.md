@@ -20,3 +20,7 @@ A thread had no owner check. Every member of the organization saw every thread, 
 - The conversation of a shared thread is readable by every member, as is the workspace's files and diff through the runner: what the agent printed or wrote is visible, so a person sharing should know that. Processes and their logs, and the Desktop, which may show anything, are never shared.
 - A shared thread's `running` state is on the list a teammate gets, and its live events stream works for them, but the page does not push a new share to other people's lists: they see it when they next load threads.
 - The runner, the project and the workspace's variables are still the organization's (0008, 0045).
+
+## Note: a Share button and a dialog
+
+Who can see a thread is chosen from a **Share** button in the thread header that opens a dialog (it was a Private/Shared dropdown): the two choices as cards, saved as soon as one is picked, a Copy link button (the link opens only for people who may read the thread) and Done. The button has the globe once the thread is shared.
