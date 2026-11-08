@@ -1,4 +1,4 @@
-# 0153: A doc that is no longer true is deleted, and its folder renumbered
+# 0154: A doc that is no longer true is deleted, and its folder renumbered
 
 Status: accepted. Changes the rule in `docs/README.md` that outdated docs are kept and marked superseded, and that numbers are never renumbered.
 
