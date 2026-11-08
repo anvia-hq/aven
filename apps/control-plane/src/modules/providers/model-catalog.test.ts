@@ -92,6 +92,80 @@ describe("modelCatalog", () => {
     expect(calls.n).toBe(2);
   });
 
+  test("callers racing on a cold cache share one load and all get its data", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const calls = { n: 0 };
+    const fetchFn = (async () => {
+      calls.n++;
+      await gate;
+      return Response.json(catalog);
+    }) as unknown as typeof fetch;
+    const models = createModelCatalog(fetchFn, () => 0, url);
+
+    const first = models.chatModels("openai", ["gpt-5.6", "whisper-1"]);
+    const second = models.canRun("openai", "gpt-image-2");
+    const third = models.efforts("anthropic", "claude-haiku-5-5");
+    release();
+
+    expect(await first).toEqual(["gpt-5.6"]);
+    expect(await second).toBe(false);
+    expect(await third).toEqual(["low", "high"]);
+    expect(calls.n).toBe(1);
+  });
+
+  test("a failed first load is the same for callers racing it, and a later call recovers", async () => {
+    let time = 0;
+    let up = false;
+    const calls = { n: 0 };
+    const fetchFn = (async () => {
+      calls.n++;
+      if (!up) throw new Error("down");
+      return Response.json(catalog);
+    }) as unknown as typeof fetch;
+    const models = createModelCatalog(fetchFn, () => time, url);
+
+    const [deprecated, unusable] = await Promise.all([
+      models.chatModels("openai", ["o4-mini"]),
+      models.chatModels("openai", ["gpt-image-2"]),
+    ]);
+    expect(deprecated).toEqual(["o4-mini"]);
+    expect(unusable).toEqual([]);
+    expect(calls.n).toBe(1);
+
+    await models.chatModels("openai", []);
+    expect(calls.n).toBe(1);
+
+    up = true;
+    time += 5 * 60 * 1000;
+    expect(await models.chatModels("openai", ["o4-mini"])).toEqual([]);
+    expect(calls.n).toBe(2);
+  });
+
+  test("a catalog address that throws is a failed refresh, not a failed call", async () => {
+    let time = 0;
+    let broken = true;
+    const calls = { n: 0 };
+    const models = createModelCatalog(
+      serving(catalog, calls),
+      () => time,
+      () => {
+        if (broken) throw new Error("no catalog address");
+        return "https://catalog.test/api.json";
+      },
+    );
+
+    expect(await models.chatModels("openai", ["o4-mini"])).toEqual(["o4-mini"]);
+    expect(calls.n).toBe(0);
+
+    broken = false;
+    time += 5 * 60 * 1000;
+    expect(await models.chatModels("openai", ["o4-mini"])).toEqual([]);
+    expect(calls.n).toBe(1);
+  });
+
   test("a stale catalog keeps serving when a refresh fails", async () => {
     let time = 0;
     let up = true;
@@ -141,6 +215,25 @@ describe("contextWindow", () => {
     expect(await models.contextWindow("openai", "o4-mini")).toBeNull();
     expect(await models.contextWindow("openai", "not-listed")).toBeNull();
     expect(await models.contextWindow("openai-compatible", "llama")).toBeNull();
+  });
+
+  test("the window index stays bounded, keeping the names most hosts share", async () => {
+    const bulk: Record<string, unknown> = {};
+    for (let i = 0; i < 5000; i++) bulk[`vendor-${i}`] = { limit: { context: 1000 + i } };
+    const shared = { models: { shared: { limit: { context: 4096 } } } };
+    const models = createModelCatalog(
+      serving({ hostA: { models: bulk }, hostB: shared, hostC: shared }),
+      () => 0,
+      url,
+    );
+
+    expect(await models.contextWindow("azure", "shared")).toBe(4096);
+    let remembered = 0;
+    for (let i = 0; i < 5000; i++) {
+      if ((await models.contextWindow("azure", `vendor-${i}`)) !== null) remembered++;
+    }
+    expect(remembered).toBeGreaterThan(0);
+    expect(remembered).toBeLessThan(5000);
   });
 
   test("an Azure deployment the azure entry lacks gets the window other hosts give the model", async () => {

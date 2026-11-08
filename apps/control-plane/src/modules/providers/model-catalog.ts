@@ -21,6 +21,13 @@ const catalogId = (kind: Provider, id: string) =>
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
+const MAX_WINDOWS = 4096;
+const MAX_MODELS = 4096;
+
+type Snapshot = {
+  entries: Partial<Record<Provider, Map<string, Entry>>>;
+  windows: Map<string, number[]>;
+};
 
 type CatalogModel = {
   name?: string;
@@ -79,6 +86,13 @@ function commonWindow(values: number[] | undefined) {
   return [...counts].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? null;
 }
 
+const frequentFirst = (a: [string, number[]], b: [string, number[]]) =>
+  b[1].length - a[1].length || (a[0] < b[0] ? -1 : Number(a[0] > b[0]));
+
+function boundedWindows(byName: Map<string, number[]>) {
+  return new Map([...byName].sort(frequentFirst).slice(0, MAX_WINDOWS));
+}
+
 export function createModelCatalog(
   fetchFn: typeof fetch = fetch,
   now: () => number = Date.now,
@@ -89,60 +103,76 @@ export function createModelCatalog(
   let nextTry = 0;
   let loading: Promise<void> | null = null;
 
-  async function refresh() {
-    const url = catalogUrl();
-    if (!url) {
-      nextTry = now() + RETRY_MS;
-      return;
+  async function readCatalog(url: string): Promise<Snapshot> {
+    const res = await fetchFn(url, { signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
+    const next: Partial<Record<Provider, Map<string, Entry>>> = {};
+    for (const kind of ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure"] as const) {
+      const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
+      next[kind] = new Map(
+        Object.entries(models)
+          .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))
+          .slice(0, MAX_MODELS)
+          .map(([id, info]) => {
+            return [
+              id,
+              {
+                usable: isUsable(info),
+                deprecated: info.status === "deprecated",
+                efforts: effortsOf(info),
+                contextWindow: contextWindowOf(info),
+                images: imagesOf(info),
+                label: typeof info.name === "string" && info.name.trim() ? info.name.trim() : null,
+              },
+            ];
+          }),
+      );
     }
+    const byName = new Map<string, number[]>();
+    for (const provider of Object.values(json)) {
+      for (const [id, info] of Object.entries(provider?.models ?? {})) {
+        const window = isRecord(info) ? contextWindowOf(info) : null;
+        if (window === null) continue;
+        const name = id.toLowerCase().split("/").pop() ?? id;
+        const seen = byName.get(name) ?? [];
+        seen.push(window);
+        byName.set(name, seen);
+      }
+    }
+    return { entries: next, windows: boundedWindows(byName) };
+  }
+
+  async function refresh() {
     try {
-      const res = await fetchFn(url, { signal: AbortSignal.timeout(8_000) });
-      if (!res.ok) throw new Error(String(res.status));
-      const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
-      const next: Partial<Record<Provider, Map<string, Entry>>> = {};
-      for (const kind of ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure"] as const) {
-        const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
-        next[kind] = new Map(
-          Object.entries(models)
-            .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))
-            .map(([id, info]) => {
-              return [
-                id,
-                {
-                  usable: isUsable(info),
-                  deprecated: info.status === "deprecated",
-                  efforts: effortsOf(info),
-                  contextWindow: contextWindowOf(info),
-                  images: imagesOf(info),
-                  label:
-                    typeof info.name === "string" && info.name.trim() ? info.name.trim() : null,
-                },
-              ];
-            }),
-        );
+      const url = catalogUrl();
+      const snapshot = url ? await readCatalog(url) : null;
+      if (!snapshot) {
+        nextTry = now() + RETRY_MS;
+        return;
       }
-      const byName = new Map<string, number[]>();
-      for (const provider of Object.values(json)) {
-        for (const [id, info] of Object.entries(provider?.models ?? {})) {
-          const window = isRecord(info) ? contextWindowOf(info) : null;
-          if (window === null) continue;
-          const name = id.toLowerCase().split("/").pop() ?? id;
-          const seen = byName.get(name) ?? [];
-          seen.push(window);
-          byName.set(name, seen);
-        }
-      }
-      windows = byName;
-      entries = next;
+      entries = snapshot.entries;
+      windows = snapshot.windows;
       nextTry = now() + TTL_MS;
     } catch {
       nextTry = now() + RETRY_MS;
     }
   }
 
+  function startLoading() {
+    if (loading) return loading;
+    const shared = refresh().finally(() => {
+      loading = null;
+    });
+    loading = shared;
+    return shared;
+  }
+
   async function lookup(kind: Provider) {
-    if (now() >= nextTry) loading ??= refresh().finally(() => (loading = null));
-    if (!entries) await loading;
+    if (now() >= nextTry) {
+      const pending = startLoading();
+      if (!entries) await pending;
+    }
     return entries?.[kind] ?? null;
   }
 
