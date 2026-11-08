@@ -515,6 +515,48 @@ describe("startRuntime", () => {
       return { sandbox, signedIn, identities };
     }
 
+    test("a runner that restarts signs the run in again with the secrets the control plane attaches", async () => {
+      const { sandbox, signedIn } = signingSandbox();
+      const paths = { journalPath: journalPath() };
+      const hold = Promise.withResolvers<void>();
+      const reached = Promise.withResolvers<void>();
+      const first = connect({
+        sandbox,
+        ...paths,
+        createAgent: ({ id }) => ({
+          agent: new Agent({
+            id,
+            instructions: "x",
+            model: scriptedModel([
+              async () => {
+                reached.resolve();
+                await hold.promise;
+                return [text("never")];
+              },
+            ]),
+          }),
+        }),
+      });
+      await first.runtime.ready;
+      first.plane.send({ ...runStart, runId: "run-a", github: ada });
+      await reached.promise;
+      const stopping = first.runtime.stop();
+      hold.resolve();
+      await stopping;
+
+      const second = connect({ sandbox, ...paths, createAgent: reply() });
+      await second.runtime.ready;
+      await until(() => second.plane.received.some((m) => m.type === "hello"));
+      second.plane.send({
+        type: "run.attach",
+        runId: "run-a",
+        after: 0,
+        secrets: { github: ada },
+      });
+      await until(() => second.plane.received.some((m) => m.type === "run.end"));
+      expect(signedIn.map((entry) => entry.github)).toEqual([ada, ada]);
+    });
+
     test("a run signs in as the account it came with, and a run with none signs out", async () => {
       const { sandbox, signedIn } = signingSandbox();
       const { plane, runtime } = connect({ sandbox, createAgent: reply() });

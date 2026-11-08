@@ -17,8 +17,7 @@ async function inside(root: string, path: string) {
   if (!real) return null;
   const from = relative(root, real);
   if (from === ".." || from.startsWith(`..${sep}`) || isAbsolute(from)) return null;
-  const [first] = from.split(sep);
-  return first === ".git" ? null : real;
+  return from.split(sep).includes(".git") ? null : real;
 }
 
 export async function listDirectory(root: string, path: string): Promise<FileEntry[]> {
@@ -28,7 +27,7 @@ export async function listDirectory(root: string, path: string): Promise<FileEnt
   const names = await readdir(real, { withFileTypes: true }).catch(() => []);
   const entries: FileEntry[] = [];
   for (const entry of names) {
-    if (entry.name === ".git" && real === top) continue;
+    if (entry.name === ".git") continue;
     entries.push({ name: entry.name, type: entry.isDirectory() ? "directory" : "file" });
   }
   entries.sort(

@@ -1,7 +1,17 @@
 import { UnprocessableError } from "../../errors";
+import { createMcpBody, updateMcpBody } from "./schema";
 import { mcpService } from "./service";
 import type { BotMcp, McpServerView } from "./types";
 import type { BotMcpView } from "@aven/protocol/types";
+import type { z } from "zod";
+
+function checked<Schema extends z.ZodType>(schema: Schema, body: unknown): z.output<Schema> {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    throw new UnprocessableError(result.error.issues[0]?.message ?? "The MCP server is not valid");
+  }
+  return result.data;
+}
 
 const seenByBot = ({
   id,
@@ -22,22 +32,25 @@ export const botMcp: BotMcp = {
     return (await mcpService.list(userId)).map(seenByBot);
   },
 
-  async add(userId, { name, url, headers = [], target = "all" }) {
-    return seenByBot(
-      await mcpService.create(userId, {
-        name,
-        url,
-        headers,
-        target,
-        enabled: true,
-        allowLocal: false,
-      }),
-    );
+  async add(userId, input) {
+    const body = checked(createMcpBody, {
+      name: input.name,
+      url: input.url,
+      headers: input.headers ?? [],
+      target: input.target ?? "all",
+      enabled: true,
+      allowLocal: false,
+    });
+    return seenByBot(await mcpService.create(userId, body));
   },
 
-  async update(userId, id, { name, url, headers, target, enabled }) {
+  async update(userId, id, input) {
     const current = await mcpService.get(userId, id);
     if (!current) throw new UnprocessableError(NOT_FOUND);
+    const { name, url, headers, target, enabled } = checked(
+      updateMcpBody,
+      Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)),
+    );
     const moved = url !== undefined && url !== current.url;
     const changed = await mcpService.update(userId, id, {
       name,

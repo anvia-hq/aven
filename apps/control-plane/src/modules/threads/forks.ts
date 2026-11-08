@@ -2,7 +2,7 @@ import { FORKS_PER_THREAD, forkPrompt } from "@aven/protocol/forks";
 import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
-import { UnprocessableError } from "../../errors";
+import { ConflictError, UnprocessableError } from "../../errors";
 import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
 import type { ThreadForks, ThreadMessages } from "./types";
@@ -21,6 +21,42 @@ export function createThreadForks({
       throw new UnprocessableError("That is not a fork of this thread");
     }
     return fork;
+  };
+
+  const waiting = new Map<string, string[]>();
+  const sendNote = async (
+    parent: { id: string; organizationId: string; createdBy: string },
+    prompt: string,
+  ) => {
+    try {
+      await messages.send(
+        parent.organizationId,
+        parent.createdBy,
+        parent.id,
+        { prompt },
+        { onPersonsWord: false },
+      );
+    } catch (error) {
+      if (!(error instanceof ConflictError)) {
+        console.warn(`Could not tell thread ${parent.id} about a fork:`, error);
+        return;
+      }
+      const queued = waiting.get(parent.id) ?? [];
+      queued.push(prompt);
+      waiting.set(parent.id, queued);
+    }
+  };
+  const deliverWaiting = async (
+    thread: { id: string; organizationId: string },
+    outcome: string,
+  ) => {
+    if (outcome !== "done" && outcome !== "failed") return;
+    const prompts = waiting.get(thread.id);
+    if (!prompts?.length) return;
+    const parent = await threadsService.get(thread.organizationId, thread.id);
+    if (!parent || parent.awaitingAnswer) return;
+    waiting.delete(thread.id);
+    for (const prompt of prompts) await sendNote(parent, prompt);
   };
 
   const turns = new Map<string, Promise<unknown>>();
@@ -70,7 +106,11 @@ export function createThreadForks({
     start: (thread, input) => inTurn(thread.id, () => start(thread, input)),
 
     async ended(fork, ending) {
-      if (!fork.parentThreadId || ending.outcome === "cancelled") return;
+      if (!fork.parentThreadId) {
+        await deliverWaiting(fork, ending.outcome);
+        return;
+      }
+      if (ending.outcome === "cancelled") return;
       const parentWorking = runs.isRunning(fork.parentThreadId);
       const siblings = await threadsService.liveForkList(fork.parentThreadId);
       if (!parentWorking && siblings.some((other) => runs.isRunning(other.id))) return;
@@ -85,15 +125,7 @@ export function createThreadForks({
       const prompt = parentWorking
         ? `[fork] Your fork "${forked.title}" (${forked.id}) ${how}. Look at it with fork_status, and take its changes with take_fork_changes when you want them.`
         : `[fork] Your fork "${forked.title}" (${forked.id}) ${how}, and none of your forks is going now: ${siblings.map((other) => `"${other.title}" (${other.id})`).join(", ")}. Look at each with fork_status. If the person asked you to take their work or open pull requests, do that now, checking each change first; otherwise tell them the forks are done and ask what they want taken.`;
-      await messages
-        .send(
-          parent.organizationId,
-          parent.createdBy,
-          parent.id,
-          { prompt },
-          { onPersonsWord: false },
-        )
-        .catch(() => undefined);
+      await sendNote(parent, prompt);
     },
 
     async status(thread, id) {

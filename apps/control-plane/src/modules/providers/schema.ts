@@ -122,11 +122,24 @@ export const updateProviderBody = z.object({
   isDefault: z.literal(true).optional(),
 });
 
-export const listModelsBody = z.object({
-  kind: z.enum(PROVIDERS),
-  apiKey: apiKey.optional(),
-  baseUrl: providerBaseUrl.optional(),
-});
+export const listModelsBody = z
+  .object({
+    kind: z.enum(PROVIDERS),
+    apiKey: z.string().trim().max(10_000).optional(),
+    baseUrl: providerBaseUrl.optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (body.apiKey === undefined) return;
+    const check = body.kind === "vertex" ? vertexCredential : apiKey;
+    const result = check.safeParse(body.apiKey);
+    if (!result.success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["apiKey"],
+        message: result.error.issues[0]?.message ?? "Not a valid key",
+      });
+    }
+  });
 
 export type CreateProviderBody = z.infer<typeof createProviderBody>;
 export type KeylessProviderBody = z.infer<typeof keylessProviderBody> & { apiKey?: undefined };

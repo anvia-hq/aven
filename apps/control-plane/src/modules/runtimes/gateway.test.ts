@@ -5,6 +5,13 @@ import { createCodingAgent } from "@aven/agents/coding-agent";
 import { GoogleAuthError } from "../providers/google-auth";
 import { RunGateway } from "./gateway";
 
+const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
+process.env.PROVIDER_ALLOWED_HOSTS = "localhost";
+afterAll(() => {
+  if (allowedBefore === undefined) delete process.env.PROVIDER_ALLOWED_HOSTS;
+  else process.env.PROVIDER_ALLOWED_HOSTS = allowedBefore;
+});
+
 type Seen = { path: string; search: string; headers: Headers; body: Record<string, unknown> };
 
 describe("RunGateway", () => {

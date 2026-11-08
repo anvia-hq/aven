@@ -57,6 +57,11 @@ async function requireLiveProject(organizationId: string, threadId: string) {
   }
 }
 
+function archivedFilter(archived: boolean | undefined) {
+  if (archived === undefined) return undefined;
+  return archived ? eq(threads.state, "archived") : ne(threads.state, "archived");
+}
+
 export const threadsService = {
   list: (viewer: Viewer) =>
     db.select(columns).from(threads).where(seenBy(viewer)).orderBy(desc(threads.updatedAt)),
@@ -85,7 +90,11 @@ export const threadsService = {
     return thread;
   },
 
-  listForPerson: (userId: string, limit: number) =>
+  listForPerson: (
+    userId: string,
+    limit: number,
+    narrow: { archived?: boolean; projectId?: string } = {},
+  ) =>
     db
       .select(columns)
       .from(threads)
@@ -93,6 +102,8 @@ export const threadsService = {
         and(
           inPersonsWorkspaces(userId),
           or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+          archivedFilter(narrow.archived),
+          narrow.projectId === undefined ? undefined : eq(threads.projectId, narrow.projectId),
         ),
       )
       .orderBy(desc(threads.updatedAt))
