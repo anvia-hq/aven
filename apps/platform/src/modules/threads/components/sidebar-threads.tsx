@@ -23,6 +23,7 @@ import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
+import { useUnreadThreads } from "../hooks/use-unread-threads";
 import type { Thread } from "../types";
 
 const RUNNING_REFRESH_MS = 5000;
@@ -53,6 +54,16 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
     >
       {shortTimeAgo(thread.updatedAt)}
     </time>
+  );
+}
+
+function UnreadDot() {
+  return (
+    <span
+      role="img"
+      aria-label="Finished, not opened yet"
+      className="pointer-events-none absolute top-1/2 left-0 z-10 size-1.5 -translate-y-1/2 rounded-full bg-primary group-data-[collapsible=icon]:hidden"
+    />
   );
 }
 
@@ -155,6 +166,7 @@ export function SidebarThreads() {
   const archive = useArchiveThread();
   const rename = useRenameThread();
   useFinishedSound();
+  const unread = useUnreadThreads();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
@@ -189,6 +201,7 @@ export function SidebarThreads() {
             {nested && (
               <ForkElbow first={!rows[index - 1]?.nested} last={!rows[index + 1]?.nested} />
             )}
+            {unread.has(thread.id) && <UnreadDot />}
             <SidebarMenuButton
               render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
               isActive={pathname === `/threads/${thread.id}`}
