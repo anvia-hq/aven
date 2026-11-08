@@ -11,23 +11,34 @@ afterAll(() => {
 
 run("providersService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
+  const { providers } = await import("@aven/db/schema/providers");
   const { users } = await import("@aven/db/schema/users");
-  const { inArray } = await import("drizzle-orm");
+  const { eq, inArray } = await import("drizzle-orm");
   const { UnavailableError } = await import("../../errors");
   const { providersService } = await import("./service");
   const { effortsByModel } = await import("./model-list");
   const { bedrockEndpoint } = await import("./schema");
   const { InvalidSelectionError, resolveModel } = await import("./resolve-model");
 
+  const encryptWithAnotherKey = async (plain: string) => {
+    const previous = process.env.PROVIDER_ENCRYPTION_KEY;
+    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+    try {
+      const { encryptSecret } = (await import(
+        `../../crypto.ts?key=${crypto.randomUUID()}`
+      )) as typeof import("../../crypto");
+      return encryptSecret(plain);
+    } finally {
+      if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
+      else process.env.PROVIDER_ENCRYPTION_KEY = previous;
+    }
+  };
+
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
   const bob = `u-bob-${suffix}`;
-  let previousKey: string | undefined;
-
   beforeAll(async () => {
-    previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
     process.env.MODEL_CATALOG_URL = "";
-    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString("base64");
     await db.insert(users).values([
       { id: alice, name: "Alice", email: `${alice}@aven.test` },
       { id: bob, name: "Bob", email: `${bob}@aven.test` },
@@ -35,7 +46,6 @@ run("providersService (postgres)", async () => {
   });
 
   afterAll(async () => {
-    process.env.PROVIDER_ENCRYPTION_KEY = previousKey;
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -71,15 +81,22 @@ run("providersService (postgres)", async () => {
   });
 
   test("a key that cannot be decrypted makes the provider unavailable, not a server error", async () => {
-    const original = process.env.PROVIDER_ENCRYPTION_KEY;
-    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+    const [mine] = await providersService.list(alice);
+    const stored = (await db.select().from(providers).where(eq(providers.id, mine!.id)))[0]!;
     const silenced = console.error;
     console.error = () => undefined;
     try {
+      await db
+        .update(providers)
+        .set({ apiKeyEncrypted: await encryptWithAnotherKey("sk-secret-abcd") })
+        .where(eq(providers.id, mine!.id));
       await expect(resolveModel(alice)).rejects.toBeInstanceOf(UnavailableError);
     } finally {
       console.error = silenced;
-      process.env.PROVIDER_ENCRYPTION_KEY = original;
+      await db
+        .update(providers)
+        .set({ apiKeyEncrypted: stored.apiKeyEncrypted })
+        .where(eq(providers.id, mine!.id));
     }
   });
 
