@@ -3,12 +3,13 @@ import { Elysia } from "elysia";
 import { ForbiddenError, orNotFound } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
+import { platformService } from "../platform/service";
 import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
 import { createLatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
-import { createRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
+import { createRuntimeBody, renameRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
@@ -54,6 +55,31 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       "/gateway/:segment/*",
       ({ request, params }) => runGateway.forward(request, params.segment, params["*"]),
       { parse: "none" },
+    )
+    .patch(
+      "/:id",
+      async ({ params, body, organizationId, user }) => {
+        const runtime = orNotFound(
+          await runtimesService.get(organizationId, params.id),
+          "Runtime not found",
+        );
+        const allowed =
+          runtime.id === LOCAL_RUNTIME_ID
+            ? await platformService.isOwner(user)
+            : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
+        if (!allowed) {
+          throw new ForbiddenError(
+            runtime.id === LOCAL_RUNTIME_ID
+              ? "Only a platform owner can rename the built-in runner"
+              : "Only the runner's owner, an owner or an admin can rename it",
+          );
+        }
+        return orNotFound(
+          await runtimesService.rename(organizationId, params.id, body.name),
+          "Runtime not found",
+        );
+      },
+      { auth: true, org: true, params: runtimeParams, body: renameRuntimeBody },
     )
     .post(
       "/:id/rotate",

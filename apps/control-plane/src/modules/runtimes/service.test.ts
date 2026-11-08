@@ -72,4 +72,24 @@ run("runtimes service (real postgres)", async () => {
     );
     expect(await runtimesService.authenticate("avrt_local_guess")).toBeNull();
   });
+
+  test("a runtime is renamed in its own organization only, and a revoked one is not found", async () => {
+    const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "old name" });
+
+    expect(await runtimesService.rename(seed.orgB, runtime.id, "stolen")).toBeNull();
+    expect((await runtimesService.get(seed.orgA, runtime.id))?.name).toBe("old name");
+
+    expect((await runtimesService.rename(seed.orgA, runtime.id, "Homelab"))?.name).toBe("Homelab");
+    expect((await runtimesService.get(seed.orgA, runtime.id))?.name).toBe("Homelab");
+    expect(
+      (
+        await runtimesService.authenticate(
+          (await runtimesService.rotate(seed.orgA, seed.userId, runtime.id))!.token,
+        )
+      )?.name,
+    ).toBe("Homelab");
+
+    await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
+    expect(await runtimesService.rename(seed.orgA, runtime.id, "again")).toBeNull();
+  });
 });
