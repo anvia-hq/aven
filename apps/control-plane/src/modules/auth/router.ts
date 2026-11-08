@@ -25,7 +25,10 @@ export const authRouter = new Elysia({ name: "auth" })
       async resolve({ request, status }) {
         const session = await sessionOf(request);
         const organizationId = session?.session.activeOrganizationId;
-        if (!organizationId) return status(400, "No active organization");
+        if (!session || !organizationId) return status(400, "No active organization");
+        if (!(await authService.isMember(session.user.id, organizationId))) {
+          return status(400, "No active organization");
+        }
         return { organizationId };
       },
     },
