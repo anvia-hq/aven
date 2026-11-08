@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **50**: `run.attach` can carry the secrets the run was started with, `secrets` (the environment variables, GitHub account, identity credential and MCP servers), so a runner that restarted mid-run signs in and connects again (bug 003).
 - **49**: the control plane can ask a runner to update itself, `runner.update` (a `call` with `{ release? }` that answers with a `RunnerUpdateResult`), and `hello` can say `canUpdate` (decision 0146). A runner that has not updated is refused until `aven update`.
 - **48**: a runner tells the control plane when a process the agent left running ends while no run of its thread is going, `process.ended`, and the control plane wakes the agent with a note (decision 0144). A runner that has not updated is refused until `aven update`.
 - **47**: a run can use the `vertex` provider (decision 0140), which an older runtime would build as an Anthropic client.

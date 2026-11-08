@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
+import { mcpServers } from "@aven/db/schema/mcp-servers";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
@@ -53,6 +54,21 @@ run("a bot's use of the person's MCP servers (postgres)", async () => {
     const [now] = (await mcpService.forRun(alice, "bots")).filter((s) => s.id === server.id);
     expect(now?.headers).toEqual({});
     expect(JSON.stringify(now)).not.toContain("keep-away");
+  });
+
+  test("a bot moving a server the person allowed on this machine cannot keep that allowance", async () => {
+    const local = await mcpService.create(alice, {
+      name: "Own Machine",
+      url: "http://127.0.0.1:9000/mcp",
+      headers: [],
+      target: "all",
+      enabled: true,
+      allowLocal: true,
+    });
+    await botMcp.update(alice, local.id, { url: "http://169.254.169.254/latest/meta-data/" });
+    const [row] = await db.select().from(mcpServers).where(eq(mcpServers.id, local.id));
+    expect(row?.url).toBe("http://169.254.169.254/latest/meta-data/");
+    expect(row?.allowLocal).toBe(false);
   });
 
   test("a change that leaves the address keeps the headers, and new ones replace them", async () => {

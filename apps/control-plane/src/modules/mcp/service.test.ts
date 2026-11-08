@@ -114,6 +114,28 @@ run("mcpService (postgres)", async () => {
     expect(moved?.lastError).toBeNull();
   });
 
+  test("moving a server to another address clears its allowance for this machine, unless the change allows it", async () => {
+    const local = await mcpService.create(
+      alice,
+      make({ name: "Local Allowed", url: "http://127.0.0.1:9000/mcp", allowLocal: true }),
+    );
+    expect(local.allowLocal).toBe(true);
+    const moved = await mcpService.update(
+      alice,
+      local.id,
+      change({ url: "http://169.254.169.254/latest/meta-data/" }),
+    );
+    expect(moved?.allowLocal).toBe(false);
+    const again = await mcpService.update(
+      alice,
+      local.id,
+      change({ url: "http://127.0.0.1:9001/mcp", allowLocal: true }),
+    );
+    expect(again?.allowLocal).toBe(true);
+    const sameAddress = await mcpService.update(alice, local.id, change({ name: "Local Renamed" }));
+    expect(sameAddress?.allowLocal).toBe(true);
+  });
+
   test("another person's server is not found, changed or removed", async () => {
     const server = await mcpService.create(alice, make({ name: "Private" }));
     expect(await mcpService.get(bob, server.id)).toBeNull();

@@ -100,7 +100,7 @@ export async function setupEnvironment(input: SetupInput) {
     const handedBack = input.hostUser ? await handOver(input.hostUser) : undefined;
     await mkdir(dirname(input.logPath), { recursive: true });
     await writeFile(input.logPath, `${ran.stdout}${ran.stderr}`);
-    if (ran.stderr.includes("timed out after")) {
+    if (ran.timedOut) {
       throw new Error(
         `${SETUP_SCRIPT} did not finish within ${Math.round(timeoutMs / 60_000)} minutes`,
       );
