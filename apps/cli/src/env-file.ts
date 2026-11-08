@@ -36,14 +36,24 @@ export function newSecrets() {
   };
 }
 
-const SETTINGS_BEFORE: Record<string, string> = { AVEN_BIND: "" };
+type AddedKeyDefault = { from: "install"; value: string } | { from: "template" };
+
+const ADDED_KEY_POLICY: Record<string, AddedKeyDefault> = {
+  AVEN_BIND: { from: "install", value: "" },
+  AVEN_LOCAL_RUNNER: { from: "template" },
+};
 
 export function addMissingKeys(existing: string, template: string) {
   const have = parseEnv(existing);
   const secrets: Record<string, string> = newSecrets();
   const missing: Record<string, string> = {};
-  for (const [key, value] of Object.entries(parseEnv(template)))
-    if (!(key in have)) missing[key] = secrets[key] ?? SETTINGS_BEFORE[key] ?? value;
+  for (const [key, templateValue] of Object.entries(parseEnv(template))) {
+    if (key in have) continue;
+    const policy = ADDED_KEY_POLICY[key];
+    if (key in secrets) missing[key] = secrets[key]!;
+    else if (policy?.from === "template") missing[key] = templateValue;
+    else if (policy?.from === "install") missing[key] = policy.value;
+  }
   return setEnv(existing, missing);
 }
 
