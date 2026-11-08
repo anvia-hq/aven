@@ -25,7 +25,7 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
           {tag && (
             <TagBadge
               tag={tag}

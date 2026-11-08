@@ -81,13 +81,19 @@ export function CenterPage() {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 md:py-10">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{one ? one.name : "Center"}</h1>
-          <p className="text-sm text-muted-foreground">
-            {one
-              ? one.repoFullName
-              : "Pull requests and commits across all your projects, read from GitHub."}
-          </p>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+            {one ? one.name : "Center"}
+          </h1>
+          {/* The repository is worth a line even on a phone; the sentence about what Center is,
+              only where it fits (decision 0172). */}
+          {one ? (
+            <p className="truncate text-sm text-muted-foreground">{one.repoFullName}</p>
+          ) : (
+            <p className="hidden text-sm text-muted-foreground md:block">
+              Pull requests and commits across all your projects, read from GitHub.
+            </p>
+          )}
         </div>
         <Button
           variant="outline"
