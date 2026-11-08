@@ -17,6 +17,7 @@ import { dirname } from "node:path";
 
 import { createDurableEventMapper } from "./durable-events";
 import { defineAvenGoal, startGoal } from "./durable-goals";
+import { assertDurableToolConcurrency } from "./durable-tool-concurrency";
 import { openRunDatabase } from "./run-outbox";
 import type { SandboxToolName } from "@aven/agents/types";
 import type {
@@ -148,6 +149,7 @@ export class DurableRuns {
     });
     let runs: DurableRuns | undefined;
     try {
+      assertDurableToolConcurrency((registration) => runtime.registerAgents([registration]));
       runs = new DurableRuns(runtime, goal, contexts, databasePath);
       held.set(databasePath, runs);
       await runs.#endInterrupted(keepAgents);
