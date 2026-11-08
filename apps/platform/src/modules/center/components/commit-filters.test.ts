@@ -20,13 +20,13 @@ test("a period is named when it is one of the presets, else by its days", () => 
 test("every filter that is on is a chip that takes only it off", () => {
   const changes: object[] = [];
   const chips = commitChips(
-    { grep: "login", commitAuthor: "ada", since: "2026-11-01", path: "src/a.ts", branch: "dev" },
+    { grep: "login", commitAuthor: "ada", since: "2020-01-01", path: "src/a.ts", branch: "dev" },
     (next) => changes.push(next),
   );
   expect(chips.map((chip) => chip.label)).toEqual([
     "“login”",
     "By ada",
-    "2026-11-01 → now",
+    "2020-01-01 → now",
     "File: src/a.ts",
     "Branch: dev",
   ]);

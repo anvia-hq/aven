@@ -2,6 +2,7 @@ import { Agent, createQuestionTool, type AnyTool } from "@anvia/core";
 import { createMcpServerTools } from "@aven/agents/tools/mcp-servers";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
+import { McpClient } from "@anvia/mcp";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
@@ -226,6 +227,37 @@ describe("a run with the person's MCP servers", () => {
     plane.send({ ...runStart, runId: "run-2", mcp: [...mcp(), down] });
     await until(() => ended(plane).length === 2);
     expect(requests - before).toBeGreaterThan(first);
+  });
+
+  test("a connection with a server that was down is closed before it is replaced, not left open", async () => {
+    const original = McpClient.prototype.close;
+    let closed = 0;
+    McpClient.prototype.close = function (this: McpClient) {
+      closed++;
+      return original.call(this);
+    };
+    try {
+      const { plane, runtime } = connect(({ id }) => ({
+        agent: new Agent({ id, instructions: "x", model: scriptedModel([[text("ok")]]) }),
+      }));
+      await runtime.ready;
+      const down = {
+        ...mcp()[0],
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "Gone",
+        url: "http://localhost:1/",
+      };
+
+      plane.send({ ...runStart, mcp: [...mcp(), down] });
+      await until(() => ended(plane).length === 1);
+      const afterFirst = closed;
+
+      plane.send({ ...runStart, runId: "run-2", mcp: [...mcp(), down] });
+      await until(() => ended(plane).length === 2);
+      expect(closed - afterFirst).toBe(2);
+    } finally {
+      McpClient.prototype.close = original;
+    }
   });
 
   test("a server that is down is reported and the run goes on without it", async () => {

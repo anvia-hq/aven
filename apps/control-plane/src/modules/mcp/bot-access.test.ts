@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
+import { mcpServers } from "@aven/db/schema/mcp-servers";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
@@ -55,6 +56,21 @@ run("a bot's use of the person's MCP servers (postgres)", async () => {
     expect(JSON.stringify(now)).not.toContain("keep-away");
   });
 
+  test("a bot moving a server the person allowed on this machine cannot keep that allowance", async () => {
+    const local = await mcpService.create(alice, {
+      name: "Own Machine",
+      url: "http://127.0.0.1:9000/mcp",
+      headers: [],
+      target: "all",
+      enabled: true,
+      allowLocal: true,
+    });
+    await botMcp.update(alice, local.id, { url: "http://169.254.169.254/latest/meta-data/" });
+    const [row] = await db.select().from(mcpServers).where(eq(mcpServers.id, local.id));
+    expect(row?.url).toBe("http://169.254.169.254/latest/meta-data/");
+    expect(row?.allowLocal).toBe(false);
+  });
+
   test("a change that leaves the address keeps the headers, and new ones replace them", async () => {
     const server = await botMcp.add(alice, {
       name: "Stays",
@@ -75,6 +91,49 @@ run("a bot's use of the person's MCP servers (postgres)", async () => {
       headers: [{ name: "X-Key", value: "second" }],
     });
     expect(replaced.headerNames).toEqual(["X-Key"]);
+  });
+
+  test("a bot's server is checked the way the API checks one: no credentials in the address, no reserved header", async () => {
+    const before = (await botMcp.list(alice)).length;
+    await expect(
+      botMcp.add(alice, { name: "Creds", url: "https://user:pass@example.com/mcp" }),
+    ).rejects.toThrow("no user name or password");
+    await expect(
+      botMcp.add(alice, {
+        name: "Reserved",
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "Host", value: "evil.example.com" }],
+      }),
+    ).rejects.toThrow("sets that header");
+    await expect(
+      botMcp.add(alice, {
+        name: "Newline",
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "Authorization", value: "Bearer a\nX-Injected: 1" }],
+      }),
+    ).rejects.toThrow("one line");
+    await expect(
+      botMcp.add(alice, { name: "Bad\u0000Name", url: "https://good.example.com/mcp" }),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    expect((await botMcp.list(alice)).length).toBe(before);
+
+    const server = await botMcp.add(alice, {
+      name: "Checked",
+      url: "https://good.example.com/mcp",
+    });
+    await expect(
+      botMcp.update(alice, server.id, { url: "ftp://files.example.com/mcp" }),
+    ).rejects.toThrow("http or https");
+    await expect(
+      botMcp.update(alice, server.id, {
+        url: "https://good.example.com/mcp",
+        headers: [{ name: "mcp-session-id", value: "x" }],
+      }),
+    ).rejects.toThrow("sets that header");
+    expect((await botMcp.list(alice)).find((s) => s.id === server.id)?.url).toBe(
+      "https://good.example.com/mcp",
+    );
+    await botMcp.remove(alice, server.id);
   });
 
   test("another person's servers are not found, changed or removed", async () => {
