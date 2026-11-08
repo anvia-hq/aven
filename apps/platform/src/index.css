@@ -12,19 +12,19 @@
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.992 0.005 160);
-  --foreground: oklch(0.2 0.009 160);
-  --card: oklch(0.997 0.003 160);
+  --background: oklch(0.975 0.02 160);
+  --foreground: oklch(0.2 0.02 160);
+  --card: oklch(0.99 0.012 160);
   --card-foreground: oklch(0.2 0.009 160);
-  --popover: oklch(0.997 0.003 160);
+  --popover: oklch(0.99 0.012 160);
   --popover-foreground: oklch(0.2 0.009 160);
   --primary: oklch(0.22 0.01 160);
   --primary-foreground: oklch(0.98 0.003 160);
-  --secondary: oklch(0.953 0.012 160);
+  --secondary: oklch(0.935 0.035 160);
   --secondary-foreground: oklch(0.25 0.02 160);
-  --muted: oklch(0.953 0.012 160);
-  --muted-foreground: oklch(0.5 0.009 160);
-  --accent: oklch(0.968 0.012 160);
+  --muted: oklch(0.935 0.035 160);
+  --muted-foreground: oklch(0.48 0.03 160);
+  --accent: oklch(0.945 0.035 160);
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -38,23 +38,23 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.48 0.13 155);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.958 0.011 160);
-  --border: oklch(0.905 0.012 160);
-  --input: oklch(0.905 0.012 160);
+  --frame: oklch(0.94 0.03 160);
+  --border: oklch(0.87 0.035 160);
+  --input: oklch(0.87 0.035 160);
   --ring: oklch(0.7 0.06 160);
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.2 0.009 160);
   --sidebar-primary: oklch(0.22 0.01 160);
   --sidebar-primary-foreground: oklch(0.98 0.003 160);
-  --sidebar-accent: oklch(0.95 0.013 160);
+  --sidebar-accent: oklch(0.925 0.035 160);
   --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.93 0.011 160);
+  --sidebar-border: oklch(0.9 0.032 160);
   --sidebar-ring: oklch(0.7 0.06 160);
 }
 
 /* Charcoal dark theme with a faint indigo tint (default). */
 .dark {
-  --background: oklch(0.175 0.009 160);
+  --background: oklch(0.17 0.009 160);
   --foreground: oklch(0.9 0.006 160);
   --card: oklch(0.2 0.009 160);
   --card-foreground: oklch(0.9 0.006 160);
@@ -66,7 +66,7 @@
   --secondary-foreground: oklch(0.9 0.006 160);
   --muted: oklch(0.22 0.009 160);
   --muted-foreground: oklch(0.62 0.006 160);
-  --accent: oklch(0.25 0.009 160);
+  --accent: oklch(0.255 0.009 160);
   --accent-foreground: oklch(0.92 0.006 160);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
@@ -80,7 +80,7 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.8 0.14 155);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.235 0.009 160);
+  --frame: oklch(0.225 0.009 160);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.5 0.02 160);
