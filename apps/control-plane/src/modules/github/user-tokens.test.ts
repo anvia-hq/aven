@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 
 import type { GithubClient } from "./client";
 import type { GithubUserGrant } from "./types";
@@ -18,8 +18,6 @@ run("a person's GitHub connection (postgres)", async () => {
 
   const suffix = crypto.randomUUID().slice(0, 8);
   const ids: string[] = [];
-  let previousKey: string | undefined;
-
   const profile = { id: 42, login: "ada", name: "Ada L" };
   const grant = (over: Partial<GithubUserGrant> = {}): GithubUserGrant => ({
     accessToken: "ghu_one",
@@ -51,13 +49,21 @@ run("a person's GitHub connection (postgres)", async () => {
     return id;
   }
 
-  beforeAll(() => {
-    previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
-    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
-  });
+  const encryptWithAnotherKey = async (plain: string) => {
+    const previous = process.env.PROVIDER_ENCRYPTION_KEY;
+    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString("base64");
+    try {
+      const { encryptSecret } = (await import(
+        `../../crypto.ts?key=${crypto.randomUUID()}`
+      )) as typeof import("../../crypto");
+      return encryptSecret(plain);
+    } finally {
+      if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
+      else process.env.PROVIDER_ENCRYPTION_KEY = previous;
+    }
+  };
 
   afterAll(async () => {
-    process.env.PROVIDER_ENCRYPTION_KEY = previousKey;
     await db.delete(users).where(inArray(users.id, ids));
   });
 
@@ -211,15 +217,20 @@ run("a person's GitHub connection (postgres)", async () => {
     expect(await tokens.status(id)).toEqual({ login: "ada" });
   });
 
-  test("a token that cannot be read (the key changed) leaves the person not connected", async () => {
+  test("a token written with another key leaves the person not connected", async () => {
     const id = await person("g");
     const tokens = createGithubUserTokens(only(fakeClient(() => null).client));
     await tokens.connect(id, grant());
 
-    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString("base64");
-    expect(await tokens.use(id)).toBeNull();
-    process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    await db
+      .update(githubUserTokens)
+      .set({
+        accessTokenEncrypted: await encryptWithAnotherKey("ghu_one"),
+        refreshTokenEncrypted: await encryptWithAnotherKey("ghr_one"),
+      })
+      .where(eq(githubUserTokens.userId, id));
 
+    expect(await tokens.use(id)).toBeNull();
     expect(await tokens.status(id)).toBeNull();
   });
 });
