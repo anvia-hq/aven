@@ -14,7 +14,7 @@ const ids: Record<string, string> = {
 test.describe("themes", () => {
   test("every theme can be picked, in light and dark, and is remembered", async ({ page }) => {
     await registerUser(page, "theme", "Theme User");
-    await page.goto("/settings/profile");
+    await page.goto("/settings/general");
     const html = page.locator("html");
 
     const picker = page.getByRole("combobox", { name: "Theme" });
@@ -56,7 +56,7 @@ test.describe("themes", () => {
 
   test("the interface font can be chosen and is remembered", async ({ page }) => {
     await registerUser(page, "font", "Font User");
-    await page.goto("/settings/profile");
+    await page.goto("/settings/general");
     const picker = page.getByRole("combobox", { name: "Interface font" });
     await picker.click();
     await page.getByRole("option", { name: "Inter", exact: true }).click();
@@ -71,7 +71,7 @@ test.describe("themes", () => {
     test.skip(!process.env.THEME_SHOTS, "only when recording proof");
     await page.setViewportSize({ width: 1280, height: 900 });
     await registerUser(page, "shots", "Theme User");
-    await page.goto("/settings/profile");
+    await page.goto("/settings/general");
     const dark = page.getByRole("switch", { name: "Dark mode" });
     for (const mode of ["light", "dark"] as const) {
       if ((await dark.getAttribute("aria-checked")) === String(mode === "light"))

@@ -9,7 +9,7 @@ import type { PlatformConfig } from "@/modules/platform/types";
 export const Route = createFileRoute("/_authed/settings/platform")({
   beforeLoad: async () => {
     const config = await api<PlatformConfig>("/platform/config");
-    if (!config.isOwner) throw redirect({ to: "/settings/profile" });
+    if (!config.isOwner) throw redirect({ to: "/settings/general" });
   },
   component: Platform,
 });

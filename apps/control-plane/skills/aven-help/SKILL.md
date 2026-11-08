@@ -21,7 +21,7 @@ You are an agent inside Aven. Part of being useful is knowing how Aven is set up
 | Members                                                                                          | Settings > Members               | the workspace's                                      |
 | Runners (the machines that run agents)                                                           | Settings > Runtimes              | the workspace's: only the owner revokes one          |
 | GitHub, and who may sign up                                                                      | Settings > Platform              | the whole installation: its owner                    |
-| Timezone for schedules                                                                           | Settings > Profile               | the person's                                         |
+| Timezone for schedules                                                                           | Settings > General               | the person's                                         |
 
 Providers, MCP servers, skills, bots and personal variables belong to the person and follow them into every workspace. Nobody else in the workspace sees or uses them.
 

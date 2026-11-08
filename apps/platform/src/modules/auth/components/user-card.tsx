@@ -39,7 +39,7 @@ export function UserCard({ name, onSignOut }: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="bottom" align="start" className="w-76 p-2">
             <OrganizationMenu />
-            <DropdownMenuItem onClick={() => navigate({ to: "/settings/profile" })}>
+            <DropdownMenuItem onClick={() => navigate({ to: "/settings/general" })}>
               <Cog /> Personal settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>

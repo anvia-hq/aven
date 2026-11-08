@@ -582,7 +582,7 @@ test.describe("bots", () => {
     expect(paused.ok()).toBe(true);
     expect((await paused.json()).nextRun).toBeNull();
 
-    await page.goto("/settings/profile");
+    await page.goto("/settings/general");
     await page.getByRole("combobox", { name: "Timezone" }).click();
     await page.getByRole("option", { name: "Asia/Jakarta" }).click();
     await expect(page.getByText("Timezone saved")).toBeVisible();

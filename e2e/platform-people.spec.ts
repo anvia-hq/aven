@@ -14,7 +14,7 @@ test.describe("the platform owner's people page", () => {
 
     expect((await outsider.request.get("/api/platform/users")).status()).toBe(403);
     await outsider.goto("/settings/people");
-    await expect(outsider).toHaveURL(/\/settings\/profile$/);
+    await expect(outsider).toHaveURL(/\/settings\/general$/);
 
     await page.goto("/settings/people");
     const people = page.getByRole("list", { name: "People" });

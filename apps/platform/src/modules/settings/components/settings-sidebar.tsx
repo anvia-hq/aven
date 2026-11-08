@@ -12,6 +12,7 @@ import {
   Users,
   UsersGroup,
   BookmarkUser,
+  UserCircle,
 } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
@@ -28,7 +29,8 @@ const groups = [
   {
     label: "Personal",
     items: [
-      { to: "/settings/profile", label: "Profile", icon: Cog },
+      { to: "/settings/general", label: "General", icon: Cog },
+      { to: "/settings/profile", label: "Profile", icon: UserCircle },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
       { to: "/settings/bots", label: "Bots", icon: ChatDots },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },

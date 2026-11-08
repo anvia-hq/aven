@@ -115,7 +115,7 @@ export function AppShell({ user, sidebar }: Props) {
                 size="sm"
                 aria-label="Settings"
                 className="h-9 min-w-0 flex-1 justify-start md:h-7 group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:p-0"
-                onClick={() => navigate({ to: "/settings/profile" })}
+                onClick={() => navigate({ to: "/settings/general" })}
               >
                 <Cog />
                 <span className="group-data-[collapsible=icon]:hidden">Settings</span>

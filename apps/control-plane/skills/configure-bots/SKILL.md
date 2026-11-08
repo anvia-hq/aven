@@ -11,7 +11,7 @@ A bot is an assistant the person chats with, with a computer of its own. Everyon
 
 - A **name**, a **description** (what it is for) and an **instruction** (how it works, written to it). Settings > Bots has them, and its model, its reasoning effort and the size past which its chat is summarized.
 - A **handle** that other bots write to it by (`main` for the main bot).
-- **Schedules**: tasks that run again and again, like cron, in the person's timezone (Settings > Profile).
+- **Schedules**: tasks that run again and again, like cron, in the person's timezone (Settings > General).
 - A **goal**: a task too big for one reply that the bot works on in rounds in the background until it is complete or blocked.
 - **Skills** and **MCP servers** the person has (see `configure-mcp`), and a computer to run commands on.
 
