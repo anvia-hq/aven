@@ -280,8 +280,15 @@ export class Sandboxes implements ThreadWorkspaces {
   shell(threadId: string, sessionId: string) {
     if (!/^[\w-]+$/.test(sessionId)) throw new Error("Invalid terminal id");
     if (!this.#running.has(threadId) || !this.#hub.isConnected(threadId)) return undefined;
-    const project = this.#projectEnv.get(threadId) ?? {};
-    return terminalShell({ container: this.#name(threadId), sessionId, project });
+    return terminalShell({
+      container: this.#name(threadId),
+      sessionId,
+      project: this.projectEnv(threadId) ?? {},
+    });
+  }
+
+  projectEnv(threadId: string) {
+    return this.#projectEnv.get(threadId);
   }
 
   async workspace(threadId: string) {
@@ -296,13 +303,13 @@ export class Sandboxes implements ThreadWorkspaces {
   async release(threadId: string) {
     await this.#starting.get(threadId)?.catch(() => undefined);
     this.#roots.delete(threadId);
+    this.#projectEnv.delete(threadId);
+    this.#redactors.delete(threadId);
     await this.#teardown(threadId);
   }
 
   async #teardown(threadId: string) {
     this.#running.delete(threadId);
-    this.#projectEnv.delete(threadId);
-    this.#redactors.delete(threadId);
     this.#dropTokens(threadId);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
