@@ -61,8 +61,9 @@ export function useProviderForm(
     const apiKey = readTrimmedField("apiKey");
     const baseUrl = readBaseUrl();
     const saved = provider !== undefined && !apiKey;
+    const keyless = compatible && preset?.needsKey !== true;
     const ready =
-      saved || ((apiKey || compatible) && (baseUrl || !(compatible || azure || bedrock || vertex)));
+      saved || ((apiKey || keyless) && (baseUrl || !(compatible || azure || bedrock || vertex)));
     if (!ready) {
       latest.current += 1;
       setModelsState({ status: "idle", models: null });
@@ -85,6 +86,11 @@ export function useProviderForm(
       setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
     } catch (failure) {
       if (request !== latest.current) return;
+      const refused = /answered (401|403)\b/.test(errorMessage(failure));
+      if (!apiKey && !saved && refused) {
+        setModelsState({ status: "idle", models: null });
+        return;
+      }
       setModelsState((current) => ({ ...current, status: "error", error: errorMessage(failure) }));
     }
   }
