@@ -43,20 +43,20 @@ export async function copyTree(from: string, to: string) {
   const attempts =
     process.platform === "darwin"
       ? [
-          ["cp", "-cpPR"],
-          ["cp", "-pPR"],
+          ["cp", "-cpPRf"],
+          ["cp", "-pPRf"],
         ]
       : [
-          ["cp", "-a", "--reflink=auto"],
-          ["cp", "-a"],
+          ["cp", "-af", "--reflink=auto"],
+          ["cp", "-af"],
         ];
-  let last = "";
+  const failures: string[] = [];
   for (const command of attempts) {
     const copied = await runCommand([...command, `${from}/.`, to]);
     if (copied.code === 0) return;
-    last = copied.stderr.trim();
+    failures.push(copied.stderr.trim());
   }
-  throw new Error(`Could not copy ${from}: ${last}`);
+  throw new Error(`Could not copy ${from}: ${failures[0]}`);
 }
 
 export class SnapshotStore {

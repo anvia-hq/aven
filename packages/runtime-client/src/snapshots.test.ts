@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { SNAPSHOT_MAX_AGE_MS, SnapshotStore } from "./snapshots";
+import { SNAPSHOT_MAX_AGE_MS, SnapshotStore, copyTree } from "./snapshots";
 
 const dirs: string[] = [];
 async function temp() {
@@ -170,5 +170,21 @@ describe("snapshots", () => {
     await store.remove("k1");
 
     expect(await store.valid("k1", "b")).toBeNull();
+  });
+});
+
+describe("copying a workspace", () => {
+  test("goes over what an earlier copy left, read-only git packs included", async () => {
+    const from = await temp();
+    const to = join(await temp(), "workspace");
+    const pack = join(".git", "objects", "pack", "pack-1.pack");
+    await mkdir(join(from, ".git", "objects", "pack"), { recursive: true });
+    await writeFile(join(from, pack), "objects");
+    await chmod(join(from, pack), 0o444);
+
+    await copyTree(from, to);
+    await copyTree(from, to);
+
+    expect(await readFile(join(to, pack), "utf8")).toBe("objects");
   });
 });
