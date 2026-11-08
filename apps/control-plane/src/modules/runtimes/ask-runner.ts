@@ -5,6 +5,7 @@ import { threadsService } from "../threads/service";
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
 import type { FindRunner, Refusal } from "./types";
 import type {
+  ActionRunParams,
   ArtifactsReadParams,
   DesktopCallParams,
   DiffGetParams,
@@ -21,6 +22,7 @@ function refuse(refusal: Refusal, error: unknown): never {
 }
 
 type CallParams =
+  | ActionRunParams
   | ArtifactsReadParams
   | DesktopCallParams
   | DiffGetParams

@@ -6,7 +6,7 @@ import type { DesktopInfo } from "@aven/protocol/types";
 
 const TAKEOVER_LEASE_MS = 60_000;
 
-const WAKE_TIMEOUT_MS = 120_000;
+export const WAKE_TIMEOUT_MS = 120_000;
 
 class SandboxNotRunningError extends ConflictError {
   constructor(what: string) {

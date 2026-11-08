@@ -223,6 +223,33 @@ describe("startRuntime processes", () => {
       error: "Invalid parameters",
     });
   });
+
+  test("runs an action's command in the sandbox, waking it, and lists it as a process", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const { plane } = connect({ sandbox: workspaces });
+    await until(() => plane.received.some((m) => m.type === "hello"));
+    const ask = async (id: string, method: string, params: object) => {
+      plane.send({ type: "call", id, method, params } as never);
+      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      return plane.received.find((m) => m.type === "reply" && m.id === id);
+    };
+
+    const reply = await ask("a", "actions.run", { threadId: "t1", command: "echo tested" });
+    expect(reply).toMatchObject({
+      ok: true,
+      result: { process: { command: "echo tested", status: "running" } },
+    });
+    await Bun.sleep(300);
+    const process = (reply as { result: { process: { id: string } } }).result.process;
+    expect(
+      await ask("b", "processes.logs", { threadId: "t1", processId: process.id }),
+    ).toMatchObject({ result: { stdout: "tested\n" } });
+    expect(await ask("c", "actions.run", { threadId: "t1", command: "  " })).toMatchObject({
+      ok: false,
+      error: "Invalid parameters",
+    });
+  });
 });
 
 describe("startRuntime host stats", () => {
@@ -1068,6 +1095,7 @@ describe("startRuntime", () => {
     sandbox.acquire = async (...args) => ({
       ...(await acquire(...args)),
       processes: {
+        start: async () => list[0]!,
         list: async () => list,
         stop: async () => list,
         logs: async () => ({ stdout: "7 pass", stderr: "", truncated: false }),

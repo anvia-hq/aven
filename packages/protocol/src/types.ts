@@ -394,6 +394,14 @@ export type ArtifactsCallMethod = "artifacts.read";
 
 export type ArtifactContent = { mediaType: string; data: string };
 
+export type ThreadAction = { name: string; kind: "run" | "prompt" };
+
+export type ActionsCallMethod = "actions.run";
+
+export type ActionRunParams = { threadId: string; command: string };
+
+export type ActionRunResult = { process: ProcessView };
+
 export type ProcessesCallMethod = "processes.list" | "processes.stop" | "processes.logs";
 
 export type ProcessView = {
@@ -436,6 +444,7 @@ export type RunnerCallMethod =
   | FilesCallMethod
   | ArtifactsCallMethod
   | ProcessesCallMethod
+  | ActionsCallMethod
   | RunCallMethod
   | SandboxCallMethod
   | RunnerSelfCallMethod;

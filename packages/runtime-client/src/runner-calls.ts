@@ -1,4 +1,5 @@
 import {
+  actionRunParams,
   artifactsReadParams,
   desktopCallParams,
   diffGetParams,
@@ -85,6 +86,16 @@ export function createRunnerCalls({
     return viewers.call("desktop.status", { threadId });
   }
 
+  async function actionOf(params: unknown) {
+    const { threadId, command } = actionRunParams(params);
+    await wakeOf({ threadId });
+    const box = boxes.get(threadId);
+    if (!box) throw new Error("The sandbox is not running");
+    const process = await box.processes.start(command);
+    processEnds.ignore(threadId, process.id);
+    return { process };
+  }
+
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
     const { release } = runnerUpdateParams(params);
     if (!update) return { status: "unsupported" };
@@ -97,6 +108,7 @@ export function createRunnerCalls({
   return function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "runner.update") return updateOf(params);
     if (method === "run.steer") return steer(steerParams(params));
+    if (method === "actions.run") return actionOf(params);
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);

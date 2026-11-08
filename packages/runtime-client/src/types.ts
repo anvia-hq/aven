@@ -470,6 +470,7 @@ export type FakeControlPlaneOptions = {
 };
 
 export type ThreadProcesses = {
+  start(command: string): Promise<ProcessView>;
   list(): Promise<ProcessView[]>;
   stop(processId: string): Promise<ProcessView[]>;
   logs(processId: string): Promise<ProcessLogs>;
