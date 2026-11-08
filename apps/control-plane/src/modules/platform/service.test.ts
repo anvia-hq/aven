@@ -3,9 +3,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { organizations } from "@aven/db/schema/organizations";
+import { projects } from "@aven/db/schema/projects";
+import { runtimes } from "@aven/db/schema/runtimes";
+import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq, inArray } from "drizzle-orm";
 
+import { seedProject } from "../../testing/seed-project";
 import { platformService, registrationDefault } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -168,5 +172,100 @@ run("removing an account (real postgres)", () => {
         .from(organizations)
         .where(eq(organizations.id, solo)),
     ).toEqual([]);
+  });
+
+  describe("what other people use", () => {
+    const newcomer = async (role: string) => {
+      const id = `rm-${role}-${tag}`;
+      await db
+        .insert(users)
+        .values({ id, email: `${id}@aven.test`, name: id, createdAt: new Date() });
+      await db.insert(members).values({
+        id: `m-${id}`,
+        organizationId: shared,
+        userId: id,
+        role: "member",
+      });
+      return { id, email: `${id}@aven.test`, name: id };
+    };
+    const runnerOf = async (ownerId: string | null, name: string) => {
+      const [runner] = await db
+        .insert(runtimes)
+        .values({
+          organizationId: shared,
+          ownerId,
+          name: `${name}-${tag}`,
+          tokenHash: `hash-${name}-${tag}`,
+          tokenHint: "hint",
+        })
+        .returning();
+      return runner!;
+    };
+    const threadIn = (projectId: string, runtimeId: string, createdBy: string) =>
+      db
+        .insert(threads)
+        .values({ organizationId: shared, projectId, runtimeId, createdBy, title: "t" });
+    const cleanup = async (ids: string[], runnerIds: string[]) => {
+      await db.delete(projects).where(eq(projects.organizationId, shared));
+      await db.delete(runtimes).where(inArray(runtimes.id, runnerIds));
+      await db.delete(users).where(inArray(users.id, ids));
+    };
+
+    test("a runner that another person's project uses is not removed with its owner", async () => {
+      const adder = await newcomer("adder");
+      const runner = await runnerOf(adder.id, "added");
+      await seedProject(shared, lead.id, runner.id, `a-${tag}`);
+      await expect(platformService.removePerson(owner, adder.id, putAway)).rejects.toThrow(
+        "added the runner",
+      );
+      expect(await exists(adder.id)).toBe(true);
+      await cleanup([adder.id], [runner.id]);
+    });
+
+    test("a project with other people's threads is not removed with its importer", async () => {
+      const importer = await newcomer("importer");
+      const runner = await runnerOf(null, "plain");
+      const { project } = await seedProject(shared, importer.id, runner.id, `i-${tag}`);
+      await threadIn(project.id, runner.id, lead.id);
+      await expect(platformService.removePerson(owner, importer.id, putAway)).rejects.toThrow(
+        "imported the project",
+      );
+      expect(await exists(importer.id)).toBe(true);
+      await cleanup([importer.id], [runner.id]);
+    });
+
+    test("a GitHub account that another person's project uses is not removed with who connected it", async () => {
+      const connector = await newcomer("connector");
+      const runner = await runnerOf(null, "other");
+      const { installation } = await seedProject(shared, connector.id, runner.id, `c-${tag}`);
+      await db.delete(projects).where(eq(projects.organizationId, shared));
+      await db.insert(projects).values({
+        organizationId: shared,
+        createdBy: lead.id,
+        runtimeId: runner.id,
+        githubInstallationId: installation.id,
+        repoFullName: `acme/g-${tag}`,
+        cloneUrl: `https://github.com/acme/g-${tag}.git`,
+        defaultBranch: "main",
+        name: `g-${tag}`,
+      });
+      await expect(platformService.removePerson(owner, connector.id, putAway)).rejects.toThrow(
+        "connected the GitHub account",
+      );
+      expect(await exists(connector.id)).toBe(true);
+      await cleanup([connector.id], [runner.id]);
+    });
+
+    test("a person whose project only they use is removed and their threads are put away", async () => {
+      const importer = await newcomer("solo-importer");
+      const runner = await runnerOf(null, "free");
+      const { project } = await seedProject(shared, importer.id, runner.id, `s-${tag}`);
+      await threadIn(project.id, runner.id, importer.id);
+      away.length = 0;
+      await platformService.removePerson(owner, importer.id, putAway);
+      expect(await exists(importer.id)).toBe(false);
+      expect(away).toHaveLength(1);
+      await cleanup([importer.id], [runner.id]);
+    });
   });
 });
