@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
+import { clearUserState } from "@/lib/user-state";
 import { resetBots } from "@/modules/bots/hooks/use-bots";
 import { resetMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
 import { resetMemory } from "@/modules/memory/hooks/use-memory";
@@ -12,7 +13,6 @@ import { resetOrganizationData } from "@/modules/organizations/hooks/use-organiz
 import { resetPlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { resetProviders } from "@/modules/providers/hooks/use-providers";
 import { resetSkills } from "@/modules/skills/hooks/use-skills";
-import { resetModelSelection } from "@/modules/threads/hooks/use-model-selection";
 
 export function useSignOut() {
   const navigate = useNavigate();
@@ -29,8 +29,8 @@ export function useSignOut() {
     resetTasks();
     resetNotes();
     resetCockpitTags();
-    resetModelSelection();
     resetPlatformConfig();
+    clearUserState();
     await navigate({ to: "/login" });
   };
 }

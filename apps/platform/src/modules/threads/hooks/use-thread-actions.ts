@@ -4,15 +4,20 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useRequest } from "@/hooks/use-request";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
+import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
 import type { ThreadAction } from "@aven/protocol/types";
 
 import { useModelSelection } from "./use-model-selection";
 
+const FAVORITES_PREFIX = "aven.actions.favorites.";
+
 type Answer = { actions: ThreadAction[]; problem: string | null };
+
+registerUserState(() => forgetStoredKeysStartingWith(FAVORITES_PREFIX));
 
 export function useThreadActions(threadId: string, projectId: string, running: boolean) {
   const [favorites, setFavorites] = useLocalStorage<string[]>(
-    `aven.actions.favorites.${projectId}`,
+    `${FAVORITES_PREFIX}${projectId}`,
     [],
   );
   const [starting, setStarting] = useState<string | null>(null);

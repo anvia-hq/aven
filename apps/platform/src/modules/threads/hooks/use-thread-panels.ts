@@ -1,10 +1,21 @@
 import { usePanel } from "@/hooks/use-panel";
+import { forgetStoredKeys, registerUserState } from "@/lib/user-state";
+
+const OVERVIEW_KEY = "aven.overview-open";
+const DESKTOP_KEY = "aven.desktop-open";
+const DIFF_KEY = "aven.diff-open";
+const FILES_KEY = "aven.files-open";
+const TERMINAL_KEY = "aven.terminal-open";
+
+registerUserState(() =>
+  forgetStoredKeys([OVERVIEW_KEY, DESKTOP_KEY, DIFF_KEY, FILES_KEY, TERMINAL_KEY]),
+);
 
 export function useThreadPanels() {
-  const overview = usePanel("aven.overview-open", true);
-  const desktop = usePanel("aven.desktop-open", false);
-  const diff = usePanel("aven.diff-open", false);
-  const files = usePanel("aven.files-open", false);
-  const terminal = usePanel("aven.terminal-open", false);
+  const overview = usePanel(OVERVIEW_KEY, true);
+  const desktop = usePanel(DESKTOP_KEY, false);
+  const diff = usePanel(DIFF_KEY, false);
+  const files = usePanel(FILES_KEY, false);
+  const terminal = usePanel(TERMINAL_KEY, false);
   return { overview, desktop, diff, files, terminal };
 }
