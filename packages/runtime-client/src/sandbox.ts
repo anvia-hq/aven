@@ -507,8 +507,8 @@ export class Sandboxes implements ThreadWorkspaces {
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
     const user = hostUser();
-    const profile = await this.#profiles.lease(threadId);
     try {
+      const profile = await this.#profiles.lease(threadId);
       const args = dockerRunArgs({
         name,
         threadId,
