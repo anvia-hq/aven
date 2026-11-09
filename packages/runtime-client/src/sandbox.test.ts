@@ -174,6 +174,21 @@ describe("Sandboxes starting a container", () => {
       await rm(home, { recursive: true, force: true });
     });
 
+    test("says its computer is asleep until it is woken, waking while it starts, and asleep again when it could not", async () => {
+      const { box, sandboxes, home } = await acquireBotSandbox();
+      expect(box.state?.()).toBe("asleep");
+
+      const starting = box.start?.();
+      await Bun.sleep(50);
+      expect(box.state?.()).toBe("waking");
+      expect(sandboxes.computerState("bot-1")).toBe("waking");
+
+      await starting?.catch(() => undefined);
+      expect(box.state?.()).toBe("asleep");
+      await sandboxes.dispose();
+      await rm(home, { recursive: true, force: true });
+    });
+
     test("is started in the background when the bot has used its computer before (decision 0130)", async () => {
       const { calls, docker } = fakeDocker();
       const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));

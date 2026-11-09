@@ -23,14 +23,14 @@ export function lateBoundTools(
 
 export const boundedTools = (tools: readonly AnyTool[]) => lateBoundTools(tools, () => tools);
 
-export function awaitingReady(tools: readonly AnyTool[], ready: Promise<unknown>): AnyTool[] {
+export function wakingTools(tools: readonly AnyTool[], wake: () => Promise<unknown>): AnyTool[] {
   return tools.map((tool) => ({
     name: tool.name,
     requiresApproval: tool.requiresApproval,
     definition: (prompt) => tool.definition(prompt),
     parseInput: tool.parseInput && ((args) => tool.parseInput!(args)),
     call: async (args, context) => {
-      await ready;
+      await wake();
       return tool.call(args, context);
     },
   }));

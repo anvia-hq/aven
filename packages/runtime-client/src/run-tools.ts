@@ -2,6 +2,7 @@ import type { AnyTool } from "@anvia/core";
 import { createDefineGoalTool } from "@aven/agents/tools/define-goal";
 import { createForkTools } from "@aven/agents/tools/forks";
 import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
+import { createComputerTools } from "@aven/agents/tools/computer";
 import { createCockpitTool } from "@aven/agents/tools/cockpit";
 import { createMemoryTool } from "@aven/agents/tools/memory";
 import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
@@ -26,13 +27,15 @@ export function toolsForRun({
   memory,
   forks,
   cockpit,
+  computer,
 }: RunToolsInput): AnyTool[] {
   const gitFetch = createGitFetchTool(async (branch) => {
     const root = await sandbox.workspace(thread.id);
     if (!root) throw new Error("The thread has no workspace yet");
     return fetchBranch(root, await repoAccess(), branch);
   });
-  const bound: AnyTool[] = [...lateBoundTools(tools, current), gitFetch];
+  const ownComputer = computer ? createComputerTools(computer) : [];
+  const bound: AnyTool[] = [...lateBoundTools(tools, current), gitFetch, ...ownComputer];
   if (mcp) {
     bound.push(
       ...lateBoundTools(

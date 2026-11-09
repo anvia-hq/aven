@@ -33,6 +33,7 @@ import { threadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
 import type {
+  ComputerState,
   DockerRemoveParams,
   RepoAccess,
   RunEnvVar,
@@ -138,6 +139,7 @@ export class Sandboxes implements ThreadWorkspaces {
   #environments: Environments;
   #archived: ArchivedCleanup;
   #profiles: BrowserProfiles;
+  #waking = new Map<string, number>();
   #leftovers: Leftovers;
   #sweeper: Timer | undefined;
   #hub: RemoteSandboxHub;
@@ -269,10 +271,20 @@ export class Sandboxes implements ThreadWorkspaces {
     };
     const eager = !(lazy && repo);
     const root = eager ? await this.#workspace(thread, repo) : undefined;
-    const start = eager
+    const begin = eager
       ? () =>
           this.#ensure(thread.id, root!).then(() => (repo ? undefined : this.#noteUsed(thread.id)))
       : startLazily;
+    const start = async () => {
+      this.#waking.set(thread.id, (this.#waking.get(thread.id) ?? 0) + 1);
+      try {
+        await begin();
+      } finally {
+        const left = (this.#waking.get(thread.id) ?? 1) - 1;
+        if (left > 0) this.#waking.set(thread.id, left);
+        else this.#waking.delete(thread.id);
+      }
+    };
     const upWhenNeeded = <T extends object>(sandbox: T) =>
       repo && eager ? sandbox : startedOnUse(sandbox, start);
     if (repo && eager) await start();
@@ -294,7 +306,13 @@ export class Sandboxes implements ThreadWorkspaces {
         () => this.#redactors.get(thread.id),
       ),
       start,
+      state: () => this.computerState(thread.id),
     };
+  }
+
+  computerState(threadId: string): ComputerState {
+    if (this.#running.has(threadId) && this.#hub.isConnected(threadId)) return "awake";
+    return this.#starting.has(threadId) || this.#waking.has(threadId) ? "waking" : "asleep";
   }
 
   desktop(threadId: string) {

@@ -7,6 +7,7 @@ import { startRuntime } from "./runner";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { journalPath } from "./testing/journal-path";
 import { noProcesses } from "./thread-processes";
+import type { ScriptStep } from "@aven/agents/types";
 import type { ThreadSandbox, ThreadWorkspaces } from "./types";
 
 const thread = { id: "thread-1", organizationId: "org-1" };
@@ -24,6 +25,7 @@ afterEach(async () => {
 
 function slowSandbox() {
   const events: string[] = [];
+  let asleep = true;
   let open!: () => void;
   let fail!: (error: Error) => void;
   const gate = new Promise<void>((resolve, reject) => {
@@ -49,19 +51,27 @@ function slowSandbox() {
         processes: noProcesses,
         start: async () => {
           await gate;
+          asleep = false;
           events.push("sandbox ready");
         },
+        state: () => (asleep ? "asleep" : "awake"),
       };
     },
     desktop: () => undefined,
     workspace: async () => undefined,
+    async signInGithub() {
+      events.push("signed in");
+    },
     async release() {},
     async dispose() {},
   };
   return { workspaces, events, open, fail };
 }
 
-function connect(sandbox: ThreadWorkspaces) {
+function connect(
+  sandbox: ThreadWorkspaces,
+  script: ScriptStep[] = [[toolCall("probe", {})], [text("done")]],
+) {
   const plane = fakeControlPlane({});
   const runtime = startRuntime({
     url: plane.url,
@@ -73,7 +83,7 @@ function connect(sandbox: ThreadWorkspaces) {
         id,
         instructions: "x",
         tools: [...tools],
-        model: scriptedModel([[toolCall("probe", {})], [text("done")]]),
+        model: scriptedModel(script),
       }),
     }),
     typingPause: async () => undefined,
@@ -101,7 +111,7 @@ describe("a run whose sandbox is still being got ready (decision 0128)", () => {
     sandbox.open();
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
-    expect(sandbox.events).toEqual(["acquired lazily", "sandbox ready", "tool ran"]);
+    expect(sandbox.events).toEqual(["acquired lazily", "sandbox ready", "signed in", "tool ran"]);
   });
 
   test("ends the run with why when the sandbox cannot be had", async () => {
@@ -119,5 +129,47 @@ describe("a run whose sandbox is still being got ready (decision 0128)", () => {
       error: "Could not start the sandbox: docker is not running",
     });
     expect(sandbox.events).not.toContain("tool ran");
+  });
+});
+
+describe("a run and its computer (decision 0180)", () => {
+  test("a run that never uses its computer never wakes it, nor signs in", async () => {
+    const sandbox = slowSandbox();
+    const { plane, runtime } = connect(sandbox.workspaces, [[text("just talking")]]);
+    await runtime.ready;
+    plane.send(runStart);
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+    expect(sandbox.events).toEqual(["acquired lazily"]);
+  });
+
+  test("the agent can ask whether its computer is awake, and wake it, once, with the run signed in", async () => {
+    const sandbox = slowSandbox();
+    const results: string[] = [];
+    const { plane, runtime } = connect(sandbox.workspaces, [
+      [toolCall("computer_status", {})],
+      [toolCall("computer_wake", {})],
+      [toolCall("computer_wake", {})],
+      [toolCall("computer_status", {})],
+      [text("done")],
+    ]);
+    await runtime.ready;
+    plane.send(runStart);
+    await until(() => heard(plane, "computer_wake"));
+    expect(sandbox.events).toEqual(["acquired lazily"]);
+
+    sandbox.open();
+    await until(() => ended(plane).length === 1);
+    for (const message of plane.received) {
+      if (message.type === "run.event" && message.event.type === "tool_end") {
+        results.push(message.event.output ?? "");
+      }
+    }
+    expect(results[0]).toContain("asleep");
+    expect(results[1]).toContain("The computer was asleep and is awake now");
+    expect(results[2]).toContain("The computer was already awake");
+    expect(results[3]).toContain("awake");
+    expect(sandbox.events.filter((event) => event === "sandbox ready")).toHaveLength(1);
   });
 });

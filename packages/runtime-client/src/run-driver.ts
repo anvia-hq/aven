@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import { sentPrompt } from "@aven/agents/attachments";
+import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 
@@ -12,7 +13,7 @@ import { DurableRuns } from "./durable-runs";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
-import { awaitingReady } from "./late-bound-tools";
+import { wakingTools } from "./late-bound-tools";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
@@ -248,22 +249,41 @@ export function createRunDriver(context: DriverContext) {
     run.mcpGoing.catch(() => undefined);
     const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
     context.boxes.set(thread.id, box);
-    const ready = (async () => {
-      await box.start?.();
-      clock.mark("sandbox");
-      if (run.cancelReason) throw new Error(run.cancelReason);
-      await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
-      clock.mark("sign-in");
-      if (state.record.kind === "start" && !state.record.durableId) {
-        const root = await context.sandbox.workspace(thread.id);
-        if (root) await markTurn(root).catch(() => false);
-      }
-      clock.mark("turn");
-    })();
-    ready.catch((error: unknown) => {
-      run.cancelReason ??= errorMessage(error);
-      void run.followed?.cancel();
-    });
+    let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
+    const markCurrentTurn = async () => {
+      if (turnMarked) return;
+      const root = await context.sandbox.workspace(thread.id);
+      if (!root) return;
+      turnMarked = true;
+      await markTurn(root).catch(() => false);
+    };
+    await markCurrentTurn();
+    let waking: Promise<void> | undefined;
+    const wake = () => {
+      waking ??= (async () => {
+        await box.start?.();
+        clock.mark("sandbox");
+        if (run.cancelReason) throw new Error(run.cancelReason);
+        await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
+        clock.mark("sign-in");
+        await markCurrentTurn();
+        clock.mark("turn");
+      })().catch((error: unknown) => {
+        waking = undefined;
+        run.cancelReason ??= errorMessage(error);
+        void run.followed?.cancel();
+        throw error;
+      });
+      return waking;
+    };
+    const computer: ComputerHost = {
+      status: async () => box.state?.() ?? "awake",
+      async wake() {
+        const before = box.state?.() ?? "awake";
+        await wake();
+        return { before, state: box.state?.() ?? "awake" };
+      },
+    };
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
     if (run.cancelReason) throw new Error(run.cancelReason);
@@ -273,7 +293,7 @@ export function createRunDriver(context: DriverContext) {
     const redact = secretRedactor(env);
     const current = () => {
       const live = context.boxes.get(thread.id)?.tools;
-      const tools = live && awaitingReady(live, ready);
+      const tools = live && wakingTools(live, wake);
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
@@ -310,7 +330,8 @@ export function createRunDriver(context: DriverContext) {
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
-            tools: awaitingReady(box.tools, ready),
+            tools: wakingTools(box.tools, wake),
+            computer,
             current,
             mcp: mcp && {
               tools: mcp.tools,
