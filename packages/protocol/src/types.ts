@@ -329,6 +329,8 @@ export type BotProviderView = {
 
 export type ProviderKeyAsk = { providerId: string; name: string };
 
+export type ComputerState = "asleep" | "waking" | "awake";
+
 export type RunThreadInfo = {
   id: string;
   organizationId: string;
