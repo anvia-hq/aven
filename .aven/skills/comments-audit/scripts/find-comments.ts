@@ -18,10 +18,9 @@ function commentsOf(file: string) {
 
   const collect = (node: ts.Node) => {
     const start = node.getFullStart();
-    const ranges = [
-      ...(ts.getLeadingCommentRanges(text, start) ?? []),
-      ...(ts.getTrailingCommentRanges(text, start) ?? []),
-    ];
+    const ranges = (ts.getLeadingCommentRanges(text, start) ?? []).concat(
+      ts.getTrailingCommentRanges(text, start) ?? [],
+    );
     for (const range of ranges) {
       if (seen.has(range.pos)) continue;
       seen.add(range.pos);
