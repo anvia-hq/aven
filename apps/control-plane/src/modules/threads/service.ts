@@ -1,6 +1,7 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
+import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
@@ -10,7 +11,7 @@ import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-or
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
-import type { ThreadPullRequest, Viewer } from "./types";
+import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
 export class ProjectNotFoundError extends UnprocessableError {}
 export class ThreadNotFoundError extends NotFoundError {
@@ -24,6 +25,16 @@ const columns = {
   ...publicColumns,
   createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
+  participants: sql<ThreadPerson[]>`coalesce((
+    select json_agg(json_build_object('id', ${users.id}, 'name', ${users.name}) order by joined.first_at)
+    from (
+      select ${threadMessageSenders.senderId} as sender_id, min(${threadMessageSenders.createdAt}) as first_at
+      from ${threadMessageSenders}
+      where ${threadMessageSenders.threadId} = "threads"."id"
+      group by ${threadMessageSenders.senderId}
+    ) as joined
+    join ${users} on ${users.id} = joined.sender_id
+  ), '[]'::json)`,
   pullRequests: sql<ThreadPullRequest[]>`coalesce((
     select json_agg(json_build_object(
       'number', ${threadPullRequests.number},
@@ -290,6 +301,24 @@ export const threadsService = {
       .from(threadRunTimes)
       .where(eq(threadRunTimes.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.ms]));
+  },
+
+  async saveSender(threadId: string, messageIndex: number, senderId: string) {
+    await db
+      .insert(threadMessageSenders)
+      .values({ threadId, messageIndex, senderId })
+      .onConflictDoUpdate({
+        target: [threadMessageSenders.threadId, threadMessageSenders.messageIndex],
+        set: { senderId },
+      });
+  },
+
+  async senders(threadId: string) {
+    const rows = await db
+      .select({ index: threadMessageSenders.messageIndex, id: threadMessageSenders.senderId })
+      .from(threadMessageSenders)
+      .where(eq(threadMessageSenders.threadId, threadId));
+    return new Map(rows.map((row) => [row.index, row.id]));
   },
 
   async saveLastError(id: string, message: string | null) {

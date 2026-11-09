@@ -4,6 +4,7 @@ import { UnavailableError } from "../../errors";
 import {
   memoryContinuations,
   memoryFailures,
+  memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { RunBusyError, RunManager } from "./service";
@@ -35,6 +36,7 @@ function managerRunning(handle: RuntimeRun, store: Partial<ConversationStore> = 
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
+    senders: memorySenders().store,
   });
 }
 

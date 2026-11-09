@@ -128,4 +128,130 @@ test.describe("sharing a thread", () => {
 
     await mate.context.close();
   });
+  test("in a multiplayer thread each person's own words are on the right and the others' on the left", async ({
+    page,
+    browser,
+  }) => {
+    await registerUser(page, "owner", "Owner Person");
+    await addRunner(page);
+    await connectGithub(page);
+    await importRepository(page, "shiny-app");
+    const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    const created = await page.request.post("/api/threads", {
+      data: { projectId: project!.id, title: "Together" },
+    });
+    const thread = (await created.json()) as { id: string };
+    const mate = await teammateOf(page, browser);
+    const shared = await page.request.patch(`/api/threads/${thread.id}`, {
+      data: { visibility: "workspace", driving: 7 },
+    });
+    expect(shared.ok()).toBe(true);
+
+    const idOf = async (who: Page) =>
+      ((await (await who.request.get("/api/auth/get-session")).json()) as { user: { id: string } })
+        .user.id;
+    const ownerId = await idOf(page);
+    const mateId = await idOf(mate.page);
+    const events = [
+      {
+        type: "snapshot",
+        running: false,
+        messages: [
+          {
+            id: "m0",
+            role: "user",
+            senderId: ownerId,
+            parts: [{ type: "text", text: "clean up the comments" }],
+          },
+          { id: "m1", role: "assistant", parts: [{ type: "text", text: "Done." }] },
+          {
+            id: "m2",
+            role: "user",
+            senderId: mateId,
+            parts: [{ type: "text", text: "[driver: Mate Person] thanks" }],
+          },
+        ],
+      },
+    ];
+    for (const who of [page, mate.page]) {
+      await who.route("**/api/threads/*/events", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          body: `retry: 600000\n\n${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}`,
+        }),
+      );
+      await who.goto(`/threads/${thread.id}`);
+      await expect(who.getByText("Done.")).toBeVisible();
+    }
+
+    const bubble = (who: Page, text: string) =>
+      who.locator('[data-role="user"]', { hasText: text });
+    await expect(bubble(page, "clean up the comments")).toHaveAttribute("data-author", "mine");
+    await expect(bubble(page, "thanks")).toHaveAttribute("data-author", "other");
+    await expect(bubble(page, "thanks").getByText("Mate Person")).toBeVisible();
+    await expect(bubble(page, "clean up the comments").getByText("Owner Person")).toHaveCount(0);
+
+    await expect(bubble(mate.page, "thanks")).toHaveAttribute("data-author", "mine");
+    await expect(bubble(mate.page, "clean up the comments")).toHaveAttribute(
+      "data-author",
+      "other",
+    );
+    await expect(
+      bubble(mate.page, "clean up the comments").getByText("Owner Person"),
+    ).toBeVisible();
+    await expect(bubble(mate.page, "thanks").getByText("Mate Person")).toHaveCount(0);
+
+    const box = async (who: Page, text: string) => (await bubble(who, text).boundingBox())!;
+    const viewport = page.viewportSize()!.width;
+    expect((await box(page, "clean up the comments")).x).toBeGreaterThan(viewport / 4);
+    expect((await box(page, "thanks")).x).toBeLessThan(viewport / 4 + 100);
+
+    await mate.context.close();
+  });
+  test("a multiplayer thread shows up to three people in the sidebar, and how many more", async ({
+    page,
+  }) => {
+    await registerUser(page, "owner", "Owner Person");
+    await addRunner(page);
+    await connectGithub(page);
+    await importRepository(page, "shiny-app");
+    const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    const created = await page.request.post("/api/threads", {
+      data: { projectId: project!.id, title: "Together" },
+    });
+    const thread = (await created.json()) as { id: string };
+    const shared = await page.request.patch(`/api/threads/${thread.id}`, {
+      data: { visibility: "workspace", driving: 7 },
+    });
+    expect(shared.ok()).toBe(true);
+
+    const people = (names: string[]) => names.map((name, id) => ({ id: `u-${id}`, name }));
+    let participants = people([]);
+    await page.route("**/api/threads", async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as { id: string }[];
+      await route.fulfill({
+        response,
+        json: body.map((row) => (row.id === thread.id ? { ...row, participants } : row)),
+      });
+    });
+
+    await page.goto("/threads");
+    const row = page.locator('[data-slot="sidebar"]').locator("li", { hasText: "Together" });
+    const stack = row.locator('[data-role="participants"]');
+    await expect(stack).toHaveAttribute("aria-label", "In this thread: Owner Person");
+    await expect(stack.locator('[data-slot="avatar"]')).toHaveCount(1);
+
+    participants = people(["Randy Pamungkas", "Dina Putri", "Eko Santoso", "Fitri Lestari"]);
+    await expect(async () => {
+      await page.reload();
+      await expect(stack.locator('[data-slot="avatar"]')).toHaveCount(3);
+    }).toPass({ timeout: 10_000 });
+    await expect(stack).toContainText("2+");
+    await expect(stack).toHaveAttribute(
+      "aria-label",
+      "In this thread: Owner Person, Randy Pamungkas, Dina Putri, Eko Santoso, Fitri Lestari",
+    );
+  });
 });

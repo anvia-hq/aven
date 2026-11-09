@@ -4,13 +4,13 @@ export const DRIVING_DAYS_DEFAULT = 7;
 const DRIVER = /^\[driver: ([^\]\n]{1,80})\] ([\s\S]*)$/;
 const OWN_MARK = "​";
 
-const cleanName = (name: string) =>
+export const driverName = (name: string) =>
   name
     .replace(/[\]\n\r]/g, " ")
     .trim()
     .slice(0, 80) || "Teammate";
 
-export const driverPrompt = (name: string, text: string) => `[driver: ${cleanName(name)}] ${text}`;
+export const driverPrompt = (name: string, text: string) => `[driver: ${driverName(name)}] ${text}`;
 
 export const ownPrompt = (text: string) => (DRIVER.test(text) ? `${OWN_MARK}${text}` : text);
 

@@ -72,6 +72,10 @@ export const runsService = new RunManager({
     record: (threadId, index, ms) => threadsService.saveWorkedTime(threadId, index, ms),
     read: (threadId) => threadsService.workedTimes(threadId),
   },
+  senders: {
+    record: (threadId, index, senderId) => threadsService.saveSender(threadId, index, senderId),
+    read: (threadId) => threadsService.senders(threadId),
+  },
 });
 
 export const threadMessages = createThreadMessages(runsService);

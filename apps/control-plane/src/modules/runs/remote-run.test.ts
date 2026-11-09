@@ -10,6 +10,7 @@ import { createMemoryStore } from "../../memory-store";
 import {
   memoryContinuations,
   memoryFailures,
+  memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
@@ -119,6 +120,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
+    senders: memorySenders().store,
   });
   const thread = {
     id: threadId,

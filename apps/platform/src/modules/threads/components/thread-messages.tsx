@@ -4,7 +4,7 @@ import { Button } from "@/components/button";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import { mergedRuns } from "../merged-runs";
-import type { ChatMessage, QueuedSteer } from "../types";
+import type { ChatMessage, QueuedSteer, Viewer } from "../types";
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
@@ -21,6 +21,7 @@ type Props = {
   steers?: QueuedSteer[];
   running?: boolean;
   owned?: boolean;
+  viewer: Viewer;
   startedAt?: number | null;
   error?: string | null;
   aside?: ReactNode;
@@ -37,6 +38,7 @@ export function ThreadMessages({
   steers = [],
   running = false,
   owned = false,
+  viewer,
   startedAt = null,
   error,
   aside,
@@ -63,7 +65,12 @@ export function ThreadMessages({
               </div>
             )}
             {earlierRuns.map((message) => (
-              <ThreadMessage key={message.id} message={message} threadId={threadId} />
+              <ThreadMessage
+                key={message.id}
+                message={message}
+                threadId={threadId}
+                viewer={viewer}
+              />
             ))}
             {messages.length === 0 && pending.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
@@ -73,14 +80,21 @@ export function ThreadMessages({
                 key={message.id}
                 message={message}
                 threadId={threadId}
+                viewer={viewer}
                 streaming={running && index === runs.length - 1}
               />
             ))}
             {pending.map((message) => (
-              <ThreadMessage key={message.id} message={message} threadId={threadId} sending />
+              <ThreadMessage
+                key={message.id}
+                message={message}
+                threadId={threadId}
+                viewer={viewer}
+                sending
+              />
             ))}
             {steers.map((steer) => (
-              <QueuedMessage key={steer.id} message={steer} />
+              <QueuedMessage key={steer.id} message={steer} viewer={viewer} />
             ))}
             <WorkingIndicator running={running} startedAt={startedAt} />
             {owned && <BackgroundChip threadId={threadId} running={running} />}
