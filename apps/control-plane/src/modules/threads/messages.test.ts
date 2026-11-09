@@ -77,6 +77,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
 
   const started: { prompt: string; extras: Record<string, unknown> }[] = [];
   const steered: string[] = [];
+  const steeredBy: (string | undefined)[] = [];
   const answered: Record<string, unknown>[] = [];
   const messages = (running: boolean) =>
     createThreadMessages({
@@ -84,8 +85,9 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
       start: async (_thread: unknown, prompt: string, _model: unknown, extras: object) => {
         started.push({ prompt, extras: extras as Record<string, unknown> });
       },
-      steer: async (_thread: unknown, message: { prompt: string }) => {
+      steer: async (_thread: unknown, message: { prompt: string; senderId?: string }) => {
         steered.push(message.prompt);
+        steeredBy.push(message.senderId);
         return "queued";
       },
       answer: async (
@@ -114,6 +116,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     await messages(false).send(orgA, mateId, thread.id, { prompt: "try the other way" });
     expect(started).toHaveLength(1);
     expect(started[0]?.prompt).toBe("[driver: Ana Lima] try the other way");
+    expect(started[0]?.extras.senderId).toBe(mateId);
     expect(started[0]?.extras.mcp).toEqual([]);
     expect(idOf(started[0]!.extras)).toMatchObject({ userId, driverId: mateId });
     expect((started[0]!.extras.memory as { caller: { writable: boolean } }).caller.writable).toBe(
@@ -128,14 +131,17 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     await messages(false).send(orgA, userId, thread.id, { prompt: "[driver: Ana Lima] ok" });
     expect(started[0]?.prompt).toBe("\u200B[driver: Ana Lima] ok");
     expect(idOf(started[0]!.extras).driverId).toBeUndefined();
+    expect(started[0]?.extras.senderId).toBe(userId);
   });
 
   test("a teammate's message steers a working agent, marked the same way", async () => {
     const thread = await driven();
     steered.length = 0;
+    steeredBy.length = 0;
     const sent = await messages(true).send(orgA, mateId, thread.id, { prompt: "also this" });
     expect(sent.steered).toBe(true);
     expect(steered).toEqual(["[driver: Ana Lima] also this"]);
+    expect(steeredBy).toEqual([mateId]);
   });
 
   test("a teammate cannot send once multiplayer is off, over, or the thread is private", async () => {
@@ -199,6 +205,7 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
 
   const started: string[] = [];
   const kept: string[] = [];
+  const keptBy: string[] = [];
   const asked: string[] = [];
   const steered: string[] = [];
   const messages = (agentAction: boolean, running = false) =>
@@ -212,8 +219,9 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
         start: async (_thread: unknown, prompt: string) => {
           started.push(prompt);
         },
-        note: async (_thread: unknown, prompt: string) => {
+        note: async (_thread: unknown, prompt: string, senderId?: string) => {
           kept.push(prompt);
+          keptBy.push(senderId ?? "");
         },
         latest: async () => ({ messages: [], hidden: 0 }),
       } as never,

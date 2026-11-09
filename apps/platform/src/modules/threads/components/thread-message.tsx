@@ -8,11 +8,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Markdown } from "@/components/markdown";
 import { elapsed } from "@/lib/format";
 
+import { authorOf } from "../message-author";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
 import { foldedSteps, messageBlocks } from "../message-blocks";
-import type { Block, ChatMessage } from "../types";
+import type { Block, ChatMessage, Viewer } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
+import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
@@ -51,11 +53,13 @@ function AssistantBlock({
 export const ThreadMessage = memo(function ThreadMessage({
   message,
   threadId,
+  viewer,
   streaming = false,
   sending = false,
 }: {
   message: ChatMessage;
   threadId: string;
+  viewer: Viewer;
   streaming?: boolean;
   sending?: boolean;
 }) {
@@ -77,31 +81,30 @@ export const ThreadMessage = memo(function ThreadMessage({
       );
     }
     const text = message.parts.some((part) => part.type === "text" && part.text);
-    const driver = message.parts.reduce<string | undefined>(
-      (found, part) =>
-        found ?? (part.type === "text" ? parseDriverPrompt(part.text).driver : undefined),
-      undefined,
+    const author = authorOf(
+      message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+      viewer,
+      message.senderId,
     );
+    const mine = sending || author.mine;
     return (
       <div
         className={cn(
-          "my-12 ml-auto flex max-w-[80%] flex-col items-end gap-2",
+          "my-12 flex max-w-[80%] flex-col gap-2",
+          mine ? "ml-auto items-end" : "mr-auto items-start",
           sending && "opacity-60",
         )}
         data-role="user"
+        data-author={mine ? "mine" : "other"}
         aria-busy={sending || undefined}
       >
+        {!mine && <AuthorLabel name={author.name} />}
         {message.attachments?.length ? (
           <SentAttachments
             artifactsPath={`/api/threads/${threadId}/artifacts`}
             attachments={message.attachments}
           />
         ) : null}
-        {driver && (
-          <p className="text-xs text-muted-foreground" data-role="driver">
-            {driver}
-          </p>
-        )}
         {text && (
           <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">
             {message.parts.map((part, index) =>

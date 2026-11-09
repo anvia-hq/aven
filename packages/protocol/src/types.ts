@@ -193,12 +193,18 @@ export type ChatMessage = {
   parts: MessagePart[];
   attachments?: MessageAttachment[];
   mentions?: MessageMention[];
+  senderId?: string;
   workedMs?: number;
 };
 
 export type MessagesPage = { messages: ChatMessage[]; hidden: number };
 
-export type QueuedSteer = { id: string; prompt: string; mentions?: MessageMention[] };
+export type QueuedSteer = {
+  id: string;
+  prompt: string;
+  mentions?: MessageMention[];
+  senderId?: string;
+};
 
 export type RunEvent =
   | {
@@ -216,6 +222,7 @@ export type RunEvent =
       prompt: string;
       attachments?: MessageAttachment[];
       mentions?: MessageMention[];
+      senderId?: string;
     }
   | { type: "run_resume" }
   | ({ type: "steer_queued" } & QueuedSteer)
@@ -388,6 +395,7 @@ export type DiffScope = (typeof DIFF_SCOPES)[number];
 export type ThreadDiff = {
   patch: string;
   truncated: boolean;
+  branch?: string | null;
 };
 
 export type FilesCallMethod = "files.list" | "files.read" | "files.search";

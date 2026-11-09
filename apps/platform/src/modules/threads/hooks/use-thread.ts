@@ -1,6 +1,6 @@
 import { isDriving } from "@aven/protocol/drivers";
 import { applyEvent, applyUsage, isRunning, pendingQuestion } from "@aven/protocol/events";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
 import { api, attempt, postJson } from "@/lib/api";
@@ -43,6 +43,15 @@ export function useThread(threadId: string) {
   const wasArchived = thread !== undefined && thread.state !== "open";
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
   const driven = thread !== undefined && !owned && isDriving(thread.drivingUntil);
+
+  const viewerId = session?.user.id ?? "";
+  const viewerName = session?.user.name ?? "";
+  const ownerId = thread?.createdBy ?? "";
+  const ownerName = thread?.createdByName ?? "";
+  const viewer = useMemo(
+    () => ({ id: viewerId, owned, name: viewerName, ownerId, ownerName }),
+    [viewerId, owned, viewerName, ownerId, ownerName],
+  );
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [earlier, setEarlier] = useState<ChatMessage[]>([]);
@@ -224,6 +233,7 @@ export function useThread(threadId: string) {
   return {
     thread,
     owned,
+    viewer,
     driven,
     loaded: loaded && (session != null || !isPending),
     messages,

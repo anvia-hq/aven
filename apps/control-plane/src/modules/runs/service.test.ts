@@ -16,6 +16,7 @@ import { createMemoryStore } from "../../memory-store";
 import {
   memoryContinuations,
   memoryFailures,
+  memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
@@ -83,6 +84,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       continuations: continuations.store,
       failures: failures.store,
       workedTimes: memoryWorkedTimes().store,
+      senders: memorySenders().store,
       ...extra,
     });
   };

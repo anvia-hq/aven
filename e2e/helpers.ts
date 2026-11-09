@@ -26,6 +26,13 @@ export async function addRunner(page: Page) {
   expect(response.ok()).toBe(true);
 }
 
+export async function setDecisionModel(page: Page) {
+  const saved = await page.request.put("/api/decision-model", {
+    data: { kind: "jev-openrouter", apiKey: "sk-or-test-0000" },
+  });
+  expect(saved.ok()).toBe(true);
+}
+
 export async function connectGithub(page: Page) {
   const response = await page.request.get("/api/github");
   const { installUrl } = (await response.json()) as { installUrl: string };

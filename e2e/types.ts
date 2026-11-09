@@ -12,6 +12,7 @@ export type FakeRunnerSwitch =
   | "FAKE_RUN_ENDS_AFTER"
   | "FAKE_RUN_FAILS"
   | "FAKE_AVEN_FILES"
+  | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
@@ -50,5 +51,6 @@ export type FakeRunnerConfig = {
   self: FakeRunnerSelf;
   steering: FakeRunnerSteering;
   avenFiles: readonly string[];
+  branch: string;
   backgroundProcesses: boolean;
 };

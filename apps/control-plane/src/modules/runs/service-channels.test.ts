@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   memoryContinuations,
   memoryFailures,
+  memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { RunManager } from "./service";
@@ -74,6 +75,7 @@ function managerFor(
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
+    senders: memorySenders().store,
     ...extra,
   });
 }
@@ -127,6 +129,24 @@ describe("how long a run worked", () => {
     const done = watcher.events.find((event) => event.type === "done");
     expect(done?.type === "done" && done.workedMs).toBeGreaterThanOrEqual(0);
     expect(await times.store.read(thread.id)).toEqual(new Map([[1, expect.any(Number)]]));
+  });
+});
+
+describe("who sent a message", () => {
+  test("is kept for the message's place in the thread", async () => {
+    const senders = memorySenders();
+    const { runtime, current } = scriptedRuntime();
+    const manager = managerFor(runtime, { senders: senders.store });
+    const thread = newThread();
+    const watcher = attach(manager, thread);
+
+    await manager.start(thread, "one", undefined, { senderId: "user-1" });
+    current().say("hello");
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await watcher.detach();
+
+    expect(await senders.store.read(thread.id)).toEqual(new Map([[0, "user-1"]]));
   });
 });
 
@@ -235,12 +255,13 @@ describe("a message that starts no run", () => {
       },
     } as unknown as ConversationStore;
     const { runtime } = scriptedRuntime();
-    const manager = managerFor(runtime, { store });
+    const senders = memorySenders();
+    const manager = managerFor(runtime, { store, senders: senders.store });
     const thread = newThread();
     const watcher = attach(manager, thread);
     await until(() => watcher.events.length > 0);
 
-    await manager.note(thread, "[driver: Randy] hello Indra");
+    await manager.note(thread, "[driver: Randy] hello Indra", "user-randy");
     await until(() => watcher.events.length > 1);
     await watcher.detach();
 
@@ -250,6 +271,8 @@ describe("a message that starts no run", () => {
     ]);
     const shown = watcher.events.at(-1);
     expect(shown?.type === "snapshot" && shown.messages.map((m) => m.role)).toEqual(["user"]);
+    expect(shown?.type === "snapshot" && shown.messages[0]?.senderId).toBe("user-randy");
+    expect(await senders.store.read(thread.id)).toEqual(new Map([[0, "user-randy"]]));
     expect(manager.isRunning(thread.id)).toBe(false);
   });
 });

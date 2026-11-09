@@ -49,6 +49,8 @@ export type ThreadPullRequest = {
 
 type ThreadState = "open" | "snoozed" | "archived";
 
+export type ThreadPerson = { id: string; name: string };
+
 export type ThreadVisibility = "private" | "workspace";
 
 export type Thread = {
@@ -57,6 +59,7 @@ export type Thread = {
   title: string;
   createdBy: string;
   createdByName: string;
+  participants: ThreadPerson[];
   visibility: ThreadVisibility;
   drivingUntil: string | null;
   parentThreadId: string | null;
@@ -67,6 +70,18 @@ export type Thread = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type Crowd = { shown: ThreadPerson[]; more: number; names: string[] };
+
+export type Viewer = {
+  id: string;
+  owned: boolean;
+  name: string;
+  ownerId: string;
+  ownerName: string;
+};
+
+export type MessageAuthor = { mine: boolean; name: string; text: string };
 
 export type SavedSelection = { providerId: string; modelId?: string; effort?: string };
 
@@ -109,6 +124,13 @@ export type ShipChanges = {
   any: boolean;
 };
 
+export type ShipBranchPulls = {
+  loaded: boolean;
+  problem: string | null;
+  known: boolean;
+  any: boolean;
+};
+
 export type ShipFacts = {
   running: boolean;
   shipping: boolean;
@@ -117,6 +139,7 @@ export type ShipFacts = {
   connected: boolean | null;
   changes: ShipChanges;
   branch: ShipChanges;
+  branchPulls: ShipBranchPulls;
   pullRequests: ThreadPullRequest[];
 };
 

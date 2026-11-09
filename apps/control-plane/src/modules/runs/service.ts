@@ -2,7 +2,7 @@ import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { messagesToChat } from "@aven/agents/projection";
 import { latestMessages, messagesBefore } from "@aven/protocol/message-window";
 import { usageFromHistory } from "@aven/agents/usage";
-import { applyEvent, applyUsage, withWorkedTimes } from "@aven/protocol/events";
+import { applyEvent, applyUsage, withSenders, withWorkedTimes } from "@aven/protocol/events";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
@@ -11,6 +11,7 @@ import type { ConversationStore } from "../../types";
 import type {
   ContinuationStore,
   FailureStore,
+  SenderStore,
   WorkedTimeStore,
   FinishedRun,
   RunEnding,
@@ -68,6 +69,7 @@ export class RunManager {
   #continuations: ContinuationStore;
   #failures: FailureStore;
   #workedTimes: WorkedTimeStore;
+  #senders: SenderStore;
 
   constructor(deps: {
     store: ConversationStore;
@@ -76,6 +78,7 @@ export class RunManager {
     continuations: ContinuationStore;
     failures: FailureStore;
     workedTimes: WorkedTimeStore;
+    senders: SenderStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
@@ -83,6 +86,7 @@ export class RunManager {
     this.#continuations = deps.continuations;
     this.#failures = deps.failures;
     this.#workedTimes = deps.workedTimes;
+    this.#senders = deps.senders;
   }
 
   isRunning(threadId: string) {
@@ -110,6 +114,7 @@ export class RunManager {
       compact,
       memory,
       cockpit,
+      senderId,
     }: RunExtras = {},
   ) {
     const channel = this.#channel(thread);
@@ -133,6 +138,7 @@ export class RunManager {
         model: model ?? undefined,
       });
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
+      if (senderId) opening.senderId = senderId;
       if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
       if (mentions.length > 0) opening.mentions = mentions;
       await this.#begin(channel, handle, opening);
@@ -221,9 +227,10 @@ export class RunManager {
     const loaded = Promise.all([
       this.#store.load({ scope: this.#scope(thread) }),
       this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+      this.#senders.read(thread.id).catch(() => new Map<number, string>()),
     ])
-      .then(([history, times]) => {
-        run.messages = withWorkedTimes(messagesToChat(history), times);
+      .then(([history, times, senders]) => {
+        run.messages = withSenders(withWorkedTimes(messagesToChat(history), times), senders);
         run.usage = usageFromHistory(history);
       })
       .then(prepare);
@@ -237,6 +244,7 @@ export class RunManager {
       console.warn(`Could not load the history of thread ${thread.id}:`, error);
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
+    if (opening.type === "run_start") this.#recordSender(channel, run, opening.senderId);
     this.#emit(channel, opening);
     run.markAtStart = answerMark(run.messages);
     this.#recordFailure(channel, null);
@@ -263,7 +271,11 @@ export class RunManager {
     this.#emit(channel, { type: "steer_queued", ...message });
     let result: Awaited<ReturnType<RuntimeRun["steer"]>>;
     try {
-      result = await run.handle.steer(message);
+      result = await run.handle.steer({
+        id: message.id,
+        prompt: message.prompt,
+        mentions: message.mentions,
+      });
     } catch (error) {
       this.#reject(channel, run, message.id);
       console.warn(`Could not hand a message to the run of thread ${thread.id}:`, error);
@@ -311,13 +323,19 @@ export class RunManager {
     }
   }
 
-  async note(thread: RunThread, prompt: string) {
+  async note(thread: RunThread, prompt: string, senderId?: string) {
+    const at = senderId ? (await this.#stored(thread)).length : 0;
     await this.#store.append({
       scope: this.#scope(thread),
       runId: crypto.randomUUID(),
       turn: 0,
       messages: [{ role: "user", content: prompt }],
     });
+    if (senderId) {
+      await this.#senders.record(thread.id, at, senderId).catch((error: unknown) => {
+        console.warn(`Could not keep who sent a message of thread ${thread.id}:`, error);
+      });
+    }
     const channel = this.#channels.get(thread.id);
     if (!channel || channel.run) return;
     this.#emit(channel, { type: "snapshot", ...(await this.#attach(channel, [])) });
@@ -330,11 +348,12 @@ export class RunManager {
   }
 
   async #stored(thread: RunThread) {
-    const [history, times] = await Promise.all([
+    const [history, times, senders] = await Promise.all([
       this.#store.load({ scope: this.#scope(thread) }),
       this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+      this.#senders.read(thread.id).catch(() => new Map<number, string>()),
     ]);
-    return withWorkedTimes(messagesToChat(history), times);
+    return withSenders(withWorkedTimes(messagesToChat(history), times), senders);
   }
 
   async latest(thread: RunThread) {
@@ -388,14 +407,17 @@ export class RunManager {
           steers: [...run.steers.values()],
         };
       }
-      const [history, times, failure] = await Promise.all([
+      const [history, times, senders, failure] = await Promise.all([
         this.#store.load({ scope: this.#scope(channel.thread) }),
         this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
+        this.#senders.read(channel.thread.id).catch(() => new Map<number, string>()),
         this.#failure(channel),
       ]);
       if (channel.run) continue;
       queue.length = 0;
-      const shown = latestMessages(withWorkedTimes(messagesToChat(history), times));
+      const shown = latestMessages(
+        withSenders(withWorkedTimes(messagesToChat(history), times), senders),
+      );
       const snapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
         messages: shown.messages,
         hidden: shown.hidden,
@@ -450,7 +472,17 @@ export class RunManager {
     const message = run.steers.get(id);
     if (!message) return;
     run.steers.delete(id);
+    this.#recordSender(channel, run, message.senderId);
     this.#emit(channel, { type: "steer", ...message });
+  }
+
+  #recordSender(channel: Channel, run: ActiveRun, senderId: string | undefined) {
+    if (!senderId) return;
+    this.#senders
+      .record(channel.thread.id, run.messages.length, senderId)
+      .catch((error: unknown) => {
+        console.warn(`Could not keep who sent a message of thread ${channel.thread.id}:`, error);
+      });
   }
 
   #reject(channel: Channel, run: ActiveRun, id: string, reason?: string) {

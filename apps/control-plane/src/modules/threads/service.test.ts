@@ -49,6 +49,34 @@ run("threadsService (postgres)", async () => {
     );
   });
 
+  test("keeps who sent a message at its place, and the latest sender wins", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    await threadsService.saveSender(thread.id, 0, userId);
+    await threadsService.saveSender(thread.id, 2, teammateId);
+    await threadsService.saveSender(thread.id, 2, userId);
+    expect(await threadsService.senders(thread.id)).toEqual(
+      new Map([
+        [0, userId],
+        [2, userId],
+      ]),
+    );
+  });
+
+  test("lists who has sent a message to the thread, in the order they first did", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    expect((await threadsService.list(mine)).find((row) => row.id === thread.id)).toMatchObject({
+      participants: [],
+    });
+    await threadsService.saveSender(thread.id, 0, teammateId);
+    await threadsService.saveSender(thread.id, 2, userId);
+    await threadsService.saveSender(thread.id, 4, teammateId);
+    const listed = (await threadsService.list(mine)).find((row) => row.id === thread.id);
+    expect(listed?.participants).toEqual([
+      { id: teammateId, name: "Mate" },
+      { id: userId, name: expect.any(String) },
+    ]);
+  });
+
   test("creates a thread titled after the project and lists it", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     expect(thread.title).toBe("proj");

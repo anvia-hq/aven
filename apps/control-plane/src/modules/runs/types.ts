@@ -39,7 +39,7 @@ export type RunExtras = Pick<
   | "compact"
   | "memory"
   | "cockpit"
->;
+> & { senderId?: string };
 
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
 
@@ -103,6 +103,11 @@ export type FailureStore = {
 export type WorkedTimeStore = {
   record(threadId: string, messageIndex: number, workedMs: number): Promise<void>;
   read(threadId: string): Promise<Map<number, number>>;
+};
+
+export type SenderStore = {
+  record(threadId: string, messageIndex: number, senderId: string): Promise<void>;
+  read(threadId: string): Promise<Map<number, string>>;
 };
 
 export type RunEnding =

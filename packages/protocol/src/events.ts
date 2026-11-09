@@ -148,6 +148,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       };
       if (event.attachments?.length) user.attachments = event.attachments;
       if (event.mentions?.length) user.mentions = event.mentions;
+      if (event.senderId) user.senderId = event.senderId;
       return [
         ...messages,
         user,
@@ -161,6 +162,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts: [{ type: "text", text: event.prompt }],
       };
       if (event.mentions?.length) user.mentions = event.mentions;
+      if (event.senderId) user.senderId = event.senderId;
       return [
         ...messages,
         user,
@@ -240,5 +242,15 @@ export function withWorkedTimes(
   return messages.map((message, at) => {
     const workedMs = times.get(at);
     return workedMs === undefined ? message : { ...message, workedMs };
+  });
+}
+
+export function withSenders(
+  messages: ChatMessage[],
+  senders: ReadonlyMap<number, string>,
+): ChatMessage[] {
+  return messages.map((message, at) => {
+    const senderId = senders.get(at);
+    return senderId === undefined ? message : { ...message, senderId };
   });
 }

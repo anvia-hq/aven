@@ -11,10 +11,8 @@ const PILL =
 export function ChangesBadge({ diff, onOpen }: Props) {
   if (!diff.loaded) {
     return (
-      <span className={PILL} role="status" aria-label="Changes loading">
-        <span aria-hidden className="invisible">
-          +00 -00
-        </span>
+      <span className={`${PILL} opacity-0`} role="status" aria-label="Changes loading">
+        <span aria-hidden>+00 -00</span>
       </span>
     );
   }

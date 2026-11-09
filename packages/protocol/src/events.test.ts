@@ -5,6 +5,7 @@ import {
   applyEvent,
   isRunning,
   mentionToken,
+  withSenders,
   withWorkedTimes,
 } from "./events";
 import type { ChatMessage, RunEvent } from "./types";
@@ -110,6 +111,35 @@ describe("applyEvent with mentions", () => {
   test("a mention's token is its sign and its name", () => {
     expect(mentionToken({ type: "file", name: "src/a.ts" })).toBe("@src/a.ts");
     expect(mentionToken({ type: "skill", name: "notes" })).toBe("/notes");
+  });
+});
+
+describe("applyEvent with a sender", () => {
+  test("a message's sender goes on the user message, for a first message and a steering one", () => {
+    const events: RunEvent[] = [
+      { type: "run_start", prompt: "one", senderId: "user-1" },
+      { type: "steer", id: "s1", prompt: "two", senderId: "user-2" },
+      { type: "done" },
+      { type: "run_start", prompt: "three" },
+    ];
+    const messages = events.reduce(applyEvent, [] as ChatMessage[]);
+    expect(messages.filter((message) => message.role === "user")).toMatchObject([
+      { senderId: "user-1" },
+      { senderId: "user-2" },
+      {},
+    ]);
+    expect(messages.at(-2) && "senderId" in messages.at(-2)!).toBe(false);
+  });
+
+  test("a stored sender is put back on the message at its place", () => {
+    const messages = withSenders(
+      [
+        { id: "m0", role: "user", parts: [] },
+        { id: "m1", role: "assistant", parts: [] },
+      ],
+      new Map([[0, "user-1"]]),
+    );
+    expect(messages.map((message) => message.senderId)).toEqual(["user-1", undefined]);
   });
 });
 

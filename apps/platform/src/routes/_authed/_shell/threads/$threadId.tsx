@@ -33,6 +33,7 @@ function ThreadPage() {
   const {
     thread,
     owned,
+    viewer,
     driven,
     loaded,
     messages,
@@ -102,6 +103,7 @@ function ThreadPage() {
                   steers={steers}
                   running={running}
                   owned={owned}
+                  viewer={viewer}
                   startedAt={startedAt}
                   error={error}
                   aside={

@@ -814,6 +814,44 @@ describe("writing to a repository", () => {
     expect(await refused.findPullRequests(7, "acme/app", "aven/x")).toEqual([]);
   });
 
+  test("finds the pull requests of one branch by asking GitHub for exactly that branch", async () => {
+    const pull = (number: number, ref: string, extra: Record<string, unknown> = {}) => ({
+      number,
+      html_url: `https://github.com/acme/app/pull/${number}`,
+      title: `Pull ${number}`,
+      state: "open",
+      merged_at: null,
+      head: { ref, repo: { full_name: "acme/app" } },
+      ...extra,
+    });
+    const github = fakeGithub({
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_read",
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+      "GET /repos/acme/app/pulls?state=all&head=acme%3Afeat%2Fvector&per_page=100": [
+        pull(9, "feat/vector", { state: "closed", merged_at: "2026-01-01T00:00:00Z" }),
+        pull(8, "feat/vector-2"),
+        pull(7, "feat/vector", { head: { ref: "feat/vector", repo: { full_name: "me/app" } } }),
+      ],
+    });
+    const client = new GithubClient(config, github.fetch);
+
+    expect(await client.branchPullRequests(7, "acme/app", "feat/vector")).toEqual([
+      {
+        number: 9,
+        url: "https://github.com/acme/app/pull/9",
+        title: "Pull 9",
+        branch: "feat/vector",
+        state: "merged",
+      },
+    ]);
+    expect(auth(github.calls[1]!)).toBe("Bearer ghs_read");
+
+    const refused = new GithubClient(config, async () => new Response("no", { status: 422 }));
+    expect(await refused.branchPullRequests(7, "acme/app", "feat/vector")).toBeNull();
+  });
+
   test("a person can push only when GitHub says so for their token; a repository they cannot see is no", async () => {
     const github = fakeGithub({
       "GET /repos/acme/app": { permissions: { push: true } },
