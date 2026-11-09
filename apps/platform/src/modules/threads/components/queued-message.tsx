@@ -10,7 +10,7 @@ import { mentionCode } from "./mention-code";
 
 export function QueuedMessage({ message, viewer }: { message: QueuedSteer; viewer: Viewer }) {
   if (systemNoteOf(message.prompt)?.kind === "process") return null;
-  const { mine, name, text } = authorOf(message.prompt, viewer);
+  const { mine, name, text } = authorOf(message.prompt, viewer, message.senderId);
   return (
     <div
       className={

@@ -68,7 +68,13 @@ export type Thread = {
   updatedAt: string;
 };
 
-export type Viewer = { owned: boolean; name: string; ownerName: string };
+export type Viewer = {
+  id: string;
+  owned: boolean;
+  name: string;
+  ownerId: string;
+  ownerName: string;
+};
 
 export type MessageAuthor = { mine: boolean; name: string; text: string };
 

@@ -44,11 +44,13 @@ export function useThread(threadId: string) {
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
   const driven = thread !== undefined && !owned && isDriving(thread.drivingUntil);
 
+  const viewerId = session?.user.id ?? "";
   const viewerName = session?.user.name ?? "";
+  const ownerId = thread?.createdBy ?? "";
   const ownerName = thread?.createdByName ?? "";
   const viewer = useMemo(
-    () => ({ owned, name: viewerName, ownerName }),
-    [owned, viewerName, ownerName],
+    () => ({ id: viewerId, owned, name: viewerName, ownerId, ownerName }),
+    [viewerId, owned, viewerName, ownerId, ownerName],
   );
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);

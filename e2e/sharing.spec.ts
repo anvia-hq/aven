@@ -147,16 +147,27 @@ test.describe("sharing a thread", () => {
     });
     expect(shared.ok()).toBe(true);
 
+    const idOf = async (who: Page) =>
+      ((await (await who.request.get("/api/auth/get-session")).json()) as { user: { id: string } })
+        .user.id;
+    const ownerId = await idOf(page);
+    const mateId = await idOf(mate.page);
     const events = [
       {
         type: "snapshot",
         running: false,
         messages: [
-          { id: "m0", role: "user", parts: [{ type: "text", text: "clean up the comments" }] },
+          {
+            id: "m0",
+            role: "user",
+            senderId: ownerId,
+            parts: [{ type: "text", text: "clean up the comments" }],
+          },
           { id: "m1", role: "assistant", parts: [{ type: "text", text: "Done." }] },
           {
             id: "m2",
             role: "user",
+            senderId: mateId,
             parts: [{ type: "text", text: "[driver: Mate Person] thanks" }],
           },
         ],
