@@ -13,6 +13,8 @@ import type { ChatMessage } from "@aven/protocol/types";
 
 const RECENT_MESSAGES = 4;
 const RECENT_CHARACTERS = 300;
+const UNKNOWN_AUTHOR = "someone";
+const AGENT_AUTHOR = "agent";
 
 export const recentSenders = (messages: readonly ChatMessage[]) => [
   ...new Set(
@@ -27,8 +29,8 @@ export function recentOf(messages: readonly ChatMessage[], names: ReadonlyMap<st
       const written = parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("");
       const author =
         role === "user"
-          ? (senderId && names.get(senderId)) || parseDriverPrompt(written).driver || "person"
-          : "agent";
+          ? (senderId && names.get(senderId)) || parseDriverPrompt(written).driver || UNKNOWN_AUTHOR
+          : AGENT_AUTHOR;
       return { author, text: spoken(written).slice(0, RECENT_CHARACTERS) };
     })
     .filter(({ text }) => text.length > 0);
@@ -55,7 +57,9 @@ export function createAddressingGate({ configOf, deciderFor }: Deps): Addressing
           author,
           owner,
           ...names,
-          ...recent.map((message) => message.author).filter((name) => name !== "agent"),
+          ...recent
+            .map((message) => message.author)
+            .filter((name) => name !== AGENT_AUTHOR && name !== UNKNOWN_AUTHOR),
         ]),
       ],
       recent,
