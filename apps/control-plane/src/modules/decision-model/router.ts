@@ -10,10 +10,13 @@ const ONLY_ADMINS = "Only an owner or an admin can set the decision model";
 
 export const decisionModelRouter = new Elysia({ prefix: "/decision-model" })
   .use(authRouter)
-  .get("/", ({ organizationId }) => decisionModelService.get(organizationId), {
-    auth: true,
-    org: true,
-  })
+  .get(
+    "/",
+    async ({ organizationId }) => ({
+      decisionModel: await decisionModelService.get(organizationId),
+    }),
+    { auth: true, org: true },
+  )
   .put(
     "/",
     async ({ body, organizationId, user }) => {
