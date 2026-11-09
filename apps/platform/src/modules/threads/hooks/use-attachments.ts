@@ -7,7 +7,9 @@ import { fileSize } from "@/lib/format";
 
 import type { AttachmentUpload, PendingFile } from "../types";
 
-const MODEL_IMAGES = new Set<string>(ARTIFACT_MEDIA_TYPES);
+const MODEL_IMAGES = new Set<string>(
+  ARTIFACT_MEDIA_TYPES.filter((mediaType) => mediaType.startsWith("image/")),
+);
 
 function readBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
