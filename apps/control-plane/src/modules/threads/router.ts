@@ -83,7 +83,7 @@ export const threadsRouter = (
         const { steered } = await messages.send(organizationId, user.id, params.id, body);
         return status(202, { ok: true, steered });
       },
-      { thread: "own", params: threadParams, body: sendMessageBody },
+      { thread: "drive", params: threadParams, body: sendMessageBody },
     )
     .post(
       "/:id/compact",
@@ -112,10 +112,10 @@ export const threadsRouter = (
         await messages.answer(organizationId, user.id, params.id, body);
         return status(202, { ok: true });
       },
-      { thread: "own", params: threadParams, body: answerQuestionBody },
+      { thread: "drive", params: threadParams, body: answerQuestionBody },
     )
     .post("/:id/cancel", ({ params }) => ({ cancelled: runs.cancel(params.id) }), {
-      thread: "own",
+      thread: "drive",
       params: threadParams,
     })
     .get(
