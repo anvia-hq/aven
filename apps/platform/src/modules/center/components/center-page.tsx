@@ -85,8 +85,6 @@ export function CenterPage() {
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             {one ? one.name : "Center"}
           </h1>
-          {/* The repository is worth a line even on a phone; the sentence about what Center is,
-              only where it fits (decision 0172). */}
           {one ? (
             <p className="truncate text-sm text-muted-foreground">{one.repoFullName}</p>
           ) : (

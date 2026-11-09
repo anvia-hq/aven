@@ -5,12 +5,6 @@ import { SidebarTrigger, useSidebar } from "@/components/sidebar";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 
-/**
- * The bar over every page on a phone: the way into the sidebar (the threads, the app's own list,
- * Settings and the theme) and into search. It carries no title of its own: the tab bar under the
- * page says which app you are in, and the page says what it is, so a name here would only repeat
- * one of them. It stays put while the page scrolls under it.
- */
 export function MobileAppBar() {
   const { setOpen: setCommandOpen } = useCommandMenu();
 
@@ -30,7 +24,6 @@ export function MobileAppBar() {
   );
 }
 
-/** The sheet hides its own close button, so the sidebar's header carries this one instead. */
 export function MobileSidebarClose() {
   const { setOpenMobile } = useSidebar();
   return (
