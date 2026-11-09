@@ -19,3 +19,9 @@ export function messageBlocks(parts: MessagePart[]) {
   }
   return result;
 }
+
+export function foldedSteps(blocks: Block[]) {
+  const answer = blocks.at(-1);
+  if (blocks.length < 2 || answer?.type !== "text") return undefined;
+  return { steps: blocks.slice(0, -1), answer };
+}
