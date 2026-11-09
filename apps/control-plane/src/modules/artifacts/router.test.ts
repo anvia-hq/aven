@@ -124,6 +124,24 @@ run("the images a thread's agent showed (real postgres, real WebSocket)", async 
     expect(calls).toEqual([{ threadId: thread.id, name }]);
   });
 
+  test("serves an HTML page sandboxed, with the bridge, and never in pieces", async () => {
+    const page = "<!doctype html><html><head></head><body>hi</body></html>";
+    const { thread } = await setup(() => ({
+      ok: true,
+      result: { mediaType: "text/html", data: Buffer.from(page).toString("base64") },
+    }));
+    const htmlName = "00000000-0000-4000-8000-000000000002.html";
+    const response = await fetch(`http://${base}/threads/${thread.id}/artifacts/${htmlName}`, {
+      headers: { authorization: `Bearer ${owner.token}`, range: "bytes=0-3" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toStartWith("text/html");
+    expect(response.headers.get("content-security-policy")).toContain("sandbox allow-scripts");
+    const body = await response.text();
+    expect(body).toContain("<script>");
+    expect(body).toContain("<body>hi</body>");
+  });
+
   test("is not found when the runner has no such image", async () => {
     const { thread } = await setup(() => ({ ok: true, result: null }));
     expect((await get(`/threads/${thread.id}/artifacts/${name}`, owner.token)).status).toBe(404);

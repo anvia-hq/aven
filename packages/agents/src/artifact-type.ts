@@ -23,4 +23,13 @@ export function videoType(bytes: Uint8Array) {
   return null;
 }
 
-export const artifactType = (bytes: Uint8Array) => imageType(bytes) ?? videoType(bytes);
+export function htmlType(bytes: Uint8Array) {
+  const head = new TextDecoder()
+    .decode(bytes.subarray(0, 512))
+    .replace(/^\uFEFF/, "")
+    .trimStart();
+  return /^<(!doctype\s+html|html[\s>])/i.test(head) ? "text/html" : null;
+}
+
+export const artifactType = (bytes: Uint8Array) =>
+  imageType(bytes) ?? videoType(bytes) ?? htmlType(bytes);

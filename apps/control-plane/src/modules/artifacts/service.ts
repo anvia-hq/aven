@@ -1,4 +1,5 @@
 import { NotFoundError } from "../../errors";
+import { HTML_HEADERS, framedHtml } from "./html-frame";
 import { byteRange } from "./range";
 import { artifactAnswer } from "./schema";
 import type { Runner } from "../runtimes/types";
@@ -18,6 +19,9 @@ export function createArtifactsService(runner: Runner) {
       });
       if (!image) throw new NotFoundError("No such image");
       const bytes = Buffer.from(image.data, "base64");
+      if (image.mediaType === "text/html") {
+        return new Response(framedHtml(bytes.toString("utf8")), { headers: HTML_HEADERS });
+      }
       const headers = {
         "content-type": image.mediaType,
         "accept-ranges": "bytes",

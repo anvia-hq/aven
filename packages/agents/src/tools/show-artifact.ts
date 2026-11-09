@@ -9,11 +9,19 @@ import type { ToolArtifact } from "@aven/protocol/types";
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 10 * 1024 * 1024;
+export const MAX_HTML_BYTES = 2 * 1024 * 1024;
 
 type ArtifactFiles = {
   readFile(options: { path: string; abortSignal?: AbortSignal }): Promise<Uint8Array>;
   save(bytes: Uint8Array, mediaType: string): Promise<string>;
 };
+
+const LIMITS = { images: MAX_IMAGE_BYTES, videos: MAX_VIDEO_BYTES, pages: MAX_HTML_BYTES };
+
+function kindOf(mediaType: string) {
+  if (mediaType === "text/html") return "pages";
+  return mediaType.startsWith("video/") ? "videos" : "images";
+}
 
 const itemSchema = z.object({
   path: z.string().min(1).describe("The file, relative to the workspace or absolute."),
@@ -27,12 +35,14 @@ export function createShowArtifactTool(files: ArtifactFiles) {
   ): Promise<ToolArtifact> => {
     const bytes = await files.readFile({ path, abortSignal });
     const mediaType = artifactType(bytes);
-    if (!mediaType) throw new Error(`${path} is not a PNG, JPEG, GIF, WebP, MP4 or WebM file`);
-    const video = mediaType.startsWith("video/");
-    const limit = video ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (!mediaType) {
+      throw new Error(`${path} is not a PNG, JPEG, GIF, WebP, MP4, WebM or HTML file`);
+    }
+    const kind = kindOf(mediaType);
+    const limit = LIMITS[kind];
     if (bytes.length > limit) {
       throw new Error(
-        `${path} is ${bytes.length} bytes; ${video ? "videos" : "images"} up to ${limit / 1024 / 1024} MiB can be shown`,
+        `${path} is ${bytes.length} bytes; ${kind} up to ${limit / 1024 / 1024} MiB can be shown`,
       );
     }
     const name = await files.save(bytes, mediaType);
@@ -41,7 +51,7 @@ export function createShowArtifactTool(files: ArtifactFiles) {
 
   return createTool({
     name: SHOW_ARTIFACT_TOOL_NAME,
-    description: `Show the user files from the sandbox in the conversation: images (PNG, JPEG, GIF or WebP, up to 8 MiB each) and videos (MP4 or WebM, up to 10 MiB each), such as a chart you plotted, a screenshot or a short screen recording. Give every file you want shown in one call, up to ${MAX_ARTIFACTS_PER_CALL}: several appear together as a grid. Save the files first; SVG is not supported, so save plots as PNG.`,
+    description: `Show the user files from the sandbox in the conversation: images (PNG, JPEG, GIF or WebP, up to 8 MiB each) and videos (MP4 or WebM, up to 10 MiB each), such as a chart you plotted, a screenshot or a short screen recording, and interactive HTML pages (up to 2 MiB each, one self-contained file: every script and style inline, no network). A page runs in a sandboxed frame with no access to the app, the network or storage, and is drawn in the conversation as a live component. Give every file you want shown in one call, up to ${MAX_ARTIFACTS_PER_CALL}: several appear together as a grid. Save the files first; SVG is not supported, so save plots as PNG.`,
     inputSchema: z.object({
       items: z
         .array(itemSchema)
