@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
@@ -62,7 +62,20 @@ async function withEnvKey<T>(key: string, body: () => Promise<T>) {
   }
 }
 
+const environmentKey = process.env.WORKLOAD_IDENTITY_PRIVATE_KEY;
+const withoutEnvironmentKey = () => {
+  beforeEach(() => {
+    delete process.env.WORKLOAD_IDENTITY_PRIVATE_KEY;
+  });
+  afterEach(() => {
+    if (environmentKey === undefined) delete process.env.WORKLOAD_IDENTITY_PRIVATE_KEY;
+    else process.env.WORKLOAD_IDENTITY_PRIVATE_KEY = environmentKey;
+  });
+};
+
 describe("Issuer", () => {
+  withoutEnvironmentKey();
+
   test("signs a token the published key verifies", async () => {
     const issuer = await Issuer.create(url);
     const token = await issuer.sign({ aud: "https://service.example", sub: "thread:1" });
@@ -135,6 +148,7 @@ describe("Issuer", () => {
 });
 
 run("the kept signing key (real postgres)", () => {
+  withoutEnvironmentKey();
   const keptRow = () => db.select().from(platformSettings).where(eq(platformSettings.key, setting));
 
   beforeAll(() => db.delete(platformSettings).where(eq(platformSettings.key, setting)));
