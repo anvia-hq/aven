@@ -23,9 +23,9 @@ import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
-type Props = { threadId: string; split?: boolean; onClose?: () => void };
+type Props = { threadId: string; split?: boolean; last?: boolean; onClose?: () => void };
 
-export function ThreadPane({ threadId, split, onClose }: Props) {
+export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const {
     thread,
     owned,
@@ -86,7 +86,12 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
           onLayoutChanged={layout.onLayoutChanged}
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
-            <div className="@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-r-xl md:border-y md:border-r md:border-sidebar-border">
+            <div
+              className={cn(
+                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border-sidebar-border",
+                last ? "md:rounded-xl md:border" : "md:rounded-r-xl md:border-y md:border-r",
+              )}
+            >
               <ThreadHeader thread={thread} panels={panels} owned={owned} onClose={onClose} />
               <div ref={conversation} className="relative min-h-0 flex-1">
                 <ThreadMessages
