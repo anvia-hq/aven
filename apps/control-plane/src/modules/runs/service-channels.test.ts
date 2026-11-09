@@ -12,22 +12,39 @@ import type { RunEvent } from "@aven/protocol/types";
 
 type FakeRun = {
   handle: RuntimeRun;
+  say(delta: string): void;
   finish(outcome?: RunResult): void;
 };
 
 function fakeRun(): FakeRun {
   const done = Promise.withResolvers<RunResult>();
+  const said: RunEvent[] = [];
+  let finished = false;
   const handle: RuntimeRun = {
     events: {
       [Symbol.asyncIterator]: () => ({
-        next: async () => (await done.promise, { done: true as const, value: undefined }),
+        next: async () => {
+          for (;;) {
+            const event = said.shift();
+            if (event) return { done: false as const, value: event };
+            if (finished) return { done: true as const, value: undefined };
+            await Bun.sleep(2);
+          }
+        },
       }),
     },
     result: done.promise,
     cancel: () => undefined,
     steer: async () => ({ status: "closed" as const }),
   };
-  return { handle, finish: (outcome: RunResult = { type: "response" }) => done.resolve(outcome) };
+  return {
+    handle,
+    say: (delta) => void said.push({ type: "text", delta }),
+    finish: (outcome: RunResult = { type: "response" }) => {
+      finished = true;
+      done.resolve(outcome);
+    },
+  };
 }
 
 function scriptedRuntime() {
@@ -101,6 +118,7 @@ describe("how long a run worked", () => {
     const watcher = attach(manager, thread);
 
     await manager.start(thread, "one");
+    current().say("hello");
     current().finish({ type: "response" });
     await until(() => !manager.isRunning(thread.id));
     await until(() => (times.saved.get(thread.id)?.size ?? 0) > 0);
@@ -109,6 +127,21 @@ describe("how long a run worked", () => {
     const done = watcher.events.find((event) => event.type === "done");
     expect(done?.type === "done" && done.workedMs).toBeGreaterThanOrEqual(0);
     expect(await times.store.read(thread.id)).toEqual(new Map([[1, expect.any(Number)]]));
+  });
+});
+
+describe("a run that produced nothing", () => {
+  test("keeps no time, so it does not add to the answer before it", async () => {
+    const times = memoryWorkedTimes();
+    const { runtime, current } = scriptedRuntime();
+    const manager = managerFor(runtime, { workedTimes: times.store });
+    const thread = newThread();
+
+    await manager.start(thread, "one");
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await Bun.sleep(30);
+    expect(times.saved.get(thread.id)?.size ?? 0).toBe(0);
   });
 });
 
