@@ -60,6 +60,21 @@ run("threadsService (postgres)", async () => {
     );
   });
 
+  test("lists who has sent a message to the thread, in the order they first did", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    expect((await threadsService.list(mine)).find((row) => row.id === thread.id)).toMatchObject({
+      participants: [],
+    });
+    await threadsService.saveSender(thread.id, 0, teammateId);
+    await threadsService.saveSender(thread.id, 2, userId);
+    await threadsService.saveSender(thread.id, 4, teammateId);
+    const listed = (await threadsService.list(mine)).find((row) => row.id === thread.id);
+    expect(listed?.participants).toEqual([
+      { id: teammateId, name: "Mate" },
+      { id: userId, name: expect.any(String) },
+    ]);
+  });
+
   test("creates a thread titled after the project and lists it", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     expect(thread.title).toBe("proj");
