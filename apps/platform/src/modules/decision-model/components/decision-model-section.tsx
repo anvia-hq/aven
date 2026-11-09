@@ -7,8 +7,18 @@ import { NativeSelect, NativeSelectOption } from "@/components/native-select";
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
 import { TextField } from "@/components/text-field";
 
+import { useCanChangeDecisionModel } from "../hooks/use-can-change-decision-model";
 import { useDecisionModel } from "../hooks/use-decision-model";
-import { DECISION_KINDS, type DecisionKind, type DecisionModel } from "../types";
+import { DECISION_KINDS } from "../kinds";
+import type { DecisionKind, DecisionModel } from "../types";
+
+function explanation(isSet: boolean, canChange: boolean) {
+  if (isSet) return "Multiplayer threads use it.";
+  const needed = "Needed before anyone can turn multiplayer on.";
+  return canChange
+    ? `${needed} Without it a message that mentions a teammate is judged by its words alone.`
+    : `${needed} Ask an owner or an admin to set it.`;
+}
 
 function Form({
   current,
@@ -90,6 +100,7 @@ function Form({
 
 export function DecisionModelSection() {
   const { decisionModel, loaded, failed, save, remove } = useDecisionModel();
+  const canChange = useCanChangeDecisionModel();
   if (failed) return <p className="py-6 text-sm text-muted-foreground">{failed}</p>;
   if (!loaded) return null;
   return (
@@ -99,24 +110,29 @@ export function DecisionModelSection() {
     >
       <SettingsRow
         title={decisionModel ? "Set" : "Not set"}
-        description={
-          decisionModel
-            ? "Multiplayer threads use it."
-            : "Needed before anyone can turn multiplayer on. Without it a message that mentions a teammate is judged by its words alone."
-        }
-      />
-      <div className="pt-4">
-        <Form
-          key={
-            decisionModel
-              ? `${decisionModel.kind}:${decisionModel.modelId}:${decisionModel.keyHint}`
-              : "none"
-          }
-          current={decisionModel}
-          onSave={save}
-          onRemove={remove}
-        />
-      </div>
+        description={explanation(decisionModel !== null, canChange)}
+      >
+        {decisionModel && !canChange && (
+          <span className="text-xs text-muted-foreground">
+            {DECISION_KINDS.find((each) => each.id === decisionModel.kind)?.label} ·{" "}
+            {decisionModel.modelId}
+          </span>
+        )}
+      </SettingsRow>
+      {canChange && (
+        <div className="pt-4">
+          <Form
+            key={
+              decisionModel
+                ? `${decisionModel.kind}:${decisionModel.modelId}:${decisionModel.keyHint}`
+                : "none"
+            }
+            current={decisionModel}
+            onSave={save}
+            onRemove={remove}
+          />
+        </div>
+      )}
     </SettingsSection>
   );
 }

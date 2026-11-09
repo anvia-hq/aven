@@ -1,14 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { initials } from "@/lib/format";
 
 import type { MentionPerson } from "../types";
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join("");
 
 export function PersonAvatar({ name, image }: Pick<MentionPerson, "name" | "image">) {
   return (
