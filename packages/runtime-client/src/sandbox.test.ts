@@ -261,7 +261,7 @@ describe("Sandboxes starting a container", () => {
   test("fails at once, saying why, when the container cannot reach the runner", async () => {
     const { calls, docker: base } = fakeDocker();
     const docker: typeof base = async (args) => {
-      if (args[0] === "exec") return { code: 124, stdout: "", stderr: "" };
+      if (args[0] === "exec") return { code: 0, stdout: "blocked\n", stderr: "" };
       return base(args);
     };
     const home = await mkdtemp(join(tmpdir(), "aven-sandbox-home-"));
