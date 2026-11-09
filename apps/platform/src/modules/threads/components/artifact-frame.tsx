@@ -31,7 +31,6 @@ function Frame({ src, label, fill }: { src: string; label: string; fill?: boolea
       title={label}
       sandbox={SANDBOX}
       referrerPolicy="no-referrer"
-      loading="lazy"
       style={fill ? undefined : { height }}
       className={fill ? "size-full border-0" : "block w-full border-0"}
     />
