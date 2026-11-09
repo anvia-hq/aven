@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { messageBlocks } from "./message-blocks";
+import { foldedSteps, messageBlocks } from "./message-blocks";
 import type { MessagePart, ToolPart } from "./types";
 
 const tool = (id: string) => ({ type: "tool", tool: { id, name: "exec_command" } as ToolPart });
@@ -27,5 +27,21 @@ describe("a message's blocks", () => {
       tool("2"),
     ] as MessagePart[]);
     expect(blocks.map((block) => block.type)).toEqual(["tools", "text", "tools"]);
+  });
+});
+
+describe("the steps folded under a final answer", () => {
+  test("everything before the closing words folds, and the words stay out", () => {
+    const folded = foldedSteps(
+      messageBlocks([tool("1"), text("Checking."), tool("2"), text("All done.")] as MessagePart[]),
+    );
+    expect(folded?.steps.map((block) => block.type)).toEqual(["tools", "text", "tools"]);
+    expect(folded?.answer).toEqual({ type: "text", text: "All done." });
+  });
+
+  test("nothing folds when the message ends in a tool call, or is only words", () => {
+    expect(foldedSteps(messageBlocks([text("a"), tool("1")] as MessagePart[]))).toBeUndefined();
+    expect(foldedSteps(messageBlocks([text("only words")]))).toBeUndefined();
+    expect(foldedSteps([])).toBeUndefined();
   });
 });

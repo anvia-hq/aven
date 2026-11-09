@@ -4,11 +4,13 @@ import { systemNoteOf } from "@aven/protocol/system-notes";
 import { cn } from "cn";
 import { memo } from "react";
 
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 import { Markdown } from "@/components/markdown";
+import { elapsed } from "@/lib/format";
 
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
-import { messageBlocks } from "../message-blocks";
+import { foldedSteps, messageBlocks } from "../message-blocks";
 import type { Block, ChatMessage } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
 import { mentionCode } from "./mention-code";
@@ -130,9 +132,39 @@ function AssistantMessage({
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
   if (parts.length === 0) return null;
+  const shown = messageBlocks(parts);
+  const folded = live ? undefined : foldedSteps(shown);
+  if (folded) {
+    return (
+      <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
+        <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
+          <CollapsibleTrigger
+            className="group flex w-full items-center gap-3 py-1 text-muted-foreground hover:text-foreground"
+            data-role="worked"
+          >
+            <span className="h-px flex-1 bg-border" />
+            <span className="shrink-0 font-medium">
+              {message.workedMs === undefined
+                ? "Worked"
+                : `Worked for ${elapsed(message.workedMs)}`}
+            </span>
+            <span className="h-px flex-1 bg-border" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="flex min-w-0 flex-col gap-2 pt-2">
+              {folded.steps.map((block, index) => (
+                <AssistantBlock key={index} block={block} live={false} threadId={threadId} />
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+        <AssistantBlock block={folded.answer} live={false} threadId={threadId} />
+      </div>
+    );
+  }
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
-      {messageBlocks(parts).map((block, index, all) => (
+      {shown.map((block, index, all) => (
         <AssistantBlock
           key={index}
           block={block}
