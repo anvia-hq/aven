@@ -8,7 +8,7 @@ export function startIdentityRelay(
 ): IdentityRelay {
   const target = `${controlPlane.replace(/\/+$/, "")}${TOKEN_PATH}`;
   const server = Bun.serve({
-    hostname: "127.0.0.1",
+    hostname: "0.0.0.0",
     port: 0,
     async fetch(request) {
       if (request.method !== "POST" || new URL(request.url).pathname !== TOKEN_PATH) {
