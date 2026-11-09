@@ -47,7 +47,12 @@ export class ProcessWatchRecords implements WatchStore {
       .query<{ state: string }, [string]>("select state from process_watch where thread_id = ?")
       .get(threadId);
     if (!row) return undefined;
-    const state = JSON.parse(row.state) as Partial<KeptWatch>;
+    let state: Partial<KeptWatch>;
+    try {
+      state = JSON.parse(row.state) as Partial<KeptWatch>;
+    } catch {
+      return undefined;
+    }
     return {
       baseline: state.baseline ?? [],
       tracked: state.tracked ?? [],

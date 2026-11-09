@@ -204,6 +204,15 @@ describe("an end the watch is told of survives a runner that restarts", () => {
     again.clear("thread-1");
     expect(again.load("thread-1")).toBeUndefined();
   });
+  test("a row that cannot be read is no record, so the watch starts afresh instead of failing", () => {
+    const db = openRunDatabase(":memory:");
+    const records = new ProcessWatchRecords(db);
+    db.query("insert into process_watch (thread_id, state) values (?, ?)").run(
+      "thread-1",
+      "{not json",
+    );
+    expect(records.load("thread-1")).toBeUndefined();
+  });
   test("a second watch built from the same store does not tell of an end it already told", async () => {
     const store = memoryStore();
     const world = { current: [] as ProcessView[] };
