@@ -416,6 +416,16 @@
   --sidebar-ring: #268bd2;
 }
 
+/* A profile's charts take the accent of the chosen theme: Mint's own green, and every other
+   palette's primary, which is the colour that palette is known by (Mint's primary is its ink). */
+:root {
+  --chart: var(--effort);
+}
+
+:root[data-theme] {
+  --chart: var(--primary);
+}
+
 /* The dots of the working indicator run from pale mint to green (modules/threads/components/working-indicator.tsx). */
 :root {
   --working-from: oklch(0.88 0.1 160);
@@ -474,6 +484,7 @@
   --color-graph-6: var(--graph-6);
   --color-code: var(--code);
   --color-effort: var(--effort);
+  --color-chart: var(--chart);
   --color-frame: var(--frame);
   --color-avatar-face: var(--avatar-face);
   --color-brand: var(--brand);
