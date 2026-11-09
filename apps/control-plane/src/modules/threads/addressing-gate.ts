@@ -1,6 +1,23 @@
 import { addressingFrom, fallbackAddressing, personMentions } from "./addressing";
 import type { AddressingDecider, DecisionConfig } from "../decision-model/types";
 import type { AddressingGate } from "./types";
+import type { ChatMessage } from "@aven/protocol/types";
+
+const RECENT_MESSAGES = 4;
+const RECENT_CHARACTERS = 300;
+
+export function recentOf(messages: readonly ChatMessage[]) {
+  return messages
+    .slice(-RECENT_MESSAGES)
+    .map(({ role, parts }) => ({
+      author: role === "user" ? "person" : "agent",
+      text: parts
+        .flatMap((part) => (part.type === "text" ? [part.text] : []))
+        .join("")
+        .slice(0, RECENT_CHARACTERS),
+    }))
+    .filter(({ text }) => text.length > 0);
+}
 
 type Deps = {
   configOf(organizationId: string): Promise<DecisionConfig | null>;

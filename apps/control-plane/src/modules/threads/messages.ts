@@ -1,7 +1,7 @@
 import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
 import { timing } from "@aven/runtime-client/timing";
 
-import { driverPrompt, ownPrompt } from "@aven/protocol/drivers";
+import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubService } from "../github/service";
@@ -16,10 +16,20 @@ import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
+import { decisionModelService } from "../decision-model/service";
+import { addressingDecider, jevModel } from "../decision-model/jev";
+import { personMentions } from "./addressing";
+import { createAddressingGate, recentOf } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 import type { RunIdentity } from "../workload-identity/types";
+import type { AddressingGate } from "./types";
+
+const defaultGate = createAddressingGate({
+  configOf: (organizationId) => decisionModelService.config(organizationId),
+  deciderFor: (config) => addressingDecider(jevModel(config)),
+});
 
 async function runIdentity(
   thread: { id: string; organizationId: string; projectId: string },
@@ -97,7 +107,34 @@ async function acting(organizationId: string, userId: string, threadId: string) 
   return { thread, ownerId: thread.createdBy, driverId: userId, said };
 }
 
-export const createThreadMessages = (runs: RunManager) => {
+export const createThreadMessages = (runs: RunManager, gate: AddressingGate = defaultGate) => {
+  async function keptFromAgent(
+    organizationId: string,
+    userId: string,
+    threadId: string,
+    { prompt, attachments = [] }: SendMessageBody,
+  ) {
+    if (attachments.length > 0 || personMentions(prompt).length === 0) return false;
+    const { thread, said } = await acting(organizationId, userId, threadId);
+    if (!isDriving(thread.drivingUntil)) return false;
+    const author = (await usersService.get(userId))?.name ?? "";
+    const owner =
+      thread.createdBy === userId
+        ? author
+        : ((await usersService.get(thread.createdBy))?.name ?? "");
+    const { messages } = await runs.latest(thread);
+    const verdict = await gate({
+      organizationId,
+      prompt,
+      author,
+      owner,
+      recent: recentOf(messages),
+    });
+    if (verdict.agentAction) return false;
+    await runs.note(thread, said(prompt));
+    return true;
+  }
+
   async function start(
     organizationId: string,
     userId: string,
@@ -161,7 +198,10 @@ export const createThreadMessages = (runs: RunManager) => {
       threadId: string,
       body: SendMessageBody,
       options: { onPersonsWord?: boolean } = {},
-    ): Promise<{ steered: boolean }> {
+    ): Promise<{ steered: boolean; agentAction?: false }> {
+      if (await keptFromAgent(organizationId, userId, threadId, body)) {
+        return { steered: false, agentAction: false };
+      }
       if (runs.isRunning(threadId) && (await steer(organizationId, userId, threadId, body))) {
         return { steered: true };
       }
