@@ -3,6 +3,7 @@ import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
+import { isDriving } from "@aven/protocol/drivers";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
@@ -34,6 +35,16 @@ const columns = {
     where ${threadPullRequests.threadId} = "threads"."id"
   ), '[]'::json)`,
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+async function isMember(organizationId: string, userId: string) {
+  const [row] = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)));
+  return row !== undefined;
+}
 
 const seenBy = ({ organizationId, userId }: Viewer) =>
   and(
@@ -193,11 +204,43 @@ export const threadsService = {
     return thread!;
   },
 
+  async drivable({ organizationId, userId }: Viewer, id: string) {
+    const [thread] = await db
+      .select(columns)
+      .from(threads)
+      .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
+    if (!thread) throw new ThreadNotFoundError();
+    if (thread.createdBy === userId) return thread;
+    const driven =
+      thread.visibility === "workspace" &&
+      isDriving(thread.drivingUntil) &&
+      (await isMember(organizationId, thread.createdBy));
+    if (!driven) throw new ThreadNotFoundError();
+    return thread;
+  },
+
   async update({ organizationId, userId }: Viewer, id: string, body: UpdateThreadBody) {
     if (body.state && body.state !== "archived") await requireLiveProject(organizationId, id);
+    const { driving, ...rest } = body;
+    const changes: Partial<typeof threads.$inferInsert> = { ...rest };
+    if (driving !== undefined) {
+      const [current] = await db
+        .select({ visibility: threads.visibility })
+        .from(threads)
+        .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
+      const shared = (body.visibility ?? current?.visibility) === "workspace";
+      if (driving !== null && !shared) {
+        throw new ConflictError(
+          "Share the thread with the workspace before turning on multiplayer",
+        );
+      }
+      changes.drivingUntil = driving === null ? null : new Date(Date.now() + driving * DAY_MS);
+    }
+    if (body.visibility === "private" || body.state === "archived") changes.drivingUntil = null;
+    if (Object.keys(changes).length === 0) return this.owned({ organizationId, userId }, id);
     const [thread] = await db
       .update(threads)
-      .set(body)
+      .set(changes)
       .where(
         and(
           eq(threads.organizationId, organizationId),
