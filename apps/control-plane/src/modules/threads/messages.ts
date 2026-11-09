@@ -24,7 +24,7 @@ import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 import type { RunIdentity } from "../workload-identity/types";
-import type { AddressingGate } from "./types";
+import type { Acting, AddressingGate } from "./types";
 
 const defaultGate = createAddressingGate({
   configOf: (organizationId) => decisionModelService.config(organizationId),
@@ -97,7 +97,7 @@ async function requireLiveProject(organizationId: string, projectId: string) {
   return project;
 }
 
-async function acting(organizationId: string, userId: string, threadId: string) {
+export async function acting(organizationId: string, userId: string, threadId: string) {
   const thread = await threadsService.drivable({ organizationId, userId }, threadId);
   if (thread.createdBy === userId) {
     return { thread, ownerId: userId, driverId: undefined, said: ownPrompt };
@@ -111,11 +111,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
   async function keptFromAgent(
     organizationId: string,
     userId: string,
-    threadId: string,
+    who: Acting,
     { prompt, attachments = [] }: SendMessageBody,
   ) {
+    const { thread, said } = who;
+    if (runs.isRunning(thread.id)) return false;
     if (attachments.length > 0 || personMentions(prompt).length === 0) return false;
-    const { thread, said } = await acting(organizationId, userId, threadId);
     if (!isDriving(thread.drivingUntil)) return false;
     const author = (await usersService.get(userId))?.name ?? "";
     const owner =
@@ -140,9 +141,10 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     userId: string,
     threadId: string,
     { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
-    { onPersonsWord = true }: { onPersonsWord?: boolean } = {},
+    { onPersonsWord = true, known }: { onPersonsWord?: boolean; known?: Acting } = {},
   ) {
-    const { thread, ownerId, driverId, said } = await acting(organizationId, userId, threadId);
+    const { thread, ownerId, driverId, said } =
+      known ?? (await acting(organizationId, userId, threadId));
     const clock = timing(`message ${threadId}`);
     clock.mark("thread");
     const project = await requireLiveProject(organizationId, thread.projectId);
@@ -175,8 +177,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     userId: string,
     threadId: string,
     { prompt, steerId, attachments = [], mentions = [] }: SendMessageBody,
+    known?: Acting,
   ) {
-    const { thread, said } = await acting(organizationId, userId, threadId);
+    const { thread, said } = known ?? (await acting(organizationId, userId, threadId));
     await requireLiveProject(organizationId, thread.projectId);
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     if (attachments.length > 0) {
@@ -199,13 +202,17 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       body: SendMessageBody,
       options: { onPersonsWord?: boolean } = {},
     ): Promise<{ steered: boolean; agentAction?: false }> {
-      if (await keptFromAgent(organizationId, userId, threadId, body)) {
+      const known = await acting(organizationId, userId, threadId);
+      if (await keptFromAgent(organizationId, userId, known, body)) {
         return { steered: false, agentAction: false };
       }
-      if (runs.isRunning(threadId) && (await steer(organizationId, userId, threadId, body))) {
+      if (
+        runs.isRunning(threadId) &&
+        (await steer(organizationId, userId, threadId, body, known))
+      ) {
         return { steered: true };
       }
-      await start(organizationId, userId, threadId, body, options);
+      await start(organizationId, userId, threadId, body, { ...options, known });
       return { steered: false };
     },
 

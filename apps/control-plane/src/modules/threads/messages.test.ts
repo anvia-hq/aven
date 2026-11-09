@@ -200,10 +200,15 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
   const started: string[] = [];
   const kept: string[] = [];
   const asked: string[] = [];
-  const messages = (agentAction: boolean) =>
+  const steered: string[] = [];
+  const messages = (agentAction: boolean, running = false) =>
     createThreadMessages(
       {
-        isRunning: () => false,
+        isRunning: () => running,
+        steer: async (_thread: unknown, message: { prompt: string }) => {
+          steered.push(message.prompt);
+          return "queued";
+        },
         start: async (_thread: unknown, prompt: string) => {
           started.push(prompt);
         },
@@ -242,6 +247,16 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
     expect(sent.steered).toBe(false);
     expect(started).toHaveLength(1);
     expect(kept).toEqual([]);
+  });
+
+  test("a message sent while the agent is working steers it as before, and the gate is not asked", async () => {
+    const driven = await thread(7);
+    steered.length = 0;
+    asked.length = 0;
+    const sent = await messages(false, true).send(orgA, userId, driven.id, { prompt: toRandy });
+    expect(sent).toEqual({ steered: true });
+    expect(steered).toEqual([toRandy]);
+    expect(asked).toEqual([]);
   });
 
   test("the gate is not asked outside multiplayer, for a message without a mention, or with files", async () => {

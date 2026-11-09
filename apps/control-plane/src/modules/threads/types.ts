@@ -1,6 +1,6 @@
 import type { RunEnding } from "../runs/types";
 import type { createThreadContinuation } from "./continuation";
-import type { createThreadMessages } from "./messages";
+import type { acting, createThreadMessages } from "./messages";
 import type { SendMessageBody } from "./schema";
 import type {
   BotProjectView,
@@ -89,3 +89,5 @@ export type GateRequest = {
 };
 
 export type AddressingGate = (request: GateRequest) => Promise<Addressing>;
+
+export type Acting = Awaited<ReturnType<typeof acting>>;
