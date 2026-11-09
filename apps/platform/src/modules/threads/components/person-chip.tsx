@@ -1,3 +1,5 @@
+import { Sparkles } from "@mynaui/icons-react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import { initials } from "@/lib/format";
 
@@ -33,6 +35,19 @@ export function SentPersonMention({ name }: { name: string }) {
       data-mention="person"
     >
       @{name}
+    </span>
+  );
+}
+
+export function AgentChip() {
+  return (
+    <span
+      className="inline-flex h-fit items-center gap-1 rounded bg-primary/10 px-1 py-0.5 align-middle text-[0.85em] leading-none font-medium text-primary"
+      title="Asks the agent"
+      data-mention="agent"
+    >
+      <Sparkles className="size-3.5" />
+      agent
     </span>
   );
 }
