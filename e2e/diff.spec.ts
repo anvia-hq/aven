@@ -46,6 +46,26 @@ test.describe("a thread's changes", () => {
     await expect(panel).toHaveCount(0);
   });
 
+  test("the changes badge opens the panel on the same unshipped changes", async ({ page }) => {
+    await registerUser(page, "bad", "Badge User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto(`/threads/${threadId}`);
+    const badge = page.getByTitle("Changes not shipped yet");
+    await expect(badge).toHaveText("+2 -1");
+
+    await badge.click();
+
+    const panel = page.getByRole("region", { name: "Changes" });
+    await expect(panel.getByRole("tab", { name: "Unshipped" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(panel.getByText("2 files")).toContainText("+2 -1");
+  });
+
   test("shares its width with the desktop, so switching between them does not move the edge", async ({
     page,
   }) => {

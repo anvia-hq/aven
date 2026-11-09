@@ -4,23 +4,13 @@ import { Button } from "@/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 
-import type { ThreadPullRequest } from "../types";
+type Props = { disabled: boolean; onNew: () => void };
 
-type Props = {
-  pullRequests: ThreadPullRequest[];
-  canUpdate: boolean;
-  disabled: boolean;
-  onNew: () => void;
-};
-
-export function ShipMenu({ pullRequests, canUpdate, disabled, onNew }: Props) {
+export function ShipMenu({ disabled, onNew }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -35,28 +25,10 @@ export function ShipMenu({ pullRequests, canUpdate, disabled, onNew }: Props) {
       >
         <ChevronDown />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        {canUpdate && (
-          <>
-            <DropdownMenuItem disabled={disabled} onClick={onNew}>
-              <Plus /> Ship as a new PR
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Pull requests</DropdownMenuLabel>
-          {pullRequests.map((pull) => (
-            <DropdownMenuItem
-              key={pull.number}
-              render={<a href={pull.url} target="_blank" rel="noreferrer" />}
-            >
-              <span className="shrink-0 text-muted-foreground">#{pull.number}</span>
-              <span className="min-w-0 flex-1 truncate">{pull.title}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{pull.state}</span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuGroup>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem disabled={disabled} onClick={onNew}>
+          <Plus /> Ship as a new PR
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

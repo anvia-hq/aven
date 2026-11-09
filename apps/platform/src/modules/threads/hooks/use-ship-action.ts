@@ -1,0 +1,75 @@
+import { useCallback } from "react";
+
+import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
+import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
+
+import { shipActionOf } from "../ship-state";
+import type { OutgoingMessage, RunSelection, Thread } from "../types";
+import { useModelSelection } from "./use-model-selection";
+import { useShipReadiness } from "./use-ship-readiness";
+import { useShipThread } from "./use-ship-thread";
+
+type Send = (message: OutgoingMessage, selection?: RunSelection) => Promise<boolean>;
+
+export function useShipAction(
+  thread: Thread,
+  unshipped: ReturnType<typeof useThreadDiff>,
+  showShip: () => () => void,
+  send: Send,
+) {
+  const { shipping, ship } = useShipThread(thread, showShip);
+  const { gate, appKey } = useShipReadiness(thread.id, thread.running);
+  const account = useGithubAccount(appKey);
+  const { selection } = useModelSelection(thread.id);
+  const connected = account === null ? null : account.data?.connected !== false;
+  const changes = {
+    loaded: unshipped.loaded,
+    available: unshipped.available,
+    problem: unshipped.problem,
+    any: unshipped.files.length > 0,
+  };
+  const needsBranch =
+    connected === true &&
+    !shipping &&
+    !thread.running &&
+    changes.loaded &&
+    changes.problem === null &&
+    changes.available !== false &&
+    !changes.any &&
+    thread.pullRequests.length === 0;
+  const branch = useThreadDiff(thread.id, "all", thread.running, needsBranch);
+  const action = shipActionOf({
+    running: thread.running,
+    shipping,
+    gate,
+    appKey,
+    connected,
+    changes,
+    branch: {
+      loaded: branch.loaded,
+      available: branch.available,
+      problem: branch.problem,
+      any: branch.files.length > 0,
+    },
+    pullRequests: thread.pullRequests,
+  });
+
+  const setUp = useCallback(() => {
+    if (action.kind !== "set-up") return;
+    void send(
+      {
+        prompt: action.command,
+        attachments: [],
+        mentions: [{ type: "skill", name: action.skill, from: 0, to: action.command.length }],
+      },
+      selection,
+    );
+  }, [action, send, selection]);
+
+  const retry = useCallback(() => {
+    unshipped.reload();
+    branch.reload();
+  }, [unshipped, branch]);
+
+  return { action, ship, setUp, retry };
+}

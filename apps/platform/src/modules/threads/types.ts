@@ -84,6 +84,42 @@ export type ShipGate =
   | { kind: "unknown" }
   | { kind: "missing"; commands: string[] };
 
+export type ShipLabel = "Ship" | "Update PR" | "New PR";
+
+export type ShipAct =
+  | { kind: "loading" }
+  | { kind: "failed"; reason: string }
+  | { kind: "set-up"; command: string; skill: string; disabled: boolean }
+  | { kind: "connect"; appKey: string | null }
+  | { kind: "blocked"; label: ShipLabel }
+  | {
+      kind: "ship";
+      label: ShipLabel;
+      disabled: boolean;
+      shipping: boolean;
+      canOpenNew: boolean;
+    }
+  | { kind: "open"; disabled: boolean }
+  | { kind: "none" };
+
+export type ShipChanges = {
+  loaded: boolean;
+  available: boolean | null;
+  problem: string | null;
+  any: boolean;
+};
+
+export type ShipFacts = {
+  running: boolean;
+  shipping: boolean;
+  gate: ShipGate;
+  appKey: string | null;
+  connected: boolean | null;
+  changes: ShipChanges;
+  branch: ShipChanges;
+  pullRequests: ThreadPullRequest[];
+};
+
 export type ThreadPanels = ReturnType<typeof useThreadPanels>;
 
 export type Mentionable = Pick<MessageMention, "type" | "name">;

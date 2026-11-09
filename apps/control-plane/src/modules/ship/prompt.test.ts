@@ -33,6 +33,23 @@ describe("the prompt a Ship sends", () => {
     }
   });
 
+  test("tells the agent to skip the commit when the branch is already pushed", () => {
+    const prompt = shipPrompt(null, where);
+
+    expect(prompt).toContain(
+      "When the branch is already pushed and nothing is uncommitted there is nothing to commit: skip the commit and keep going, so the last step only opens the pull request",
+    );
+    expect(prompt).toContain("git log origin/main..HEAD");
+    expect(prompt).toContain("rebase onto origin/main");
+
+    const update = shipPrompt(null, { ...where, mode: "update", pullRequests: [open] });
+    expect(update).toContain("the push below updates its pull request");
+    expect(update).toContain("rebase onto origin/main");
+
+    const fresh = shipPrompt(null, { ...where, mode: "new", pullRequests: [merged] });
+    expect(fresh).not.toContain("already pushed");
+  });
+
   test("is the repository's own when it has one, as it is, then where the thread is", () => {
     const prompt = shipPrompt(
       text("  Rebase, run `bun test`, then open a PR with the template.\n"),
