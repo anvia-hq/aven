@@ -2,19 +2,19 @@ import { runCommand } from "./run-command";
 import type { DockerRun, HostReach } from "./types";
 
 export const REACH_TIMEOUT_SECONDS = 3;
-const SHELL_MISSING = 127;
-const CONNECT_FAILED = new Set([1, 124]);
+const BLOCKED = "blocked";
+const REACHABLE = "reachable";
 
 export function reachCheckScript(host: string, port: number) {
-  return `timeout ${REACH_TIMEOUT_SECONDS} bash -c 'echo > /dev/tcp/${host}/${port}'`;
+  return `timeout ${REACH_TIMEOUT_SECONDS} bash -c 'echo > /dev/tcp/${host}/${port}' 2>/dev/null && echo ${REACHABLE} || echo ${BLOCKED}`;
 }
 
 export function reachAdvice(host: string, port: number) {
   return `A sandbox cannot reach the runner at ${host}:${port}, so its tools cannot start. A firewall on this machine is probably dropping what a container sends to it. On Linux with ufw: sudo ufw allow in on docker0`;
 }
 
-export function reachBlocked(result: { code: number }) {
-  return CONNECT_FAILED.has(result.code);
+export function reachBlocked(result: { code: number; stdout: string }) {
+  return result.code === 0 && result.stdout.trim() === BLOCKED;
 }
 
 export async function containerReachesHost(
@@ -25,7 +25,7 @@ export async function containerReachesHost(
 ): Promise<boolean> {
   const result = await docker(["exec", container, "bash", "-c", reachCheckScript(host, port)], {
     timeoutMs: (REACH_TIMEOUT_SECONDS + 5) * 1000,
-  }).catch(() => ({ code: SHELL_MISSING }));
+  }).catch(() => ({ code: 1, stdout: "" }));
   return !reachBlocked(result);
 }
 
@@ -46,8 +46,8 @@ export async function checkSandboxReach(
     if (options.platform) args.push("--platform", options.platform);
     args.push(options.image, "bash", "-c", reachCheckScript(host, listener.port));
     const result = await docker(args, { timeoutMs: 120_000 });
-    if (result.code === 0) return { ok: true, detail: "a container reaches this machine" };
     if (reachBlocked(result)) return { ok: false, detail: reachAdvice(host, listener.port) };
+    if (result.code === 0) return { ok: true, detail: "a container reaches this machine" };
     return {
       ok: true,
       detail: `could not run the check (exit ${result.code}): ${result.stderr.trim()}`,
