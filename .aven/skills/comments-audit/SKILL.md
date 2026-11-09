@@ -20,7 +20,7 @@ From the repository root, on the files you changed:
 bun .aven/skills/comments-audit/scripts/find-comments.ts $(git diff --name-only main...HEAD; git diff --name-only; git ls-files --others --exclude-standard)
 ```
 
-It uses the TypeScript scanner, so text inside strings, regular expressions and templates is not mistaken for a comment, and it skips the directives above. It prints `file:line: comment` and exits 1 when there are any.
+It reads the comments between the tokens of the parsed file, so text inside strings, regular expressions, templates and JSX is not mistaken for a comment, and it skips the directives above. It prints `file:line: comment` and exits 1 when there are any. Leave out generated files (`apps/platform/src/routeTree.gen.ts`) and the vendored `apps/platform/src/components/`.
 
 ## 2. Remove each one the right way
 
