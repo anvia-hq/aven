@@ -23,10 +23,12 @@ test.describe("a thread's background tasks", () => {
 
     const card = page.getByRole("region", { name: "Background tasks" });
     await expect(card).toContainText("npm run dev");
-    await expect(card).toContainText("Running for 3 minutes");
-    await expect(card).toContainText("bun test");
-    await expect(card).toContainText("Exited with code 1");
+    await expect(card.getByText("3m", { exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: /^Stop/ })).toHaveCount(1);
+
+    await card.getByRole("button", { name: "Ended (1)" }).click();
+    await expect(card).toContainText("bun test");
+    await expect(card.getByText("Exit 1", { exact: true })).toBeVisible();
 
     await card
       .getByRole("button", { name: /npm run dev/ })
