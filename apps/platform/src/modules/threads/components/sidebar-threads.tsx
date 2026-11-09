@@ -216,10 +216,7 @@ export function SidebarThreads() {
               onDragStart={(event) => dragThread(event, thread.id)}
             />
           }
-          isActive={
-            pathname === `/threads/${thread.id}` ||
-            (split !== undefined && pathname === `/threads/${split}`)
-          }
+          isActive={pathname === `/threads/${thread.id}`}
           className={cn("pr-11", nested && "pl-8")}
         >
           <SidebarProjectTile
