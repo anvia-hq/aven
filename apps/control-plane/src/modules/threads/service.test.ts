@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
+import { members } from "@aven/db/schema/members";
+import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
@@ -22,6 +24,10 @@ run("threadsService (postgres)", async () => {
   const teammateId = `${userId}-mate`;
   await db.insert(users).values({ id: teammateId, name: "Mate", email: `${teammateId}@aven.test` });
   const teammate = { organizationId: orgA, userId: teammateId };
+  await db.insert(members).values([
+    { id: `${userId}-m`, organizationId: orgA, userId, role: "owner" },
+    { id: `${teammateId}-m`, organizationId: orgA, userId: teammateId, role: "member" },
+  ]);
 
   afterAll(async () => {
     await db.delete(users).where(eq(users.id, teammateId));
@@ -163,5 +169,56 @@ run("threadsService (postgres)", async () => {
     await expect(threadsService.readable(outsider, thread.id)).rejects.toBeInstanceOf(
       ThreadNotFoundError,
     );
+  });
+
+  test("multiplayer is the creator's to turn on, for a thread the workspace sees, and lapses by itself (decision 0179)", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    await expect(threadsService.update(mine, thread.id, { driving: 7 })).rejects.toThrow(
+      "Share the thread",
+    );
+    await expect(threadsService.drivable(teammate, thread.id)).rejects.toBeInstanceOf(
+      ThreadNotFoundError,
+    );
+
+    const shared = await threadsService.update(mine, thread.id, {
+      visibility: "workspace",
+      driving: 7,
+    });
+    expect(shared?.drivingUntil).toBeInstanceOf(Date);
+    expect((await threadsService.drivable(teammate, thread.id)).id).toBe(thread.id);
+    expect(await threadsService.update(teammate, thread.id, { driving: null })).toBeNull();
+
+    await db
+      .update(threads)
+      .set({ drivingUntil: new Date(Date.now() - 1000) })
+      .where(eq(threads.id, thread.id));
+    await expect(threadsService.drivable(teammate, thread.id)).rejects.toBeInstanceOf(
+      ThreadNotFoundError,
+    );
+    expect((await threadsService.drivable(mine, thread.id)).id).toBe(thread.id);
+
+    await threadsService.update(mine, thread.id, { driving: 7 });
+    await db.delete(members).where(eq(members.id, `${userId}-m`));
+    await expect(threadsService.drivable(teammate, thread.id)).rejects.toBeInstanceOf(
+      ThreadNotFoundError,
+    );
+  });
+
+  test("making a thread private, archiving it or turning multiplayer off ends it", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    const on = () =>
+      threadsService.update(mine, thread.id, { visibility: "workspace", driving: 3 });
+    expect((await on())?.drivingUntil).not.toBeNull();
+    expect(
+      (await threadsService.update(mine, thread.id, { visibility: "private" }))?.drivingUntil,
+    ).toBeNull();
+    await on();
+    expect(
+      (await threadsService.update(mine, thread.id, { state: "archived" }))?.drivingUntil,
+    ).toBeNull();
+    await on();
+    expect(
+      (await threadsService.update(mine, thread.id, { driving: null }))?.drivingUntil,
+    ).toBeNull();
   });
 });

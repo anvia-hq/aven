@@ -1,4 +1,5 @@
 import { MAX_SKILL_NAME, SKILL_NAME } from "@aven/agents/skills";
+import { DRIVING_DAYS_MAX } from "@aven/protocol/drivers";
 import { ATTACHMENT_LIMITS, MENTION_LIMIT, mentionToken } from "@aven/protocol/events";
 import { z } from "zod";
 
@@ -18,9 +19,14 @@ export const updateThreadBody = z
     title: z.string().trim().min(1).max(200).optional(),
     state: z.enum(["open", "snoozed", "archived"]).optional(),
     visibility: z.enum(["private", "workspace"]).optional(),
+    driving: z.number().int().min(1).max(DRIVING_DAYS_MAX).nullable().optional(),
   })
   .refine(
-    (body) => body.title !== undefined || body.state !== undefined || body.visibility !== undefined,
+    (body) =>
+      body.title !== undefined ||
+      body.state !== undefined ||
+      body.visibility !== undefined ||
+      body.driving !== undefined,
     {
       message: "Nothing to update",
     },
