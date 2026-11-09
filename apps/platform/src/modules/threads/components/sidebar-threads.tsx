@@ -23,8 +23,10 @@ import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
+import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { dragThread } from "../split";
+import { SplitPairGroup } from "./split-pair-group";
 import { crowdOf } from "../thread-crowd";
 import type { Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
@@ -176,6 +178,7 @@ export function SidebarThreads() {
   const rename = useRenameThread();
   useFinishedSound();
   const unread = useUnreadThreads();
+  const { pairs, partnerOf, unpair } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
@@ -189,6 +192,71 @@ export function SidebarThreads() {
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
     return `${thread.running ? "Running" : "Hosted"} on ${host}`;
+  }
+
+  function row(
+    thread: Thread,
+    {
+      nested = false,
+      first = true,
+      last = true,
+      split,
+    }: { nested?: boolean; first?: boolean; last?: boolean; split?: string },
+  ) {
+    return (
+      <SidebarMenuItem key={thread.id}>
+        {nested && <ForkElbow first={first} last={last} />}
+        {unread.has(thread.id) && <UnreadDot />}
+        <SidebarMenuButton
+          render={
+            <Link
+              to="/threads/$threadId"
+              params={{ threadId: thread.id }}
+              search={{ split }}
+              onDragStart={(event) => dragThread(event, thread.id)}
+            />
+          }
+          isActive={
+            pathname === `/threads/${thread.id}` ||
+            (split !== undefined && pathname === `/threads/${split}`)
+          }
+          className={cn("pr-11", nested && "pl-8")}
+        >
+          <SidebarProjectTile
+            thread={thread}
+            project={projects.find((candidate) => candidate.id === thread.projectId)}
+            palette={palettes.get(thread.projectId)}
+          />
+          <SharedMark thread={thread} />
+          <ForkMark thread={thread} />
+          <ThreadTitle
+            thread={thread}
+            hint={hostLabel(thread)}
+            editing={editing === thread.id}
+            onEdit={() => setEditing(thread.id)}
+            onDone={(value) => {
+              setEditing(null);
+              if (value !== undefined) void rename(thread, value);
+            }}
+          />
+          <CrowdMark thread={thread} />
+        </SidebarMenuButton>
+        <UpdatedAt thread={thread} yields />
+        <SidebarMenuAction
+          className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
+          aria-label={`Archive ${thread.title}`}
+          title="Archive"
+          onClick={() => void archive(thread)}
+        >
+          <Archive />
+        </SidebarMenuAction>
+      </SidebarMenuItem>
+    );
+  }
+
+  function pairedWith(id: string) {
+    const partner = threads.find((thread) => thread.id === partnerOf(id));
+    return partner && partner.id !== id ? partner : undefined;
   }
 
   return (
@@ -205,53 +273,33 @@ export function SidebarThreads() {
         </Button>
       </div>
       <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
-        {nestForks(threads).map(({ thread, nested }, index, rows) => (
-          <SidebarMenuItem key={thread.id}>
-            {nested && (
-              <ForkElbow first={!rows[index - 1]?.nested} last={!rows[index + 1]?.nested} />
-            )}
-            {unread.has(thread.id) && <UnreadDot />}
-            <SidebarMenuButton
-              render={
-                <Link
-                  to="/threads/$threadId"
-                  params={{ threadId: thread.id }}
-                  onDragStart={(event) => dragThread(event, thread.id)}
-                />
-              }
-              isActive={pathname === `/threads/${thread.id}`}
-              className={cn("pr-11", nested && "pl-8")}
-            >
-              <SidebarProjectTile
-                thread={thread}
-                project={projects.find((candidate) => candidate.id === thread.projectId)}
-                palette={palettes.get(thread.projectId)}
-              />
-              <SharedMark thread={thread} />
-              <ForkMark thread={thread} />
-              <ThreadTitle
-                thread={thread}
-                hint={hostLabel(thread)}
-                editing={editing === thread.id}
-                onEdit={() => setEditing(thread.id)}
-                onDone={(value) => {
-                  setEditing(null);
-                  if (value !== undefined) void rename(thread, value);
-                }}
-              />
-              <CrowdMark thread={thread} />
-            </SidebarMenuButton>
-            <UpdatedAt thread={thread} yields />
-            <SidebarMenuAction
-              className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
-              aria-label={`Archive ${thread.title}`}
-              title="Archive"
-              onClick={() => void archive(thread)}
-            >
-              <Archive />
-            </SidebarMenuAction>
-          </SidebarMenuItem>
-        ))}
+        {nestForks(threads).map(({ thread, nested }, index, rows) => {
+          const partner = pairedWith(thread.id);
+          if (partner) {
+            const first =
+              rows.findIndex((row) => row.thread.id === thread.id) <
+              rows.findIndex((row) => row.thread.id === partner.id);
+            if (!first) return null;
+            return (
+              <SidebarMenuItem key={`pair-${thread.id}-${partner.id}`}>
+                <SplitPairGroup
+                  titles={[thread.title, partner.title]}
+                  onUnpair={() => unpair(thread.id)}
+                >
+                  {(pairs.find((each) => each[0] === partner.id)
+                    ? [partner, thread]
+                    : [thread, partner]
+                  ).map((shown, at, both) => row(shown, { split: both[1 - at]!.id }))}
+                </SplitPairGroup>
+              </SidebarMenuItem>
+            );
+          }
+          return row(thread, {
+            nested,
+            first: !rows[index - 1]?.nested,
+            last: !rows[index + 1]?.nested,
+          });
+        })}
         {threads.length === 0 && (
           <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>
         )}

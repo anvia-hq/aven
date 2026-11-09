@@ -1,6 +1,6 @@
 import type { DragEvent } from "react";
 
-import type { SplitSide } from "./types";
+import type { SplitPair, SplitSide } from "./types";
 
 export const THREAD_DRAG = "application/x-aven-thread";
 
@@ -32,3 +32,16 @@ export function splitWith(
   }
   return { threadId, split: dropped };
 }
+
+export const withPair = (pairs: SplitPair[], left: string, right: string): SplitPair[] => [
+  ...pairs.filter((pair) => !pair.includes(left) && !pair.includes(right)),
+  [left, right],
+];
+
+export const withoutPair = (pairs: SplitPair[], id: string): SplitPair[] =>
+  pairs.filter((pair) => !pair.includes(id));
+
+export const partnerOf = (pairs: SplitPair[], id: string) => {
+  const pair = pairs.find((each) => each.includes(id));
+  return pair?.find((each) => each !== id);
+};
