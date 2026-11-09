@@ -1,15 +1,51 @@
+import { Button } from "@/components/button";
+
+import type { ThreadDiff } from "../types";
 import { DiffStat } from "./diff-stat";
 
-type Props = { empty: boolean; additions: number; deletions: number };
+type Props = { diff: ThreadDiff; onOpen: () => void };
 
-export function ChangesBadge({ empty, additions, deletions }: Props) {
-  if (empty) return null;
+const PILL =
+  "h-7 gap-1 rounded-lg border bg-background px-2.5 font-mono text-[0.8rem] font-normal shadow-md";
+
+export function ChangesBadge({ diff, onOpen }: Props) {
+  if (!diff.loaded) {
+    return (
+      <span className={PILL} role="status" aria-label="Changes loading">
+        <span aria-hidden className="invisible">
+          +00 -00
+        </span>
+      </span>
+    );
+  }
+  if (diff.problem) {
+    return (
+      <Button variant="outline" size="sm" className={PILL} title={diff.problem} onClick={onOpen}>
+        Changes unknown
+      </Button>
+    );
+  }
+  if (diff.available === false) return null;
+  if (diff.files.length === 0) return null;
+  const counted = diff.additions > 0 || diff.deletions > 0;
   return (
-    <p
-      className="rounded-lg border bg-background px-2 py-1 font-mono text-xs shadow-md"
+    <Button
+      variant="outline"
+      size="sm"
+      className={PILL}
       title="Changes not shipped yet"
+      aria-label="Changes not shipped yet"
+      onClick={onOpen}
     >
-      <DiffStat additions={additions} deletions={deletions} />
-    </p>
+      {counted ? (
+        <DiffStat additions={diff.additions} deletions={diff.deletions} />
+      ) : (
+        fileCount(diff.files.length)
+      )}
+    </Button>
   );
+}
+
+function fileCount(files: number) {
+  return `${files} ${files === 1 ? "file" : "files"}`;
 }

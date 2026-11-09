@@ -19,6 +19,7 @@ type Props = {
 
 const EMPTY: Record<DiffScope, string> = {
   turn: "The last turn changed no files.",
+  unshipped: "Everything the branch changed is shipped.",
   all: "This thread has not changed any files yet.",
 };
 
@@ -29,6 +30,7 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
     scope,
     running,
   );
+  const counted = additions > 0 || deletions > 0;
 
   return (
     <SidePanel
@@ -40,7 +42,7 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           {files.length > 0 && (
             <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
               {files.length} {files.length === 1 ? "file" : "files"}{" "}
-              <DiffStat additions={additions} deletions={deletions} />
+              {counted && <DiffStat additions={additions} deletions={deletions} />}
             </p>
           )}
           {files.length === 0 && <span className="flex-1" />}
@@ -61,6 +63,7 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
         <Tabs value={scope} onValueChange={(next) => isDiffScope(next) && setScope(next)}>
           <TabsList>
             <TabsTrigger value="turn">Last turn</TabsTrigger>
+            <TabsTrigger value="unshipped">Unshipped</TabsTrigger>
             <TabsTrigger value="all">Full diff</TabsTrigger>
           </TabsList>
         </Tabs>

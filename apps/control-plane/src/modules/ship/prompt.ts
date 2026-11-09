@@ -38,6 +38,10 @@ function modeNote(context: Context) {
 
 function defaultPrompt(context: Context) {
   const { base, mode } = context;
+  const nothingToCommit =
+    mode === "update"
+      ? "When the branch is already pushed and nothing is uncommitted there is nothing to commit: skip the commit and keep going, since the push below updates its pull request."
+      : "When the branch is already pushed and nothing is uncommitted there is nothing to commit: skip the commit and keep going, so the last step only opens the pull request.";
   const steps =
     mode === "new"
       ? [
@@ -46,7 +50,7 @@ function defaultPrompt(context: Context) {
           "Commit it with clear imperative commit messages. Do not commit secrets, .env files or build output.",
         ]
       : [
-          "Look at git status and git diff. Commit everything that belongs to the work, with clear imperative commit messages. Do not commit secrets, .env files or build output.",
+          `Look at git status and git log origin/${base}..HEAD. ${nothingToCommit} Commit everything that belongs to the work, with clear imperative commit messages. Do not commit secrets, .env files or build output.`,
           `Bring the branch up to date: git fetch origin ${base}, then rebase onto origin/${base}. Resolve conflicts if you can; if one needs a decision, ask me.`,
         ];
   steps.push(

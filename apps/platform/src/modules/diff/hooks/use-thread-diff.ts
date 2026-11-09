@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useRequest } from "@/hooks/use-request";
 
@@ -7,12 +7,21 @@ import type { ThreadDiffResponse, ThreadDiffScope } from "../types";
 
 const POLL_MS = 4_000;
 
-export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running: boolean) {
-  const answer = useRequest<ThreadDiffResponse>(`/threads/${threadId}/diff?scope=${scope}`, {
-    key: `${threadId}/${scope}`,
-    pollMs: running ? POLL_MS : undefined,
-    resetOn: threadId,
-  });
+export function useThreadDiff(
+  threadId: string,
+  scope: ThreadDiffScope,
+  running: boolean,
+  enabled = true,
+) {
+  const [reads, setReads] = useState(0);
+  const answer = useRequest<ThreadDiffResponse>(
+    enabled ? `/threads/${threadId}/diff?scope=${scope}` : null,
+    {
+      key: `${threadId}/${scope}/${reads}`,
+      pollMs: running ? POLL_MS : undefined,
+      resetOn: threadId,
+    },
+  );
 
   const response = answer?.data ?? null;
   const patch = response?.available ? response : null;
@@ -20,6 +29,8 @@ export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running:
 
   const additions = useMemo(() => files.reduce((sum, file) => sum + file.additions, 0), [files]);
   const deletions = useMemo(() => files.reduce((sum, file) => sum + file.deletions, 0), [files]);
+
+  const reload = useCallback(() => setReads((count) => count + 1), []);
 
   return {
     loaded: answer !== null,
@@ -29,5 +40,6 @@ export function useThreadDiff(threadId: string, scope: ThreadDiffScope, running:
     files,
     additions,
     deletions,
+    reload,
   };
 }

@@ -2,11 +2,11 @@ export type ThreadDiffResponse =
   | { available: false }
   | { available: true; patch: string; truncated: boolean };
 
-const DIFF_SCOPES = ["turn", "all"] as const;
+const DIFF_SCOPES = ["turn", "unshipped", "all"] as const;
 
 export type DiffScope = (typeof DIFF_SCOPES)[number];
 
-export type ThreadDiffScope = DiffScope | "unshipped";
+export type ThreadDiffScope = DiffScope;
 
 export const isDiffScope = (value: unknown): value is DiffScope =>
   (DIFF_SCOPES as readonly unknown[]).includes(value);
@@ -41,3 +41,13 @@ export type DiffFile = {
 };
 
 export type SplitRow = { old?: DiffRow; new?: DiffRow };
+
+export type ThreadDiff = {
+  loaded: boolean;
+  problem: string | null;
+  available: boolean | null;
+  truncated: boolean;
+  files: DiffFile[];
+  additions: number;
+  deletions: number;
+};
