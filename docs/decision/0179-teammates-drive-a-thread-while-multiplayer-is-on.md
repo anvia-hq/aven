@@ -21,4 +21,5 @@ A run is sent as one person: their model provider and key, their GitHub account 
 ## Consequences
 
 - The creator keeps the credentials and the bill and chooses how long to trust the team, as with a shell lent for a week. This guards against accident, not against a determined member: a driver can ask the agent to run anything in the sandbox as the creator.
+- A driver acts through the creator's computer, so what the creator signed in to in its browser (decision 0180) is reachable by what a driver asks the agent to do, the same as the credentials above.
 - A per-server setting that allows an MCP server in multiplayer (Amp's "Use in Multiplayer Threads"), shipping by a driver and per-driver GitHub identity, a workspace switch that forbids multiplayer, presence, `@` invitations and an audit trail of who drove are later work.
