@@ -163,3 +163,5 @@ export type MentionPerson = { id: string; name: string; email: string; image: st
 export type SplitSide = "left" | "right";
 
 export type SplitPair = [string, string];
+
+export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: boolean };
