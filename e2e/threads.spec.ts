@@ -222,6 +222,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await startThread(page, "Catch up with main");
 
+    await page.locator('[data-role="worked"]').click();
     const group = page.getByRole("button", { name: "Fetched from GitHub" });
     await expect(group).toBeVisible();
     await group.click();
@@ -259,6 +260,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await startThread(page, "Set up this repo");
 
+    await page.locator('[data-role="worked"]').click();
     const group = page.getByRole("button", { name: "Saved the environment" });
     await expect(group).toBeVisible();
     await group.click();
@@ -396,7 +398,7 @@ test.describe("threads", () => {
       { type: "tool_end", id: "c3", status: "error", output: "File not found: missing.txt" },
       { type: "text", delta: "All " },
       { type: "text", delta: "done." },
-      { type: "done" },
+      { type: "done", workedMs: 124_000 },
     ];
     await page.route("**/api/threads/*/events", (route) =>
       route.fulfill({
@@ -411,8 +413,11 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await expect(page.locator('[data-role="user"]')).toContainText("Rename hello to bye");
-    await expect(page.getByText("Reading the file.")).toBeVisible();
     await expect(page.getByText("All done.")).toBeVisible();
+    await expect(page.getByText("Reading the file.")).toBeHidden();
+    await expect(page.locator('[data-role="worked"]')).toHaveText("Worked for 2m 4s");
+    await page.locator('[data-role="worked"]').click();
+    await expect(page.getByText("Reading the file.")).toBeVisible();
 
     const group = page.getByRole("button", { name: /^Read 2 files, edited a file/ });
     await expect(group).toBeVisible();
