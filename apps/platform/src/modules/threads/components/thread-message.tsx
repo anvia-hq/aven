@@ -90,7 +90,7 @@ export const ThreadMessage = memo(function ThreadMessage({
     return (
       <div
         className={cn(
-          "my-6 flex max-w-[80%] flex-col gap-2",
+          "flex max-w-[80%] flex-col gap-2",
           mine ? "ml-auto items-end" : "mr-auto items-start",
           sending && "opacity-60",
         )}
