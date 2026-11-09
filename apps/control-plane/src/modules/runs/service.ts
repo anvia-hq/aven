@@ -28,8 +28,12 @@ import type {
   ThreadUsage,
 } from "@aven/protocol/types";
 
+const answerMark = (messages: ChatMessage[]) =>
+  `${messages.length}:${messages.findLast((message) => message.role === "assistant")?.parts.length ?? 0}`;
+
 type ActiveRun = {
   handle: RuntimeRun;
+  markAtStart: string;
   messages: ChatMessage[];
   usage: ThreadUsage;
   cancelled: boolean;
@@ -202,6 +206,7 @@ export class RunManager {
     const { thread } = channel;
     const run: ActiveRun = {
       handle,
+      markAtStart: "",
       messages: [],
       usage: usageFromHistory([]),
       cancelled: false,
@@ -233,6 +238,7 @@ export class RunManager {
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
     this.#emit(channel, opening);
+    run.markAtStart = answerMark(run.messages);
     this.#recordFailure(channel, null);
     void this.#consume(channel, run);
   }
@@ -467,7 +473,11 @@ export class RunManager {
         : { type: "done", workedMs },
     );
     const answered = run.messages.findLastIndex((message) => message.role === "assistant");
-    if (ending.outcome !== "failed" && answered !== -1) {
+    if (
+      ending.outcome !== "failed" &&
+      answered !== -1 &&
+      answerMark(run.messages) !== run.markAtStart
+    ) {
       this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
         console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
       });
