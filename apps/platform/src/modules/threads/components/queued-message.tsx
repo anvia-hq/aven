@@ -1,4 +1,5 @@
 import { parseDriverPrompt } from "@aven/protocol/drivers";
+import { systemNoteOf } from "@aven/protocol/system-notes";
 
 import { Markdown } from "@/components/markdown";
 
@@ -7,6 +8,7 @@ import type { QueuedSteer } from "../types";
 import { mentionCode } from "./mention-code";
 
 export function QueuedMessage({ message }: { message: QueuedSteer }) {
+  if (systemNoteOf(message.prompt)?.kind === "process") return null;
   const { driver, text } = parseDriverPrompt(message.prompt);
   return (
     <div className="ml-auto flex max-w-[80%] flex-col items-end gap-1" data-role="user" data-queued>
