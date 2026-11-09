@@ -6,6 +6,7 @@ import {
   List,
   Monitor,
   Terminal,
+  X,
 } from "@mynaui/icons-react";
 import type { ComponentType } from "react";
 
@@ -27,6 +28,7 @@ type Props = {
   thread: Thread;
   panels: ThreadPanels;
   owned: boolean;
+  onClose?: () => void;
 };
 
 type Toggle = {
@@ -36,7 +38,7 @@ type Toggle = {
   show: boolean;
 };
 
-export function ThreadHeader({ thread, panels, owned }: Props) {
+export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
   const toggles: Toggle[] = [
     { label: "Overview", icon: List, panel: panels.overview, show: true },
     { label: "Desktop", icon: Monitor, panel: panels.desktop, show: owned },
@@ -50,7 +52,18 @@ export function ThreadHeader({ thread, panels, owned }: Props) {
     <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10 md:px-4">
       <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</h1>
       {owned && <ThreadShare thread={thread} />}
-      <div className="hidden items-center gap-2 sm:flex">
+      {onClose && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Close ${thread.title}`}
+          title="Close"
+          onClick={onClose}
+        >
+          <X />
+        </Button>
+      )}
+      <div className={cn("hidden items-center gap-2 sm:flex", onClose && "sm:hidden")}>
         {shown.map(({ label, icon, panel }) => (
           <PanelToggle
             key={label}
@@ -61,7 +74,7 @@ export function ThreadHeader({ thread, panels, owned }: Props) {
           />
         ))}
       </div>
-      <PanelsMenu toggles={shown} className="sm:hidden" />
+      {!onClose && <PanelsMenu toggles={shown} className="sm:hidden" />}
     </header>
   );
 }

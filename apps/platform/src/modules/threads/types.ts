@@ -159,3 +159,7 @@ export type Block =
   | { type: "tools"; entries: ToolGroupEntry[] };
 
 export type MentionPerson = { id: string; name: string; email: string; image: string | null };
+
+export type SplitSide = "left" | "right";
+
+export type SplitPair = [string, string];
