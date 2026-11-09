@@ -395,6 +395,7 @@ export type DiffScope = (typeof DIFF_SCOPES)[number];
 export type ThreadDiff = {
   patch: string;
   truncated: boolean;
+  branch?: string | null;
 };
 
 export type FilesCallMethod = "files.list" | "files.read" | "files.search";

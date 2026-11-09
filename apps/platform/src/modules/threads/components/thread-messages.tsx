@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
+import { mergedRuns } from "../merged-runs";
 import type { ChatMessage, QueuedSteer, Viewer } from "../types";
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
@@ -43,6 +44,8 @@ export function ThreadMessages({
   aside,
 }: Props) {
   const scrollRef = useScrollToBottom(messages.length + pending.length + steers.length);
+  const earlierRuns = useMemo(() => mergedRuns(earlier, false), [earlier]);
+  const runs = useMemo(() => mergedRuns(messages, running), [messages, running]);
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">
@@ -61,7 +64,7 @@ export function ThreadMessages({
                 </Button>
               </div>
             )}
-            {earlier.map((message) => (
+            {earlierRuns.map((message) => (
               <ThreadMessage
                 key={message.id}
                 message={message}
@@ -72,13 +75,13 @@ export function ThreadMessages({
             {messages.length === 0 && pending.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
-            {messages.map((message, index) => (
+            {runs.map((message, index) => (
               <ThreadMessage
                 key={message.id}
                 message={message}
                 threadId={threadId}
                 viewer={viewer}
-                streaming={running && index === messages.length - 1}
+                streaming={running && index === runs.length - 1}
               />
             ))}
             {pending.map((message) => (

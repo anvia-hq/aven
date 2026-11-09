@@ -170,10 +170,12 @@ test.describe("shipping a thread", () => {
     try {
       await page.goto(`/threads/${threadId}`);
       await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
-      await expect(page.getByRole("status", { name: "Reading the changes" })).toBeVisible();
+      const reading = page.getByRole("status", { name: "Reading the changes" });
+      await expect(reading).toBeAttached();
+      await expect(reading).toHaveCSS("opacity", "0");
       await expect(shipButton(page)).toHaveCount(0);
       await expect(changesBadge(page)).toHaveCount(0);
-      await expect(page.getByRole("status", { name: "Changes loading" })).toBeVisible();
+      await expect(page.getByRole("status", { name: "Changes loading" })).toHaveCSS("opacity", "0");
     } finally {
       held.resolve();
     }
@@ -232,6 +234,28 @@ test.describe("shipping a thread", () => {
 
     await open.click();
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
+  });
+
+  test("does not offer to open a pull request for a branch GitHub already has one for, and shows it", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const branch = `feat/vector-${testKey.slice(-8)}`;
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS: "1",
+      FAKE_AVEN_FILES: "setup,ship",
+      FAKE_BRANCH: branch,
+    });
+    runner = child;
+    await page.request.post(pullsUrl(), { data: { head: branch, title: "Record vector context" } });
+    await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
+
+    await page.goto(`/threads/${threadId}`);
+
+    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
+    await expect(shipButton(page)).toHaveCount(0);
   });
 
   test("two pull requests sit behind the newest one's +1, with no Ship", async ({ page }) => {

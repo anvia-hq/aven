@@ -119,6 +119,13 @@ export type ShipChanges = {
   any: boolean;
 };
 
+export type ShipBranchPulls = {
+  loaded: boolean;
+  problem: string | null;
+  known: boolean;
+  any: boolean;
+};
+
 export type ShipFacts = {
   running: boolean;
   shipping: boolean;
@@ -127,6 +134,7 @@ export type ShipFacts = {
   connected: boolean | null;
   changes: ShipChanges;
   branch: ShipChanges;
+  branchPulls: ShipBranchPulls;
   pullRequests: ThreadPullRequest[];
 };
 

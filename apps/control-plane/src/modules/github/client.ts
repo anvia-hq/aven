@@ -80,6 +80,16 @@ function pullState(pull: PullPayload): GithubPullRequest["state"] {
   return pull.state === "open" ? "open" : "closed";
 }
 
+function asPullRequest(pull: PullPayload): GithubPullRequest {
+  return {
+    number: pull.number,
+    url: pull.html_url,
+    title: pull.title,
+    branch: pull.head.ref,
+    state: pullState(pull),
+  };
+}
+
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 type RepoPayload = {
@@ -306,9 +316,7 @@ export class GithubClient {
     return `${webUrl}/login/oauth/authorize?${new URLSearchParams({ client_id: clientId, state })}`;
   }
 
-  async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
-    const [, name] = fullName.split("/") as [string, string];
-    let token: string;
+  async #readToken(installationId: number, name: string) {
     try {
       const issued = await this.#api<{ token: string }>(
         `/app/installations/${installationId}/access_tokens`,
@@ -321,11 +329,17 @@ export class GithubClient {
           }),
         },
       );
-      token = issued.token;
+      return issued.token;
     } catch (error) {
-      if (error instanceof GithubApiError && error.status === 422) return [];
+      if (error instanceof GithubApiError && error.status === 422) return null;
       throw error;
     }
+  }
+
+  async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
+    const [, name] = fullName.split("/") as [string, string];
+    const token = await this.#readToken(installationId, name);
+    if (token === null) return [];
     const query = new URLSearchParams({
       state: "all",
       sort: "created",
@@ -339,13 +353,26 @@ export class GithubClient {
           (pull.head.ref === branchPrefix || pull.head.ref.startsWith(`${branchPrefix}-`)) &&
           pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase(),
       )
-      .map((pull): GithubPullRequest => ({
-        number: pull.number,
-        url: pull.html_url,
-        title: pull.title,
-        branch: pull.head.ref,
-        state: pullState(pull),
-      }));
+      .map(asPullRequest);
+  }
+
+  async branchPullRequests(installationId: number, fullName: string, branch: string) {
+    const [owner, name] = fullName.split("/") as [string, string];
+    const token = await this.#readToken(installationId, name);
+    if (token === null) return null;
+    const query = new URLSearchParams({
+      state: "all",
+      head: `${owner}:${branch}`,
+      per_page: String(PAGE_SIZE),
+    });
+    const pulls = await this.#api<PullPayload[]>(`${repoPath(fullName)}/pulls?${query}`, token);
+    return pulls
+      .filter(
+        (pull) =>
+          pull.head.ref === branch &&
+          pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase(),
+      )
+      .map(asPullRequest);
   }
 
   async canWrite(installationId: number) {
