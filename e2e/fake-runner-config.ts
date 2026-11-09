@@ -18,6 +18,7 @@ export const FAKE_RUNNER_SWITCHES = {
   runEndsAfterMs: "FAKE_RUN_ENDS_AFTER",
   runFails: "FAKE_RUN_FAILS",
   avenFiles: "FAKE_AVEN_FILES",
+  branch: "FAKE_BRANCH",
   processes: "FAKE_PROCESSES",
   updateBusy: "FAKE_UPDATE_BUSY",
   steerRefuses: "FAKE_STEER_REFUSES",
@@ -102,6 +103,7 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     steerAppliesAfterMs,
     steerRefuses,
     avenFiles,
+    branch,
     processes,
   } = FAKE_RUNNER_SWITCHES;
   return {
@@ -118,6 +120,7 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
       refuseReason: valueOf(env, steerRefuses),
     },
     avenFiles: (given(env, avenFiles) ?? "").split(","),
+    branch: valueOf(env, branch) ?? "aven/fake-branch",
     backgroundProcesses: on(env, processes),
   };
 }

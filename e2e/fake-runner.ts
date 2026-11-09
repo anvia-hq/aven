@@ -444,6 +444,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     return reply({
       patch: scope === "turn" ? TURN_PATCH : TURN_PATCH + ALL_ONLY_PATCH,
       truncated: false,
+      branch: config.branch,
     });
   }
   if (call.method === "files.list") {
