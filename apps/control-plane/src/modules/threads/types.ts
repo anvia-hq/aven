@@ -73,3 +73,9 @@ export type PatchOf = (
 ) => Promise<{ patch: string; truncated: boolean } | null>;
 
 export type ThreadContinuation = ReturnType<typeof createThreadContinuation>;
+
+export type PersonMention = { id: string; name: string };
+
+export type AddressingScores = { toAgent: number; toPerson: number };
+
+export type Addressing = { agentAction: boolean; by: "model" | "fallback" };
