@@ -6,8 +6,8 @@ import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
 import { useSkills } from "@/modules/skills/hooks/use-skills";
 
-import { COMPACT_COMMAND } from "../mentions";
-import type { Mentionable } from "../types";
+import { COMPACT_COMMAND, PERSON_PREFIX, personToken } from "../mentions";
+import type { Mentionable, MentionPerson } from "../types";
 
 const REPO_SKILLS = ".aven/skills";
 const SEARCH_DELAY_MS = 120;
@@ -39,7 +39,16 @@ const compactItem: ComposerTriggerItem = {
   detail: "Summarize the conversation so far to free up context",
 };
 
-export function useMentions(threadId: string | undefined) {
+const personItem = (person: MentionPerson): ComposerTriggerItem => ({
+  id: `${PERSON_PREFIX}${person.id}`,
+  label: person.name,
+  text: personToken(person),
+  detail: person.email,
+});
+
+export function useMentions(threadId: string | undefined, people: MentionPerson[] = []) {
+  const mentionable = useRef(people);
+  mentionable.current = people;
   const { personal, builtIn, loaded } = useSkills();
   const skillsLoaded = useRef(Promise.withResolvers<void>());
   useEffect(() => {
@@ -98,13 +107,17 @@ export function useMentions(threadId: string | undefined) {
       id: "file",
       char: "@",
       items: async ({ query, signal }) => {
-        if (!(await wait(SEARCH_DELAY_MS, signal))) return [];
+        const wanted = query.toLowerCase();
+        const teammates = mentionable.current
+          .filter(({ name, email }) => `${name} ${email}`.toLowerCase().includes(wanted))
+          .map(personItem);
+        if (!(await wait(SEARCH_DELAY_MS, signal))) return teammates;
         const found = await api<SearchResponse>(
           `/threads/${threadId}/files/search?q=${encodeURIComponent(query)}`,
           { signal },
         ).catch(() => undefined);
-        if (!found?.available) return [];
-        return found.paths.map((path) => itemOf({ type: "file", name: path }));
+        if (!found?.available) return teammates;
+        return [...teammates, ...found.paths.map((path) => itemOf({ type: "file", name: path }))];
       },
     };
     return [fileTrigger, skillTrigger];
