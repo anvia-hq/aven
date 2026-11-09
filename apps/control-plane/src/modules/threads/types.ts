@@ -79,3 +79,13 @@ export type PersonMention = { id: string; name: string };
 export type AddressingScores = { toAgent: number; toPerson: number };
 
 export type Addressing = { agentAction: boolean; by: "model" | "fallback" };
+
+export type GateRequest = {
+  organizationId: string;
+  prompt: string;
+  author: string;
+  owner: string;
+  recent: { author: string; text: string }[];
+};
+
+export type AddressingGate = (request: GateRequest) => Promise<Addressing>;
