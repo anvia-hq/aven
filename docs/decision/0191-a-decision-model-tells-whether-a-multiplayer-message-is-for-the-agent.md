@@ -26,8 +26,12 @@ the fix?"), and a run for that wastes the bill and answers a question nobody ask
   costs more than an extra reply.
 - **A message that is not for the agent is kept, not run.** It is appended to the thread's
   history as a user message (a later run loads it with the rest of the history) and shown to
-  whoever watches an idle thread. While a run is working, it is stored but watchers see it on
-  their next load, as the run holds its own copy of the conversation.
+  whoever watches an idle thread.
+- **The gate applies only while the agent is idle.** A run keeps its own copy of the
+  conversation and writes it to the history turn by turn, and its "Worked for" times are keyed
+  by a message's place in it. A message stored from outside during a run would land between
+  those writes and shift the places, so while a run is working a message steers it as before,
+  mention or not.
 - **The decision model belongs to the workspace and is required.** One per workspace, set by an
   owner or an admin in settings (Jev directly or through OpenRouter, a model id and a key kept
   encrypted like a provider's). Multiplayer cannot be turned on until it is set; a thread that
@@ -42,6 +46,8 @@ the fix?"), and a run for that wastes the bill and answers a question nobody ask
 
 ## Consequences
 
+- While the agent is working, a message that mentions a teammate still reaches it as a steer;
+  the gate cannot keep it out until the run ends.
 - A person who mentions a teammate and the agent in one message, without `@agent` and without
   the model, is judged by the fallback as being for the teammate. The model handles it better,
   which is why it is required.
