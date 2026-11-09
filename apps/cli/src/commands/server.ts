@@ -4,7 +4,7 @@ import { join } from "node:path";
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
 import { stringFlag } from "../args";
-import { composeCommand, dockerProblem, run } from "../compose";
+import { composeCommand, dockerProblem, recordProject, run } from "../compose";
 import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
@@ -117,6 +117,7 @@ export async function serverLogs(service: string | undefined, follow: boolean) {
 export async function serverUpgrade(release: string) {
   const dir = serverDir();
   const envPath = join(dir, ".env");
+  recordProject(dir);
   const existing = await readFile(envPath, "utf8").catch(() => undefined);
   if (existing === undefined) return false;
 

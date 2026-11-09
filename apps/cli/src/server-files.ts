@@ -1,7 +1,8 @@
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { stringFlag } from "./args";
+import { projectName, recordProject } from "./compose";
 import { newServerEnv, parseEnv, setEnv } from "./env-file";
 import type { Args, ServerEnvOptions } from "./types";
 
@@ -55,12 +56,16 @@ export async function writeServerFiles(
   values: Record<string, string> = {},
 ): Promise<{ created: boolean; changed: EnvChange[] }> {
   await mkdir(dir, { recursive: true });
+  recordProject(dir);
   await writeFile(join(dir, "docker-compose.yml"), files.compose);
 
   const envPath = join(dir, ".env");
   const existing = await readFile(envPath, "utf8").catch(() => undefined);
   if (existing === undefined) {
-    await writeFile(envPath, newServerEnv(files.envTemplate, options), { mode: 0o600 });
+    const fresh = setEnv(newServerEnv(files.envTemplate, options), {
+      COMPOSE_PROJECT_NAME: projectName(dirname(resolve(dir))),
+    });
+    await writeFile(envPath, fresh, { mode: 0o600 });
     await chmod(envPath, 0o600);
     return { created: true, changed: [] };
   }
