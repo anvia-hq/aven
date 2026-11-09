@@ -6,6 +6,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
+import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "./messages";
 import { ThreadNotFoundError, threadsService } from "./service";
@@ -61,6 +62,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   const { userId, orgA, cleanup } = await seedOrgPair();
   const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const { project } = await seedProject(orgA, userId, runner.id, "proj");
+  await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
   const mateId = `${userId}-mate`;
   await db.insert(users).values({ id: mateId, name: "Ana Lima", email: `${mateId}@aven.test` });
   await db.insert(members).values([
@@ -191,6 +193,7 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
   const { userId, orgA, cleanup } = await seedOrgPair();
   const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const { project } = await seedProject(orgA, userId, runner.id, "proj");
+  await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
   const owner = { organizationId: orgA, userId };
   afterAll(cleanup);
 

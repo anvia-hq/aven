@@ -6,6 +6,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
+import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { ProjectNotFoundError, ThreadNotFoundError, threadsService } from "./service";
 
@@ -14,6 +15,7 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 run("threadsService (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
+  await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
   const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
   const { seedProject } = await import("../../testing/seed-project");
@@ -215,6 +217,20 @@ run("threadsService (postgres)", async () => {
     await expect(threadsService.drivable(teammate, thread.id)).rejects.toBeInstanceOf(
       ThreadNotFoundError,
     );
+  });
+
+  test("multiplayer needs the workspace's decision model, which an owner sets first (decision 0191)", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    await threadsService.update(mine, thread.id, { visibility: "workspace" });
+    await decisionModelService.remove(orgA);
+    await expect(threadsService.update(mine, thread.id, { driving: 7 })).rejects.toThrow(
+      "decision model",
+    );
+    expect((await threadsService.owned(mine, thread.id)).drivingUntil).toBeNull();
+    await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
+    expect(
+      (await threadsService.update(mine, thread.id, { driving: 7 }))?.drivingUntil,
+    ).not.toBeNull();
   });
 
   test("making a thread private, archiving it or turning multiplayer off ends it", async () => {

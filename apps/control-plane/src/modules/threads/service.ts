@@ -8,6 +8,7 @@ import { isDriving } from "@aven/protocol/drivers";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
+import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPullRequest, Viewer } from "./types";
@@ -233,6 +234,11 @@ export const threadsService = {
       if (driving !== null && !shared) {
         throw new ConflictError(
           "Share the thread with the workspace before turning on multiplayer",
+        );
+      }
+      if (driving !== null && !(await decisionModelService.get(organizationId))) {
+        throw new ConflictError(
+          "Set the workspace's decision model in settings before turning on multiplayer",
         );
       }
       changes.drivingUntil = driving === null ? null : new Date(Date.now() + driving * DAY_MS);
