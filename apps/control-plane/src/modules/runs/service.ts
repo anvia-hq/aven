@@ -2,7 +2,7 @@ import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { messagesToChat } from "@aven/agents/projection";
 import { latestMessages, messagesBefore } from "@aven/protocol/message-window";
 import { usageFromHistory } from "@aven/agents/usage";
-import { applyEvent, applyUsage } from "@aven/protocol/events";
+import { applyEvent, applyUsage, withWorkedTimes } from "@aven/protocol/events";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
@@ -11,6 +11,7 @@ import type { ConversationStore } from "../../types";
 import type {
   ContinuationStore,
   FailureStore,
+  WorkedTimeStore,
   FinishedRun,
   RunEnding,
   RunExtras,
@@ -62,6 +63,7 @@ export class RunManager {
   #onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
+  #workedTimes: WorkedTimeStore;
 
   constructor(deps: {
     store: ConversationStore;
@@ -69,12 +71,14 @@ export class RunManager {
     onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
     continuations: ContinuationStore;
     failures: FailureStore;
+    workedTimes: WorkedTimeStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
     this.#continuations = deps.continuations;
     this.#failures = deps.failures;
+    this.#workedTimes = deps.workedTimes;
   }
 
   isRunning(threadId: string) {
@@ -209,10 +213,12 @@ export class RunManager {
       finished: Promise.withResolvers<void>(),
     };
     channel.run = run;
-    const loaded = this.#store
-      .load({ scope: this.#scope(thread) })
-      .then((history) => {
-        run.messages = messagesToChat(history);
+    const loaded = Promise.all([
+      this.#store.load({ scope: this.#scope(thread) }),
+      this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+    ])
+      .then(([history, times]) => {
+        run.messages = withWorkedTimes(messagesToChat(history), times);
         run.usage = usageFromHistory(history);
       })
       .then(prepare);
@@ -302,7 +308,15 @@ export class RunManager {
   async history(thread: RunThread) {
     const run = this.#channels.get(thread.id)?.run;
     if (run) return run.messages;
-    return messagesToChat(await this.#store.load({ scope: this.#scope(thread) }));
+    return this.#stored(thread);
+  }
+
+  async #stored(thread: RunThread) {
+    const [history, times] = await Promise.all([
+      this.#store.load({ scope: this.#scope(thread) }),
+      this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+    ]);
+    return withWorkedTimes(messagesToChat(history), times);
   }
 
   async latest(thread: RunThread) {
@@ -356,13 +370,14 @@ export class RunManager {
           steers: [...run.steers.values()],
         };
       }
-      const [history, failure] = await Promise.all([
+      const [history, times, failure] = await Promise.all([
         this.#store.load({ scope: this.#scope(channel.thread) }),
+        this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
         this.#failure(channel),
       ]);
       if (channel.run) continue;
       queue.length = 0;
-      const shown = latestMessages(messagesToChat(history));
+      const shown = latestMessages(withWorkedTimes(messagesToChat(history), times));
       const snapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
         messages: shown.messages,
         hidden: shown.hidden,
@@ -444,10 +459,19 @@ export class RunManager {
     for (const id of run.steers.keys()) {
       this.#reject(channel, run, id, "The run ended before the agent read it");
     }
+    const workedMs = Date.now() - run.startedAt;
     this.#emit(
       channel,
-      ending.outcome === "failed" ? { type: "error", message: ending.error } : { type: "done" },
+      ending.outcome === "failed"
+        ? { type: "error", message: ending.error }
+        : { type: "done", workedMs },
     );
+    const answered = run.messages.findLastIndex((message) => message.role === "assistant");
+    if (ending.outcome !== "failed" && answered !== -1) {
+      this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
+        console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
+      });
+    }
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
     if (channel.run === run) channel.run = undefined;
     run.finished.resolve();

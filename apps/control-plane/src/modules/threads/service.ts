@@ -1,6 +1,7 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
+import { threadRunTimes } from "@aven/db/schema/thread-run-times";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { isDriving } from "@aven/protocol/drivers";
@@ -271,6 +272,24 @@ export const threadsService = {
 
   async clearContinuation(id: string) {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
+  },
+
+  async saveWorkedTime(threadId: string, messageIndex: number, workedMs: number) {
+    await db
+      .insert(threadRunTimes)
+      .values({ threadId, messageIndex, workedMs })
+      .onConflictDoUpdate({
+        target: [threadRunTimes.threadId, threadRunTimes.messageIndex],
+        set: { workedMs },
+      });
+  },
+
+  async workedTimes(threadId: string) {
+    const rows = await db
+      .select({ index: threadRunTimes.messageIndex, ms: threadRunTimes.workedMs })
+      .from(threadRunTimes)
+      .where(eq(threadRunTimes.threadId, threadId));
+    return new Map(rows.map((row) => [row.index, row.ms]));
   },
 
   async saveLastError(id: string, message: string | null) {

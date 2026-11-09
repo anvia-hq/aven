@@ -7,7 +7,11 @@ import { journalPath } from "@aven/runtime-client/testing/journal-path";
 import { Elysia } from "elysia";
 
 import { createMemoryStore } from "../../memory-store";
-import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
+import {
+  memoryContinuations,
+  memoryFailures,
+  memoryWorkedTimes,
+} from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RunGateway } from "../runtimes/gateway";
@@ -114,6 +118,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     onRunFinished: () => undefined,
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
+    workedTimes: memoryWorkedTimes().store,
   });
   const thread = {
     id: threadId,

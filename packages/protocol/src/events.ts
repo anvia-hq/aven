@@ -219,7 +219,24 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
           return { type: "tool", tool: { ...part.tool, subagents } };
         });
       });
+    case "done": {
+      const { workedMs } = event;
+      if (workedMs === undefined) return messages;
+      const index = messages.findLastIndex((message) => message.role === "assistant");
+      if (index === -1) return messages;
+      return messages.map((message, at) => (at === index ? { ...message, workedMs } : message));
+    }
     default:
       return messages;
   }
+}
+
+export function withWorkedTimes(
+  messages: ChatMessage[],
+  times: ReadonlyMap<number, number>,
+): ChatMessage[] {
+  return messages.map((message, at) => {
+    const workedMs = times.get(at);
+    return workedMs === undefined ? message : { ...message, workedMs };
+  });
 }

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
+import {
+  memoryContinuations,
+  memoryFailures,
+  memoryWorkedTimes,
+} from "../../testing/memory-continuations";
 import { RunManager } from "./service";
 import type { ConversationStore } from "../../types";
 import type { RunResult, RunThread, Runtime, RuntimeRun } from "./types";
@@ -52,6 +56,7 @@ function managerFor(
     onRunFinished: () => undefined,
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
+    workedTimes: memoryWorkedTimes().store,
     ...extra,
   });
 }
@@ -86,6 +91,26 @@ async function until(check: () => boolean | Promise<boolean>, ms = 5000) {
     await Bun.sleep(5);
   }
 }
+
+describe("how long a run worked", () => {
+  test("is told with done and kept for the answer's place in the thread", async () => {
+    const times = memoryWorkedTimes();
+    const { runtime, current } = scriptedRuntime();
+    const manager = managerFor(runtime, { workedTimes: times.store });
+    const thread = newThread();
+    const watcher = attach(manager, thread);
+
+    await manager.start(thread, "one");
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await until(() => (times.saved.get(thread.id)?.size ?? 0) > 0);
+    await watcher.detach();
+
+    const done = watcher.events.find((event) => event.type === "done");
+    expect(done?.type === "done" && done.workedMs).toBeGreaterThanOrEqual(0);
+    expect(await times.store.read(thread.id)).toEqual(new Map([[1, expect.any(Number)]]));
+  });
+});
 
 describe("a thread's channel", () => {
   test("is dropped once its run ended with nobody watching, so a later client hears the store", async () => {

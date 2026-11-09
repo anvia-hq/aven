@@ -193,6 +193,7 @@ export type ChatMessage = {
   parts: MessagePart[];
   attachments?: MessageAttachment[];
   mentions?: MessageMention[];
+  workedMs?: number;
 };
 
 export type MessagesPage = { messages: ChatMessage[]; hidden: number };
@@ -233,7 +234,7 @@ export type RunEvent =
     }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "subagent"; index: number; event: SubagentEvent }
-  | { type: "done" }
+  | { type: "done"; workedMs?: number }
   | { type: "error"; message: string };
 
 export type ForkView = {
