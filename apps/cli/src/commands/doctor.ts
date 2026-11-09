@@ -32,6 +32,7 @@ export async function doctor() {
 export async function diagnose(
   options: {
     home?: string;
+    unitHome?: string;
     binary?: string;
     execPath?: string;
     platform?: NodeJS.Platform;
@@ -86,7 +87,7 @@ export async function diagnose(
   if (runnerEnv) {
     const status = await serviceManager(names).status();
     add("runner", status.startsWith("running"), `${status}, connects to ${runnerEnv.AVEN_URL}`);
-    const unit = await runnerUnitCheck({ platform, execPath, home });
+    const unit = await runnerUnitCheck({ platform, execPath, unitHome: options.unitHome });
     if (unit) checks.push(unit);
     const image = runnerEnv.AVEN_SANDBOX_IMAGE ?? "";
     const has = (await exec(["docker", "image", "inspect", image])).code === 0;
@@ -145,13 +146,13 @@ async function releaseChecks(
 async function runnerUnitCheck(options: {
   platform: NodeJS.Platform;
   execPath: string;
-  home: string;
+  unitHome: string | undefined;
 }): Promise<Check | undefined> {
   const state = await serviceUnitState({
     platform: options.platform,
     names,
     execPath: options.execPath,
-    home: options.home,
+    home: options.unitHome,
   });
   if (state === undefined) return undefined;
   if (state.problem === undefined)
