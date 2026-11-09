@@ -49,6 +49,7 @@ export class RunIdentities {
       thread_id: identity.threadId,
       user_id: identity.userId,
       email: identity.email,
+      ...(identity.driverId === undefined ? {} : { driver_id: identity.driverId }),
     });
   }
 }

@@ -43,6 +43,18 @@ describe("RunIdentities", () => {
     expect(claims.nbf).toBe(claims.iat);
   });
 
+  test("a run a teammate started names the teammate as its driver, the creator staying the user", async () => {
+    const issuer = await Issuer.create("https://aven.example/api/workload-identity");
+    const identities = new RunIdentities(issuer);
+    const credential = identities.issue("run-2", { ...identity, driverId: "user-2" });
+    const claims = payload((await identities.mint(credential, request()))!);
+    expect(claims).toMatchObject({ user_id: "user-1", driver_id: "user-2" });
+    const own = await setup();
+    expect(payload((await own.identities.mint(own.credential, request()))!)).not.toHaveProperty(
+      "driver_id",
+    );
+  });
+
   test("the subject follows the scope, and the claims stay", async () => {
     const { identities, credential } = await setup();
 
