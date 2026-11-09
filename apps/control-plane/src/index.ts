@@ -34,6 +34,7 @@ import { platformRouter } from "./modules/platform/router";
 import { preferencesRouter } from "./modules/preferences/router";
 import { profileRouter } from "./modules/profile/router";
 import { projectsRouter } from "./modules/projects/router";
+import { decisionModelRouter } from "./modules/decision-model/router";
 import { providersRouter } from "./modules/providers/router";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { startLocalRunner } from "./modules/runtimes/local";
@@ -69,6 +70,7 @@ export const app = new Elysia()
   .use(profileRouter)
   .use(projectsRouter(putAwayThread))
   .use(providersRouter)
+  .use(decisionModelRouter)
   .use(runtimesRouter(runtimeHub))
   .use(schedulesRouter)
   .use(skillsRouter)

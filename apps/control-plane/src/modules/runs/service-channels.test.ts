@@ -244,3 +244,35 @@ describe("a thread's channel", () => {
     ]);
   });
 });
+
+describe("a message that starts no run", () => {
+  test("is kept in the thread's history and shown to whoever is watching the idle thread", async () => {
+    const appended: { messages: unknown[] }[] = [];
+    const store = {
+      load: async () => appended.flatMap(({ messages }) => messages),
+      append: async (entry: { messages: unknown[] }) => {
+        appended.push(entry);
+      },
+    } as unknown as ConversationStore;
+    const { runtime } = scriptedRuntime();
+    const senders = memorySenders();
+    const manager = managerFor(runtime, { store, senders: senders.store });
+    const thread = newThread();
+    const watcher = attach(manager, thread);
+    await until(() => watcher.events.length > 0);
+
+    await manager.note(thread, "[driver: Randy] hello Indra", "user-randy");
+    await until(() => watcher.events.length > 1);
+    await watcher.detach();
+
+    expect(appended).toHaveLength(1);
+    expect(appended[0]?.messages).toEqual([
+      { role: "user", content: "[driver: Randy] hello Indra" },
+    ]);
+    const shown = watcher.events.at(-1);
+    expect(shown?.type === "snapshot" && shown.messages.map((m) => m.role)).toEqual(["user"]);
+    expect(shown?.type === "snapshot" && shown.messages[0]?.senderId).toBe("user-randy");
+    expect(await senders.store.read(thread.id)).toEqual(new Map([[0, "user-randy"]]));
+    expect(manager.isRunning(thread.id)).toBe(false);
+  });
+});

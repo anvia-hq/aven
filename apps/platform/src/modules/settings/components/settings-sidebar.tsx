@@ -46,6 +46,7 @@ const groups = [
       { to: "/settings/github", label: "GitHub", icon: Github },
       { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
       { to: "/settings/workspace-variables", label: "Variables", icon: Key },
+      { to: "/settings/decision-model", label: "Decision model", icon: Sparkles },
     ],
   },
 ] as const;

@@ -1,6 +1,15 @@
+import type { ChildProcess } from "node:child_process";
+
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
+import {
+  addRunner,
+  connectGithub,
+  importRepository,
+  registerUser,
+  setDecisionModel,
+  threadOnFakeRunner,
+} from "./helpers";
 
 async function teammateOf(owner: Page, browser: Browser) {
   const context = await browser.newContext();
@@ -90,6 +99,8 @@ test.describe("sharing a thread", () => {
     });
     expect(message.status()).toBe(404);
 
+    await setDecisionModel(page);
+    await page.reload();
     await share.click();
     await dialog.getByRole("switch", { name: "Let teammates message this thread" }).click();
     await expect(page.getByText(/Teammates can message it for 7 days/)).toBeVisible();
@@ -142,6 +153,7 @@ test.describe("sharing a thread", () => {
     });
     const thread = (await created.json()) as { id: string };
     const mate = await teammateOf(page, browser);
+    await setDecisionModel(page);
     const shared = await page.request.patch(`/api/threads/${thread.id}`, {
       data: { visibility: "workspace", driving: 7 },
     });
@@ -221,6 +233,7 @@ test.describe("sharing a thread", () => {
       data: { projectId: project!.id, title: "Together" },
     });
     const thread = (await created.json()) as { id: string };
+    await setDecisionModel(page);
     const shared = await page.request.patch(`/api/threads/${thread.id}`, {
       data: { visibility: "workspace", driving: 7 },
     });
@@ -253,5 +266,72 @@ test.describe("sharing a thread", () => {
       "aria-label",
       "In this thread: Owner Person, Randy Pamungkas, Dina Putri, Eko Santoso, Fitri Lestari",
     );
+  });
+
+  test.describe("a mention in a multiplayer thread", () => {
+    let runner: ChildProcess | undefined;
+    test.afterEach(() => {
+      runner?.kill();
+      runner = undefined;
+    });
+
+    test("needs the workspace's decision model, and a message for a teammate does not wake the agent", async ({
+      page,
+      browser,
+    }) => {
+      await registerUser(page, "owner", "Owner Person");
+      const provider = await page.request.post("/api/providers", {
+        data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+      });
+      expect(provider.ok()).toBe(true);
+      const { child, events, threadId } = await threadOnFakeRunner(page);
+      runner = child;
+      const mate = await teammateOf(page, browser);
+
+      await page.goto(`/threads/${threadId}`);
+      const share = page.getByRole("button", { name: /^(Share|Shared to workspace)$/ });
+      const dialog = page.getByRole("dialog", { name: "Share this thread" });
+      const multiplayer = dialog.getByRole("switch", { name: "Let teammates message this thread" });
+      await share.click();
+      await dialog.getByRole("radio", { name: /Everyone in the workspace/ }).click();
+      await expect(multiplayer).toBeDisabled();
+      await expect(dialog.getByText("The workspace needs a decision model first.")).toBeVisible();
+      await dialog.getByRole("button", { name: "Done" }).click();
+
+      await setDecisionModel(page);
+      expect(await (await page.request.get("/api/decision-model")).json()).toEqual({
+        decisionModel: { kind: "jev-openrouter", modelId: "typesafe/jev-1.13", keyHint: "0000" },
+      });
+      await page.reload();
+      await share.click();
+      await expect(multiplayer).toBeEnabled();
+      await multiplayer.click();
+      await expect(page.getByText(/Teammates can message it for 7 days/)).toBeVisible();
+      await dialog.getByRole("button", { name: "Done" }).click();
+
+      const prompt = page.getByRole("textbox", { name: "Prompt" });
+      const menu = page.getByRole("listbox", { name: "Mention" });
+      await prompt.click();
+      await page.keyboard.type("@Mate");
+      await expect(menu.getByRole("option", { name: /Mate Person/ })).toBeVisible();
+      await page.keyboard.press("Enter");
+      await expect(prompt.locator('[data-mention="person"]')).toContainText("Mate Person");
+      await page.keyboard.type(" did you deploy the fix?");
+      await page.keyboard.press("Enter");
+
+      const sent = page.locator('[data-role="user"]');
+      await expect(sent.locator('[data-mention="person"]')).toHaveText("@Mate Person");
+      await expect(sent).toContainText("did you deploy the fix?");
+      await page.reload();
+      await expect(sent.locator('[data-mention="person"]')).toHaveText("@Mate Person");
+      expect(events.filter((event) => event.type === "started")).toEqual([]);
+
+      await prompt.click();
+      await page.keyboard.type("fix the build");
+      await page.keyboard.press("Enter");
+      await expect.poll(() => events.some((event) => event.type === "started")).toBe(true);
+
+      await mate.context.close();
+    });
   });
 });

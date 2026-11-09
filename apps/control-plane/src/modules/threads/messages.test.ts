@@ -6,6 +6,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
+import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "./messages";
 import { ThreadNotFoundError, threadsService } from "./service";
@@ -61,6 +62,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   const { userId, orgA, cleanup } = await seedOrgPair();
   const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const { project } = await seedProject(orgA, userId, runner.id, "proj");
+  await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
   const mateId = `${userId}-mate`;
   await db.insert(users).values({ id: mateId, name: "Ana Lima", email: `${mateId}@aven.test` });
   await db.insert(members).values([
@@ -190,3 +192,93 @@ const secretContinuation = {
   },
   state: {},
 };
+
+run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
+  const { seedOrgPair } = await import("../../testing/seed-org-pair");
+  const { seedProject } = await import("../../testing/seed-project");
+  const { userId, orgA, cleanup } = await seedOrgPair();
+  const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
+  const { project } = await seedProject(orgA, userId, runner.id, "proj");
+  await decisionModelService.save(orgA, { kind: "jev", apiKey: "test-key-0000" });
+  const owner = { organizationId: orgA, userId };
+  afterAll(cleanup);
+
+  const started: string[] = [];
+  const kept: string[] = [];
+  const keptBy: string[] = [];
+  const asked: string[] = [];
+  const steered: string[] = [];
+  const messages = (agentAction: boolean, running = false) =>
+    createThreadMessages(
+      {
+        isRunning: () => running,
+        steer: async (_thread: unknown, message: { prompt: string }) => {
+          steered.push(message.prompt);
+          return "queued";
+        },
+        start: async (_thread: unknown, prompt: string) => {
+          started.push(prompt);
+        },
+        note: async (_thread: unknown, prompt: string, senderId?: string) => {
+          kept.push(prompt);
+          keptBy.push(senderId ?? "");
+        },
+        latest: async () => ({ messages: [], hidden: 0 }),
+      } as never,
+      async ({ prompt }) => {
+        asked.push(prompt);
+        return { agentAction, by: "model" };
+      },
+    );
+  const thread = async (driving: number | null) => {
+    const created = await threadsService.create(orgA, userId, { projectId: project.id });
+    await threadsService.update(owner, created.id, { visibility: "workspace", driving });
+    return created;
+  };
+  const toRandy = "@[Randy](user:u-2) did you deploy the fix?";
+
+  test("a message the gate says is for a person is kept without starting a run", async () => {
+    const driven = await thread(7);
+    started.length = 0;
+    kept.length = 0;
+    const sent = await messages(false).send(orgA, userId, driven.id, { prompt: toRandy });
+    expect(sent).toEqual({ steered: false, agentAction: false });
+    expect(kept).toEqual([`​${toRandy}`.replace("​", "")]);
+    expect(started).toEqual([]);
+  });
+
+  test("a message the gate says is for the agent starts a run", async () => {
+    const driven = await thread(7);
+    started.length = 0;
+    kept.length = 0;
+    const sent = await messages(true).send(orgA, userId, driven.id, { prompt: toRandy });
+    expect(sent.steered).toBe(false);
+    expect(started).toHaveLength(1);
+    expect(kept).toEqual([]);
+  });
+
+  test("a message sent while the agent is working steers it as before, and the gate is not asked", async () => {
+    const driven = await thread(7);
+    steered.length = 0;
+    asked.length = 0;
+    const sent = await messages(false, true).send(orgA, userId, driven.id, { prompt: toRandy });
+    expect(sent).toEqual({ steered: true });
+    expect(steered).toEqual([toRandy]);
+    expect(asked).toEqual([]);
+  });
+
+  test("the gate is not asked outside multiplayer, for a message without a mention, or with files", async () => {
+    const plain = await thread(null);
+    const driven = await thread(7);
+    started.length = 0;
+    asked.length = 0;
+    await messages(false).send(orgA, userId, plain.id, { prompt: toRandy });
+    await messages(false).send(orgA, userId, driven.id, { prompt: "fix the build" });
+    await messages(false).send(orgA, userId, driven.id, {
+      prompt: toRandy,
+      attachments: [{ name: "a.txt", mediaType: "text/plain", data: "aGk=" }],
+    });
+    expect(started).toHaveLength(3);
+    expect(asked).toEqual([]);
+  });
+});

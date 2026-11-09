@@ -3,6 +3,7 @@ import {
   ComposerPrimitive,
   useComposer,
   type ComposerInputEntity,
+  type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, StopSolid } from "@mynaui/icons-react";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
@@ -12,14 +13,16 @@ import { Button } from "@/components/button";
 import { useAttachmentDrop } from "../hooks/use-attachment-drop";
 import { useAttachments } from "../hooks/use-attachments";
 import { useComposerChat } from "../hooks/use-composer-chat";
+import { useMentionPeople } from "../hooks/use-mention-people";
 import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
-import { COMPACT_COMMAND, mentionOf } from "../mentions";
-import type { OutgoingMessage, RunSelection } from "../types";
+import { COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
+import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
+import { PersonAvatar, PersonChip } from "./person-chip";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
 
@@ -34,15 +37,31 @@ type Props = {
   tools?: ReactNode;
 };
 
-const renderEntity = ({ triggerId, id }: ComposerInputEntity) => {
-  if (id === COMPACT_COMMAND) return <CommandChip name="compact" />;
-  const mention = mentionOf(triggerId, id);
-  return mention ? <MentionChip {...mention} /> : null;
-};
+const renderEntity =
+  (people: MentionPerson[]) =>
+  ({ triggerId, id, text }: ComposerInputEntity) => {
+    if (id === COMPACT_COMMAND) return <CommandChip name="compact" />;
+    const personId = personIdOf(id);
+    if (personId !== undefined) {
+      const person = people.find((each) => each.id === personId);
+      const name = person?.name ?? /^@\[(.*)\]\(/.exec(text)?.[1] ?? "Teammate";
+      return <PersonChip name={name} image={person?.image ?? null} />;
+    }
+    const mention = mentionOf(triggerId, id);
+    return mention ? <MentionChip {...mention} /> : null;
+  };
+
+function personIcon(people: MentionPerson[], item: ComposerTriggerItem) {
+  const id = personIdOf(item.id);
+  if (id === undefined) return null;
+  const person = people.find((each) => each.id === id);
+  return person ? <PersonAvatar name={person.name} image={person.image} /> : null;
+}
 
 export function PromptInput({ threadId, ...props }: Props) {
   const chat = useComposerChat();
-  const triggers = useMentions(threadId);
+  const people = useMentionPeople(threadId);
+  const triggers = useMentions(threadId, people);
   return (
     <ChatProvider controller={chat}>
       <ComposerPrimitive.Root
@@ -50,7 +69,7 @@ export function PromptInput({ threadId, ...props }: Props) {
         className="contents"
         onSubmit={(event) => event.preventDefault()}
       >
-        <Composer threadId={threadId} {...props} />
+        <Composer threadId={threadId} people={people} {...props} />
       </ComposerPrimitive.Root>
     </ChatProvider>
   );
@@ -65,7 +84,8 @@ function Composer({
   autoFocus,
   threadId,
   tools,
-}: Props) {
+  people,
+}: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
@@ -107,12 +127,12 @@ function Composer({
       onClick={focusOnBoxClick}
     >
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
-      <MentionMenu />
+      <MentionMenu icon={(item) => personIcon(people, item)} />
       <ComposerPrimitive.Input
         ref={editor}
         aria-label="Prompt"
         placeholder={placeholder}
-        renderEntity={renderEntity}
+        renderEntity={renderEntity(people)}
         className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6 [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
       <div className="flex items-center gap-2 pt-2">

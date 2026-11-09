@@ -7,6 +7,7 @@ import type { cockpitInboxItems } from "./cockpit-inbox-items";
 import type { cockpitNotes } from "./cockpit-notes";
 import type { cockpitTags } from "./cockpit-tags";
 import type { cockpitTasks } from "./cockpit-tasks";
+import type { decisionModels } from "./decision-models";
 import type { environmentVariables } from "./environment-variables";
 import type { githubApps } from "./github-apps";
 import type { githubInstallations } from "./github-installations";
@@ -109,3 +110,5 @@ export type VariableEventRow = typeof variableEvents.$inferSelect;
 export type NewVariableEventRow = typeof variableEvents.$inferInsert;
 
 export type Verification = typeof verifications.$inferSelect;
+
+export type DecisionModelRow = typeof decisionModels.$inferSelect;

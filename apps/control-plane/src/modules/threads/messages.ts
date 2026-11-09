@@ -1,7 +1,7 @@
 import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
 import { timing } from "@aven/runtime-client/timing";
 
-import { driverPrompt, ownPrompt } from "@aven/protocol/drivers";
+import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubService } from "../github/service";
@@ -16,10 +16,20 @@ import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
+import { decisionModelService } from "../decision-model/service";
+import { addressingDecider, jevModel } from "../decision-model/jev";
+import { personMentions } from "./addressing";
+import { createAddressingGate, recentOf } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 import type { RunIdentity } from "../workload-identity/types";
+import type { Acting, AddressingGate } from "./types";
+
+const defaultGate = createAddressingGate({
+  configOf: (organizationId) => decisionModelService.config(organizationId),
+  deciderFor: (config) => addressingDecider(jevModel(config)),
+});
 
 async function runIdentity(
   thread: { id: string; organizationId: string; projectId: string },
@@ -87,7 +97,7 @@ async function requireLiveProject(organizationId: string, projectId: string) {
   return project;
 }
 
-async function acting(organizationId: string, userId: string, threadId: string) {
+export async function acting(organizationId: string, userId: string, threadId: string) {
   const thread = await threadsService.drivable({ organizationId, userId }, threadId);
   if (thread.createdBy === userId) {
     return { thread, ownerId: userId, driverId: undefined, said: ownPrompt };
@@ -97,15 +107,44 @@ async function acting(organizationId: string, userId: string, threadId: string) 
   return { thread, ownerId: thread.createdBy, driverId: userId, said };
 }
 
-export const createThreadMessages = (runs: RunManager) => {
+export const createThreadMessages = (runs: RunManager, gate: AddressingGate = defaultGate) => {
+  async function keptFromAgent(
+    organizationId: string,
+    userId: string,
+    who: Acting,
+    { prompt, attachments = [] }: SendMessageBody,
+  ) {
+    const { thread, said } = who;
+    if (runs.isRunning(thread.id)) return false;
+    if (attachments.length > 0 || personMentions(prompt).length === 0) return false;
+    if (!isDriving(thread.drivingUntil)) return false;
+    const author = (await usersService.get(userId))?.name ?? "";
+    const owner =
+      thread.createdBy === userId
+        ? author
+        : ((await usersService.get(thread.createdBy))?.name ?? "");
+    const { messages } = await runs.latest(thread);
+    const verdict = await gate({
+      organizationId,
+      prompt,
+      author,
+      owner,
+      recent: recentOf(messages),
+    });
+    if (verdict.agentAction) return false;
+    await runs.note(thread, said(prompt), userId);
+    return true;
+  }
+
   async function start(
     organizationId: string,
     userId: string,
     threadId: string,
     { prompt, attachments: files = [], mentions = [], ...selection }: SendMessageBody,
-    { onPersonsWord = true }: { onPersonsWord?: boolean } = {},
+    { onPersonsWord = true, known }: { onPersonsWord?: boolean; known?: Acting } = {},
   ) {
-    const { thread, ownerId, driverId, said } = await acting(organizationId, userId, threadId);
+    const { thread, ownerId, driverId, said } =
+      known ?? (await acting(organizationId, userId, threadId));
     const clock = timing(`message ${threadId}`);
     clock.mark("thread");
     const project = await requireLiveProject(organizationId, thread.projectId);
@@ -139,8 +178,9 @@ export const createThreadMessages = (runs: RunManager) => {
     userId: string,
     threadId: string,
     { prompt, steerId, attachments = [], mentions = [] }: SendMessageBody,
+    known?: Acting,
   ) {
-    const { thread, said } = await acting(organizationId, userId, threadId);
+    const { thread, said } = known ?? (await acting(organizationId, userId, threadId));
     await requireLiveProject(organizationId, thread.projectId);
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     if (attachments.length > 0) {
@@ -167,11 +207,18 @@ export const createThreadMessages = (runs: RunManager) => {
       threadId: string,
       body: SendMessageBody,
       options: { onPersonsWord?: boolean } = {},
-    ): Promise<{ steered: boolean }> {
-      if (runs.isRunning(threadId) && (await steer(organizationId, userId, threadId, body))) {
+    ): Promise<{ steered: boolean; agentAction?: false }> {
+      const known = await acting(organizationId, userId, threadId);
+      if (await keptFromAgent(organizationId, userId, known, body)) {
+        return { steered: false, agentAction: false };
+      }
+      if (
+        runs.isRunning(threadId) &&
+        (await steer(organizationId, userId, threadId, body, known))
+      ) {
         return { steered: true };
       }
-      await start(organizationId, userId, threadId, body, options);
+      await start(organizationId, userId, threadId, body, { ...options, known });
       return { steered: false };
     },
 

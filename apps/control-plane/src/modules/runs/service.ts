@@ -323,6 +323,24 @@ export class RunManager {
     }
   }
 
+  async note(thread: RunThread, prompt: string, senderId?: string) {
+    const at = senderId ? (await this.#stored(thread)).length : 0;
+    await this.#store.append({
+      scope: this.#scope(thread),
+      runId: crypto.randomUUID(),
+      turn: 0,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (senderId) {
+      await this.#senders.record(thread.id, at, senderId).catch((error: unknown) => {
+        console.warn(`Could not keep who sent a message of thread ${thread.id}:`, error);
+      });
+    }
+    const channel = this.#channels.get(thread.id);
+    if (!channel || channel.run) return;
+    this.#emit(channel, { type: "snapshot", ...(await this.#attach(channel, [])) });
+  }
+
   async history(thread: RunThread) {
     const run = this.#channels.get(thread.id)?.run;
     if (run) return run.messages;

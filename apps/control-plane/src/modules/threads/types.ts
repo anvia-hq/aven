@@ -1,6 +1,6 @@
 import type { RunEnding } from "../runs/types";
 import type { createThreadContinuation } from "./continuation";
-import type { createThreadMessages } from "./messages";
+import type { acting, createThreadMessages } from "./messages";
 import type { SendMessageBody } from "./schema";
 import type {
   BotProjectView,
@@ -75,3 +75,21 @@ export type PatchOf = (
 ) => Promise<{ patch: string; truncated: boolean } | null>;
 
 export type ThreadContinuation = ReturnType<typeof createThreadContinuation>;
+
+export type PersonMention = { id: string; name: string };
+
+export type AddressingScores = { toAgent: number; toPerson: number };
+
+export type Addressing = { agentAction: boolean; by: "model" | "fallback" };
+
+export type GateRequest = {
+  organizationId: string;
+  prompt: string;
+  author: string;
+  owner: string;
+  recent: { author: string; text: string }[];
+};
+
+export type AddressingGate = (request: GateRequest) => Promise<Addressing>;
+
+export type Acting = Awaited<ReturnType<typeof acting>>;

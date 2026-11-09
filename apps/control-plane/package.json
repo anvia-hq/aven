@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@anvia/core": "^1.18.0",
+    "@anvia/jev": "^0.2.1",
     "@anvia/memory-drizzle": "^1.2.0",
     "@aven/agents": "workspace:*",
     "@aven/db": "workspace:*",
     "@aven/protocol": "workspace:*",
     "@aven/runtime-client": "workspace:*",
+    "@typesafe-ai/sdk": "^0.7.0",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",
     "elysia": "^1.4.30",

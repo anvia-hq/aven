@@ -1,5 +1,6 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
 import { Check, Globe, Link, Lock, Share } from "@mynaui/icons-react";
+import { Link as RouterLink } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
@@ -17,6 +18,8 @@ import { Label } from "@/components/label";
 import { RadioGroup, RadioGroupItem } from "@/components/radio-group";
 import { Switch } from "@/components/switch";
 import { toast } from "@/components/toast";
+
+import { useDecisionModelReady } from "@/modules/decision-model/hooks/use-decision-model-ready";
 
 import { useDriveThread, useShareThread } from "../hooks/use-share-thread";
 import type { Thread, ThreadVisibility } from "../types";
@@ -43,6 +46,8 @@ export function ThreadShare({ thread }: { thread: Thread }) {
   const driving = isDriving(thread.drivingUntil);
   const [copied, setCopied] = useState(false);
   const shared = thread.visibility === "workspace";
+  const decisionModelSet = useDecisionModelReady(shared);
+  const needsDecisionModel = !driving && decisionModelSet === false;
 
   async function copyLink() {
     try {
@@ -102,6 +107,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
               <Switch
                 aria-label="Let teammates message this thread"
                 checked={driving}
+                disabled={needsDecisionModel}
                 onCheckedChange={(on) => void drive(thread, on ? DRIVING_DAYS_DEFAULT : null)}
                 className="mt-0.5"
               />
@@ -112,6 +118,15 @@ export function ThreadShare({ thread }: { thread: Thread }) {
                     ? `Teammates can message, steer and stop the agent until ${new Date(thread.drivingUntil ?? "").toLocaleDateString()}. It runs with your model, account and bill, and without your personal variables or MCP servers.`
                     : `Let teammates message the agent for ${DRIVING_DAYS_DEFAULT} days. It runs with your model, account and bill.`}
                 </span>
+                {needsDecisionModel && (
+                  <span className="text-xs text-muted-foreground">
+                    The workspace needs a decision model first.{" "}
+                    <RouterLink to="/settings/decision-model" className="underline">
+                      Set it in settings
+                    </RouterLink>
+                    .
+                  </span>
+                )}
               </span>
               {driving && (
                 <Button
