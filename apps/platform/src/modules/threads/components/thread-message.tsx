@@ -8,7 +8,8 @@ import { Markdown } from "@/components/markdown";
 
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
-import type { ChatMessage, MessagePart, ToolArtifact, ToolGroupEntry, ToolPart } from "../types";
+import { messageBlocks } from "../message-blocks";
+import type { Block, ChatMessage } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
@@ -16,32 +17,6 @@ import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { SubagentCard } from "./subagent-card";
 import { ToolGroup } from "./tool-group";
-
-type Block =
-  | { type: "text"; text: string }
-  | { type: "question"; tool: ToolPart }
-  | { type: "artifacts"; artifacts: ToolArtifact[] }
-  | { type: "subagents"; tool: ToolPart }
-  | { type: "tools"; entries: ToolGroupEntry[] };
-
-function blocks(parts: MessagePart[]) {
-  const result: Block[] = [];
-  const group = (entry: ToolGroupEntry) => {
-    const last = result.at(-1);
-    if (last?.type === "tools") last.entries.push(entry);
-    else result.push({ type: "tools", entries: [entry] });
-  };
-  for (const part of parts) {
-    if (part.type === "text") result.push(part);
-    else if (part.type === "reasoning") group({ type: "reasoning", text: part.text });
-    else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
-    else if (part.tool.artifacts)
-      result.push({ type: "artifacts", artifacts: part.tool.artifacts });
-    else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
-    else group({ type: "tool", tool: part.tool });
-  }
-  return result;
-}
 
 function AssistantBlock({
   block,
@@ -157,7 +132,7 @@ function AssistantMessage({
   if (parts.length === 0) return null;
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
-      {blocks(parts).map((block, index, all) => (
+      {messageBlocks(parts).map((block, index, all) => (
         <AssistantBlock
           key={index}
           block={block}

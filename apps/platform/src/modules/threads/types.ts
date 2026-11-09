@@ -91,3 +91,10 @@ export type Mentionable = Pick<MessageMention, "type" | "name">;
 export type PendingMessage = { id: string; message: ChatMessage };
 
 export type ViewerImage = { src: string; label: string };
+
+export type Block =
+  | { type: "text"; text: string }
+  | { type: "question"; tool: ToolPart }
+  | { type: "artifacts"; artifacts: ToolArtifact[] }
+  | { type: "subagents"; tool: ToolPart }
+  | { type: "tools"; entries: ToolGroupEntry[] };
