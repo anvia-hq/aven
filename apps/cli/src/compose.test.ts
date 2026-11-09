@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 
-import { composeCommand, composeProject, projectName } from "./compose";
+import { composeCommand, composeProject, projectName, recordProject } from "./compose";
 
 const legacy = { Name: "aven", ConfigFiles: "/home/me/.aven/server/docker-compose.yml" };
 
@@ -71,4 +71,34 @@ test("adopts the fixed name of a compose file written before projects were per h
 test("has a project of its own before an install writes any compose file", async () => {
   expect(await Bun.file(composeFile()).exists()).toBe(false);
   expect(composeProject(dir, [])).toBe(projectName(home));
+});
+
+const writeEnv = (text: string) => writeFile(join(dir, ".env"), text);
+const readEnv = () => Bun.file(join(dir, ".env")).text();
+
+test("keeps aven for an install that is stopped, whose compose file an update has already replaced", async () => {
+  await writeEnv("POSTGRES_PASSWORD=x\n");
+  await installFile("${COMPOSE_PROJECT_NAME:-aven}");
+  expect(composeProject(dir, [])).toBe("aven");
+});
+
+test("takes the project an install's .env records over what Docker or the file say", async () => {
+  await writeEnv("COMPOSE_PROJECT_NAME=aven-0a1b2c3d\n");
+  await installFile("aven");
+  expect(composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven-0a1b2c3d");
+});
+
+test("records the project an existing install is in, once, before its compose file is replaced", async () => {
+  await writeEnv("POSTGRES_PASSWORD=x\n");
+  await installFile("aven");
+  recordProject(dir, []);
+  expect(await readEnv()).toBe("POSTGRES_PASSWORD=x\nCOMPOSE_PROJECT_NAME=aven\n");
+  await installFile("${COMPOSE_PROJECT_NAME:-aven}");
+  recordProject(dir, [{ Name: "other", ConfigFiles: composeFile() }]);
+  expect(await readEnv()).toBe("POSTGRES_PASSWORD=x\nCOMPOSE_PROJECT_NAME=aven\n");
+});
+
+test("records nothing where no install has been made", () => {
+  recordProject(dir, []);
+  expect(Bun.file(join(dir, ".env")).size).toBe(0);
 });

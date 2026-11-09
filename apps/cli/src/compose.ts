@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+
+import { parseEnv, setEnv } from "./env-file";
 
 const LEGACY_PROJECT = "aven";
 const PROJECT_HASH_LENGTH = 8;
@@ -73,10 +75,38 @@ const declaredProject = (dir: string) => {
   return declared === undefined || declared.includes("${") ? undefined : declared;
 };
 
-export const composeProject = (
-  dir: string,
-  projects: ComposeProject[] | undefined = composeProjects(),
-) => adoptedProject(dir, projects) ?? declaredProject(dir) ?? projectName(dirname(resolve(dir)));
+const envFile = (dir: string) => join(dir, ".env");
+
+const recordedProject = (dir: string) => {
+  try {
+    return parseEnv(readFileSync(envFile(dir), "utf8")).COMPOSE_PROJECT_NAME || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const composeProject = (dir: string, projects?: ComposeProject[]) =>
+  recordedProject(dir) ??
+  adoptedProject(dir, projects ?? composeProjects()) ??
+  declaredProject(dir) ??
+  (existsSync(envFile(dir)) ? LEGACY_PROJECT : projectName(dirname(resolve(dir))));
+
+export function recordProject(dir: string, projects?: ComposeProject[]) {
+  let text: string;
+  try {
+    text = readFileSync(envFile(dir), "utf8");
+  } catch {
+    return;
+  }
+  if (parseEnv(text).COMPOSE_PROJECT_NAME) return;
+  writeFileSync(
+    envFile(dir),
+    setEnv(text, { COMPOSE_PROJECT_NAME: composeProject(dir, projects) }),
+    {
+      mode: 0o600,
+    },
+  );
+}
 
 export const composeCommand = (dir: string, args: string[]) => [
   "docker",

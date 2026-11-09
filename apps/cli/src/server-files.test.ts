@@ -112,7 +112,10 @@ test("an install with no flags leaves an existing .env as it is", async () => {
   const { result, env } = await installWith(["server", "install"], { release: "1.0.0" });
 
   expect(result.changed).toEqual([]);
-  expect(await readFile(join(dir, ".env"), "utf8")).toBe(installed);
+  expect(parseEnv(await readFile(join(dir, ".env"), "utf8"))).toEqual({
+    ...parseEnv(installed),
+    COMPOSE_PROJECT_NAME: "aven",
+  });
   expect(env.AVEN_PORT).toBe("3000");
   expect(env.AVEN_BIND).toBe("100.64.0.7");
 });
