@@ -3,6 +3,7 @@ import type {
   BotPeer,
   BotReplyInfo,
   CockpitAccess,
+  ComputerState,
   ControlPlaneToRuntime,
   DockerLeftovers,
   DockerRemoveParams,
@@ -47,6 +48,7 @@ import type {
   DurableRun,
   DurableRuntime,
 } from "@anvia/durable";
+import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunOutbox } from "./run-outbox";
 import type { DurableRuns } from "./durable-runs";
@@ -364,6 +366,7 @@ export type RunToolsInput = {
   memory?: MemoryHost;
   forks?: ForkHost;
   cockpit?: CockpitHost;
+  computer?: ComputerHost;
 };
 
 export type RunnerCallsContext = {
@@ -427,6 +430,7 @@ export type ThreadSandbox = {
   hasRunningProcesses(): Promise<boolean>;
   processes: ThreadProcesses;
   start?(): Promise<void>;
+  state?(): ComputerState;
 };
 
 export interface ThreadWorkspaces {

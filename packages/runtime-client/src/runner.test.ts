@@ -56,6 +56,17 @@ const agentThat =
 
 const reply = () => agentThat([text("ok")]);
 
+const wakingReply =
+  (): CreateRuntimeAgent =>
+  ({ id, tools }) => ({
+    agent: new Agent({
+      id,
+      tools: [...tools],
+      model: scriptedModel([[toolCall("computer_wake", {})], [text("ok")]]),
+      instructions: "x",
+    }),
+  });
+
 const until = async (condition: () => boolean) => {
   for (let i = 0; i < 100 && !condition(); i++) await Bun.sleep(20);
   expect(condition()).toBe(true);
@@ -572,11 +583,13 @@ describe("startRuntime", () => {
       const first = connect({
         sandbox,
         ...paths,
-        createAgent: ({ id }) => ({
+        createAgent: ({ id, tools }) => ({
           agent: new Agent({
             id,
             instructions: "x",
+            tools: [...tools],
             model: scriptedModel([
+              [toolCall("computer_wake", {})],
               async () => {
                 reached.resolve();
                 await hold.promise;
@@ -593,7 +606,7 @@ describe("startRuntime", () => {
       hold.resolve();
       await stopping;
 
-      const second = connect({ sandbox, ...paths, createAgent: reply() });
+      const second = connect({ sandbox, ...paths, createAgent: wakingReply() });
       await second.runtime.ready;
       await until(() => second.plane.received.some((m) => m.type === "hello"));
       second.plane.send({
@@ -608,7 +621,7 @@ describe("startRuntime", () => {
 
     test("a run signs in as the account it came with, and a run with none signs out", async () => {
       const { sandbox, signedIn } = signingSandbox();
-      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      const { plane, runtime } = connect({ sandbox, createAgent: wakingReply() });
       await runtime.ready;
 
       plane.send({ ...runStart, runId: "run-a", github: ada });
@@ -624,7 +637,7 @@ describe("startRuntime", () => {
 
     test("a run signs in to mint identity tokens with the credential it came with, at the control plane's origin", async () => {
       const { sandbox, identities } = signingSandbox();
-      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      const { plane, runtime } = connect({ sandbox, createAgent: wakingReply() });
       await runtime.ready;
 
       plane.send({ ...runStart, runId: "run-a", identity: { credential: "avid_a" } });
@@ -698,7 +711,7 @@ describe("startRuntime", () => {
 
     test("a run sets the variables it came with, and a run with none clears them", async () => {
       const { sandbox, given } = envSandbox();
-      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      const { plane, runtime } = connect({ sandbox, createAgent: wakingReply() });
       await runtime.ready;
 
       plane.send({ ...runStart, runId: "run-a", env });
@@ -1752,6 +1765,8 @@ describe("startRuntime runs", () => {
         attended: true,
         tools: [
           "git_fetch",
+          "computer_status",
+          "computer_wake",
           "spawn_agent",
           "fork_thread",
           "fork_status",
@@ -1760,8 +1775,16 @@ describe("startRuntime runs", () => {
           "define_goal",
         ],
       },
-      { id: "goal-run-1", attended: false, tools: ["git_fetch", "spawn_agent"] },
-      { id: "run-run-1-report", attended: false, tools: ["git_fetch", "spawn_agent"] },
+      {
+        id: "goal-run-1",
+        attended: false,
+        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
+      },
+      {
+        id: "run-run-1-report",
+        attended: false,
+        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
+      },
     ]);
     const texts = plane.received.flatMap((m) =>
       m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
