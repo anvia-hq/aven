@@ -13,3 +13,4 @@ Status: accepted. Follows decision 0008 (native clients over the control plane's
 
 - The macOS client gets the same address handling, since both use `AvenKit`.
 - The app needs full Xcode. `UITests/SignInTests.swift` signs in against a running control plane (`TEST_RUNNER_AVEN_TEST_SERVER`, `_EMAIL`, `_PASSWORD`) and expects the thread list.
+- A server saved by a macOS client before this change as a bare address, such as `aven.example.com`, now normalises to `https://aven.example.com/api`, and its token is kept under that address, so that client signs in once more.
