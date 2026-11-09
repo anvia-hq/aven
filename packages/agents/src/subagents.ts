@@ -6,6 +6,7 @@ import {
   SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 
+import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import type { SandboxToolName, SubagentType } from "./types";
@@ -21,6 +22,8 @@ const PARENT_ONLY = new Set<string>([
   SECRET_TOOL_NAME,
   DEFINE_GOAL_TOOL_NAME,
   SAVE_ENVIRONMENT_TOOL_NAME,
+  COMPUTER_STATUS_TOOL_NAME,
+  COMPUTER_WAKE_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
 ]);

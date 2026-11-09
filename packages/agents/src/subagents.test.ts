@@ -21,6 +21,8 @@ const parentTools = [
   "git_fetch",
   "define_goal",
   "save_environment",
+  "computer_status",
+  "computer_wake",
   "spawn_agent",
   "ask_user",
   "request_secret",
@@ -55,6 +57,8 @@ describe("subagentTools", () => {
       "request_secret",
       "define_goal",
       "save_environment",
+      "computer_status",
+      "computer_wake",
       "show_artifact",
       "spawn_agent",
     ])
