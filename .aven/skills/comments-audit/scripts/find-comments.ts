@@ -6,26 +6,42 @@ const DIRECTIVE = /^\s*(@ts-|oxlint-|eslint-|\/\s*<reference)/;
 
 function commentsOf(file: string) {
   const text = readFileSync(file, "utf8");
-  const scanner = ts.createScanner(
-    ts.ScriptTarget.Latest,
-    false,
-    file.endsWith("x") ? ts.LanguageVariant.JSX : ts.LanguageVariant.Standard,
+  const source = ts.createSourceFile(
+    file,
     text,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
+  const seen = new Set<number>();
   const found: { line: number; text: string }[] = [];
-  for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFileToken; kind = scanner.scan()) {
-    if (
-      kind !== ts.SyntaxKind.SingleLineCommentTrivia &&
-      kind !== ts.SyntaxKind.MultiLineCommentTrivia
-    )
-      continue;
-    const comment = scanner.getTokenText();
-    const body = comment.replace(/^\/\/|^\/\*+|\*+\/$/g, "");
-    const start = scanner.getTokenStart();
-    if (DIRECTIVE.test(body) || (start === 0 && comment.startsWith("#!"))) continue;
-    found.push({ line: text.slice(0, start).split("\n").length, text: comment.split("\n")[0]! });
-  }
-  return found;
+
+  const collect = (node: ts.Node) => {
+    const start = node.getFullStart();
+    const ranges = [
+      ...(ts.getLeadingCommentRanges(text, start) ?? []),
+      ...(ts.getTrailingCommentRanges(text, start) ?? []),
+    ];
+    for (const range of ranges) {
+      if (seen.has(range.pos)) continue;
+      seen.add(range.pos);
+      const comment = text.slice(range.pos, range.end);
+      const body = comment.replace(/^\/\/|^\/\*+|\*+\/$/g, "");
+      if (DIRECTIVE.test(body)) continue;
+      found.push({
+        line: source.getLineAndCharacterOfPosition(range.pos).line + 1,
+        text: comment.split("\n")[0]!,
+      });
+    }
+  };
+
+  const visit = (node: ts.Node) => {
+    const children = node.getChildren(source);
+    if (children.length === 0 && node.kind !== ts.SyntaxKind.JsxText) collect(node);
+    children.forEach(visit);
+  };
+  visit(source);
+  return found.sort((a, b) => a.line - b.line);
 }
 
 const files = process.argv.slice(2).filter((file) => /\.tsx?$/.test(file));
