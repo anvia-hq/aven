@@ -4,6 +4,7 @@ import { Button } from "@/components/button";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import type { ChatMessage, QueuedSteer } from "../types";
+import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
 import { WorkingIndicator } from "./working-indicator";
@@ -77,6 +78,7 @@ export function ThreadMessages({
               <QueuedMessage key={steer.id} message={steer} />
             ))}
             <WorkingIndicator running={running} startedAt={startedAt} />
+            <BackgroundChip threadId={threadId} running={running} />
             {error && (
               <p
                 role="alert"

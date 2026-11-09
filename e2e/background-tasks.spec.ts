@@ -41,6 +41,27 @@ test.describe("a thread's background tasks", () => {
     await expect(card.getByRole("button", { name: /^Stop/ })).toHaveCount(0);
   });
 
+  test("shows a chip under the conversation while a process runs and drops it when it stops", async ({
+    page,
+  }) => {
+    await registerUser(page, "bgt", "Background User");
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_PROCESSES: "1" });
+    runner = child;
+    await page.setViewportSize({ width: 1400, height: 760 });
+
+    await page.goto(`/threads/${threadId}`);
+
+    const chip = page.locator('[data-role="background-chip"]');
+    await expect(chip).toContainText("Running in the background: npm run dev");
+    if (process.env.CHIP_SHOT) await page.screenshot({ path: process.env.CHIP_SHOT });
+
+    await page
+      .getByRole("region", { name: "Background tasks" })
+      .getByRole("button", { name: "Stop npm run dev" })
+      .click();
+    await expect(chip).toHaveCount(0, { timeout: 10_000 });
+  });
+
   test("has no card while nothing has run in the background", async ({ page }) => {
     await registerUser(page, "bgt", "Background User");
     const { child, threadId } = await threadOnFakeRunner(page);
