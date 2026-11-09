@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import ts from "typescript";
 
 const DIRECTIVE = /^\s*(@ts-|oxlint-|eslint-|\/\s*<reference)/;
@@ -43,7 +43,9 @@ function commentsOf(file: string) {
   return found.sort((a, b) => a.line - b.line);
 }
 
-const files = process.argv.slice(2).filter((file) => /\.tsx?$/.test(file));
+const files = [...new Set(process.argv.slice(2))].filter(
+  (file) => /\.tsx?$/.test(file) && existsSync(file),
+);
 let total = 0;
 for (const file of files) {
   for (const { line, text } of commentsOf(file)) {
