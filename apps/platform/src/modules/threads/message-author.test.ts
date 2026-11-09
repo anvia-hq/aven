@@ -4,8 +4,14 @@ import { driverPrompt, ownPrompt } from "@aven/protocol/drivers";
 
 import { authorOf } from "./message-author";
 
-const owner = { owned: true, name: "Indra", ownerName: "Indra" };
-const randy = { owned: false, name: "Randy Pamungkas", ownerName: "Indra" };
+const owner = { id: "u-indra", owned: true, name: "Indra", ownerId: "u-indra", ownerName: "Indra" };
+const randy = {
+  id: "u-randy",
+  owned: false,
+  name: "Randy Pamungkas",
+  ownerId: "u-indra",
+  ownerName: "Indra",
+};
 
 describe("whose a message in a multiplayer thread is", () => {
   test("the creator sees their own words as theirs and a teammate's as the teammate's", () => {
@@ -39,7 +45,19 @@ describe("whose a message in a multiplayer thread is", () => {
   });
 
   test("a name the wire would change is still recognised as the person's own", () => {
-    const odd = { owned: false, name: "Randy ] P\nK", ownerName: "Indra" };
+    const odd = { ...randy, name: "Randy ] P\nK" };
     expect(authorOf(driverPrompt(odd.name, "yo"), odd).mine).toBe(true);
+  });
+
+  test("a sender id decides whose it is, whatever the names", () => {
+    const same = { ...randy, name: "Indra" };
+    const fromOwner = authorOf(ownPrompt("fix it"), same, "u-indra");
+    expect(fromOwner).toEqual({ mine: false, name: "Indra", text: "fix it" });
+    const fromMe = authorOf(driverPrompt("Indra", "hi"), same, "u-randy");
+    expect(fromMe.mine).toBe(true);
+    const fromThird = authorOf(driverPrompt("Dina", "hi"), randy, "u-dina");
+    expect(fromThird).toEqual({ mine: false, name: "Dina", text: "hi" });
+    expect(authorOf(driverPrompt("Dina", "hi"), owner, "u-dina").mine).toBe(false);
+    expect(authorOf("hello", owner, "u-indra").mine).toBe(true);
   });
 });

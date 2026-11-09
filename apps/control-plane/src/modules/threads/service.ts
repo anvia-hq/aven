@@ -1,6 +1,7 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
+import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
@@ -290,6 +291,24 @@ export const threadsService = {
       .from(threadRunTimes)
       .where(eq(threadRunTimes.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.ms]));
+  },
+
+  async saveSender(threadId: string, messageIndex: number, senderId: string) {
+    await db
+      .insert(threadMessageSenders)
+      .values({ threadId, messageIndex, senderId })
+      .onConflictDoUpdate({
+        target: [threadMessageSenders.threadId, threadMessageSenders.messageIndex],
+        set: { senderId },
+      });
+  },
+
+  async senders(threadId: string) {
+    const rows = await db
+      .select({ index: threadMessageSenders.messageIndex, id: threadMessageSenders.senderId })
+      .from(threadMessageSenders)
+      .where(eq(threadMessageSenders.threadId, threadId));
+    return new Map(rows.map((row) => [row.index, row.id]));
   },
 
   async saveLastError(id: string, message: string | null) {

@@ -125,6 +125,7 @@ export const createThreadMessages = (runs: RunManager) => {
     await runs.start(thread, said(prompt), model, {
       attachments,
       mentions,
+      senderId: userId,
       ...sender,
       ...scoped,
     });
@@ -146,7 +147,12 @@ export const createThreadMessages = (runs: RunManager) => {
       throw new ConflictError("Files can be sent when the agent is not working");
     }
     if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
-    const message = { id: steerId ?? crypto.randomUUID(), prompt: said(prompt), mentions };
+    const message = {
+      id: steerId ?? crypto.randomUUID(),
+      prompt: said(prompt),
+      mentions,
+      senderId: userId,
+    };
     const queued = (await runs.steer(thread, message)) === "queued";
     if (queued) await threadsService.reopen(thread);
     return queued;

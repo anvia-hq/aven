@@ -1,4 +1,9 @@
-import type { ContinuationStore, FailureStore, WorkedTimeStore } from "../modules/runs/types";
+import type {
+  ContinuationStore,
+  FailureStore,
+  SenderStore,
+  WorkedTimeStore,
+} from "../modules/runs/types";
 
 export function memoryContinuations() {
   const saved = new Map<string, unknown>();
@@ -25,6 +30,18 @@ export function memoryWorkedTimes() {
     record: async (threadId, index, ms) => {
       const times = saved.get(threadId) ?? new Map<number, number>();
       saved.set(threadId, times.set(index, (times.get(index) ?? 0) + ms));
+    },
+    read: async (threadId) => new Map(saved.get(threadId) ?? []),
+  };
+  return { store, saved };
+}
+
+export function memorySenders() {
+  const saved = new Map<string, Map<number, string>>();
+  const store: SenderStore = {
+    record: async (threadId, index, senderId) => {
+      const senders = saved.get(threadId) ?? new Map<number, string>();
+      saved.set(threadId, senders.set(index, senderId));
     },
     read: async (threadId) => new Map(saved.get(threadId) ?? []),
   };

@@ -84,6 +84,7 @@ export const ThreadMessage = memo(function ThreadMessage({
     const author = authorOf(
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
       viewer,
+      message.senderId,
     );
     const mine = sending || author.mine;
     return (
