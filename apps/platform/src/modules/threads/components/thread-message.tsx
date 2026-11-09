@@ -1,3 +1,4 @@
+import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { shipRequestOf } from "@aven/protocol/ship-request";
 import { systemNoteOf } from "@aven/protocol/system-notes";
 import { cn } from "cn";
@@ -99,6 +100,11 @@ export const ThreadMessage = memo(function ThreadMessage({
       );
     }
     const text = message.parts.some((part) => part.type === "text" && part.text);
+    const driver = message.parts.reduce<string | undefined>(
+      (found, part) =>
+        found ?? (part.type === "text" ? parseDriverPrompt(part.text).driver : undefined),
+      undefined,
+    );
     return (
       <div
         className={cn(
@@ -114,12 +120,17 @@ export const ThreadMessage = memo(function ThreadMessage({
             attachments={message.attachments}
           />
         ) : null}
+        {driver && (
+          <p className="text-xs text-muted-foreground" data-role="driver">
+            {driver}
+          </p>
+        )}
         {text && (
           <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">
             {message.parts.map((part, index) =>
               part.type === "text" ? (
                 <Markdown key={index} components={{ code: mentionCode }}>
-                  {markMentions(part.text, message.mentions)}
+                  {markMentions(parseDriverPrompt(part.text).text, message.mentions)}
                 </Markdown>
               ) : null,
             )}

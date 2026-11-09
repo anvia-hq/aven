@@ -58,6 +58,7 @@ export type Thread = {
   createdBy: string;
   createdByName: string;
   visibility: ThreadVisibility;
+  drivingUntil: string | null;
   parentThreadId: string | null;
   runtimeId: string;
   state: ThreadState;
