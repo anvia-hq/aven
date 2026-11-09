@@ -13,9 +13,11 @@ import type { ServiceDefinition } from "./types";
 const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
 
 let home: string;
+let unitHome: string;
 let aven: string;
 beforeEach(async () => {
   home = await mkdtemp(join(tmpdir(), "aven-doctor-"));
+  unitHome = join(home, "user-home");
   aven = join(home, "bin", "aven");
 });
 afterEach(() => rm(home, { recursive: true, force: true }));
@@ -35,7 +37,7 @@ function definition(command: string): ServiceDefinition {
 }
 
 async function writeUnit(command: string) {
-  await write(serviceFile("darwin", names, home)!, launchdPlist(definition(command)));
+  await write(serviceFile("darwin", names, unitHome)!, launchdPlist(definition(command)));
 }
 
 async function runnerEnv() {
@@ -45,7 +47,8 @@ async function runnerEnv() {
   );
 }
 
-const doctor = () => diagnose({ home, binary: "0.3.0", execPath: aven, platform: "darwin" });
+const doctor = () =>
+  diagnose({ home, unitHome, binary: "0.3.0", execPath: aven, platform: "darwin" });
 
 const report = (checks: Awaited<ReturnType<typeof diagnose>>, name: string) =>
   checks.find((check) => check.name === name);
