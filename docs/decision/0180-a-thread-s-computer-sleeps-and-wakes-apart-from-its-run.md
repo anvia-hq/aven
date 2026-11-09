@@ -27,9 +27,9 @@ The aim is that nobody has to think about the computer: a run never waits for on
 ## Phases
 
 1. This record, and the browser profile (item 6): independent of the rest.
-2. The lifecycle: `computer.*` calls on the wire, runs that start without a container, the agent's tools, wake with sign-in (items 1, 2, 5).
+2. The lifecycle on the runner: a run starts without waking its computer, which wakes (and signs the run in) when the agent first uses a command or file tool or calls `computer_wake`; `computer_status` and `computer_wake` for the agent; the runner knows a computer's state (items 1 and 2). A wake that fails still ends the run with why (0128).
 3. The desktop as its own layer and the two sleep times (items 1, 3).
-4. The Computer card, pre-warm and the login handoff (items 4, 7, 8).
+4. What the control plane and the person need: `computer.*` calls on the wire, wake with sign-in for a person's click (item 5), the Computer card, pre-warm and the login handoff (items 4, 7, 8). The wire waits for the card, which is its first user.
 
 ## Consequences
 
