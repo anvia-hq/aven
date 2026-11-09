@@ -219,7 +219,7 @@ describe("contextWindow", () => {
 
   test("the window index stays bounded, keeping the names most hosts share", async () => {
     const bulk: Record<string, unknown> = {};
-    for (let i = 0; i < 5000; i++) bulk[`vendor-${i}`] = { limit: { context: 1000 + i } };
+    for (let i = 0; i < 20_000; i++) bulk[`vendor-${i}`] = { limit: { context: 1000 + i } };
     const shared = { models: { shared: { limit: { context: 4096 } } } };
     const models = createModelCatalog(
       serving({ hostA: { models: bulk }, hostB: shared, hostC: shared }),
@@ -229,11 +229,11 @@ describe("contextWindow", () => {
 
     expect(await models.contextWindow("azure", "shared")).toBe(4096);
     let remembered = 0;
-    for (let i = 0; i < 5000; i++) {
+    for (let i = 0; i < 20_000; i++) {
       if ((await models.contextWindow("azure", `vendor-${i}`)) !== null) remembered++;
     }
     expect(remembered).toBeGreaterThan(0);
-    expect(remembered).toBeLessThan(5000);
+    expect(remembered).toBeLessThan(20_000);
   });
 
   test("an Azure deployment the azure entry lacks gets the window other hosts give the model", async () => {
