@@ -210,7 +210,13 @@ export type ContainerBase = {
   runtime?: string;
 };
 
-export type ThreadRef = { id: string; organizationId?: string; forkOf?: string };
+export type ThreadRef = {
+  id: string;
+  organizationId?: string;
+  forkOf?: string;
+  projectId?: string;
+  ownerId?: string;
+};
 
 export type EnvironmentsConfig = {
   image: string;
@@ -409,6 +415,7 @@ export type SandboxConfig = {
   git?: Git;
   docker?: DockerRun;
   archivedKeepDays?: number;
+  browserProfileKeepDays?: number;
 };
 
 export type AcquireOptions = {
@@ -452,6 +459,10 @@ export interface ThreadWorkspaces {
   readonly skills?: SkillStore;
   dispose(): Promise<void>;
 }
+
+export type BrowserProfile = { name: string; dir: string; shared: boolean };
+
+export type BrowserProfilesOptions = { home: string; keepMs: number; now?: () => number };
 
 export type ArchivedCleanupOptions = {
   home: string;

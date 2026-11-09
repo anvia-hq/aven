@@ -45,6 +45,17 @@ describe("sandboxConfigFromEnv", () => {
     expect(() => sandboxConfigFromEnv({ AVEN_ARCHIVED_KEEP_DAYS: "soon" })).toThrow();
   });
 
+  test("takes the days a browser profile is kept, 0 for ever, and refuses a bad number", () => {
+    expect(sandboxConfigFromEnv({}).browserProfileKeepDays).toBeUndefined();
+    expect(
+      sandboxConfigFromEnv({ AVEN_BROWSER_PROFILE_KEEP_DAYS: "30" }).browserProfileKeepDays,
+    ).toBe(30);
+    expect(
+      sandboxConfigFromEnv({ AVEN_BROWSER_PROFILE_KEEP_DAYS: "0" }).browserProfileKeepDays,
+    ).toBe(0);
+    expect(() => sandboxConfigFromEnv({ AVEN_BROWSER_PROFILE_KEEP_DAYS: "-1" })).toThrow();
+  });
+
   test("refuses a limit that is not a positive number", () => {
     expect(() => sandboxConfigFromEnv({ AVEN_SANDBOX_PIDS_LIMIT: "lots" })).toThrow(
       'AVEN_SANDBOX_PIDS_LIMIT must be a positive number, got "lots".',

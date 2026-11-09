@@ -32,5 +32,6 @@ export function sandboxConfigFromEnv(env: Env = process.env): SandboxConfig {
     cpus: positiveNumber(env, "AVEN_SANDBOX_CPUS"),
     pidsLimit: positiveNumber(env, "AVEN_SANDBOX_PIDS_LIMIT"),
     archivedKeepDays: days(env, "AVEN_ARCHIVED_KEEP_DAYS"),
+    browserProfileKeepDays: days(env, "AVEN_BROWSER_PROFILE_KEEP_DAYS"),
   };
 }
