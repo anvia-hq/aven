@@ -337,6 +337,13 @@
       "when": 1794014821832,
       "tag": "0047_jittery_mentor",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794197258449,
+      "tag": "0048_famous_firelord",
+      "breakpoints": true
     }
   ]
 }
