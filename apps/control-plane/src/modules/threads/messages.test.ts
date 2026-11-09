@@ -83,26 +83,30 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   const steeredBy: (string | undefined)[] = [];
   const answered: Record<string, unknown>[] = [];
   const messages = (running: boolean) =>
-    createThreadMessages({
-      isRunning: () => running,
-      start: async (_thread: unknown, prompt: string, _model: unknown, extras: object) => {
-        started.push({ prompt, extras: extras as Record<string, unknown> });
-      },
-      steer: async (_thread: unknown, message: { prompt: string; senderId?: string }) => {
-        steered.push(message.prompt);
-        steeredBy.push(message.senderId);
-        return "queued";
-      },
-      answer: async (
-        _thread: unknown,
-        _continuation: unknown,
-        _answers: unknown,
-        _model: unknown,
-        extras: Record<string, unknown>,
-      ) => {
-        answered.push(extras);
-      },
-    } as never);
+    createThreadMessages(
+      {
+        isRunning: () => running,
+        start: async (_thread: unknown, prompt: string, _model: unknown, extras: object) => {
+          started.push({ prompt, extras: extras as Record<string, unknown> });
+        },
+        steer: async (_thread: unknown, message: { prompt: string; senderId?: string }) => {
+          steered.push(message.prompt);
+          steeredBy.push(message.senderId);
+          return "queued";
+        },
+        answer: async (
+          _thread: unknown,
+          _continuation: unknown,
+          _answers: unknown,
+          _model: unknown,
+          extras: Record<string, unknown>,
+        ) => {
+          answered.push(extras);
+        },
+        latest: async () => ({ messages: [], hidden: 0 }),
+      } as never,
+      async () => ({ agentAction: true, by: "model" }),
+    );
 
   const driven = async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: project.id });
@@ -296,18 +300,26 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
     expect(asked).toEqual([]);
   });
 
-  test("the gate is not asked outside multiplayer, for a message without a mention, or with files", async () => {
+  test("a message with no mention is asked of the gate too while multiplayer is on", async () => {
+    const driven = await thread(7);
+    asked.length = 0;
+    started.length = 0;
+    await messages(true).send(orgA, userId, driven.id, { prompt: "fix the build" });
+    expect(asked).toEqual(["fix the build"]);
+    expect(started).toHaveLength(1);
+  });
+
+  test("the gate is not asked outside multiplayer or with files", async () => {
     const plain = await thread(null);
     const driven = await thread(7);
     started.length = 0;
     asked.length = 0;
     await messages(false).send(orgA, userId, plain.id, { prompt: toRandy });
-    await messages(false).send(orgA, userId, driven.id, { prompt: "fix the build" });
     await messages(false).send(orgA, userId, driven.id, {
       prompt: toRandy,
       attachments: [{ name: "a.txt", mediaType: "text/plain", data: "aGk=" }],
     });
-    expect(started).toHaveLength(3);
+    expect(started).toHaveLength(2);
     expect(asked).toEqual([]);
   });
 });

@@ -42,7 +42,7 @@ const QUESTIONS = {
   }),
   toPerson: check({
     instructions:
-      "Is the author talking to one of the mentioned teammates and waiting for that person to answer, rather than to the AI agent?",
+      "Is the author talking to another person in the thread, either a mentioned teammate or someone the author was already talking with in the recent messages, and waiting for that person rather than the AI agent?",
   }),
 };
 
