@@ -20,13 +20,7 @@ const UNKNOWN_GATE =
 
 export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props) {
   if (action.kind === "loading") {
-    return (
-      <span
-        className="h-7 w-28 rounded-lg border bg-background shadow-md"
-        role="status"
-        aria-label="Reading the changes"
-      />
-    );
+    return <span className="h-7 w-28 opacity-0" role="status" aria-label="Reading the changes" />;
   }
   if (action.kind === "failed") {
     return (

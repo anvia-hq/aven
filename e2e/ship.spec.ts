@@ -170,10 +170,12 @@ test.describe("shipping a thread", () => {
     try {
       await page.goto(`/threads/${threadId}`);
       await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
-      await expect(page.getByRole("status", { name: "Reading the changes" })).toBeVisible();
+      const reading = page.getByRole("status", { name: "Reading the changes" });
+      await expect(reading).toBeAttached();
+      await expect(reading).toHaveCSS("opacity", "0");
       await expect(shipButton(page)).toHaveCount(0);
       await expect(changesBadge(page)).toHaveCount(0);
-      await expect(page.getByRole("status", { name: "Changes loading" })).toBeVisible();
+      await expect(page.getByRole("status", { name: "Changes loading" })).toHaveCSS("opacity", "0");
     } finally {
       held.resolve();
     }
