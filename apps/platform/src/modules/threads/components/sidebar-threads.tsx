@@ -254,34 +254,6 @@ export function SidebarThreads() {
     );
   }
 
-  function half(thread: Thread, split: string) {
-    return (
-      <div key={thread.id} className="group/menu-item relative min-w-0 flex-1">
-        {unread.has(thread.id) && <UnreadDot />}
-        <SidebarMenuButton
-          render={
-            <Link
-              to="/threads/$threadId"
-              params={{ threadId: thread.id }}
-              search={{ split }}
-              title={thread.title}
-              onDragStart={(event) => dragThread(event, thread.id)}
-            />
-          }
-          isActive={pathname === `/threads/${thread.id}` || pathname === `/threads/${split}`}
-          className="gap-1.5 px-1.5"
-        >
-          <SidebarProjectTile
-            thread={thread}
-            project={projects.find((candidate) => candidate.id === thread.projectId)}
-            palette={palettes.get(thread.projectId)}
-          />
-          <span className="min-w-0 flex-1 truncate">{thread.title}</span>
-        </SidebarMenuButton>
-      </div>
-    );
-  }
-
   function pairedWith(id: string) {
     const partner = threads.find((thread) => thread.id === partnerOf(id));
     return partner && partner.id !== id ? partner : undefined;
@@ -317,7 +289,7 @@ export function SidebarThreads() {
                   {(pairs.find((each) => each[0] === partner.id)
                     ? [partner, thread]
                     : [thread, partner]
-                  ).map((shown, at, both) => half(shown, both[1 - at]!.id))}
+                  ).map((shown, at, both) => row(shown, { split: both[1 - at]!.id }))}
                 </SplitPairGroup>
               </SidebarMenuItem>
             );

@@ -9,7 +9,7 @@ export function SplitPairGroup({ titles, onUnpair, children }: Props) {
   return (
     <div
       data-slot="split-pair"
-      className="group/pair relative flex gap-0.5 rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-0.5"
+      className="group/pair relative flex flex-col rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-0.5"
     >
       {children}
       <Button
