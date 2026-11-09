@@ -5,13 +5,18 @@ import { cn } from "cn";
 import { Button } from "@/components/button";
 
 import type { ToolArtifact } from "../types";
+import { ArtifactFrame } from "./artifact-frame";
 import { ImageViewer } from "./image-viewer";
 
+const isPage = (artifact: ToolArtifact) => artifact.mediaType === "text/html";
 const isVideo = (artifact: ToolArtifact) => artifact.mediaType.startsWith("video/");
 const sourceOf = (threadId: string, artifact: ToolArtifact) =>
   `/api/threads/${threadId}/artifacts/${artifact.name}`;
-const labelOf = (artifact: ToolArtifact) =>
-  artifact.caption ?? (isVideo(artifact) ? "Video shown by the agent" : "Image shown by the agent");
+function labelOf(artifact: ToolArtifact) {
+  if (artifact.caption) return artifact.caption;
+  if (isPage(artifact)) return "Page shown by the agent";
+  return isVideo(artifact) ? "Video shown by the agent" : "Image shown by the agent";
+}
 
 function Unavailable({ video, onRetry }: { video: boolean; onRetry: () => void }) {
   return (
@@ -107,28 +112,40 @@ export function ArtifactGrid({
   artifacts: ToolArtifact[];
 }) {
   const [viewing, setViewing] = useState<number | null>(null);
-  const images = artifacts.filter((artifact) => !isVideo(artifact));
-  const single = artifacts.length === 1;
+  const pages = artifacts.filter(isPage);
+  const media = artifacts.filter((artifact) => !isPage(artifact));
+  const images = media.filter((artifact) => !isVideo(artifact));
+  const single = media.length === 1;
 
   return (
     <>
-      <div
-        className={cn(
-          "grid min-w-0 gap-3",
-          !single && "grid-cols-2",
-          artifacts.length > 2 && "sm:grid-cols-3",
-        )}
-      >
-        {artifacts.map((artifact) => (
-          <Tile
-            key={artifact.name}
-            threadId={threadId}
-            artifact={artifact}
-            single={single}
-            onOpen={() => setViewing(images.indexOf(artifact))}
-          />
-        ))}
-      </div>
+      {pages.map((artifact) => (
+        <ArtifactFrame
+          key={artifact.name}
+          src={sourceOf(threadId, artifact)}
+          label={labelOf(artifact)}
+          caption={artifact.caption}
+        />
+      ))}
+      {media.length > 0 && (
+        <div
+          className={cn(
+            "grid min-w-0 gap-3",
+            !single && "grid-cols-2",
+            media.length > 2 && "sm:grid-cols-3",
+          )}
+        >
+          {media.map((artifact) => (
+            <Tile
+              key={artifact.name}
+              threadId={threadId}
+              artifact={artifact}
+              single={single}
+              onOpen={() => setViewing(images.indexOf(artifact))}
+            />
+          ))}
+        </div>
+      )}
       <ImageViewer
         images={images.map((artifact) => ({
           src: sourceOf(threadId, artifact),

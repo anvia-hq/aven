@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import { projectToolOutput } from "../tool-projection";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, createShowArtifactTool } from "./show-artifact";
+import {
+  MAX_HTML_BYTES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  createShowArtifactTool,
+} from "./show-artifact";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
 const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32]);
@@ -16,7 +21,7 @@ function setup(files: Record<string, Uint8Array>) {
     },
     save: async (bytes, mediaType) => {
       kept.push({ bytes, mediaType });
-      const extension = mediaType === "video/mp4" ? "mp4" : "png";
+      const extension = { "video/mp4": "mp4", "text/html": "html" }[mediaType] ?? "png";
       return `00000000-0000-4000-8000-00000000000${kept.length}.${extension}`;
     },
   });
@@ -52,7 +57,7 @@ describe("show_artifact", () => {
     })) as { artifacts: unknown[]; failed: { path: string; error: string }[] };
     expect(result.artifacts).toHaveLength(1);
     expect(result.failed.map((failure) => failure.path)).toEqual(["logo.png", "missing.png"]);
-    expect(result.failed[0]?.error).toContain("is not a PNG, JPEG, GIF, WebP, MP4 or WebM");
+    expect(result.failed[0]?.error).toContain("is not a PNG, JPEG, GIF, WebP, MP4, WebM or HTML");
     expect(kept).toHaveLength(1);
   });
 
@@ -104,5 +109,25 @@ describe("show_artifact", () => {
       output: "Showed /tmp/plot.png",
       artifacts: [image],
     });
+  });
+
+  test("shows an HTML page by its first bytes, within its own limit", async () => {
+    const page = new TextEncoder().encode("<!DOCTYPE html><html><body>x</body></html>");
+    const huge = new Uint8Array(MAX_HTML_BYTES + 1);
+    huge.set(page);
+    const { tool, kept } = setup({
+      "chart.html": page,
+      "huge.html": huge,
+      "notes.txt": new TextEncoder().encode("hello"),
+    });
+    const result = (await tool.call({
+      items: [{ path: "chart.html" }, { path: "huge.html" }, { path: "notes.txt" }],
+    })) as { artifacts: unknown[]; failed: { path: string; error: string }[] };
+    expect(result.artifacts).toEqual([
+      { name: "00000000-0000-4000-8000-000000000001.html", mediaType: "text/html" },
+    ]);
+    expect(kept[0]!.mediaType).toBe("text/html");
+    expect(result.failed.map((failure) => failure.path)).toEqual(["huge.html", "notes.txt"]);
+    expect(result.failed[0]!.error).toContain("pages up to 2 MiB");
   });
 });

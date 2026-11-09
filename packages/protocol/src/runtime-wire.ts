@@ -15,6 +15,7 @@ export const ARTIFACT_MEDIA_TYPES = [
   "image/webp",
   "video/mp4",
   "video/webm",
+  "text/html",
 ] as const;
 
 export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
@@ -24,10 +25,11 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
   "image/webp": "webp",
   "video/mp4": "mp4",
   "video/webm": "webm",
+  "text/html": "html",
 };
 
 export const ARTIFACT_NAME =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm|html)$/;
 
 export const FILE_SEARCH_LIMIT = 50;
 
@@ -39,4 +41,4 @@ export const CloseCode = {
   Revoked: 4002,
 } as const;
 
-export const WIRE_VERSION = 52;
+export const WIRE_VERSION = 53;
