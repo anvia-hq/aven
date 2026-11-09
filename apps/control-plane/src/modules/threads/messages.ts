@@ -49,11 +49,11 @@ async function runIdentity(
   return identity;
 }
 
-async function senderExtras(userId: string, installationRowId: string, driven = false) {
+async function senderExtras(userId: string, installationRowId: string, driverId?: string) {
   const skills = await skillsService.forRun(userId);
-  const mcp = driven ? [] : await mcpService.forRun(userId, "threads");
+  const mcp = driverId === undefined ? await mcpService.forRun(userId, "threads") : [];
   const github = await githubUserTokenService.forRun(
-    userId,
+    driverId ?? userId,
     await githubService.appKeyOf(installationRowId),
   );
   return { skills, mcp, github };
@@ -153,11 +153,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     const model = await resolveModel(ownerId, driverId === undefined ? selection : {});
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     clock.mark("model");
-    const sender = await senderExtras(
-      ownerId,
-      project.githubInstallationId,
-      driverId !== undefined,
-    );
+    const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
     clock.mark("sender");
     const scoped = await threadExtras(organizationId, thread, ownerId, onPersonsWord, driverId);
     clock.mark("thread extras");
@@ -250,11 +246,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
       const model = await resolveModel(ownerId, driverId === undefined ? selection : {});
-      const sender = await senderExtras(
-        ownerId,
-        project.githubInstallationId,
-        driverId !== undefined,
-      );
+      const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,
         userId: ownerId,

@@ -4,7 +4,10 @@ import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
+import { githubUserTokens } from "@aven/db/schema/github-user-tokens";
 import { eq } from "drizzle-orm";
+
+import { encryptSecret } from "../../crypto";
 
 import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
@@ -109,6 +112,32 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   const mate = { organizationId: orgA, userId: mateId };
   const idOf = (extras: Record<string, unknown>) =>
     (extras.identity as { userId: string; driverId?: string }) ?? undefined;
+
+  const connectGithub = (id: string, login: string, githubUserId: number) =>
+    db.insert(githubUserTokens).values({
+      userId: id,
+      githubUserId,
+      login,
+      name: login,
+      accessTokenEncrypted: encryptSecret(`ghu_${login}`),
+    });
+  const githubOf = (extras: Record<string, unknown>) =>
+    extras.github as { token: string; login: string } | undefined;
+
+  test("a teammate's run signs in to GitHub as the teammate, never as the creator", async () => {
+    const thread = await driven();
+    await connectGithub(userId, "creator", 1);
+    started.length = 0;
+    await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
+    expect(githubOf(started[0]!.extras)).toBeUndefined();
+
+    await connectGithub(mateId, "mate", 2);
+    await messages(false).send(orgA, mateId, thread.id, { prompt: "two" });
+    expect(githubOf(started[1]!.extras)).toMatchObject({ token: "ghu_mate", login: "mate" });
+
+    await messages(false).send(orgA, userId, thread.id, { prompt: "three" });
+    expect(githubOf(started[2]!.extras)).toMatchObject({ token: "ghu_creator", login: "creator" });
+  });
 
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {
     const thread = await driven();
