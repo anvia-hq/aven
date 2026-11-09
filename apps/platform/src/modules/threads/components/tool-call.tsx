@@ -37,6 +37,8 @@ const meta: Record<string, Meta> = {
   show_artifact: { icon: ImageIcon, running: "Showing", done: "Showed" },
   show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
   git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
+  computer_status: { icon: Eye, running: "Checking the computer", done: "Checked the computer" },
+  computer_wake: { icon: Eye, running: "Waking the computer", done: "Woke the computer" },
   save_environment: {
     icon: Save,
     running: "Saving the environment",
