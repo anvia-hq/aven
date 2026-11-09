@@ -42,7 +42,8 @@ test.describe("two threads side by side", () => {
     await page.goto("/threads");
     await expect(group).toBeVisible();
     await group.getByRole("link", { name: /Second thread/ }).click();
-    await expect(page).toHaveURL(/\?split=/);
+    await expect(page).toHaveURL(new RegExp(`/threads/${threadId}\\?split=${other.id}`));
+    await expect(group.getByRole("link").last()).toContainText("Second thread");
     await expect(page.locator("header h1")).toHaveCount(2);
 
     await page.getByRole("button", { name: "Close Second thread" }).click();

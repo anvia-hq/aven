@@ -28,7 +28,7 @@ import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { dragThread } from "../split";
 import { SplitPairGroup } from "./split-pair-group";
 import { crowdOf } from "../thread-crowd";
-import type { Thread } from "../types";
+import type { SplitPair, Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
 
 const RUNNING_REFRESH_MS = 5000;
@@ -181,6 +181,9 @@ export function SidebarThreads() {
   const { pairs, partnerOf, unpair } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const split = useRouterState({
+    select: (state) => (state.location.search as { split?: string }).split,
+  });
 
   const anyRunning = [...own, ...others].some((thread) => thread.running);
   useEffect(() => {
@@ -200,8 +203,8 @@ export function SidebarThreads() {
       nested = false,
       first = true,
       last = true,
-      split,
-    }: { nested?: boolean; first?: boolean; last?: boolean; split?: string },
+      pair,
+    }: { nested?: boolean; first?: boolean; last?: boolean; pair?: SplitPair },
   ) {
     return (
       <SidebarMenuItem key={thread.id}>
@@ -211,12 +214,14 @@ export function SidebarThreads() {
           render={
             <Link
               to="/threads/$threadId"
-              params={{ threadId: thread.id }}
-              search={{ split }}
+              params={{ threadId: pair ? pair[0] : thread.id }}
+              search={{ split: pair?.[1] }}
               onDragStart={(event) => dragThread(event, thread.id)}
             />
           }
-          isActive={pathname === `/threads/${thread.id}`}
+          isActive={
+            pathname === `/threads/${thread.id}` || (pair !== undefined && split === thread.id)
+          }
           className={cn("pr-11", nested && "pl-8")}
         >
           <SidebarProjectTile
@@ -277,16 +282,16 @@ export function SidebarThreads() {
               rows.findIndex((row) => row.thread.id === thread.id) <
               rows.findIndex((row) => row.thread.id === partner.id);
             if (!first) return null;
+            const pair: SplitPair = pairs.find((each) => each[0] === partner.id)
+              ? [partner.id, thread.id]
+              : [thread.id, partner.id];
             return (
-              <SidebarMenuItem key={`pair-${thread.id}-${partner.id}`}>
+              <SidebarMenuItem key={`pair-${pair[0]}-${pair[1]}`}>
                 <SplitPairGroup
                   titles={[thread.title, partner.title]}
                   onUnpair={() => unpair(thread.id)}
                 >
-                  {(pairs.find((each) => each[0] === partner.id)
-                    ? [partner, thread]
-                    : [thread, partner]
-                  ).map((shown, at, both) => row(shown, { split: both[1 - at]!.id }))}
+                  {pair.map((id) => row(id === thread.id ? thread : partner, { pair }))}
                 </SplitPairGroup>
               </SidebarMenuItem>
             );
