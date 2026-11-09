@@ -14,7 +14,11 @@ function commentsOf(file: string) {
   );
   const found: { line: number; text: string }[] = [];
   for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFileToken; kind = scanner.scan()) {
-    if (kind !== ts.SyntaxKind.SingleLineCommentTrivia && kind !== ts.SyntaxKind.MultiLineCommentTrivia) continue;
+    if (
+      kind !== ts.SyntaxKind.SingleLineCommentTrivia &&
+      kind !== ts.SyntaxKind.MultiLineCommentTrivia
+    )
+      continue;
     const comment = scanner.getTokenText();
     const body = comment.replace(/^\/\/|^\/\*+|\*+\/$/g, "");
     const start = scanner.getTokenStart();
