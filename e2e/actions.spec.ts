@@ -45,13 +45,13 @@ test.describe("a repository's actions", () => {
       .getByRole("button", { name: "Test", exact: true })
       .click();
     await expect(page.getByText("Running in the sandbox, under Background tasks")).toBeVisible();
-    await expect(page.getByText("Finished", { exact: false }).first()).toBeVisible({
+    await expect(page.getByText("Done", { exact: true }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     await page.getByRole("button", { name: "Actions", exact: true }).click();
     await page.getByRole("button", { name: "Typecheck", exact: true }).click();
-    await expect(page.getByText("Exited with code 2")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Exit 2", { exact: true })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /Ask the agent to fix bun run typecheck/ }).click();
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
     const fix = String(events.find((event) => event.type === "started")?.prompt);

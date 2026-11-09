@@ -1,9 +1,10 @@
 import { Check, DangerCircle, StopSolid } from "@mynaui/icons-react";
+import { cn } from "cn";
 import { useState } from "react";
 
 import { Button } from "@/components/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
-import { timeAgo } from "@/lib/format";
+import { shortTimeAgo, timeAgo } from "@/lib/format";
 
 import { useProcessLogs } from "../hooks/use-process-logs";
 import type { ProcessView } from "@aven/protocol/types";
@@ -16,6 +17,8 @@ type Props = {
   fixing: boolean;
   onFix?: () => void;
 };
+
+const CHIP = "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap";
 
 function statusText({ status, exitCode, startedAt, endedAt }: ProcessView) {
   if (status === "running") return `Running for ${timeAgo(startedAt)}`;
@@ -41,36 +44,52 @@ function StatusMark({ process }: { process: ProcessView }) {
   return <Check className="size-4 text-muted-foreground" aria-hidden />;
 }
 
+function StateChip({ process }: { process: ProcessView }) {
+  if (process.status === "running") {
+    return (
+      <span className={cn(CHIP, "bg-success/15 text-success")}>
+        {shortTimeAgo(process.startedAt)}
+      </span>
+    );
+  }
+  if (process.status === "exited" && process.exitCode) {
+    return (
+      <span className={cn(CHIP, "bg-destructive/15 text-destructive")}>
+        Exit {process.exitCode}
+      </span>
+    );
+  }
+  return (
+    <span className={cn(CHIP, "bg-muted text-muted-foreground")}>
+      {process.status === "stopped" ? "Stopped" : "Done"}
+    </span>
+  );
+}
+
 export function BackgroundProcess({ threadId, process, stopping, onStop, fixing, onFix }: Props) {
   const [open, setOpen] = useState(false);
   const running = process.status === "running";
+  const failed = process.status === "exited" && Boolean(process.exitCode);
   const { logs, problem } = useProcessLogs(threadId, process.id, open, running);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="flex min-w-0 flex-col">
-      <div className="-mx-1.5 flex min-w-0 items-start gap-1 rounded-md px-1.5 py-1 hover:bg-accent/50">
+      <div className="-mx-1.5 flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-accent/50">
         <CollapsibleTrigger
-          className="grid min-w-0 flex-1 grid-cols-[1rem_1fr] items-center gap-x-2 text-left outline-none focus-visible:underline"
-          title={process.command}
+          className="grid min-w-0 flex-1 grid-cols-[1rem_1fr_auto] items-center gap-x-2 text-left outline-none focus-visible:underline"
+          title={`${process.command}\n${statusText(process)}`}
         >
           <StatusMark process={process} />
-          <span className="min-w-0 truncate font-mono text-xs">{process.command}</span>
-          <span />
-          <span className="text-[11px] text-muted-foreground" aria-live="polite">
-            {statusText(process)}
-          </span>
-        </CollapsibleTrigger>
-        {onFix && process.status === "exited" && process.exitCode ? (
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={fixing}
-            aria-label={`Ask the agent to fix ${process.command}`}
-            onClick={onFix}
+          <span
+            className={cn(
+              "min-w-0 truncate font-mono text-xs",
+              !running && "text-muted-foreground",
+            )}
           >
-            {fixing ? "Asking…" : "Ask agent to fix"}
-          </Button>
-        ) : null}
+            {process.command}
+          </span>
+          <StateChip process={process} />
+        </CollapsibleTrigger>
         {running && (
           <Button
             variant="outline"
@@ -80,6 +99,18 @@ export function BackgroundProcess({ threadId, process, stopping, onStop, fixing,
             onClick={onStop}
           >
             {stopping ? "Stopping…" : "Stop"}
+          </Button>
+        )}
+        {onFix && failed && (
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={fixing}
+            aria-label={`Ask the agent to fix ${process.command}`}
+            title="Ask the agent to fix this"
+            onClick={onFix}
+          >
+            {fixing ? "Asking…" : "Fix"}
           </Button>
         )}
       </div>
