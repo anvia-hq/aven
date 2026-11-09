@@ -39,6 +39,37 @@ describe("the steps folded under a final answer", () => {
     expect(folded?.answer).toEqual({ type: "text", text: "All done." });
   });
 
+  test("a question and what the agent showed stay in view, between the fold and the words", () => {
+    const question = { type: "tool", tool: { id: "q", name: "ask_user", questions: [] } };
+    const shown = {
+      type: "tool",
+      tool: {
+        id: "s",
+        name: "show_artifact",
+        artifacts: [{ name: "a.png", mediaType: "image/png" }],
+      },
+    };
+    const folded = foldedSteps(
+      messageBlocks([tool("1"), question, shown, text("All done.")] as unknown as MessagePart[]),
+    );
+    expect(folded?.steps.map((block) => block.type)).toEqual(["tools"]);
+    expect(folded?.kept.map((block) => block.type)).toEqual(["question", "artifacts"]);
+  });
+
+  test("a message of only a question or shown files and words has nothing to fold", () => {
+    const shown = {
+      type: "tool",
+      tool: {
+        id: "s",
+        name: "show_artifact",
+        artifacts: [{ name: "a.png", mediaType: "image/png" }],
+      },
+    };
+    expect(
+      foldedSteps(messageBlocks([shown, text("Here.")] as unknown as MessagePart[])),
+    ).toBeUndefined();
+  });
+
   test("nothing folds when the message ends in a tool call, or is only words", () => {
     expect(foldedSteps(messageBlocks([text("a"), tool("1")] as MessagePart[]))).toBeUndefined();
     expect(foldedSteps(messageBlocks([text("only words")]))).toBeUndefined();
