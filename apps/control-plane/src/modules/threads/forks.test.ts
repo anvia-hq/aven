@@ -158,7 +158,7 @@ run("a thread's forks (postgres)", async () => {
     told.length = 0;
   });
 
-  test("a note queued for a parent whose run is cancelled is flushed, not lost", async () => {
+  test("a note queued for a parent whose run is cancelled is dropped, so Stop is not undone", async () => {
     const main = await parent();
     const finished = await forks.start(main, input);
     asking.add(main.id);
@@ -175,16 +175,13 @@ run("a thread's forks (postgres)", async () => {
       { id: main.id, organizationId: orgA, parentThreadId: null },
       { outcome: "cancelled" },
     );
-    const delivered = told.filter((entry) => entry.thread === main.id);
-    expect(delivered).toHaveLength(1);
-    expect(delivered[0]?.prompt).toContain(finished.id);
-    expect(delivered[0]?.onWord).toBe(false);
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
 
     await forks.ended(
       { id: main.id, organizationId: orgA, parentThreadId: null },
-      { outcome: "cancelled" },
+      { outcome: "done" },
     );
-    expect(told.filter((entry) => entry.thread === main.id)).toHaveLength(1);
+    expect(told.filter((entry) => entry.thread === main.id)).toEqual([]);
     told.length = 0;
   });
 

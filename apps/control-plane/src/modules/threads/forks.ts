@@ -120,7 +120,8 @@ export function createThreadForks({
 
     async ended(fork, ending) {
       if (!fork.parentThreadId) {
-        await deliverWaiting(fork);
+        if (ending.outcome === "cancelled") waiting.delete(fork.id);
+        else await deliverWaiting(fork);
         return;
       }
       if (ending.outcome === "cancelled") return;
