@@ -24,7 +24,21 @@ run("profileService (postgres)", async () => {
   const message = (tokens: number) => ({
     role: "assistant" as const,
     content: "done",
-    metadata: { anvia: { usage: { totalTokens: tokens } } },
+    metadata: {
+      anvia: {
+        generation: {
+          provider: "anthropic",
+          modelId: "claude-sonnet-4",
+          usage: {
+            inputTokens: tokens - 4,
+            outputTokens: 4,
+            totalTokens: tokens,
+            cachedInputTokens: 0,
+            cacheCreationInputTokens: 0,
+          },
+        },
+      },
+    },
   });
 
   beforeAll(async () => {
