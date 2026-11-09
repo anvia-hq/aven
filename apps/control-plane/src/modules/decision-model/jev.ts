@@ -38,7 +38,7 @@ export function jevModel({ kind, modelId, apiKey }: DecisionConfig): AddressingM
 const QUESTIONS = {
   toAgent: check({
     instructions:
-      "The message was written in a shared thread where an AI agent and several people work together. Is the author asking the AI agent to do something, answer something, or continue the work?",
+      "The message was written in a shared thread where an AI agent and several people work together. Is the author asking the AI agent (also written @agent) to do something, answer something, or continue the work?",
   }),
   toPerson: check({
     instructions:
