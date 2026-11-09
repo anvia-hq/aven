@@ -142,6 +142,28 @@ run("variablesService (postgres)", async () => {
     ]);
   });
 
+  test("a run a teammate started leaves out the creator's personal variables (decision 0179)", async () => {
+    const { project: mine } = await seedProject(orgA, userId, runner.id, "driven");
+    await variablesService.set(inProject(orgA, mine.id), "SHARED_ONE", {
+      value: "project",
+      secret: false,
+    });
+    await variablesService.set({ kind: "personal", organizationId: orgA, userId }, "SHARED_ONE", {
+      value: "mine",
+      secret: false,
+    });
+    await variablesService.set({ kind: "personal", organizationId: orgA, userId }, "ONLY_MINE", {
+      value: "mine",
+      secret: false,
+    });
+    const run = { organizationId: orgA, projectId: mine.id, userId };
+    const own = await variablesService.forRun(run);
+    expect(own.find((variable) => variable.name === "SHARED_ONE")?.value).toBe("mine");
+    const driven = await variablesService.forRun({ ...run, withoutPersonal: true });
+    expect(driven.find((variable) => variable.name === "SHARED_ONE")?.value).toBe("project");
+    expect(driven.find((variable) => variable.name === "ONLY_MINE")).toBeUndefined();
+  });
+
   describe("scopes (decision 0046)", () => {
     const otherId = `u-other-${crypto.randomUUID().slice(0, 8)}`;
     beforeAll(async () => {

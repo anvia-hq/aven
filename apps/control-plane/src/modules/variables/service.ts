@@ -189,6 +189,7 @@ export const variablesService = {
     organizationId: string;
     projectId: string;
     userId: string;
+    withoutPersonal?: boolean;
   }): Promise<RunEnvVar[]> {
     const rows = await db
       .select()
@@ -199,7 +200,7 @@ export const variablesService = {
           or(
             and(isNull(variables.projectId), isNull(variables.userId)),
             eq(variables.projectId, run.projectId),
-            eq(variables.userId, run.userId),
+            run.withoutPersonal ? undefined : eq(variables.userId, run.userId),
           ),
         ),
       );

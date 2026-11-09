@@ -6,6 +6,7 @@ export type RunIdentity = {
   threadId: string;
   userId: string;
   email: string;
+  driverId?: string;
 };
 
 export type SubjectScope = (typeof SUBJECT_SCOPES)[number];
