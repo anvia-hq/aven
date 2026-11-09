@@ -224,7 +224,9 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       if (workedMs === undefined) return messages;
       const index = messages.findLastIndex((message) => message.role === "assistant");
       if (index === -1) return messages;
-      return messages.map((message, at) => (at === index ? { ...message, workedMs } : message));
+      return messages.map((message, at) =>
+        at === index ? { ...message, workedMs: (message.workedMs ?? 0) + workedMs } : message,
+      );
     }
     default:
       return messages;

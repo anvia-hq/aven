@@ -34,6 +34,19 @@ run("threadsService (postgres)", async () => {
     await cleanup();
   });
 
+  test("keeps the time of every run that carried on an answer, added up", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    await threadsService.saveWorkedTime(thread.id, 3, 40_000);
+    await threadsService.saveWorkedTime(thread.id, 3, 25_000);
+    await threadsService.saveWorkedTime(thread.id, 5, 1_000);
+    expect(await threadsService.workedTimes(thread.id)).toEqual(
+      new Map([
+        [3, 65_000],
+        [5, 1_000],
+      ]),
+    );
+  });
+
   test("creates a thread titled after the project and lists it", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     expect(thread.title).toBe("proj");

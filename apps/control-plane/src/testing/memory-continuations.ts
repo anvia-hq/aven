@@ -23,7 +23,8 @@ export function memoryWorkedTimes() {
   const saved = new Map<string, Map<number, number>>();
   const store: WorkedTimeStore = {
     record: async (threadId, index, ms) => {
-      saved.set(threadId, (saved.get(threadId) ?? new Map()).set(index, ms));
+      const times = saved.get(threadId) ?? new Map<number, number>();
+      saved.set(threadId, times.set(index, (times.get(index) ?? 0) + ms));
     },
     read: async (threadId) => new Map(saved.get(threadId) ?? []),
   };
