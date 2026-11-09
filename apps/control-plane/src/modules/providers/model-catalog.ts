@@ -21,7 +21,7 @@ const catalogId = (kind: Provider, id: string) =>
 const DEFAULT_URL = "https://models.dev/api.json";
 const TTL_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
-const MAX_WINDOWS = 4096;
+const MAX_WINDOWS = 16_384;
 const MAX_MODELS = 4096;
 
 type Snapshot = {
