@@ -466,21 +466,17 @@ export class RunManager {
       this.#reject(channel, run, id, "The run ended before the agent read it");
     }
     const workedMs = Date.now() - run.startedAt;
-    this.#emit(
-      channel,
-      ending.outcome === "failed"
-        ? { type: "error", message: ending.error }
-        : { type: "done", workedMs },
-    );
     const answered = run.messages.findLastIndex((message) => message.role === "assistant");
-    if (
-      ending.outcome !== "failed" &&
-      answered !== -1 &&
-      answerMark(run.messages) !== run.markAtStart
-    ) {
-      this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
-        console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
-      });
+    const produced = answered !== -1 && answerMark(run.messages) !== run.markAtStart;
+    if (ending.outcome === "failed") {
+      this.#emit(channel, { type: "error", message: ending.error });
+    } else {
+      this.#emit(channel, produced ? { type: "done", workedMs } : { type: "done" });
+      if (produced) {
+        this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
+          console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
+        });
+      }
     }
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
     if (channel.run === run) channel.run = undefined;
