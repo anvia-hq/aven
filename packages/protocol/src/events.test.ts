@@ -242,6 +242,11 @@ describe("how long a run worked", () => {
     expect(applyEvent(chat, { type: "done" })).toBe(chat);
   });
 
+  test("a run that carries on an answer adds its time to the time already kept", () => {
+    const first = applyEvent(chat, { type: "done", workedMs: 40_000 });
+    expect(applyEvent(first, { type: "done", workedMs: 25_000 })[1]?.workedMs).toBe(65_000);
+  });
+
   test("a saved time is put on the message at its place in the thread", () => {
     const marked = withWorkedTimes(chat, new Map([[1, 5_000]]));
     expect(marked[1]?.workedMs).toBe(5_000);

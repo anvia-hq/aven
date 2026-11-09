@@ -280,7 +280,7 @@ export const threadsService = {
       .values({ threadId, messageIndex, workedMs })
       .onConflictDoUpdate({
         target: [threadRunTimes.threadId, threadRunTimes.messageIndex],
-        set: { workedMs },
+        set: { workedMs: sql`${threadRunTimes.workedMs} + ${workedMs}` },
       });
   },
 
