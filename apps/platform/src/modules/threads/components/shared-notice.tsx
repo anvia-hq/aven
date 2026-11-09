@@ -10,9 +10,9 @@ export function SharedNotice({ thread, driven }: { thread: Thread; driven: boole
       <span>
         {driven ? (
           <>
-            Multiplayer is on. Your messages go to the agent as{" "}
-            <span className="font-medium text-foreground">{thread.createdByName}</span>, with their
-            model, account and bill.
+            Multiplayer is on. Commits and pull requests are yours, through your GitHub. The model,
+            memory and bill are{" "}
+            <span className="font-medium text-foreground">{thread.createdByName}</span>'s.
           </>
         ) : (
           <>
