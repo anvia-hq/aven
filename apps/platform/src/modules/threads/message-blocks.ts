@@ -22,6 +22,11 @@ export function messageBlocks(parts: MessagePart[]) {
 
 export function foldedSteps(blocks: Block[]) {
   const answer = blocks.at(-1);
-  if (blocks.length < 2 || answer?.type !== "text") return undefined;
-  return { steps: blocks.slice(0, -1), answer };
+  if (answer?.type !== "text") return undefined;
+  const before = blocks.slice(0, -1);
+  const stays = (block: Block) => block.type === "question" || block.type === "artifacts";
+  const kept = before.filter(stays);
+  const steps = before.filter((block) => !stays(block));
+  if (steps.length === 0) return undefined;
+  return { steps, kept, answer };
 }

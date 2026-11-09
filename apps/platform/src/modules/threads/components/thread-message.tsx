@@ -158,6 +158,9 @@ function AssistantMessage({
             </div>
           </CollapsibleContent>
         </Collapsible>
+        {folded.kept.map((block, index) => (
+          <AssistantBlock key={index} block={block} live={false} threadId={threadId} />
+        ))}
         <AssistantBlock block={folded.answer} live={false} threadId={threadId} />
       </div>
     );
