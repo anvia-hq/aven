@@ -27,7 +27,7 @@ import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { dragThread } from "../split";
 import { crowdOf } from "../thread-crowd";
-import type { SplitPair, Thread } from "../types";
+import type { Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
 
 const RUNNING_REFRESH_MS = 5000;
@@ -310,16 +310,16 @@ export function SidebarThreads() {
               rows.findIndex((row) => row.thread.id === thread.id) <
               rows.findIndex((row) => row.thread.id === partner.id);
             if (!first) return null;
-            const pair: SplitPair = pairs.find((each) => each[0] === partner.id)
-              ? [partner.id, thread.id]
-              : [thread.id, partner.id];
-            return pairRow(pair[0] === thread.id ? [thread, partner] : [partner, thread]);
+            const ordered: [Thread, Thread] = pairs.some(([left]) => left === partner.id)
+              ? [partner, thread]
+              : [thread, partner];
+            return pairRow(ordered);
           }
-          return row(thread, {
-            nested,
-            first: !rows[index - 1]?.nested,
-            last: !rows[index + 1]?.nested,
-          });
+          const joins = (at: number) => {
+            const neighbour = rows[at];
+            return neighbour?.nested === true && !pairedWith(neighbour.thread.id);
+          };
+          return row(thread, { nested, first: !joins(index - 1), last: !joins(index + 1) });
         })}
         {threads.length === 0 && (
           <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>

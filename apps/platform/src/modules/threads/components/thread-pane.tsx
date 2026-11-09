@@ -140,6 +140,7 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
                         showShip={showShip}
                         send={send}
                         panels={panels}
+                        split={split}
                       />
                     )}
                     {!owned && <SharedNotice thread={thread} driven={driven} />}

@@ -14,9 +14,10 @@ type Props = {
   showShip: () => () => void;
   send: (message: OutgoingMessage, selection?: RunSelection) => Promise<boolean>;
   panels: ThreadPanels;
+  split?: boolean;
 };
 
-export function ShipBar({ thread, unshipped, showShip, send, panels }: Props) {
+export function ShipBar({ thread, unshipped, showShip, send, panels, split = false }: Props) {
   const { action, ship, setUp, retry } = useShipAction(thread, unshipped, showShip, send);
   const { setScope } = useDiffPreferences();
 
@@ -36,7 +37,7 @@ export function ShipBar({ thread, unshipped, showShip, send, panels }: Props) {
           onRetry={retry}
         />
         <PullRequestChip pullRequests={thread.pullRequests} />
-        <ChangesBadge diff={unshipped} onOpen={showChanges} />
+        {!split && <ChangesBadge diff={unshipped} onOpen={showChanges} />}
       </div>
       <div className="flex items-center gap-2">
         <ActionButtons thread={thread} />
