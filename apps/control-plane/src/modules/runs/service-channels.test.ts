@@ -136,12 +136,15 @@ describe("a run that produced nothing", () => {
     const { runtime, current } = scriptedRuntime();
     const manager = managerFor(runtime, { workedTimes: times.store });
     const thread = newThread();
+    const watcher = attach(manager, thread);
 
     await manager.start(thread, "one");
     current().finish({ type: "response" });
     await until(() => !manager.isRunning(thread.id));
     await Bun.sleep(30);
     expect(times.saved.get(thread.id)?.size ?? 0).toBe(0);
+    await watcher.detach();
+    expect(watcher.events.find((event) => event.type === "done")).toEqual({ type: "done" });
   });
 });
 
