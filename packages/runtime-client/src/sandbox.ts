@@ -500,32 +500,39 @@ export class Sandboxes implements ThreadWorkspaces {
   async #startContainer(threadId: string, root: string) {
     const name = this.#name(threadId);
     await this.#run(["rm", "-f", name]);
+    const image = await this.#environments.imageOf(threadId);
+    const uploads = await this.uploads.dir(threadId);
+    const skills = await this.skills.dir(threadId);
     const token = randomBytes(24).toString("base64url");
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
     const user = hostUser();
     const profile = await this.#profiles.lease(threadId);
-    const args = dockerRunArgs({
-      name,
-      threadId,
-      image: await this.#environments.imageOf(threadId),
-      root,
-      uploads: await this.uploads.dir(threadId),
-      skills: await this.skills.dir(threadId),
-      profile: profile?.dir,
-      host: this.#host,
-      hubPort: this.#port,
-      token,
-      ...this.#containers,
-      platform: this.#config.platform,
-      runtime: this.#config.runtime,
-      user,
-    });
-    const started = await this.#run(args);
-    if (started.code !== 0) {
+    try {
+      const args = dockerRunArgs({
+        name,
+        threadId,
+        image,
+        root,
+        uploads,
+        skills,
+        profile: profile?.dir,
+        host: this.#host,
+        hubPort: this.#port,
+        token,
+        ...this.#containers,
+        platform: this.#config.platform,
+        runtime: this.#config.runtime,
+        user,
+      });
+      const started = await this.#run(args);
+      if (started.code !== 0) {
+        throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
+      }
+    } catch (error) {
       this.#tokens.delete(token);
       this.#profiles.release(threadId);
-      throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
+      throw error;
     }
     this.#running.add(threadId);
     if (user) await this.#repairHome(name, user);
