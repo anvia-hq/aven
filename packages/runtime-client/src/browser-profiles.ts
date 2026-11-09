@@ -48,9 +48,14 @@ export class BrowserProfiles {
     const name = shared ? key : `t-${threadId}`;
     this.#held.set(threadId, name);
     const dir = this.#path(name);
-    await mkdir(dir, { recursive: true, mode: 0o700 });
-    if (shared) await Promise.all(LOCKS.map((lock) => rm(join(dir, lock), { force: true })));
-    await writeFile(join(dir, ".aven-used"), new Date(this.#now()).toISOString());
+    try {
+      await mkdir(dir, { recursive: true, mode: 0o700 });
+      if (shared) await Promise.all(LOCKS.map((lock) => rm(join(dir, lock), { force: true })));
+      await writeFile(join(dir, ".aven-used"), new Date(this.#now()).toISOString());
+    } catch (error) {
+      this.#held.delete(threadId);
+      throw error;
+    }
     return { name, dir, shared };
   }
 

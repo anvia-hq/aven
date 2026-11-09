@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -29,6 +29,22 @@ describe("a person's browser profile in a project (decision 0180)", () => {
     const second = await kept.lease("t2");
     expect(second?.dir).toBe(first?.dir);
     expect(((await stat(second!.dir)).mode & 0o777).toString(8)).toBe("700");
+  });
+
+  test("a lease that fails to prepare its directory holds nothing, so the next one can have it", async () => {
+    const kept = profiles();
+    await kept.remember(mine("t1"));
+    await kept.remember(mine("t2"));
+    const first = await kept.lease("t1");
+    kept.release("t1");
+    const marker = join(first!.dir, ".aven-used");
+    await rm(marker);
+    await mkdir(marker);
+    await expect(kept.lease("t1")).rejects.toThrow();
+    await rm(marker, { recursive: true });
+    const second = await kept.lease("t2");
+    expect(second?.shared).toBe(true);
+    expect(second?.dir).toBe(first?.dir);
   });
 
   test("another person, or another project, has a profile of its own", async () => {
