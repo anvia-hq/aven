@@ -37,6 +37,7 @@ export const threads = pgTable(
     visibility: text("visibility", { enum: ["private", "workspace"] })
       .notNull()
       .default("private"),
+    drivingUntil: timestamp("driving_until", { withTimezone: true }),
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),

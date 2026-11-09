@@ -1,0 +1,1 @@
+ALTER TABLE "threads" ADD COLUMN "driving_until" timestamp with time zone;
