@@ -271,7 +271,9 @@ test.describe("bots", () => {
     await expect(page.getByText("The user attached 2 files")).toHaveCount(1);
   });
 
-  test("files alone make a message", async ({ page }) => {
+  test("files alone make a message: it stays as one attachment, the bot answers it and the composer empties", async ({
+    page,
+  }) => {
     test.slow();
     await registerUser(page, "bot-files-only", "Files Only");
     const provider = await page.request.post("/api/providers", {
@@ -294,8 +296,6 @@ test.describe("bots", () => {
       ]);
     await expect(send).toBeEnabled();
     await send.click();
-    // The message is the file alone: it stays in the chat as one attachment, the bot answers it,
-    // and the composer is empty again. (The /uploads path is a note for the model, not shown.)
     await expect(page.getByText("Hey there!")).toBeVisible();
     await expect(page.getByText("plan.md", { exact: true })).toHaveCount(1);
     await expect(send).toBeDisabled();
