@@ -1,18 +1,28 @@
-import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { systemNoteOf } from "@aven/protocol/system-notes";
 
 import { Markdown } from "@/components/markdown";
 
+import { authorOf } from "../message-author";
 import { markMentions } from "../mentions";
-import type { QueuedSteer } from "../types";
+import type { QueuedSteer, Viewer } from "../types";
+import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
 
-export function QueuedMessage({ message }: { message: QueuedSteer }) {
+export function QueuedMessage({ message, viewer }: { message: QueuedSteer; viewer: Viewer }) {
   if (systemNoteOf(message.prompt)?.kind === "process") return null;
-  const { driver, text } = parseDriverPrompt(message.prompt);
+  const { mine, name, text } = authorOf(message.prompt, viewer);
   return (
-    <div className="ml-auto flex max-w-[80%] flex-col items-end gap-1" data-role="user" data-queued>
-      {driver && <p className="text-xs text-muted-foreground">{driver}</p>}
+    <div
+      className={
+        mine
+          ? "ml-auto flex max-w-[80%] flex-col items-end gap-1"
+          : "mr-auto flex max-w-[80%] flex-col items-start gap-1"
+      }
+      data-role="user"
+      data-author={mine ? "mine" : "other"}
+      data-queued
+    >
+      {!mine && <AuthorLabel name={name} />}
       <div className="w-fit max-w-full rounded-lg bg-accent/60 px-3 py-2 opacity-70 [&_p]:whitespace-pre-line">
         <Markdown components={{ code: mentionCode }}>
           {markMentions(text, message.mentions)}

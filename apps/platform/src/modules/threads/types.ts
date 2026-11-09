@@ -68,6 +68,10 @@ export type Thread = {
   updatedAt: string;
 };
 
+export type Viewer = { owned: boolean; name: string; ownerName: string };
+
+export type MessageAuthor = { mine: boolean; name: string; text: string };
+
 export type SavedSelection = { providerId: string; modelId?: string; effort?: string };
 
 export type Draft = { choice: string; custom: string };
