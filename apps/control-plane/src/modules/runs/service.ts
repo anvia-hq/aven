@@ -311,6 +311,18 @@ export class RunManager {
     }
   }
 
+  async note(thread: RunThread, prompt: string) {
+    await this.#store.append({
+      scope: this.#scope(thread),
+      runId: crypto.randomUUID(),
+      turn: 0,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const channel = this.#channels.get(thread.id);
+    if (!channel || channel.run) return;
+    this.#emit(channel, { type: "snapshot", ...(await this.#attach(channel, [])) });
+  }
+
   async history(thread: RunThread) {
     const run = this.#channels.get(thread.id)?.run;
     if (run) return run.messages;
