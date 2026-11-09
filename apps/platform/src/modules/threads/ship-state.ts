@@ -6,7 +6,8 @@ const shipLabel = (latest: ThreadPullRequest | undefined): ShipLabel => {
 };
 
 export function shipActionOf(facts: ShipFacts): ShipAct {
-  const { gate, appKey, changes, branch, pullRequests, running, shipping, connected } = facts;
+  const { gate, appKey, changes, branch, branchPulls, pullRequests, running, shipping, connected } =
+    facts;
   const [latest] = pullRequests;
   const busy = running || shipping;
   if (gate.kind === "checking") return { kind: "loading" };
@@ -33,6 +34,9 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
   if (latest) return { kind: "none" };
   if (!branch.loaded) return { kind: "loading" };
   if (branch.problem) return { kind: "failed", reason: branch.problem };
-  if (branch.any) return { kind: "open", disabled: busy };
-  return { kind: "none" };
+  if (!branch.any) return { kind: "none" };
+  if (!branchPulls.loaded) return { kind: "loading" };
+  if (branchPulls.problem !== null || !branchPulls.known || branchPulls.any)
+    return { kind: "none" };
+  return { kind: "open", disabled: busy };
 }

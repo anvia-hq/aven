@@ -236,6 +236,28 @@ test.describe("shipping a thread", () => {
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
   });
 
+  test("does not offer to open a pull request for a branch GitHub already has one for, and shows it", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const branch = `feat/vector-${testKey.slice(-8)}`;
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS: "1",
+      FAKE_AVEN_FILES: "setup,ship",
+      FAKE_BRANCH: branch,
+    });
+    runner = child;
+    await page.request.post(pullsUrl(), { data: { head: branch, title: "Record vector context" } });
+    await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
+
+    await page.goto(`/threads/${threadId}`);
+
+    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
+    await expect(shipButton(page)).toHaveCount(0);
+  });
+
   test("two pull requests sit behind the newest one's +1, with no Ship", async ({ page }) => {
     await registerUser(page, "shp", "Ship User");
     await provider(page);

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { git } from "./git-clone";
-import { markTurn, threadDiff } from "./thread-diff";
+import { currentBranch, markTurn, threadDiff } from "./thread-diff";
 
 const roots: string[] = [];
 
@@ -38,6 +38,13 @@ describe("a thread's changes", () => {
     roots.push(dir);
     expect(await markTurn(dir)).toBe(false);
     expect(await threadDiff(dir, "all")).toBeNull();
+  });
+
+  test("the branch the workspace is on is named, and a detached head has none", async () => {
+    const { root, sh } = await workspace();
+    expect(await currentBranch(root)).toBe("aven/test");
+    await sh(root, "checkout", "-q", "--detach");
+    expect(await currentBranch(root)).toBeNull();
   });
 
   test("the whole branch shows committed work too, in a clone made as Aven makes it (no origin/HEAD)", async () => {

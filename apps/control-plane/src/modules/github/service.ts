@@ -267,6 +267,11 @@ export function createGithubService(
       return client.findPullRequests(installationId, fullName, branchPrefix);
     },
 
+    async branchPullRequests(installationRowId: string, fullName: string, branch: string) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.branchPullRequests(installationId, fullName, branch);
+    },
+
     async requireWritable(installationRowId: string) {
       const { client, installationId, accountLogin } = await acting(installationRowId);
       if (!(await client.canWrite(installationId))) {

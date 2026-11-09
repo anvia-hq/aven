@@ -105,6 +105,11 @@ export async function threadDiff(
   return diff;
 }
 
+export async function currentBranch(root: string, run: Git = git) {
+  const found = await hostGit(run)(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
+  return found.code === 0 ? found.stdout.trim() : null;
+}
+
 export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
   const host = hostGit(run);
   const now = await workingTree(root, host);

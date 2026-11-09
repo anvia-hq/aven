@@ -33,6 +33,7 @@ A boolean switch counts as on when its value is exactly `1`; any other value, or
 | `FAKE_RUN_ENDS_AFTER`      | milliseconds                                | the run ends after that long                                                       |
 | `FAKE_RUN_FAILS`           | message                                     | the run ends in `error` with that message instead of saying `Done.`                |
 | `FAKE_AVEN_FILES`          | `setup`, `ship`, `actions`, comma separated | the fake workspace carries `.aven/setup`, `.aven/ship.md` and `.aven/actions.yml`  |
+| `FAKE_BRANCH`              | branch name                                 | `diff.get` says the workspace is on that branch (`aven/fake-branch` when unset)    |
 | `FAKE_PROCESSES`           | `1`                                         | `processes.list` answers a running `npm run dev` and a failed `bun test`           |
 | `FAKE_STEER_REFUSES`       | reason                                      | `run.steer` is refused with that reason                                            |
 | `FAKE_STEER_APPLIES_AFTER` | milliseconds                                | how long after a steer `steer_applied` comes; `400` when it says nothing           |

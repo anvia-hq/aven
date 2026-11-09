@@ -11,7 +11,7 @@ import {
   sandboxReleaseParams,
   steerParams,
 } from "./call-params";
-import { threadDiff } from "./thread-diff";
+import { currentBranch, threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import type {
   FilesCallMethod,
@@ -35,7 +35,8 @@ export function createRunnerCalls({
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
     const root = await sandbox.workspace(threadId);
-    return root ? threadDiff(root, scope) : null;
+    const diff = root ? await threadDiff(root, scope) : null;
+    return root && diff ? { ...diff, branch: await currentBranch(root) } : null;
   }
 
   async function filesOf(method: Exclude<FilesCallMethod, "files.search">, params: unknown) {
