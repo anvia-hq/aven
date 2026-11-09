@@ -24,6 +24,7 @@ import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
+import { dragThread } from "../split";
 import { crowdOf } from "../thread-crowd";
 import type { Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
@@ -211,7 +212,13 @@ export function SidebarThreads() {
             )}
             {unread.has(thread.id) && <UnreadDot />}
             <SidebarMenuButton
-              render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
+              render={
+                <Link
+                  to="/threads/$threadId"
+                  params={{ threadId: thread.id }}
+                  onDragStart={(event) => dragThread(event, thread.id)}
+                />
+              }
               isActive={pathname === `/threads/${thread.id}`}
               className={cn("pr-11", nested && "pl-8")}
             >
@@ -258,7 +265,13 @@ export function SidebarThreads() {
             {shared.map((thread) => (
               <SidebarMenuItem key={thread.id}>
                 <SidebarMenuButton
-                  render={<Link to="/threads/$threadId" params={{ threadId: thread.id }} />}
+                  render={
+                    <Link
+                      to="/threads/$threadId"
+                      params={{ threadId: thread.id }}
+                      onDragStart={(event) => dragThread(event, thread.id)}
+                    />
+                  }
                   isActive={pathname === `/threads/${thread.id}`}
                   className="pr-11"
                 >
