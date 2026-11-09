@@ -1,4 +1,4 @@
-import { Archive, GitBranch, Plus, Share, X } from "@mynaui/icons-react";
+import { Archive, GitBranch, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
@@ -177,7 +177,7 @@ export function SidebarThreads() {
   const rename = useRenameThread();
   useFinishedSound();
   const unread = useUnreadThreads();
-  const { pairs, partnerOf, unpair } = useSplitPairs();
+  const { pairs, partnerOf } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
@@ -279,15 +279,7 @@ export function SidebarThreads() {
             {left.title} + {right.title}
           </span>
         </SidebarMenuButton>
-        <UpdatedAt thread={latest} yields />
-        <SidebarMenuAction
-          className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
-          aria-label={`Unpair ${left.title} and ${right.title}`}
-          title="Unpair"
-          onClick={() => unpair(left.id)}
-        >
-          <X />
-        </SidebarMenuAction>
+        <UpdatedAt thread={latest} />
       </SidebarMenuItem>
     );
   }
