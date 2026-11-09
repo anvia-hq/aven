@@ -333,6 +333,8 @@ export type RunThreadInfo = {
   id: string;
   organizationId: string;
   forkOf?: string;
+  projectId?: string;
+  ownerId?: string;
 };
 
 export type Provider = (typeof PROVIDERS)[number];

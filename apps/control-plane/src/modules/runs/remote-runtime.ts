@@ -255,5 +255,7 @@ function forkable(thread: RunThread): RunThreadInfo {
     id: thread.id,
     organizationId: thread.organizationId,
     forkOf: thread.parentThreadId ?? undefined,
+    projectId: thread.projectId,
+    ownerId: thread.createdBy,
   };
 }

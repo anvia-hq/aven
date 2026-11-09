@@ -48,6 +48,14 @@ describe("dockerRunArgs", () => {
     expect(args).not.toContain("--user");
   });
 
+  test("mounts a browser profile and points the browser at it only when there is one", () => {
+    const plain = dockerRunArgs(input);
+    expect(plain.some((arg) => arg.includes("ANVIA_BROWSER_PROFILE"))).toBe(false);
+    const args = dockerRunArgs({ ...input, profile: "/data/browser-profiles/p-1" });
+    expect(args).toContain("/data/browser-profiles/p-1:/browser-profile");
+    expect(args).toContain("ANVIA_BROWSER_PROFILE=/browser-profile");
+  });
+
   test("starts an init as PID 1 so abandoned children are reaped", () => {
     expect(dockerRunArgs(input)).toContain("--init");
   });

@@ -22,6 +22,8 @@ export type RunThread = {
   organizationId: string;
   runtimeId: string;
   parentThreadId?: string | null;
+  projectId?: string;
+  createdBy?: string;
 };
 
 export type RunExtras = Pick<

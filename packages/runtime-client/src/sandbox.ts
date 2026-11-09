@@ -11,6 +11,7 @@ import { SKILLS_DIR } from "@aven/agents/skills";
 import { ArtifactStore } from "./artifacts";
 import { homeRepairArgs } from "./container-home";
 import { RESUME_SCRIPT, containerBaseArgs, hostUser, scriptState } from "./environment-setup";
+import { BROWSER_PROFILE_DIR, BrowserProfiles } from "./browser-profiles";
 import { ArchivedCleanup } from "./archived-cleanup";
 import { Leftovers } from "./leftovers";
 import { Environments } from "./environments";
@@ -65,6 +66,7 @@ const DEFAULT_CONNECT_TIMEOUT_MS = 90_000;
 const DEFAULT_REACH_CHECK_AFTER_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_ARCHIVED_KEEP_DAYS = 1;
+const DEFAULT_BROWSER_PROFILE_KEEP_DAYS = 90;
 const FIRST_SWEEP_MS = 60_000;
 const SWEEP_MS = 60 * 60 * 1000;
 const CONNECT_POLL_MS = 50;
@@ -79,11 +81,22 @@ type DockerRunInput = Omit<ContainerBase, "label"> & {
   root: string;
   uploads: string;
   skills: string;
+  profile?: string;
   host: string;
   hubPort: number;
   token: string;
   user?: string;
 };
+
+function profileArgs(profile: string | undefined) {
+  if (!profile) return [];
+  return [
+    "-v",
+    `${profile}:${BROWSER_PROFILE_DIR}`,
+    "-e",
+    `ANVIA_BROWSER_PROFILE=${BROWSER_PROFILE_DIR}`,
+  ];
+}
 
 export function dockerRunArgs(input: DockerRunInput) {
   const args = containerBaseArgs(
@@ -99,6 +112,7 @@ export function dockerRunArgs(input: DockerRunInput) {
         `${input.uploads}:${UPLOADS_DIR}:ro`,
         "-v",
         `${input.skills}:${SKILLS_DIR}:ro`,
+        ...profileArgs(input.profile),
         "-e",
         `ANVIA_CONTROL_URL=ws://${input.host}:${input.hubPort}/daemon`,
         "-e",
@@ -123,6 +137,7 @@ export class Sandboxes implements ThreadWorkspaces {
   #host: string;
   #environments: Environments;
   #archived: ArchivedCleanup;
+  #profiles: BrowserProfiles;
   #leftovers: Leftovers;
   #sweeper: Timer | undefined;
   #hub: RemoteSandboxHub;
@@ -171,6 +186,10 @@ export class Sandboxes implements ThreadWorkspaces {
       inUse: (threadId) =>
         this.#running.has(threadId) || this.#starting.has(threadId) || this.#roots.has(threadId),
     });
+    this.#profiles = new BrowserProfiles({
+      home: runtimeHome(config.home),
+      keepMs: (config.browserProfileKeepDays ?? DEFAULT_BROWSER_PROFILE_KEEP_DAYS) * DAY_MS,
+    });
     this.#leftovers = new Leftovers({
       docker: commands.docker,
       runner: this.#containers.runner,
@@ -205,9 +224,13 @@ export class Sandboxes implements ThreadWorkspaces {
 
   #startSweeping() {
     const sweep = () =>
-      void this.#archived.sweep().catch((error: unknown) => {
-        console.warn("Could not clean up archived threads:", error);
-      });
+      void this.#archived
+        .sweep()
+        .then((removed) => Promise.all(removed.map((id) => this.#profiles.forget(id))))
+        .then(() => this.#profiles.sweep())
+        .catch((error: unknown) => {
+          console.warn("Could not clean up archived threads:", error);
+        });
     setTimeout(sweep, FIRST_SWEEP_MS).unref();
     this.#sweeper = setInterval(sweep, SWEEP_MS);
     this.#sweeper.unref();
@@ -231,6 +254,7 @@ export class Sandboxes implements ThreadWorkspaces {
     { lazy = false }: AcquireOptions = {},
   ): Promise<ThreadSandbox> {
     await this.#archived.clear(thread.id);
+    await this.#profiles.remember(thread);
     let preparing: Promise<void> | undefined;
     const prepare = async () => {
       const root = await this.#workspace(thread, repo);
@@ -313,6 +337,7 @@ export class Sandboxes implements ThreadWorkspaces {
     this.#dropTokens(threadId);
     this.#hub.forget(threadId);
     await this.#run(["rm", "-f", this.#name(threadId)]);
+    this.#profiles.release(threadId);
   }
 
   async dispose() {
@@ -479,6 +504,7 @@ export class Sandboxes implements ThreadWorkspaces {
     this.#dropTokens(threadId);
     this.#tokens.set(token, threadId);
     const user = hostUser();
+    const profile = await this.#profiles.lease(threadId);
     const args = dockerRunArgs({
       name,
       threadId,
@@ -486,6 +512,7 @@ export class Sandboxes implements ThreadWorkspaces {
       root,
       uploads: await this.uploads.dir(threadId),
       skills: await this.skills.dir(threadId),
+      profile: profile?.dir,
       host: this.#host,
       hubPort: this.#port,
       token,
@@ -497,6 +524,7 @@ export class Sandboxes implements ThreadWorkspaces {
     const started = await this.#run(args);
     if (started.code !== 0) {
       this.#tokens.delete(token);
+      this.#profiles.release(threadId);
       throw new Error(`Could not start the sandbox: ${started.stderr.trim() || started.stdout}`);
     }
     this.#running.add(threadId);
