@@ -110,7 +110,7 @@ The native macOS client (Swift, no web view; decision 0008). Two SwiftPM package
 
 ## clients/ios
 
-The iPhone and iPad app (SwiftUI, iOS 17, dark Mint theme only; decision 0172), `clients/ios/AvenMobile`, over `AvenKit` from `clients/macos`. `project.yml` is XcodeGen's: `xcodegen generate` makes `AvenMobile.xcodeproj` (git-ignored), which Xcode opens and `xcodebuild -project AvenMobile.xcodeproj -scheme AvenMobile -destination 'id=<simulator>'` builds. Needs full Xcode and the iOS simulator runtime. `UITests/SignInTests.swift` signs in against a running control plane with `TEST_RUNNER_AVEN_TEST_SERVER`, `_EMAIL` and `_PASSWORD` set. A server address that is not local and has no port or path gets `/api` added by `AvenKit`.
+The iPhone and iPad app (SwiftUI, iOS 17, dark Mint theme only; decision 0175), `clients/ios/AvenMobile`, over `AvenKit` from `clients/macos`. `project.yml` is XcodeGen's: `xcodegen generate` makes `AvenMobile.xcodeproj` (git-ignored), which Xcode opens and `xcodebuild -project AvenMobile.xcodeproj -scheme AvenMobile -destination 'id=<simulator>'` builds. Needs full Xcode and the iOS simulator runtime. `UITests/SignInTests.swift` signs in against a running control plane with `TEST_RUNNER_AVEN_TEST_SERVER`, `_EMAIL` and `_PASSWORD` set. A server address that is not local and has no port or path gets `/api` added by `AvenKit`.
 
 ## apps/runtime and packages/runtime-client
 
