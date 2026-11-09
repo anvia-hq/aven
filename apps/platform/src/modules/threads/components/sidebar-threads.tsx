@@ -24,7 +24,9 @@ import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
+import { crowdOf } from "../thread-crowd";
 import type { Thread } from "../types";
+import { ParticipantStack } from "./participant-stack";
 
 const RUNNING_REFRESH_MS = 5000;
 
@@ -67,8 +69,14 @@ function UnreadDot() {
   );
 }
 
-function SharedMark({ thread }: { thread: Thread }) {
+function CrowdMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace") return null;
+  const crowd = crowdOf(thread);
+  return crowd && <ParticipantStack crowd={crowd} />;
+}
+
+function SharedMark({ thread }: { thread: Thread }) {
+  if (thread.visibility !== "workspace" || crowdOf(thread)) return null;
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
@@ -224,6 +232,7 @@ export function SidebarThreads() {
                   if (value !== undefined) void rename(thread, value);
                 }}
               />
+              <CrowdMark thread={thread} />
             </SidebarMenuButton>
             <UpdatedAt thread={thread} yields />
             <SidebarMenuAction
@@ -262,6 +271,7 @@ export function SidebarThreads() {
                   <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
                     {thread.title}
                   </span>
+                  <CrowdMark thread={thread} />
                 </SidebarMenuButton>
                 <UpdatedAt thread={thread} />
               </SidebarMenuItem>
