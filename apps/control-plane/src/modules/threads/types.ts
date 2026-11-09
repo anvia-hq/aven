@@ -63,6 +63,8 @@ export type ThreadPullRequest = {
   state: "open" | "closed" | "merged";
 };
 
+export type ThreadPerson = { id: string; name: string };
+
 export type Viewer = { organizationId: string; userId: string };
 
 export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;

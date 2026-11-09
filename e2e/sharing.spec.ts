@@ -209,4 +209,49 @@ test.describe("sharing a thread", () => {
 
     await mate.context.close();
   });
+  test("a multiplayer thread shows up to three people in the sidebar, and how many more", async ({
+    page,
+  }) => {
+    await registerUser(page, "owner", "Owner Person");
+    await addRunner(page);
+    await connectGithub(page);
+    await importRepository(page, "shiny-app");
+    const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
+    const created = await page.request.post("/api/threads", {
+      data: { projectId: project!.id, title: "Together" },
+    });
+    const thread = (await created.json()) as { id: string };
+    const shared = await page.request.patch(`/api/threads/${thread.id}`, {
+      data: { visibility: "workspace", driving: 7 },
+    });
+    expect(shared.ok()).toBe(true);
+
+    const people = (names: string[]) => names.map((name, id) => ({ id: `u-${id}`, name }));
+    let participants = people([]);
+    await page.route("**/api/threads", async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as { id: string }[];
+      await route.fulfill({
+        response,
+        json: body.map((row) => (row.id === thread.id ? { ...row, participants } : row)),
+      });
+    });
+
+    await page.goto("/threads");
+    const row = page.locator('[data-slot="sidebar"]').locator("li", { hasText: "Together" });
+    const stack = row.locator('[data-role="participants"]');
+    await expect(stack).toHaveAttribute("aria-label", "In this thread: Owner Person");
+    await expect(stack.locator('[data-slot="avatar"]')).toHaveCount(1);
+
+    participants = people(["Randy Pamungkas", "Dina Putri", "Eko Santoso", "Fitri Lestari"]);
+    await expect(async () => {
+      await page.reload();
+      await expect(stack.locator('[data-slot="avatar"]')).toHaveCount(3);
+    }).toPass({ timeout: 10_000 });
+    await expect(stack).toContainText("2+");
+    await expect(stack).toHaveAttribute(
+      "aria-label",
+      "In this thread: Owner Person, Randy Pamungkas, Dina Putri, Eko Santoso, Fitri Lestari",
+    );
+  });
 });

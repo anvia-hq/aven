@@ -11,7 +11,7 @@ import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-or
 import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
 import { projectsService } from "../projects/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
-import type { ThreadPullRequest, Viewer } from "./types";
+import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
 export class ProjectNotFoundError extends UnprocessableError {}
 export class ThreadNotFoundError extends NotFoundError {
@@ -25,6 +25,16 @@ const columns = {
   ...publicColumns,
   createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
+  participants: sql<ThreadPerson[]>`coalesce((
+    select json_agg(json_build_object('id', ${users.id}, 'name', ${users.name}) order by joined.first_at)
+    from (
+      select ${threadMessageSenders.senderId} as sender_id, min(${threadMessageSenders.createdAt}) as first_at
+      from ${threadMessageSenders}
+      where ${threadMessageSenders.threadId} = "threads"."id"
+      group by ${threadMessageSenders.senderId}
+    ) as joined
+    join ${users} on ${users.id} = joined.sender_id
+  ), '[]'::json)`,
   pullRequests: sql<ThreadPullRequest[]>`coalesce((
     select json_agg(json_build_object(
       'number', ${threadPullRequests.number},
