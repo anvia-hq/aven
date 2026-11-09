@@ -13,6 +13,8 @@ Status: accepted. Narrows 0191, which read only a message that mentions a person
 - The question about a person is no longer limited to the mentioned teammates: it asks whether the author is talking to someone in the thread, mentioned or already in the recent talk, and waiting for them.
 - `@agent` in a message sends it to the agent without asking the model.
 - The fallback when the model is missing, fails or is slow is unchanged: a mention is for the person unless `@agent`; a message with none is for the agent.
+- `@` in the composer of a multiplayer thread offers `agent` first, before the teammates, and writes `@agent`.
+- The agent's instructions say that a thread can have several people, what the `[driver: Name]` mark is, that a message for a teammate may sit in the history with no answer from it, and that `@agent` means it. Until now it was never told.
 - User messages in a thread use the margins of a plain chat (`my-6`), since in a thread of several people the larger gap read as empty space.
 
 ## Consequences
