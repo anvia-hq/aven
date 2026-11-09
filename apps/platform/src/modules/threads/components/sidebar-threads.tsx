@@ -1,4 +1,4 @@
-import { Archive, GitBranch, Plus, Share } from "@mynaui/icons-react";
+import { Archive, GitBranch, Plus, Share, X } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
@@ -26,7 +26,6 @@ import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { dragThread } from "../split";
-import { SplitPairGroup } from "./split-pair-group";
 import { crowdOf } from "../thread-crowd";
 import type { SplitPair, Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
@@ -181,9 +180,6 @@ export function SidebarThreads() {
   const { pairs, partnerOf, unpair } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const split = useRouterState({
-    select: (state) => (state.location.search as { split?: string }).split,
-  });
 
   const anyRunning = [...own, ...others].some((thread) => thread.running);
   useEffect(() => {
@@ -203,8 +199,7 @@ export function SidebarThreads() {
       nested = false,
       first = true,
       last = true,
-      pair,
-    }: { nested?: boolean; first?: boolean; last?: boolean; pair?: SplitPair },
+    }: { nested?: boolean; first?: boolean; last?: boolean },
   ) {
     return (
       <SidebarMenuItem key={thread.id}>
@@ -214,14 +209,11 @@ export function SidebarThreads() {
           render={
             <Link
               to="/threads/$threadId"
-              params={{ threadId: pair ? pair[0] : thread.id }}
-              search={{ split: pair?.[1] }}
+              params={{ threadId: thread.id }}
               onDragStart={(event) => dragThread(event, thread.id)}
             />
           }
-          isActive={
-            pathname === `/threads/${thread.id}` || (pair !== undefined && split === thread.id)
-          }
+          isActive={pathname === `/threads/${thread.id}`}
           className={cn("pr-11", nested && "pl-8")}
         >
           <SidebarProjectTile
@@ -256,6 +248,50 @@ export function SidebarThreads() {
     );
   }
 
+  function pairRow([left, right]: [Thread, Thread]) {
+    const latest = left.updatedAt > right.updatedAt ? left : right;
+    return (
+      <SidebarMenuItem key={`pair-${left.id}-${right.id}`} data-slot="split-pair">
+        {(unread.has(left.id) || unread.has(right.id)) && <UnreadDot />}
+        <SidebarMenuButton
+          render={
+            <Link
+              to="/threads/$threadId"
+              params={{ threadId: left.id }}
+              search={{ split: right.id }}
+              title={`${left.title} + ${right.title}`}
+            />
+          }
+          isActive={pathname === `/threads/${left.id}` || pathname === `/threads/${right.id}`}
+          className="pr-11"
+        >
+          <span className="flex shrink-0 -space-x-1.5">
+            {[left, right].map((thread) => (
+              <SidebarProjectTile
+                key={thread.id}
+                thread={thread}
+                project={projects.find((candidate) => candidate.id === thread.projectId)}
+                palette={palettes.get(thread.projectId)}
+              />
+            ))}
+          </span>
+          <span className="min-w-0 flex-1 truncate">
+            {left.title} + {right.title}
+          </span>
+        </SidebarMenuButton>
+        <UpdatedAt thread={latest} yields />
+        <SidebarMenuAction
+          className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
+          aria-label={`Unpair ${left.title} and ${right.title}`}
+          title="Unpair"
+          onClick={() => unpair(left.id)}
+        >
+          <X />
+        </SidebarMenuAction>
+      </SidebarMenuItem>
+    );
+  }
+
   function pairedWith(id: string) {
     const partner = threads.find((thread) => thread.id === partnerOf(id));
     return partner && partner.id !== id ? partner : undefined;
@@ -285,16 +321,7 @@ export function SidebarThreads() {
             const pair: SplitPair = pairs.find((each) => each[0] === partner.id)
               ? [partner.id, thread.id]
               : [thread.id, partner.id];
-            return (
-              <SidebarMenuItem key={`pair-${pair[0]}-${pair[1]}`}>
-                <SplitPairGroup
-                  titles={[thread.title, partner.title]}
-                  onUnpair={() => unpair(thread.id)}
-                >
-                  {pair.map((id) => row(id === thread.id ? thread : partner, { pair }))}
-                </SplitPairGroup>
-              </SidebarMenuItem>
-            );
+            return pairRow(pair[0] === thread.id ? [thread, partner] : [partner, thread]);
           }
           return row(thread, {
             nested,
