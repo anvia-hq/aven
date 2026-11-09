@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { SUBAGENT_TOOLS_KEPT, applyEvent, isRunning, mentionToken } from "./events";
+import {
+  SUBAGENT_TOOLS_KEPT,
+  applyEvent,
+  isRunning,
+  mentionToken,
+  withWorkedTimes,
+} from "./events";
 import type { ChatMessage, RunEvent } from "./types";
 
 type Fixture = {
@@ -222,5 +228,23 @@ describe("applyEvent with a steering message", () => {
     ] satisfies RunEvent[]) {
       expect(applyEvent(base, event)).toBe(base);
     }
+  });
+});
+
+describe("how long a run worked", () => {
+  const chat: ChatMessage[] = [
+    { id: "m-0", role: "user", parts: [{ type: "text", text: "go" }] },
+    { id: "m-1", role: "assistant", parts: [{ type: "text", text: "done" }] },
+  ];
+
+  test("a done event with the time marks the latest answer, and one without leaves it alone", () => {
+    expect(applyEvent(chat, { type: "done", workedMs: 124_000 })[1]?.workedMs).toBe(124_000);
+    expect(applyEvent(chat, { type: "done" })).toBe(chat);
+  });
+
+  test("a saved time is put on the message at its place in the thread", () => {
+    const marked = withWorkedTimes(chat, new Map([[1, 5_000]]));
+    expect(marked[1]?.workedMs).toBe(5_000);
+    expect(marked[0]).toBe(chat[0]!);
   });
 });

@@ -13,7 +13,11 @@ import { journalPath } from "@aven/runtime-client/testing/journal-path";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { createMemoryStore } from "../../memory-store";
-import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
+import {
+  memoryContinuations,
+  memoryFailures,
+  memoryWorkedTimes,
+} from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
@@ -78,6 +82,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       onRunFinished,
       continuations: continuations.store,
       failures: failures.store,
+      workedTimes: memoryWorkedTimes().store,
       ...extra,
     });
   };

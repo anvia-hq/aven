@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { UnavailableError } from "../../errors";
-import { memoryContinuations, memoryFailures } from "../../testing/memory-continuations";
+import {
+  memoryContinuations,
+  memoryFailures,
+  memoryWorkedTimes,
+} from "../../testing/memory-continuations";
 import { RunBusyError, RunManager } from "./service";
 import type { ConversationStore } from "../../types";
 import type { RunResult, RunThread, Runtime, RuntimeRun } from "./types";
@@ -30,6 +34,7 @@ function managerRunning(handle: RuntimeRun, store: Partial<ConversationStore> = 
     onRunFinished: () => undefined,
     continuations: memoryContinuations().store,
     failures: memoryFailures().store,
+    workedTimes: memoryWorkedTimes().store,
   });
 }
 

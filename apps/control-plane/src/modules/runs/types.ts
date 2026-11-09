@@ -98,6 +98,11 @@ export type FailureStore = {
   read(threadId: string): Promise<string | null>;
 };
 
+export type WorkedTimeStore = {
+  record(threadId: string, messageIndex: number, workedMs: number): Promise<void>;
+  read(threadId: string): Promise<Map<number, number>>;
+};
+
 export type RunEnding =
   | { outcome: "done" }
   | { outcome: "failed"; error: string }
