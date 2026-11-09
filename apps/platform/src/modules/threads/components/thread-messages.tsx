@@ -19,6 +19,7 @@ type Props = {
   pending?: ChatMessage[];
   steers?: QueuedSteer[];
   running?: boolean;
+  owned?: boolean;
   startedAt?: number | null;
   error?: string | null;
   aside?: ReactNode;
@@ -34,6 +35,7 @@ export function ThreadMessages({
   pending = [],
   steers = [],
   running = false,
+  owned = false,
   startedAt = null,
   error,
   aside,
@@ -78,7 +80,7 @@ export function ThreadMessages({
               <QueuedMessage key={steer.id} message={steer} />
             ))}
             <WorkingIndicator running={running} startedAt={startedAt} />
-            <BackgroundChip threadId={threadId} running={running} />
+            {owned && <BackgroundChip threadId={threadId} running={running} />}
             {error && (
               <p
                 role="alert"

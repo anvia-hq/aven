@@ -53,7 +53,6 @@ test.describe("a thread's background tasks", () => {
 
     const chip = page.locator('[data-role="background-chip"]');
     await expect(chip).toContainText("Running in the background: npm run dev");
-    if (process.env.CHIP_SHOT) await page.screenshot({ path: process.env.CHIP_SHOT });
 
     await page
       .getByRole("region", { name: "Background tasks" })
