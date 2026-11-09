@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { MENTION_MARK, markMentions, mentionOf, personIdOf, personToken } from "./mentions";
+import {
+  AGENT_ENTITY,
+  MENTION_MARK,
+  markMentions,
+  mentionOf,
+  personIdOf,
+  personToken,
+} from "./mentions";
 
 describe("mentioning a teammate in a multiplayer thread (decision 0191)", () => {
   test("a teammate is written with their id, and a name that would break the token is cleaned", () => {
@@ -26,5 +33,11 @@ describe("mentioning a teammate in a multiplayer thread (decision 0191)", () => 
       `\`${MENTION_MARK}person:Randy\` look at \`${MENTION_MARK}file:src/app.ts\``,
     );
     expect(markMentions("no tokens here")).toBe("no tokens here");
+  });
+});
+
+describe("mentioning the agent", () => {
+  test("is a handle in the text and not a file or skill mention sent with the message", () => {
+    expect(mentionOf("file", AGENT_ENTITY)).toBeUndefined();
   });
 });

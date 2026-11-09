@@ -5,7 +5,7 @@ import {
   type ComposerInputEntity,
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
-import { ArrowUp, StopSolid } from "@mynaui/icons-react";
+import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
@@ -17,12 +17,12 @@ import { useMentionPeople } from "../hooks/use-mention-people";
 import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
-import { COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
+import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
 import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
-import { PersonAvatar, PersonChip } from "./person-chip";
+import { AgentChip, PersonAvatar, PersonChip } from "./person-chip";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
 
@@ -41,6 +41,7 @@ const renderEntity =
   (people: MentionPerson[]) =>
   ({ triggerId, id, text }: ComposerInputEntity) => {
     if (id === COMPACT_COMMAND) return <CommandChip name="compact" />;
+    if (id === AGENT_ENTITY) return <AgentChip />;
     const personId = personIdOf(id);
     if (personId !== undefined) {
       const person = people.find((each) => each.id === personId);
@@ -52,6 +53,7 @@ const renderEntity =
   };
 
 function personIcon(people: MentionPerson[], item: ComposerTriggerItem) {
+  if (item.id === AGENT_ENTITY) return <Sparkles className="size-5 p-0.5" />;
   const id = personIdOf(item.id);
   if (id === undefined) return null;
   const person = people.find((each) => each.id === id);

@@ -6,7 +6,13 @@ import { api } from "@/lib/api";
 import type { FolderResponse, SearchResponse } from "@/modules/files/types";
 import { useSkills } from "@/modules/skills/hooks/use-skills";
 
-import { COMPACT_COMMAND, PERSON_PREFIX, personToken } from "../mentions";
+import {
+  AGENT_ENTITY,
+  AGENT_HANDLE,
+  COMPACT_COMMAND,
+  PERSON_PREFIX,
+  personToken,
+} from "../mentions";
 import type { Mentionable, MentionPerson } from "../types";
 
 const REPO_SKILLS = ".aven/skills";
@@ -37,6 +43,13 @@ const compactItem: ComposerTriggerItem = {
   label: "compact",
   text: COMPACT_COMMAND,
   detail: "Summarize the conversation so far to free up context",
+};
+
+const agentItem: ComposerTriggerItem = {
+  id: AGENT_ENTITY,
+  label: "agent",
+  text: AGENT_HANDLE,
+  detail: "Ask the agent, not a teammate",
 };
 
 const personItem = (person: MentionPerson): ComposerTriggerItem => ({
@@ -108,9 +121,12 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
       char: "@",
       items: async ({ query, signal }) => {
         const wanted = query.toLowerCase();
-        const teammates = mentionable.current
+        const people = mentionable.current
           .filter(({ name, email }) => `${name} ${email}`.toLowerCase().includes(wanted))
           .map(personItem);
+        const agent =
+          mentionable.current.length > 0 && "agent".startsWith(wanted) ? [agentItem] : [];
+        const teammates = [...agent, ...people];
         if (!(await wait(SEARCH_DELAY_MS, signal))) return teammates;
         const found = await api<SearchResponse>(
           `/threads/${threadId}/files/search?q=${encodeURIComponent(query)}`,

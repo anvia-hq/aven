@@ -89,3 +89,9 @@ test("the agent is pointed at the setup-env skill instead of building a service 
   expect(text).toContain("setup-env skill");
   expect(text).toContain("do not build it by hand in /tmp");
 });
+
+test("the instructions tell the agent about the people in a thread and @agent", () => {
+  const text = codingInstructions(200);
+  expect(text).toContain("[driver: Name]");
+  expect(text).toContain("@agent");
+});

@@ -6,6 +6,10 @@ export const COMPACT_COMMAND = "/compact";
 
 export const PERSON_PREFIX = "user:";
 
+export const AGENT_ENTITY = "agent:self";
+
+export const AGENT_HANDLE = "@agent";
+
 const PERSON_TOKEN = /@\[([^\]\n`]{1,80})\]\(user:[\w-]{1,64}\)/g;
 
 export const personToken = ({ id, name }: Pick<MentionPerson, "id" | "name">) =>
@@ -20,7 +24,9 @@ export const personIdOf = (entityId: string) =>
   entityId.startsWith(PERSON_PREFIX) ? entityId.slice(PERSON_PREFIX.length) : undefined;
 
 export function mentionOf(triggerId: string, id: string): Mentionable | undefined {
-  if (id === COMPACT_COMMAND || personIdOf(id) !== undefined) return undefined;
+  if (id === COMPACT_COMMAND || id === AGENT_ENTITY || personIdOf(id) !== undefined) {
+    return undefined;
+  }
   return triggerId === "file" || triggerId === "skill" ? { type: triggerId, name: id } : undefined;
 }
 

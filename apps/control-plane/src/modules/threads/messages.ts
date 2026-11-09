@@ -18,8 +18,7 @@ import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
 import { decisionModelService } from "../decision-model/service";
 import { addressingDecider, jevModel } from "../decision-model/jev";
-import { personMentions } from "./addressing";
-import { createAddressingGate, recentOf } from "./addressing-gate";
+import { createAddressingGate, recentOf, recentSenders } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
@@ -116,7 +115,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
   ) {
     const { thread, said } = who;
     if (runs.isRunning(thread.id)) return false;
-    if (attachments.length > 0 || personMentions(prompt).length === 0) return false;
+    if (attachments.length > 0) return false;
     if (!isDriving(thread.drivingUntil)) return false;
     const author = (await usersService.get(userId))?.name ?? "";
     const owner =
@@ -124,12 +123,17 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         ? author
         : ((await usersService.get(thread.createdBy))?.name ?? "");
     const { messages } = await runs.latest(thread);
+    const names = new Map<string, string>();
+    for (const id of recentSenders(messages)) {
+      const name = (await usersService.get(id))?.name;
+      if (name) names.set(id, name);
+    }
     const verdict = await gate({
       organizationId,
       prompt,
       author,
       owner,
-      recent: recentOf(messages),
+      recent: recentOf(messages, names),
     });
     if (verdict.agentAction) return false;
     await runs.note(thread, said(prompt), userId);

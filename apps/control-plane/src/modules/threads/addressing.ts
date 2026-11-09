@@ -1,3 +1,5 @@
+import { parseDriverPrompt } from "@aven/protocol/drivers";
+
 import type { Addressing, AddressingScores, PersonMention } from "./types";
 
 export const AGENT_HANDLE = "@agent";
@@ -13,6 +15,10 @@ export function personMentions(text: string): PersonMention[] {
     if (name && id && !seen.has(id)) seen.set(id, { id, name });
   }
   return [...seen.values()];
+}
+
+export function spoken(text: string) {
+  return parseDriverPrompt(text).text.replace(PERSON_MENTION, (_, name: string) => `@${name}`);
 }
 
 export function namesAgent(text: string) {
