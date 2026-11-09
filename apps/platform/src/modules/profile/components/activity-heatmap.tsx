@@ -6,13 +6,7 @@ import type { ProfileDay } from "../types";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-const LEVELS = [
-  "bg-muted",
-  "bg-primary/20",
-  "bg-primary/40",
-  "bg-primary/65",
-  "bg-primary",
-] as const;
+const LEVELS = ["bg-muted", "bg-chart/20", "bg-chart/40", "bg-chart/65", "bg-chart"] as const;
 
 const CELL = 12;
 const GAP = 4;

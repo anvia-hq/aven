@@ -40,7 +40,7 @@ export function TokensChart({ days, today, tokens }: Props) {
             preserveAspectRatio="none"
             role="img"
             aria-label={`Tokens a day from ${chartDate(first)} to today`}
-            className="h-48 w-full text-primary"
+            className="h-48 w-full text-chart"
           >
             <defs>
               <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
