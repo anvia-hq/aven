@@ -24,6 +24,7 @@ test.describe("subagents", () => {
     await page.getByRole("textbox", { name: "Prompt" }).fill("find auth and test it");
     await page.getByRole("button", { name: "Send" }).click();
 
+    await page.locator('[data-role="worked"]').click();
     const explorer = page.getByRole("button", { name: /Find the auth middleware/ });
     await expect(explorer).toBeVisible();
     await expect(explorer).toContainText("explore");
