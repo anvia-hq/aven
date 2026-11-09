@@ -21,3 +21,5 @@ export type AddressingInput = {
 export type AddressingDecider = (input: AddressingInput) => Promise<AddressingScores | null>;
 
 export type AddressingModel = DecisionModel<unknown>;
+
+export type DecisionModelView = { kind: DecisionKind; modelId: string; keyHint: string };

@@ -351,6 +351,13 @@
       "when": 1794205446146,
       "tag": "0049_premium_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794238542449,
+      "tag": "0050_free_slayback",
+      "breakpoints": true
     }
   ]
 }
