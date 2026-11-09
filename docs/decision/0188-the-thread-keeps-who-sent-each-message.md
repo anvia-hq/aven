@@ -32,5 +32,9 @@ without knowing who created the thread.
   name shown is still the one written in the marker, or the creator's name for the creator, so a
   rename is not shown on old messages. Showing the member's current name and picture from the
   workspace list is later work.
-- The place of a message is its index in the thread, as for a run's time. If a change ever moves
-  messages, their rows must move with them, as the times must.
+- The place of a message is its index in the thread, as for a run's time. History only grows at
+  the end: compaction does not remove or renumber messages. `@anvia/memory-drizzle` keeps every row
+  and records the summary and the position it covers on the session, and the thread is read from
+  all the rows (`load`), while only the model's view is cut at that position
+  (`loadCompactionSnapshot`). A fork has a history of its own and no rows are copied into it. If a
+  change ever rewrites or removes stored messages, the sender rows, like the times, must follow.
