@@ -33,8 +33,8 @@ export const profileService = {
           select
             m.created_at,
             case
-              when (m.message #>> '{metadata,anvia,usage,totalTokens}') ~ '^[0-9]+$'
-                then (m.message #>> '{metadata,anvia,usage,totalTokens}')::numeric
+              when (m.message #>> '{metadata,anvia,generation,usage,totalTokens}') ~ '^[0-9]+$'
+                then (m.message #>> '{metadata,anvia,generation,usage,totalTokens}')::numeric
               else 0
             end as tokens
           from agent_memory_messages m

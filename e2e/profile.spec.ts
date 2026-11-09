@@ -1,8 +1,34 @@
+import { spawnSync } from "node:child_process";
+
 import { expect, test } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
+/** Puts messages with a generation's tokens in a person's memory, as a run leaves them. */
+function spendTokens(email: string, tokens: number, daysAgo: number[]) {
+  const seeded = spawnSync(
+    "bun",
+    ["e2e/seed-spending.ts", email, String(tokens), daysAgo.join(",")],
+    { env: process.env, encoding: "utf8" },
+  );
+  if (seeded.status !== 0) throw new Error(seeded.stderr || "seeding failed");
+}
+
 test.describe("Settings > Profile", () => {
+  test("the tokens a person spent are read from the messages they ran", async ({ page }) => {
+    const email = await registerUser(page, "spent", "Spent Person");
+    spendTokens(email, 1_000, [0, 1, 2]);
+
+    await page.goto("/settings/profile");
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await expect(page.getByRole("region", { name: "Tokens" })).toContainText("3K");
+    await expect(page.getByRole("region", { name: "Activity" })).toContainText("3 days of work");
+    await expect(page.getByRole("region", { name: "Tokens" })).not.toContainText(
+      "Your first thread starts this chart.",
+    );
+    await page.screenshot({ path: ".aven/proof/profile-tokens/after.png", fullPage: true });
+  });
   test("the profile page is the person's own, with what they have done so far", async ({
     page,
   }) => {
