@@ -1,3 +1,4 @@
+import { isDriving } from "@aven/protocol/drivers";
 import { applyEvent, applyUsage, isRunning, pendingQuestion } from "@aven/protocol/events";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -41,6 +42,7 @@ export function useThread(threadId: string) {
   const thread = all.find((candidate) => candidate.id === threadId);
   const wasArchived = thread !== undefined && thread.state !== "open";
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
+  const driven = thread !== undefined && !owned && isDriving(thread.drivingUntil);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [earlier, setEarlier] = useState<ChatMessage[]>([]);
@@ -222,6 +224,7 @@ export function useThread(threadId: string) {
   return {
     thread,
     owned,
+    driven,
     loaded: loaded && (session != null || !isPending),
     messages,
     earlier,

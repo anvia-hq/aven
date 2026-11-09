@@ -33,6 +33,7 @@ function ThreadPage() {
   const {
     thread,
     owned,
+    driven,
     loaded,
     messages,
     earlier,
@@ -127,8 +128,8 @@ function ThreadPage() {
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
                     {owned && <ShipBar thread={thread} unshipped={unshipped} showShip={showShip} />}
-                    {!owned && <SharedNotice thread={thread} />}
-                    {owned &&
+                    {!owned && <SharedNotice thread={thread} driven={driven} />}
+                    {(owned || driven) &&
                       (question ? (
                         <AnswerForm
                           key={question.id}

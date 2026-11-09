@@ -1,3 +1,4 @@
+import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
 import { Check, Globe, Link, Lock, Share } from "@mynaui/icons-react";
 import { useState } from "react";
 
@@ -14,9 +15,10 @@ import {
 } from "@/components/dialog";
 import { Label } from "@/components/label";
 import { RadioGroup, RadioGroupItem } from "@/components/radio-group";
+import { Switch } from "@/components/switch";
 import { toast } from "@/components/toast";
 
-import { useShareThread } from "../hooks/use-share-thread";
+import { useDriveThread, useShareThread } from "../hooks/use-share-thread";
 import type { Thread, ThreadVisibility } from "../types";
 
 const CHOICES = [
@@ -30,12 +32,15 @@ const CHOICES = [
     value: "workspace",
     icon: Globe,
     title: "Everyone in the workspace",
-    detail: "They can read it, with its files and changes, but not change it.",
+    detail:
+      "They can read it, with its files and changes. Only you send messages, unless you turn on multiplayer.",
   },
 ] as const;
 
 export function ThreadShare({ thread }: { thread: Thread }) {
   const share = useShareThread();
+  const drive = useDriveThread();
+  const driving = isDriving(thread.drivingUntil);
   const [copied, setCopied] = useState(false);
   const shared = thread.visibility === "workspace";
 
@@ -69,7 +74,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
           <DialogHeader>
             <DialogTitle>Share this thread</DialogTitle>
             <DialogDescription>
-              Choose who can read it. Only you can send the agent messages.
+              Choose who can read it, and whether teammates can message the agent.
             </DialogDescription>
           </DialogHeader>
           <RadioGroup
@@ -92,6 +97,34 @@ export function ThreadShare({ thread }: { thread: Thread }) {
               </Label>
             ))}
           </RadioGroup>
+          {shared && (
+            <div className="flex items-start gap-3 rounded-lg border px-3 py-2.5">
+              <Switch
+                aria-label="Let teammates message this thread"
+                checked={driving}
+                onCheckedChange={(on) => void drive(thread, on ? DRIVING_DAYS_DEFAULT : null)}
+                className="mt-0.5"
+              />
+              <span className="flex flex-1 flex-col">
+                <span className="text-sm font-medium">Multiplayer</span>
+                <span className="text-xs text-muted-foreground">
+                  {driving
+                    ? `Teammates can message, steer and stop the agent until ${new Date(thread.drivingUntil ?? "").toLocaleDateString()}. It runs with your model, account and bill, and without your personal variables or MCP servers.`
+                    : `Let teammates message the agent for ${DRIVING_DAYS_DEFAULT} days. It runs with your model, account and bill.`}
+                </span>
+              </span>
+              {driving && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void drive(thread, DRIVING_DAYS_DEFAULT)}
+                >
+                  Extend
+                </Button>
+              )}
+            </div>
+          )}
           <DialogFooter className="sm:justify-between">
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
               {copied ? <Check /> : <Link />}
