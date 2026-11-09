@@ -101,6 +101,7 @@ function ThreadPage() {
                   pending={pending}
                   steers={steers}
                   running={running}
+                  owned={owned}
                   startedAt={startedAt}
                   error={error}
                   aside={

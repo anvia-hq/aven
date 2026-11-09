@@ -63,6 +63,10 @@ test.describe("sharing a thread", () => {
     await choose(/Everyone in the workspace/);
     await expect(sidebar(page).getByRole("img", { name: "Shared with workspace" })).toHaveCount(1);
 
+    const processCalls: string[] = [];
+    mate.page.on("request", (request) => {
+      if (request.url().includes("/processes")) processCalls.push(request.url());
+    });
     await mate.page.goto("/threads");
     await expect(sidebar(mate.page)).toContainText("Shared with workspace");
     await mate.page.keyboard.press("ControlOrMeta+k");
@@ -80,6 +84,7 @@ test.describe("sharing a thread", () => {
     await expect(mate.page.getByRole("button", { name: "Desktop" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Terminal" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Files" })).toBeVisible();
+    expect(processCalls).toEqual([]);
     const message = await mate.page.request.post(`/api/threads/${thread.id}/messages`, {
       data: { prompt: "hello" },
     });
