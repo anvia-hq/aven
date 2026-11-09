@@ -13,8 +13,6 @@ export function SettingsPage({ title, description, actions, children }: PageProp
       <header className="flex items-start justify-between gap-4 pb-4 md:pb-6">
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
-          {/* The sentence that says what the page is for is three lines on a phone and one on a
-              wide screen: it shows from md up (decision 0172). */}
           {description && (
             <p className="hidden max-w-2xl text-sm text-pretty text-muted-foreground md:block">
               {description}

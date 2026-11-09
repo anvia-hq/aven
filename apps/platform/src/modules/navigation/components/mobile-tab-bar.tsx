@@ -46,11 +46,6 @@ function Tab({
   );
 }
 
-/**
- * The phone's way between the apps: a tab bar under the page, one tap from anywhere
- * (docs/decision/0169-the-mobile-shell-is-a-tab-bar.md). It stands above the page and below a
- * sheet, and its bottom edge keeps the phone's own safe area.
- */
 export function MobileTabBar() {
   const { main } = useBots();
   const pathname = useRouterState({

@@ -23,8 +23,6 @@ function NewThread() {
   const startThread = useStartThread();
   const { projects, loaded } = useProjects();
   const { threads, shared } = useThreads();
-  // On a phone this page is what the Threads tab opens, so it lists every thread you have; on a
-  // wider screen the sidebar holds them all and this is the few most recent.
   const wide = useMediaQuery("(min-width: 768px)");
   const open = threads.filter((thread) => thread.state === "open");
   const openShared = shared.filter((thread) => thread.state === "open");
