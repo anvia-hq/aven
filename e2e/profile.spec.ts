@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
-/** Puts messages with a generation's tokens in a person's memory, as a run leaves them. */
 function spendTokens(email: string, tokens: number, daysAgo: number[]) {
   const seeded = spawnSync(
     "bun",
@@ -27,7 +26,6 @@ test.describe("Settings > Profile", () => {
     await expect(page.getByRole("region", { name: "Tokens" })).not.toContainText(
       "Your first thread starts this chart.",
     );
-    await page.screenshot({ path: ".aven/proof/profile-tokens/after.png", fullPage: true });
   });
   test("the profile page is the person's own, with what they have done so far", async ({
     page,
