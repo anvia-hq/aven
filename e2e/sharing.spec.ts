@@ -85,6 +85,42 @@ test.describe("sharing a thread", () => {
     });
     expect(message.status()).toBe(404);
 
+    await share.click();
+    await dialog.getByRole("switch", { name: "Let teammates message this thread" }).click();
+    await expect(page.getByText(/Teammates can message it for 7 days/)).toBeVisible();
+    await expect(
+      dialog.getByText(/It runs with your model, account and bill, and without your personal/),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Done" }).click();
+
+    await mate.page.reload();
+    await expect(mate.page.getByText(/Multiplayer is on/)).toContainText("Owner Person");
+    await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    await expect(
+      mate.page.getByRole("button", { name: /^(Share|Shared to workspace)$/ }),
+    ).toHaveCount(0);
+    const driven = await mate.page.request.post(`/api/threads/${thread.id}/messages`, {
+      data: { prompt: "hello" },
+    });
+    expect(driven.status()).not.toBe(404);
+    const archived = await mate.page.request.patch(`/api/threads/${thread.id}`, {
+      data: { title: "Mine now" },
+    });
+    expect(archived.status()).toBe(404);
+    const compacted = await mate.page.request.post(`/api/threads/${thread.id}/compact`, {
+      data: {},
+    });
+    expect(compacted.status()).toBe(404);
+
+    await share.click();
+    await dialog.getByRole("switch", { name: "Let teammates message this thread" }).click();
+    await expect(page.getByText("Multiplayer is off")).toBeVisible();
+    await dialog.getByRole("button", { name: "Done" }).click();
+    const ended = await mate.page.request.post(`/api/threads/${thread.id}/messages`, {
+      data: { prompt: "hello" },
+    });
+    expect(ended.status()).toBe(404);
+
     await mate.context.close();
   });
 });
