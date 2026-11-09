@@ -37,6 +37,8 @@ export class RunIdentities {
     const identity = this.#grants.get(credential);
     if (!identity) return null;
     const issuedAt = Math.floor(Date.now() / 1000);
+    const driver: Record<string, string> = {};
+    if (identity.driverId !== undefined) driver.driver_id = identity.driverId;
     return this.issuer.sign({
       aud: audience,
       sub: SUBJECTS[subjectScope](identity),
@@ -49,7 +51,7 @@ export class RunIdentities {
       thread_id: identity.threadId,
       user_id: identity.userId,
       email: identity.email,
-      ...(identity.driverId === undefined ? {} : { driver_id: identity.driverId }),
+      ...driver,
     });
   }
 }

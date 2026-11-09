@@ -56,3 +56,8 @@ export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
     value: `stored as ${questionId}`,
   }));
 }
+
+export function asksForSecret(continuation: unknown) {
+  const { interaction } = parseSaved(continuation);
+  return interaction.type === "tool-question" && interaction.toolName === SECRET_TOOL_NAME;
+}
