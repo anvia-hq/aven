@@ -27,11 +27,11 @@ GitHub and start a thread. Update later with `aven update`.
 
 Paste this to a coding agent (Claude Code, Codex) on the machine you want to set up:
 
-> Install Aven from https://github.com/anvia-hq/aven. **Control plane** (the server, plus a runner on this machine): run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash`, answer its prompts (for a server others can reach, add `--domain <host> --owner-email <email>`), then run `aven doctor` and fix anything not `ok`. **Runner only** (another machine that runs the agents): ask me for the server's address and a runner token (Settings > Runtimes > create a runner), then run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --runner --url <address>/api --token <token>` and `aven doctor`. Never print or commit the token, and stop and ask me if Docker or git cannot be installed.
+> Install Aven from https://github.com/anvia-hq/aven. **Control plane** (the server, plus a runner on this machine): run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash`, answer its prompts (for a server others can reach, add `--domain <host> --owner-email <email>`), then run `aven doctor` and fix anything not `ok`. **Runner only** (another machine that runs the agents): ask me for the server's address and a runner token (Settings > Runtimes > create a runner), then run `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --runner --url <address>/api --token <token>` and `aven doctor`. If I want to see pages the agent serves in a thread, also set up the Browser tab: follow "The Browser tab" in docs/guides/self-hosting.md (it needs an HTTPS address of its own and `aven server install --browser-origin <address>`), and ask me which address to use. Never print or commit the token, and stop and ask me if Docker or git cannot be installed.
 
 ## Docs
 
-- [Self-hosting](docs/guides/self-hosting.md): how it works, your own domain, more runners, updating, backup
+- [Self-hosting](docs/guides/self-hosting.md): how it works, your own domain, the thread Browser tab, more runners, updating, backup
 - [Cloud](docs/guides/cloud.md): a server others can reach, HTTPS, who can connect
 - [Connect GitHub](docs/guides/connect-github.md)
 - [Troubleshooting](docs/guides/troubleshooting.md)
