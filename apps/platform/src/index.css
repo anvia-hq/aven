@@ -52,7 +52,7 @@
   --border: oklch(0.87 0.035 160);
   --input: oklch(0.87 0.035 160);
   --ring: oklch(0.7 0.06 160);
-  --sidebar: oklch(0.965 0.01 160);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.2 0.009 160);
   --sidebar-primary: oklch(0.22 0.01 160);
   --sidebar-primary-foreground: oklch(0.98 0.003 160);
