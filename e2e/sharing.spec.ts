@@ -105,7 +105,9 @@ test.describe("sharing a thread", () => {
     await dialog.getByRole("switch", { name: "Let teammates message this thread" }).click();
     await expect(page.getByText(/Teammates can message it for 7 days/)).toBeVisible();
     await expect(
-      dialog.getByText(/It runs with your model, account and bill, and without your personal/),
+      dialog.getByText(
+        /A message from a teammate runs on their own model and bill, and without your personal/,
+      ),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Done" }).click();
 

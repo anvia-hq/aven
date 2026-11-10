@@ -10,8 +10,8 @@ export function SharedNotice({ thread, driven }: { thread: Thread; driven: boole
       <span>
         {driven ? (
           <>
-            Multiplayer is on. Commits and pull requests are yours, through your GitHub. The model,
-            memory and bill are{" "}
+            Multiplayer is on. Your messages run on your own model and bill, and your commits and
+            pull requests go through your GitHub. The memory and the workspace are{" "}
             <span className="font-medium text-foreground">{thread.createdByName}</span>'s.
           </>
         ) : (
