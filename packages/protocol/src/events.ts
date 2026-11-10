@@ -71,6 +71,14 @@ export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | un
   return asks && tool.questions && tool.status === "running" ? tool : undefined;
 }
 
+export function answerableQuestion(
+  messages: readonly ChatMessage[],
+  running: boolean,
+  failed: boolean,
+): ToolPart | undefined {
+  return running || failed ? undefined : pendingQuestion(messages);
+}
+
 export function questionAnswers(tool: ToolPart): QuestionAnswer[] {
   if (tool.status !== "done" || !tool.output) return [];
   try {

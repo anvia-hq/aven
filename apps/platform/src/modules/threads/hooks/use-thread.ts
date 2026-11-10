@@ -1,5 +1,5 @@
 import { isDriving } from "@aven/protocol/drivers";
-import { applyEvent, applyUsage, isRunning, pendingQuestion } from "@aven/protocol/events";
+import { answerableQuestion, applyEvent, applyUsage, isRunning } from "@aven/protocol/events";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
@@ -228,7 +228,7 @@ export function useThread(threadId: string) {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  const question = running ? undefined : pendingQuestion(messages);
+  const question = answerableQuestion(messages, running, error !== null);
 
   return {
     thread,
