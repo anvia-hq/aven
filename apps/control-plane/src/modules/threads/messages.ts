@@ -224,7 +224,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         return { steered: false };
       };
       const result = await delivered();
-      await threadMentionsService.record(threadId, userId, body.prompt);
+      await threadMentionsService
+        .record(threadId, userId, body.prompt)
+        .catch((error) => console.error(`mention not recorded for ${threadId}`, error));
       return result;
     },
 
