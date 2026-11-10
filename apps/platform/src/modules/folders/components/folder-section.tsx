@@ -79,7 +79,7 @@ export function FolderSection({
             data-slot="folder-toggle"
             aria-expanded={folder.open}
             className="h-full min-w-0 flex-1 justify-start gap-1.5 rounded-lg pr-10 pl-1 text-left text-sm font-medium hover:bg-transparent"
-            onClick={onToggle}
+            onClick={pending ? undefined : onToggle}
             onDoubleClick={pending ? undefined : onEdit}
           >
             <ChevronRight
