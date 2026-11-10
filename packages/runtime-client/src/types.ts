@@ -521,3 +521,40 @@ export type Timing = {
 export type IdentityRelay = { port: number; stop: () => void };
 
 export type HostReach = { ok: boolean; detail: string; skipped?: boolean };
+
+export type Spawned = ReturnType<typeof Bun.spawn>;
+
+export type Terminate = (proc: Spawned) => Promise<void>;
+
+export type Launch = (input: {
+  argv: string[];
+  cwd: string;
+  inside: string;
+  env?: Readonly<Record<string, string>>;
+}) => Spawned;
+
+export type VmShare = { name: string; dir: string; readOnly?: boolean };
+
+export type MacVmOptions = {
+  bin: string;
+  name: string;
+  base: string;
+  home?: string;
+  cpus?: number;
+  memoryMb?: number;
+  connectTimeoutMs?: number;
+  pollMs?: number;
+};
+
+export type MacSandboxConfig = {
+  base: string;
+  bin?: string;
+  tartHome?: string;
+  home?: string;
+  cpus?: number;
+  memoryMb?: number;
+  connectTimeoutMs?: number;
+  git?: Git;
+};
+
+export type VmRun = { code: number; stdout: string; stderr: string };

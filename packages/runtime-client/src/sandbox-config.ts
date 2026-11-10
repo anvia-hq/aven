@@ -1,4 +1,4 @@
-import type { SandboxConfig } from "./types";
+import type { MacSandboxConfig, SandboxConfig } from "./types";
 
 type Env = Record<string, string | undefined>;
 
@@ -33,5 +33,23 @@ export function sandboxConfigFromEnv(env: Env = process.env): SandboxConfig {
     pidsLimit: positiveNumber(env, "AVEN_SANDBOX_PIDS_LIMIT"),
     archivedKeepDays: days(env, "AVEN_ARCHIVED_KEEP_DAYS"),
     browserProfileKeepDays: days(env, "AVEN_BROWSER_PROFILE_KEEP_DAYS"),
+  };
+}
+
+export const DEFAULT_MAC_IMAGE = "ghcr.io/cirruslabs/macos-tahoe-base:latest";
+
+export function macSandboxConfigFromEnv(env: Env = process.env): MacSandboxConfig | undefined {
+  const kind = env.AVEN_SANDBOX || "linux";
+  if (kind === "linux") return undefined;
+  if (kind !== "macos") {
+    throw new Error(`AVEN_SANDBOX must be linux or macos, got "${kind}".`);
+  }
+  return {
+    base: env.AVEN_MAC_IMAGE || DEFAULT_MAC_IMAGE,
+    bin: env.AVEN_MAC_TART || undefined,
+    tartHome: env.AVEN_MAC_TART_HOME || undefined,
+    home: env.AVEN_RUNTIME_HOME || undefined,
+    memoryMb: positiveNumber(env, "AVEN_SANDBOX_MEMORY_MB"),
+    cpus: positiveNumber(env, "AVEN_SANDBOX_CPUS"),
   };
 }

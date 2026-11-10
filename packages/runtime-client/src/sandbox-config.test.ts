@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sandboxConfigFromEnv } from "./sandbox-config";
+import { DEFAULT_MAC_IMAGE, macSandboxConfigFromEnv, sandboxConfigFromEnv } from "./sandbox-config";
 
 describe("sandboxConfigFromEnv", () => {
   test("defaults the image and leaves the rest to Sandboxes", () => {
@@ -61,5 +61,37 @@ describe("sandboxConfigFromEnv", () => {
       'AVEN_SANDBOX_PIDS_LIMIT must be a positive number, got "lots".',
     );
     expect(() => sandboxConfigFromEnv({ AVEN_SANDBOX_CPUS: "0" })).toThrow();
+  });
+});
+
+describe("macSandboxConfigFromEnv", () => {
+  test("is off unless AVEN_SANDBOX is macos, and refuses another kind", () => {
+    expect(macSandboxConfigFromEnv({})).toBeUndefined();
+    expect(macSandboxConfigFromEnv({ AVEN_SANDBOX: "linux" })).toBeUndefined();
+    expect(() => macSandboxConfigFromEnv({ AVEN_SANDBOX: "windows" })).toThrow(
+      'AVEN_SANDBOX must be linux or macos, got "windows".',
+    );
+  });
+
+  test("uses the Cirrus Tahoe image unless told another, and reads the limits and paths", () => {
+    expect(macSandboxConfigFromEnv({ AVEN_SANDBOX: "macos" })?.base).toBe(DEFAULT_MAC_IMAGE);
+    expect(
+      macSandboxConfigFromEnv({
+        AVEN_SANDBOX: "macos",
+        AVEN_MAC_IMAGE: "ghcr.io/cirruslabs/macos-tahoe-xcode:latest",
+        AVEN_MAC_TART: "/opt/tart",
+        AVEN_MAC_TART_HOME: "/Volumes/vms",
+        AVEN_RUNTIME_HOME: "/data/aven",
+        AVEN_SANDBOX_MEMORY_MB: "8192",
+        AVEN_SANDBOX_CPUS: "6",
+      }),
+    ).toEqual({
+      base: "ghcr.io/cirruslabs/macos-tahoe-xcode:latest",
+      bin: "/opt/tart",
+      tartHome: "/Volumes/vms",
+      home: "/data/aven",
+      memoryMb: 8192,
+      cpus: 6,
+    });
   });
 });
