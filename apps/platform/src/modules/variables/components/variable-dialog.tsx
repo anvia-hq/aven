@@ -52,7 +52,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
     >
       <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
       <DialogContent>
-        <Form ref={form.formRef} onSubmit={form.submit} className="flex flex-col gap-4">
+        <Form ref={form.formRef} onSubmit={form.submit} className="flex min-w-0 flex-col gap-4">
           <DialogHeader>
             <DialogTitle>{editing ? `Edit ${variable.name}` : "Add a variable"}</DialogTitle>
             <DialogDescription>

@@ -129,6 +129,25 @@ test.describe("project environment variables", () => {
     await expect(page.getByText("a-long-secret")).toHaveCount(0);
   });
 
+  test("a pasted .env with long values keeps the dialog and its button on the screen", async ({
+    page,
+  }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Paste a .env" }).click();
+    const longValue = "x".repeat(900);
+    await page
+      .getByLabel(".env contents")
+      .fill(`FIRST_KEY="-----BEGIN-----\\n${longValue}\\n-----END-----"\nSECOND_KEY=${longValue}`);
+
+    const dialog = page.getByRole("dialog", { name: "Add a variable" });
+    const viewport = page.viewportSize()!;
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+    await expect(page.getByRole("button", { name: "Add 2 variables" })).toBeInViewport();
+  });
+
   test("an unknown project has no variables to read", async ({ page }) => {
     await openProject(page);
     const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
