@@ -57,6 +57,34 @@ suite(
       expect(await exec("echo oops >&2; exit 3")).toMatchObject({ exitCode: 3, stderr: "oops\n" });
     }, 600_000);
 
+    test("shows the desktop, takes mouse and keys, and gives a browser a login-free stream", async () => {
+      const desktop = sandboxes.desktop("vm-test")!;
+      expect(desktop).toBeDefined();
+      const status = await desktop.status();
+      expect(status.state).toBe("running");
+      expect(status.width).toBeGreaterThan(500);
+
+      const shot = await desktop.screenshot({ scale: 0.5 });
+      expect(Buffer.from(shot.png.subarray(0, 4)).toString("hex")).toBe("89504e47");
+      expect(shot.displayWidth).toBe(status.width);
+
+      await desktop.act({ type: "mouse_move", x: 100, y: 100 });
+      await desktop.act({ type: "key", keys: "shift" });
+      expect(await desktop.cursorPosition()).toEqual({ x: 100, y: 100 });
+
+      const mapping = await exec("/usr/bin/hidutil property --get UserKeyMapping");
+      expect(mapping.stdout).toContain("30064771302");
+
+      const viewer = await desktop.openViewer();
+      const iterator = viewer.output[Symbol.asyncIterator]();
+      expect(Buffer.from((await iterator.next()).value as Uint8Array).toString()).toBe(
+        "RFB 003.008\n",
+      );
+      await viewer.write("RFB 003.008\n");
+      expect([...((await iterator.next()).value as Uint8Array)]).toEqual([1, 1]);
+      viewer.close();
+    }, 120_000);
+
     test("a command that times out does not keep running in the VM", async () => {
       const timedOut = await exec("exec sleep 321", 3000);
       expect(timedOut.status).toBe("timed_out");

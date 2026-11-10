@@ -1,6 +1,7 @@
 import { mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 
+import { createDesktopTools } from "@anvia/sandbox";
 import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import type {
   ComputerState,
@@ -17,6 +18,7 @@ import { cloneRepository, git, isCloned } from "./git-clone";
 import { signInCommand } from "./github-signin";
 import { identitySignInCommand, originOf } from "./identity-signin";
 import { ensureLocalExcludes } from "./local-excludes";
+import { MacDesktop } from "./mac-desktop";
 import { MacVm, syntheticConf } from "./mac-vm";
 import { envOf, withProjectEnv } from "./project-env";
 import { secretRedactor } from "./secret-redaction";
@@ -49,6 +51,7 @@ export class MacSandboxes implements ThreadWorkspaces {
   #prepared: string;
   #roots = new Map<string, Promise<string>>();
   #sandboxes = new Map<string, DirectorySandbox>();
+  #desktops = new Map<string, MacDesktop>();
   #vms = new Map<string, MacVm>();
   #holder: string | undefined;
   #starting = new Map<string, Promise<void>>();
@@ -190,8 +193,14 @@ export class MacSandboxes implements ThreadWorkspaces {
     const runtime = withProjectEnv(startedOnUse(sandbox, start), () =>
       this.#projectEnv.get(thread.id),
     );
+    const desktop = new MacDesktop({ endpoint: () => vm.vnc, start });
+    this.#desktops.get(thread.id)?.dispose();
+    this.#desktops.set(thread.id, desktop);
     return {
-      tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
+      tools: [
+        ...sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
+        ...createDesktopTools({ sandbox: startedOnUse(desktop, start) }),
+      ],
       hasRunningProcesses: async () => vm.running && (await hasRunningProcesses(runtime)),
       processes: threadProcesses(
         runtime,
@@ -236,8 +245,8 @@ export class MacSandboxes implements ThreadWorkspaces {
     return this.#starting.has(threadId) ? "waking" : "asleep";
   }
 
-  desktop() {
-    return undefined;
+  desktop(threadId: string) {
+    return this.#vms.get(threadId)?.running ? this.#desktops.get(threadId) : undefined;
   }
 
   running() {
@@ -251,6 +260,8 @@ export class MacSandboxes implements ThreadWorkspaces {
 
   async release(threadId: string) {
     await this.#starting.get(threadId)?.catch(() => undefined);
+    this.#desktops.get(threadId)?.dispose();
+    this.#desktops.delete(threadId);
     await this.#sandboxes.get(threadId)?.dispose();
     this.#sandboxes.delete(threadId);
     this.#starts.delete(threadId);

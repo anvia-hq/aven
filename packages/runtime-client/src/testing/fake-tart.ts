@@ -27,6 +27,7 @@ case "$cmd" in
     [ -f "$state/fail-run" ] && { echo "Virtualization failed" >&2; exit 1; }
     [ -f "$state/dirs.$$" ] && mv "$state/dirs.$$" "$state/vms/$name/dirs"
     sleep "\${FAKE_TART_BOOT_SECONDS:-0}"
+    echo "VNC server is running at vnc://:fake-pass@127.0.0.1:\${FAKE_TART_VNC_PORT:-1}"
     touch "$state/vms/$name/up"
     while [ ! -f "$state/vms/$name/stop" ]; do sleep 0.05; done
     rm -f "$state/vms/$name/up" "$state/vms/$name/stop" ;;
@@ -46,6 +47,7 @@ case "$cmd" in
       script="$(printf '%s' "$script" | sed -e "s#'/workspace#'$workspace#g" -e 's#/usr/bin/sudo -n ##' -e "s#/etc/synthetic.conf#$state/synthetic.conf#")"
       exec /bin/bash -c "$script"
     fi
+    case "$1" in */hidutil) echo "hidutil $*" >> "$state/calls.log"; exit 0 ;; esac
     exec "$@" ;;
   *) echo "unknown command $cmd" >&2; exit 2 ;;
 esac

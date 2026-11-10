@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { MacSandboxes } from "./mac-sandboxes";
 import { fakeTart } from "./testing/fake-tart";
+import { startFakeVnc } from "./testing/fake-vnc";
 import type { ThreadSandbox } from "./types";
 
 let root: string;
@@ -115,10 +116,29 @@ describe("a thread's macOS sandbox", () => {
     expect(await Bun.file(join(tart.state, "vms", "aven-mac-t1", "dirs")).exists()).toBe(false);
   });
 
-  test("has no desktop to show", async () => {
-    const sandboxes = await started();
-    await sandboxes.acquire({ id: "t1" });
-    expect(sandboxes.desktop()).toBeUndefined();
+  test("has a desktop to show and drive while its VM is up, and none before or after", async () => {
+    const vnc = startFakeVnc({ password: "fake-pass", width: 40, height: 30 });
+    process.env.FAKE_TART_VNC_PORT = String(vnc.port);
+    try {
+      const sandboxes = await started();
+      const box = await sandboxes.acquire({ id: "t1" });
+      expect(sandboxes.desktop("t1")).toBeUndefined();
+      expect(box.tools.map((tool) => tool.name)).toContain("desktop_screenshot");
+
+      await run(box, "exec_command", { command: "true" });
+      const desktop = sandboxes.desktop("t1")!;
+      expect(await desktop.status()).toMatchObject({ state: "running", width: 40, height: 30 });
+      await desktop.act({ type: "click", x: 3, y: 4 });
+      await desktop.screenshot();
+      expect(vnc.events.at(-1)).toMatchObject({ type: "pointer", x: 3, y: 4 });
+
+      await sandboxes.release("t1");
+      expect(sandboxes.desktop("t1")).toBeUndefined();
+      expect(await calls()).toContain("hidutil property --set");
+    } finally {
+      delete process.env.FAKE_TART_VNC_PORT;
+      vnc.close();
+    }
   });
 });
 

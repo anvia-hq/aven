@@ -77,7 +77,25 @@ describe("a macOS VM", () => {
     expect(vm.running).toBe(false);
     const calls = await readFile(join(tart.state, "calls.log"), "utf8");
     expect(calls.match(/^clone base t1$/gm)).toHaveLength(1);
-    expect(calls).toContain("run --no-graphics --dir=workspace:" + workspace + " t1");
+    expect(calls).toContain(
+      "run --no-graphics --vnc-experimental --dir=workspace:" + workspace + " t1",
+    );
+  });
+
+  test("learns where its desktop is from Tart's output, sets the keyboard up, and forgets both when stopped", async () => {
+    process.env.FAKE_TART_VNC_PORT = "5999";
+    try {
+      const vm = vmOf();
+      await vm.start([]);
+      expect(vm.vnc).toEqual({ host: "127.0.0.1", port: 5999, password: "fake-pass" });
+      const calls = await readFile(join(tart.state, "calls.log"), "utf8");
+      expect(calls).toContain("set t1 --display 1280x800px");
+      expect(calls).toContain("hidutil property --set");
+      await vm.stop();
+      expect(vm.vnc).toBeUndefined();
+    } finally {
+      delete process.env.FAKE_TART_VNC_PORT;
+    }
   });
 
   test("keeps its disk when stopped, so waking it again does not clone", async () => {

@@ -2,11 +2,25 @@ import { WORKSPACE_DIR } from "@aven/agents/sandbox-tools";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
 import { SKILLS_DIR } from "@aven/agents/skills";
 
-import type { Launch, MacVmOptions, Spawned, Terminate, VmRun, VmShare } from "./types";
+import type {
+  Launch,
+  MacVmOptions,
+  Spawned,
+  Terminate,
+  VmRun,
+  VmShare,
+  VncEndpoint,
+} from "./types";
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 5 * 60_000;
 const DEFAULT_POLL_MS = 1000;
 const SHARED_FILES = "/Volumes/My Shared Files";
+const VNC_URL = /vnc:\/\/:([^@\s]*)@([^:\s]+):(\d+)/;
+const VNC_WAIT_MS = 5000;
+const DEFAULT_DISPLAY = "1280x800px";
+const MAX_ERROR_CHARS = 8192;
+const COMMAND_KEY =
+  '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x7000000E6,"HIDKeyboardModifierMappingDst":0x7000000E3}]}';
 
 export const GUEST_LINKS = [WORKSPACE_DIR, UPLOADS_DIR, SKILLS_DIR].map((path) => path.slice(1));
 
@@ -61,6 +75,8 @@ export class MacVm {
   #options: MacVmOptions;
   #run: Spawned | undefined;
   #running = false;
+  #vnc: VncEndpoint | undefined;
+  #errors = "";
 
   constructor(options: MacVmOptions) {
     this.#options = options;
@@ -72,6 +88,10 @@ export class MacVm {
 
   get running() {
     return this.#running;
+  }
+
+  get vnc() {
+    return this.#running ? this.#vnc : undefined;
   }
 
   #env() {
@@ -124,7 +144,7 @@ export class MacVm {
     if (cloned.code !== 0) {
       throw new Error(`Could not create the macOS VM from ${base}: ${cloned.stderr.trim()}`);
     }
-    const set: string[] = [];
+    const set: string[] = ["--display", this.#options.display ?? DEFAULT_DISPLAY];
     if (cpus) set.push("--cpu", String(cpus));
     if (memoryMb) set.push("--memory", String(memoryMb));
     if (set.length > 0) await this.tart(["set", name, ...set]);
@@ -137,13 +157,17 @@ export class MacVm {
     const dirs = shares.map(
       ({ name: tag, dir, readOnly }) => `--dir=${tag}:${dir}${readOnly ? ":ro" : ""}`,
     );
-    const run = Bun.spawn([bin, "run", "--no-graphics", ...dirs, name], {
+    const run = Bun.spawn([bin, "run", "--no-graphics", "--vnc-experimental", ...dirs, name], {
       env: this.#env(),
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
     });
     this.#run = run;
+    this.#vnc = undefined;
+    this.#errors = "";
+    void this.#watch(run.stdout as ReadableStream, false);
+    void this.#watch(run.stderr as ReadableStream, true);
     let ended = false;
     void run.exited.then(() => {
       ended = true;
@@ -151,10 +175,11 @@ export class MacVm {
     });
     const deadline = Date.now() + connectTimeoutMs;
     while (Date.now() < deadline) {
-      if (ended) throw new Error(await this.#whyEnded(run));
+      if (ended) throw new Error(this.#whyEnded(run));
       const probe = await this.exec(["/usr/bin/true"]).catch(() => undefined);
       if (probe?.code === 0) {
         this.#running = true;
+        await this.#ready();
         return;
       }
       await Bun.sleep(this.#options.pollMs ?? DEFAULT_POLL_MS);
@@ -163,9 +188,30 @@ export class MacVm {
     throw new Error(`The macOS VM ${name} did not come up in ${connectTimeoutMs / 1000} seconds`);
   }
 
-  async #whyEnded(run: Spawned) {
-    const stderr = await new Response(run.stderr as ReadableStream).text();
-    return `The macOS VM ${this.#options.name} stopped while starting: ${stderr.trim() || `exit ${run.exitCode}`}`;
+  async #watch(stream: ReadableStream, errors: boolean) {
+    const decoder = new TextDecoder();
+    let text = "";
+    try {
+      for await (const chunk of stream) {
+        const piece = decoder.decode(chunk as Uint8Array, { stream: true });
+        if (errors) this.#errors = (this.#errors + piece).slice(-MAX_ERROR_CHARS);
+        text = (text + piece).slice(-MAX_ERROR_CHARS);
+        const found = VNC_URL.exec(text);
+        if (found && !this.#vnc) {
+          this.#vnc = { password: found[1]!, host: found[2]!, port: Number(found[3]) };
+        }
+      }
+    } catch {}
+  }
+
+  async #ready() {
+    const waitUntil = Date.now() + VNC_WAIT_MS;
+    while (!this.#vnc && Date.now() < waitUntil) await Bun.sleep(50);
+    await this.exec(["/usr/bin/hidutil", "property", "--set", COMMAND_KEY]).catch(() => undefined);
+  }
+
+  #whyEnded(run: Spawned) {
+    return `The macOS VM ${this.#options.name} stopped while starting: ${this.#errors.trim() || `exit ${run.exitCode}`}`;
   }
 
   exec(argv: string[], script?: string): Promise<VmRun> {

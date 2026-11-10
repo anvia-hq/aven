@@ -542,6 +542,7 @@ export type MacVmOptions = {
   home?: string;
   cpus?: number;
   memoryMb?: number;
+  display?: string;
   connectTimeoutMs?: number;
   pollMs?: number;
 };
@@ -558,3 +559,15 @@ export type MacSandboxConfig = {
 };
 
 export type VmRun = { code: number; stdout: string; stderr: string };
+
+export type VncEndpoint = { host: string; port: number; password: string };
+
+export type RfbFrame = { width: number; height: number; rgba: Uint8Array };
+
+export type PointerState = { x: number; y: number; buttons: number };
+
+export type MacDesktopOptions = {
+  endpoint(): VncEndpoint | undefined;
+  start(): Promise<void>;
+  tick?: number;
+};
