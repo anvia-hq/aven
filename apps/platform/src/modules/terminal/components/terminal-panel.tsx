@@ -29,7 +29,7 @@ export function TerminalPanel({ computer, onClose }: Props) {
         {view === "ready" && <TerminalViewer computer={computer} />}
         {view === "no-sandbox" && (
           <SandboxAsleepNotice
-            asleep={computer.asleep}
+            computer={computer}
             purpose="open a terminal"
             waking={waking}
             onWake={() => void wake()}

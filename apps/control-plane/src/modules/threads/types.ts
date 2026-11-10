@@ -78,7 +78,7 @@ export type ThreadContinuation = ReturnType<typeof createThreadContinuation>;
 
 export type PersonMention = { id: string; name: string };
 
-export type AddressingScores = { toAgent: number; toPerson: number };
+export type AddressingScores = { toPerson: number };
 
 export type Addressing = { agentAction: boolean; by: "model" | "fallback" };
 

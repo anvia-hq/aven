@@ -1,4 +1,4 @@
-import { check, decide } from "@anvia/core/decision";
+import { choice, decide } from "@anvia/core/decision";
 import { JevClient } from "@anvia/jev";
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 
@@ -36,13 +36,15 @@ export function jevModel({ kind, modelId, apiKey }: DecisionConfig): AddressingM
 }
 
 const QUESTIONS = {
-  toAgent: check({
+  addressee: choice({
     instructions:
-      "The message was written in a shared thread where an AI agent and several people work together. Is the author asking the AI agent (also written @agent) to do something, answer something, or continue the work?",
-  }),
-  toPerson: check({
-    instructions:
-      "Is the author talking to another person in the thread, either a mentioned teammate or someone the author was already talking with in the recent messages, and waiting for that person rather than the AI agent?",
+      "In a shared chat thread, several people and one AI coding agent talk in the same stream. Decide who the author of the last message is talking to. A message with no name in it usually continues the talk the author was just having in the recent messages. A first name, a term of address (bro, mas, bang, pak, you), a greeting or a reply to someone's question points to a person. A request for code work or a command (run, fix, check, build) points to the agent. A question about the project can still be for a person.",
+    options: {
+      agent:
+        "The author wants the AI agent to do work, answer, or continue. Nobody else is being talked to.",
+      person:
+        "The author is talking to a teammate, named in the message or the one they were just talking to, and wants that person to reply.",
+    },
   }),
 };
 
@@ -59,7 +61,7 @@ export function addressingDecider(
         abortSignal: AbortSignal.timeout(timeoutMs),
         retries: false,
       });
-      return { toAgent: answers.toAgent.probability, toPerson: answers.toPerson.probability };
+      return { toPerson: answers.addressee.probabilities?.person ?? 0 };
     } catch (error) {
       console.error("The decision model could not tell who a message is for:", error);
       return null;

@@ -87,6 +87,25 @@ describe("settlePending", () => {
     expect(settlePending(two, event).map(({ id }) => id)).toEqual(["b"]);
   });
 
+  test("drops the one a teammate sent, whose prompt the server marks with their name", () => {
+    const text = "@Indra is this project ready ?";
+    const marked = `[driver: Zed] ${text}`;
+    const mine = [sent("a", text)];
+    expect(settlePending(mine, { type: "run_start", prompt: marked })).toEqual([]);
+    const snapshot: RunEvent = {
+      type: "snapshot",
+      messages: [user(marked)],
+      running: true,
+    };
+    expect(settlePending(mine, snapshot)).toEqual([]);
+  });
+
+  test("drops the one whose text looks like a mark, which the server shields with a hidden character", () => {
+    const text = "[driver: Zed] was this you?";
+    const event: RunEvent = { type: "run_start", prompt: `\u200b${text}` };
+    expect(settlePending([sent("a", text)], event)).toEqual([]);
+  });
+
   test("leaves one another run's start does not bring", () => {
     const event: RunEvent = { type: "run_start", prompt: "Something else" };
     expect(settlePending(one, event)).toEqual(one);

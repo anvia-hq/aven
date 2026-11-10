@@ -64,6 +64,11 @@ export function createAddressingGate({ configOf, deciderFor }: Deps): Addressing
       ],
       recent,
     });
-    return scores ? addressingFrom(scores) : fallbackAddressing(prompt);
+    if (!scores) return fallbackAddressing(prompt);
+    const addressing = addressingFrom(scores);
+    console.info(
+      `The decision model gave ${scores.toPerson.toFixed(2)} to a person for a message of ${author}: ${addressing.agentAction ? "the agent answers" : "left to the person"}`,
+    );
+    return addressing;
   };
 }
