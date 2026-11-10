@@ -20,7 +20,7 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
     <div
       className={cn(
         "mx-auto flex w-full flex-col gap-4 px-4 py-6 md:py-10",
-        wide ? "max-w-7xl" : "max-w-4xl",
+        wide ? "max-w-none md:px-6" : "max-w-4xl",
       )}
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
