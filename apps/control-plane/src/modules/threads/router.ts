@@ -13,6 +13,7 @@ import {
   threadParams,
   updateThreadBody,
 } from "./schema";
+import { threadMentionsService } from "./mentions";
 import { threadsService } from "./service";
 import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
@@ -30,6 +31,11 @@ export const threadsRouter = (
         const rows = await threadsService.list({ organizationId, userId: user.id });
         return rows.map((thread) => ({ ...thread, running: runs.isRunning(thread.id) }));
       },
+      { auth: true, org: true },
+    )
+    .get(
+      "/mentioned",
+      ({ organizationId, user }) => threadMentionsService.waiting(organizationId, user.id),
       { auth: true, org: true },
     )
     .post(
@@ -84,6 +90,14 @@ export const threadsRouter = (
         return status(202, { ok: true, steered });
       },
       { thread: "drive", params: threadParams, body: sendMessageBody },
+    )
+    .post(
+      "/:id/mentions/seen",
+      async ({ params, user }) => {
+        await threadMentionsService.seen(user.id, params.id);
+        return { ok: true };
+      },
+      { thread: "read", params: threadParams },
     )
     .post(
       "/:id/compact",

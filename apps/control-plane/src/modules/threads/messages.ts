@@ -18,6 +18,7 @@ import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
 import { decisionModelService } from "../decision-model/service";
 import { addressingDecider, jevModel } from "../decision-model/jev";
+import { threadMentionsService } from "./mentions";
 import { createAddressingGate, recentOf, recentSenders } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
@@ -209,6 +210,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       options: { onPersonsWord?: boolean } = {},
     ): Promise<{ steered: boolean; agentAction?: false }> {
       const known = await acting(organizationId, userId, threadId);
+      await threadMentionsService.record(threadId, userId, body.prompt);
       if (await keptFromAgent(organizationId, userId, known, body)) {
         return { steered: false, agentAction: false };
       }
