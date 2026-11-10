@@ -68,7 +68,7 @@ export function DesktopPanel({ computer, onClose }: Props) {
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "no-sandbox" && (
           <SandboxAsleepNotice
-            asleep={computer.asleep}
+            computer={computer}
             purpose="watch the desktop"
             waking={waking}
             onWake={() => void wake()}

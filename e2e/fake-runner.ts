@@ -559,6 +559,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       branch: config.branch,
     });
   }
+  if (config.noWorkspace && call.method.startsWith("files.")) return reply(null);
   if (call.method === "files.list") {
     const { path } = call.params as { path: string };
     return reply({ entries: WORKSPACE[path] ?? [] });
