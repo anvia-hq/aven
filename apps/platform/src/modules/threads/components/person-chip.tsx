@@ -17,7 +17,7 @@ export function PersonAvatar({ name, image }: Pick<MentionPerson, "name" | "imag
 export function PersonChip({ name, image }: Pick<MentionPerson, "name" | "image">) {
   return (
     <span
-      className="inline-flex h-fit items-center gap-1 rounded bg-primary/10 px-1 py-0.5 align-middle text-[0.85em] leading-none font-medium text-primary"
+      className="inline-flex h-fit items-center gap-1 align-middle rounded bg-code/10 px-1 py-0.5 font-mono leading-none text-[0.85em] font-medium text-code"
       title={`Mentions ${name}`}
       data-mention="person"
     >
@@ -30,7 +30,7 @@ export function PersonChip({ name, image }: Pick<MentionPerson, "name" | "image"
 export function SentPersonMention({ name }: { name: string }) {
   return (
     <span
-      className="inline-flex h-fit items-center rounded bg-primary/10 px-1 py-0.5 align-middle text-[0.85em] leading-none font-medium text-primary"
+      className="inline-flex h-fit items-center gap-1 align-middle rounded bg-code/10 px-1 py-0.5 font-mono leading-none text-[0.85em] font-medium text-code"
       title={`Mentions ${name}`}
       data-mention="person"
     >
