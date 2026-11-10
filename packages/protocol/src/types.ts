@@ -360,6 +360,8 @@ export type RunModel = {
   gatewayToken: string;
 };
 
+export type RunCodex = { modelId?: string; reasoningEffort?: string };
+
 export type Reply = {
   type: "reply";
   id: string;
@@ -590,6 +592,7 @@ export type ControlPlaneToRuntime =
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
+      codex?: RunCodex;
     }
   | {
       type: "run.resume";
@@ -606,6 +609,7 @@ export type ControlPlaneToRuntime =
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
+      codex?: RunCodex;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {
@@ -662,7 +666,14 @@ export type ProcessEnded = {
 };
 
 export type RuntimeToControlPlane =
-  | { type: "hello"; version: number; runs: string[]; build?: string; canUpdate?: boolean }
+  | {
+      type: "hello";
+      version: number;
+      runs: string[];
+      build?: string;
+      canUpdate?: boolean;
+      codex?: boolean;
+    }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }

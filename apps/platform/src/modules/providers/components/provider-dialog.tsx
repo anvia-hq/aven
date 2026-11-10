@@ -27,6 +27,7 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   vertex: "Service account JSON key, or an access token",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
+  codex: "",
 };
 
 const modelWaiting: Record<ProviderKind, string> = {
@@ -37,6 +38,7 @@ const modelWaiting: Record<ProviderKind, string> = {
   vertex: "Enter the project, location and credential to load models",
   azure: "Enter the resource URL and key to load deployments",
   "openai-compatible": "Enter the base URL to load models",
+  codex: "Codex lists its own models",
 };
 
 type Props = {

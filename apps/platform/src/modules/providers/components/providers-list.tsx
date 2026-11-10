@@ -65,7 +65,8 @@ export function ProvidersList() {
   if (!loaded) return null;
 
   const available = PROVIDERS.filter(
-    (kind) => MANY.has(kind) || !providers.some((provider) => provider.kind === kind),
+    (kind) =>
+      kind !== "codex" && (MANY.has(kind) || !providers.some((provider) => provider.kind === kind)),
   );
 
   const taken = connectedPresets(providers);

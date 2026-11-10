@@ -6,6 +6,7 @@ export const PROVIDERS = [
   "vertex",
   "azure",
   "openai-compatible",
+  "codex",
 ] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 export const ARTIFACT_MEDIA_TYPES = [

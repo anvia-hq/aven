@@ -1,6 +1,7 @@
 import { parseAgentContinuation } from "@anvia/core/agent/interactions";
 import { z } from "zod";
 
+import { UnavailableError } from "../../errors";
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
@@ -17,6 +18,7 @@ import type { ModelConfig } from "@aven/agents/types";
 import type {
   ControlPlaneToRuntime,
   RunEvent,
+  RunCodex,
   RunIdentityCredential,
   RunModel,
   RunOutcome,
@@ -24,6 +26,8 @@ import type {
 } from "@aven/protocol/types";
 
 const STEER_TIMEOUT_MS = 10_000;
+
+type Routed = { model?: RunModel; codex?: RunCodex };
 
 const steerResult = z.discriminatedUnion("status", [
   z.object({ status: z.literal("queued") }),
@@ -97,7 +101,7 @@ export class RemoteRuntime implements Runtime {
     model,
   }: StartRunInput): RuntimeRun {
     const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential) => ({
+    return this.#launch(thread, model, extras, undefined, (runId, routed, credential) => ({
       type: "run.start",
       runId,
       thread: forkable(thread),
@@ -113,7 +117,8 @@ export class RemoteRuntime implements Runtime {
       webSearch,
       memory: memory?.index,
       cockpit: cockpit?.access,
-      model: runModel,
+      model: routed.model,
+      codex: routed.codex,
     }));
   }
 
@@ -137,7 +142,7 @@ export class RemoteRuntime implements Runtime {
       model,
       extras,
       askedBy(continuation),
-      (runId, runModel, credential) => ({
+      (runId, routed, credential) => ({
         type: "run.resume",
         runId,
         thread: forkable(thread),
@@ -151,7 +156,8 @@ export class RemoteRuntime implements Runtime {
         webSearch,
         memory: memory?.index,
         cockpit: cockpit?.access,
-        model: runModel,
+        model: routed.model,
+        codex: routed.codex,
       }),
     );
   }
@@ -171,13 +177,13 @@ export class RemoteRuntime implements Runtime {
     tokenOf: string | undefined,
     message: (
       runId: string,
-      runModel: RunModel,
+      routed: Routed,
       credential: RunIdentityCredential | undefined,
     ) => ControlPlaneToRuntime,
   ): RuntimeRun {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
-    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
+    const routed = this.#route(connection, runId, thread, model ?? environmentModel(), tokenOf);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
@@ -198,7 +204,7 @@ export class RemoteRuntime implements Runtime {
         mcp: mcp?.length ? mcp : undefined,
       },
     );
-    this.#post(connection, runId, message(runId, runModel, credential));
+    this.#post(connection, runId, message(runId, routed, credential));
 
     return {
       events: queue,
@@ -217,6 +223,22 @@ export class RemoteRuntime implements Runtime {
 
   dispose() {
     this.hub.closeAll();
+  }
+
+  #route(
+    connection: RuntimeConnection,
+    runId: string,
+    thread: RunThread,
+    model: ModelConfig,
+    tokenOf: string | undefined,
+  ): Routed {
+    if (model.provider !== "codex") {
+      return { model: this.gateway.issue(runId, model, thread.id, tokenOf) };
+    }
+    if (!connection.codex) {
+      throw new UnavailableError("This runner has to be updated before it can run Codex");
+    }
+    return { codex: { modelId: model.modelId, reasoningEffort: model.reasoningEffort } };
   }
 
   #connectionFor(thread: RunThread) {

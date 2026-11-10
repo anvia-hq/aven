@@ -6,6 +6,7 @@ import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
+import { assertOwnRunner } from "../providers/codex-runner";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { webSearchForRun } from "../runs/web-search";
@@ -156,6 +157,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
     const model = await resolveModel(driverId ?? ownerId, selection);
+    await assertOwnRunner(organizationId, thread.runtimeId, model, driverId ?? ownerId);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
@@ -258,6 +260,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
       const model = await resolveModel(driverId ?? ownerId, selection);
+      await assertOwnRunner(organizationId, thread.runtimeId, model, driverId ?? ownerId);
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,

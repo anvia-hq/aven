@@ -13,6 +13,8 @@ import type { RunModel } from "@aven/protocol/types";
 
 const TOKEN_PREFIX = "avgw_";
 
+type GatewayProvider = Exclude<Provider, "codex">;
+
 type Upstreams = { anthropic: string; openai: string; gemini?: string };
 
 const DEFAULT_UPSTREAMS: Upstreams = {
@@ -29,9 +31,9 @@ const SEGMENTS = {
   vertex: "vertex",
   azure: "azure",
   "openai-compatible": "compatible",
-} as const satisfies Record<Provider, string>;
+} as const satisfies Record<GatewayProvider, string>;
 
-const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
+const ALLOWED_PATHS: Record<GatewayProvider, readonly string[]> = {
   anthropic: ["/v1/messages"],
   openai: ["/responses", "/chat/completions"],
   gemini: [],
@@ -43,7 +45,7 @@ const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
 
 const GEMINI_PATH = /^\/v1(?:beta)?\/models\/[^/:?]+:(generateContent|streamGenerateContent)$/;
 
-const allowed = (provider: Provider, path: string) =>
+const allowed = (provider: GatewayProvider, path: string) =>
   provider === "gemini" ? GEMINI_PATH.test(path) : ALLOWED_PATHS[provider].includes(path);
 
 const PASS_REQUEST_HEADERS = ["accept", "anthropic-version", "anthropic-beta"];
@@ -96,6 +98,11 @@ export class RunGateway {
   }
 
   issue(runId: string, config: ModelConfig, scope?: string, tokenOf: string = runId): RunModel {
+    if (config.provider === "codex") {
+      throw new ModelUnavailableError(
+        "Codex runs on the runner's own login, not through the gateway",
+      );
+    }
     const key = this.#keyOf(config);
     const token = tokenFor(tokenOf, scope);
     this.revoke(runId);
@@ -127,6 +134,7 @@ export class RunGateway {
     const grant = presented ? this.#grants.get(presented) : undefined;
     if (!grant) return reject("Unauthorized", 401);
     const { provider } = grant.model;
+    if (provider === "codex") return reject("Not allowed", 404);
     if (SEGMENTS[provider] !== segment) return reject("Wrong provider for this run", 403);
     const upstreamPath = `/${path}`;
     if (request.method !== "POST" || !allowed(provider, upstreamPath)) {

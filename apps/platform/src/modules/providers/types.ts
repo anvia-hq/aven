@@ -10,6 +10,7 @@ export const PROVIDER_LABELS: Record<ProviderKind, string> = {
   vertex: "Google Vertex AI",
   azure: "Azure OpenAI",
   "openai-compatible": "OpenAI-compatible",
+  codex: "Codex",
 };
 
 export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
@@ -20,6 +21,7 @@ export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
   vertex: "Gemini and other models in a Google Cloud project, through a service account.",
   azure: "Models you have deployed in an Azure OpenAI resource.",
   "openai-compatible": "Any server that speaks the OpenAI API, such as Ollama or vLLM.",
+  codex: "Your ChatGPT plan, through the Codex login on your own runner.",
 };
 
 export type Provider = {

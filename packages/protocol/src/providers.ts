@@ -1,6 +1,7 @@
 import type { Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
 
-export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
+export const providerNeedsKey = (kind: Provider) =>
+  kind !== "openai-compatible" && kind !== "codex";
 
 export const bedrockBaseUrl = (region: string) => `https://bedrock-mantle.${region}.api.aws/v1`;
 

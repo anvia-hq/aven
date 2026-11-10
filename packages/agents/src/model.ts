@@ -117,6 +117,10 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
     });
   }
 
+  if (config.provider === "codex") {
+    throw new Error("Codex runs on its own login on the runner, so Aven creates no model for it");
+  }
+
   const unknownProvider: string = config.provider;
   throw new Error(`Unknown model provider "${unknownProvider}"`);
 }

@@ -62,6 +62,7 @@ export class RuntimeConnection {
   #ready = false;
   #build: string | undefined;
   #canUpdate = false;
+  #codex = false;
   #stats: ReportedStats | undefined;
 
   constructor(
@@ -89,6 +90,10 @@ export class RuntimeConnection {
 
   get canUpdate() {
     return this.#canUpdate;
+  }
+
+  get codex() {
+    return this.#codex;
   }
 
   get stats() {
@@ -184,7 +189,13 @@ export class RuntimeConnection {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
     if (message.type === "hello")
-      return this.#hello(message.version, message.runs, message.build, message.canUpdate);
+      return this.#hello(
+        message.version,
+        message.runs,
+        message.build,
+        message.canUpdate,
+        message.codex,
+      );
     if (!this.#ready) return;
     await this.#dispatch(message);
   }
@@ -199,11 +210,13 @@ export class RuntimeConnection {
     runs: string[],
     build: string | undefined,
     canUpdate: boolean | undefined,
+    codex: boolean | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
       this.#build = build;
       this.#canUpdate = canUpdate === true;
+      this.#codex = codex === true;
       void runtimesService.touch(this.runtimeId);
       this.hub.reclaim(this, runs);
       return;

@@ -19,11 +19,12 @@ const identity = {
 };
 const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" };
 
-function runtime({ failPost = false } = {}) {
+function runtime({ failPost = false, codex = true } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
   const revoked: string[] = [];
   const issued: { runId: string; tokenOf: string | undefined }[] = [];
   const connection = {
+    codex,
     startRun() {},
     endRun() {},
     post(message: ControlPlaneToRuntime) {
@@ -183,5 +184,42 @@ describe("the gateway token of a run that answers a question", () => {
     remote.resume({ thread, continuation: continuation("goal-x"), response: {} });
     remote.start({ thread, prompt: "go" } as never);
     expect(issued.map((call) => call.tokenOf)).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe("a Codex run's message to its runtime", () => {
+  const codexModel = { provider: "codex" as const, modelId: "gpt-5", reasoningEffort: "high" };
+
+  test("names the model and effort, carries no gateway model, and takes no gateway grant", () => {
+    const { posted, remote, issued } = runtime();
+
+    remote.start({ thread, prompt: "hi", model: codexModel });
+    remote.resume({ thread, continuation: {}, response: {}, model: codexModel });
+
+    expect(issued).toEqual([]);
+    for (const message of posted) {
+      expect(message).toMatchObject({ codex: { modelId: "gpt-5", reasoningEffort: "high" } });
+      expect(message).not.toHaveProperty("model", expect.anything());
+      expect(JSON.stringify(message)).not.toContain("gateway");
+    }
+  });
+
+  test("is refused, and posts nothing, on a runner that has not said it can run Codex", () => {
+    const { posted, remote, issued } = runtime({ codex: false });
+
+    expect(() => remote.start({ thread, prompt: "hi", model: codexModel })).toThrow(
+      "has to be updated before it can run Codex",
+    );
+    expect(posted).toEqual([]);
+    expect(issued).toEqual([]);
+  });
+
+  test("leaves an API-key run as it was: a gateway model and no codex field", () => {
+    const { posted, remote } = runtime();
+
+    remote.start({ thread, prompt: "hi", model: { provider: "anthropic" } });
+
+    expect(posted[0]).toMatchObject({ model });
+    expect(posted[0]).not.toHaveProperty("codex", expect.anything());
   });
 });

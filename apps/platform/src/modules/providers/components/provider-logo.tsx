@@ -27,6 +27,7 @@ const LOGOS = {
   azure: AzureColorMark,
   bedrock: BedrockMark,
   vertex: VertexMark,
+  codex: OpenAiMark,
 } as const;
 
 const PRESET_LOGOS = {

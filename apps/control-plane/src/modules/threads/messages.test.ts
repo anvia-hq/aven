@@ -161,6 +161,32 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     expect(lookedUp).toEqual([mateId, userId]);
   });
 
+  test("a teammate's Codex provider is refused on the creator's runner, and nothing starts", async () => {
+    const thread = await driven();
+    started.length = 0;
+    const forRun = spyOn(providersService, "forRun").mockResolvedValue({
+      kind: "codex",
+      name: "Codex",
+      modelId: null,
+      apiKeyEncrypted: null,
+    } as never);
+    const runner = spyOn(runtimesService, "get").mockResolvedValue({
+      id: thread.runtimeId,
+      ownerId: userId,
+    } as never);
+    try {
+      await expect(messages(false).send(orgA, mateId, thread.id, { prompt: "go" })).rejects.toThrow(
+        "Use an API-key provider for this thread.",
+      );
+      await messages(false).send(orgA, userId, thread.id, { prompt: "go" });
+    } finally {
+      forRun.mockRestore();
+      runner.mockRestore();
+    }
+    expect(started).toHaveLength(1);
+    expect(started[0]?.extras.senderId).toBe(userId);
+  });
+
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {
     const thread = await driven();
     started.length = 0;

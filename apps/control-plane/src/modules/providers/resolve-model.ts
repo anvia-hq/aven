@@ -36,6 +36,22 @@ export function environmentModel(): ModelConfig {
 
 export class InvalidSelectionError extends UnprocessableError {}
 
+export const CODEX_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"] as const;
+
+function codexModel(modelId: string | null, selection: ModelSelection): ModelConfig {
+  const { reasoningEffort } = selection;
+  if (reasoningEffort && !(CODEX_EFFORTS as readonly string[]).includes(reasoningEffort)) {
+    throw new InvalidSelectionError(
+      `Codex does not support the "${reasoningEffort}" reasoning effort`,
+    );
+  }
+  return {
+    provider: "codex",
+    modelId: selection.modelId ?? modelId ?? undefined,
+    reasoningEffort,
+  };
+}
+
 type ProviderKind = ModelConfig["provider"];
 
 export async function resolveModel(
@@ -49,6 +65,7 @@ export async function resolveModel(
       `${row.name} has no API key yet; add it in Settings > Providers, or ask your bot for the key card`,
     );
   }
+  if (row.kind === "codex") return codexModel(row.modelId, selection);
   const config: ModelConfig = {
     provider: row.kind,
     modelId: selection.modelId ?? row.modelId ?? undefined,
