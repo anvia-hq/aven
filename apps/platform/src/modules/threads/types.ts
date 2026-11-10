@@ -49,7 +49,7 @@ export type ThreadPullRequest = {
 
 type ThreadState = "open" | "snoozed" | "archived";
 
-export type ThreadPerson = { id: string; name: string };
+export type ThreadPerson = { id: string; name: string; image: string | null };
 
 export type ThreadVisibility = "private" | "workspace";
 
@@ -59,6 +59,7 @@ export type Thread = {
   title: string;
   createdBy: string;
   createdByName: string;
+  createdByImage: string | null;
   participants: ThreadPerson[];
   visibility: ThreadVisibility;
   drivingUntil: string | null;
