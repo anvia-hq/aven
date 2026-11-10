@@ -31,6 +31,24 @@ test.describe("taking a snapshot of a thread's environment", () => {
     await expect(card.getByRole("button", { name: "Take snapshot" })).toBeEnabled();
   });
 
+  test("shows a snapshot the runner already has, one the agent saved, not only the card's own", async ({
+    page,
+  }) => {
+    await registerUser(page, "snap", "Snapshot Person");
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_SNAPSHOT_SAVED_MINUTES_AGO: "5",
+    });
+    runner = child;
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto(`/threads/${threadId}`);
+
+    const state = page
+      .getByRole("complementary", { name: "Overview" })
+      .locator('[data-slot="snapshot-state"]');
+    await expect(state).not.toHaveText("No snapshot yet");
+    await expect(state).toHaveText(/^Snapshot .+ ago$/);
+  });
+
   test("shows the reason when the runner could not save one", async ({ page }) => {
     await registerUser(page, "snap", "Snapshot Person");
     const { child, threadId } = await threadOnFakeRunner(page, {

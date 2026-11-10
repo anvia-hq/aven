@@ -15,6 +15,7 @@ export type FakeRunnerSwitch =
   | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
   | "FAKE_SNAPSHOT_FAILS"
+  | "FAKE_SNAPSHOT_SAVED_MINUTES_AGO"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
   | "FAKE_STEER_APPLIES_AFTER"
@@ -55,4 +56,5 @@ export type FakeRunnerConfig = {
   branch: string;
   backgroundProcesses: boolean;
   snapshotFailure: string | undefined;
+  snapshotSavedMinutesAgo: number | undefined;
 };

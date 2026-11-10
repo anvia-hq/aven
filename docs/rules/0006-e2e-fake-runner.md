@@ -20,28 +20,29 @@ const { threadId } = await threadOnFakeRunner(page, { FAKE_RUN_ENDS: "1" });
 
 A boolean switch counts as on when its value is exactly `1`; any other value, or no value, leaves it off.
 
-| Switch                     | Value                                       | The fake runner                                                                      |
-| -------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `NO_SANDBOX`               | `1`                                         | starts every sandbox stopped: a desktop or terminal is closed until a wake           |
-| `FAKE_SECRET`              | `1`                                         | the run asks for a secret with `request_secret` and one question, `STRIPE_API_KEY`   |
-| `FAKE_QUESTION`            | `1`, or `2`                                 | the run asks one question, or two: its size first, then its color                    |
-| `FAKE_SUBAGENTS`           | `1`                                         | the run calls `spawn_agent` for two subagents, one of which fails                    |
-| `FAKE_STREAM_WORDS`        | count                                       | the run streams `count` words, one every `FAKE_STREAM_MS`                            |
-| `FAKE_STREAM_LINES`        | count                                       | the run streams `count` plan lines, one every `FAKE_STREAM_MS`                       |
-| `FAKE_STREAM_MS`           | milliseconds                                | the gap between two streamed pieces; `500` when it says nothing                      |
-| `FAKE_RUN_ENDS`            | `1`                                         | the run ends at once, instead of staying open for a steer or a stop                  |
-| `FAKE_RUN_ENDS_AFTER`      | milliseconds                                | the run ends after that long                                                         |
-| `FAKE_RUN_FAILS`           | message                                     | the run ends in `error` with that message instead of saying `Done.`                  |
-| `FAKE_AVEN_FILES`          | `setup`, `ship`, `actions`, comma separated | the fake workspace carries `.aven/setup`, `.aven/ship.md` and `.aven/actions.yml`    |
-| `FAKE_BRANCH`              | branch name                                 | `diff.get` says the workspace is on that branch (`aven/fake-branch` when unset)      |
-| `FAKE_PROCESSES`           | `1`                                         | `processes.list` answers a running `npm run dev` and a failed `bun test`             |
-| `FAKE_SNAPSHOT_FAILS`      | message                                     | `environment.save` fails with that message, after 700 ms, instead of saying it saved |
-| `FAKE_STEER_REFUSES`       | reason                                      | `run.steer` is refused with that reason                                              |
-| `FAKE_STEER_APPLIES_AFTER` | milliseconds                                | how long after a steer `steer_applied` comes; `400` when it says nothing             |
-| `FAKE_UPDATE_BUSY`         | reason                                      | `runner.update` answers `busy` with that reason instead of `started`                 |
-| `FAKE_BUILD`               | version                                     | the `build` the runner says in its `hello`                                           |
-| `FAKE_CAN_UPDATE`          | `1`                                         | the `hello` says the runner can update itself                                        |
-| `FAKE_STATS`               | JSON                                        | the `host.stats` the runner sends after its `hello`                                  |
+| Switch                            | Value                                       | The fake runner                                                                           |
+| --------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `NO_SANDBOX`                      | `1`                                         | starts every sandbox stopped: a desktop or terminal is closed until a wake                |
+| `FAKE_SECRET`                     | `1`                                         | the run asks for a secret with `request_secret` and one question, `STRIPE_API_KEY`        |
+| `FAKE_QUESTION`                   | `1`, or `2`                                 | the run asks one question, or two: its size first, then its color                         |
+| `FAKE_SUBAGENTS`                  | `1`                                         | the run calls `spawn_agent` for two subagents, one of which fails                         |
+| `FAKE_STREAM_WORDS`               | count                                       | the run streams `count` words, one every `FAKE_STREAM_MS`                                 |
+| `FAKE_STREAM_LINES`               | count                                       | the run streams `count` plan lines, one every `FAKE_STREAM_MS`                            |
+| `FAKE_STREAM_MS`                  | milliseconds                                | the gap between two streamed pieces; `500` when it says nothing                           |
+| `FAKE_RUN_ENDS`                   | `1`                                         | the run ends at once, instead of staying open for a steer or a stop                       |
+| `FAKE_RUN_ENDS_AFTER`             | milliseconds                                | the run ends after that long                                                              |
+| `FAKE_RUN_FAILS`                  | message                                     | the run ends in `error` with that message instead of saying `Done.`                       |
+| `FAKE_AVEN_FILES`                 | `setup`, `ship`, `actions`, comma separated | the fake workspace carries `.aven/setup`, `.aven/ship.md` and `.aven/actions.yml`         |
+| `FAKE_BRANCH`                     | branch name                                 | `diff.get` says the workspace is on that branch (`aven/fake-branch` when unset)           |
+| `FAKE_PROCESSES`                  | `1`                                         | `processes.list` answers a running `npm run dev` and a failed `bun test`                  |
+| `FAKE_SNAPSHOT_FAILS`             | message                                     | `environment.save` fails with that message, after 700 ms, instead of saying it saved      |
+| `FAKE_SNAPSHOT_SAVED_MINUTES_AGO` | a number of minutes                         | `environment.read` says a snapshot was saved that long ago, as if the agent had saved one |
+| `FAKE_STEER_REFUSES`              | reason                                      | `run.steer` is refused with that reason                                                   |
+| `FAKE_STEER_APPLIES_AFTER`        | milliseconds                                | how long after a steer `steer_applied` comes; `400` when it says nothing                  |
+| `FAKE_UPDATE_BUSY`                | reason                                      | `runner.update` answers `busy` with that reason instead of `started`                      |
+| `FAKE_BUILD`                      | version                                     | the `build` the runner says in its `hello`                                                |
+| `FAKE_CAN_UPDATE`                 | `1`                                         | the `hello` says the runner can update itself                                             |
+| `FAKE_STATS`                      | JSON                                        | the `host.stats` the runner sends after its `hello`                                       |
 
 The reply a run gives is one of five, in this order: subagents, then streamed words, then streamed lines, then a question or a secret, then the plain reply. The first switch that asks for one decides, so `FAKE_SUBAGENTS=1` beside `FAKE_QUESTION=1` narrates subagents and asks nothing, and the three switches that end a run (`FAKE_RUN_ENDS`, `FAKE_RUN_ENDS_AFTER`, `FAKE_RUN_FAILS`) apply to the plain reply only. Ask for one shape per runner.
 
