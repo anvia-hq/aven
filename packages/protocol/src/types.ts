@@ -413,7 +413,7 @@ export type ArtifactContent = { mediaType: string; data: string };
 
 export type ThreadAction = { name: string; kind: "run" | "prompt" };
 
-export type EnvironmentCallMethod = "environment.save";
+export type EnvironmentCallMethod = "environment.save" | "environment.read";
 
 export type EnvironmentSaveParams = {
   threadId: string;
@@ -422,6 +422,8 @@ export type EnvironmentSaveParams = {
 };
 
 export type EnvironmentSaveResult = { image: string };
+
+export type EnvironmentReadResult = { savedAt: string | null };
 
 export type ActionsCallMethod = "actions.run";
 

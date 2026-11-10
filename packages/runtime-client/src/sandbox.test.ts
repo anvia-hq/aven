@@ -618,6 +618,16 @@ describe("Sandboxes preparing a thread's environment (decision 0043)", () => {
       await cleanup();
     });
 
+    test("tells when the snapshot was saved, and that there is none before", async () => {
+      const d = docker();
+      const { sandboxes, cleanup } = await threadWithScript(d);
+      expect(await sandboxes.environmentSavedAt(thread, access)).toBeNull();
+      await sandboxes.saveEnvironment(thread, access);
+      const savedAt = await sandboxes.environmentSavedAt(thread, access);
+      expect(Date.parse(savedAt!)).not.toBeNaN();
+      await cleanup();
+    });
+
     test("says what to do when there is no script, or it cannot run", async () => {
       const none = await threadWithScript(docker(), null);
       await expect(none.sandboxes.saveEnvironment(thread, access)).rejects.toThrow(
