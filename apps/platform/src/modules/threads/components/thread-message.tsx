@@ -56,12 +56,14 @@ export const ThreadMessage = memo(function ThreadMessage({
   viewer,
   streaming = false,
   sending = false,
+  showAuthor = true,
 }: {
   message: ChatMessage;
   threadId: string;
   viewer: Viewer;
   streaming?: boolean;
   sending?: boolean;
+  showAuthor?: boolean;
 }) {
   if (message.role === "user") {
     const isShipRequest =
@@ -98,7 +100,7 @@ export const ThreadMessage = memo(function ThreadMessage({
         data-author={mine ? "mine" : "other"}
         aria-busy={sending || undefined}
       >
-        {!mine && <AuthorLabel name={author.name} />}
+        {!mine && showAuthor && <AuthorLabel name={author.name} />}
         {message.attachments?.length ? (
           <SentAttachments
             artifactsPath={`/api/threads/${threadId}/artifacts`}
