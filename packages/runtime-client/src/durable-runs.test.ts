@@ -117,6 +117,41 @@ describe("the default runtime agent's model retries", () => {
   );
 });
 
+describe("DurableRuns answering a question in the same process", () => {
+  test("the answer continues with the agent that asked, whatever was built for it, so what that agent holds must stay valid", async () => {
+    const runs = await opened(journalPath());
+    const asked = await runs.start(
+      "run-1",
+      "thread-1",
+      "paint it",
+      input("run-1", question, [text("from the agent that asked")]),
+      () => {},
+    );
+    const end = await asked.done;
+    expect(end.type).toBe("interaction");
+    if (end.type !== "interaction") return;
+    const { interaction } = end.continuation as {
+      interaction: { id: string; toolCallId: string };
+    };
+
+    const parked = await runs.asked("thread-1");
+    const events: RunEvent[] = [];
+    const answered = await runs.answer(
+      parked!,
+      interaction,
+      { type: "tool-question", answers: [{ questionId: "color", value: "red" }] },
+      () => input("run-1", [text("from the agent built for the answer")]),
+      (event) => events.push(event),
+    );
+    expect(await answered.done).toMatchObject({ type: "response" });
+    expect(events).toContainEqual({ type: "text", delta: "from the agent that asked" });
+    expect(events).not.toContainEqual({
+      type: "text",
+      delta: "from the agent built for the answer",
+    });
+  });
+});
+
 describe("DurableRuns after the process restarts", () => {
   test("a run parked on a question is answered by a process that never saw it", async () => {
     const path = journalPath();

@@ -363,6 +363,31 @@ describe("RunGateway", () => {
     expect((await post("anthropic/v1/messages", second.gatewayToken, {})).status).toBe(401);
   });
 
+  test("a run that answers a question can use the token of the run that asked", async () => {
+    const asking = gateway.issue(
+      "r-asks",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-q",
+    );
+    gateway.revoke("r-asks");
+    expect((await post("anthropic/v1/messages", asking.gatewayToken, {})).status).toBe(401);
+
+    const answering = gateway.issue(
+      "r-answers",
+      { provider: "anthropic", apiKey: "sk-real" },
+      "thread-q",
+      "r-asks",
+    );
+    expect(answering.gatewayToken).toBe(asking.gatewayToken);
+    expect((await post("anthropic/v1/messages", asking.gatewayToken, {})).status).not.toBe(401);
+
+    gateway.revoke("r-asks");
+    expect((await post("anthropic/v1/messages", asking.gatewayToken, {})).status).not.toBe(401);
+
+    gateway.revoke("r-answers");
+    expect((await post("anthropic/v1/messages", asking.gatewayToken, {})).status).toBe(401);
+  });
+
   test("the vendor's streamed answer passes through untouched", async () => {
     const run = gateway.issue("r5", { provider: "anthropic", apiKey: "sk-real" });
     const chunks = ["event: a\ndata: 1\n\n", "event: b\ndata: 2\n\n"];
