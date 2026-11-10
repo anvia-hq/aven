@@ -1,5 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 
+import { cn } from "cn";
+
 import { Button } from "@/components/button";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
@@ -109,11 +111,11 @@ export function ThreadMessages({
                 <QueuedMessage message={steer} viewer={viewer} showAuthor={first} />
               </div>
             ))}
-            <div className={working.space}>
+            <div className={cn(working.space, "empty:hidden")}>
               <WorkingIndicator running={running} startedAt={startedAt} />
             </div>
             {owned && (
-              <div className="mt-4">
+              <div className="mt-4 empty:hidden">
                 <BackgroundChip threadId={threadId} running={running} />
               </div>
             )}
