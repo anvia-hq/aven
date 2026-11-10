@@ -28,7 +28,7 @@ export function SandboxAsleepNotice({ computer, purpose, waking, onWake }: Props
     <PanelNotice>
       <span className="flex flex-col items-center gap-4">
         {computer.asleep} You can also wake it up to {purpose}.
-        <Button variant="outline" disabled={waking || exists === null} onClick={onWake}>
+        <Button variant="outline" disabled={waking} onClick={onWake}>
           {waking ? <Spinner /> : <Power />} {waking ? "Waking up" : "Wake up"}
         </Button>
       </span>
