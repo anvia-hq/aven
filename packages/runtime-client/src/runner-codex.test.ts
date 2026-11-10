@@ -207,4 +207,26 @@ describe("a runner with Codex", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Stopped by the user" });
   });
+
+  test("a message sent while Codex works is refused, with when to send it instead", async () => {
+    const { plane, runtime, script } = connect();
+    script([{ type: "thread.started", thread_id: "cx-6" }, "hang"]);
+    await runtime.ready;
+    plane.send(start());
+    await Bun.sleep(400);
+    plane.send({
+      type: "call",
+      id: "steer-1",
+      method: "run.steer",
+      params: { runId: "run-1", steerId: "s1", prompt: "also this" },
+    });
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "steer-1"));
+    const reply = plane.received.find((m) => m.type === "reply" && m.id === "steer-1");
+    expect(reply).toMatchObject({
+      ok: true,
+      result: { status: "refused", reason: expect.stringContaining("send it when the run ends") },
+    });
+    plane.send({ type: "run.cancel", runId: "run-1", reason: "done" });
+    await until(() => ended(plane).length === 1);
+  });
 });

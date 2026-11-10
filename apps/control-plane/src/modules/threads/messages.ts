@@ -6,7 +6,7 @@ import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
-import { assertOwnRunner } from "../providers/codex-runner";
+import { assertOwnRunner, assertSameEngine } from "../providers/codex-runner";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { webSearchForRun } from "../runs/web-search";
@@ -263,6 +263,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
       const model = await resolveModel(driverId ?? ownerId, selection);
+      assertSameEngine(continuation, model, driverId !== undefined);
       await assertOwnRunner(organizationId, thread.runtimeId, model, driverId ?? ownerId);
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({

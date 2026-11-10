@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 
 import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
-import { assertOwnRunner, OTHER_PROVIDER } from "./codex-runner";
+import { assertOwnRunner, assertSameEngine, OTHER_PROVIDER } from "./codex-runner";
 import { InvalidSelectionError, resolveModel } from "./resolve-model";
 import { providersService } from "./service";
 import type { ModelConfig } from "@aven/agents/types";
@@ -84,5 +84,31 @@ describe("resolving a Codex provider", () => {
       'Codex does not support the "ultra" reasoning effort',
     );
     forRun.mockRestore();
+  });
+});
+
+describe("a question stays with the engine that asked it", () => {
+  const codexAsked = { version: 1, state: { codex: true } };
+  const nativeAsked = { version: 1, state: {} };
+
+  test("a Codex question is answered with Codex by its creator, and a native one with a native provider", () => {
+    expect(() => assertSameEngine(codexAsked, codex, false)).not.toThrow();
+    expect(() => assertSameEngine(nativeAsked, anthropic, false)).not.toThrow();
+    expect(() => assertSameEngine(nativeAsked, null, false)).not.toThrow();
+  });
+
+  test("a Codex question answered with another provider, or a native one with Codex, is refused", () => {
+    expect(() => assertSameEngine(codexAsked, anthropic, false)).toThrow(
+      "Codex asked this question",
+    );
+    expect(() => assertSameEngine(codexAsked, null, false)).toThrow("Codex asked this question");
+    expect(() => assertSameEngine(nativeAsked, codex, false)).toThrow("not asked by Codex");
+  });
+
+  test("a teammate never answers a question Codex asked on the creator's login", () => {
+    expect(() => assertSameEngine(codexAsked, codex, true)).toThrow("Only the thread's creator");
+    expect(() => assertSameEngine(codexAsked, anthropic, true)).toThrow(
+      "Only the thread's creator",
+    );
   });
 });

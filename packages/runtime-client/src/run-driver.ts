@@ -656,6 +656,12 @@ export function createRunDriver(context: DriverContext) {
       if (record.compact) {
         return { status: "refused", reason: "The conversation is being compacted" };
       }
+      if (record.codex) {
+        return {
+          status: "refused",
+          reason: "Codex cannot take a message while it works: send it when the run ends",
+        };
+      }
       if (record.phase !== "chat") {
         return {
           status: "refused",
