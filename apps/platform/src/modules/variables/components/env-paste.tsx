@@ -25,7 +25,7 @@ export function EnvPaste({ value, parsed, secret, onChange }: Props) {
               rows={6}
               spellCheck={false}
               autoComplete="off"
-              className="max-h-60 overflow-y-auto font-mono text-xs md:text-xs"
+              className="max-h-60 field-sizing-fixed overflow-auto font-mono text-xs md:text-xs"
               placeholder={"DATABASE_URL=postgres://localhost/app\nAPI_KEY=sk-123"}
               value={value}
               onChange={(event) => onChange(event.target.value)}

@@ -32,6 +32,14 @@ The repository already says which versions it runs on. Make the environment matc
 
 Do not guess. If something that matters is unclear (a private registry, a license key, a database the tests need), ask the user.
 
+### Names Aven refuses as project variables
+
+Aven refuses these names as project variables, and the user cannot save them: `PATH`, `HOME`, `USER`, `SHELL`, `PWD`, and anything starting `LD_`, `AVEN_`, `GH_`, `GITHUB_` or `GIT_`, in any letter case (`github_token` too). They steer the sandbox and the GitHub sign-in each run makes as the person, so a variable cannot replace them. Check the names the project reads (`.env.example`, the README, the code that reads `process.env`, compose's `environment:`) against this list **before** you tell the user which variables to add.
+
+- A project that reads `GITHUB_APP_ID`, `GITHUB_CLIENT_SECRET` or the like (a GitHub App of its own, an OAuth login) hits this. Do not tell the user to paste its `.env`: the dialog refuses those lines and the user cannot proceed.
+- Tell the user which names are refused and why, and ask which way they want. The usual one is for the project to also read a name that is allowed (`MYAPP_GITHUB_APP_ID`), falling back to the plain one so production and Docker are unchanged; the user then saves those under the new names, as secrets where they are. Another is to keep the real values in a `.env` in the workspace yourself, which only that thread's container has, and which must be ignored by git.
+- Change the project's code only after they choose. Never write a value into `.aven/setup`, a committed file or your own message.
+
 ## 2. Write `.aven/setup`
 
 An executable shell script at `.aven/setup`, run from the repository root as the user `node` (with `sudo`) with no interaction. Write it like this:
