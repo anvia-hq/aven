@@ -8,14 +8,14 @@ import type { SnapshotState } from "../types";
 
 const POLL_MS = 3_000;
 
-export function useEnvironmentSnapshot(threadId: string) {
+export function useEnvironmentSnapshot(threadId: string, saves = 0) {
   const [looked, setLooked] = useState(0);
   const [asking, setAsking] = useState(false);
   const [running, setRunning] = useState(false);
   const answer = useRequest<SnapshotState>(`/threads/${threadId}/environment`, {
     pollMs: running ? POLL_MS : undefined,
     resetOn: threadId,
-    refreshKey: looked,
+    refreshKey: `${looked}:${saves}`,
   });
   const snapshot = answer?.data ?? null;
   const was = useRef<SnapshotState | null>(null);

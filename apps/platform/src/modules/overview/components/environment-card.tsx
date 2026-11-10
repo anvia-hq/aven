@@ -13,10 +13,18 @@ import type { SnapshotState } from "../types";
 import { useEnvironmentSnapshot } from "../hooks/use-environment-snapshot";
 import { OverviewCard } from "./overview-card";
 
-export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: boolean }) {
+export function EnvironmentCard({
+  thread,
+  owned,
+  saves,
+}: {
+  thread: Thread;
+  owned: boolean;
+  saves: number;
+}) {
   const { project } = useProject(thread.projectId);
   const { runtime } = useRuntime(thread.runtimeId);
-  const { loaded, snapshot, busy, take } = useEnvironmentSnapshot(thread.id);
+  const { loaded, snapshot, busy, take } = useEnvironmentSnapshot(thread.id, saves);
   const canSnapshot = owned && thread.state !== "archived";
 
   return (
@@ -41,33 +49,31 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
       {canSnapshot && (
-        <Row
-          icon={<Camera />}
-          action={
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="ml-auto shrink-0"
-                    disabled={!loaded || busy || !runtime?.online}
-                    onClick={() => void take()}
-                  />
-                }
-              >
-                {busy ? "Taking…" : "Take snapshot"}
-              </TooltipTrigger>
-              <TooltipContent>
-                Run .aven/setup in a fresh container and keep the result for new threads
-              </TooltipContent>
-            </Tooltip>
-          }
-        >
-          <span className="text-muted-foreground" data-slot="snapshot-state">
-            {loaded ? snapshotLine(snapshot) : "Checking for a snapshot…"}
-          </span>
-        </Row>
+        <>
+          <Row icon={<Camera />}>
+            <span className="text-muted-foreground" data-slot="snapshot-state">
+              {loaded ? snapshotLine(snapshot) : "Checking for a snapshot…"}
+            </span>
+          </Row>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="w-fit"
+                  disabled={!loaded || busy || !runtime?.online}
+                  onClick={() => void take()}
+                />
+              }
+            >
+              {busy ? "Taking…" : "Take snapshot"}
+            </TooltipTrigger>
+            <TooltipContent>
+              Run .aven/setup in a fresh container and keep the result for new threads
+            </TooltipContent>
+          </Tooltip>
+        </>
       )}
     </OverviewCard>
   );
