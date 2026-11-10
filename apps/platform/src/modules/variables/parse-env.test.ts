@@ -47,14 +47,10 @@ describe("parseEnv", () => {
     expect(parseEnv("A=1\r\nA=2\r\n").entries).toEqual([{ name: "A", value: "2" }]);
   });
 
-  test("reports reserved names and lines it cannot read", () => {
+  test("keeps reserved names, so the person sees them, and reports lines it cannot read", () => {
     const { entries, issues } = parseEnv("PATH=/bin\nGITHUB_TOKEN=x\nnot a variable\nOK=1");
-    expect(entries).toEqual([{ name: "OK", value: "1" }]);
-    expect(issues.map((issue) => [issue.line, issue.reason])).toEqual([
-      [1, "Reserved for Aven's own use"],
-      [2, "Reserved for Aven's own use"],
-      [3, "Not NAME=value"],
-    ]);
+    expect(entries.map((entry) => entry.name)).toEqual(["PATH", "GITHUB_TOKEN", "OK"]);
+    expect(issues.map((issue) => [issue.line, issue.reason])).toEqual([[3, "Not NAME=value"]]);
   });
 });
 
