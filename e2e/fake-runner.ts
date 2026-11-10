@@ -58,8 +58,65 @@ const ws = new WebSocket(`${base.replace(/^http/, "ws").replace(/\/$/, "")}/runt
 ws.binaryType = "arraybuffer";
 const viewers = new Map<string, FakeDesktop>();
 const terminals = new Map<string, { line: string }>();
+const ports = new Map<string, { request: string; answered: boolean }>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
+
+const FAKE_APP_PORT = 3000;
+
+function serveFakeApp(
+  viewerId: string,
+  port: { request: string; answered: boolean },
+  bytes: string,
+) {
+  port.request += bytes;
+  const end = port.request.indexOf("\r\n\r\n");
+  if (end < 0 || port.answered) return;
+  port.answered = true;
+  const [line = "", ...lines] = port.request.slice(0, end).split("\r\n");
+  const header = (name: string) =>
+    lines
+      .find((entry) => entry.toLowerCase().startsWith(`${name}:`))
+      ?.slice(name.length + 1)
+      .trim() ?? "";
+  const path = line.split(" ")[1] ?? "/";
+  event({ type: "port.request", path, host: header("host"), cookie: header("cookie") });
+  const respond = (status: string, headers: Record<string, string>, body: string) => {
+    const head = Object.entries({
+      ...headers,
+      "Content-Length": String(text(body).length),
+      Connection: "close",
+    })
+      .map(([name, value]) => `${name}: ${value}`)
+      .join("\r\n");
+    ws.send(encodeViewerFrame(viewerId, text(`HTTP/1.1 ${status}\r\n${head}\r\n\r\n${body}`)));
+    setTimeout(() => {
+      if (ports.delete(viewerId)) {
+        send({ type: "port.closed", viewerId, reason: "The port closed the connection" });
+      }
+    }, 20);
+  };
+  if (path === "/") {
+    respond(
+      "200 OK",
+      {
+        "Content-Type": "text/html",
+        "Set-Cookie": "theme=dark; Path=/",
+        "X-Frame-Options": "DENY",
+        "Strict-Transport-Security": "max-age=63072000",
+      },
+      `<!doctype html><title>Sandbox app</title><h1>Hello from the sandbox</h1><p id="out">loading</p><pre id="seen">host=${header("host")} cookie=${header("cookie")}</pre><a id="old" href="/old">old</a><script src="/app.js"></script>`,
+    );
+  } else if (path === "/app.js") {
+    respond(
+      "200 OK",
+      { "Content-Type": "application/javascript" },
+      "document.getElementById('out').textContent = 'script ran on ' + location.origin;",
+    );
+  } else if (path === "/old") {
+    respond("302 Found", { Location: `http://localhost:${FAKE_APP_PORT}/` }, "");
+  } else respond("404 Not Found", { "Content-Type": "text/plain" }, "not here");
+}
 
 const seqs = new Map<string, number>();
 const streamed = new Map<string, number>();
@@ -101,6 +158,11 @@ ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
     if (!frame) return;
+    const port = ports.get(frame.viewerId);
+    if (port) {
+      serveFakeApp(frame.viewerId, port, new TextDecoder().decode(frame.payload));
+      return;
+    }
     const terminal = terminals.get(frame.viewerId);
     if (!terminal) viewers.get(frame.viewerId)?.feed(frame.payload);
     else {
@@ -145,6 +207,21 @@ ws.onmessage = ({ data }) => {
     event({ type: "terminal.resize", cols: message.cols, rows: message.rows });
   } else if (message.type === "terminal.close") {
     terminals.delete(message.viewerId);
+  } else if (message.type === "port.open") {
+    const { viewerId, threadId, port } = message;
+    if (!sandboxFor(threadId).running) {
+      send({ type: "port.closed", viewerId, reason: "The sandbox is not running" });
+      return;
+    }
+    event({ type: "port.open", port });
+    if (port !== FAKE_APP_PORT) {
+      send({ type: "port.closed", viewerId, reason: "connection refused" });
+      return;
+    }
+    ports.set(viewerId, { request: "", answered: false });
+    send({ type: "port.opened", viewerId });
+  } else if (message.type === "port.close") {
+    ports.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.cancel") {

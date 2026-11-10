@@ -45,6 +45,10 @@ A boolean switch counts as on when its value is exactly `1`; any other value, or
 
 The reply a run gives is one of five, in this order: subagents, then streamed words, then streamed lines, then a question or a secret, then the plain reply. The first switch that asks for one decides, so `FAKE_SUBAGENTS=1` beside `FAKE_QUESTION=1` narrates subagents and asks nothing, and the three switches that end a run (`FAKE_RUN_ENDS`, `FAKE_RUN_ENDS_AFTER`, `FAKE_RUN_FAILS`) apply to the plain reply only. Ask for one shape per runner.
 
+## A pretend app on port 3000
+
+The fake runner answers `port.open` for port 3000 as a small HTTP app (decision 0199) and refuses every other port with `connection refused`: `/` is a page that carries the `Host` and `Cookie` it was asked with and sets a `theme` cookie, `/app.js` writes the page's origin into it, `/old` redirects to `http://localhost:3000/`, and anything else is a 404. It emits `EVENT port.open` and `EVENT port.request` lines. A stopped sandbox (`NO_SANDBOX`) refuses every port. The control plane of an e2e run serves the Browser at `E2E_BROWSER_ORIGIN` (port 8104, `E2E_BROWSER_PORT`).
+
 ## State, per thread
 
 A fake runner serves every thread the control plane gives it, so what a thread's sandbox is doing is kept per thread, in `sandboxes` of `e2e/fake-runner.ts`: whether it runs (`NO_SANDBOX` sets where a thread starts) and the desktop lease a takeover takes, which a release gives back and which `sandbox.release` — what archiving a thread asks for — ends for that thread alone. Stream counters and a run's end are kept per run. Waking one thread's sandbox, or putting another one away, leaves every other thread as it was.
