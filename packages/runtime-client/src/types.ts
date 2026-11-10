@@ -539,3 +539,11 @@ export type CodexTurnEnd = {
   ended: "done" | "error" | "cancelled";
   error?: string;
 };
+
+export type CodexQuestion = { toolName: string; callId: string; input: unknown };
+
+export type CodexToolsServer = {
+  url: string;
+  token: string;
+  close(): Promise<void>;
+};
