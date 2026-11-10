@@ -25,6 +25,7 @@ import type {
   DriverContext,
   DurableEnd,
   Emit,
+  FollowedGoal,
   FollowedRun,
   GoalEnd,
   RunInput,
@@ -39,6 +40,7 @@ type Live = {
   threadId: string;
   save(changes: Partial<RunRecord>): void;
   followed?: Pick<FollowedRun, "cancel">;
+  goal?: FollowedGoal;
   cancelReason?: string;
   steers: { steerId: string; message: AgentPrompt }[];
   mcp?: ConnectedMcp;
@@ -479,6 +481,7 @@ export function createRunDriver(context: DriverContext) {
       cursorOf: (durableId) => outbox.cursor(runId, durableId),
     });
     run.followed = working;
+    run.goal = working;
     if (run.cancelReason) void working.cancel();
     const goalEnd = await working.done;
     if (goalEnd.type === "error") {
@@ -583,13 +586,17 @@ export function createRunDriver(context: DriverContext) {
       if (record.compact) {
         return { status: "refused", reason: "The conversation is being compacted" };
       }
-      if (record.phase !== "chat") {
+      if (record.phase === "report") {
         return {
           status: "refused",
-          reason: "The agent is working on a goal in the background: stop it to talk to the agent",
+          reason: "The agent is writing up how the goal ended: wait for it to finish",
         };
       }
       const message = sentPrompt(prompt, { mentions, skills: record.skillListing });
+      if (record.phase === "goal") {
+        const taken = (await run.goal?.steer(message, steerId)) ?? false;
+        return { status: taken ? "queued" : "closed" };
+      }
       if (!record.durableId) {
         run.steers.push({ steerId, message });
         return { status: "queued" };

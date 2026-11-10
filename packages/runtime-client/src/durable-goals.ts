@@ -31,6 +31,7 @@ type Session = {
   onEvent: Emit;
   onSession: (session: number, messages: Message[]) => Promise<void>;
   tracker: GoalTracker;
+  working: { runId?: string };
 };
 
 export function defineAvenGoal(contexts: Map<string, GoalContext>) {
@@ -80,11 +81,32 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
     throw error;
   }
   const tracker = { state, saveState, cursorOf };
-  const done = followGoal(journal, handle, { input, onEvent, onSession, tracker }).finally(
-    finished,
-  );
+  const working: { runId?: string } = {};
+  const done = followGoal(journal, handle, {
+    input,
+    onEvent,
+    onSession,
+    tracker,
+    working,
+  }).finally(finished);
   if (Object.keys(state.sessions).length > 0) await journal.revive([agentId]);
-  return { done, cancel: () => handle.cancel().catch(() => undefined) };
+  return {
+    done,
+    cancel: () => handle.cancel().catch(() => undefined),
+    steer: async (prompt, requestId) => {
+      const runId = working.runId ?? (await sessionRunning(journal, agentId));
+      return runId !== undefined && (await journal.steer(runId, prompt, requestId));
+    },
+  };
+}
+
+async function sessionRunning(journal: GoalJournal, agentId: string) {
+  for (const status of ["running", "pending", "queued"] as const) {
+    const { runs } = await journal.runtime.listRuns({ status, limit: 100 });
+    const run = runs.find((summary) => summary.agentId === agentId);
+    if (run) return run.id;
+  }
+  return undefined;
 }
 
 async function followGoal(
@@ -109,6 +131,7 @@ async function followGoal(
       tracker.saveState(state);
       onEvent({ type: "text", delta: goalSessionMarker(number) });
     }
+    session.working.runId = runId;
     sessions.push(followSession(journal, runId, number, session));
   };
 
@@ -152,7 +175,7 @@ async function followSession(
   journal: GoalJournal,
   runId: string,
   number: number,
-  { input, onEvent, onSession, tracker }: Session,
+  { input, onEvent, onSession, tracker, working }: Session,
 ) {
   try {
     const run = await journal.runtime.getRun(runId);
@@ -166,5 +189,8 @@ async function followSession(
       tracker.state.sessions[runId] = { number, filed: true };
       tracker.saveState(tracker.state);
     }
-  } catch {}
+  } catch {
+  } finally {
+    if (working.runId === runId) working.runId = undefined;
+  }
 }

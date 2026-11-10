@@ -40,7 +40,14 @@ import type {
   ThreadsHost,
   UpdateSelf,
 } from "@aven/agents/tools/types";
-import type { Agent, AgentMemoryOptions, AgentOutcome, AnyTool, Message } from "@anvia/core";
+import type {
+  Agent,
+  AgentMemoryOptions,
+  AgentOutcome,
+  AgentPrompt,
+  AnyTool,
+  Message,
+} from "@anvia/core";
 import type { KeptAttachment, McpNote, SkillListing, SubagentType } from "@aven/agents/types";
 import type {
   DefinedGoal,
@@ -132,7 +139,11 @@ export type GoalState = {
   sessions: Record<string, { number: number; filed: boolean }>;
 };
 
-export type FollowedGoal = { done: Promise<GoalEnd>; cancel(): Promise<void> };
+export type FollowedGoal = {
+  done: Promise<GoalEnd>;
+  cancel(): Promise<void>;
+  steer(prompt: AgentPrompt, requestId: string): Promise<boolean>;
+};
 
 export type GoalContext = { verify: () => Promise<CommandResult[]> };
 
@@ -156,6 +167,7 @@ export type GoalJournal = {
   follow(run: DurableRun, input: RunInput, onEvent: Emit, options?: FollowOptions): FollowedRun;
   release(agentId: string, end: DurableEnd): void;
   revive(agentIds: readonly string[]): Promise<void>;
+  steer(durableId: string, prompt: AgentPrompt, requestId: string): Promise<boolean>;
 };
 
 export type Emit = (event: RunEvent, source?: Source) => void;
