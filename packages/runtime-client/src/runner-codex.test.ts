@@ -51,13 +51,13 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
 });
 
-function connect(withCodex = true) {
+function connect(withCodex = true, path = fake) {
   const home = mkdtempSync(join(tmpdir(), "runner-codex-"));
   const codex: CodexSupport | undefined = withCodex
     ? {
-        path: fake,
+        path,
         threads: new CodexThreads(join(home, "codex-threads.json")),
-        env: { PATH: process.env.PATH },
+        env: { PATH: process.env.PATH, CODEX_HOME: home },
         work: join(home, "work"),
       }
     : undefined;
@@ -228,5 +228,36 @@ describe("a runner with Codex", () => {
     });
     plane.send({ type: "run.cancel", runId: "run-1", reason: "done" });
     await until(() => ended(plane).length === 1);
+  });
+
+  test("answers the control plane's Codex sign-in: the link and the code, then signed in when approved", async () => {
+    const { plane, runtime, home } = connect(
+      true,
+      join(import.meta.dir, "testing", "fake-codex-login.ts"),
+    );
+    mkdirSync(home, { recursive: true });
+    await runtime.ready;
+    const ask = async (id: string, action: string) => {
+      plane.send({ type: "call", id, method: "codex.login", params: { action } });
+      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      return plane.received.find((m) => m.type === "reply" && m.id === id);
+    };
+    expect(await ask("l1", "status")).toMatchObject({ ok: true, result: { state: "signed-out" } });
+    expect(await ask("l2", "start")).toMatchObject({
+      ok: true,
+      result: { state: "waiting", url: "https://auth.openai.com/codex/device", code: "AOL5-C2T9O" },
+    });
+    expect(await ask("l3", "cancel")).toMatchObject({ ok: true, result: { state: "signed-out" } });
+  });
+
+  test("a runner with no Codex says so to a sign-in, and does not fail the call", async () => {
+    const { plane, runtime } = connect(false);
+    await runtime.ready;
+    plane.send({ type: "call", id: "l1", method: "codex.login", params: { action: "status" } });
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "l1"));
+    expect(plane.received.find((m) => m.type === "reply" && m.id === "l1")).toMatchObject({
+      ok: true,
+      result: { state: "unavailable" },
+    });
   });
 });

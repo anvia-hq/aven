@@ -1,6 +1,7 @@
 import {
   actionRunParams,
   artifactsReadParams,
+  codexLoginParams,
   desktopCallParams,
   environmentSaveParams,
   diffGetParams,
@@ -15,6 +16,7 @@ import {
 import { currentBranch, threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import type {
+  CodexLoginState,
   FilesCallMethod,
   ProcessesCallMethod,
   RunnerCallMethod,
@@ -32,6 +34,7 @@ export function createRunnerCalls({
   processEnds,
   update,
   steer,
+  codexLogin,
 }: RunnerCallsContext) {
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
@@ -111,6 +114,12 @@ export function createRunnerCalls({
     return { savedAt: await sandbox.environmentSavedAt({ id: threadId, organizationId }, access) };
   }
 
+  async function codexLoginOf(params: unknown): Promise<CodexLoginState> {
+    const action = codexLoginParams(params);
+    if (!codexLogin) return { state: "unavailable", error: "This runner has no Codex installed" };
+    return codexLogin.call(action);
+  }
+
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
     const { release } = runnerUpdateParams(params);
     if (!update) return { status: "unsupported" };
@@ -122,6 +131,7 @@ export function createRunnerCalls({
 
   return function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "runner.update") return updateOf(params);
+    if (method === "codex.login") return codexLoginOf(params);
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
     if (method === "environment.save") return saveEnvironmentOf(params);

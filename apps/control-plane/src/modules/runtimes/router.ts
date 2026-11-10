@@ -9,7 +9,14 @@ import { connectRouter } from "./connect";
 import { createLatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
-import { createRuntimeBody, renameRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
+import { codexLogin } from "./codex-login";
+import {
+  codexLoginBody,
+  createRuntimeBody,
+  renameRuntimeBody,
+  runtimeParams,
+  updateRuntimeBody,
+} from "./schema";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
@@ -92,6 +99,18 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
         return rotated;
       },
       { auth: true, org: true, params: runtimeParams },
+    )
+    .get(
+      "/:id/codex",
+      ({ params, organizationId, user }) =>
+        codexLogin(hub, organizationId, user.id, params.id, "status"),
+      { auth: true, org: true, params: runtimeParams },
+    )
+    .post(
+      "/:id/codex/login",
+      ({ params, body, organizationId, user }) =>
+        codexLogin(hub, organizationId, user.id, params.id, body.action),
+      { auth: true, org: true, params: runtimeParams, body: codexLoginBody },
     )
     .post(
       "/:id/update",

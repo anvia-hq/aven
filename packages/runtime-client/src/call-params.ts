@@ -2,6 +2,7 @@ import { asRecord } from "@aven/agents/values";
 import { DIFF_SCOPES } from "@aven/protocol/runtime-wire";
 import type {
   ArtifactsReadParams,
+  CodexLoginAction,
   DesktopCallParams,
   DiffGetParams,
   DiffScope,
@@ -115,4 +116,10 @@ export function environmentSaveParams(params: unknown): EnvironmentSaveParams {
   if (typeof cloneUrl !== "string" || typeof defaultBranch !== "string") throw invalid();
   if (typeof token !== "string") throw invalid();
   return { threadId, organizationId, access: { cloneUrl, defaultBranch, token } };
+}
+
+export function codexLoginParams(params: unknown): CodexLoginAction {
+  const { action } = asRecord(params);
+  if (action !== "status" && action !== "start" && action !== "cancel") throw invalid();
+  return action;
 }

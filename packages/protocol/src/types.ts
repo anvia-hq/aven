@@ -456,7 +456,16 @@ export type SteerResult =
 
 export type SandboxCallMethod = "sandbox.release";
 
-export type RunnerSelfCallMethod = "runner.update";
+export type RunnerSelfCallMethod = "runner.update" | "codex.login";
+
+export type CodexLoginAction = "status" | "start" | "cancel";
+
+export type CodexLoginState = {
+  state: "signed-in" | "signed-out" | "waiting" | "failed" | "unavailable";
+  url?: string;
+  code?: string;
+  error?: string;
+};
 
 export type DockerCallMethod = "docker.leftovers" | "docker.remove";
 

@@ -51,6 +51,7 @@ import type {
 } from "@anvia/durable";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import type { CodexLogin } from "./codex-login";
 import type { CodexThreads } from "./codex-threads";
 import type { RunOutbox } from "./run-outbox";
 import type { DurableRuns } from "./durable-runs";
@@ -385,6 +386,7 @@ export type RunnerCallsContext = {
   };
   processEnds: Pick<ProcessEndWatch, "ignore">;
   steer(params: SteerParams): Promise<SteerResult>;
+  codexLogin?: Pick<CodexLogin, "call">;
 };
 
 export type RuntimeOptions = {

@@ -18,6 +18,7 @@ import { createRunnerCalls } from "./runner-calls";
 import { PortTunnels } from "./port-tunnels";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
+import { CodexLogin } from "./codex-login";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
@@ -225,6 +226,7 @@ export function startRuntime(options: RuntimeOptions) {
           : undefined,
     },
     steer: (params) => driver.steer(params),
+    codexLogin: options.codex && new CodexLogin(options.codex),
   });
 
   async function handle(message: ControlPlaneToRuntime) {
