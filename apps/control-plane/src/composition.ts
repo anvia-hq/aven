@@ -18,6 +18,8 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createActionsService } from "./modules/actions/service";
+import { browserConfig } from "./modules/browser/config";
+import { createBrowserService } from "./modules/browser/service";
 import { createEnvironmentService } from "./modules/environment/service";
 import { runnerFor } from "./modules/runtimes/ask-runner";
 import { createShipService } from "./modules/ship/service";
@@ -112,6 +114,12 @@ const botThreads = createBotThreads({
 
 export const environmentService = createEnvironmentService(runnerFor(runtimeHub), {
   repoAccess: (threadId) => projectsService.repoAccess(threadId),
+});
+export const browser = browserConfig();
+export const browserService = createBrowserService({
+  origin: browser.origin,
+  secret: browser.secret,
+  readable: (viewer, threadId) => threadsService.readable(viewer, threadId),
 });
 export const actionsService = createActionsService(runtimeHub, { send: threadMessages.start });
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });

@@ -11,6 +11,8 @@ import {
   threadWatcher,
   actionsService,
   environmentService,
+  browser,
+  browserService,
   shipService,
   threadMessages,
   putAwayThread,
@@ -21,6 +23,9 @@ import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
+import { browserRouter } from "./modules/browser/router";
+import { startBrowserProxy } from "./modules/browser/proxy";
+import { runnerFor } from "./modules/runtimes/ask-runner";
 import { cockpitRouter } from "./modules/cockpit/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
@@ -60,6 +65,7 @@ export const app = new Elysia()
   .use(authRouter)
   .use(botsRouter(botChats))
   .use(botComputerRouter(runtimeHub, botRuntimeId))
+  .use(browserRouter(browserService))
   .use(cockpitRouter)
   .use(desktopRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
@@ -92,10 +98,31 @@ if (!Number.isInteger(port) || port <= 0)
   throw new Error(`PORT must be a port number, got "${process.env.PORT}"`);
 app.listen(port);
 
+const browserProxy = browser.origin
+  ? startBrowserProxy({
+      hostname: browser.hostname,
+      port: browser.port,
+      secret: browser.secret,
+      secure: browser.secure,
+      open: async (claims, sink) => {
+        const connection = await runnerFor(runtimeHub).connection(
+          claims.organizationId,
+          claims.threadId,
+        );
+        return connection.openPort(claims.threadId, claims.port, sink);
+      },
+    })
+  : undefined;
+if (browserProxy)
+  console.log(
+    `the Browser is served at ${browser.hostname}:${browserProxy.port} for ${browser.origin}`,
+  );
+
 const localRunner = await startLocalRunner(port);
 
 const shutdown = async () => {
   botRunner.dispose();
+  browserProxy?.stop();
   await localRunner?.stop();
   await scheduler.close();
   await goalDriver.close();
