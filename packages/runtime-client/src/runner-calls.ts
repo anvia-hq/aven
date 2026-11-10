@@ -2,6 +2,7 @@ import {
   actionRunParams,
   artifactsReadParams,
   desktopCallParams,
+  environmentSaveParams,
   diffGetParams,
   dockerRemoveParams,
   filesCallParams,
@@ -98,6 +99,12 @@ export function createRunnerCalls({
     return { process };
   }
 
+  async function saveEnvironmentOf(params: unknown) {
+    const { threadId, organizationId, access } = environmentSaveParams(params);
+    if (!sandbox.saveEnvironment) throw new Error("This runner cannot save environments");
+    return sandbox.saveEnvironment({ id: threadId, organizationId }, access);
+  }
+
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
     const { release } = runnerUpdateParams(params);
     if (!update) return { status: "unsupported" };
@@ -111,6 +118,7 @@ export function createRunnerCalls({
     if (method === "runner.update") return updateOf(params);
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
+    if (method === "environment.save") return saveEnvironmentOf(params);
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);
