@@ -210,18 +210,22 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       options: { onPersonsWord?: boolean } = {},
     ): Promise<{ steered: boolean; agentAction?: false }> {
       const known = await acting(organizationId, userId, threadId);
+      const delivered = async (): Promise<{ steered: boolean; agentAction?: false }> => {
+        if (await keptFromAgent(organizationId, userId, known, body)) {
+          return { steered: false, agentAction: false };
+        }
+        if (
+          runs.isRunning(threadId) &&
+          (await steer(organizationId, userId, threadId, body, known))
+        ) {
+          return { steered: true };
+        }
+        await start(organizationId, userId, threadId, body, { ...options, known });
+        return { steered: false };
+      };
+      const result = await delivered();
       await threadMentionsService.record(threadId, userId, body.prompt);
-      if (await keptFromAgent(organizationId, userId, known, body)) {
-        return { steered: false, agentAction: false };
-      }
-      if (
-        runs.isRunning(threadId) &&
-        (await steer(organizationId, userId, threadId, body, known))
-      ) {
-        return { steered: true };
-      }
-      await start(organizationId, userId, threadId, body, { ...options, known });
-      return { steered: false };
+      return result;
     },
 
     async compact(
