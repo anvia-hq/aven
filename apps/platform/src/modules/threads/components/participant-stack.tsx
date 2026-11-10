@@ -13,15 +13,18 @@ export function ParticipantStack({ crowd }: { crowd: Crowd }) {
       data-role="participants"
     >
       {crowd.shown.map((person) => (
-        <Avatar key={person.id} className="size-5 ring-2 ring-sidebar">
+        <Avatar
+          key={person.id}
+          className="size-5 ring-2 ring-sidebar group-hover/menu-button:ring-sidebar-accent group-data-active/menu-button:ring-sidebar-accent"
+        >
           {person.image && <AvatarImage src={person.image} alt="" />}
-          <AvatarFallback className="bg-sidebar-accent text-[9px] text-sidebar-foreground">
+          <AvatarFallback className="bg-foreground/10 text-[9px] font-medium text-sidebar-foreground">
             {initials(person.name)}
           </AvatarFallback>
         </Avatar>
       ))}
       {crowd.more > 0 && (
-        <span className="z-10 grid h-5 min-w-5 place-items-center rounded-full bg-sidebar-accent px-1 text-[9px] text-sidebar-foreground ring-2 ring-sidebar">
+        <span className="z-10 grid h-5 min-w-5 place-items-center rounded-full bg-foreground/10 px-1 text-[9px] font-medium text-sidebar-foreground ring-2 ring-sidebar group-hover/menu-button:ring-sidebar-accent group-data-active/menu-button:ring-sidebar-accent">
           {crowd.more}+
         </span>
       )}

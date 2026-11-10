@@ -110,7 +110,7 @@ test.describe("sharing a thread", () => {
     await dialog.getByRole("button", { name: "Done" }).click();
 
     await mate.page.reload();
-    await expect(mate.page.getByText(/Multiplayer is on/)).toContainText("Owner Person");
+    await expect(mate.page.getByText(/Model, memory and bill are/)).toContainText("Owner Person");
     await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
     await expect(
       mate.page.getByRole("button", { name: /^(Share|Shared to workspace)$/ }),
