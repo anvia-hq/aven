@@ -1,6 +1,6 @@
 import { ConflictError, UnavailableError } from "../../errors";
 import { runnerFor } from "../runtimes/ask-runner";
-import { environmentSaveAnswer } from "./schema";
+import { environmentReadAnswer, environmentSaveAnswer } from "./schema";
 import type { EnvironmentDeps, SnapshotState } from "./types";
 
 export const SAVE_TIMEOUT_MS = 30 * 60_000;
@@ -17,6 +17,25 @@ export function createEnvironmentService(
 
   return {
     state: stateOf,
+
+    async report(organizationId: string, threadId: string): Promise<SnapshotState> {
+      const remembered = stateOf(threadId);
+      if (remembered.state === "running") return remembered;
+      try {
+        const access = await repoAccess(threadId);
+        const { savedAt } = await runner.ask(
+          organizationId,
+          "environment.read",
+          { threadId, organizationId, access },
+          environmentReadAnswer,
+        );
+        if (savedAt === null) return { state: "idle", error: remembered.error };
+        const newer = savedAt > (remembered.savedAt ?? "");
+        return { state: "idle", savedAt, error: newer ? undefined : remembered.error };
+      } catch {
+        return remembered;
+      }
+    },
 
     async snapshot(organizationId: string, threadId: string): Promise<SnapshotState> {
       if (stateOf(threadId).state === "running") {

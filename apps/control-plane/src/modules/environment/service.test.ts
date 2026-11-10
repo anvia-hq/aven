@@ -104,3 +104,62 @@ describe("taking a snapshot of a thread's environment", () => {
     expect(service.state("t2")).toEqual({ state: "idle" });
   });
 });
+
+describe("reporting a thread's environment", () => {
+  test("says when the runner's snapshot was saved, whoever asked for it", async () => {
+    const { service, asked } = setup(async () => ({ savedAt: "2026-11-09T22:00:00.000Z" }));
+    expect(await service.report("org", "t1")).toEqual({
+      state: "idle",
+      savedAt: "2026-11-09T22:00:00.000Z",
+    });
+    expect(asked).toEqual([
+      { method: "environment.read", params: { threadId: "t1", organizationId: "org", access } },
+    ]);
+  });
+
+  test("says there is none when the runner has none", async () => {
+    const { service } = setup(async () => ({ savedAt: null }));
+    expect(await service.report("org", "t1")).toEqual({ state: "idle", error: undefined });
+  });
+
+  test("falls back to what it remembers when the runner cannot answer, such as an older one", async () => {
+    let fail = false;
+    const { service } = setup(async () => {
+      if (fail) throw new Error("Unknown method");
+      return { image: "aven-env-x" };
+    });
+    await service.snapshot("org", "t1");
+    await Bun.sleep(5);
+    fail = true;
+    expect(await service.report("org", "t1")).toEqual({
+      state: "idle",
+      savedAt: "2026-11-10T00:00:01.000Z",
+    });
+  });
+
+  test("does not ask the runner while a snapshot is being taken", async () => {
+    const { service, asked } = setup(() => new Promise(() => undefined));
+    await service.snapshot("org", "t1");
+    asked.length = 0;
+    expect(await service.report("org", "t1")).toMatchObject({ state: "running" });
+    expect(asked).toEqual([]);
+  });
+
+  test("keeps a failure until a newer snapshot has been saved", async () => {
+    let answer: unknown = { image: "x" };
+    let calls = 0;
+    const { service } = setup(async () => {
+      calls += 1;
+      if (calls === 2) throw new Error("setup failed");
+      return answer;
+    });
+    await service.snapshot("org", "t1");
+    await Bun.sleep(5);
+    await service.snapshot("org", "t1");
+    await Bun.sleep(5);
+    answer = { savedAt: "2026-11-10T00:00:01.000Z" };
+    expect((await service.report("org", "t1")).error).toBe("setup failed");
+    answer = { savedAt: "2026-11-11T00:00:00.000Z" };
+    expect((await service.report("org", "t1")).error).toBeUndefined();
+  });
+});
