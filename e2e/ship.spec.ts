@@ -221,6 +221,15 @@ test.describe("shipping a thread", () => {
       const chipBox = await chip.boundingBox();
       expect(slot && slot.width > 0).toBe(true);
       expect(chipBox && slot && chipBox.x >= slot.x + slot.width).toBe(true);
+      await page.screenshot({
+        path: ".aven/proof/ship-gap/after.png",
+        clip: {
+          x: Math.max(0, slot!.x - 24),
+          y: Math.max(0, slot!.y - 24),
+          width: 520,
+          height: slot!.height + 48,
+        },
+      });
     } finally {
       held.resolve();
     }
