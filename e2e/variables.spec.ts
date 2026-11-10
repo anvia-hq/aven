@@ -108,7 +108,10 @@ test.describe("project environment variables", () => {
     await expect(page.getByLabel("Value 1")).toHaveValue("postgres://localhost/app");
     await expect(page.getByLabel("Name 2")).toHaveValue("PORT");
     await expect(page.getByLabel("Value 3")).toHaveValue("two words");
-    await expect(page.getByRole("list", { name: "Skipped lines" })).toContainText("GIT_DIR");
+    await expect(page.getByLabel("Name 4")).toHaveValue("GIT_DIR");
+    await expect(page.getByText("Reserved for Aven's own use")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add 4 variables" })).toBeDisabled();
+    await page.getByRole("button", { name: "Remove row 4" }).click();
 
     await page.getByLabel("Value 2").fill("4000");
     await page.getByRole("button", { name: "Add 3 variables" }).click();
