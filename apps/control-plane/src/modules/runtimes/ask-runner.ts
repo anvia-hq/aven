@@ -9,6 +9,7 @@ import type {
   ArtifactsReadParams,
   DesktopCallParams,
   DiffGetParams,
+  EnvironmentSaveParams,
   FilesCallParams,
   FilesSearchParams,
   ProcessesCallParams,
@@ -26,6 +27,7 @@ type CallParams =
   | ArtifactsReadParams
   | DesktopCallParams
   | DiffGetParams
+  | EnvironmentSaveParams
   | FilesCallParams
   | FilesSearchParams
   | ProcessesCallParams;
