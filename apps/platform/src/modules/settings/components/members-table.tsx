@@ -1,6 +1,6 @@
 import { Copy, Trash } from "@mynaui/icons-react";
 
-import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { SettingsList, SettingsRow } from "@/components/settings-section";
@@ -19,6 +19,7 @@ export function MembersTable() {
           <SettingsRow
             leading={
               <Avatar size="sm">
+                {member.image && <AvatarImage src={member.image} alt="" />}
                 <AvatarFallback>{initials(member.name)}</AvatarFallback>
               </Avatar>
             }

@@ -14,7 +14,7 @@ function General() {
   return (
     <SettingsPage title="General" description="Your personal account and preferences.">
       <SettingsSection title="Account" description="How you appear to others in this workspace.">
-        <ProfileForm name={user.name} email={user.email} />
+        <ProfileForm name={user.name} email={user.email} image={user.image ?? null} />
       </SettingsSection>
       <PreferencesSection />
     </SettingsPage>

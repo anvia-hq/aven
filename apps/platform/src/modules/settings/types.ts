@@ -16,5 +16,6 @@ export type Member = {
   name: string;
   email: string;
   role: string;
+  image?: string | null;
   status: "active" | "pending";
 };
