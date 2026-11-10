@@ -1,13 +1,25 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import type { Message } from "@anvia/core";
+import type { AgentPrompt, Message } from "@anvia/core";
 import { questionsOf } from "@aven/agents/tool-projection";
 import { asRecord } from "@aven/agents/values";
 
 import { runCodexTurn } from "./codex-engine";
 import { serveCodexTools } from "./codex-tools-server";
 import type { CodexChat, CodexQuestion, DurableEnd } from "./types";
+
+export function promptText(prompt: AgentPrompt): string {
+  if (typeof prompt === "string") return prompt;
+  if (Array.isArray(prompt)) return prompt.map(promptText).join("\n");
+  const { content } = asRecord(prompt);
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map(asRecord)
+    .flatMap(({ type, text }) => (type === "text" && typeof text === "string" ? [text] : []))
+    .join("\n");
+}
 
 const EFFORTS = ["minimal", "low", "medium", "high", "xhigh"] as const;
 

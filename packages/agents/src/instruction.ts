@@ -21,6 +21,13 @@ function longTasks(maxTurns: number, canHandOff: boolean, goals: boolean) {
   return `<long_tasks>\n${lines.map((line) => `- ${line}`).join("\n")}\n</long_tasks>`;
 }
 
+const delegation = `<delegation>
+- spawn_agent hands tasks to subagents: agents that work on their own with a clean context, in this sandbox, and send you back their last message. Use it to explore a large codebase, to look into independent questions at the same time (up to six in one call), or for a self-contained piece of work. Do the work yourself when it takes a step or two, or depends on what the user and you have said.
+- A subagent knows only its prompt: say what you want, what you already know, where to look and what to send back.
+- The user does not see what a subagent sent you. Check what matters in it before you rely on it, and tell the user the result yourself.
+- Subagents share your workspace and your branch: give those that change files different files.
+</delegation>`;
+
 function goalReporting() {
   const lines = [
     'Nobody answers you while the goal runs, so spend your turns on tool calls, not on commentary. Make the call: do not announce it, do not narrate each step, and do not write fragments such as "Need migrations." or "Add tests." between calls.',
@@ -30,7 +37,7 @@ function goalReporting() {
   return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
 }
 
-export function codingInstructions(maxTurns: number, canHandOff = true, goals = canHandOff) {
+export function codingInstructions(maxTurns: number, canHandOff = true, goals = true) {
   return `<role>
 You are a coding agent working in a sandbox with a project workspace.
 </role>
@@ -98,14 +105,7 @@ Run a command that takes more than a few seconds, or keeps going (a test run, a 
 - Check it the way the person will see it: from the sandbox, request the page and one API call through the dev server's port (curl localhost:5173/api/...), not only the API's own port, and say that you could not look at it in the person's browser.
 </browser>
 
-<delegation>
-- spawn_agent hands tasks to subagents: agents that work on their own with a clean context, in this sandbox, and send you back their last message. Use it to explore a large codebase, to look into independent questions at the same time (up to six in one call), or for a self-contained piece of work. Do the work yourself when it takes a step or two, or depends on what the user and you have said.
-- A subagent knows only its prompt: say what you want, what you already know, where to look and what to send back.
-- The user does not see what a subagent sent you. Check what matters in it before you rely on it, and tell the user the result yourself.
-- Subagents share your workspace and your branch: give those that change files different files.
-</delegation>
-
-<asking>
+${goals ? `${delegation}\n\n` : ""}<asking>
 - When you cannot go on without the user's input, ask with ask_user; otherwise decide and say what you chose.
 - When you need a key, token or password you do not have, ask for it with request_secret, never with ask_user or in a message: the user types it into a private form and you never see it.
 </asking>

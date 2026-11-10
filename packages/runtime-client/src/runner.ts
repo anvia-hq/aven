@@ -190,6 +190,7 @@ export function startRuntime(options: RuntimeOptions) {
     report,
     boxes,
     controlPlane: origin,
+    codex: options.codex,
     starting: (threadId) => {
       processEnds.arm(threadId);
       return idle.starting(threadId);
@@ -311,6 +312,7 @@ export function startRuntime(options: RuntimeOptions) {
         runs: outbox.ids(),
         build: options.build,
         canUpdate: options.update ? true : undefined,
+        codex: options.codex ? true : undefined,
       });
       resend();
       connected.resolve();

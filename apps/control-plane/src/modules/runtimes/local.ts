@@ -1,3 +1,4 @@
+import { codexSupportFromEnv } from "@aven/runtime-client/codex-support";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
 import { sandboxConfigFromEnv } from "@aven/runtime-client/sandbox-config";
@@ -32,6 +33,7 @@ export async function startLocalRunner(port: number) {
       token: runtimesService.localToken,
       sandbox,
       journalPath: journalPathIn(config.home),
+      codex: codexSupportFromEnv(process.env, config.home),
     });
   } catch (error) {
     console.warn(`The control plane's own runner is offline: ${describeError(error)}`);

@@ -242,6 +242,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       await requireLiveProject(organizationId, thread.projectId);
       if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
       const model = await resolveModel(userId, selection);
+      if (model?.provider === "codex") {
+        throw new ConflictError("Codex keeps its own history, so this thread cannot be compacted");
+      }
       await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
       await threadsService.reopen(thread);
     },

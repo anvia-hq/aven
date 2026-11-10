@@ -4,6 +4,7 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import { sentPrompt } from "@aven/agents/attachments";
+import { codingSystemPrompt, codingTools } from "@aven/agents/coding-agent";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
@@ -17,6 +18,7 @@ import { wakingTools } from "./late-bound-tools";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
+import { answerOf, promptText, runCodexChat } from "./codex-run";
 import { markTurn } from "./thread-diff";
 import { timing } from "./timing";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
@@ -55,6 +57,7 @@ type RunScope = {
   save(changes: Partial<RunRecord>): void;
   current(): readonly AnyTool[] | undefined;
   build(id: string, attended: boolean): RunInput;
+  codexInputs(): { tools: AnyTool[]; instructions: string };
   forward: Emit;
   file(messages: Message[]): Promise<void>;
   stopIfCancelled(): void;
@@ -66,6 +69,11 @@ const withoutPrompt = (messages: Message[]) =>
 const FIRST_OUTPUT = new Set(["text", "reasoning", "tool_start"]);
 
 const MCP_SWEEP_MS = 60_000;
+
+const CODEX_WITHOUT = new Set(["spawn_agent", "define_goal"]);
+
+const CODEX_RESTARTED =
+  "The runner restarted while Codex was working: send your message again to carry on";
 
 const RUN_GONE = "The run is gone: this runner has no record of it";
 
@@ -229,6 +237,9 @@ export function createRunDriver(context: DriverContext) {
         ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
         contextWindow: model?.contextWindow,
       }),
+      codexInputs: () => {
+        throw new Error("A compaction run has no Codex inputs");
+      },
       ...reporting(initial, state, run),
     };
   }
@@ -307,6 +318,63 @@ export function createRunDriver(context: DriverContext) {
       send(event, source);
     }) as Emit;
 
+    const runTools = (id: string, attended: boolean, forking: boolean) => {
+      const skills = state.record.skillListing;
+      const envNames = env?.map(({ name }) => name);
+      return toolsForRun({
+        sandbox: context.sandbox,
+        thread,
+        tools: wakingTools(box.tools, wake),
+        computer,
+        current,
+        mcp: mcp && {
+          tools: mcp.tools,
+          current: () => mcpConnections.get(thread.id)?.tools,
+        },
+        attended,
+        repoAccess,
+        defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+        memory:
+          state.record.memory &&
+          (async (command) => {
+            const answer = await context.call("memory.notes", {
+              runId,
+              command: redact ? redact(command) : command,
+            });
+            return redact ? redact(answer) : answer;
+          }),
+        cockpit:
+          state.record.cockpit &&
+          (async (command) => {
+            const answer = await context.call("cockpit.read", { runId, command });
+            return redact ? redact(answer) : answer;
+          }),
+        forks: forking
+          ? createForkHost({
+              runId,
+              thread,
+              sandbox: context.sandbox,
+              call: context.call,
+              redact,
+            })
+          : undefined,
+        emit: (event) => forward(event),
+        createSubagent: ({ type, id: subagentId, tools }) =>
+          context.createAgent({
+            thread,
+            id: `${id}-${subagentId}`,
+            attended: false,
+            tools,
+            skills,
+            envNames,
+            mcp: mcp?.note,
+            webSearch: state.record.webSearch,
+            model,
+            role: type,
+          }).agent,
+      });
+    };
+
     return {
       runId,
       thread,
@@ -327,58 +395,7 @@ export function createRunDriver(context: DriverContext) {
           id,
           attended,
           forks: forking,
-          tools: toolsForRun({
-            sandbox: context.sandbox,
-            thread,
-            tools: wakingTools(box.tools, wake),
-            computer,
-            current,
-            mcp: mcp && {
-              tools: mcp.tools,
-              current: () => mcpConnections.get(thread.id)?.tools,
-            },
-            attended,
-            repoAccess,
-            defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
-            memory:
-              state.record.memory &&
-              (async (command) => {
-                const answer = await context.call("memory.notes", {
-                  runId,
-                  command: redact ? redact(command) : command,
-                });
-                return redact ? redact(answer) : answer;
-              }),
-            cockpit:
-              state.record.cockpit &&
-              (async (command) => {
-                const answer = await context.call("cockpit.read", { runId, command });
-                return redact ? redact(answer) : answer;
-              }),
-            forks: forking
-              ? createForkHost({
-                  runId,
-                  thread,
-                  sandbox: context.sandbox,
-                  call: context.call,
-                  redact,
-                })
-              : undefined,
-            emit: (event) => forward(event),
-            createSubagent: ({ type, id: subagentId, tools }) =>
-              context.createAgent({
-                thread,
-                id: `${id}-${subagentId}`,
-                attended: false,
-                tools,
-                skills,
-                envNames,
-                mcp: mcp?.note,
-                webSearch: state.record.webSearch,
-                model,
-                role: type,
-              }).agent,
-          }),
+          tools: runTools(id, attended, forking),
           skills,
           envNames,
           mcp: mcp?.note,
@@ -388,13 +405,68 @@ export function createRunDriver(context: DriverContext) {
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
       },
+      codexInputs() {
+        const own = runTools(`run-${runId}`, true, false).filter(
+          ({ name }) => !CODEX_WITHOUT.has(name),
+        );
+        return {
+          tools: codingTools({ tools: own, webSearch: state.record.webSearch }),
+          instructions: codingSystemPrompt(
+            {
+              skills: state.record.skillListing,
+              envNames: env?.map(({ name }) => name),
+              mcp: mcp?.note,
+              memory: state.record.memory,
+            },
+            false,
+          ),
+        };
+      },
       forward,
       file,
       stopIfCancelled,
     };
   }
 
+  async function runCodex(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
+    const { thread, run, record } = scope;
+    const { codex } = context;
+    if (!codex || !record.codex) return { type: "error", error: "This runner cannot run Codex" };
+    if (!message) return { type: "error", error: CODEX_RESTARTED };
+    const controller = new AbortController();
+    run.followed = { cancel: async () => controller.abort() };
+    if (run.cancelReason) controller.abort();
+    let prompt: string;
+    let filed: Message[];
+    if (record.kind === "start") {
+      const sent = await promptOf(record, context.sandbox);
+      prompt = promptText(sent);
+      filed = [typeof sent === "string" ? { role: "user", content: sent } : (sent as Message)];
+    } else if (message.type === "run.resume") {
+      ({ prompt, filed } = answerOf(message.continuation, message.response));
+    } else {
+      return { type: "error", error: "This thread has no question waiting for an answer" };
+    }
+    const { tools, instructions } = scope.codexInputs();
+    const end = await runCodexChat({
+      runId: scope.runId,
+      threadId: thread.id,
+      codex,
+      model: record.codex.modelId,
+      effort: record.codex.reasoningEffort,
+      prompt,
+      filed,
+      tools,
+      instructions,
+      emit: (event) => scope.forward(event),
+      signal: controller.signal,
+    });
+    if (end.type !== "error") await scope.file(end.messages);
+    return end;
+  }
+
   async function phases(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
+    if (scope.record.codex) return runCodex(scope, message);
     let end: DurableEnd = { type: "response", messages: [] };
     if (scope.record.phase === "chat") end = await runChat(scope, message);
     const goal = scope.record.goal;
@@ -548,6 +620,7 @@ export function createRunDriver(context: DriverContext) {
         runId: message.runId,
         thread: message.thread,
         model: message.model,
+        codex: message.codex,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
         compact: message.type === "run.start" ? message.compact : undefined,

@@ -18,6 +18,7 @@ import type {
   RunGithub,
   RunIdentityCredential,
   RunMemory,
+  RunCodex,
   RunModel,
   RunSkill,
   RunThreadInfo,
@@ -325,6 +326,7 @@ export type DriverContext = {
   starting(threadId: string): Promise<void>;
   finished(threadId: string, ended?: DurableEnd["type"]): void;
   controlPlane: string;
+  codex?: CodexSupport;
   stopped(): boolean;
 };
 
@@ -334,6 +336,7 @@ export type RunRecord = {
   runId: string;
   thread: RunThreadInfo;
   model?: RunModel;
+  codex?: RunCodex;
   kind: "start" | "answer";
   prompt?: string;
   compact?: boolean;
@@ -400,6 +403,7 @@ export type RuntimeOptions = {
   idleReleaseMs?: number;
   processPollMs?: number;
   statsIntervalMs?: number;
+  codex?: CodexSupport;
 };
 
 export type PreflightConfig = { image: string; platform?: string; runtime?: string };

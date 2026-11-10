@@ -187,6 +187,25 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     expect(started[0]?.extras.senderId).toBe(userId);
   });
 
+  test("a thread on Codex cannot be compacted, since Codex keeps its own history", async () => {
+    const thread = await driven();
+    started.length = 0;
+    const forRun = spyOn(providersService, "forRun").mockResolvedValue({
+      kind: "codex",
+      name: "Codex",
+      modelId: null,
+      apiKeyEncrypted: null,
+    } as never);
+    try {
+      await expect(messages(false).compact(orgA, userId, thread.id)).rejects.toThrow(
+        "cannot be compacted",
+      );
+    } finally {
+      forRun.mockRestore();
+    }
+    expect(started).toHaveLength(0);
+  });
+
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {
     const thread = await driven();
     started.length = 0;

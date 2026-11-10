@@ -44,8 +44,7 @@ export function codingSystemPrompt(
 ) {
   const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
   return [
-    options.instructions ??
-      codingInstructions(maxTurns, options.questions ?? true, (options.questions ?? true) && goals),
+    options.instructions ?? codingInstructions(maxTurns, options.questions ?? true, goals),
     skillsInstructions(options.skills ?? []),
     environmentInstructions(options.envNames ?? []),
     mcpInstructions(options.mcp),

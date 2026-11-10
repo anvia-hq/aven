@@ -110,6 +110,8 @@ test("an agent that cannot hand a task to a goal is still told about the user, a
   const text = codingInstructions(200, true, false);
   expect(text).not.toContain("define_goal");
   expect(text).not.toContain("<reporting>");
+  expect(text).not.toContain("<delegation>");
+  expect(text).not.toContain("spawn_agent");
   expect(text).not.toContain("You have 200 turns");
   expect(text).toContain("ask with ask_user or request_secret");
   expect(text).toContain("[driver: Name]");
@@ -122,4 +124,9 @@ test("an agent that cannot hand a task to a goal is still told about the user, a
 test("the default instructions are unchanged by the option to leave goals out", () => {
   expect(codingInstructions(200, true)).toBe(codingInstructions(200, true, true));
   expect(codingInstructions(200, true)).toContain("define_goal");
+});
+
+test("a goal's own session and an interactive agent are both still told how to delegate", () => {
+  expect(codingInstructions(200, true)).toContain("<delegation>");
+  expect(codingInstructions(200, false)).toContain("<delegation>");
 });

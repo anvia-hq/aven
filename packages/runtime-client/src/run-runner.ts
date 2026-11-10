@@ -1,3 +1,4 @@
+import { codexSupportFromEnv } from "./codex-support";
 import { startRuntime } from "./runner";
 import { Sandboxes, journalPathIn } from "./sandbox";
 import { sandboxConfigFromEnv } from "./sandbox-config";
@@ -45,6 +46,7 @@ export async function runRunner({
     update,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),
+    codex: codexSupportFromEnv(process.env, process.env.AVEN_RUNTIME_HOME || undefined),
     onRefused: (reason) => {
       console.error(`The control plane refused this runtime: ${reason}`);
       void exit(1);
