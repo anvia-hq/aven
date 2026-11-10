@@ -7,7 +7,7 @@ export function SharedNotice({ thread, driven }: { thread: Thread; driven: boole
   return (
     <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
       <Icon className="size-4 shrink-0" />
-      <span>
+      <span className={driven ? "min-w-0 truncate" : undefined}>
         {driven ? (
           <>
             <span className="font-medium text-foreground">Multiplayer is on</span>
