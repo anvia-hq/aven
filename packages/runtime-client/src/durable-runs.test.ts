@@ -355,6 +355,76 @@ describe("DurableRuns goals", () => {
   });
 });
 
+describe("steering a goal (decision 0210)", () => {
+  const request = {
+    objective: "Make the tests pass",
+    acceptanceCriteria: ["the work is done"],
+    verifyCommands: [],
+  };
+
+  test("a message sent while a session works reaches that session at its next step", async () => {
+    const runs = await opened(journalPath());
+    const gate = Promise.withResolvers<void>();
+    const seen: string[] = [];
+    const slow = createTool({
+      name: "slow",
+      description: "Takes a while",
+      inputSchema: z.object({}),
+      execute: async () => {
+        await gate.promise;
+        return "done";
+      },
+    });
+    const events: RunEvent[] = [];
+    const goal = await runs.startGoal({
+      runId: "run-1",
+      request,
+      input: {
+        agent: new Agent({
+          id: "goal-run-1",
+          instructions: "x",
+          tools: [slow],
+          model: scriptedModel([
+            [{ type: "tool-call", toolCallId: "c1", toolName: "slow", input: {} }],
+            (request) => {
+              seen.push(JSON.stringify(request.chatHistory));
+              return [text("changed course")];
+            },
+          ]),
+        }),
+      },
+      verify: async () => [],
+      onEvent: (event) => events.push(event),
+      onSession: async () => {},
+    });
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "tool_start"); i++)
+      await Bun.sleep(10);
+
+    expect(await goal.steer("use the other API", "steer-a")).toBe(true);
+    gate.resolve();
+
+    expect((await goal.done).type).toBe("complete");
+    expect(events.filter((e) => e.type === "steer_applied")).toEqual([
+      { type: "steer_applied", id: "steer-a" },
+    ]);
+    expect(seen[0]).toContain("use the other API");
+  });
+
+  test("a goal with no session going takes no message", async () => {
+    const runs = await opened(journalPath());
+    const goal = await runs.startGoal({
+      runId: "run-1",
+      request,
+      input: input("goal-run-1", [text("done")]),
+      verify: async () => [],
+      onEvent: () => {},
+      onSession: async () => {},
+    });
+    await goal.done;
+    expect(await goal.steer("too late", "steer-b")).toBe(false);
+  });
+});
+
 describe("DurableRuns tool concurrency", () => {
   async function mostAtOnce(withQuestionTool: boolean) {
     let running = 0;

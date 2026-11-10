@@ -1941,6 +1941,78 @@ describe("startRuntime runs", () => {
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
   });
 
+  test("a message sent while the goal works is taken by its session at the next step (decision 0210)", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const gate = Promise.withResolvers<void>();
+    const working = Promise.withResolvers<void>();
+    const seen: string[] = [];
+    const slow = createTool({
+      name: "slow",
+      description: "Takes a while",
+      inputSchema: z.object({}),
+      execute: async () => {
+        working.resolve();
+        await gate.promise;
+        return "done";
+      },
+    });
+    const scripts: Record<string, ScriptStep[]> = {
+      "run-run-1": [
+        [
+          {
+            type: "tool-call",
+            toolCallId: "g1",
+            toolName: "define_goal",
+            input: { objective: "Add paging", acceptanceCriteria: ["it pages"] },
+          },
+        ],
+        [text("Goal started.")],
+      ],
+      "goal-run-1": [
+        [{ type: "tool-call", toolCallId: "s1", toolName: "slow", input: {} }],
+        (request) => {
+          seen.push(JSON.stringify(request.chatHistory));
+          return [text("Paging added.")];
+        },
+      ],
+      "run-run-1-report": [[text("All done.")]],
+    };
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          instructions: "x",
+          tools: id === "goal-run-1" ? [...tools, slow] : [...tools],
+          model: scriptedModel(scripts[id] ?? []),
+        }),
+      }),
+    });
+    await runtime.ready;
+    plane.send(runStart);
+    await working.promise;
+
+    plane.send({
+      type: "call",
+      id: "steer-1",
+      method: "run.steer",
+      params: { runId: "run-1", steerId: "steer-a", prompt: "page by cursor" },
+    } as never);
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "steer-1"));
+    expect(plane.received.find((m) => m.type === "reply" && m.id === "steer-1")).toMatchObject({
+      result: { status: "queued" },
+    });
+    gate.resolve();
+
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+    expect(seen[0]).toContain("page by cursor");
+    expect(plane.received.flatMap((m) => (m.type === "run.event" ? [m.event] : []))).toContainEqual(
+      { type: "steer_applied", id: "steer-a" },
+    );
+  });
+
   test("an agent hands tasks to subagents that work at the same time, and the control plane hears them", async () => {
     const { sandbox, up } = slowSandbox();
     up();

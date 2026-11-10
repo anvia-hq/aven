@@ -125,6 +125,7 @@ export class DurableRuns {
       follow: (run, input, onEvent, options) => this.#follow(run, input, onEvent, options),
       release: (agentId, end) => this.#release(agentId, end),
       revive: (agentIds) => this.#revive(agentIds),
+      steer: (durableId, prompt, requestId) => this.steer(durableId, prompt, requestId),
     };
   }
 
