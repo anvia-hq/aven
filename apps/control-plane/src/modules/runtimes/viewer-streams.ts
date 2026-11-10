@@ -4,10 +4,17 @@ import { UnavailableError } from "../../errors";
 import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
-type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" | "port" };
+type Viewer = {
+  sink: ViewerSink;
+  ready: boolean;
+  kind: "desktop" | "terminal" | "port";
+  waiting: Uint8Array[];
+  waitingBytes: number;
+};
 
 const MAX_VIEWERS = 32;
 const MAX_PORT_VIEWERS = 64;
+const MAX_WAITING_BYTES = 1024 * 1024;
 
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
@@ -61,7 +68,7 @@ export class ViewerStreams {
       throw new UnavailableError("Too many desktops and terminals are open on this runner");
     }
     const viewerId = crypto.randomUUID();
-    this.#viewers.set(viewerId, { sink, ready: false, kind });
+    this.#viewers.set(viewerId, { sink, ready: false, kind, waiting: [], waitingBytes: 0 });
     return viewerId;
   }
 
@@ -71,7 +78,16 @@ export class ViewerStreams {
   ): ViewerHandle {
     return {
       write: (bytes) => {
-        if (this.#viewers.get(viewerId)?.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
+        const viewer = this.#viewers.get(viewerId);
+        if (!viewer) return;
+        if (viewer.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
+        else if (
+          viewer.kind === "port" &&
+          viewer.waitingBytes + bytes.length <= MAX_WAITING_BYTES
+        ) {
+          viewer.waiting.push(bytes.slice());
+          viewer.waitingBytes += bytes.length;
+        }
       },
       close: () => {
         if (!this.#viewers.delete(viewerId) || this.connectionClosed()) return;
@@ -82,7 +98,11 @@ export class ViewerStreams {
 
   opened(viewerId: string, kind: Viewer["kind"]) {
     const viewer = this.#viewers.get(viewerId);
-    if (viewer?.kind === kind) viewer.ready = true;
+    if (viewer?.kind !== kind) return;
+    viewer.ready = true;
+    for (const bytes of viewer.waiting) this.sendFrame(encodeViewerFrame(viewerId, bytes));
+    viewer.waiting = [];
+    viewer.waitingBytes = 0;
   }
 
   closed(viewerId: string, kind: Viewer["kind"], reason: string) {
