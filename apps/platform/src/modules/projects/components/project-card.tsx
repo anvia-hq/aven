@@ -1,9 +1,9 @@
-import { ArrowRight, GitBranch } from "@mynaui/icons-react";
+import { GitBranch } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
 import { GithubMark } from "@/components/brand-icons";
-import { Button, buttonVariants } from "@/components/button";
+import { buttonVariants } from "@/components/button";
 import { timeAgo } from "@/lib/format";
 import { RuntimeBadge } from "@/modules/runtimes/components/runtime-badge";
 import type { Thread } from "@/modules/threads/types";
@@ -15,11 +15,9 @@ type Props = {
   project: Project;
   palette?: number;
   threads: Thread[];
-  selected: boolean;
-  onSelect: (projectId?: string) => void;
 };
 
-export function ProjectCard({ project, palette, threads, selected, onSelect }: Props) {
+export function ProjectCard({ project, palette, threads }: Props) {
   const own = threads.filter(
     (thread) => thread.projectId === project.id && thread.state !== "archived",
   );
@@ -29,14 +27,17 @@ export function ProjectCard({ project, palette, threads, selected, onSelect }: P
     <article
       className={cn(
         "group/project flex flex-col overflow-hidden rounded-xl border bg-card transition-colors",
-        selected ? "border-foreground/25 bg-accent/30" : "hover:border-foreground/20",
+        "hover:border-foreground/20",
       )}
     >
-      <Button
-        variant="ghost"
-        aria-pressed={selected}
-        onClick={() => onSelect(selected ? undefined : project.id)}
-        className="h-auto items-start justify-start gap-3 rounded-none px-3 py-3 text-left font-normal whitespace-normal hover:bg-transparent"
+      <Link
+        to="/projects/$projectId"
+        params={{ projectId: project.id }}
+        className={buttonVariants({
+          variant: "ghost",
+          className:
+            "h-auto items-start justify-start gap-3 rounded-none px-3 py-3 text-left font-normal whitespace-normal hover:bg-transparent",
+        })}
       >
         <ProjectTile
           projectId={project.id}
@@ -51,7 +52,7 @@ export function ProjectCard({ project, palette, threads, selected, onSelect }: P
             <span className="truncate">{project.repoFullName}</span>
           </span>
         </span>
-      </Button>
+      </Link>
       <div className="flex items-center justify-between gap-2 border-t px-3 py-2 text-xs text-muted-foreground">
         <span className="flex min-w-0 items-center gap-1">
           <GitBranch className="size-3.5 shrink-0" />
@@ -66,19 +67,6 @@ export function ProjectCard({ project, palette, threads, selected, onSelect }: P
           </span>
           <RuntimeBadge runtimeId={project.runtimeId} />
           <span className="whitespace-nowrap">{timeAgo(project.updatedAt, true)}</span>
-          <Link
-            to="/projects/$projectId"
-            params={{ projectId: project.id }}
-            aria-label={`Open ${project.name}`}
-            title={`Open ${project.name}`}
-            className={buttonVariants({
-              variant: "ghost",
-              size: "icon-xs",
-              className: "-mr-1 text-muted-foreground group-hover/project:text-foreground",
-            })}
-          >
-            <ArrowRight />
-          </Link>
         </span>
       </div>
     </article>

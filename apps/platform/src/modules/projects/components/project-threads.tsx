@@ -1,33 +1,28 @@
-import { Plus, X } from "@mynaui/icons-react";
+import { Plus } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button, buttonVariants } from "@/components/button";
+import { buttonVariants } from "@/components/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import type { Thread } from "@/modules/threads/types";
 
-import type { Project } from "../types";
-
 type ThreadTab = "open" | "archived";
 
 type Props = {
-  project?: Project;
   threads: Thread[];
   projectCount: number;
-  onShowAll: () => void;
 };
 
 const newestFirst = (threads: Thread[]) =>
   [...threads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-function emptyText(tab: ThreadTab, project?: Project) {
+function emptyText(tab: ThreadTab) {
   if (tab === "archived") return "No archived threads.";
-  if (project) return "No open threads in this project yet.";
   return "No open threads yet. Start one with New thread.";
 }
 
-export function ProjectThreads({ project, threads, projectCount, onShowAll }: Props) {
+export function ProjectThreads({ threads, projectCount }: Props) {
   const [tab, setTab] = useState<ThreadTab>("open");
   const open = threads.filter((thread) => thread.state !== "archived");
   const archived = threads.filter((thread) => thread.state === "archived");
@@ -37,33 +32,12 @@ export function ProjectThreads({ project, threads, projectCount, onShowAll }: Pr
     <section aria-label="Thread list" className="flex min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-2 py-2">
         <div className="flex min-w-0 flex-1 flex-col">
-          <h2 className="truncate text-sm font-medium">{project ? project.name : "All threads"}</h2>
+          <h2 className="truncate text-sm font-medium">All threads</h2>
           <p className="truncate text-xs text-muted-foreground">
-            {project
-              ? `${project.repoFullName} · ${open.length} open`
-              : `${open.length} open in ${projectCount} ${projectCount === 1 ? "project" : "projects"}`}
+            {`${open.length} open in ${projectCount} ${projectCount === 1 ? "project" : "projects"}`}
           </p>
         </div>
-        {project && (
-          <>
-            <Button variant="ghost" size="sm" onClick={onShowAll}>
-              <X />
-              All projects
-            </Button>
-            <Link
-              to="/projects/$projectId"
-              params={{ projectId: project.id }}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Open project
-            </Link>
-          </>
-        )}
-        <Link
-          to="/threads"
-          search={project ? { project: project.id } : {}}
-          className={buttonVariants({ size: "sm" })}
-        >
+        <Link to="/threads" className={buttonVariants({ size: "sm" })}>
           <Plus />
           New thread
         </Link>
@@ -73,7 +47,7 @@ export function ProjectThreads({ project, threads, projectCount, onShowAll }: Pr
         <TabsList
           variant="line"
           aria-label="Thread state"
-          className="h-8 w-full justify-start gap-1 border-b px-2"
+          className="h-8 w-full justify-start gap-1 border-b px-0"
         >
           <TabsTrigger value="open" className="flex-none gap-1 px-2 text-xs">
             Open
@@ -87,12 +61,7 @@ export function ProjectThreads({ project, threads, projectCount, onShowAll }: Pr
       </Tabs>
 
       <div className="min-h-0 flex-1 overflow-y-auto pt-1">
-        <ThreadList
-          threads={shown}
-          showProject={!project}
-          compact
-          empty={emptyText(tab, project)}
-        />
+        <ThreadList threads={shown} showProject compact empty={emptyText(tab)} />
       </div>
     </section>
   );

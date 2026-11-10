@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 import { Button } from "@/components/button";
 import { PageHeader } from "@/components/page-header";
@@ -41,30 +41,10 @@ export function ProjectsPage() {
     [projects, me, running],
   );
   const shown = filterProjects(projects, filters, { me, running });
-  const selected = projects.find((project) => project.id === search.project);
-  const projectThreads = selected
-    ? threads.filter((thread) => thread.projectId === selected.id)
-    : threads;
-
   const change = (next: ProjectsSearch) =>
     void navigate({ to: "/projects", search: { ...search, ...next }, replace: true });
 
-  const gone = loaded && search.project !== undefined && !selected;
-  useEffect(() => {
-    if (!gone) return;
-    void navigate({ to: "/projects", search: { ...search, project: undefined }, replace: true });
-  }, [gone, navigate, search]);
-
-  let list = (
-    <ProjectList
-      projects={shown}
-      threads={threads}
-      palettes={palettes}
-      selectedId={selected?.id}
-      loaded={loaded}
-      onSelect={(project) => change({ project })}
-    />
-  );
+  let list = <ProjectList projects={shown} threads={threads} palettes={palettes} loaded={loaded} />;
   if (loaded && projects.length === 0) {
     list = (
       <ProjectListEmpty>
@@ -94,7 +74,7 @@ export function ProjectsPage() {
     <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-1rem-2px)]">
       <PageHeader
         title="Projects"
-        description="Pick a project to see its threads. Each one is an imported GitHub repository and the runner that hosts its sandboxes."
+        description="Open a project to see its files, README and threads. Each one is an imported GitHub repository and the runner that hosts its sandboxes."
         actions={<ImportRepositoryDialog />}
       />
 
@@ -109,12 +89,7 @@ export function ProjectsPage() {
           {list}
         </section>
 
-        <ProjectThreads
-          project={selected}
-          threads={projectThreads}
-          projectCount={projects.length}
-          onShowAll={() => change({ project: undefined })}
-        />
+        <ProjectThreads threads={threads} projectCount={projects.length} />
       </div>
     </div>
   );
