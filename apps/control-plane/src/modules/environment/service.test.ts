@@ -59,7 +59,7 @@ describe("taking a snapshot of a thread's environment", () => {
     await service.snapshot("org", "t1");
     await Bun.sleep(5);
 
-    expect(service.state("t1")).toEqual({
+    expect(service.state("t1")).toMatchObject({
       state: "idle",
       savedAt: saved,
       error: "The repository has no .aven/setup: write one, then save the environment",
@@ -145,21 +145,17 @@ describe("reporting a thread's environment", () => {
     expect(asked).toEqual([]);
   });
 
-  test("keeps a failure until a newer snapshot has been saved", async () => {
-    let answer: unknown = { image: "x" };
-    let calls = 0;
+  test("keeps a failure until a snapshot newer than it has been saved, even with none remembered", async () => {
+    let answer: unknown = new Error("setup failed");
     const { service } = setup(async () => {
-      calls += 1;
-      if (calls === 2) throw new Error("setup failed");
+      if (answer instanceof Error) throw answer;
       return answer;
     });
     await service.snapshot("org", "t1");
     await Bun.sleep(5);
-    await service.snapshot("org", "t1");
-    await Bun.sleep(5);
-    answer = { savedAt: "2026-11-10T00:00:01.000Z" };
+    answer = { savedAt: "2000-01-01T00:00:00.000Z" };
     expect((await service.report("org", "t1")).error).toBe("setup failed");
-    answer = { savedAt: "2026-11-11T00:00:00.000Z" };
+    answer = { savedAt: "2999-01-01T00:00:00.000Z" };
     expect((await service.report("org", "t1")).error).toBeUndefined();
   });
 });

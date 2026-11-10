@@ -30,8 +30,8 @@ export function createEnvironmentService(
           environmentReadAnswer,
         );
         if (savedAt === null) return { state: "idle", error: remembered.error };
-        const newer = savedAt > (remembered.savedAt ?? "");
-        return { state: "idle", savedAt, error: newer ? undefined : remembered.error };
+        const failedSince = remembered.failedAt === undefined || savedAt <= remembered.failedAt;
+        return { state: "idle", savedAt, error: failedSince ? remembered.error : undefined };
       } catch {
         return remembered;
       }
@@ -71,6 +71,7 @@ export function createEnvironmentService(
               state: "idle",
               savedAt: before.savedAt,
               error: reasonOf(error),
+              failedAt: now().toISOString(),
             }),
         );
       return stateOf(threadId);
