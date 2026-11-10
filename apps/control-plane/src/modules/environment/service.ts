@@ -22,12 +22,15 @@ export function createEnvironmentService(
       if (stateOf(threadId).state === "running") {
         throw new ConflictError("A snapshot is already being taken");
       }
-      const access = await repoAccess(threadId);
       const before = stateOf(threadId);
       states.set(threadId, {
         state: "running",
         startedAt: now().toISOString(),
         savedAt: before.savedAt,
+      });
+      const access = await repoAccess(threadId).catch((error: unknown) => {
+        states.set(threadId, before);
+        throw error;
       });
       void runner
         .ask(

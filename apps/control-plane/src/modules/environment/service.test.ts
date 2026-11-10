@@ -66,6 +66,38 @@ describe("taking a snapshot of a thread's environment", () => {
     });
   });
 
+  test("refuses a second request that arrives while the repository's access is still being fetched", async () => {
+    const gate = Promise.withResolvers<typeof access>();
+    const asked: unknown[] = [];
+    const service = createEnvironmentService(
+      {
+        ask: (async (...args: unknown[]) => {
+          asked.push(args);
+          return new Promise(() => undefined);
+        }) as never,
+      },
+      { repoAccess: () => gate.promise },
+    );
+    const first = service.snapshot("org", "t1");
+    await expect(service.snapshot("org", "t1")).rejects.toBeInstanceOf(ConflictError);
+    gate.resolve(access);
+    await first;
+    expect(asked).toHaveLength(1);
+  });
+
+  test("goes back to what it was when the access cannot be fetched", async () => {
+    const service = createEnvironmentService(
+      { ask: (async () => ({ image: "x" })) as never },
+      {
+        repoAccess: async () => {
+          throw new Error("GitHub could not be reached");
+        },
+      },
+    );
+    await expect(service.snapshot("org", "t1")).rejects.toThrow("GitHub could not be reached");
+    expect(service.state("t1")).toEqual({ state: "idle" });
+  });
+
   test("another thread is its own", async () => {
     const { service } = setup(() => new Promise(() => undefined));
     await service.snapshot("org", "t1");
