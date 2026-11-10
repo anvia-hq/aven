@@ -39,6 +39,8 @@ Aven (MIT) bundles none of this: the person installs Tart and pulls the image on
 - **Tart (Cirrus Labs, Fair Source).** Free on personal computers and workstations. An organisation needs a paid licence only above 100 CPU cores across the Macs it runs Tart on (every performance and efficiency core counts): Gold, $12,000 a year, up to 500 cores; Platinum, $36,000, up to 3,000; Diamond, $12 a core. The page does not say whether embedding Tart in a product is allowed, which is one more reason Aven drives an installed `tart` and does not ship it. Lume (Cua) or Virtualization.framework directly would avoid this licence, and the VM driver is the only code that would change.
 - **The images.** `ghcr.io/cirruslabs/macos-*` are public and free to pull. Their own terms were not read, and the Xcode images contain Apple's Xcode, under Apple's terms.
 
+Decided: Aven uses Cirrus Labs' public images as published, pulled by the person with `tart pull`, and nothing else. It does not host or publish a macOS image, and it does not build one (no `tart create --from-ipsw`): redistributing macOS is not something the licence above clearly allows. The one change Aven makes, the links at the guest's root, is made on the person's own Mac from the pulled image.
+
 Cost to the person: nothing for one Mac below 100 cores. The disk is the real cost: about 31 GB for the base image (a full macOS install, 12 GB used inside a 50 GB virtual disk; a thread's VM is a copy-on-write clone and grows only with what it changes), and several times that for an Xcode image.
 
 ## How to run one
