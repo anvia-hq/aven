@@ -1,6 +1,6 @@
 # A ChatGPT plan is the Codex login the person already has on their own runner
 
-Status: proposed, not built. Builds on 0006 (providers belong to the user), 0012 (the agent's tools come from the sandbox), 0021 (runs go through durable), 0177 (a thread lives on one runner), 0179 (teammates drive a thread), 0202 (the run's model gateway) and 0207 (a teammate's run is billed to the teammate). It follows the same design as 0208 for a Claude subscription; where 0208 is changed or dropped, this one follows it.
+Status: proposed. The engine, the tools server, the wire and the runner's driver are built and tested against a fake `codex` program, never against real Codex; the sign-in card and the login status are not built. Builds on 0006 (providers belong to the user), 0012 (the agent's tools come from the sandbox), 0021 (runs go through durable), 0177 (a thread lives on one runner), 0179 (teammates drive a thread), 0202 (the run's model gateway) and 0207 (a teammate's run is billed to the teammate). It follows the same design as 0208 for a Claude subscription; where 0208 is changed or dropped, this one follows it.
 
 ## Context
 
@@ -46,3 +46,19 @@ We have not found OpenAI's terms for the Codex SDK itself, and its page does not
 - Nothing is built. The next steps are the spike on tools and events, reading OpenAI's help article at the source, and a question to OpenAI.
 - A team install gets nothing from this kind: each member needs their own runner with their own login.
 - If 0208 is dropped or changed after Anthropic's answer, this one is reread against it, but it stands alone: OpenAI's and Anthropic's rules differ, and neither answer settles the other.
+
+## What is built, and what it assumes
+
+- **Wire.** `PROVIDERS` and the provider's kind enum gain `codex` (no migration: the column is text). `run.start` and `run.resume` gain an optional `codex: {modelId, reasoningEffort}` that replaces the gateway `model`, and `hello` gains an optional `codex: true` that a runner sends when it finds a `codex` binary (on its `PATH` or at `AVEN_CODEX_PATH`). `WIRE_VERSION` does not change. The control plane refuses a Codex run on a runner that has not said it can run it.
+- **Control plane.** A Codex provider needs no key and no catalog. A message or an answer on it is allowed only when the thread's runner is owned by the sender (`runtimes.owner_id`), or is the built-in runner and `AVEN_BUILTIN_RUNNER_OWNER` names the sender. A question stays with the engine that asked it, and only the thread's creator answers one Codex asked. A Codex thread cannot be compacted. A run takes no gateway grant.
+- **Runner.** One `codex exec` per turn through `@openai/codex-sdk`, with a built environment (only `PATH`, `HOME`, `CODEX_HOME` and a few basics, and the run's token), `sandbox read-only`, approvals never, Codex's shell (`shell_tool`, `unified_exec`) and web search off, and `developer_instructions` set to the coding agent's prompt for it. Aven's tools, including questions and the person's own MCP servers, are one MCP server on the runner's loopback, with a token per run, read by Codex from `AVEN_MCP_TOKEN`. `spawn_agent`, `define_goal` and forks are not offered, and the instructions leave out the sections about them. The Codex thread id of an Aven thread is kept in `codex-threads.json` in the runner's home. The turn is filed in the thread's history as Anvia messages, so a reload shows what the live events showed. A message sent while Codex works is refused. A runner that restarts mid-run ends the run and asks the person to send the message again.
+- **Hidden.** The platform does not offer Codex in the providers list yet.
+
+What none of this has been checked against, and has to be on a real login before it is trusted:
+
+- that `developer_instructions` is the config key Codex reads for extra instructions (it is in the binary's strings, and in no documentation we read);
+- that `shell_tool` and `unified_exec` off leave Codex no way to run a command on the host, and what `apply_patch` and `view_image` do;
+- that Codex, called with the SDK's options, uses the `CODEX_HOME` login and sends no other credential;
+- that the person's own `~/.codex/config.toml` cannot add MCP servers or tools that run on the host (`codex exec` has `--ignore-user-config`, which the SDK does not pass);
+- how Codex counts `input_tokens` (the projector subtracts the cached ones, so they are not counted twice), and that no context window is reported;
+- that Codex follows the instruction to end its turn after a question, and what it does when it does not.
