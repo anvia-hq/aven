@@ -25,9 +25,12 @@ const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads
 const columns = {
   ...publicColumns,
   createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
+  createdByImage: sql<
+    string | null
+  >`(select ${users.image} from ${users} where ${users.id} = "threads"."created_by")`,
   awaitingAnswer: sql<boolean>`${threads.pendingContinuation} is not null`,
   participants: sql<ThreadPerson[]>`coalesce((
-    select json_agg(json_build_object('id', ${users.id}, 'name', ${users.name}) order by joined.first_at)
+    select json_agg(json_build_object('id', ${users.id}, 'name', ${users.name}, 'image', ${users.image}) order by joined.first_at)
     from (
       select ${threadMessageSenders.senderId} as sender_id, min(${threadMessageSenders.createdAt}) as first_at
       from ${threadMessageSenders}

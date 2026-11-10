@@ -63,7 +63,7 @@ export type ThreadPullRequest = {
   state: "open" | "closed" | "merged";
 };
 
-export type ThreadPerson = { id: string; name: string };
+export type ThreadPerson = { id: string; name: string; image: string | null };
 
 export type Viewer = { organizationId: string; userId: string };
 

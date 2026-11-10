@@ -70,11 +70,16 @@ run("threadsService (postgres)", async () => {
     await threadsService.saveSender(thread.id, 0, teammateId);
     await threadsService.saveSender(thread.id, 2, userId);
     await threadsService.saveSender(thread.id, 4, teammateId);
+    await db
+      .update(users)
+      .set({ image: "/api/users/mate/avatar?v=1" })
+      .where(eq(users.id, teammateId));
     const listed = (await threadsService.list(mine)).find((row) => row.id === thread.id);
     expect(listed?.participants).toEqual([
-      { id: teammateId, name: "Mate" },
-      { id: userId, name: expect.any(String) },
+      { id: teammateId, name: "Mate", image: "/api/users/mate/avatar?v=1" },
+      { id: userId, name: expect.any(String), image: null },
     ]);
+    expect(listed?.createdByImage).toBeNull();
   });
 
   test("creates a thread titled after the project and lists it", async () => {
