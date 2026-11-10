@@ -1,3 +1,4 @@
+import { parseAgentContinuation } from "@anvia/core/agent/interactions";
 import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
@@ -96,7 +97,7 @@ export class RemoteRuntime implements Runtime {
     model,
   }: StartRunInput): RuntimeRun {
     const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
+    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential) => ({
       type: "run.start",
       runId,
       thread: forkable(thread),
@@ -131,22 +132,28 @@ export class RemoteRuntime implements Runtime {
     model,
   }: ResumeRunInput): RuntimeRun {
     const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(thread, model, extras, (runId, runModel, credential) => ({
-      type: "run.resume",
-      runId,
-      thread: forkable(thread),
-      continuation,
-      response,
-      skills: skills?.length ? skills : undefined,
-      mcp: mcp?.length ? mcp : undefined,
-      github,
-      env: env?.length ? env : undefined,
-      identity: credential,
-      webSearch,
-      memory: memory?.index,
-      cockpit: cockpit?.access,
-      model: runModel,
-    }));
+    return this.#launch(
+      thread,
+      model,
+      extras,
+      askedBy(continuation),
+      (runId, runModel, credential) => ({
+        type: "run.resume",
+        runId,
+        thread: forkable(thread),
+        continuation,
+        response,
+        skills: skills?.length ? skills : undefined,
+        mcp: mcp?.length ? mcp : undefined,
+        github,
+        env: env?.length ? env : undefined,
+        identity: credential,
+        webSearch,
+        memory: memory?.index,
+        cockpit: cockpit?.access,
+        model: runModel,
+      }),
+    );
   }
 
   #launch(
@@ -161,6 +168,7 @@ export class RemoteRuntime implements Runtime {
       github,
       env,
     }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env">,
+    tokenOf: string | undefined,
     message: (
       runId: string,
       runModel: RunModel,
@@ -169,7 +177,7 @@ export class RemoteRuntime implements Runtime {
   ): RuntimeRun {
     const connection = this.#connectionFor(thread);
     const runId = crypto.randomUUID();
-    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id);
+    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
@@ -247,6 +255,16 @@ export class RemoteRuntime implements Runtime {
       connection.endRun(runId);
       throw error;
     }
+  }
+}
+
+const ASKING_AGENT = /^run-(.+)$/;
+
+function askedBy(continuation: unknown) {
+  try {
+    return ASKING_AGENT.exec(parseAgentContinuation(continuation).agentId)?.[1];
+  } catch {
+    return undefined;
   }
 }
 

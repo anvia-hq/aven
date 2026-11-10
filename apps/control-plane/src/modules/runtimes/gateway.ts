@@ -49,7 +49,7 @@ const allowed = (provider: Provider, path: string) =>
 const PASS_REQUEST_HEADERS = ["accept", "anthropic-version", "anthropic-beta"];
 const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-request-id"];
 
-type Grant = { model: ModelConfig; key: string | undefined };
+type Grant = { model: ModelConfig; key: string | undefined; owner: string };
 
 const TOKEN_SECRET = process.env.PROVIDER_ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
 if (!TOKEN_SECRET) {
@@ -95,11 +95,11 @@ export class RunGateway {
     this.#keyOf(config);
   }
 
-  issue(runId: string, config: ModelConfig, scope?: string): RunModel {
+  issue(runId: string, config: ModelConfig, scope?: string, tokenOf: string = runId): RunModel {
     const key = this.#keyOf(config);
-    const token = tokenFor(runId, scope);
+    const token = tokenFor(tokenOf, scope);
     this.revoke(runId);
-    this.#grants.set(token, { model: config, key });
+    this.#grants.set(token, { model: config, key, owner: runId });
     this.#tokens.set(runId, token);
     return {
       provider: config.provider,
@@ -116,7 +116,7 @@ export class RunGateway {
     const token = this.#tokens.get(runId);
     if (!token) return;
     this.#tokens.delete(runId);
-    this.#grants.delete(token);
+    if (this.#grants.get(token)?.owner === runId) this.#grants.delete(token);
   }
 
   async forward(request: Request, segment: string, path: string): Promise<Response> {

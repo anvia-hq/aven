@@ -22,6 +22,7 @@ const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" 
 function runtime({ failPost = false } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
   const revoked: string[] = [];
+  const issued: { runId: string; tokenOf: string | undefined }[] = [];
   const connection = {
     startRun() {},
     endRun() {},
@@ -38,7 +39,18 @@ function runtime({ failPost = false } = {}) {
   return {
     posted,
     revoked,
-    remote: new RemoteRuntime(hub, { issue: () => model, revoke() {} }, identities),
+    issued,
+    remote: new RemoteRuntime(
+      hub,
+      {
+        issue: (runId: string, _config: unknown, _scope?: string, tokenOf?: string) => {
+          issued.push({ runId, tokenOf });
+          return model;
+        },
+        revoke() {},
+      },
+      identities,
+    ),
   };
 }
 
@@ -140,5 +152,36 @@ describe("a run's message to its runtime", () => {
     expect(() => remote.start({ thread, prompt: "hi", identity })).toThrow("connection lost");
 
     expect(revoked).toHaveLength(1);
+  });
+});
+
+describe("the gateway token of a run that answers a question", () => {
+  const continuation = (agentId: string) => ({
+    version: 1,
+    agentId,
+    sourceRunId: "durable-1",
+    interaction: {
+      type: "tool-question",
+      id: "i1",
+      toolName: "ask_user",
+      toolCallId: "c1",
+      internalCallId: "ic1",
+      questions: [{ id: "q1", text: "Which?" }],
+    },
+    state: {},
+  });
+
+  test("is the token of the run that asked, whose agent the runner keeps", () => {
+    const { issued, remote } = runtime();
+    remote.resume({ thread, continuation: continuation("run-asked-1"), response: {} });
+    expect(issued).toEqual([{ runId: expect.any(String), tokenOf: "asked-1" }]);
+  });
+
+  test("is its own when the continuation does not say which run asked", () => {
+    const { issued, remote } = runtime();
+    remote.resume({ thread, continuation: {}, response: {} });
+    remote.resume({ thread, continuation: continuation("goal-x"), response: {} });
+    remote.start({ thread, prompt: "go" } as never);
+    expect(issued.map((call) => call.tokenOf)).toEqual([undefined, undefined, undefined]);
   });
 });
