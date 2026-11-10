@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createTool, type Message } from "@anvia/core";
 import { z } from "zod";
 
-import { createCodingAgent } from "./coding-agent";
+import { codingSystemPrompt, codingTools, createCodingAgent } from "./coding-agent";
 import { scriptedModel, text } from "./testing/scripted-model";
 import { createEditTool } from "./tools/edit";
 
@@ -217,5 +217,21 @@ describe("history from earlier runs", () => {
     expect(body).toContain("It is a monorepo.");
     expect(body).not.toContain("thinking");
     expect(body).not.toContain("rs_earlier");
+  });
+});
+
+describe("what Codex is given from the coding agent", () => {
+  test("the system prompt has the skills, the variables and no goal hand-off, and the tools gain the questions", () => {
+    const prompt = codingSystemPrompt(
+      { skills: [{ name: "a", description: "A.", path: "/skills/a/SKILL.md" }], envNames: ["X"] },
+      false,
+    );
+    expect(prompt).toContain("/skills/a/SKILL.md");
+    expect(prompt).toContain("X");
+    expect(prompt).not.toContain("define_goal");
+    const names = codingTools({ tools: [] }).map((tool) => tool.name);
+    expect(names).toContain("ask_user");
+    expect(names).toContain("request_secret");
+    expect(codingTools({ tools: [], questions: false })).toEqual([]);
   });
 });

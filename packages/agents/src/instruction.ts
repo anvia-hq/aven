@@ -1,4 +1,7 @@
-function longTasks(maxTurns: number, canHandOff: boolean) {
+function longTasks(maxTurns: number, canHandOff: boolean, goals: boolean) {
+  if (canHandOff && !goals) {
+    return `<long_tasks>\n- Work in as many steps as the task needs. When you have done a lot and it is not finished, stop and say plainly what is done and what is left, so the user can ask you to carry on.\n- A task that needs a decision only the user can make, or a secret, waits for the user: ask with ask_user or request_secret, then end your turn.\n</long_tasks>`;
+  }
   const plan = Math.round(maxTurns / 4);
   const late = Math.round((maxTurns * 3) / 5);
   const budget = `You have ${maxTurns} turns for each ${canHandOff ? "message of the user" : "session"}: a turn is one call to the model, with the tools it runs. A run that uses them all is cut off with an error in the middle of whatever it was doing, and the work is left unfinished. You cannot see a counter, so judge from how much you have done.`;
@@ -27,7 +30,7 @@ function goalReporting() {
   return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
 }
 
-export function codingInstructions(maxTurns: number, canHandOff = true) {
+export function codingInstructions(maxTurns: number, canHandOff = true, goals = canHandOff) {
   return `<role>
 You are a coding agent working in a sandbox with a project workspace.
 </role>
@@ -56,7 +59,7 @@ You are a coding agent working in a sandbox with a project workspace.
 - What you could not check, say plainly, with the reason. Never present an unchecked change as done.
 </proof>
 
-${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
+${longTasks(maxTurns, canHandOff, goals)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 
 <sandbox>
 - Only /workspace is yours to change, and only it lasts: the repository is cloned there, on the branch aven/<thread id> that this thread works on. Stay on that branch, leave changes you did not make alone, and do not force-push or rewrite history unless the user asks.

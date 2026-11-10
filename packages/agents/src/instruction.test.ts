@@ -105,3 +105,21 @@ test("the agent is told how a person sees what it serves, and that localhost is 
   expect(section).toContain("relative URLs");
   expect(section).toContain("server.proxy");
 });
+
+test("an agent that cannot hand a task to a goal is still told about the user, and not about define_goal", () => {
+  const text = codingInstructions(200, true, false);
+  expect(text).not.toContain("define_goal");
+  expect(text).not.toContain("<reporting>");
+  expect(text).not.toContain("You have 200 turns");
+  expect(text).toContain("ask with ask_user or request_secret");
+  expect(text).toContain("[driver: Name]");
+  const opens = [...text.matchAll(/^<([a-z_]+)>$/gm)].map((match) => match[1]);
+  const closes = [...text.matchAll(/^<\/([a-z_]+)>$/gm)].map((match) => match[1]);
+  expect(closes).toEqual(opens);
+  expect(new Set(opens).size).toBe(opens.length);
+});
+
+test("the default instructions are unchanged by the option to leave goals out", () => {
+  expect(codingInstructions(200, true)).toBe(codingInstructions(200, true, true));
+  expect(codingInstructions(200, true)).toContain("define_goal");
+});

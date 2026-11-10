@@ -1,4 +1,10 @@
-import type { ToolResultOutput } from "@anvia/core";
+import type {
+  AssistantContentPart,
+  JsonValue,
+  Message,
+  ToolResultOutput,
+  ToolResultPart,
+} from "@anvia/core";
 
 import { projectToolCall, projectToolOutput } from "./tool-projection";
 import type { CodexEvent, CodexItem, CodexProjector } from "./types";
@@ -52,59 +58,84 @@ const startOf = (item: ToolItem): ToolPart => {
   }
 };
 
-const endOf = (item: ToolItem): Extract<RunEvent, { type: "tool_end" }> => {
-  const end = (name: string, output: ToolResultOutput) => ({
-    type: "tool_end" as const,
-    id: item.id,
-    ...projectToolOutput(output, name),
-  });
+const outputOf = (item: ToolItem): ToolResultOutput => {
   switch (item.type) {
     case "command_execution":
-      return end(
-        COMMAND_TOOL,
-        item.status === "failed" && item.exit_code === undefined
-          ? { type: "error-text", value: item.aggregated_output || "The command failed" }
-          : {
-              type: "json",
-              value: {
-                status: "exited",
-                exitCode: item.exit_code ?? 0,
-                stdout: item.aggregated_output,
-                stderr: "",
-              },
+      return item.status === "failed" && item.exit_code === undefined
+        ? { type: "error-text", value: item.aggregated_output || "The command failed" }
+        : {
+            type: "json",
+            value: {
+              status: "exited",
+              exitCode: item.exit_code ?? 0,
+              stdout: item.aggregated_output,
+              stderr: "",
             },
-      );
+          };
     case "file_change":
-      return end(
-        PATCH_TOOL,
-        item.status === "failed"
-          ? { type: "error-text", value: "The patch did not apply" }
-          : {
-              type: "text",
-              value: item.changes.map(({ kind, path }) => `${kind} ${path}`).join("\n"),
-            },
-      );
+      return item.status === "failed"
+        ? { type: "error-text", value: "The patch did not apply" }
+        : {
+            type: "text",
+            value: item.changes.map(({ kind, path }) => `${kind} ${path}`).join("\n"),
+          };
     case "web_search":
-      return end(SEARCH_TOOL, { type: "text", value: "" });
+      return { type: "text", value: "" };
     case "mcp_tool_call": {
-      const name = item.server === CODEX_AVEN_SERVER ? item.tool : `${item.server}__${item.tool}`;
       if (item.error || item.status === "failed") {
-        return end(name, { type: "error-text", value: item.error?.message ?? "The tool failed" });
+        return { type: "error-text", value: item.error?.message ?? "The tool failed" };
       }
       const structured = item.result?.structured_content;
       if (structured !== undefined && structured !== null) {
-        return end(name, { type: "json", value: structured });
+        return { type: "json", value: structured };
       }
-      const text = (item.result?.content ?? []).map((part) => part.text ?? "").join("");
-      return end(name, { type: "text", value: text });
+      return {
+        type: "text",
+        value: (item.result?.content ?? []).map((part) => part.text ?? "").join(""),
+      };
     }
   }
 };
+
+const nameOf = (item: ToolItem) => {
+  switch (item.type) {
+    case "command_execution":
+      return COMMAND_TOOL;
+    case "file_change":
+      return PATCH_TOOL;
+    case "web_search":
+      return SEARCH_TOOL;
+    case "mcp_tool_call":
+      return item.server === CODEX_AVEN_SERVER ? item.tool : `${item.server}__${item.tool}`;
+  }
+};
+
+const inputOf = (item: ToolItem): JsonValue => {
+  switch (item.type) {
+    case "command_execution":
+      return { command: item.command };
+    case "file_change":
+      return { changes: item.changes };
+    case "web_search":
+      return { query: item.query };
+    case "mcp_tool_call":
+      return item.arguments;
+  }
+};
+
+const endOf = (item: ToolItem): Extract<RunEvent, { type: "tool_end" }> => ({
+  type: "tool_end",
+  id: item.id,
+  ...projectToolOutput(outputOf(item), nameOf(item)),
+});
 
 export function createCodexProjector(): CodexProjector {
   const said = new Map<string, string>();
   const started = new Set<string>();
   const ended = new Set<string>();
+  const calls = new Map<string, ToolItem>();
+  const results = new Map<string, ToolItem>();
+  const sequence: ({ kind: "text"; id: string } | { kind: "tool"; id: string })[] = [];
   let threadId: string | undefined;
 
   const grown = (id: string, text: string) => {
@@ -115,6 +146,9 @@ export function createCodexProjector(): CodexProjector {
 
   const spoken = (item: CodexItem): RunEvent[] => {
     if (item.type !== "agent_message" && item.type !== "reasoning") return [];
+    if (item.type === "agent_message" && !said.has(item.id)) {
+      sequence.push({ kind: "text", id: item.id });
+    }
     const delta = grown(item.id, item.text);
     if (!delta) return [];
     return [{ type: item.type === "agent_message" ? "text" : "reasoning", delta }];
@@ -124,13 +158,16 @@ export function createCodexProjector(): CodexProjector {
     const events: RunEvent[] = [];
     if (!started.has(item.id)) {
       started.add(item.id);
+      sequence.push({ kind: "tool", id: item.id });
       events.push({ type: "tool_start", tool: startOf(item) });
     }
+    calls.set(item.id, item);
     const finished =
       kind === "item.completed" ||
       (item.type !== "web_search" && item.status !== "in_progress" && kind !== "item.started");
     if (finished && !ended.has(item.id)) {
       ended.add(item.id);
+      results.set(item.id, item);
       events.push(endOf(item));
     }
     return events;
@@ -139,6 +176,37 @@ export function createCodexProjector(): CodexProjector {
   return {
     get threadId() {
       return threadId;
+    },
+    messages() {
+      const content: AssistantContentPart[] = [];
+      const done: ToolResultPart[] = [];
+      for (const entry of sequence) {
+        if (entry.kind === "text") {
+          const text = said.get(entry.id) ?? "";
+          if (text.trim()) content.push({ type: "text", text });
+          continue;
+        }
+        const call = calls.get(entry.id)!;
+        content.push({
+          type: "tool-call",
+          toolCallId: entry.id,
+          toolName: nameOf(call),
+          input: inputOf(call),
+        });
+        const finished = results.get(entry.id);
+        if (finished) {
+          done.push({
+            type: "tool-result",
+            toolCallId: entry.id,
+            toolName: nameOf(finished),
+            output: outputOf(finished),
+          });
+        }
+      }
+      const messages: Message[] = [];
+      if (content.length) messages.push({ role: "assistant", content });
+      if (done.length) messages.push({ role: "tool", content: done });
+      return messages;
     },
     project(event) {
       switch (event.type) {

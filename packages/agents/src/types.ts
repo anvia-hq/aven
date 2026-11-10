@@ -3,6 +3,7 @@ import type {
   CompletionModel,
   CompletionRequest,
   JsonValue,
+  Message,
 } from "@anvia/core";
 import type { SANDBOX_TOOL_NAMES } from "./sandbox-tools";
 import type { SUBAGENT_TYPES } from "./subagents";
@@ -98,5 +99,6 @@ export type CodexEvent =
 
 export type CodexProjector = {
   readonly threadId: string | undefined;
+  messages(): Message[];
   project(event: CodexEvent): RunEvent[];
 };

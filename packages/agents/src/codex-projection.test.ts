@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createCodexProjector } from "./codex-projection";
+import { messagesToChat } from "./projection";
 import { applyEvent } from "@aven/protocol/events";
 import type { CodexEvent } from "./types";
 import type { ChatMessage, RunEvent } from "@aven/protocol/types";
@@ -251,5 +252,61 @@ describe("codex projection", () => {
     );
     expect(chat.map((message) => message.role)).toEqual(["user", "assistant"]);
     expect(chat[1]!.parts.map((part) => part.type)).toEqual(["text", "tool", "text"]);
+  });
+
+  const turn: CodexEvent[] = [
+    { type: "item.completed", item: { id: "m", type: "agent_message", text: "Looking." } },
+    {
+      type: "item.completed",
+      item: {
+        id: "c",
+        type: "command_execution",
+        command: "ls",
+        aggregated_output: "a",
+        exit_code: 0,
+        status: "completed",
+      },
+    },
+    { type: "item.completed", item: { id: "n", type: "agent_message", text: "Done." } },
+  ];
+
+  test("the turn is filed as an assistant message of its text and calls, and a tool message of their results", () => {
+    const { projector } = project(turn);
+    const [assistant, tool] = projector.messages();
+    expect(projector.messages()).toHaveLength(2);
+    expect(assistant).toMatchObject({
+      role: "assistant",
+      content: [
+        { type: "text", text: "Looking." },
+        { type: "tool-call", toolCallId: "c", toolName: "exec_command", input: { command: "ls" } },
+        { type: "text", text: "Done." },
+      ],
+    });
+    expect(tool).toMatchObject({
+      role: "tool",
+      content: [{ type: "tool-result", toolCallId: "c", toolName: "exec_command" }],
+    });
+  });
+
+  test("the filed turn reads back as the same chat the live events built", () => {
+    const { projector, out } = project(turn);
+    const live = [{ type: "run_start", prompt: "go" } as RunEvent, ...out].reduce<ChatMessage[]>(
+      (messages, event) => applyEvent(messages, event),
+      [],
+    );
+    const filed = messagesToChat([{ role: "user", content: "go" }, ...projector.messages()]);
+    expect(filed[1]!.parts).toEqual(live[1]!.parts);
+  });
+
+  test("a call that never finished is filed without a result, and an empty turn files nothing", () => {
+    const open = project([
+      {
+        type: "item.started",
+        item: { id: "w", type: "web_search", query: "bun" },
+      },
+    ]).projector.messages();
+    expect(open).toHaveLength(1);
+    expect(open[0]).toMatchObject({ role: "assistant" });
+    expect(project([{ type: "turn.started" }]).projector.messages()).toEqual([]);
   });
 });

@@ -29,11 +29,35 @@ type CodingAgentOptions = ModelSource & {
   memory?: RunMemory;
 };
 
-export function createCodingAgent(options: CodingAgentOptions) {
+export function codingTools(
+  options: Pick<CodingAgentOptions, "tools" | "webSearch" | "questions">,
+) {
   const tools = [...options.tools];
   if (options.webSearch) tools.push(createWebSearchTool({ apiKey: options.webSearch.apiKey }));
-
   if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());
+  return tools;
+}
+
+export function codingSystemPrompt(
+  options: Omit<CodingAgentOptions, "tools" | "webSearch" | keyof ModelSource>,
+  goals = true,
+) {
+  const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
+  return [
+    options.instructions ??
+      codingInstructions(maxTurns, options.questions ?? true, (options.questions ?? true) && goals),
+    skillsInstructions(options.skills ?? []),
+    environmentInstructions(options.envNames ?? []),
+    mcpInstructions(options.mcp),
+    memoryInstructions(options.memory),
+    options.forks ? forkInstructions() : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export function createCodingAgent(options: CodingAgentOptions) {
+  const tools = codingTools(options);
 
   const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
   const agentModel = resolveAgentModel(options);
@@ -41,16 +65,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     ...agentModel,
     retries: options.retries ?? agentModel.retries,
     id: options.id ?? "coding",
-    instructions: [
-      options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
-      skillsInstructions(options.skills ?? []),
-      environmentInstructions(options.envNames ?? []),
-      mcpInstructions(options.mcp),
-      memoryInstructions(options.memory),
-      options.forks ? forkInstructions() : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
+    instructions: codingSystemPrompt(options),
     maxTurns,
     tools,
   });
