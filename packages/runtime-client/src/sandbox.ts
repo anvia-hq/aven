@@ -484,6 +484,10 @@ export class Sandboxes implements ThreadWorkspaces {
     return this.#environments.save(thread, root, access);
   }
 
+  environmentSavedAt(thread: ThreadRef, access: RepoAccess) {
+    return this.#environments.savedAt(thread, access);
+  }
+
   #workspaceDir(threadId: string) {
     return join(runtimeHome(this.#config.home), "workspaces", threadId);
   }

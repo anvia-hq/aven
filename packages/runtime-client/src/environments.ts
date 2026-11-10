@@ -62,6 +62,13 @@ export class Environments {
     );
   }
 
+  async savedAt(thread: { organizationId?: string }, access: RepoAccess) {
+    const environment = await this.#environmentOf(thread, access);
+    if (!environment) return null;
+    const snapshot = await this.snapshots.valid(environment.key, environment.baseImageId);
+    return snapshot?.createdAt ?? null;
+  }
+
   async imageOf(threadId: string) {
     const pinned = await readFile(this.#imageFile(threadId), "utf8").catch(() => "");
     return pinned.trim() || this.#config.image;

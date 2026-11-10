@@ -473,6 +473,7 @@ type PretendProcess = {
   endedAt?: string;
 };
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+let savedSnapshotAt: string | null = null;
 const PROCESSES: PretendProcess[] = config.backgroundProcesses
   ? [
       { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
@@ -556,11 +557,20 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     PROCESS_LOGS[started.id] = failing ? "src/greeting.ts(2,3): error TS2322\n" : "7 pass\n";
     return reply({ process: started });
   }
+  if (call.method === "environment.read") {
+    const { snapshotSavedMinutesAgo } = config;
+    const savedAt =
+      savedSnapshotAt ??
+      (snapshotSavedMinutesAgo === undefined ? null : ago(snapshotSavedMinutesAgo * 60_000));
+    return reply({ savedAt });
+  }
   if (call.method === "environment.save") {
     const { snapshotFailure } = config;
     setTimeout(() => {
-      if (snapshotFailure) send({ type: "reply", id: call.id, ok: false, error: snapshotFailure });
-      else reply({ image: "aven-env-fake" });
+      if (snapshotFailure)
+        return send({ type: "reply", id: call.id, ok: false, error: snapshotFailure });
+      savedSnapshotAt = new Date().toISOString();
+      reply({ image: "aven-env-fake" });
     }, 700);
     return;
   }

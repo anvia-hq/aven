@@ -22,6 +22,7 @@ export const FAKE_RUNNER_SWITCHES = {
   processes: "FAKE_PROCESSES",
   updateBusy: "FAKE_UPDATE_BUSY",
   snapshotFails: "FAKE_SNAPSHOT_FAILS",
+  snapshotSaved: "FAKE_SNAPSHOT_SAVED_MINUTES_AGO",
   steerRefuses: "FAKE_STEER_REFUSES",
   steerAppliesAfterMs: "FAKE_STEER_APPLIES_AFTER",
   build: "FAKE_BUILD",
@@ -107,6 +108,7 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     branch,
     processes,
     snapshotFails,
+    snapshotSaved,
   } = FAKE_RUNNER_SWITCHES;
   return {
     sandboxStartsRunning: !on(env, sandbox),
@@ -125,5 +127,8 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     branch: valueOf(env, branch) ?? "aven/fake-branch",
     backgroundProcesses: on(env, processes),
     snapshotFailure: valueOf(env, snapshotFails),
+    snapshotSavedMinutesAgo: valueOf(env, snapshotSaved)
+      ? countOf(env, snapshotSaved, 0)
+      : undefined,
   };
 }

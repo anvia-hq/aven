@@ -5,6 +5,7 @@ export type SnapshotState = {
   startedAt?: string;
   savedAt?: string;
   error?: string;
+  failedAt?: string;
 };
 
 export type EnvironmentDeps = {

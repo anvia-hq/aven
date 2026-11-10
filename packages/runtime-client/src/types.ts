@@ -460,6 +460,7 @@ export interface ThreadWorkspaces {
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
   saveEnvironment?(thread: ThreadRef, access: RepoAccess): Promise<{ image: string }>;
+  environmentSavedAt?(thread: ThreadRef, access: RepoAccess): Promise<string | null>;
   readonly artifacts?: ArtifactStore;
   readonly uploads?: UploadStore;
   readonly skills?: SkillStore;

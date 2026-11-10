@@ -301,6 +301,34 @@ describe("startRuntime saving an environment", () => {
     });
   });
 
+  test("tells when the thread's environment was last saved, and says so when it cannot", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const seen: { thread: unknown; access: unknown }[] = [];
+    const { plane } = connect({
+      sandbox: {
+        ...workspaces,
+        environmentSavedAt: async (thread: unknown, repo: unknown) => {
+          seen.push({ thread, access: repo });
+          return "2026-11-09T22:00:00.000Z";
+        },
+      } as never,
+    });
+    await until(() => plane.received.some((m) => m.type === "hello"));
+    plane.send({
+      type: "call",
+      id: "r",
+      method: "environment.read",
+      params: { threadId: "t1", organizationId: "org-1", access },
+    } as never);
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "r"));
+    expect(plane.received.find((m) => m.type === "reply" && m.id === "r")).toMatchObject({
+      ok: true,
+      result: { savedAt: "2026-11-09T22:00:00.000Z" },
+    });
+    expect(seen).toEqual([{ thread: { id: "t1", organizationId: "org-1" }, access }]);
+  });
+
   test("says so when the runner cannot save one", async () => {
     const workspaces = directoryWorkspaces();
     cleanups.push(() => workspaces.dispose());

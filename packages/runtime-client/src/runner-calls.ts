@@ -105,6 +105,12 @@ export function createRunnerCalls({
     return sandbox.saveEnvironment({ id: threadId, organizationId }, access);
   }
 
+  async function readEnvironmentOf(params: unknown) {
+    const { threadId, organizationId, access } = environmentSaveParams(params);
+    if (!sandbox.environmentSavedAt) throw new Error("This runner cannot read environments");
+    return { savedAt: await sandbox.environmentSavedAt({ id: threadId, organizationId }, access) };
+  }
+
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
     const { release } = runnerUpdateParams(params);
     if (!update) return { status: "unsupported" };
@@ -119,6 +125,7 @@ export function createRunnerCalls({
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
     if (method === "environment.save") return saveEnvironmentOf(params);
+    if (method === "environment.read") return readEnvironmentOf(params);
     if (method === "desktop.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);
