@@ -55,9 +55,10 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const canCompact = owned && !running && !question;
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels();
-  const { overview, desktop, diff, files, terminal } = panels;
+  const { overview, desktop, diff, files, terminal, browser } = panels;
   const sideOpen =
-    !split && (diff.open || files.open || (owned && (desktop.open || terminal.open)));
+    !split &&
+    (diff.open || files.open || browser.open || (owned && (desktop.open || terminal.open)));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({
