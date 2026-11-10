@@ -15,22 +15,23 @@ export function OrganizationMenu() {
 
   return (
     <>
-      <div className="flex gap-3 p-2">
-        <Avatar>
-          <AvatarFallback>{initials(name)}</AvatarFallback>
-        </Avatar>
-        <div className="grid min-w-0 flex-1 text-sm leading-tight">
-          <span className="truncate font-medium">{name}</span>
-          <span className="truncate text-xs text-muted-foreground">
-            Organization • {memberCount} {memberCount === 1 ? "member" : "members"}
-          </span>
-        </div>
-      </div>
       <DropdownMenuItem
-        className="mx-2 mb-2 h-8 justify-center border border-border bg-background px-2.5 font-medium focus:bg-muted"
+        aria-label={`Organization settings, ${name}, ${memberCount} ${memberCount === 1 ? "member" : "members"}`}
+        className="h-12 gap-3 px-2"
         onClick={() => navigate({ to: "/settings/members" })}
       >
-        <Cog /> Settings
+        <Avatar className="rounded-lg after:rounded-lg">
+          <AvatarFallback className="rounded-lg bg-primary/15 text-xs font-semibold text-primary">
+            {initials(name)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="grid min-w-0 flex-1 leading-tight">
+          <span className="truncate text-sm font-medium">{name}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {memberCount} {memberCount === 1 ? "member" : "members"}
+          </span>
+        </div>
+        <Cog className="size-4 text-muted-foreground" />
       </DropdownMenuItem>
       {organizations.length > 1 && (
         <>
@@ -43,7 +44,6 @@ export function OrganizationMenu() {
           ))}
         </>
       )}
-      <DropdownMenuSeparator />
     </>
   );
 }

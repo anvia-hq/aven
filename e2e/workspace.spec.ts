@@ -50,13 +50,50 @@ test.describe("settings", () => {
     const userCard = page.locator('[data-slot="sidebar-header"]');
 
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toContainText("Workspace User");
+    await expect(menu).toContainText("@");
+    await expect(menu.getByRole("menuitem", { name: "Sign out" })).toHaveAttribute(
+      "data-variant",
+      "destructive",
+    );
+    expect(
+      await menu
+        .getByRole("menuitem")
+        .evaluateAll((items) => items.map((item) => item.textContent)),
+    ).toEqual([
+      expect.stringContaining("member"),
+      expect.stringContaining("Personal settings"),
+      expect.stringContaining("Command palette"),
+      expect.stringContaining("Sign out"),
+    ]);
+    const shapes = await menu.locator("[data-slot='avatar']").evaluateAll((avatars) =>
+      avatars.map((avatar) => {
+        const box = avatar.getBoundingClientRect();
+        return [Math.round(box.width), Math.round(box.height)];
+      }),
+    );
+    expect(shapes).toHaveLength(2);
+    for (const [width, height] of shapes) {
+      expect(width).toBe(height);
+      expect(width).toBeLessThanOrEqual(40);
+    }
+    expect(await menu.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.screenshot({
+      path: ".aven/proof/user-menu/after.png",
+      clip: { x: 0, y: 0, width: 420, height: 420 },
+    });
     await page.getByRole("menuitem", { name: /Personal settings/ }).click();
     await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
 
     await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
-    await page.getByRole("menu").getByRole("menuitem", { name: "Settings", exact: true }).click();
+    const organizationRow = page
+      .getByRole("menu")
+      .getByRole("menuitem", { name: /Organization settings/ });
+    await expect(organizationRow).toHaveAccessibleName(/Organization settings, .+, \d+ members?/);
+    await organizationRow.click();
     await expect(page).toHaveURL(/\/settings\/members$/);
 
     await page.getByRole("link", { name: "Aven", exact: true }).click();

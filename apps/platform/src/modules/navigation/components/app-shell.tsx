@@ -32,7 +32,7 @@ import { MobileTabBar } from "./mobile-tab-bar";
 import { SidebarResizer } from "./sidebar-resizer";
 
 type Props = {
-  user: { name: string; image?: string | null };
+  user: { name: string; email?: string | null; image?: string | null };
   sidebar: ReactNode;
 };
 
@@ -90,7 +90,12 @@ export function AppShell({ user, sidebar }: Props) {
           <SidebarHeader>
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
               <div className="min-w-0 flex-1">
-                <UserCard name={user.name} image={user.image} onSignOut={signOut} />
+                <UserCard
+                  name={user.name}
+                  email={user.email}
+                  image={user.image}
+                  onSignOut={signOut}
+                />
               </div>
               <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <Button
