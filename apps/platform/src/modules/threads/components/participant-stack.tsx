@@ -9,22 +9,22 @@ export function ParticipantStack({ crowd }: { crowd: Crowd }) {
       role="img"
       aria-label={`In this thread: ${crowd.names.join(", ")}`}
       title={crowd.names.join(", ")}
-      className="mr-1 flex shrink-0 items-center -space-x-1"
+      className="mr-1 flex shrink-0 items-center rounded-full border border-foreground/10 bg-(--capsule) p-0.5 [--capsule:color-mix(in_oklch,var(--sidebar),var(--foreground)_8%)] group-hover/menu-button:[--capsule:color-mix(in_oklch,var(--sidebar-accent),var(--foreground)_8%)] group-data-active/menu-button:[--capsule:color-mix(in_oklch,var(--sidebar-accent),var(--foreground)_8%)]"
       data-role="participants"
     >
       {crowd.shown.map((person) => (
         <Avatar
           key={person.id}
-          className="size-5 ring-2 ring-sidebar group-hover/menu-button:ring-sidebar-accent group-data-active/menu-button:ring-sidebar-accent"
+          className="size-[18px] ring-[1.5px] ring-(--capsule) not-first:-ml-1"
         >
           {person.image && <AvatarImage src={person.image} alt="" />}
-          <AvatarFallback className="bg-foreground/10 text-[9px] font-medium text-sidebar-foreground">
+          <AvatarFallback className="bg-[color-mix(in_oklch,var(--capsule),var(--foreground)_16%)] text-[8px] font-medium text-sidebar-foreground">
             {initials(person.name)}
           </AvatarFallback>
         </Avatar>
       ))}
       {crowd.more > 0 && (
-        <span className="z-10 grid h-5 min-w-5 place-items-center rounded-full bg-foreground/10 px-1 text-[9px] font-medium text-sidebar-foreground ring-2 ring-sidebar group-hover/menu-button:ring-sidebar-accent group-data-active/menu-button:ring-sidebar-accent">
+        <span className="pr-1 pl-1 text-[9px] font-medium text-sidebar-foreground tabular-nums">
           {crowd.more}+
         </span>
       )}
