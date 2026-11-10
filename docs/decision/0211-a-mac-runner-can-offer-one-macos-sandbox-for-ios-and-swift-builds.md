@@ -31,6 +31,16 @@ macOS can run in a VM on a Mac. What is known, from documentation and forum post
 - A Mac runner that runs macOS threads cannot also run Linux ones; a person who wants both runs two runners.
 - Not decided here: desktop streaming of the VM, snapshots and forks of it, more than one VM, and a project setting that picks the sandbox per project.
 
+## Licences
+
+Aven (MIT) bundles none of this: the person installs Tart and pulls the image on their own Mac, so what follows is between them and the owners. None of it was read in full or checked with a lawyer; it is what the pages said when this was written.
+
+- **Apple (macOS).** The macOS licence allows up to two extra copies of macOS in VMs on each Apple-branded Mac the person owns or controls, for purposes that include software development and testing, and Virtualization.framework refuses a third. It covers macOS guests on Apple hardware only: never a Linux or cloud host, and not renting macOS VMs to others. This feature runs one VM on the person's own Mac to build and test their own app, which is the case the licence describes. Anything beyond that, such as running it for a team on shared Macs, needs the licence text read for that case (the wording for macOS 27 is being discussed on Apple's forums).
+- **Tart (Cirrus Labs, Fair Source).** Free on personal computers and workstations. An organisation needs a paid licence only above 100 CPU cores across the Macs it runs Tart on (every performance and efficiency core counts): Gold, $12,000 a year, up to 500 cores; Platinum, $36,000, up to 3,000; Diamond, $12 a core. The page does not say whether embedding Tart in a product is allowed, which is one more reason Aven drives an installed `tart` and does not ship it. Lume (Cua) or Virtualization.framework directly would avoid this licence, and the VM driver is the only code that would change.
+- **The images.** `ghcr.io/cirruslabs/macos-*` are public and free to pull. Their own terms were not read, and the Xcode images contain Apple's Xcode, under Apple's terms.
+
+Cost to the person: nothing for one Mac below 100 cores. The disk is the real cost: about 31 GB for the base image (a full macOS install, 12 GB used inside a 50 GB virtual disk; a thread's VM is a copy-on-write clone and grows only with what it changes), and several times that for an Xcode image.
+
 ## How to run one
 
 On the Mac, with Apple Silicon and Tart (https://tart.run) installed:
@@ -56,4 +66,4 @@ On an M-series Mac (macOS 27 host, 16 GB), with Tart 2.41.1 and `macos-tahoe-bas
 - A thread that clones a real repository through the runner, a fork of a thread, the idle release, and a whole run through the control plane. Each uses the same `ThreadWorkspaces` calls as a container, and none was run on a VM.
 - How `tart exec` behaves when a command prints a lot, or the connection is long-lived.
 - Whether the VM can reach services on the host or the local network. It uses Tart's default shared (NAT) networking, so it can reach both; `--net-softnet` would limit that and was not tried.
-- Apple's current licence wording for the macOS version in use, and Tart's terms for how it is used.
+- The licence texts themselves (see Licences), including Cirrus Labs' terms for its images.
