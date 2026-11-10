@@ -1,23 +1,21 @@
 import { usePanel } from "@/hooks/use-panel";
-import { forgetStoredKeys, registerUserState } from "@/lib/user-state";
+import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
 
-const OVERVIEW_KEY = "aven.overview-open";
-const DESKTOP_KEY = "aven.desktop-open";
-const DIFF_KEY = "aven.diff-open";
-const FILES_KEY = "aven.files-open";
-const TERMINAL_KEY = "aven.terminal-open";
-const BROWSER_KEY = "aven.browser-open";
+const THREAD_PREFIX = "aven.thread.";
+const LAYOUT_PREFIX = `react-resizable-panels:${THREAD_PREFIX}`;
 
-registerUserState(() =>
-  forgetStoredKeys([OVERVIEW_KEY, DESKTOP_KEY, DIFF_KEY, FILES_KEY, TERMINAL_KEY, BROWSER_KEY]),
-);
+registerUserState(() => {
+  forgetStoredKeysStartingWith(THREAD_PREFIX);
+  forgetStoredKeysStartingWith(LAYOUT_PREFIX);
+});
 
-export function useThreadPanels() {
-  const overview = usePanel(OVERVIEW_KEY, true);
-  const desktop = usePanel(DESKTOP_KEY, false);
-  const diff = usePanel(DIFF_KEY, false);
-  const files = usePanel(FILES_KEY, false);
-  const terminal = usePanel(TERMINAL_KEY, false);
-  const browser = usePanel(BROWSER_KEY, false);
+export function useThreadPanels(threadId: string) {
+  const key = (name: string) => `${THREAD_PREFIX}${threadId}.${name}-open`;
+  const overview = usePanel(key("overview"), true);
+  const desktop = usePanel(key("desktop"), false);
+  const diff = usePanel(key("diff"), false);
+  const files = usePanel(key("files"), false);
+  const terminal = usePanel(key("terminal"), false);
+  const browser = usePanel(key("browser"), false);
   return { overview, desktop, diff, files, terminal, browser };
 }

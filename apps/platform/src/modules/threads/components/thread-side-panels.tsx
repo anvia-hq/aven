@@ -22,7 +22,7 @@ type Props = {
 export function ThreadSidePanels({ threadId, running, panels, owned, handleClassName }: Props) {
   const { diff, desktop, files, terminal, browser } = panels;
   const side = useDefaultLayout({
-    id: "aven.thread-side",
+    id: `aven.thread.${threadId}.side`,
     panelIds: ["files", "diff", "desktop", "terminal", "browser"],
     storage: safeStorage,
   });

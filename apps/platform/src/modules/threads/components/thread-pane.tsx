@@ -55,7 +55,7 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const { compacting, compact } = useCompactThread(threadId);
   const canCompact = owned && !running && !question;
   const wide = useMediaQuery("(min-width: 1024px)");
-  const panels = useThreadPanels();
+  const panels = useThreadPanels(threadId);
   const { overview, desktop, diff, files, terminal, browser } = panels;
   const sideOpen =
     !split &&
@@ -63,7 +63,7 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({
-    id: `aven.thread-panels.${wide ? "row" : "column"}`,
+    id: `aven.thread.${threadId}.panels.${wide ? "row" : "column"}`,
     panelIds,
     storage: safeStorage,
   });
