@@ -50,6 +50,7 @@ import type {
 } from "@anvia/durable";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import type { CodexThreads } from "./codex-threads";
 import type { RunOutbox } from "./run-outbox";
 import type { DurableRuns } from "./durable-runs";
 import type { RunRecords } from "./run-records";
@@ -526,6 +527,7 @@ export type CodexTurn = {
   codexPath: string;
   input: string;
   threadId?: string;
+  instructions?: string;
   model?: string;
   effort?: "minimal" | "low" | "medium" | "high" | "xhigh";
   workingDirectory: string;
@@ -538,6 +540,7 @@ export type CodexTurnEnd = {
   threadId?: string;
   ended: "done" | "error" | "cancelled";
   error?: string;
+  messages: Message[];
 };
 
 export type CodexQuestion = { toolName: string; callId: string; input: unknown };
@@ -546,4 +549,25 @@ export type CodexToolsServer = {
   url: string;
   token: string;
   close(): Promise<void>;
+};
+
+export type CodexSupport = {
+  path: string;
+  threads: CodexThreads;
+  env: Record<string, string | undefined>;
+  work: string;
+};
+
+export type CodexChat = {
+  runId: string;
+  threadId: string;
+  codex: CodexSupport;
+  model?: string;
+  effort?: string;
+  prompt: string;
+  filed: Message[];
+  tools: readonly AnyTool[];
+  instructions: string;
+  emit: (event: RunEvent) => void;
+  signal: AbortSignal;
 };

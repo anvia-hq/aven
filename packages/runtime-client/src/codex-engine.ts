@@ -22,10 +22,11 @@ export function codexEnvironment(source: Record<string, string | undefined>, tok
   return env;
 }
 
-export function codexConfig(mcpUrl?: string) {
+export function codexConfig(mcpUrl?: string, instructions?: string) {
   const config: NonNullable<CodexOptions["config"]> = {
     features: Object.fromEntries(SHELL_FEATURES.map((name) => [name, false])),
   };
+  if (instructions) config.developer_instructions = instructions;
   if (mcpUrl) {
     config.mcp_servers = {
       [CODEX_AVEN_SERVER]: { url: mcpUrl, bearer_token_env_var: CODEX_MCP_TOKEN_VAR },
@@ -41,7 +42,7 @@ export async function runCodexTurn(
   const codex = new Codex({
     codexPathOverride: turn.codexPath,
     env: codexEnvironment(turn.env, turn.mcp?.token),
-    config: codexConfig(turn.mcp?.url),
+    config: codexConfig(turn.mcp?.url, turn.instructions),
   });
   const options = {
     model: turn.model,
@@ -68,7 +69,11 @@ export async function runCodexTurn(
     }
   } catch (error) {
     if (turn.signal?.aborted) {
-      return { threadId: projector.threadId ?? turn.threadId, ended: "cancelled" };
+      return {
+        threadId: projector.threadId ?? turn.threadId,
+        ended: "cancelled",
+        messages: projector.messages(),
+      };
     }
     failure ??= error instanceof Error ? error.message : String(error);
     emit({ type: "error", message: failure });
@@ -77,5 +82,6 @@ export async function runCodexTurn(
     threadId: projector.threadId ?? thread.id ?? turn.threadId,
     ended: failure === undefined ? "done" : "error",
     error: failure,
+    messages: projector.messages(),
   };
 }

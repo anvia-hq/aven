@@ -90,7 +90,7 @@ function editDiff(input: unknown): DiffLine[] | undefined {
   );
 }
 
-function questionsOf(input: unknown): QuestionPrompt[] {
+export function questionsOf(input: unknown): QuestionPrompt[] {
   const { questions } = asRecord(input);
   if (!Array.isArray(questions)) return [];
   return questions.flatMap((entry): QuestionPrompt[] => {

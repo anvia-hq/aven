@@ -58,7 +58,7 @@ describe("runCodexTurn", () => {
     const { turn } = turnOf(finished);
     const { events, end } = await run(turn);
     expect(events.map((event) => event.type)).toEqual(["text", "usage"]);
-    expect(end).toEqual({ threadId: "th_1", ended: "done", error: undefined });
+    expect(end).toMatchObject({ threadId: "th_1", ended: "done", error: undefined });
   });
 
   test("the prompt goes in on stdin, with the model, the read-only sandbox and no approvals", async () => {
@@ -143,7 +143,7 @@ describe("runCodexTurn", () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 300);
     const { events, end } = await run({ ...turn, signal: controller.signal });
-    expect(end).toEqual({ threadId: "th_9", ended: "cancelled" });
+    expect(end).toMatchObject({ threadId: "th_9", ended: "cancelled" });
     expect(events.filter((event) => event.type === "error")).toEqual([]);
   });
 });

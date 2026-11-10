@@ -6,11 +6,15 @@ import type {
   ToolResultPart,
 } from "@anvia/core";
 
+import { QUESTION_TOOL_NAME, SECRET_TOOL_NAME } from "@aven/protocol/events";
+
 import { projectToolCall, projectToolOutput } from "./tool-projection";
 import type { CodexEvent, CodexItem, CodexProjector } from "./types";
 import type { RunEvent, ToolPart } from "@aven/protocol/types";
 
 export const CODEX_AVEN_SERVER = "aven";
+
+const ASKING = new Set<string>([QUESTION_TOOL_NAME, SECRET_TOOL_NAME]);
 
 const COMMAND_TOOL = "exec_command";
 const PATCH_TOOL = "apply_patch";
@@ -162,6 +166,13 @@ export function createCodexProjector(): CodexProjector {
       events.push({ type: "tool_start", tool: startOf(item) });
     }
     calls.set(item.id, item);
+    if (
+      item.type === "mcp_tool_call" &&
+      item.server === CODEX_AVEN_SERVER &&
+      ASKING.has(item.tool)
+    ) {
+      return events;
+    }
     const finished =
       kind === "item.completed" ||
       (item.type !== "web_search" && item.status !== "in_progress" && kind !== "item.started");
