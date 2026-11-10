@@ -521,3 +521,21 @@ export type Timing = {
 export type IdentityRelay = { port: number; stop: () => void };
 
 export type HostReach = { ok: boolean; detail: string; skipped?: boolean };
+
+export type CodexTurn = {
+  codexPath: string;
+  input: string;
+  threadId?: string;
+  model?: string;
+  effort?: "minimal" | "low" | "medium" | "high" | "xhigh";
+  workingDirectory: string;
+  mcp?: { url: string; token: string };
+  env: Record<string, string | undefined>;
+  signal?: AbortSignal;
+};
+
+export type CodexTurnEnd = {
+  threadId?: string;
+  ended: "done" | "error" | "cancelled";
+  error?: string;
+};
