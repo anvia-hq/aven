@@ -22,19 +22,19 @@
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.975 0.02 160);
-  --foreground: oklch(0.2 0.02 160);
-  --card: oklch(0.99 0.012 160);
+  --background: oklch(0.99 0.006 90);
+  --foreground: oklch(0.2 0.012 80);
+  --card: oklch(0.995 0.004 90);
   --card-foreground: oklch(0.2 0.009 160);
-  --popover: oklch(0.99 0.012 160);
+  --popover: oklch(0.995 0.004 90);
   --popover-foreground: oklch(0.2 0.009 160);
   --primary: oklch(0.22 0.01 160);
   --primary-foreground: oklch(0.98 0.003 160);
-  --secondary: oklch(0.935 0.035 160);
+  --secondary: oklch(0.955 0.016 88);
   --secondary-foreground: oklch(0.25 0.02 160);
-  --muted: oklch(0.935 0.035 160);
-  --muted-foreground: oklch(0.48 0.03 160);
-  --accent: oklch(0.945 0.035 160);
+  --muted: oklch(0.955 0.016 88);
+  --muted-foreground: oklch(0.5 0.02 80);
+  --accent: oklch(0.945 0.03 90);
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -48,36 +48,36 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.48 0.13 155);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.94 0.03 160);
-  --border: oklch(0.87 0.035 160);
-  --input: oklch(0.87 0.035 160);
+  --frame: oklch(0.955 0.012 85);
+  --border: oklch(0.89 0.014 85);
+  --input: oklch(0.89 0.014 85);
   --ring: oklch(0.7 0.06 160);
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.2 0.009 160);
   --sidebar-primary: oklch(0.22 0.01 160);
   --sidebar-primary-foreground: oklch(0.98 0.003 160);
-  --sidebar-accent: oklch(0.925 0.035 160);
+  --sidebar-accent: oklch(0.935 0.03 90);
   --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.9 0.032 160);
+  --sidebar-border: oklch(0.91 0.014 85);
   --sidebar-ring: oklch(0.7 0.06 160);
 }
 
 /* Charcoal dark theme with a faint indigo tint (default). */
 .dark {
-  --background: oklch(0.17 0.009 160);
-  --foreground: oklch(0.9 0.006 160);
-  --card: oklch(0.2 0.009 160);
-  --card-foreground: oklch(0.9 0.006 160);
-  --popover: oklch(0.22 0.009 160);
-  --popover-foreground: oklch(0.9 0.006 160);
-  --primary: oklch(0.93 0.006 160);
-  --primary-foreground: oklch(0.18 0.006 160);
-  --secondary: oklch(0.24 0.009 160);
-  --secondary-foreground: oklch(0.9 0.006 160);
-  --muted: oklch(0.22 0.009 160);
-  --muted-foreground: oklch(0.62 0.006 160);
-  --accent: oklch(0.255 0.009 160);
-  --accent-foreground: oklch(0.92 0.006 160);
+  --background: oklch(0.17 0.014 195);
+  --foreground: oklch(0.9 0.008 195);
+  --card: oklch(0.2 0.014 195);
+  --card-foreground: oklch(0.9 0.008 195);
+  --popover: oklch(0.22 0.014 195);
+  --popover-foreground: oklch(0.9 0.008 195);
+  --primary: oklch(0.93 0.008 195);
+  --primary-foreground: oklch(0.18 0.008 195);
+  --secondary: oklch(0.24 0.014 195);
+  --secondary-foreground: oklch(0.9 0.008 195);
+  --muted: oklch(0.22 0.014 195);
+  --muted-foreground: oklch(0.62 0.008 195);
+  --accent: oklch(0.255 0.014 195);
+  --accent-foreground: oklch(0.92 0.008 195);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
   --meter-low: oklch(0.7 0.14 245);
@@ -90,18 +90,18 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.8 0.14 155);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.225 0.009 160);
+  --frame: oklch(0.225 0.014 195);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.5 0.02 160);
+  --ring: oklch(0.5 0.03 195);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.86 0.006 160);
-  --sidebar-primary: oklch(0.93 0.006 160);
-  --sidebar-primary-foreground: oklch(0.18 0.006 160);
-  --sidebar-accent: oklch(0.23 0.009 160);
-  --sidebar-accent-foreground: oklch(0.92 0.006 160);
+  --sidebar-foreground: oklch(0.86 0.008 195);
+  --sidebar-primary: oklch(0.93 0.008 195);
+  --sidebar-primary-foreground: oklch(0.18 0.008 195);
+  --sidebar-accent: oklch(0.23 0.014 195);
+  --sidebar-accent-foreground: oklch(0.92 0.008 195);
   --sidebar-border: oklch(1 0 0 / 3%);
-  --sidebar-ring: oklch(0.5 0.02 160);
+  --sidebar-ring: oklch(0.5 0.03 195);
 }
 
 /* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Mint, the default, is :root and .dark above. */
@@ -438,7 +438,7 @@
 }
 
 .dark {
-  --brand: oklch(0.93 0.006 160);
+  --brand: oklch(0.93 0.008 195);
 }
 
 /* What a bot's face is drawn with (decision 0062): the same in both themes, like an illustration. */
@@ -755,6 +755,27 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
 }
 .bn-shadcn .bn-container {
   font-family: inherit;
+}
+
+/* A heading in a cockpit page (a note or a task) is smaller than BlockNote's own 3em, 2em and 1.3em: the page's title is 1.75rem
+   and its headings sit under it. The spacing after a heading follows the previous block's level. */
+.cockpit-doc .bn-shadcn .bn-editor [data-content-type="heading"] {
+  --level: 1.5em;
+}
+.cockpit-doc .bn-shadcn .bn-editor [data-content-type="heading"][data-level="2"] {
+  --level: 1.25em;
+}
+.cockpit-doc .bn-shadcn .bn-editor [data-content-type="heading"][data-level="3"] {
+  --level: 1.1em;
+}
+.cockpit-doc .bn-shadcn .bn-editor [data-prev-level="1"] {
+  --prev-level: 1.5em;
+}
+.cockpit-doc .bn-shadcn .bn-editor [data-prev-level="2"] {
+  --prev-level: 1.25em;
+}
+.cockpit-doc .bn-shadcn .bn-editor [data-prev-level="3"] {
+  --prev-level: 1.1em;
 }
 
 /* A cockpit page (decision 0106): its column's side room, which the editor's text lines up with

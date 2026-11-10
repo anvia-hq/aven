@@ -8,7 +8,15 @@ import type { QueuedSteer, Viewer } from "../types";
 import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
 
-export function QueuedMessage({ message, viewer }: { message: QueuedSteer; viewer: Viewer }) {
+export function QueuedMessage({
+  message,
+  viewer,
+  showAuthor = true,
+}: {
+  message: QueuedSteer;
+  viewer: Viewer;
+  showAuthor?: boolean;
+}) {
   if (systemNoteOf(message.prompt)?.kind === "process") return null;
   const { mine, name, text } = authorOf(message.prompt, viewer, message.senderId);
   return (
@@ -22,7 +30,7 @@ export function QueuedMessage({ message, viewer }: { message: QueuedSteer; viewe
       data-author={mine ? "mine" : "other"}
       data-queued
     >
-      {!mine && <AuthorLabel name={name} />}
+      {!mine && showAuthor && <AuthorLabel name={name} />}
       <div className="w-fit max-w-full rounded-lg bg-accent/60 px-3 py-2 opacity-70 [&_p]:whitespace-pre-line">
         <Markdown components={{ code: mentionCode }}>
           {markMentions(text, message.mentions)}

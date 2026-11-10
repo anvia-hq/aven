@@ -5,6 +5,7 @@ import { cn } from "cn";
 
 import { Button } from "@/components/button";
 
+import { useScrollEdges } from "../hooks/use-scroll-edges";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTask, TaskInput, TaskStatus } from "../types";
 import { DueDate, PriorityFlag, StatusDot } from "./task-badges";
@@ -93,6 +94,7 @@ export function TaskBoard({
   onNew: (initial: Partial<TaskInput>) => void;
 }) {
   const { update } = useTasks();
+  const { ref, edges, onScroll } = useScrollEdges<HTMLDivElement>();
   const [dragged, setDragged] = useState<string | null>(null);
   const [dropAt, setDropAt] = useState<DropAt | null>(null);
 
@@ -117,65 +119,93 @@ export function TaskBoard({
   }
 
   return (
-    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4" role="group" aria-label="Board">
-      {STATUSES.map((status) => {
-        const column = tasks.filter((task) => task.status === status);
-        const shown = columnOf(status);
-        return (
-          <section
-            key={status}
-            aria-label={STATUS_LABELS[status]}
-            className={cn(
-              "flex w-72 shrink-0 flex-col gap-2 rounded-xl bg-muted/50 p-2",
-              dropAt?.status === status && "ring-2 ring-ring/40",
-            )}
-            onDragOver={(event) => {
-              event.preventDefault();
-              if (dropAt?.status !== status) setDropAt({ status, index: shown.length });
-            }}
-            onDrop={(event) => drop(event, status)}
-          >
-            <header className="flex items-center gap-2 px-1">
-              <StatusDot status={status} />
-              <h2 className="text-sm font-medium">{STATUS_LABELS[status]}</h2>
-              <span className="text-xs text-muted-foreground">{column.length}</span>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="ml-auto size-8 md:size-6"
-                aria-label={`New task in ${STATUS_LABELS[status]}`}
-                onClick={() => onNew({ status, tags: tag ? [tag] : [] })}
-              >
-                <Plus />
-              </Button>
-            </header>
-            <ul className="flex min-h-12 flex-col gap-2">
-              {column.map((task) => {
-                const index = shown.findIndex((each) => each.id === task.id);
-                return (
-                  <Fragment key={task.id}>
-                    {dropAt?.status === status && dropAt.index === index && dragged && <DropLine />}
-                    <TaskCard
-                      task={task}
-                      dragging={task.id === dragged}
-                      onOpen={() => onOpen(task)}
-                      onDragStart={() => setDragged(task.id)}
-                      onDragOver={(below) => {
-                        if (task.id === dragged) setDropAt({ status, index: placeOf(task) });
-                        else setDropAt({ status, index: below ? index + 1 : index });
-                      }}
-                      onDragEnd={endDrag}
-                    />
-                  </Fragment>
-                );
-              })}
-              {dropAt?.status === status && dropAt.index === shown.length && dragged && (
-                <DropLine />
+    <div className="relative -mx-4 md:-mx-6">
+      <div
+        ref={ref}
+        onScroll={onScroll}
+        className="flex gap-3 overflow-x-auto px-4 pb-4 md:px-6"
+        role="group"
+        aria-label="Board"
+      >
+        {STATUSES.map((status) => {
+          const column = tasks.filter((task) => task.status === status);
+          const shown = columnOf(status);
+          return (
+            <section
+              key={status}
+              aria-label={STATUS_LABELS[status]}
+              className={cn(
+                "flex min-w-72 flex-1 flex-col gap-2 rounded-xl bg-muted/50 p-2",
+                dropAt?.status === status && "ring-2 ring-ring/40",
               )}
-            </ul>
-          </section>
-        );
-      })}
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (dropAt?.status !== status) setDropAt({ status, index: shown.length });
+              }}
+              onDrop={(event) => drop(event, status)}
+            >
+              <header className="flex items-center gap-2 px-1">
+                <StatusDot status={status} />
+                <h2 className="text-sm font-medium">{STATUS_LABELS[status]}</h2>
+                <span className="text-xs text-muted-foreground">{column.length}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-auto size-8 md:size-6"
+                  aria-label={`New task in ${STATUS_LABELS[status]}`}
+                  onClick={() => onNew({ status, tags: tag ? [tag] : [] })}
+                >
+                  <Plus />
+                </Button>
+              </header>
+              <ul className="flex min-h-12 flex-col gap-2">
+                {column.map((task) => {
+                  const index = shown.findIndex((each) => each.id === task.id);
+                  return (
+                    <Fragment key={task.id}>
+                      {dropAt?.status === status && dropAt.index === index && dragged && (
+                        <DropLine />
+                      )}
+                      <TaskCard
+                        task={task}
+                        dragging={task.id === dragged}
+                        onOpen={() => onOpen(task)}
+                        onDragStart={() => setDragged(task.id)}
+                        onDragOver={(below) => {
+                          if (task.id === dragged) setDropAt({ status, index: placeOf(task) });
+                          else setDropAt({ status, index: below ? index + 1 : index });
+                        }}
+                        onDragEnd={endDrag}
+                      />
+                    </Fragment>
+                  );
+                })}
+                {dropAt?.status === status && dropAt.index === shown.length && dragged && (
+                  <DropLine />
+                )}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+      <ScrollFade side="start" shown={edges.start} />
+      <ScrollFade side="end" shown={edges.end} />
     </div>
+  );
+}
+
+function ScrollFade({ side, shown }: { side: "start" | "end"; shown: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-fade={side}
+      className={cn(
+        "pointer-events-none absolute inset-y-0 w-12 transition-opacity duration-200",
+        side === "start"
+          ? "left-0 bg-gradient-to-r from-background to-transparent"
+          : "right-0 bg-gradient-to-l from-background to-transparent",
+        shown ? "opacity-100" : "opacity-0",
+      )}
+    />
   );
 }
