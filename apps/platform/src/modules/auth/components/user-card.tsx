@@ -1,7 +1,7 @@
 import { ChevronsUpDown, Cog, Command, Logout } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +17,11 @@ import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 
 type Props = {
   name: string;
+  image?: string | null;
   onSignOut: () => void;
 };
 
-export function UserCard({ name, onSignOut }: Props) {
+export function UserCard({ name, image, onSignOut }: Props) {
   const navigate = useNavigate();
   const { setOpen: setCommandOpen } = useCommandMenu();
 
@@ -30,6 +31,7 @@ export function UserCard({ name, onSignOut }: Props) {
         <DropdownMenu>
           <DropdownMenuTrigger render={<SidebarMenuButton size="sm" />}>
             <Avatar size="sm">
+              {image && <AvatarImage src={image} alt="" />}
               <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
                 {initials(name)}
               </AvatarFallback>

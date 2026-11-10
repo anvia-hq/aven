@@ -18,6 +18,7 @@ export function useMembers() {
       name: member.user.name,
       email: member.user.email,
       role: member.role,
+      image: member.user.image ?? null,
       status: "active" as const,
     })),
     ...(organization?.invitations ?? [])
