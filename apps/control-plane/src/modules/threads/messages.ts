@@ -18,6 +18,7 @@ import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
 import { decisionModelService } from "../decision-model/service";
 import { addressingDecider, jevModel } from "../decision-model/jev";
+import { threadMentionsService } from "./mentions";
 import { createAddressingGate, recentOf, recentSenders } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
@@ -209,17 +210,24 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       options: { onPersonsWord?: boolean } = {},
     ): Promise<{ steered: boolean; agentAction?: false }> {
       const known = await acting(organizationId, userId, threadId);
-      if (await keptFromAgent(organizationId, userId, known, body)) {
-        return { steered: false, agentAction: false };
-      }
-      if (
-        runs.isRunning(threadId) &&
-        (await steer(organizationId, userId, threadId, body, known))
-      ) {
-        return { steered: true };
-      }
-      await start(organizationId, userId, threadId, body, { ...options, known });
-      return { steered: false };
+      const delivered = async (): Promise<{ steered: boolean; agentAction?: false }> => {
+        if (await keptFromAgent(organizationId, userId, known, body)) {
+          return { steered: false, agentAction: false };
+        }
+        if (
+          runs.isRunning(threadId) &&
+          (await steer(organizationId, userId, threadId, body, known))
+        ) {
+          return { steered: true };
+        }
+        await start(organizationId, userId, threadId, body, { ...options, known });
+        return { steered: false };
+      };
+      const result = await delivered();
+      await threadMentionsService
+        .record(threadId, userId, body.prompt)
+        .catch((error) => console.error(`mention not recorded for ${threadId}`, error));
+      return result;
     },
 
     async compact(

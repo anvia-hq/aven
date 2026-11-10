@@ -24,6 +24,7 @@ import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
+import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { dragThread } from "../split";
 import { crowdOf } from "../thread-crowd";
@@ -61,11 +62,11 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
   );
 }
 
-function UnreadDot() {
+function UnreadDot({ label = "Finished, not opened yet" }: { label?: string }) {
   return (
     <span
       role="img"
-      aria-label="Finished, not opened yet"
+      aria-label={label}
       className="pointer-events-none absolute top-1/2 left-0 z-10 size-1.5 -translate-y-1/2 rounded-full bg-primary group-data-[collapsible=icon]:hidden"
     />
   );
@@ -177,6 +178,7 @@ export function SidebarThreads() {
   const rename = useRenameThread();
   useFinishedSound();
   const unread = useUnreadThreads();
+  const mentioned = useMentionedThreads();
   const { pairs, partnerOf } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -204,7 +206,11 @@ export function SidebarThreads() {
     return (
       <SidebarMenuItem key={thread.id}>
         {nested && <ForkElbow first={first} last={last} />}
-        {unread.has(thread.id) && <UnreadDot />}
+        {mentioned.has(thread.id) ? (
+          <UnreadDot label="You were mentioned, not opened yet" />
+        ) : (
+          unread.has(thread.id) && <UnreadDot />
+        )}
         <SidebarMenuButton
           render={
             <Link
@@ -252,7 +258,11 @@ export function SidebarThreads() {
     const latest = left.updatedAt > right.updatedAt ? left : right;
     return (
       <SidebarMenuItem key={`pair-${left.id}-${right.id}`} data-slot="split-pair">
-        {(unread.has(left.id) || unread.has(right.id)) && <UnreadDot />}
+        {mentioned.has(left.id) || mentioned.has(right.id) ? (
+          <UnreadDot label="You were mentioned, not opened yet" />
+        ) : (
+          (unread.has(left.id) || unread.has(right.id)) && <UnreadDot />
+        )}
         <SidebarMenuButton
           render={
             <Link

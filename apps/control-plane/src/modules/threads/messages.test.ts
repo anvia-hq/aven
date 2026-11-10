@@ -12,6 +12,7 @@ import { encryptSecret } from "../../crypto";
 import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "./messages";
+import { threadMentionsService } from "./mentions";
 import { ThreadNotFoundError, threadsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -298,6 +299,32 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
     expect(sent).toEqual({ steered: true });
     expect(steered).toEqual([toRandy]);
     expect(asked).toEqual([]);
+  });
+
+  test("a message that fails to send leaves no mention behind", async () => {
+    const randyId = `${userId}-randy`;
+    await db.insert(users).values({ id: randyId, name: "Randy", email: `${randyId}@aven.test` });
+    const driven = await thread(7);
+    const failing = createThreadMessages(
+      {
+        isRunning: () => false,
+        start: async () => {
+          throw new Error("no model");
+        },
+        latest: async () => ({ messages: [], hidden: 0 }),
+      } as never,
+      async () => ({ agentAction: true, by: "model" }),
+    );
+    await expect(
+      failing.send(orgA, userId, driven.id, { prompt: `@[Randy](user:${randyId}) look` }),
+    ).rejects.toThrow("no model");
+    expect(await threadMentionsService.waiting(orgA, randyId)).toEqual([]);
+
+    await messages(true).send(orgA, userId, driven.id, {
+      prompt: `@[Randy](user:${randyId}) look`,
+    });
+    expect(await threadMentionsService.waiting(orgA, randyId)).toEqual([driven.id]);
+    await db.delete(users).where(eq(users.id, randyId));
   });
 
   test("a message with no mention is asked of the gate too while multiplayer is on", async () => {
