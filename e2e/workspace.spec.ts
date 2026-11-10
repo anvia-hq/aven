@@ -89,7 +89,11 @@ test.describe("settings", () => {
 
     await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
     await userCard.getByRole("button", { name: /Workspace User/ }).click();
-    await page.getByRole("menu").getByRole("menuitem", { name: "Organization settings" }).click();
+    const organizationRow = page
+      .getByRole("menu")
+      .getByRole("menuitem", { name: /Organization settings/ });
+    await expect(organizationRow).toHaveAccessibleName(/Organization settings, .+, \d+ members?/);
+    await organizationRow.click();
     await expect(page).toHaveURL(/\/settings\/members$/);
 
     await page.getByRole("link", { name: "Aven", exact: true }).click();

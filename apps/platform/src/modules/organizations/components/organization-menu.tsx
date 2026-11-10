@@ -16,7 +16,7 @@ export function OrganizationMenu() {
   return (
     <>
       <DropdownMenuItem
-        aria-label="Organization settings"
+        aria-label={`Organization settings, ${name}, ${memberCount} ${memberCount === 1 ? "member" : "members"}`}
         className="h-12 gap-3 px-2"
         onClick={() => navigate({ to: "/settings/members" })}
       >
