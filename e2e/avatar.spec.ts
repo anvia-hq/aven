@@ -46,4 +46,13 @@ test.describe("a person's photo", () => {
     await expect(page.getByText("Could not save the photo")).toBeVisible();
     await expect(page.locator('[data-slot="avatar-image"]')).toHaveCount(0);
   });
+
+  test("refuses an oversized upload before reading it", async ({ page }) => {
+    await registerUser(page, "photo", "Photo Person");
+    const response = await page.request.put("/api/profile/avatar", {
+      data: Buffer.alloc(300 * 1024),
+      headers: { "content-type": "image/png" },
+    });
+    expect(response.status()).toBe(422);
+  });
 });
