@@ -1,10 +1,10 @@
+import { cn } from "cn";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
-import { isStale, machineMetrics } from "../machine-metrics";
-import type { MachineMetric, Runtime } from "../types";
-import { MeterBar } from "./meter-bar";
+import { busiestMetric, isStale, machineMetrics, meterLevel } from "../machine-metrics";
+import type { MachineMetric, MeterLevel, Runtime } from "../types";
 import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
 const sandboxesLine = (count: number) =>
@@ -33,7 +33,20 @@ function missing(runtime: Runtime) {
   return { short: "Waiting…", reason: "Waiting for the runner to report its load." };
 }
 
-function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }) {
+const pill: Record<MeterLevel, string> = {
+  low: "bg-meter-low/15",
+  busy: "bg-meter/15",
+  high: "bg-destructive/15",
+};
+
+const dot: Record<MeterLevel, string> = {
+  low: "bg-meter-low",
+  busy: "bg-meter",
+  high: "bg-destructive",
+};
+
+function Busiest({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }) {
+  const level = meterLevel(metric.percent);
   return (
     <span
       role="meter"
@@ -42,18 +55,18 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
       aria-valuemax={100}
       aria-valuenow={metric.percent ?? undefined}
       aria-valuetext={metric.percent === null ? "unknown" : `${metric.percent}%`}
-      className="flex shrink-0 items-center gap-[3px]"
+      data-slot="machine-busiest"
+      data-level={level}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] tabular-nums",
+        pill[level],
+      )}
     >
-      <MeterBar percent={metric.percent} />
-      <span className="flex w-[22px] flex-col gap-px leading-none">
-        <span className="text-[8px] font-medium tracking-wide text-muted-foreground/80">
-          {metric.short}
-        </span>
-        <span className="text-[10px] tabular-nums">
-          {metric.percent ?? "–"}
-          {metric.percent !== null && <span className="text-[7px] text-muted-foreground">%</span>}
-        </span>
+      <span aria-hidden className={cn("size-1.5 rounded-full", dot[level])} />
+      <span aria-hidden className="text-[8px] font-medium tracking-wide text-muted-foreground">
+        {metric.short}
       </span>
+      <span aria-hidden>{metric.percent === null ? "–" : `${metric.percent}%`}</span>
     </span>
   );
 }
@@ -61,6 +74,7 @@ function Metric({ metric, runtime }: { metric: MachineMetric; runtime: Runtime }
 export function MachineRow({ runtime }: { runtime: Runtime }) {
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
   const metrics = stats ? machineMetrics(stats) : [];
+  const busiest = busiestMetric(metrics);
   const gap = missing(runtime);
 
   return (
@@ -79,12 +93,8 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
           }
         >
           <span className="min-w-0 flex-1 truncate">{runtime.name}</span>
-          {stats ? (
-            <span className="flex shrink-0 items-center gap-1.5">
-              {metrics.map((metric) => (
-                <Metric key={metric.key} metric={metric} runtime={runtime} />
-              ))}
-            </span>
+          {stats && busiest ? (
+            <Busiest metric={busiest} runtime={runtime} />
           ) : (
             <span className="shrink-0 text-[11px] text-muted-foreground">{gap.short}</span>
           )}

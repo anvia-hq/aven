@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { isStale, machineMetrics, meterLevel, STATS_STALE_MS } from "./machine-metrics";
+import {
+  busiestMetric,
+  isStale,
+  machineMetrics,
+  meterLevel,
+  STATS_STALE_MS,
+} from "./machine-metrics";
 
 const stats = {
   cores: 4,
@@ -59,5 +65,28 @@ describe("meterLevel", () => {
 
   test("is low for a reading the machine could not give", () => {
     expect(meterLevel(null)).toBe("low");
+  });
+});
+
+describe("busiestMetric", () => {
+  test("is the metric with the highest percent, the first one on a tie", () => {
+    expect(busiestMetric(machineMetrics(stats))?.key).toBe("disk");
+    expect(busiestMetric(machineMetrics({ ...stats, cpuPercent: 76 }))?.key).toBe("cpu");
+  });
+
+  test("skips a figure that is not known, and falls back to the first when none is", () => {
+    const unknownCpu = machineMetrics({ ...stats, cpuPercent: null, diskTotalBytes: 0 });
+    expect(busiestMetric(unknownCpu)?.key).toBe("memory");
+    const none = machineMetrics({
+      ...stats,
+      cpuPercent: null,
+      memoryTotalBytes: 0,
+      diskTotalBytes: 0,
+    });
+    expect(busiestMetric(none)?.key).toBe("cpu");
+  });
+
+  test("has nothing to show for no metrics", () => {
+    expect(busiestMetric([])).toBeUndefined();
   });
 });

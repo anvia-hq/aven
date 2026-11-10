@@ -1,12 +1,12 @@
 import { Button } from "@/components/button";
+import { FLOATING_BUTTON } from "@/lib/floating-button";
 
 import type { ThreadDiff } from "../types";
 import { DiffStat } from "./diff-stat";
 
 type Props = { diff: ThreadDiff; onOpen: () => void };
 
-const PILL =
-  "h-7 gap-1 rounded-lg border bg-background px-2.5 font-mono text-[0.8rem] font-normal shadow-md";
+const PILL = `h-7 gap-1 rounded-lg border px-2.5 font-mono text-[0.8rem] font-normal ${FLOATING_BUTTON}`;
 
 export function ChangesBadge({ diff, onOpen }: Props) {
   if (!diff.loaded) {

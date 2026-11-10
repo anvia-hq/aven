@@ -1,6 +1,7 @@
 import { ExternalLink } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
+import { FLOATING_BUTTON } from "@/lib/floating-button";
 import { ButtonGroup } from "@/components/button-group";
 import {
   DropdownMenu,
@@ -24,7 +25,7 @@ export function PullRequestChip({ pullRequests }: Props) {
       <Button
         variant="secondary"
         size="sm"
-        className="shadow-md"
+        className={FLOATING_BUTTON}
         nativeButton={false}
         role="link"
         render={<a href={newest.url} target="_blank" rel="noreferrer" />}
@@ -39,7 +40,7 @@ export function PullRequestChip({ pullRequests }: Props) {
               <Button
                 variant="secondary"
                 size="sm"
-                className="shadow-md"
+                className={FLOATING_BUTTON}
                 title="Every pull request of this thread"
               />
             }
