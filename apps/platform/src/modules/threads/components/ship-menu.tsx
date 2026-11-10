@@ -1,6 +1,7 @@
 import { ChevronDown, Plus } from "@mynaui/icons-react";
 
 import { Button } from "@/components/button";
+import { FLOATING_BUTTON } from "@/lib/floating-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,7 @@ export function ShipMenu({ disabled, onNew }: Props) {
           <Button
             variant="outline"
             size="icon-sm"
-            className="shadow-md"
+            className={FLOATING_BUTTON}
             aria-label="More ways to ship"
           />
         }

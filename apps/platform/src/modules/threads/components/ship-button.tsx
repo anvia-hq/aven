@@ -2,6 +2,7 @@ import { GitPullRequest, Github, Refresh, Rocket, Sparkles } from "@mynaui/icons
 
 import { Button } from "@/components/button";
 import { ButtonGroup } from "@/components/button-group";
+import { FLOATING_BUTTON } from "@/lib/floating-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 
 import type { ShipAct } from "../types";
@@ -27,7 +28,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       <Button
         variant="outline"
         size="sm"
-        className="shadow-md"
+        className={FLOATING_BUTTON}
         title={action.reason}
         onClick={onRetry}
       >
@@ -41,7 +42,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       <Button
         variant="outline"
         size="sm"
-        className="shadow-md"
+        className={FLOATING_BUTTON}
         disabled={action.disabled}
         onClick={onSetUp}
       >
@@ -69,7 +70,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
     return (
       <Tooltip>
         <TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
-          <Button variant="outline" size="sm" className="shadow-md" disabled>
+          <Button variant="outline" size="sm" className={FLOATING_BUTTON} disabled>
             <Rocket />
             {action.label}
           </Button>
@@ -83,7 +84,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       <Button
         variant="outline"
         size="sm"
-        className="shadow-md"
+        className={FLOATING_BUTTON}
         disabled={action.disabled}
         onClick={() => onShip()}
       >
@@ -98,7 +99,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       <Button
         variant={action.label === "Ship" ? "default" : "outline"}
         size="sm"
-        className="shadow-md"
+        className={action.label === "Ship" ? "shadow-md" : FLOATING_BUTTON}
         disabled={action.disabled}
         onClick={() => onShip()}
       >
