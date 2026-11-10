@@ -15,6 +15,10 @@ test.describe("a thread's message draft", () => {
     await registerUser(page, "drf", "Draft User");
     const { child, threadId } = await threadOnFakeRunner(page);
     runner = child;
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
     const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
     const made = await page.request.post("/api/threads", { data: { projectId: projects[0]!.id } });
     const otherId = ((await made.json()) as { id: string }).id;
