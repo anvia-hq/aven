@@ -59,6 +59,7 @@ ws.binaryType = "arraybuffer";
 const viewers = new Map<string, FakeDesktop>();
 const terminals = new Map<string, { line: string }>();
 const ports = new Map<string, { request: string; answered: boolean }>();
+const realPorts = new Map<string, { write(bytes: Uint8Array): number; end(): void }>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
 
@@ -158,6 +159,11 @@ ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
     if (!frame) return;
+    const real = realPorts.get(frame.viewerId);
+    if (real) {
+      real.write(frame.payload);
+      return;
+    }
     const port = ports.get(frame.viewerId);
     if (port) {
       serveFakeApp(frame.viewerId, port, new TextDecoder().decode(frame.payload));
@@ -214,6 +220,32 @@ ws.onmessage = ({ data }) => {
       return;
     }
     event({ type: "port.open", port });
+    if (config.realPort !== undefined && port === config.realPort) {
+      void Bun.connect({
+        hostname: "127.0.0.1",
+        port,
+        socket: {
+          data: (_socket, bytes) => ws.send(encodeViewerFrame(viewerId, new Uint8Array(bytes))),
+          close: () => {
+            if (realPorts.delete(viewerId)) {
+              send({ type: "port.closed", viewerId, reason: "The port closed the connection" });
+            }
+          },
+          error: () => {
+            if (realPorts.delete(viewerId)) {
+              send({ type: "port.closed", viewerId, reason: "connection refused" });
+            }
+          },
+        },
+      }).then(
+        (socket) => {
+          realPorts.set(viewerId, socket);
+          send({ type: "port.opened", viewerId });
+        },
+        () => send({ type: "port.closed", viewerId, reason: "connection refused" }),
+      );
+      return;
+    }
     if (port !== FAKE_APP_PORT) {
       send({ type: "port.closed", viewerId, reason: "connection refused" });
       return;
@@ -222,6 +254,8 @@ ws.onmessage = ({ data }) => {
     send({ type: "port.opened", viewerId });
   } else if (message.type === "port.close") {
     ports.delete(message.viewerId);
+    realPorts.get(message.viewerId)?.end();
+    realPorts.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.cancel") {
