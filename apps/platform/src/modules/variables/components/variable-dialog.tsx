@@ -16,7 +16,7 @@ import { TextField } from "@/components/text-field";
 
 import { looksLikeEnv } from "../parse-env";
 import { useVariableForm } from "../hooks/use-variable-form";
-import { EnvPaste } from "./env-paste";
+import { VariableRows } from "./variable-rows";
 import {
   MAX_NAME_LENGTH,
   MAX_VALUE_LENGTH,
@@ -36,8 +36,8 @@ export function VariableDialog({ scope, variable, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useVariableForm(scope, variable, () => setOpen(false));
   const editing = variable !== undefined;
-  const bulk = form.pasted !== null;
-  const count = form.parsed.entries.length;
+  const bulk = form.rows !== null;
+  const count = form.count;
   let submitLabel = "Add variable";
   if (editing) submitLabel = "Save changes";
   else if (bulk) submitLabel = count === 1 ? "Add 1 variable" : `Add ${count} variables`;
@@ -61,11 +61,14 @@ export function VariableDialog({ scope, variable, label }: Props) {
             </DialogDescription>
           </DialogHeader>
           {bulk && (
-            <EnvPaste
-              value={form.pasted ?? ""}
-              parsed={form.parsed}
+            <VariableRows
+              states={form.states}
+              issues={form.issues}
               secret={form.secret}
-              onChange={form.setPasted}
+              onChange={form.changeRow}
+              onRemove={form.removeRow}
+              onAdd={form.addRow}
+              onPaste={form.pasteIntoRow}
             />
           )}
           {!editing && !bulk && (
@@ -75,7 +78,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
                 const text = event.clipboardData.getData("text");
                 if (!looksLikeEnv(text)) return;
                 event.preventDefault();
-                form.setPasted(text);
+                form.startRows(text);
               }}
               name="name"
               required
@@ -103,7 +106,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
               variant="ghost"
               size="xs"
               className="self-start text-muted-foreground"
-              onClick={() => form.setPasted("")}
+              onClick={() => form.startRows()}
             >
               Paste a .env
             </Button>
@@ -124,7 +127,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
             </p>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={form.submitting || (bulk && count === 0)}>
+            <Button type="submit" disabled={form.submitting || (bulk && !form.savable)}>
               {submitLabel}
             </Button>
           </DialogFooter>
