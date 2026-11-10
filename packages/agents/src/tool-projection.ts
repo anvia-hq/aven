@@ -5,6 +5,7 @@ import {
   SECRET_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
+  VIEW_IMAGE_TOOL_NAME,
   SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 
@@ -37,7 +38,13 @@ const PATH_TOOLS = new Set<string>([
   "list_files",
   EDIT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
-] satisfies (SandboxToolName | typeof EDIT_TOOL_NAME | typeof SHOW_IMAGE_TOOL_NAME)[]);
+  VIEW_IMAGE_TOOL_NAME,
+] satisfies (
+  | SandboxToolName
+  | typeof EDIT_TOOL_NAME
+  | typeof SHOW_IMAGE_TOOL_NAME
+  | typeof VIEW_IMAGE_TOOL_NAME
+)[]);
 const artifactTarget = (args: Record<string, unknown>) => {
   const items = Array.isArray(args.items) ? args.items : [];
   return items
