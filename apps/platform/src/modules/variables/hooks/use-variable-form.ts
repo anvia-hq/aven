@@ -1,16 +1,8 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 
-import { toast } from "@/components/toast";
-
 import { parseEnv } from "../parse-env";
 import { canSaveRows, rowStates, rowsAfterPaste, rowsToSave } from "../rows";
-import {
-  isReservedName,
-  type EnvIssue,
-  type Variable,
-  type VariableRow,
-  type VariableScope,
-} from "../types";
+import { type EnvIssue, type Variable, type VariableRow, type VariableScope } from "../types";
 import { useVariables } from "./use-variables";
 
 export function useVariableForm(
@@ -78,14 +70,6 @@ export function useVariableForm(
     }
     const data = new FormData(formRef.current ?? undefined);
     const name = variable?.name ?? String(data.get("name") ?? "").trim();
-    if (isReservedName(name)) {
-      toast.add({
-        title: "Could not save variable",
-        description: `${name} is reserved for Aven's own use`,
-        type: "error",
-      });
-      return;
-    }
     setSubmitting(true);
     const saved = await save({ name, value: String(data.get("value") ?? ""), secret });
     setSubmitting(false);
