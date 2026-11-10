@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, spyOn, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { encryptSecret } from "../../crypto";
 
 import { decisionModelService } from "../decision-model/service";
+import { providersService } from "../providers/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "./messages";
 import { threadMentionsService } from "./mentions";
@@ -142,6 +143,22 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
 
     await messages(false).send(orgA, userId, thread.id, { prompt: "three" });
     expect(githubOf(started[2]!.extras)).toMatchObject({ token: "ghu_creator", login: "creator" });
+  });
+
+  test("a teammate's run looks up the teammate's providers and the creator's the creator's", async () => {
+    const thread = await driven();
+    const lookedUp: string[] = [];
+    const spy = spyOn(providersService, "forRun").mockImplementation(async (id: string) => {
+      lookedUp.push(id);
+      return undefined as never;
+    });
+    try {
+      await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
+      await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(lookedUp).toEqual([mateId, userId]);
   });
 
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {

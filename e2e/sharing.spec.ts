@@ -105,12 +105,14 @@ test.describe("sharing a thread", () => {
     await dialog.getByRole("switch", { name: "Let teammates message this thread" }).click();
     await expect(page.getByText(/Teammates can message it for 7 days/)).toBeVisible();
     await expect(
-      dialog.getByText(/It runs with your model, account and bill, and without your personal/),
+      dialog.getByText(
+        /A message from a teammate runs on their own model and bill, and without your personal/,
+      ),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Done" }).click();
 
     await mate.page.reload();
-    await expect(mate.page.getByText(/Model, memory and bill are/)).toContainText("Owner Person");
+    await expect(mate.page.getByText(/Memory and workspace are/)).toContainText("Owner Person");
     await expect(mate.page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
     await expect(
       mate.page.getByRole("button", { name: /^(Share|Shared to workspace)$/ }),

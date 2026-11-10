@@ -155,7 +155,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     const project = await requireLiveProject(organizationId, thread.projectId);
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
     const attachments = prepareAttachments(files);
-    const model = await resolveModel(ownerId, driverId === undefined ? selection : {});
+    const model = await resolveModel(driverId ?? ownerId, selection);
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
@@ -257,7 +257,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       if (driverId !== undefined && asksForSecret(continuation)) {
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
-      const model = await resolveModel(ownerId, driverId === undefined ? selection : {});
+      const model = await resolveModel(driverId ?? ownerId, selection);
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,

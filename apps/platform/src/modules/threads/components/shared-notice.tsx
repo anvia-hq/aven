@@ -12,10 +12,10 @@ export function SharedNotice({ thread, driven }: { thread: Thread; driven: boole
           <>
             <span className="font-medium text-foreground">Multiplayer is on</span>
             <span className="mx-1.5">·</span>
-            Model, memory and bill are{" "}
-            <span className="font-medium text-foreground">{thread.createdByName}</span>'s
+            Your messages use your own model, bill and GitHub
             <span className="mx-1.5">·</span>
-            Commits and pull requests are yours
+            Memory and workspace are{" "}
+            <span className="font-medium text-foreground">{thread.createdByName}</span>'s
           </>
         ) : (
           <>
