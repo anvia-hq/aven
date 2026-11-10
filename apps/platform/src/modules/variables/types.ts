@@ -41,3 +41,7 @@ export const isReservedName = (name: string) => RESERVED.test(name);
 export type ParsedEntry = { name: string; value: string };
 export type EnvIssue = { line: number; text: string; reason: string };
 export type ParsedEnv = { entries: ParsedEntry[]; issues: EnvIssue[] };
+
+export type VariableRow = { id: number; name: string; value: string };
+export type RowProblem = "name" | "reserved" | "duplicate" | "long";
+export type RowState = { row: VariableRow; problem: RowProblem | null; skipped: boolean };
