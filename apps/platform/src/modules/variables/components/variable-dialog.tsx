@@ -14,17 +14,9 @@ import { Form } from "@/components/form";
 import { Switch } from "@/components/switch";
 import { TextField } from "@/components/text-field";
 
-import { looksLikeEnv } from "../parse-env";
 import { useVariableForm } from "../hooks/use-variable-form";
 import { VariableRows } from "./variable-rows";
-import {
-  MAX_NAME_LENGTH,
-  MAX_VALUE_LENGTH,
-  MIN_REDACTED_LENGTH,
-  NAME_PATTERN,
-  type Variable,
-  type VariableScope,
-} from "../types";
+import { MAX_VALUE_LENGTH, MIN_REDACTED_LENGTH, type Variable, type VariableScope } from "../types";
 
 type Props = {
   scope: VariableScope;
@@ -40,7 +32,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
   const count = form.count;
   let submitLabel = "Add variable";
   if (editing) submitLabel = "Save changes";
-  else if (bulk) submitLabel = count === 1 ? "Add 1 variable" : `Add ${count} variables`;
+  else if (count > 1) submitLabel = `Add ${count} variables`;
 
   return (
     <Dialog
@@ -51,7 +43,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
       }}
     >
       <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <Form ref={form.formRef} onSubmit={form.submit} className="flex min-w-0 flex-col gap-4">
           <DialogHeader>
             <DialogTitle>{editing ? `Edit ${variable.name}` : "Add a variable"}</DialogTitle>
@@ -71,23 +63,6 @@ export function VariableDialog({ scope, variable, label }: Props) {
               onPaste={form.pasteIntoRow}
             />
           )}
-          {!editing && !bulk && (
-            <TextField
-              label="Name"
-              onPaste={(event) => {
-                const text = event.clipboardData.getData("text");
-                if (!looksLikeEnv(text)) return;
-                event.preventDefault();
-                form.startRows(text);
-              }}
-              name="name"
-              required
-              autoComplete="off"
-              pattern={NAME_PATTERN}
-              maxLength={MAX_NAME_LENGTH}
-              placeholder="DATABASE_URL"
-            />
-          )}
           {!bulk && (
             <TextField
               label="Value"
@@ -99,17 +74,6 @@ export function VariableDialog({ scope, variable, label }: Props) {
               defaultValue={variable?.value ?? undefined}
               placeholder={editing && variable.secret ? "Enter the value again" : undefined}
             />
-          )}
-          {!editing && !bulk && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="self-start text-muted-foreground"
-              onClick={() => form.startRows()}
-            >
-              Paste a .env
-            </Button>
           )}
           <div className="flex items-center gap-2 text-sm">
             <Switch

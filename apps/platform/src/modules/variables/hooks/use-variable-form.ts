@@ -22,22 +22,16 @@ export function useVariableForm(
   const [submitting, setSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const { save, saveMany } = useVariables(scope);
-  const [rows, setRows] = useState<VariableRow[] | null>(null);
-  const [issues, setIssues] = useState<EnvIssue[]>([]);
   const lastId = useRef(0);
   const nextId = () => ++lastId.current;
+  const blankRow = (): VariableRow => ({ id: nextId(), name: "", value: "" });
+  const [rows, setRows] = useState<VariableRow[] | null>(() =>
+    variable === undefined ? [blankRow()] : null,
+  );
+  const [issues, setIssues] = useState<EnvIssue[]>([]);
   const states = useMemo(() => rowStates(rows ?? [], secret), [rows, secret]);
   const entries = useMemo(() => rowsToSave(states), [states]);
   const savable = canSaveRows(states);
-
-  const blankRow = (): VariableRow => ({ id: nextId(), name: "", value: "" });
-
-  const startRows = (text = "") => {
-    const parsed = parseEnv(text);
-    setIssues(parsed.issues);
-    const started = parsed.entries.map((entry) => ({ id: nextId(), ...entry }));
-    setRows(started.length > 0 ? started : [blankRow()]);
-  };
 
   const changeRow = (id: number, change: { name?: string; value?: string }) =>
     setRows(
@@ -65,7 +59,7 @@ export function useVariableForm(
 
   const reset = () => {
     setSecret(variable?.secret ?? false);
-    setRows(null);
+    setRows(variable === undefined ? [blankRow()] : null);
     setIssues([]);
   };
 
@@ -113,7 +107,6 @@ export function useVariableForm(
     issues,
     count: entries.length,
     savable,
-    startRows,
     changeRow,
     removeRow,
     addRow,
