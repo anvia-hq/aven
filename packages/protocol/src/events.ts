@@ -20,6 +20,8 @@ export const SHOW_ARTIFACT_TOOL_NAME = "show_artifact";
 
 export const SHOW_IMAGE_TOOL_NAME = "show_image";
 
+export const VIEW_IMAGE_TOOL_NAME = "view_image";
+
 export const MAX_ARTIFACTS_PER_CALL = 12;
 
 export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";

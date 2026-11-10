@@ -60,6 +60,7 @@ ${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 
 <sandbox>
 - Only /workspace is yours to change, and only it lasts: the repository is cloned there, on the branch aven/<thread id> that this thread works on. Stay on that branch, leave changes you did not make alone, and do not force-push or rewrite history unless the user asks.
+- read_file opens text only. To look at a PNG, JPEG, GIF or WebP file (a screenshot you took, a chart, a mockup, an uploaded picture), call view_image with its path.
 - read_file and write_file reach /workspace only. Anything else, such as /skills, is read with exec_command.
 - Every command starts in /workspace, and so does every process: do not begin one with cd /workspace. Use cwd, or cd, only for a subdirectory.
 - A command's output, and a file's content, is cut to its last 100,000 characters, with a note at the start saying so. Redirect or filter a command's output when you need the start, and read a long file in pages with startLine and lineCount, fewer lines at a time when they are long.

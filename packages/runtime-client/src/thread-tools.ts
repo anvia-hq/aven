@@ -3,6 +3,7 @@ import { createSandboxTools, type SandboxRuntime } from "@anvia/sandbox";
 import { SANDBOX_TOOL_NAMES } from "@aven/agents/sandbox-tools";
 import { createEditTool } from "@aven/agents/tools/edit";
 import { createShowArtifactTool } from "@aven/agents/tools/show-artifact";
+import { createViewImageTool } from "@aven/agents/tools/view-image";
 
 import type { ArtifactStore } from "./artifacts";
 import { withBackground } from "./background-command";
@@ -26,6 +27,7 @@ export function sandboxTools(
       tool.name === "exec_command" && start ? withBackground(tool, start) : tool,
     ),
     createEditTool(sandbox),
+    createViewImageTool(sandbox),
     createShowArtifactTool({
       readFile: (options) => sandbox.readFile(options),
       save: (bytes, mediaType) => thread.artifacts.save(thread.id, bytes, mediaType),
