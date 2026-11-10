@@ -10,6 +10,7 @@ import {
   scheduler,
   threadWatcher,
   actionsService,
+  environmentService,
   shipService,
   threadMessages,
   putAwayThread,
@@ -24,6 +25,7 @@ import { cockpitRouter } from "./modules/cockpit/router";
 import { desktopRouter } from "./modules/desktop/router";
 import { diffRouter } from "./modules/diff/router";
 import { actionsRouter } from "./modules/actions/router";
+import { environmentRouter } from "./modules/environment/router";
 import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { processesRouter } from "./modules/processes/router";
@@ -63,6 +65,7 @@ export const app = new Elysia()
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))
   .use(actionsRouter(actionsService))
+  .use(environmentRouter(environmentService))
   .use(filesRouter(runtimeHub))
   .use(processesRouter(runtimeHub))
   .use(githubRouter())

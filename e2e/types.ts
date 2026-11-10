@@ -14,6 +14,7 @@ export type FakeRunnerSwitch =
   | "FAKE_AVEN_FILES"
   | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
+  | "FAKE_SNAPSHOT_FAILS"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
   | "FAKE_STEER_APPLIES_AFTER"
@@ -53,4 +54,5 @@ export type FakeRunnerConfig = {
   avenFiles: readonly string[];
   branch: string;
   backgroundProcesses: boolean;
+  snapshotFailure: string | undefined;
 };

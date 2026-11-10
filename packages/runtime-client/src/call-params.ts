@@ -10,6 +10,7 @@ import type {
   FilesSearchParams,
   MessageMention,
   ActionRunParams,
+  EnvironmentSaveParams,
   ProcessesCallParams,
   RunnerUpdateParams,
   SandboxReleaseParams,
@@ -105,4 +106,13 @@ export function steerParams(params: unknown): SteerParams {
     throw invalid();
   if (mentions !== undefined && !Array.isArray(mentions)) throw invalid();
   return { runId, steerId, prompt, mentions: mentions as MessageMention[] | undefined };
+}
+
+export function environmentSaveParams(params: unknown): EnvironmentSaveParams {
+  const { threadId, organizationId, access } = asRecord(params);
+  if (typeof threadId !== "string" || typeof organizationId !== "string") throw invalid();
+  const { cloneUrl, defaultBranch, token } = asRecord(access);
+  if (typeof cloneUrl !== "string" || typeof defaultBranch !== "string") throw invalid();
+  if (typeof token !== "string") throw invalid();
+  return { threadId, organizationId, access: { cloneUrl, defaultBranch, token } };
 }

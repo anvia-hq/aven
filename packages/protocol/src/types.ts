@@ -413,6 +413,16 @@ export type ArtifactContent = { mediaType: string; data: string };
 
 export type ThreadAction = { name: string; kind: "run" | "prompt" };
 
+export type EnvironmentCallMethod = "environment.save";
+
+export type EnvironmentSaveParams = {
+  threadId: string;
+  organizationId: string;
+  access: RepoAccess;
+};
+
+export type EnvironmentSaveResult = { image: string };
+
 export type ActionsCallMethod = "actions.run";
 
 export type ActionRunParams = { threadId: string; command: string };
@@ -495,6 +505,7 @@ export type RunnerCallMethod =
   | ArtifactsCallMethod
   | ProcessesCallMethod
   | ActionsCallMethod
+  | EnvironmentCallMethod
   | RunCallMethod
   | SandboxCallMethod
   | DockerCallMethod

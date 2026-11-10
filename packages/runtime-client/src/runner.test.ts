@@ -263,6 +263,62 @@ describe("startRuntime processes", () => {
   });
 });
 
+describe("startRuntime saving an environment", () => {
+  const access = {
+    cloneUrl: "https://example.test/acme/app.git",
+    defaultBranch: "main",
+    token: "t",
+  };
+
+  test("saves the thread's environment for the organization and repository it is told, and refuses bad parameters", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const saved: { thread: unknown; access: unknown }[] = [];
+    const { plane } = connect({
+      sandbox: {
+        ...workspaces,
+        saveEnvironment: async (thread: unknown, repo: unknown) => {
+          saved.push({ thread, access: repo });
+          return { image: "aven-env-abc" };
+        },
+      } as never,
+    });
+    await until(() => plane.received.some((m) => m.type === "hello"));
+    const ask = async (id: string, params: object) => {
+      plane.send({ type: "call", id, method: "environment.save", params } as never);
+      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      return plane.received.find((m) => m.type === "reply" && m.id === id);
+    };
+
+    expect(await ask("a", { threadId: "t1", organizationId: "org-1", access })).toMatchObject({
+      ok: true,
+      result: { image: "aven-env-abc" },
+    });
+    expect(saved).toEqual([{ thread: { id: "t1", organizationId: "org-1" }, access }]);
+    expect(await ask("b", { threadId: "t1", access })).toMatchObject({
+      ok: false,
+      error: "Invalid parameters",
+    });
+  });
+
+  test("says so when the runner cannot save one", async () => {
+    const workspaces = directoryWorkspaces();
+    cleanups.push(() => workspaces.dispose());
+    const { plane } = connect({ sandbox: workspaces });
+    await until(() => plane.received.some((m) => m.type === "hello"));
+    plane.send({
+      type: "call",
+      id: "x",
+      method: "environment.save",
+      params: { threadId: "t1", organizationId: "org-1", access },
+    } as never);
+    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "x"));
+    expect(plane.received.find((m) => m.type === "reply" && m.id === "x")).toMatchObject({
+      ok: false,
+    });
+  });
+});
+
 describe("startRuntime host stats", () => {
   test("tells the control plane how loaded the machine is, as soon as it connects and again after", async () => {
     const workspaces = directoryWorkspaces();

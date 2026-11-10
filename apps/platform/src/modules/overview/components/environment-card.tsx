@@ -1,16 +1,23 @@
-import { Folder, GitBranch, Servers } from "@mynaui/icons-react";
+import { Camera, Folder, GitBranch, Servers } from "@mynaui/icons-react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
+import { Button } from "@/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { shortTimeAgo } from "@/lib/format";
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 import { ContinueThreadDialog } from "@/modules/threads/components/continue-thread-dialog";
 import type { Thread } from "@/modules/threads/types";
 
+import type { SnapshotState } from "../types";
+import { useEnvironmentSnapshot } from "../hooks/use-environment-snapshot";
 import { OverviewCard } from "./overview-card";
 
 export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: boolean }) {
   const { project } = useProject(thread.projectId);
   const { runtime } = useRuntime(thread.runtimeId);
+  const { loaded, snapshot, busy, take } = useEnvironmentSnapshot(thread.id);
+  const canSnapshot = owned && thread.state !== "archived";
 
   return (
     <OverviewCard title="Environment">
@@ -33,6 +40,35 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
+      {canSnapshot && (
+        <Row
+          icon={<Camera />}
+          action={
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="ml-auto shrink-0"
+                    disabled={!loaded || busy || !runtime?.online}
+                    onClick={() => void take()}
+                  />
+                }
+              >
+                {busy ? "Taking…" : "Take snapshot"}
+              </TooltipTrigger>
+              <TooltipContent>
+                Run .aven/setup in a fresh container and keep the result for new threads
+              </TooltipContent>
+            </Tooltip>
+          }
+        >
+          <span className="text-muted-foreground" data-slot="snapshot-state">
+            {loaded ? snapshotLine(snapshot) : "Checking for a snapshot…"}
+          </span>
+        </Row>
+      )}
     </OverviewCard>
   );
 }
@@ -53,4 +89,13 @@ function Row({
       {action}
     </p>
   );
+}
+
+function snapshotLine(snapshot: SnapshotState | null) {
+  if (snapshot?.state === "running") return "Taking a snapshot…";
+  if (snapshot?.savedAt) {
+    const ago = shortTimeAgo(snapshot.savedAt);
+    return ago === "now" ? "Snapshot just now" : `Snapshot ${ago} ago`;
+  }
+  return "No snapshot yet";
 }
