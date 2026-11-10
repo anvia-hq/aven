@@ -757,6 +757,27 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   font-family: inherit;
 }
 
+/* A heading in a page is smaller than BlockNote's own 3em, 2em and 1.3em: the page's title is 1.75rem
+   and its headings sit under it. The spacing after a heading follows the previous block's level. */
+.bn-shadcn .bn-editor [data-content-type="heading"] {
+  --level: 1.5em;
+}
+.bn-shadcn .bn-editor [data-content-type="heading"][data-level="2"] {
+  --level: 1.25em;
+}
+.bn-shadcn .bn-editor [data-content-type="heading"][data-level="3"] {
+  --level: 1.1em;
+}
+.bn-shadcn .bn-editor [data-prev-level="1"] {
+  --prev-level: 1.5em;
+}
+.bn-shadcn .bn-editor [data-prev-level="2"] {
+  --prev-level: 1.25em;
+}
+.bn-shadcn .bn-editor [data-prev-level="3"] {
+  --prev-level: 1.1em;
+}
+
 /* A cockpit page (decision 0106): its column's side room, which the editor's text lines up with
    and its handles sit in, as Notion's do. */
 .cockpit-doc {
