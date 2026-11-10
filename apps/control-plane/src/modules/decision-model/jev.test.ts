@@ -11,7 +11,7 @@ const input = {
   recent: [],
 };
 
-function modelAnswering(probabilities: Record<string, number>, delayMs = 0): AddressingModel {
+function modelAnswering(person: number, delayMs = 0): AddressingModel {
   return {
     provider: "fake",
     modelId: "fake",
@@ -34,26 +34,37 @@ function modelAnswering(probabilities: Record<string, number>, delayMs = 0): Add
           });
         });
       }
-      const answers = Object.fromEntries(
-        Object.keys(request.questions).map((name) => [
-          name,
-          { type: "check", probability: probabilities[name] ?? 0.5 },
-        ]),
-      );
+      const answers = {
+        addressee: {
+          type: "choice",
+          choice: person >= 0.5 ? "person" : "agent",
+          probabilities: { agent: 1 - person, person },
+          confidence: Math.max(person, 1 - person),
+        },
+      };
       return { answers, rawResponse: null } as never;
     },
   };
 }
 
 describe("asking the decision model who a message is for (decision 0191)", () => {
-  test("both questions are answered and read as scores", async () => {
-    const decide = addressingDecider(modelAnswering({ toAgent: 0.07, toPerson: 0.98 }));
-    expect(await decide(input)).toEqual({ toAgent: 0.07, toPerson: 0.98 });
+  test("one choice between the agent and a person is asked, and its person share is the score", async () => {
+    const asked: string[][] = [];
+    const model = modelAnswering(0.98);
+    const decide = addressingDecider({
+      ...model,
+      decision: (request, options) => {
+        asked.push(Object.keys(request.questions));
+        return model.decision(request, options);
+      },
+    });
+    expect(await decide(input)).toEqual({ toPerson: 0.98 });
+    expect(asked).toEqual([["addressee"]]);
   });
 
   test("a model that fails or is too slow answers nothing, so the caller falls back", async () => {
     const failing: AddressingModel = {
-      ...modelAnswering({}),
+      ...modelAnswering(0),
       decision: async () => {
         throw new Error("down");
       },
@@ -62,7 +73,7 @@ describe("asking the decision model who a message is for (decision 0191)", () =>
     console.error = () => undefined;
     try {
       expect(await addressingDecider(failing)(input)).toBeNull();
-      expect(await addressingDecider(modelAnswering({}, 200), 20)(input)).toBeNull();
+      expect(await addressingDecider(modelAnswering(0, 200), 20)(input)).toBeNull();
     } finally {
       console.error = quiet;
     }

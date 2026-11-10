@@ -32,13 +32,10 @@ describe("who a multiplayer message is for (decision 0191)", () => {
     });
   });
 
-  test("the model's scores keep the agent out only when a person is clearly addressed", () => {
-    expect(addressingFrom({ toAgent: 0.1, toPerson: 0.9 })).toEqual({
-      agentAction: false,
-      by: "model",
-    });
-    expect(addressingFrom({ toAgent: 0.5, toPerson: 0.9 }).agentAction).toBe(true);
-    expect(addressingFrom({ toAgent: 0.1, toPerson: 0.5 }).agentAction).toBe(true);
-    expect(addressingFrom({ toAgent: 0.9, toPerson: 0.9 }).agentAction).toBe(true);
+  test("the model keeps the agent out only when a person is clearly the one addressed", () => {
+    expect(addressingFrom({ toPerson: 0.9 })).toEqual({ agentAction: false, by: "model" });
+    expect(addressingFrom({ toPerson: 0.6 }).agentAction).toBe(false);
+    expect(addressingFrom({ toPerson: 0.59 }).agentAction).toBe(true);
+    expect(addressingFrom({ toPerson: 0.1 }).agentAction).toBe(true);
   });
 });

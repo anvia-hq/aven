@@ -1,3 +1,4 @@
+import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { shipRequestOf, wrapShipRequest } from "@aven/protocol/ship-request";
 
 import type { AttachmentUpload, OutgoingMessage, PendingMessage } from "./types";
@@ -54,7 +55,8 @@ export function pendingShip(id: string): PendingMessage {
 const isShipRequest = (message: ChatMessage) => shipRequestOf(textOf(message)) !== null;
 
 const sameRequest = (pending: ChatMessage, sent: string) =>
-  textOf(pending) === sent || (isShipRequest(pending) && shipRequestOf(sent) !== null);
+  textOf(pending) === parseDriverPrompt(sent).text ||
+  (isShipRequest(pending) && shipRequestOf(sent) !== null);
 
 export function withoutPending(pending: PendingMessage[], id: string): PendingMessage[] {
   return pending.filter((item) => item.id !== id);

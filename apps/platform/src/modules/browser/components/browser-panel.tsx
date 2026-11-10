@@ -47,7 +47,7 @@ function WakeGate({ computer, children }: { computer: Computer; children: ReactN
   if (view === "no-sandbox") {
     return (
       <SandboxAsleepNotice
-        asleep={computer.asleep}
+        computer={computer}
         purpose="open a page"
         waking={waking}
         onWake={() => void wake()}

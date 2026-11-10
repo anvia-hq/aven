@@ -11,12 +11,14 @@ export function OverviewColumn({
   usage,
   synced,
   owned,
+  saves,
   onCompact,
 }: {
   thread: Thread;
   usage: ThreadUsage | null;
   synced: boolean;
   owned: boolean;
+  saves: number;
   onCompact?: { run: () => void; busy: boolean; disabled: boolean };
 }) {
   return (
@@ -24,7 +26,7 @@ export function OverviewColumn({
       aria-label="Overview"
       className="sticky top-0 hidden w-72 shrink-0 flex-col gap-3 self-start p-3 @4xl:flex"
     >
-      <EnvironmentCard thread={thread} owned={owned} />
+      <EnvironmentCard thread={thread} owned={owned} saves={saves} />
       {owned && <BackgroundTasksCard threadId={thread.id} running={thread.running} />}
       <ContextCard
         context={usage?.context}
