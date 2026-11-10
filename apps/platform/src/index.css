@@ -22,9 +22,9 @@
 /* Semantic color tokens (shadcn/ui structure, warm-orange-tinted palette). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.975 0.02 160);
+  --background: oklch(0.992 0.004 160);
   --foreground: oklch(0.2 0.02 160);
-  --card: oklch(0.99 0.012 160);
+  --card: oklch(0.996 0.003 160);
   --card-foreground: oklch(0.2 0.009 160);
   --popover: oklch(0.99 0.012 160);
   --popover-foreground: oklch(0.2 0.009 160);
@@ -48,11 +48,11 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.48 0.13 155);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.94 0.03 160);
+  --frame: oklch(0.955 0.01 160);
   --border: oklch(0.87 0.035 160);
   --input: oklch(0.87 0.035 160);
   --ring: oklch(0.7 0.06 160);
-  --sidebar: var(--background);
+  --sidebar: oklch(0.965 0.01 160);
   --sidebar-foreground: oklch(0.2 0.009 160);
   --sidebar-primary: oklch(0.22 0.01 160);
   --sidebar-primary-foreground: oklch(0.98 0.003 160);
