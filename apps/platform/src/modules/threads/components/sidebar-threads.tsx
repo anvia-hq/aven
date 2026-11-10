@@ -13,6 +13,15 @@ import {
 } from "@/components/sidebar";
 import { shortTimeAgo, timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { FolderSection } from "@/modules/folders/components/folder-section";
+import { MoveToFolderMenu } from "@/modules/folders/components/move-to-folder-menu";
+import { NewFolderButton } from "@/modules/folders/components/new-folder-button";
+import { NewFolderRow } from "@/modules/folders/components/new-folder-row";
+import { UnfiledArea } from "@/modules/folders/components/unfiled-area";
+import { groupThreads, rootOf } from "@/modules/folders/folder-groups";
+import { useFolderActions } from "@/modules/folders/hooks/use-folder-actions";
+import { useFolders } from "@/modules/folders/hooks/use-folders";
+import type { FolderDraft } from "@/modules/folders/types";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
@@ -26,6 +35,7 @@ import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
+import { newTempId } from "@/modules/folders/folder-cache";
 import { dragThread } from "../split";
 import { crowdOf } from "../thread-crowd";
 import type { Thread } from "../types";
@@ -181,6 +191,14 @@ export function SidebarThreads() {
   const mentioned = useMentionedThreads();
   const { pairs, partnerOf } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState<FolderDraft | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const { folders } = useFolders();
+  const folderActions = useFolderActions();
+  const { groups, unfiled } = groupThreads(threads, folders);
+  const folderOfThread = (thread: Thread) =>
+    folders.find((folder) => folder.threadIds.includes(rootOf(thread, threads).id))?.id;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const anyRunning = [...own, ...others].some((thread) => thread.running);
@@ -189,6 +207,23 @@ export function SidebarThreads() {
     const timer = setInterval(() => void refresh(), RUNNING_REFRESH_MS);
     return () => clearInterval(timer);
   }, [anyRunning, refresh]);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const stop = () => setDragging(false);
+    window.addEventListener("dragend", stop, true);
+    return () => window.removeEventListener("dragend", stop, true);
+  }, [dragging]);
+
+  function file(threadId: string, folderId: string | null) {
+    setDragging(false);
+    const thread = threads.find((candidate) => candidate.id === threadId);
+    if (!thread) return;
+    const root = rootOf(thread, threads);
+    folderActions.move({ threadId: root.id, folderId });
+    const target = folders.find((folder) => folder.id === folderId);
+    if (target && !target.open) folderActions.setOpen({ id: target.id, open: true });
+  }
 
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
@@ -216,11 +251,15 @@ export function SidebarThreads() {
             <Link
               to="/threads/$threadId"
               params={{ threadId: thread.id }}
-              onDragStart={(event) => dragThread(event, thread.id)}
+              onDragStart={(event) => {
+                dragThread(event, thread.id);
+                setDragging(true);
+              }}
+              onDragEnd={() => setDragging(false)}
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
-          className={cn("pr-11", nested && "pl-8")}
+          className={cn("pr-16", nested && "pl-8")}
         >
           <SidebarProjectTile
             thread={thread}
@@ -242,6 +281,13 @@ export function SidebarThreads() {
           <CrowdMark thread={thread} />
         </SidebarMenuButton>
         <UpdatedAt thread={thread} yields />
+        <MoveToFolderMenu
+          title={thread.title}
+          folders={folders}
+          currentFolderId={folderOfThread(thread)}
+          onMove={(folderId) => file(thread.id, folderId)}
+          onNewFolder={() => setDraft({ threadId: thread.id })}
+        />
         <SidebarMenuAction
           className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
           aria-label={`Archive ${thread.title}`}
@@ -294,47 +340,92 @@ export function SidebarThreads() {
     );
   }
 
-  function pairedWith(id: string) {
-    const partner = threads.find((thread) => thread.id === partnerOf(id));
+  function pairedWith(id: string, list: Thread[]) {
+    const partner = list.find((thread) => thread.id === partnerOf(id));
     return partner && partner.id !== id ? partner : undefined;
+  }
+
+  function rows(list: Thread[]) {
+    return nestForks(list).map(({ thread, nested }, index, all) => {
+      const partner = pairedWith(thread.id, list);
+      if (partner) {
+        const first =
+          all.findIndex((each) => each.thread.id === thread.id) <
+          all.findIndex((each) => each.thread.id === partner.id);
+        if (!first) return null;
+        const ordered: [Thread, Thread] = pairs.some(([left]) => left === partner.id)
+          ? [partner, thread]
+          : [thread, partner];
+        return pairRow(ordered);
+      }
+      const joins = (at: number) => {
+        const neighbour = all[at];
+        return neighbour?.nested === true && !pairedWith(neighbour.thread.id, list);
+      };
+      return row(thread, { nested, first: !joins(index - 1), last: !joins(index + 1) });
+    });
+  }
+
+  function finishDraft(name?: string) {
+    const current = draft;
+    setDraft(null);
+    const trimmed = name?.trim();
+    if (!current || !trimmed) return;
+    folderActions.create({ tempId: newTempId(), name: trimmed, threadId: current.threadId });
+  }
+
+  function finishRename(id: string, previous: string, name?: string) {
+    setRenaming(null);
+    const trimmed = name?.trim();
+    if (trimmed && trimmed !== previous) folderActions.rename({ id, name: trimmed });
   }
 
   return (
     <>
       <div className="flex items-center justify-between pr-3 pl-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
         <span>Threads</span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="New thread"
-          onClick={() => navigate({ to: "/threads" })}
-        >
-          <Plus />
-        </Button>
+        <div className="flex items-center">
+          <NewFolderButton onClick={() => setDraft({})} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="New thread"
+            onClick={() => navigate({ to: "/threads" })}
+          >
+            <Plus />
+          </Button>
+        </div>
       </div>
-      <SidebarMenu className="px-2 group-data-[collapsible=icon]:hidden">
-        {nestForks(threads).map(({ thread, nested }, index, rows) => {
-          const partner = pairedWith(thread.id);
-          if (partner) {
-            const first =
-              rows.findIndex((row) => row.thread.id === thread.id) <
-              rows.findIndex((row) => row.thread.id === partner.id);
-            if (!first) return null;
-            const ordered: [Thread, Thread] = pairs.some(([left]) => left === partner.id)
-              ? [partner, thread]
-              : [thread, partner];
-            return pairRow(ordered);
-          }
-          const joins = (at: number) => {
-            const neighbour = rows[at];
-            return neighbour?.nested === true && !pairedWith(neighbour.thread.id);
-          };
-          return row(thread, { nested, first: !joins(index - 1), last: !joins(index + 1) });
-        })}
-        {threads.length === 0 && (
-          <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>
+      <div className="px-2 group-data-[collapsible=icon]:hidden">
+        {draft && <NewFolderRow onDone={finishDraft} />}
+        {groups.map((group) => (
+          <FolderSection
+            key={group.folder.id}
+            group={group}
+            editing={renaming === group.folder.id}
+            onToggle={() =>
+              folderActions.setOpen({ id: group.folder.id, open: !group.folder.open })
+            }
+            onEdit={() => setRenaming(group.folder.id)}
+            onRenamed={(name) => finishRename(group.folder.id, group.folder.name, name)}
+            onDelete={() => folderActions.remove(group.folder.id)}
+            onDropThread={(threadId) => file(threadId, group.folder.id)}
+          >
+            <SidebarMenu>{rows(group.threads)}</SidebarMenu>
+          </FolderSection>
+        ))}
+        {(groups.length > 0 || draft) && (
+          <div data-slot="folder-separator" className="mx-2 my-1.5 h-px bg-sidebar-border" />
         )}
-      </SidebarMenu>
+        <UnfiledArea dragging={dragging} onDropThread={(threadId) => file(threadId, null)}>
+          <SidebarMenu>
+            {rows(unfiled)}
+            {threads.length === 0 && (
+              <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>
+            )}
+          </SidebarMenu>
+        </UnfiledArea>
+      </div>
       {shared.length > 0 && (
         <>
           <div className="px-4 pt-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
