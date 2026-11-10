@@ -19,6 +19,8 @@ import {
   threadContinuation,
 } from "./composition";
 import { errorsRouter } from "./errors";
+import { foreignOrigin } from "./origin-guard";
+import { trustedOrigins } from "./modules/auth/service";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
@@ -59,6 +61,7 @@ import { workloadIdentityRouter } from "./modules/workload-identity/router";
 await useStoredGithubApp(github);
 
 export const app = new Elysia()
+  .onRequest(({ request }) => foreignOrigin(request, trustedOrigins))
   .use(errorsRouter)
   .get("/health", () => ({ status: "ok" }))
   .use(artifactsRouter(runtimeHub))
