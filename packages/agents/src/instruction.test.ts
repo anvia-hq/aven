@@ -95,3 +95,13 @@ test("the instructions tell the agent about the people in a thread and @agent", 
   expect(text).toContain("[driver: Name]");
   expect(text).toContain("@agent");
 });
+
+test("the agent is told how a person sees what it serves, and that localhost is theirs in the page", () => {
+  const section = codingInstructions(200).split("<browser>")[1]!.split("</browser>")[0]!;
+  expect(section).toContain("Browser tab");
+  expect(section).toContain("wait_for_port");
+  expect(section).toContain("list_ports");
+  expect(section).toContain("localhost and 127.0.0.1 mean their machine");
+  expect(section).toContain("relative URLs");
+  expect(section).toContain("server.proxy");
+});

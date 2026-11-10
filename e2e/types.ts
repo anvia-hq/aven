@@ -15,6 +15,7 @@ export type FakeRunnerSwitch =
   | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
   | "FAKE_SNAPSHOT_FAILS"
+  | "FAKE_REAL_PORT"
   | "FAKE_SNAPSHOT_SAVED_MINUTES_AGO"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
@@ -56,5 +57,6 @@ export type FakeRunnerConfig = {
   branch: string;
   backgroundProcesses: boolean;
   snapshotFailure: string | undefined;
+  realPort: number | undefined;
   snapshotSavedMinutesAgo: number | undefined;
 };
