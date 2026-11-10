@@ -2,6 +2,7 @@ import {
   Check,
   Folder,
   GitDiff,
+  Globe,
   LayoutPanelLeft,
   List,
   Monitor,
@@ -45,6 +46,7 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
     { label: "Changes", icon: GitDiff, panel: panels.diff, show: true },
     { label: "Files", icon: Folder, panel: panels.files, show: true },
     { label: "Terminal", icon: Terminal, panel: panels.terminal, show: owned },
+    { label: "Browser", icon: Globe, panel: panels.browser, show: true },
   ];
   const shown = toggles.filter((toggle) => toggle.show);
 

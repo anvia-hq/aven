@@ -131,6 +131,19 @@ test("a flag changes the key it names and leaves the address people open", async
   expect(env.AVEN_SITE_ADDRESS).toBe(":80");
 });
 
+test("--browser-origin sets the origin the Browser of a thread is served at, and nothing else", async () => {
+  const { result, env } = await installWith(
+    ["server", "install", "--browser-origin=https://box.lan:8444"],
+    { release: "1.0.0" },
+  );
+
+  expect(result.changed).toEqual([
+    { key: "AVEN_BROWSER_ORIGIN", from: undefined, to: "https://box.lan:8444" },
+  ]);
+  expect(env.AVEN_BROWSER_ORIGIN).toBe("https://box.lan:8444");
+  expect(env.BETTER_AUTH_URL).toBe("http://box.lan:3000");
+});
+
 test("--origin moves the address people open, both where the browser goes and what is trusted", async () => {
   const { result, env } = await installWith(
     ["server", "install", "--port=3100", "--origin=https://aven.example.com"],

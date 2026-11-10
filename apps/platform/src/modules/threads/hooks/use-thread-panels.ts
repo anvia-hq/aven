@@ -6,9 +6,10 @@ const DESKTOP_KEY = "aven.desktop-open";
 const DIFF_KEY = "aven.diff-open";
 const FILES_KEY = "aven.files-open";
 const TERMINAL_KEY = "aven.terminal-open";
+const BROWSER_KEY = "aven.browser-open";
 
 registerUserState(() =>
-  forgetStoredKeys([OVERVIEW_KEY, DESKTOP_KEY, DIFF_KEY, FILES_KEY, TERMINAL_KEY]),
+  forgetStoredKeys([OVERVIEW_KEY, DESKTOP_KEY, DIFF_KEY, FILES_KEY, TERMINAL_KEY, BROWSER_KEY]),
 );
 
 export function useThreadPanels() {
@@ -17,5 +18,6 @@ export function useThreadPanels() {
   const diff = usePanel(DIFF_KEY, false);
   const files = usePanel(FILES_KEY, false);
   const terminal = usePanel(TERMINAL_KEY, false);
-  return { overview, desktop, diff, files, terminal };
+  const browser = usePanel(BROWSER_KEY, false);
+  return { overview, desktop, diff, files, terminal, browser };
 }

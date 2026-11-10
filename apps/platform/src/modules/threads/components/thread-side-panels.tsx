@@ -4,6 +4,7 @@ import { useDefaultLayout } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { threadComputer } from "@/modules/desktop/computer";
+import { BrowserPanel } from "@/modules/browser/components/browser-panel";
 import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
@@ -19,10 +20,10 @@ type Props = {
 };
 
 export function ThreadSidePanels({ threadId, running, panels, owned, handleClassName }: Props) {
-  const { diff, desktop, files, terminal } = panels;
+  const { diff, desktop, files, terminal, browser } = panels;
   const side = useDefaultLayout({
     id: "aven.thread-side",
-    panelIds: ["files", "diff", "desktop", "terminal"],
+    panelIds: ["files", "diff", "desktop", "terminal", "browser"],
     storage: safeStorage,
   });
 
@@ -52,6 +53,21 @@ export function ThreadSidePanels({ threadId, running, panels, owned, handleClass
     sidePanels.push({
       id: "terminal",
       node: <TerminalPanel computer={threadComputer(threadId)} onClose={terminal.close} />,
+    });
+  }
+
+  if (browser.open) {
+    sidePanels.push({
+      id: "browser",
+      node: (
+        <BrowserPanel
+          key={threadId}
+          threadId={threadId}
+          computer={threadComputer(threadId)}
+          owned={owned}
+          onClose={browser.close}
+        />
+      ),
     });
   }
 

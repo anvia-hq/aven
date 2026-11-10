@@ -20,6 +20,8 @@ const GITHUB_PORT = portFromEnv(process.env.E2E_GITHUB_PORT, 8101);
 const GITHUB_URL = `http://localhost:${GITHUB_PORT}`;
 const MODEL_PORT = portFromEnv(process.env.E2E_MODEL_PORT, 8102);
 const MODEL_URL = `http://localhost:${MODEL_PORT}`;
+const BROWSER_PORT = portFromEnv(process.env.E2E_BROWSER_PORT, 8104);
+const BROWSER_ORIGIN = `http://localhost:${BROWSER_PORT}`;
 const BOT_RUNNER_PORT = portFromEnv(process.env.E2E_BOT_RUNNER_PORT, BOT_RUNNER_HEALTH_PORT);
 const DATABASE_NAME = `aven_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}_e2e`;
 const DATABASE_BASE_URL = (
@@ -36,6 +38,7 @@ process.env.E2E_PLATFORM_OWNERS ??= [0, 1, 2]
   .join(",");
 process.env.E2E_DATABASE_URL ??= E2E_DATABASE_URL;
 process.env.E2E_API_URL ??= API_URL;
+process.env.E2E_BROWSER_ORIGIN ??= BROWSER_ORIGIN;
 process.env.AVEN_RUNTIME_HOME = RUNTIME_HOME;
 
 export default defineConfig({
@@ -64,6 +67,8 @@ export default defineConfig({
         BETTER_AUTH_SECRET: "kQ8vZ3mR7xT1pL9wY4nB6cD2fH5jS0aG",
         BETTER_AUTH_URL: WEB_URL,
         TRUSTED_ORIGINS: WEB_URL,
+        AVEN_BROWSER_ORIGIN: BROWSER_ORIGIN,
+        AVEN_BROWSER_PORT: String(BROWSER_PORT),
         AGENT_PROVIDER: "anthropic",
         ANTHROPIC_API_KEY: "",
         PROVIDER_ENCRYPTION_KEY: "ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=",

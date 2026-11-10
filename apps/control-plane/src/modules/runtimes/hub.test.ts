@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 
 import { db } from "@aven/db/client";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
+import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { errorsRouter } from "../../errors";
 import { createMemoryStore } from "../../memory-store";
@@ -98,7 +99,9 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
   const inbox = (ws: WebSocket) => {
     const received: ControlPlaneToRuntime[] = [];
-    ws.onmessage = (event) => received.push(JSON.parse(String(event.data)));
+    ws.onmessage = (event) => {
+      if (typeof event.data === "string") received.push(JSON.parse(event.data));
+    };
     return received;
   };
 
@@ -563,6 +566,50 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await until(() => events.length > 0);
     expect(events).toEqual(["closed: The shell ended"]);
     terminal.close();
+  });
+
+  test("a port is opened and closed on the runtime, with a limit of its own, and only it answers for its id", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "p" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    const frames: Uint8Array[] = [];
+    ws.binaryType = "arraybuffer";
+    ws.addEventListener("message", (event) => {
+      if (event.data instanceof ArrayBuffer) frames.push(new Uint8Array(event.data));
+    });
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const events: string[] = [];
+    const sink = {
+      data: () => events.push("data"),
+      closed: (reason: string) => events.push(`closed: ${reason}`),
+    };
+
+    const port = connection.openPort("t", 3000, sink);
+    await until(() => received.some((m) => m.type === "port.open"));
+    const opened = received.find((m) => m.type === "port.open")!;
+    if (opened.type !== "port.open") throw new Error("unreachable");
+    expect(opened).toMatchObject({ threadId: "t", port: 3000 });
+
+    port.write(new TextEncoder().encode("GET / HTTP/1.1"));
+    ws.send(JSON.stringify({ type: "terminal.opened", viewerId: opened.viewerId }));
+    await Bun.sleep(30);
+    expect(frames).toHaveLength(0);
+    ws.send(JSON.stringify({ type: "port.opened", viewerId: opened.viewerId }));
+    await until(() => frames.length === 1);
+    expect(new TextDecoder().decode(decodeViewerFrame(frames[0]!)?.payload)).toBe("GET / HTTP/1.1");
+
+    ws.send(JSON.stringify({ type: "terminal.closed", viewerId: opened.viewerId, reason: "no" }));
+    ws.send(JSON.stringify({ type: "port.closed", viewerId: opened.viewerId, reason: "gone" }));
+    await until(() => events.length > 0);
+    expect(events).toEqual(["closed: gone"]);
+    port.close();
+
+    const handles = Array.from({ length: 64 }, () => connection.openPort("t", 3000, sink));
+    expect(() => connection.openPort("t", 3000, sink)).toThrow("Too many connections");
+    expect(() => connection.openViewer("t", sink)).not.toThrow();
+    handles[0]!.close();
+    expect(() => connection.openPort("t", 3000, sink)).not.toThrow();
   });
 
   test("a runtime can only touch runs the control plane started on it", async () => {

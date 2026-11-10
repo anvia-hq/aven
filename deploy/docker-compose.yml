@@ -37,10 +37,14 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://aven:${POSTGRES_PASSWORD}@postgres:5432/aven
+      AVEN_BROWSER_PORT: "8001"
+      AVEN_BROWSER_BIND: 0.0.0.0
     # The API on this machine only: the runner beside the server and `aven` use it, whatever the
-    # web entry point answers to.
+    # web entry point answers to. The Browser (decision 0199) is the same: a proxy on this machine
+    # (`tailscale serve`, Caddy) gives it the address AVEN_BROWSER_ORIGIN names.
     ports:
       - "127.0.0.1:${AVEN_API_PORT:-2837}:8000"
+      - "127.0.0.1:${AVEN_BROWSER_PORT:-2839}:8001"
 
   web:
     image: ${AVEN_WEB_IMAGE:-ghcr.io/anvia-hq/aven-web}:${AVEN_VERSION:-latest}
