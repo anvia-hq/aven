@@ -71,32 +71,19 @@ test.describe("machine monitor", () => {
     }
 
     const build = machines.getByRole("listitem", { name: "build-box" });
-    await expect(build.getByRole("meter", { name: "CPU of build-box" })).toHaveAttribute(
-      "aria-valuenow",
-      "58",
-    );
-    await expect(build.getByRole("meter", { name: "Memory of build-box" })).toHaveAttribute(
-      "aria-valuenow",
-      "38",
-    );
-    await expect(build.getByRole("meter", { name: "Disk of build-box" })).toHaveAttribute(
-      "aria-valuenow",
-      "76",
-    );
-    await expect(build).toContainText("CPU58%");
-    await expect(build).toContainText("MEM38%");
+    const busiest = build.getByRole("meter");
+    await expect(busiest).toHaveCount(1);
+    await expect(busiest).toHaveAccessibleName("Disk of build-box");
+    await expect(busiest).toHaveAttribute("aria-valuenow", "76");
+    await expect(busiest).toHaveAttribute("data-level", "busy");
     await expect(build).toContainText("DSK76%");
-    await expect(
-      build.getByRole("meter", { name: "CPU of build-box" }).locator("[data-slot=meter-fill]"),
-    ).toHaveCSS("width", /^\d/);
+    await expect(build).not.toContainText("MEM");
 
-    const fillOf = (row: typeof build, name: string) =>
-      row.getByRole("meter", { name }).locator("[data-slot=meter-fill]");
     await expect(
-      fillOf(machines.getByRole("listitem", { name: "hot-box" }), "CPU of hot-box"),
+      machines.getByRole("listitem", { name: "hot-box" }).getByRole("meter"),
     ).toHaveAttribute("data-level", "high");
-    await expect(fillOf(build, "CPU of build-box")).toHaveAttribute("data-level", "low");
 
+    await machines.screenshot({ path: ".aven/proof/machine-row/after.png" });
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");
     await expect(machines.getByRole("listitem", { name: "sleeping-box" })).toContainText("Offline");
 

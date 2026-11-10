@@ -19,6 +19,15 @@ export function meterLevel(percent: number | null): MeterLevel {
 const share = (used: number, total: number) =>
   total > 0 ? Math.round(Math.min(100, (used / total) * 100)) : null;
 
+export function busiestMetric(metrics: MachineMetric[]): MachineMetric | undefined {
+  let busiest: MachineMetric | undefined;
+  for (const metric of metrics) {
+    if (metric.percent === null) continue;
+    if (busiest === undefined || metric.percent > (busiest.percent ?? -1)) busiest = metric;
+  }
+  return busiest ?? metrics[0];
+}
+
 export function machineMetrics(stats: RuntimeStats): MachineMetric[] {
   return [
     {
