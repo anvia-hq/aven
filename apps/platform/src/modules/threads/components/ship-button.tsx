@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 
 import type { ShipAct } from "../types";
 import { ShipMenu } from "./ship-menu";
+import { ShipPlaceholder } from "./ship-placeholder";
 
 type Props = {
   action: ShipAct;
@@ -21,7 +22,7 @@ const UNKNOWN_GATE =
 
 export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props) {
   if (action.kind === "loading") {
-    return <span className="h-7 w-28 opacity-0" role="status" aria-label="Reading the changes" />;
+    return <ShipPlaceholder />;
   }
   if (action.kind === "failed") {
     return (
