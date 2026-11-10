@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { UnprocessableError } from "../../errors";
-import { imageTypeOf } from "./service";
+import { AVATAR_MAX_BYTES, imageTypeOf, readCapped } from "./service";
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const JPEG = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]);
@@ -17,6 +17,35 @@ describe("what an avatar may be", () => {
   });
 });
 
+function chunked(sizes: number[]) {
+  let sent = 0;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      const size = sizes[sent++];
+      if (size === undefined) controller.close();
+      else controller.enqueue(new Uint8Array(size).fill(7));
+    },
+  });
+  return new Request("http://aven.test/profile/avatar", {
+    method: "PUT",
+    body: stream,
+    duplex: "half",
+  } as RequestInit);
+}
+
+describe("reading an upload with no declared length", () => {
+  test("joins the chunks as they came", async () => {
+    const bytes = await readCapped(chunked([3, 4, 5]));
+    expect(bytes.length).toBe(12);
+  });
+
+  test("stops once the body passes the limit", async () => {
+    await expect(readCapped(chunked([AVATAR_MAX_BYTES, 1]))).rejects.toBeInstanceOf(
+      UnprocessableError,
+    );
+  });
+});
+
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("a person's avatar (postgres, decision 0198)", async () => {
@@ -25,7 +54,7 @@ run("a person's avatar (postgres, decision 0198)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { eq } = await import("drizzle-orm");
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
-  const { avatarsService, AVATAR_MAX_BYTES } = await import("./service");
+  const { avatarsService } = await import("./service");
 
   const { userId, orgA, cleanup } = await seedOrgPair();
   const mateId = `${userId}-mate`;

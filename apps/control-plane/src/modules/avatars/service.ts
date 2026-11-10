@@ -31,6 +31,30 @@ const SIGNATURES: { contentType: string; matches: (bytes: Uint8Array) => boolean
 export const avatarUrl = (userId: string, version: number) =>
   `/api/users/${encodeURIComponent(userId)}/avatar?v=${version}`;
 
+export async function readCapped(request: Request) {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.length;
+    if (length > AVATAR_MAX_BYTES) {
+      await reader.cancel();
+      throw new UnprocessableError("The image is too large: keep it under 256 KB");
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(length);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.length;
+  }
+  return bytes;
+}
+
 export function imageTypeOf(bytes: Uint8Array) {
   return SIGNATURES.find((signature) => signature.matches(bytes))?.contentType;
 }
@@ -43,18 +67,22 @@ export const avatarsService = {
     }
     const contentType = imageTypeOf(bytes);
     if (!contentType) throw new UnprocessableError("Use a PNG, JPEG or WebP image");
-    await db
-      .insert(userAvatars)
-      .values({ userId, contentType, data: bytes })
-      .onConflictDoUpdate({ target: userAvatars.userId, set: { contentType, data: bytes } });
     const image = avatarUrl(userId, Date.now());
-    await db.update(users).set({ image }).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(userAvatars)
+        .values({ userId, contentType, data: bytes })
+        .onConflictDoUpdate({ target: userAvatars.userId, set: { contentType, data: bytes } });
+      await tx.update(users).set({ image }).where(eq(users.id, userId));
+    });
     return { image };
   },
 
   async remove(userId: string) {
-    await db.delete(userAvatars).where(eq(userAvatars.userId, userId));
-    await db.update(users).set({ image: null }).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      await tx.delete(userAvatars).where(eq(userAvatars.userId, userId));
+      await tx.update(users).set({ image: null }).where(eq(users.id, userId));
+    });
     return { image: null };
   },
 

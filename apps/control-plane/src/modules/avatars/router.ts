@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { authRouter } from "../auth/router";
 import { UnprocessableError } from "../../errors";
-import { AVATAR_MAX_BYTES, avatarsService } from "./service";
+import { AVATAR_MAX_BYTES, avatarsService, readCapped } from "./service";
 
 export const avatarsRouter = new Elysia()
   .use(authRouter)
@@ -13,7 +13,7 @@ export const avatarsRouter = new Elysia()
       if (Number(request.headers.get("content-length") ?? 0) > AVATAR_MAX_BYTES) {
         throw new UnprocessableError("The image is too large: keep it under 256 KB");
       }
-      const bytes = new Uint8Array(await request.arrayBuffer());
+      const bytes = await readCapped(request);
       return avatarsService.save(user.id, bytes);
     },
     { auth: true, parse: "none" },
