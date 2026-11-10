@@ -38,7 +38,7 @@ export function BotChatBubble({
           <Bubble
             variant="muted"
             align="start"
-            className="*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_7%)]!"
+            className="*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_3%)]! dark:*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_7%)]!"
           >
             <BubbleContent className="rounded-2xl">
               <Markdown>{message.text}</Markdown>
