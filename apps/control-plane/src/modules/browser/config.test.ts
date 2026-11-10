@@ -33,6 +33,26 @@ describe("the Browser's settings", () => {
     expect(() => browserConfig({ ...base, AVEN_BROWSER_PORT: "x" })).toThrow("AVEN_BROWSER_PORT");
   });
 
+  test("refuses Aven's own origin, which would let a page of the sandbox run as Aven", () => {
+    const own = {
+      ...base,
+      BETTER_AUTH_URL: "https://host.example",
+      TRUSTED_ORIGINS: "http://localhost:5173, https://other.example/",
+    };
+    for (const origin of [
+      "https://host.example",
+      "http://localhost:5173",
+      "https://other.example",
+    ]) {
+      expect(() => browserConfig({ ...own, AVEN_BROWSER_ORIGIN: origin })).toThrow(
+        "another origin than Aven's own",
+      );
+    }
+    expect(browserConfig({ ...own, AVEN_BROWSER_ORIGIN: "https://host.example:8444" }).origin).toBe(
+      "https://host.example:8444",
+    );
+  });
+
   test("signs with a key of its own, not the server's secret", () => {
     const config = browserConfig(base);
     expect(Buffer.from(config.secret).toString()).not.toBe("s");

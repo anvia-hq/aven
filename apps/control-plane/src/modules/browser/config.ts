@@ -7,6 +7,14 @@ export function browserConfig(env: Record<string, string | undefined> = process.
       `AVEN_BROWSER_ORIGIN must be an address such as https://host:8444, got "${origin}"`,
     );
   }
+  const aven = [env.BETTER_AUTH_URL, ...(env.TRUSTED_ORIGINS ?? "").split(",")]
+    .map((address) => address?.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+  if (origin && aven.includes(origin)) {
+    throw new Error(
+      `AVEN_BROWSER_ORIGIN must be another origin than Aven's own (${origin}): a page of the sandbox would run as Aven`,
+    );
+  }
   const port = Number(env.AVEN_BROWSER_PORT ?? 8001);
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`AVEN_BROWSER_PORT must be a port number, got "${env.AVEN_BROWSER_PORT}"`);
