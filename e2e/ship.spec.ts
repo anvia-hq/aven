@@ -183,6 +183,74 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
   });
 
+  test("a pull request chip is never left behind a blank gap while the readiness check is slow", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS: "1",
+      FAKE_AVEN_FILES: "setup,ship",
+    });
+    runner = child;
+    const branch = `aven/${threadId.slice(0, 8)}`;
+    await page.goto(`/threads/${threadId}`);
+    await page.request.post(pullsUrl(), { data: { head: branch, title: "Add the export button" } });
+    await shipButton(page).click();
+    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Update PR" })).toBeVisible();
+
+    const held = Promise.withResolvers<void>();
+    await page.route("**/api/threads/*/ship", async (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      await held.promise;
+      return route.fallback();
+    });
+    try {
+      await page.reload();
+      const chip = page.getByRole("link", { name: /#7/ });
+      await expect(chip).toBeVisible();
+      const reading = page.getByRole("status", { name: "Reading the changes" });
+      await expect(reading).toBeAttached();
+      await expect
+        .poll(() => reading.evaluate((node) => Number(getComputedStyle(node).opacity)), {
+          timeout: 3_000,
+        })
+        .toBeGreaterThan(0.4);
+      const slot = await reading.boundingBox();
+      const chipBox = await chip.boundingBox();
+      expect(slot && slot.width > 0).toBe(true);
+      expect(chipBox && slot && chipBox.x >= slot.x + slot.width).toBe(true);
+    } finally {
+      held.resolve();
+    }
+    await expect(page.getByRole("button", { name: "Update PR" })).toBeEnabled();
+    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
+  });
+
+  test("a running thread with nothing to ship yet does not hold an empty place for the whole run", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const { child, threadId } = await threadOnFakeRunner(page, {
+      FAKE_RUN_ENDS_AFTER: "60000",
+      FAKE_AVEN_FILES: "setup,ship",
+    });
+    runner = child;
+    await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
+    await page.goto(`/threads/${threadId}`);
+    const sent = await page.request.post(`/api/threads/${threadId}/messages`, {
+      data: { prompt: "work on it" },
+    });
+    expect(sent.ok()).toBe(true);
+    await expect(page.getByRole("img", { name: "Working" })).toHaveCount(1);
+
+    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0, {
+      timeout: 5_000,
+    });
+  });
+
   test("a changes request that failed says so, and Try again reads them again", async ({
     page,
   }) => {
