@@ -23,6 +23,17 @@ async function add(page: Page, name: string, value: string, secret = false) {
   await expect(page.getByText("Variable saved")).toBeVisible();
 }
 
+async function pasteIntoName(page: Page, text: string) {
+  await page.getByLabel("Name").focus();
+  await page.evaluate((pasted) => {
+    const data = new DataTransfer();
+    data.setData("text", pasted);
+    document.activeElement?.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  }, text);
+}
+
 test.describe("project environment variables", () => {
   test("adds a plain variable and a secret; the secret's value is never shown", async ({
     page,
@@ -84,49 +95,86 @@ test.describe("project environment variables", () => {
     await expect(section).toContainText("None yet");
   });
 
-  test("pasting a .env into the name field adds every variable in it", async ({ page }) => {
+  test("pasting a .env into the name field makes a row for every variable in it", async ({
+    page,
+  }) => {
     const section = await openProject(page);
     await section.getByRole("button", { name: "Add" }).click();
-    await page.getByLabel("Name").focus();
-    await page.evaluate(() => {
-      const data = new DataTransfer();
-      data.setData(
-        "text",
-        '# app\nDATABASE_URL=postgres://localhost/app\nexport PORT=3000\nNAME="two words"\nGIT_DIR=x\n',
-      );
-      document.activeElement?.dispatchEvent(
-        new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
-      );
-    });
+    await pasteIntoName(
+      page,
+      '# app\nDATABASE_URL=postgres://localhost/app\nexport PORT=3000\nNAME="two words"\nGIT_DIR=x\n',
+    );
 
-    const list = page.getByRole("list", { name: "Variables to add" });
-    await expect(list).toContainText("DATABASE_URL");
-    await expect(list).toContainText("PORT");
-    await expect(list).toContainText("two words");
+    await expect(page.getByLabel("Name 1")).toHaveValue("DATABASE_URL");
+    await expect(page.getByLabel("Value 1")).toHaveValue("postgres://localhost/app");
+    await expect(page.getByLabel("Name 2")).toHaveValue("PORT");
+    await expect(page.getByLabel("Value 3")).toHaveValue("two words");
     await expect(page.getByRole("list", { name: "Skipped lines" })).toContainText("GIT_DIR");
 
+    await page.getByLabel("Value 2").fill("4000");
     await page.getByRole("button", { name: "Add 3 variables" }).click();
     await expect(page.getByText("3 variables saved")).toBeVisible();
     await expect(section).toContainText("postgres://localhost/app");
-    await expect(section).toContainText("3000");
+    await expect(section).toContainText("4000");
     await expect(section).toContainText("two words");
   });
 
-  test("the Paste a .env button takes text typed into the box, and secret hides the values", async ({
+  test("the Paste a .env button gives rows to fill in, and secret hides the values", async ({
     page,
   }) => {
     const section = await openProject(page);
     await section.getByRole("button", { name: "Add" }).click();
     await page.getByRole("button", { name: "Paste a .env" }).click();
-    await page.getByLabel(".env contents").fill("TOKEN=a-long-secret-value-9876");
+    await page.getByLabel("Name 1").fill("TOKEN");
+    await page.getByLabel("Value 1").fill("a-long-secret-value-9876");
+    await page.getByRole("button", { name: "Add another" }).click();
+    await page.getByLabel("Name 2").fill("OTHER");
+    await page.getByLabel("Value 2").fill("other-secret-value-1111");
     await page.getByRole("switch", { name: "Secret" }).click();
-    await expect(page.getByRole("list", { name: "Variables to add" })).not.toContainText(
-      "a-long-secret",
-    );
+    await expect(page.getByLabel("Value 1")).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Remove row 2" }).click();
     await page.getByRole("button", { name: "Add 1 variable" }).click();
     await expect(page.getByText("Variable saved")).toBeVisible();
     await expect(section).toContainText("••••••9876");
+    await expect(section).not.toContainText("OTHER");
     await expect(page.getByText("a-long-secret")).toHaveCount(0);
+  });
+
+  test("a secret with no value is left out, and the rest are still saved", async ({ page }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await pasteIntoName(
+      page,
+      "FILLED=a-long-secret-value-5555\nEMPTY=\nALSO_FILLED=another-secret-9999\n",
+    );
+    await page.getByRole("switch", { name: "Secret" }).click();
+
+    await expect(page.getByText("A secret needs a value, so this one is not added.")).toBeVisible();
+    await page.getByRole("button", { name: "Add 2 variables" }).click();
+    await expect(page.getByText("2 variables saved")).toBeVisible();
+    await expect(section).toContainText("FILLED");
+    await expect(section).toContainText("ALSO_FILLED");
+    await expect(section).not.toContainText("EMPTY");
+  });
+
+  test("a row with a bad or doubled name cannot be saved until it is fixed", async ({ page }) => {
+    const section = await openProject(page);
+    await section.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Paste a .env" }).click();
+    await page.getByLabel("Name 1").fill("1BAD");
+    await page.getByLabel("Value 1").fill("x");
+    await page.getByRole("button", { name: "Add another" }).click();
+    await page.getByLabel("Name 2").fill("GOOD");
+    await page.getByLabel("Value 2").fill("y");
+    await expect(page.getByText("Use letters, digits and underscores")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add 2 variables" })).toBeDisabled();
+
+    await page.getByLabel("Name 1").fill("GOOD");
+    await expect(page.getByText("Named twice").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add 2 variables" })).toBeDisabled();
+
+    await page.getByLabel("Name 1").fill("FIRST");
+    await expect(page.getByRole("button", { name: "Add 2 variables" })).toBeEnabled();
   });
 
   test("a pasted .env with long values keeps the dialog and its button on the screen", async ({
@@ -134,11 +182,11 @@ test.describe("project environment variables", () => {
   }) => {
     const section = await openProject(page);
     await section.getByRole("button", { name: "Add" }).click();
-    await page.getByRole("button", { name: "Paste a .env" }).click();
     const longValue = "x".repeat(900);
-    await page
-      .getByLabel(".env contents")
-      .fill(`FIRST_KEY="-----BEGIN-----\\n${longValue}\\n-----END-----"\nSECOND_KEY=${longValue}`);
+    await pasteIntoName(
+      page,
+      `FIRST_KEY="-----BEGIN-----\\n${longValue}\\n-----END-----"\nSECOND_KEY=${longValue}`,
+    );
 
     const dialog = page.getByRole("dialog", { name: "Add a variable" });
     const viewport = page.viewportSize()!;
