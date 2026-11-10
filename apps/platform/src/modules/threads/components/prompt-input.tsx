@@ -12,6 +12,7 @@ import { Button } from "@/components/button";
 
 import { useAttachmentDrop } from "../hooks/use-attachment-drop";
 import { useAttachments } from "../hooks/use-attachments";
+import { useComposerDraft } from "../hooks/use-composer-draft";
 import { useComposerChat } from "../hooks/use-composer-chat";
 import { useMentionPeople } from "../hooks/use-mention-people";
 import { useMentions } from "../hooks/use-mentions";
@@ -67,6 +68,7 @@ export function PromptInput({ threadId, ...props }: Props) {
   return (
     <ChatProvider controller={chat}>
       <ComposerPrimitive.Root
+        key={threadId}
         triggers={triggers}
         className="contents"
         onSubmit={(event) => event.preventDefault()}
@@ -91,6 +93,7 @@ function Composer({
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
+  useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const { canSend, submit } = useSendComposer({
