@@ -565,6 +565,37 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     terminal.close();
   });
 
+  test("a port is opened and closed on the runtime, with a limit of its own, and only it answers for its id", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "p" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const events: string[] = [];
+    const sink = {
+      data: () => events.push("data"),
+      closed: (reason: string) => events.push(`closed: ${reason}`),
+    };
+
+    const port = connection.openPort("t", 3000, sink);
+    await until(() => received.some((m) => m.type === "port.open"));
+    const opened = received.find((m) => m.type === "port.open")!;
+    if (opened.type !== "port.open") throw new Error("unreachable");
+    expect(opened).toMatchObject({ threadId: "t", port: 3000 });
+
+    ws.send(JSON.stringify({ type: "terminal.closed", viewerId: opened.viewerId, reason: "no" }));
+    ws.send(JSON.stringify({ type: "port.closed", viewerId: opened.viewerId, reason: "gone" }));
+    await until(() => events.length > 0);
+    expect(events).toEqual(["closed: gone"]);
+    port.close();
+
+    const handles = Array.from({ length: 64 }, () => connection.openPort("t", 3000, sink));
+    expect(() => connection.openPort("t", 3000, sink)).toThrow("Too many connections");
+    expect(() => connection.openViewer("t", sink)).not.toThrow();
+    handles[0]!.close();
+    expect(() => connection.openPort("t", 3000, sink)).not.toThrow();
+  });
+
   test("a runtime can only touch runs the control plane started on it", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
     const ws = await open(server.server?.port, token);

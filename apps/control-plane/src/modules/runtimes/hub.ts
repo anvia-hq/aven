@@ -164,6 +164,10 @@ export class RuntimeConnection {
     return this.#viewers.openTerminal(threadId, size, sink);
   }
 
+  openPort(threadId: string, port: number, sink: ViewerSink) {
+    return this.#viewers.openPort(threadId, port, sink);
+  }
+
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
     return this.#calls.call(method, params, timeoutMs);
   }
@@ -252,6 +256,12 @@ export class RuntimeConnection {
         return;
       case "terminal.closed":
         this.#viewers.closed(message.viewerId, "terminal", message.reason);
+        return;
+      case "port.opened":
+        this.#viewers.opened(message.viewerId, "port");
+        return;
+      case "port.closed":
+        this.#viewers.closed(message.viewerId, "port", message.reason);
         return;
       case "reply":
         this.#calls.settle(message);

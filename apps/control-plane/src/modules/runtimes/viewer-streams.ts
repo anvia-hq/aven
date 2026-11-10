@@ -4,9 +4,10 @@ import { UnavailableError } from "../../errors";
 import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
-type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" };
+type Viewer = { sink: ViewerSink; ready: boolean; kind: "desktop" | "terminal" | "port" };
 
 const MAX_VIEWERS = 32;
+const MAX_PORT_VIEWERS = 64;
 
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
@@ -40,8 +41,23 @@ export class ViewerStreams {
     };
   }
 
+  openPort(threadId: string, port: number, sink: ViewerSink): ViewerHandle {
+    const viewerId = this.#add("port", sink);
+    this.post({ type: "port.open", viewerId, threadId, port });
+    return this.#handle(viewerId, "port.close");
+  }
+
+  #count(ports: boolean) {
+    return [...this.#viewers.values()].filter((viewer) => (viewer.kind === "port") === ports)
+      .length;
+  }
+
   #add(kind: Viewer["kind"], sink: ViewerSink) {
-    if (this.#viewers.size >= MAX_VIEWERS) {
+    if (kind === "port") {
+      if (this.#count(true) >= MAX_PORT_VIEWERS) {
+        throw new UnavailableError("Too many connections to ports are open on this runner");
+      }
+    } else if (this.#count(false) >= MAX_VIEWERS) {
       throw new UnavailableError("Too many desktops and terminals are open on this runner");
     }
     const viewerId = crypto.randomUUID();
@@ -49,7 +65,10 @@ export class ViewerStreams {
     return viewerId;
   }
 
-  #handle(viewerId: string, closeType: "desktop.close" | "terminal.close"): ViewerHandle {
+  #handle(
+    viewerId: string,
+    closeType: "desktop.close" | "terminal.close" | "port.close",
+  ): ViewerHandle {
     return {
       write: (bytes) => {
         if (this.#viewers.get(viewerId)?.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
