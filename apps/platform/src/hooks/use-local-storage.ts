@@ -8,6 +8,11 @@ export const safeStorage = {
       return null;
     }
   },
+  removeItem(key: string) {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  },
   setItem(key: string, value: string) {
     try {
       localStorage.setItem(key, value);
