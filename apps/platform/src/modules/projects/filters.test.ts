@@ -25,16 +25,17 @@ const nobody = new Set<string>();
 const context = { me: "person-a", running: nobody };
 
 describe("parseProjectsSearch", () => {
-  test("keeps the selection, the query and the filters", () => {
-    expect(
-      parseProjectsSearch({ project: "2", q: "docs site", view: "mine", runner: "runner-2" }),
-    ).toEqual({ project: "2", q: "docs site", view: "mine", runner: "runner-2" });
+  test("keeps the query and the filters", () => {
+    expect(parseProjectsSearch({ q: "docs site", view: "mine", runner: "runner-2" })).toEqual({
+      q: "docs site",
+      view: "mine",
+      runner: "runner-2",
+    });
     expect(parseProjectsSearch({ q: " docs " }).q).toBe(" docs ");
   });
 
   test("drops empty and unknown values", () => {
-    expect(parseProjectsSearch({ project: "", q: "  ", view: "everything", runner: 7 })).toEqual({
-      project: undefined,
+    expect(parseProjectsSearch({ q: "  ", view: "everything", runner: 7 })).toEqual({
       q: undefined,
       view: undefined,
       runner: undefined,

@@ -14,7 +14,6 @@ export type Project = {
 export type ProjectsView = "all" | "mine" | "working";
 
 export type ProjectsSearch = {
-  project?: string;
   q?: string;
   view?: ProjectsView;
   runner?: string;
