@@ -626,6 +626,8 @@ export type ControlPlaneToRuntime =
   | { type: "terminal.open"; viewerId: string; threadId: string; cols: number; rows: number }
   | { type: "terminal.resize"; viewerId: string; cols: number; rows: number }
   | { type: "terminal.close"; viewerId: string }
+  | { type: "port.open"; viewerId: string; threadId: string; port: number }
+  | { type: "port.close"; viewerId: string }
   | {
       type: "call";
       id: string;
@@ -677,6 +679,8 @@ export type RuntimeToControlPlane =
   | { type: "desktop.closed"; viewerId: string; reason: string }
   | { type: "terminal.opened"; viewerId: string }
   | { type: "terminal.closed"; viewerId: string; reason: string }
+  | { type: "port.opened"; viewerId: string }
+  | { type: "port.closed"; viewerId: string; reason: string }
   | Reply;
 
 export type MemoryCallMethod = "memory.append" | "memory.notes";

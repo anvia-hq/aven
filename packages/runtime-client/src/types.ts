@@ -57,6 +57,7 @@ import type { DesktopViewers } from "./desktop-viewers";
 import type { IdleRelease } from "./idle-release";
 import type { ProcessEndWatch } from "./process-end-watch";
 import type { SandboxDesktop } from "@anvia/sandbox";
+import type { SandboxTunnel } from "@anvia/sandbox/remote";
 import type { ArtifactStore } from "./artifacts";
 import type { UploadStore } from "./uploads";
 import type { SkillStore } from "./skills";
@@ -440,6 +441,7 @@ export interface ThreadWorkspaces {
     options?: AcquireOptions,
   ): Promise<ThreadSandbox>;
   desktop(threadId: string): SandboxDesktop | undefined;
+  tunnel?(threadId: string): SandboxTunnel | undefined;
   shell?(
     threadId: string,
     sessionId: string,

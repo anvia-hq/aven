@@ -319,6 +319,12 @@ export class Sandboxes implements ThreadWorkspaces {
     return this.#hub.isConnected(threadId) ? this.#hub.desktop(threadId) : undefined;
   }
 
+  tunnel(threadId: string) {
+    return this.#running.has(threadId) && this.#hub.isConnected(threadId)
+      ? this.#hub.tunnel(threadId)
+      : undefined;
+  }
+
   shell(threadId: string, sessionId: string) {
     if (!/^[\w-]+$/.test(sessionId)) throw new Error("Invalid terminal id");
     if (!this.#running.has(threadId) || !this.#hub.isConnected(threadId)) return undefined;

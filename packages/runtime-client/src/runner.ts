@@ -15,6 +15,7 @@ import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
 import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
 import { createRunnerCalls } from "./runner-calls";
+import { PortTunnels } from "./port-tunnels";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
 import { createRunDriver } from "./run-driver";
@@ -133,6 +134,8 @@ export function startRuntime(options: RuntimeOptions) {
 
   const terminals = new TerminalSessions(options.sandbox, viewerLink);
 
+  const ports = new PortTunnels(options.sandbox, viewerLink);
+
   const sendOrWarn = (message: RuntimeToControlPlane) => {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
@@ -151,7 +154,8 @@ export function startRuntime(options: RuntimeOptions) {
     stopped: () => stopped,
     hasRun: (threadId) =>
       bots.has(threadId) || [...driver.live.values()].some((run) => run.threadId === threadId),
-    isWatched: (threadId) => viewers.watching(threadId) > 0 || terminals.count(threadId) > 0,
+    isWatched: (threadId) =>
+      viewers.watching(threadId) > 0 || terminals.count(threadId) > 0 || ports.count(threadId) > 0,
   });
 
   const processEnds = new ProcessEndWatch(
@@ -260,6 +264,12 @@ export function startRuntime(options: RuntimeOptions) {
       case "terminal.close":
         terminals.close(message.viewerId);
         return;
+      case "port.open":
+        void ports.open(message.viewerId, message.threadId, message.port);
+        return;
+      case "port.close":
+        ports.close(message.viewerId);
+        return;
       case "call":
         await answer(message.id, () => callOf(message.method, message.params));
         return;
@@ -313,6 +323,7 @@ export function startRuntime(options: RuntimeOptions) {
         const frame = decodeViewerFrame(new Uint8Array(event.data));
         if (!frame) return;
         if (terminals.has(frame.viewerId)) terminals.write(frame.viewerId, frame.payload);
+        else if (ports.has(frame.viewerId)) ports.write(frame.viewerId, frame.payload);
         else viewers.write(frame.viewerId, frame.payload);
         return;
       }
@@ -331,6 +342,7 @@ export function startRuntime(options: RuntimeOptions) {
       clearInterval(statsTimer);
       viewers.closeAll();
       terminals.closeAll();
+      ports.closeAll();
       bots.abortAll("The connection to the control plane dropped");
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
@@ -355,6 +367,7 @@ export function startRuntime(options: RuntimeOptions) {
       processEnds.cancelAll();
       viewers.closeAll();
       terminals.closeAll();
+      ports.closeAll();
       bots.abortAll("The runner is stopping");
       socket?.close();
       await idle.settled();

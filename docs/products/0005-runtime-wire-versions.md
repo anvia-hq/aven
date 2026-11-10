@@ -2,6 +2,7 @@
 
 Status: current. What each version of the wire between the control plane and a runtime added (`WIRE_VERSION` in `packages/protocol/src/runtime-wire.ts`; decision 0008). A runtime that speaks another version is refused with close code 4000. Add a line here whenever the version goes up.
 
+- **55**: a runner can open a TCP connection to a port of a thread's sandbox and relay its bytes as viewer frames, `port.open` and `port.close` from the control plane, `port.opened` and `port.closed` from the runner (decision 0199). A runner that has not updated is refused until `aven update` has run.
 - **54**: the control plane can have a runner save a thread's environment, `environment.save` (a `call` with `{ threadId, organizationId, access }` that answers with the saved `image`), which is what the Environment card's Take snapshot button asks for (decision 0197). A runner that has not updated is refused until `aven update`.
 - **53**: a runner can keep an HTML page the agent shows with `show_artifact` (`text/html`), which the control plane serves to a sandboxed frame (decision 0181).
 - **52**: `run.start` and `run.resume` can carry the key the agent's `web_search` tool needs, `webSearch`, so whether that tool is offered no longer depends on the runner's own `TAVILY_API_KEY` and the control plane decides it once.
