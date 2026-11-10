@@ -25,7 +25,7 @@ export function ProjectList({ projects, threads, palettes, selectedId, loaded, o
   }
 
   return (
-    <ul aria-label="Projects" className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+    <ul aria-label="Projects" className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
       {projects.map((project) => (
         <li key={project.id}>
           <ProjectCard
