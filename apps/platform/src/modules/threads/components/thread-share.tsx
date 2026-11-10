@@ -115,8 +115,8 @@ export function ThreadShare({ thread }: { thread: Thread }) {
                 <span className="text-sm font-medium">Multiplayer</span>
                 <span className="text-xs text-muted-foreground">
                   {driving
-                    ? `Teammates can message, steer and stop the agent until ${new Date(thread.drivingUntil ?? "").toLocaleDateString()}. A message from a teammate runs on their own model and bill, and without your personal variables or MCP servers.`
-                    : `Let teammates message the agent for ${DRIVING_DAYS_DEFAULT} days. A message from a teammate runs on their own model and bill.`}
+                    ? `Teammates can message, steer and stop the agent until ${new Date(thread.drivingUntil ?? "").toLocaleDateString()}. It runs with your model, account and bill, and without your personal variables or MCP servers.`
+                    : `Let teammates message the agent for ${DRIVING_DAYS_DEFAULT} days. It runs with your model, account and bill.`}
                 </span>
                 {needsDecisionModel && (
                   <span className="text-xs text-muted-foreground">
