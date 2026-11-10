@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   SUBAGENT_TOOLS_KEPT,
+  answerableQuestion,
   applyEvent,
   isRunning,
   mentionToken,
@@ -281,5 +282,44 @@ describe("how long a run worked", () => {
     const marked = withWorkedTimes(chat, new Map([[1, 5_000]]));
     expect(marked[1]?.workedMs).toBe(5_000);
     expect(marked[0]).toBe(chat[0]!);
+  });
+});
+
+describe("answerableQuestion", () => {
+  const asking: ChatMessage[] = [
+    {
+      id: "m-0",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: {
+            id: "q1",
+            name: "ask_user",
+            target: "",
+            status: "running",
+            questions: [
+              {
+                id: "a",
+                text: "Which?",
+                choices: [
+                  { label: "One", value: "one" },
+                  { label: "Two", value: "two" },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ];
+
+  test("a question the agent is waiting on is shown", () => {
+    expect(answerableQuestion(asking, false, false)?.name).toBe("ask_user");
+  });
+
+  test("a question is not shown while the agent runs, nor after the run failed", () => {
+    expect(answerableQuestion(asking, true, false)).toBeUndefined();
+    expect(answerableQuestion(asking, false, true)).toBeUndefined();
   });
 });
