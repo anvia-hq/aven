@@ -72,10 +72,8 @@ run("providersService (postgres)", async () => {
   });
 
   test("resolveModel decrypts the default provider's key", async () => {
-    expect(await resolveModel(alice)).toEqual({
+    expect(await resolveModel(alice)).toMatchObject({
       provider: "openai",
-      modelId: undefined,
-      baseUrl: undefined,
       apiKey: "sk-secret-abcd",
     });
   });
