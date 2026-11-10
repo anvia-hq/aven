@@ -24,5 +24,6 @@ export function fakeTunnel() {
     record,
     push: (bytes: Uint8Array) => writer.write(bytes),
     end: () => writer.close(),
+    fail: (reason: Error) => writer.abort(reason),
   };
 }

@@ -93,4 +93,15 @@ describe("PortTunnels", () => {
     });
     expect(ports.count("t1")).toBe(0);
   });
+
+  test("tells the control plane when reading the port fails, and lets go of the tunnel", async () => {
+    const fake = fakeTunnel();
+    const { ports, sent } = setup(fake.tunnel);
+    await ports.open(viewerId, "t1", 3000);
+    await fake.fail(new Error("tunnel broke"));
+    await until(() => sent.length === 2);
+    expect(sent[1]).toEqual({ type: "port.closed", viewerId, reason: "tunnel broke" });
+    expect(ports.count("t1")).toBe(0);
+    expect(fake.record.closed).toBe(true);
+  });
 });

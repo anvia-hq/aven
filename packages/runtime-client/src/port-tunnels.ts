@@ -71,14 +71,20 @@ export class PortTunnels {
   }
 
   async #pump(viewerId: string, tunnel: Tunnel, handle: TunnelHandle) {
-    for await (const chunk of handle.output) {
-      while (this.link.buffered() > MAX_BUFFERED_BYTES && !tunnel.closing) {
-        await Bun.sleep(DRAIN_POLL_MS);
+    try {
+      for await (const chunk of handle.output) {
+        while (this.link.buffered() > MAX_BUFFERED_BYTES && !tunnel.closing) {
+          await Bun.sleep(DRAIN_POLL_MS);
+        }
+        if (tunnel.closing) return;
+        this.link.sendBinary(encodeViewerFrame(viewerId, chunk));
       }
+      this.#end(viewerId, "The port closed the connection");
+    } catch (error) {
       if (tunnel.closing) return;
-      this.link.sendBinary(encodeViewerFrame(viewerId, chunk));
+      handle.close();
+      this.#end(viewerId, errorMessage(error));
     }
-    this.#end(viewerId, "The port closed the connection");
   }
 
   #end(viewerId: string, reason: string) {
