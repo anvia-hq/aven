@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, spyOn, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
@@ -80,7 +80,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     await cleanup();
   });
 
-  const started: { prompt: string; model: unknown; extras: Record<string, unknown> }[] = [];
+  const started: { prompt: string; extras: Record<string, unknown> }[] = [];
   const steered: string[] = [];
   const steeredBy: (string | undefined)[] = [];
   const answered: Record<string, unknown>[] = [];
@@ -88,8 +88,8 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     createThreadMessages(
       {
         isRunning: () => running,
-        start: async (_thread: unknown, prompt: string, model: unknown, extras: object) => {
-          started.push({ prompt, model, extras: extras as Record<string, unknown> });
+        start: async (_thread: unknown, prompt: string, _model: unknown, extras: object) => {
+          started.push({ prompt, extras: extras as Record<string, unknown> });
         },
         steer: async (_thread: unknown, message: { prompt: string; senderId?: string }) => {
           steered.push(message.prompt);
@@ -145,19 +145,20 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     expect(githubOf(started[2]!.extras)).toMatchObject({ token: "ghu_creator", login: "creator" });
   });
 
-  test("a teammate's run uses the teammate's own provider and the creator's stays the creator's", async () => {
+  test("a teammate's run looks up the teammate's providers and the creator's the creator's", async () => {
     const thread = await driven();
-    await providersService.create(userId, {
-      kind: "anthropic",
-      name: "Creator",
-      apiKey: "sk-creator-0000",
+    const lookedUp: string[] = [];
+    const spy = spyOn(providersService, "forRun").mockImplementation(async (id: string) => {
+      lookedUp.push(id);
+      return undefined as never;
     });
-    await providersService.create(mateId, { kind: "openai", name: "Mate", apiKey: "sk-mate-0000" });
-    started.length = 0;
-    await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
-    await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
-    expect(started[0]?.model).toMatchObject({ provider: "openai", apiKey: "sk-mate-0000" });
-    expect(started[1]?.model).toMatchObject({ provider: "anthropic", apiKey: "sk-creator-0000" });
+    try {
+      await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
+      await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(lookedUp).toEqual([mateId, userId]);
   });
 
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {
