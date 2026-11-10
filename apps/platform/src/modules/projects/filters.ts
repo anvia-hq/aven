@@ -23,7 +23,6 @@ const typed = (value: unknown) =>
 export function parseProjectsSearch(search: Record<string, unknown>): ProjectsSearch {
   const view = VIEWS.find((candidate) => candidate === search.view);
   return {
-    project: text(search.project),
     q: typed(search.q),
     view: view === "all" ? undefined : view,
     runner: text(search.runner),
