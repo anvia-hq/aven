@@ -68,7 +68,8 @@ export function createDesktopService(runner: Runner, owner: DesktopOwner) {
         wakeRefused,
         WAKE_TIMEOUT_MS,
       );
-      if (!info) throw new UnavailableError("The sandbox could not be started");
+      if (!info)
+        throw new UnavailableError("The sandbox is running, but it has no desktop to show");
       return statusOf(info, userId);
     },
 
