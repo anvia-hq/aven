@@ -40,7 +40,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
-      {canSnapshot && loaded && (
+      {canSnapshot && (
         <Row
           icon={<Camera />}
           action={
@@ -51,7 +51,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
                     variant="ghost"
                     size="xs"
                     className="ml-auto shrink-0"
-                    disabled={busy || !runtime?.online}
+                    disabled={!loaded || busy || !runtime?.online}
                     onClick={() => void take()}
                   />
                 }
@@ -65,7 +65,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
           }
         >
           <span className="text-muted-foreground" data-slot="snapshot-state">
-            {snapshotLine(snapshot)}
+            {loaded ? snapshotLine(snapshot) : "Checking for a snapshot…"}
           </span>
         </Row>
       )}
