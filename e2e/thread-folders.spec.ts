@@ -292,6 +292,59 @@ test.describe("thread folders", () => {
     await expect(folderOf(page, "Steady")).toBeVisible();
   });
 
+  test("a folder that is still being created cannot be opened or closed, so no request has its temporary id", async ({
+    page,
+  }) => {
+    const started = await startWithThreads(page);
+    runner = started.child;
+    const patched: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PATCH" && request.url().includes("/api/folders/")) {
+        patched.push(request.url());
+      }
+    });
+    await slow(page);
+
+    await page.getByRole("button", { name: "New folder" }).click();
+    const field = page.getByRole("textbox", { name: "Folder name" });
+    await field.fill("Pending");
+    await field.press("Enter");
+    await expect(folderOf(page, "Pending")).toHaveAttribute("data-pending", "true", QUICK);
+    const toggle = folderOf(page, "Pending").locator("[data-slot='folder-toggle']");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(folderOf(page, "Pending")).toHaveAttribute("data-pending", "false");
+    expect(patched).toEqual([]);
+    await expect(page.getByText("Could not save the folder")).toHaveCount(0);
+  });
+
+  test("a folder made for a thread is not left behind when filing the thread fails", async ({
+    page,
+  }) => {
+    const started = await startWithThreads(page);
+    runner = started.child;
+    await page.route("**/api/folders/threads/*", (route) =>
+      route.fulfill({ status: 500, body: "Boom" }),
+    );
+
+    await threadLink(page, "Alpha thread").hover();
+    await page.getByRole("button", { name: "Options for Alpha thread" }).click();
+    await page.getByRole("menuitem", { name: "Move to folder" }).click();
+    await page.getByRole("menuitem", { name: "New folder…" }).click();
+    const field = page.getByRole("textbox", { name: "Folder name" });
+    await field.fill("Orphan");
+    await field.press("Enter");
+
+    await expect(page.getByText("Could not create the folder")).toBeVisible();
+    await expect(folderOf(page, "Orphan")).toHaveCount(0);
+    await expect(async () => {
+      const folders = (await (await page.request.get("/api/folders")).json()) as {
+        name: string;
+      }[];
+      expect(folders.map((folder) => folder.name)).not.toContain("Orphan");
+    }).toPass({ timeout: 5000 });
+  });
+
   test("dragging a thread to a folder does not split, and dragging to the page still does", async ({
     page,
   }) => {
