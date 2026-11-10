@@ -46,4 +46,11 @@ describe("Open a PR", () => {
   test("is held back while the agent works", () => {
     expect(shipActionOf(facts({ running: true }))).toEqual({ kind: "open", disabled: true });
   });
+
+  test("does not wait for a branch read that is not made while the agent works", () => {
+    const unread = { loaded: false, available: null, problem: null, any: false };
+    expect(shipActionOf(facts({ running: true, branch: unread }))).toEqual({ kind: "none" });
+    expect(shipActionOf(facts({ shipping: true, branch: unread }))).toEqual({ kind: "none" });
+    expect(shipActionOf(facts({ branch: unread }))).toEqual({ kind: "loading" });
+  });
 });

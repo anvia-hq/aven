@@ -32,7 +32,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
     };
   }
   if (latest) return { kind: "none" };
-  if (!branch.loaded) return { kind: "loading" };
+  if (!branch.loaded) return busy ? { kind: "none" } : { kind: "loading" };
   if (branch.problem) return { kind: "failed", reason: branch.problem };
   if (!branch.any) return { kind: "none" };
   if (!branchPulls.loaded) return { kind: "loading" };
