@@ -479,6 +479,14 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     PROCESS_LOGS[started.id] = failing ? "src/greeting.ts(2,3): error TS2322\n" : "7 pass\n";
     return reply({ process: started });
   }
+  if (call.method === "environment.save") {
+    const { snapshotFailure } = config;
+    setTimeout(() => {
+      if (snapshotFailure) send({ type: "reply", id: call.id, ok: false, error: snapshotFailure });
+      else reply({ image: "aven-env-fake" });
+    }, 700);
+    return;
+  }
   if (call.method === "processes.list") return reply({ processes: PROCESSES });
   if (call.method === "processes.stop") {
     const { processId } = call.params as { processId: string };
