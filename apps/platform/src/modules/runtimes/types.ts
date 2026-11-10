@@ -20,6 +20,7 @@ export type Runtime = {
   updateTo: string | null;
   isControlPlane: boolean;
   canUpdate: boolean;
+  codex: boolean;
   stats: RuntimeStats | null;
   lastSeenAt: string | null;
   createdAt: string;

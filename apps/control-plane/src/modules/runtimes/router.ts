@@ -46,6 +46,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
                 latest,
               ),
               canUpdate: hub.canUpdateOf(runtime.id),
+              codex: hub.codexOf(runtime.id),
               stats: hub.statsOf(runtime.id) ?? null,
             };
           }),

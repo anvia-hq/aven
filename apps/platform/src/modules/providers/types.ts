@@ -79,3 +79,10 @@ export type ModelsState = {
   labels?: Record<string, string>;
   error?: string;
 };
+
+export type CodexLoginState = {
+  state: "signed-in" | "signed-out" | "waiting" | "failed" | "unavailable";
+  url?: string;
+  code?: string;
+  error?: string;
+};

@@ -1,5 +1,9 @@
 import type { Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
 
+export const CODEX_DEFAULT_MODEL = "default";
+
+export const CODEX_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"] as const;
+
 export const providerNeedsKey = (kind: Provider) =>
   kind !== "openai-compatible" && kind !== "codex";
 

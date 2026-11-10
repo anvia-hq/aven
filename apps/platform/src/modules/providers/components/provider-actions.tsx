@@ -17,14 +17,16 @@ export function ProviderActions({ provider, edit }: Props) {
   const { refetch, fetching } = useRefetchModels();
   return (
     <>
-      <Button
-        variant="ghost"
-        size="xs"
-        disabled={fetching === provider.id}
-        onClick={() => void refetch(provider)}
-      >
-        {fetching === provider.id ? "Fetching…" : "Refetch models"}
-      </Button>
+      {provider.kind !== "codex" && (
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={fetching === provider.id}
+          onClick={() => void refetch(provider)}
+        >
+          {fetching === provider.id ? "Fetching…" : "Refetch models"}
+        </Button>
+      )}
       {!provider.isDefault && (
         <Button variant="ghost" size="xs" onClick={() => makeDefault(provider)}>
           Make default

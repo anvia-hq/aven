@@ -7,6 +7,7 @@ import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";
 import { useProvidersModels } from "../hooks/use-provider-models";
 import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
+import { CodexDialog } from "./codex-dialog";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
@@ -65,8 +66,7 @@ export function ProvidersList() {
   if (!loaded) return null;
 
   const available = PROVIDERS.filter(
-    (kind) =>
-      kind !== "codex" && (MANY.has(kind) || !providers.some((provider) => provider.kind === kind)),
+    (kind) => MANY.has(kind) || !providers.some((provider) => provider.kind === kind),
   );
 
   const taken = connectedPresets(providers);
@@ -119,7 +119,8 @@ export function ProvidersList() {
               <ProviderActions
                 provider={provider}
                 edit={
-                  provider.kind === "openai-compatible" && !presetOf(provider) ? undefined : (
+                  provider.kind === "codex" ||
+                  (provider.kind === "openai-compatible" && !presetOf(provider)) ? undefined : (
                     <ProviderDialog
                       kind={provider.kind}
                       provider={provider}
@@ -145,7 +146,11 @@ export function ProvidersList() {
               <span className="text-sm font-medium">{row.title}</span>
               <span className="truncate text-xs text-muted-foreground">{row.description}</span>
             </div>
-            <ProviderDialog kind={row.kind} preset={row.preset} label={row.label} />
+            {row.kind === "codex" ? (
+              <CodexDialog label={row.label} />
+            ) : (
+              <ProviderDialog kind={row.kind} preset={row.preset} label={row.label} />
+            )}
           </li>
         ))}
       </Group>

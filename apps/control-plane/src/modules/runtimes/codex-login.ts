@@ -9,7 +9,11 @@ const CALL_MS = 20_000;
 
 const state = z.object({
   state: z.enum(["signed-in", "signed-out", "waiting", "failed", "unavailable"]),
-  url: z.string().max(500).optional(),
+  url: z
+    .string()
+    .max(500)
+    .refine((url) => url.startsWith("https://auth.openai.com/"))
+    .optional(),
   code: z.string().max(40).optional(),
   error: z.string().max(500).optional(),
 });

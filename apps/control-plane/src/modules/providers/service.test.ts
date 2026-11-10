@@ -381,4 +381,26 @@ run("providersService (postgres)", async () => {
     });
     expect(await effortsByModel({ kind: "openai-compatible" }, ["llama3"])).toEqual({});
   });
+
+  test("a Codex provider is made with no key, only once, and offers one default model with the efforts", async () => {
+    const created = await providersService.create(bob, {
+      kind: "codex",
+      name: "Codex",
+      modelId: "default",
+    });
+    expect(created).toMatchObject({ kind: "codex", hasKey: false, keyHint: null });
+    await expect(
+      providersService.create(bob, { kind: "codex", name: "Codex again" }),
+    ).rejects.toThrow("already connected");
+    const listed = await providersService.listModels(bob, created.id);
+    expect(listed?.models).toEqual(["default"]);
+    expect(listed?.labels).toEqual({ default: "Codex default" });
+    expect(listed?.efforts.default?.options).toEqual(["minimal", "low", "medium", "high", "xhigh"]);
+    expect(await resolveModel(bob, { providerId: created.id, reasoningEffort: "high" })).toEqual({
+      provider: "codex",
+      modelId: undefined,
+      reasoningEffort: "high",
+    });
+    await providersService.remove(bob, created.id);
+  });
 });

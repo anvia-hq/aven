@@ -1,6 +1,6 @@
 import { db } from "@aven/db/client";
 import { providers } from "@aven/db/schema/providers";
-import { providerNeedsKey } from "@aven/protocol/providers";
+import { CODEX_DEFAULT_MODEL, CODEX_EFFORTS, providerNeedsKey } from "@aven/protocol/providers";
 import { and, asc, eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
@@ -24,7 +24,13 @@ class InvalidProviderError extends UnprocessableError {}
 
 type ProviderKind = ModelConfig["provider"];
 
-const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "gemini", "azure"]);
+const SINGLE_CREDENTIAL = new Set<ProviderKind>([
+  "openai",
+  "anthropic",
+  "gemini",
+  "azure",
+  "codex",
+]);
 
 const hasBaseUrl = (
   kind: ProviderKind,
@@ -205,6 +211,7 @@ export const providersService = {
   async listModels(userId: string, id: string) {
     const [row] = await db.select().from(providers).where(ownProvider(userId, id));
     if (!row) return null;
+    if (row.kind === "codex") return codexModels(row.modelId);
     const source = sourceOf(row);
     const models = await modelsOf(row, source);
     const [efforts, labels] = await Promise.all([
@@ -225,6 +232,17 @@ export const providersService = {
       );
     return row;
   },
+};
+
+const codexModels = (modelId: string | null) => {
+  const models: string[] = [CODEX_DEFAULT_MODEL];
+  if (modelId && modelId !== CODEX_DEFAULT_MODEL) models.push(modelId);
+  const controls = { options: [...CODEX_EFFORTS], defaultValue: null };
+  return {
+    models,
+    efforts: Object.fromEntries(models.map((id) => [id, controls])),
+    labels: { [CODEX_DEFAULT_MODEL]: "Codex default" },
+  };
 };
 
 const sourceOf = (row: ProviderRow): ModelSource => ({

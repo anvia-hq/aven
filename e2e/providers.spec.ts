@@ -47,3 +47,102 @@ test("the model of a provider is picked from a list that loads by itself", async
   await expect(dialog.getByRole("combobox", { name: "Model" })).toContainText("claude-haiku-5-5");
   await page.screenshot({ path: ".aven/proof/provider-models/after.png" });
 });
+
+test.describe("Codex", () => {
+  async function ownRunner(page: import("@playwright/test").Page, codex: boolean) {
+    const made = await page.request.post("/api/runtimes", { data: { name: "my-laptop" } });
+    expect(made.ok()).toBe(true);
+    await page.route("**/api/runtimes", async (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      const response = await route.fetch();
+      const runtimes = (await response.json()) as { name: string }[];
+      return route.fulfill({
+        response,
+        json: runtimes.map((runtime) =>
+          runtime.name === "my-laptop" ? { ...runtime, online: true, codex } : runtime,
+        ),
+      });
+    });
+  }
+
+  test("with no runner of your own that has Codex, the dialog says what to do", async ({
+    page,
+  }) => {
+    await registerUser(page, "cdx", "Codex User");
+    await ownRunner(page, false);
+    await page.goto("/settings/providers");
+    await page.getByRole("listitem", { name: "Codex" }).getByRole("button").click();
+    const dialog = page.getByRole("dialog", { name: "Connect your ChatGPT subscription" });
+    await expect(dialog.getByText("You need a runner of your own")).toBeVisible();
+    await expect(dialog.getByText("Not ready: my-laptop")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Connect ChatGPT" })).toHaveCount(0);
+  });
+
+  test("the person is walked through the device code, and Codex is added once it is approved", async ({
+    page,
+  }) => {
+    await registerUser(page, "cdy", "Codex Walker");
+    await ownRunner(page, true);
+    let state: Record<string, unknown> = { state: "signed-out" };
+    const actions: string[] = [];
+    await page.route("**/api/runtimes/*/codex", (route) => route.fulfill({ json: state }));
+    await page.route("**/api/runtimes/*/codex/login", async (route) => {
+      const { action } = route.request().postDataJSON() as { action: string };
+      actions.push(action);
+      state =
+        action === "start"
+          ? { state: "waiting", url: "https://auth.openai.com/codex/device", code: "AOL5-C2T9O" }
+          : { state: "signed-out" };
+      await route.fulfill({ json: state });
+    });
+
+    await page.goto("/settings/providers");
+    await page.getByRole("listitem", { name: "Codex" }).getByRole("button").click();
+    const dialog = page.getByRole("dialog", { name: "Connect your ChatGPT subscription" });
+    await dialog.getByRole("button", { name: "Connect ChatGPT" }).click();
+
+    await expect(dialog.getByText("Enable device code authorization for Codex.")).toBeVisible();
+    await expect(dialog.getByRole("link", { name: /Open Device Authorization/ })).toHaveAttribute(
+      "href",
+      "https://auth.openai.com/codex/device",
+    );
+    await expect(dialog.getByLabel("Device code")).toHaveText("AOL5-C2T9O");
+    await expect(dialog.getByText("Waiting for approval. Keep this dialog open.")).toBeVisible();
+
+    state = { state: "signed-in" };
+    await dialog.getByRole("button", { name: "Add Codex" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("listitem", { name: "Codex" })).toBeVisible();
+    const listed = (await (await page.request.get("/api/providers")).json()) as {
+      kind: string;
+      hasKey: boolean;
+    }[];
+    expect(listed).toMatchObject([{ kind: "codex", hasKey: false }]);
+    expect(actions).toEqual(["start"]);
+  });
+
+  test("closing the dialog while it waits cancels the sign-in on the runner", async ({ page }) => {
+    await registerUser(page, "cdz", "Codex Closer");
+    await ownRunner(page, true);
+    let state: Record<string, unknown> = { state: "signed-out" };
+    const actions: string[] = [];
+    await page.route("**/api/runtimes/*/codex", (route) => route.fulfill({ json: state }));
+    await page.route("**/api/runtimes/*/codex/login", async (route) => {
+      const { action } = route.request().postDataJSON() as { action: string };
+      actions.push(action);
+      state =
+        action === "start"
+          ? { state: "waiting", url: "https://auth.openai.com/codex/device", code: "AOL5-C2T9O" }
+          : { state: "signed-out" };
+      await route.fulfill({ json: state });
+    });
+    await page.goto("/settings/providers");
+    await page.getByRole("listitem", { name: "Codex" }).getByRole("button").click();
+    const dialog = page.getByRole("dialog", { name: "Connect your ChatGPT subscription" });
+    await dialog.getByRole("button", { name: "Connect ChatGPT" }).click();
+    await expect(dialog.getByLabel("Device code")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect.poll(() => actions).toEqual(["start", "cancel"]);
+  });
+});

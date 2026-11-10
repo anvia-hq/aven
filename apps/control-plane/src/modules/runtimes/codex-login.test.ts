@@ -97,4 +97,16 @@ describe("signing in to Codex on a runner", () => {
     ).rejects.toThrow("Runtime not found");
     get.mockRestore();
   });
+
+  test("a link that is not OpenAI's sign-in page is not passed on", async () => {
+    const get = runtimeOf("rt-1", "ada");
+    const { hub } = hubOf({
+      codex: true,
+      reply: { state: "waiting", url: "https://evil.example/codex/device", code: "AOL5-C2T9O" },
+    });
+    await expect(codexLogin(hub, "org-1", "ada", "rt-1", "start")).rejects.toThrow(
+      "did not answer",
+    );
+    get.mockRestore();
+  });
 });

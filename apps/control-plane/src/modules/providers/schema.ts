@@ -94,6 +94,13 @@ const compatible = {
   isDefault,
 };
 
+const codex = {
+  kind: z.literal("codex"),
+  name: providerName,
+  modelId: providerModelId.optional(),
+  isDefault,
+};
+
 export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...openai, apiKey }),
   z.object({ ...anthropic, apiKey }),
@@ -102,6 +109,7 @@ export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...vertex, apiKey: vertexCredential }),
   z.object({ ...azure, apiKey }),
   z.object({ ...compatible, apiKey: apiKey.optional() }),
+  z.object({ ...codex, apiKey: z.never().optional() }),
 ]);
 
 export const keylessProviderBody = z.discriminatedUnion("kind", [

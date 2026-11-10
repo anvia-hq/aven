@@ -12,13 +12,16 @@ const GREETING =
   "You were just created. Introduce yourself to the person now: a short hello, who you are, and what you can do for them, in one or two short messages. You may end with one easy question to get started. Do not mention this note.";
 
 async function modelOf(userId: string, bot: Bot) {
-  return (
+  const model =
     (await resolveModel(userId, {
       providerId: bot.providerId ?? undefined,
       modelId: bot.modelId ?? undefined,
       reasoningEffort: bot.reasoningEffort ?? undefined,
-    })) ?? environmentModel()
-  );
+    })) ?? environmentModel();
+  if (model.provider === "codex") {
+    throw new UnprocessableError("A bot cannot use Codex: give it a provider with an API key");
+  }
+  return model;
 }
 
 export const createBotChats = (runner: BotRunner) => ({

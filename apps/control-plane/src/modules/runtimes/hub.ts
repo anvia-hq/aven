@@ -451,6 +451,10 @@ export class RuntimeHub {
     return this.get(runtimeId)?.canUpdate ?? false;
   }
 
+  codexOf(runtimeId: string) {
+    return this.get(runtimeId)?.codex ?? false;
+  }
+
   statsOf(runtimeId: string) {
     return this.get(runtimeId)?.stats;
   }

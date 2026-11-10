@@ -1,5 +1,5 @@
 import type { Provider } from "@aven/agents/model";
-import { providerNeedsKey } from "@aven/protocol/providers";
+import { CODEX_DEFAULT_MODEL, CODEX_EFFORTS, providerNeedsKey } from "@aven/protocol/providers";
 
 import { UnavailableError, UnprocessableError } from "../../errors";
 import { readKey } from "./crypto";
@@ -36,10 +36,9 @@ export function environmentModel(): ModelConfig {
 
 export class InvalidSelectionError extends UnprocessableError {}
 
-export const CODEX_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"] as const;
-
 function codexModel(modelId: string | null, selection: ModelSelection): ModelConfig {
   const { reasoningEffort } = selection;
+  const chosen = selection.modelId ?? modelId;
   if (reasoningEffort && !(CODEX_EFFORTS as readonly string[]).includes(reasoningEffort)) {
     throw new InvalidSelectionError(
       `Codex does not support the "${reasoningEffort}" reasoning effort`,
@@ -47,7 +46,7 @@ function codexModel(modelId: string | null, selection: ModelSelection): ModelCon
   }
   return {
     provider: "codex",
-    modelId: selection.modelId ?? modelId ?? undefined,
+    modelId: chosen && chosen !== CODEX_DEFAULT_MODEL ? chosen : undefined,
     reasoningEffort,
   };
 }
