@@ -32,6 +32,7 @@ import { github } from "./modules/github/client";
 import { githubRouter } from "./modules/github/router";
 import { platformRouter } from "./modules/platform/router";
 import { preferencesRouter } from "./modules/preferences/router";
+import { avatarsRouter } from "./modules/avatars/router";
 import { profileRouter } from "./modules/profile/router";
 import { projectsRouter } from "./modules/projects/router";
 import { decisionModelRouter } from "./modules/decision-model/router";
@@ -68,6 +69,7 @@ export const app = new Elysia()
   .use(platformRouter(putAwayThread, runtimeHub))
   .use(preferencesRouter)
   .use(profileRouter)
+  .use(avatarsRouter)
   .use(projectsRouter(putAwayThread))
   .use(providersRouter)
   .use(decisionModelRouter)
