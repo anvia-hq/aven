@@ -132,7 +132,7 @@ export function DocumentTitle({
       onChange={(event) => onChange(event.target.value.replace(/\n/g, " "))}
       onKeyDown={onKeyDown}
       onBlur={onCommit}
-      className="min-h-0 resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-[2.5rem] leading-[1.2] font-bold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-[2.5rem] dark:bg-transparent"
+      className="min-h-0 resize-none overflow-hidden rounded-none border-0 bg-transparent p-0 text-[1.75rem] leading-[1.25] font-bold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0 md:text-[1.75rem] dark:bg-transparent"
     />
   );
 }
