@@ -3,8 +3,7 @@ import { parseDriverPrompt } from "@aven/protocol/drivers";
 import type { Addressing, AddressingScores, PersonMention } from "./types";
 
 export const AGENT_HANDLE = "@agent";
-export const ACT_BELOW_PERSON = 0.6;
-export const ACT_ABOVE_AGENT = 0.4;
+export const PERSON_AT_LEAST = 0.6;
 
 const PERSON_MENTION = /@\[([^\]\n]{1,80})\]\(user:([\w-]{1,64})\)/g;
 const AGENT_WORD = /(^|[^\w@])@agent\b/i;
@@ -31,6 +30,5 @@ export function fallbackAddressing(text: string): Addressing {
 }
 
 export function addressingFrom(scores: AddressingScores): Addressing {
-  const toPerson = scores.toPerson >= ACT_BELOW_PERSON && scores.toAgent <= ACT_ABOVE_AGENT;
-  return { agentAction: !toPerson, by: "model" };
+  return { agentAction: scores.toPerson < PERSON_AT_LEAST, by: "model" };
 }

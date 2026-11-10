@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import { initials } from "@/lib/format";
 
 import type { Crowd } from "../types";
@@ -17,6 +17,7 @@ export function ParticipantStack({ crowd }: { crowd: Crowd }) {
           key={person.id}
           className="size-5 ring-2 ring-sidebar group-hover/menu-button:ring-sidebar-accent group-data-active/menu-button:ring-sidebar-accent"
         >
+          {person.image && <AvatarImage src={person.image} alt="" />}
           <AvatarFallback className="bg-foreground/10 text-[9px] font-medium text-sidebar-foreground">
             {initials(person.name)}
           </AvatarFallback>

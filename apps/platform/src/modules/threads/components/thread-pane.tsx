@@ -8,6 +8,7 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
+import { finishedEnvironmentSaves } from "@/modules/overview/environment-saves";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { ProjectInfo } from "@/modules/projects/components/project-info";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -117,6 +118,7 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
                         usage={usage}
                         synced={synced}
                         owned={owned}
+                        saves={finishedEnvironmentSaves(messages)}
                         onCompact={{
                           run: () => void compact(),
                           busy: compacting,

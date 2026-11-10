@@ -1,5 +1,5 @@
 import type { EnvIssue, ParsedEnv } from "./types";
-import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES, isReservedName } from "./types";
+import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES } from "./types";
 
 const LINE = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$/;
 
@@ -54,8 +54,6 @@ export function parseEnv(source: string): ParsedEnv {
     const value = unquote(match[2]!);
     if (name.length > MAX_NAME_LENGTH) {
       issues.push({ line, text: name.slice(0, 40), reason: "Name is too long" });
-    } else if (isReservedName(name)) {
-      issues.push({ line, text: name, reason: "Reserved for Aven's own use" });
     } else if (value.length > MAX_VALUE_LENGTH) {
       issues.push({ line, text: name, reason: "Value is too long" });
     } else {

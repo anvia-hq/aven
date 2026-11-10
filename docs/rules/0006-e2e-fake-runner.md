@@ -38,6 +38,7 @@ A boolean switch counts as on when its value is exactly `1`; any other value, or
 | `FAKE_SNAPSHOT_FAILS`             | message                                     | `environment.save` fails with that message, after 700 ms, instead of saying it saved                                  |
 | `FAKE_REAL_PORT`                  | a port number                               | `port.open` of that port is tunnelled to a real server on the test machine, byte for byte, instead of the pretend app |
 | `FAKE_SNAPSHOT_SAVED_MINUTES_AGO` | a number of minutes                         | `environment.read` says a snapshot was saved that long ago, as if the agent had saved one                             |
+| `FAKE_NO_WORKSPACE`               | `1`                                         | the files calls answer that the thread has no workspace yet, as for a thread the agent never worked on                |
 | `FAKE_STEER_REFUSES`              | reason                                      | `run.steer` is refused with that reason                                                                               |
 | `FAKE_STEER_APPLIES_AFTER`        | milliseconds                                | how long after a steer `steer_applied` comes; `400` when it says nothing                                              |
 | `FAKE_UPDATE_BUSY`                | reason                                      | `runner.update` answers `busy` with that reason instead of `started`                                                  |

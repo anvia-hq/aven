@@ -16,15 +16,15 @@ async function add(page: Page, name: string, value: string, secret = false) {
     .getByRole("region", { name: "Environment variables" })
     .getByRole("button", { name: "Add" })
     .click();
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Value").fill(value);
+  await page.getByLabel("Name 1").fill(name);
+  await page.getByLabel("Value 1").fill(value);
   if (secret) await page.getByRole("switch", { name: "Secret" }).click();
   await page.getByRole("button", { name: "Add variable" }).click();
   await expect(page.getByText("Variable saved")).toBeVisible();
 }
 
 async function pasteIntoName(page: Page, text: string) {
-  await page.getByLabel("Name").focus();
+  await page.getByLabel("Name 1").focus();
   await page.evaluate((pasted) => {
     const data = new DataTransfer();
     data.setData("text", pasted);
@@ -70,12 +70,11 @@ test.describe("project environment variables", () => {
     const section = await openProject(page);
 
     await section.getByRole("button", { name: "Add" }).click();
-    await page.getByLabel("Name").fill("GIT_DIR");
-    await page.getByLabel("Value").fill("x");
-    await page.getByRole("button", { name: "Add variable" }).click();
+    await page.getByLabel("Name 1").fill("GIT_DIR");
+    await page.getByLabel("Value 1").fill("x");
 
-    await expect(page.getByText("is reserved for Aven's own use")).toBeVisible();
-    await expect(page.getByText("Variable saved")).toHaveCount(0);
+    await expect(page.getByText("Reserved for Aven's own use")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add variable" })).toBeDisabled();
   });
 
   test("changing a secret asks for its value again; removing a variable removes it", async ({
@@ -95,7 +94,7 @@ test.describe("project environment variables", () => {
     await expect(section).toContainText("None yet");
   });
 
-  test("pasting a .env into the name field makes a row for every variable in it", async ({
+  test("pasting a .env into a name field makes a row for every variable in it", async ({
     page,
   }) => {
     const section = await openProject(page);
@@ -109,7 +108,10 @@ test.describe("project environment variables", () => {
     await expect(page.getByLabel("Value 1")).toHaveValue("postgres://localhost/app");
     await expect(page.getByLabel("Name 2")).toHaveValue("PORT");
     await expect(page.getByLabel("Value 3")).toHaveValue("two words");
-    await expect(page.getByRole("list", { name: "Skipped lines" })).toContainText("GIT_DIR");
+    await expect(page.getByLabel("Name 4")).toHaveValue("GIT_DIR");
+    await expect(page.getByText("Reserved for Aven's own use")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add 4 variables" })).toBeDisabled();
+    await page.getByRole("button", { name: "Remove row 4" }).click();
 
     await page.getByLabel("Value 2").fill("4000");
     await page.getByRole("button", { name: "Add 3 variables" }).click();
@@ -119,12 +121,11 @@ test.describe("project environment variables", () => {
     await expect(section).toContainText("two words");
   });
 
-  test("the Paste a .env button gives rows to fill in, and secret hides the values", async ({
+  test("the add dialog is always rows to fill in, and secret hides the values", async ({
     page,
   }) => {
     const section = await openProject(page);
     await section.getByRole("button", { name: "Add" }).click();
-    await page.getByRole("button", { name: "Paste a .env" }).click();
     await page.getByLabel("Name 1").fill("TOKEN");
     await page.getByLabel("Value 1").fill("a-long-secret-value-9876");
     await page.getByRole("button", { name: "Add another" }).click();
@@ -133,7 +134,7 @@ test.describe("project environment variables", () => {
     await page.getByRole("switch", { name: "Secret" }).click();
     await expect(page.getByLabel("Value 1")).toHaveAttribute("type", "password");
     await page.getByRole("button", { name: "Remove row 2" }).click();
-    await page.getByRole("button", { name: "Add 1 variable" }).click();
+    await page.getByRole("button", { name: "Add variable" }).click();
     await expect(page.getByText("Variable saved")).toBeVisible();
     await expect(section).toContainText("••••••9876");
     await expect(section).not.toContainText("OTHER");
@@ -160,7 +161,6 @@ test.describe("project environment variables", () => {
   test("a row with a bad or doubled name cannot be saved until it is fixed", async ({ page }) => {
     const section = await openProject(page);
     await section.getByRole("button", { name: "Add" }).click();
-    await page.getByRole("button", { name: "Paste a .env" }).click();
     await page.getByLabel("Name 1").fill("1BAD");
     await page.getByLabel("Value 1").fill("x");
     await page.getByRole("button", { name: "Add another" }).click();
@@ -267,8 +267,8 @@ test.describe("project environment variables", () => {
     const own = page.getByRole("region", { name: "Your variables" });
     await expect(own).toContainText("None yet");
     await own.getByRole("button", { name: "Add" }).click();
-    await page.getByLabel("Name").fill("MY_TOKEN");
-    await page.getByLabel("Value").fill("not-a-secret");
+    await page.getByLabel("Name 1").fill("MY_TOKEN");
+    await page.getByLabel("Value 1").fill("not-a-secret");
     await page.getByRole("button", { name: "Add variable" }).click();
     await expect(page.getByText("Variable saved")).toBeVisible();
     await expect(own).toContainText("MY_TOKEN");
@@ -277,8 +277,8 @@ test.describe("project environment variables", () => {
     const shared = page.getByRole("region", { name: "Workspace variables" });
     await expect(shared.getByRole("button", { name: "Add" })).toBeVisible();
     await shared.getByRole("button", { name: "Add" }).click();
-    await page.getByLabel("Name").fill("REGISTRY");
-    await page.getByLabel("Value").fill("registry.example.com");
+    await page.getByLabel("Name 1").fill("REGISTRY");
+    await page.getByLabel("Value 1").fill("registry.example.com");
     await page.getByRole("button", { name: "Add variable" }).click();
     await expect(shared).toContainText("registry.example.com");
     await expect(shared).not.toContainText("MY_TOKEN");

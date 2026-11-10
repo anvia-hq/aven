@@ -13,7 +13,7 @@ const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export const PROBLEM_TEXT: Record<RowProblem, string> = {
   name: "Use letters, digits and underscores, not starting with a digit",
-  reserved: "Reserved for Aven's own use",
+  reserved: "Reserved for Aven's own use, so it cannot be saved. Rename or remove it.",
   duplicate: "Named twice",
   long: "The value is too long",
 };

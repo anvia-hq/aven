@@ -46,11 +46,11 @@ export function PreferencesSection() {
       </SettingsSection>
       <SettingsSection title="Sound" description="Only affects this device.">
         <SettingsRow
-          title="Chime when a thread finishes"
-          description="A soft sound when an agent finishes while you are in another tab or window."
+          title="Sounds"
+          description="A soft chime when an agent finishes while you are in another tab or window, and a quieter note when someone mentions you."
         >
           <Switch
-            aria-label="Chime when a thread finishes"
+            aria-label="Sounds"
             checked={sound}
             onCheckedChange={(checked) => {
               setSound(checked);

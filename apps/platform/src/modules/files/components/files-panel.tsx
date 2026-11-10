@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 
 import { useExplorerState } from "../hooks/use-explorer-state";
@@ -26,6 +27,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
     running,
   );
   const [query, setQuery] = useState("");
+  const noWorkspace = !problem && available === false;
 
   return (
     <SidePanel
@@ -61,50 +63,51 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
         </>
       }
     >
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1">
-          <FileViewer threadId={threadId} path={explorer.active} running={running} />
+      {noWorkspace ? (
+        <PanelNotice>
+          This thread has no workspace yet. It is made when the agent first works on it.
+        </PanelNotice>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          <div className="min-w-0 flex-1">
+            <FileViewer threadId={threadId} path={explorer.active} running={running} />
+          </div>
+          {explorer.treeShown && (
+            <aside className="flex w-56 shrink-0 flex-col gap-2 border-l p-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-8 pl-7 text-xs md:text-xs"
+                  placeholder="Filter files"
+                  aria-label="Filter files"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {problem && <p className="px-3 py-2 text-xs text-muted-foreground">{problem}</p>}
+                {available &&
+                  (query.trim() === "" ? (
+                    <FileTree
+                      folders={folders}
+                      expanded={explorer.expanded}
+                      active={explorer.active}
+                      onToggleFolder={explorer.toggleFolder}
+                      onOpenFile={explorer.openFile}
+                    />
+                  ) : (
+                    <FileMatches
+                      folders={folders}
+                      query={query}
+                      active={explorer.active}
+                      onOpenFile={explorer.openFile}
+                    />
+                  ))}
+              </div>
+            </aside>
+          )}
         </div>
-        {explorer.treeShown && (
-          <aside className="flex w-56 shrink-0 flex-col gap-2 border-l p-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-8 pl-7 text-xs md:text-xs"
-                placeholder="Filter files"
-                aria-label="Filter files"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {problem && <p className="px-3 py-2 text-xs text-muted-foreground">{problem}</p>}
-              {!problem && available === false && (
-                <p className="px-3 py-2 text-xs text-muted-foreground">
-                  This thread has no workspace yet. It is made when the agent first works on it.
-                </p>
-              )}
-              {available &&
-                (query.trim() === "" ? (
-                  <FileTree
-                    folders={folders}
-                    expanded={explorer.expanded}
-                    active={explorer.active}
-                    onToggleFolder={explorer.toggleFolder}
-                    onOpenFile={explorer.openFile}
-                  />
-                ) : (
-                  <FileMatches
-                    folders={folders}
-                    query={query}
-                    active={explorer.active}
-                    onOpenFile={explorer.openFile}
-                  />
-                ))}
-            </div>
-          </aside>
-        )}
-      </div>
+      )}
     </SidePanel>
   );
 }

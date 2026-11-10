@@ -15,7 +15,7 @@ const toRandy = "@[Randy](user:u-2) did you deploy the fix?";
 
 function gateWith(options: {
   config?: typeof config | null | Error;
-  scores?: { toAgent: number; toPerson: number } | null;
+  scores?: { toPerson: number } | null;
 }) {
   const asked: AddressingInput[] = [];
   const gate = createAddressingGate({
@@ -33,7 +33,7 @@ function gateWith(options: {
 
 describe("the gate on a multiplayer message (decision 0191)", () => {
   test("a message that mentions nobody is asked of the model too, with who spoke before", async () => {
-    const { gate, asked } = gateWith({ scores: { toAgent: 0.1, toPerson: 0.9 } });
+    const { gate, asked } = gateWith({ scores: { toPerson: 0.9 } });
     const follow = {
       ...request("I think we discussed the feature to add."),
       recent: [{ author: "Indra", text: "Bro @Randy you can work with the agent." }],
@@ -47,7 +47,7 @@ describe("the gate on a multiplayer message (decision 0191)", () => {
   });
 
   test("@agent goes to the agent without asking the model", async () => {
-    const { gate, asked } = gateWith({ scores: { toAgent: 0, toPerson: 1 } });
+    const { gate, asked } = gateWith({ scores: { toPerson: 1 } });
     expect(await gate(request("@agent fix the build"))).toEqual({
       agentAction: true,
       by: "fallback",
@@ -61,7 +61,7 @@ describe("the gate on a multiplayer message (decision 0191)", () => {
   });
 
   test("the model decides a mention, and is told who wrote it and who is mentioned", async () => {
-    const said = gateWith({ scores: { toAgent: 0.05, toPerson: 0.97 } });
+    const said = gateWith({ scores: { toPerson: 0.97 } });
     expect(await said.gate(request(toRandy))).toEqual({ agentAction: false, by: "model" });
     expect(said.asked[0]).toMatchObject({
       author: "Indra",
@@ -69,7 +69,7 @@ describe("the gate on a multiplayer message (decision 0191)", () => {
       participants: ["Indra", "Randy"],
     });
     expect(said.asked[0]?.message).toBe("@Randy did you deploy the fix?");
-    const both = gateWith({ scores: { toAgent: 0.9, toPerson: 0.9 } });
+    const both = gateWith({ scores: { toPerson: 0.3 } });
     expect(await both.gate(request(`${toRandy} and please fix it`))).toEqual({
       agentAction: true,
       by: "model",

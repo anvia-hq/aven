@@ -28,7 +28,10 @@ export function VariableRows({
 }: Props) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <ul aria-label="Variables to add" className="flex max-h-72 flex-col gap-2 overflow-y-auto">
+      <ul
+        aria-label="Variables to add"
+        className="-m-1 flex max-h-72 flex-col gap-2 overflow-y-auto p-1"
+      >
         {states.map(({ row, problem, skipped }, index) => (
           <li key={row.id} className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">

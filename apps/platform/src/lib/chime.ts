@@ -28,3 +28,22 @@ export function playChime() {
     });
   } catch {}
 }
+
+export function playMention() {
+  try {
+    context ??= new AudioContext();
+    const audio = context;
+    void audio.resume();
+    const at = audio.currentTime + 0.02;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 659.25;
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(0.07, at + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(at);
+    oscillator.stop(at + 0.32);
+  } catch {}
+}
