@@ -1,6 +1,6 @@
 # A runtime's machine is persistent or ephemeral
 
-Status: accepted. Adds to 0220. Nothing here is built: it settles where a thread's work lives on a machine that stops by itself, before the first provider that makes one arrives.
+Status: accepted. Adds to 0220. It settles where a thread's work lives on a machine that stops by itself, before the first provider that makes one arrives. Of it, only two seams are built, with no change to how `manual` behaves: `reachRunner` is given the thread as well as the runtime (`RunnerPlace`), and putting a thread away frees its sandbox through its runtime's provider (`RuntimeProvider.release`, `releaseThread` in `apps/control-plane/src/modules/runtimes/providers.ts`).
 
 ## Context
 
