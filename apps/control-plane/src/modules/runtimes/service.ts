@@ -177,6 +177,14 @@ export const runtimesService = {
     return row?.provider;
   },
 
+  async agentHostOf(id: string) {
+    const [row] = await db
+      .select({ agentHost: runtimes.agentHost })
+      .from(runtimes)
+      .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+    return row?.agentHost;
+  },
+
   async touch(id: string) {
     await db.update(runtimes).set({ lastSeenAt: new Date() }).where(eq(runtimes.id, id));
   },

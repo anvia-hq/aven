@@ -3,6 +3,7 @@ import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
 import type {
   AGENT_BACKENDS,
+  AGENT_HOSTS,
   DIFF_SCOPES,
   MACHINE_OPS,
   PROVIDERS,
@@ -358,6 +359,8 @@ export type Provider = (typeof PROVIDERS)[number];
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
+
+export type AgentHost = (typeof AGENT_HOSTS)[number];
 
 export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
 

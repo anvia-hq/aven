@@ -407,6 +407,13 @@
       "when": 1794393700326,
       "tag": "0057_flippant_vertigo",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794398743186,
+      "tag": "0058_pretty_nitro",
+      "breakpoints": true
     }
   ]
 }
