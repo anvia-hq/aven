@@ -11,6 +11,7 @@ import {
   foldersReadmeParams,
   filesSearchParams,
   machineCallParams,
+  processWatchParams,
   processesCallParams,
   runnerUpdateParams,
   sandboxReleaseParams,
@@ -36,11 +37,12 @@ export function createRunnerCalls({
   boxes,
   idle,
   processEnds,
+  machineProcesses,
   update,
   steer,
   dirs = [],
 }: RunnerCallsContext) {
-  const machineCall = createMachineCalls({ sandbox, boxes, idle });
+  const machineCall = createMachineCalls({ sandbox, boxes, idle, machineProcesses });
 
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
@@ -149,6 +151,12 @@ export function createRunnerCalls({
     if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
       return processesOf(method, params);
     if (method === "machine.call") return machineCall(machineCallParams(params));
+    if (method === "process.watch") {
+      const { threadId, phase } = processWatchParams(params);
+      if (phase === "arm") return machineProcesses.begin(threadId);
+      machineProcesses.end(threadId, phase);
+      return Promise.resolve(null);
+    }
     if (method === "sandbox.release") {
       const { threadId } = sandboxReleaseParams(params);
       return idle.releaseNow(threadId).then(async (released) => {

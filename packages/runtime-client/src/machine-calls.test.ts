@@ -36,6 +36,11 @@ async function machine() {
         return true;
       },
     },
+    machineProcesses: {
+      begin: async () => undefined,
+      end: () => undefined,
+      has: () => false,
+    },
   });
   return { sandbox, boxes, released, call };
 }

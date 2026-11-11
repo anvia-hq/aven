@@ -363,6 +363,12 @@ export type RunToolsInput = {
   computer?: ComputerHost;
 };
 
+export type MachineProcessWatch = {
+  begin(threadId: string): Promise<void>;
+  end(threadId: string, phase: "settle" | "suspend"): void;
+  has(threadId: string): boolean;
+};
+
 export type RunnerCallsContext = {
   sandbox: ThreadWorkspaces;
   boxes: Map<string, ThreadSandbox>;
@@ -372,6 +378,7 @@ export type RunnerCallsContext = {
     busy(): string | undefined;
   };
   processEnds: Pick<ProcessEndWatch, "ignore">;
+  machineProcesses: MachineProcessWatch;
   steer(params: SteerParams): Promise<SteerResult>;
   dirs?: string[];
 };
@@ -387,7 +394,10 @@ export type UploadPlacement = {
 
 export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
 
-export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
+export type MachineCallsContext = Pick<
+  RunnerCallsContext,
+  "sandbox" | "boxes" | "idle" | "machineProcesses"
+>;
 
 export type RuntimeOptions = {
   url: string;
