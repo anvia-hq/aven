@@ -3,10 +3,18 @@ import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
-import { BackendUnavailableError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import {
+  BackendUnavailableError,
+  RuntimeOfflineError,
+  type RuntimeConnection,
+  type RuntimeHub,
+} from "../runtimes/hub";
 import { reachRunner } from "../runtimes/providers";
+import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
+  AgentHostOf,
+  Placement,
   ResumeRunInput,
   RunResult,
   RunThread,
@@ -79,6 +87,7 @@ export class RemoteRuntime implements Runtime {
     private hub: RuntimeHub,
     private gateway: Pick<RunGateway, "issue" | "revoke">,
     private identities: Pick<RunIdentities, "issue" | "revoke"> = runIdentities,
+    private agentHostOf: AgentHostOf = (runtimeId) => runtimesService.agentHostOf(runtimeId),
   ) {}
 
   async start({
@@ -98,24 +107,30 @@ export class RemoteRuntime implements Runtime {
     model,
   }: StartRunInput): Promise<RuntimeRun> {
     const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential) => ({
-      type: "run.start",
-      runId,
-      thread: forkable(thread),
-      prompt,
-      compact: compact || undefined,
-      attachments: attachments?.length ? attachments : undefined,
-      mentions: mentions?.length ? mentions : undefined,
-      skills: skills?.length ? skills : undefined,
-      mcp: mcp?.length ? mcp : undefined,
-      github,
-      env: env?.length ? env : undefined,
-      identity: credential,
-      webSearch,
-      memory: memory?.index,
-      cockpit: cockpit?.access,
-      model: runModel,
-    }));
+    return this.#launch(
+      thread,
+      model,
+      extras,
+      undefined,
+      (runId, runModel, credential, placed) => ({
+        type: "run.start",
+        runId,
+        thread: placed,
+        prompt,
+        compact: compact || undefined,
+        attachments: attachments?.length ? attachments : undefined,
+        mentions: mentions?.length ? mentions : undefined,
+        skills: skills?.length ? skills : undefined,
+        mcp: mcp?.length ? mcp : undefined,
+        github,
+        env: env?.length ? env : undefined,
+        identity: credential,
+        webSearch,
+        memory: memory?.index,
+        cockpit: cockpit?.access,
+        model: runModel,
+      }),
+    );
   }
 
   async resume({
@@ -138,10 +153,10 @@ export class RemoteRuntime implements Runtime {
       model,
       extras,
       askedBy(continuation),
-      (runId, runModel, credential) => ({
+      (runId, runModel, credential, placed) => ({
         type: "run.resume",
         runId,
-        thread: forkable(thread),
+        thread: placed,
         continuation,
         response,
         skills: skills?.length ? skills : undefined,
@@ -174,9 +189,11 @@ export class RemoteRuntime implements Runtime {
       runId: string,
       runModel: RunModel,
       credential: RunIdentityCredential | undefined,
+      placed: RunThreadInfo,
     ) => ControlPlaneToRuntime,
   ): Promise<RuntimeRun> {
-    const connection = await this.#connectionFor(thread);
+    const { connection, hostId, machine } = await this.#placementFor(thread);
+    const placed = forkable(thread, machine);
     const runId = crypto.randomUUID();
     const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
@@ -186,7 +203,7 @@ export class RemoteRuntime implements Runtime {
     const credential = identity && { credential: this.identities.issue(runId, identity) };
     connection.startRun(
       runId,
-      thread,
+      placed,
       this.#sink(runId, queue, result),
       skills?.map((skill) => skill.digest),
       mcp?.map((server) => server.id),
@@ -199,12 +216,12 @@ export class RemoteRuntime implements Runtime {
         mcp: mcp?.length ? mcp : undefined,
       },
     );
-    this.#post(connection, runId, message(runId, runModel, credential));
+    this.#post(connection, runId, message(runId, runModel, credential, placed));
 
     return {
       events: queue,
       result: result.promise,
-      cancel: (reason) => this.hub.cancelRun(thread.runtimeId, runId, reason),
+      cancel: (reason) => this.hub.cancelRun(hostId, runId, reason),
       steer: async ({ id, prompt, mentions }) =>
         steerResult.parse(
           await connection.call(
@@ -220,13 +237,24 @@ export class RemoteRuntime implements Runtime {
     this.hub.closeAll();
   }
 
-  async #connectionFor(thread: RunThread) {
+  async #placementFor(thread: RunThread): Promise<Placement> {
+    const backend = thread.agentBackend ?? "native";
+    if (
+      backend === "native" &&
+      thread.runtimeId !== LOCAL_RUNTIME_ID &&
+      (await this.agentHostOf(thread.runtimeId)) === "control_plane"
+    ) {
+      const connection = this.hub.get(LOCAL_RUNTIME_ID);
+      if (!connection)
+        throw new RuntimeOfflineError("The control plane's own runner is not running");
+      return { connection, hostId: LOCAL_RUNTIME_ID, machine: thread.runtimeId };
+    }
     const connection = await reachRunner(this.hub, {
       runtimeId: thread.runtimeId,
       threadId: thread.id,
     });
-    if (!connection.offers(thread.agentBackend ?? "native")) throw new BackendUnavailableError();
-    return connection;
+    if (!connection.offers(backend)) throw new BackendUnavailableError();
+    return { connection, hostId: thread.runtimeId };
   }
 
   #sink(runId: string, queue: EventQueue, result: PromiseWithResolvers<RunResult>) {
@@ -272,12 +300,13 @@ function askedBy(continuation: unknown) {
   }
 }
 
-function forkable(thread: RunThread): RunThreadInfo {
+function forkable(thread: RunThread, machine?: string): RunThreadInfo {
   return {
     id: thread.id,
     organizationId: thread.organizationId,
     forkOf: thread.parentThreadId ?? undefined,
     projectId: thread.projectId,
     ownerId: thread.createdBy,
+    machine,
   };
 }
