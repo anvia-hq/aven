@@ -111,6 +111,7 @@
       "dependencies": {
         "@anvia/core": "^1.18.0",
         "@anvia/memory-drizzle": "^1.2.0",
+        "@aven/protocol": "workspace:*",
         "drizzle-orm": "^0.45.4",
         "postgres": "^3.4.9",
       },

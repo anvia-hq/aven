@@ -8,6 +8,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { AGENT_BACKENDS } from "@aven/protocol/runtime-wire";
+
 import { organizations } from "./organizations";
 import { projects } from "./projects";
 import { runtimes } from "./runtimes";
@@ -31,9 +33,7 @@ export const threads = pgTable(
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
-    agentBackend: text("agent_backend", { enum: ["native"] })
-      .notNull()
-      .default("native"),
+    agentBackend: text("agent_backend", { enum: AGENT_BACKENDS }).notNull().default("native"),
     parentThreadId: uuid("parent_thread_id").references((): AnyPgColumn => threads.id, {
       onDelete: "set null",
     }),

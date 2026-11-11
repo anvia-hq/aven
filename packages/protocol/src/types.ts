@@ -1,7 +1,7 @@
 import type { COCKPIT_KINDS, TASK_PRIORITIES, TASK_STATUSES } from "./cockpit";
 import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
-import type { AGENT_BACKENDS, DIFF_SCOPES, PROVIDERS } from "./runtime-wire";
+import type { AGENT_BACKENDS, DIFF_SCOPES, PROVIDERS, RUNTIME_PROVIDERS } from "./runtime-wire";
 
 export type Bot = {
   id: string;
@@ -352,7 +352,7 @@ export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
 
-export type RuntimeProviderKind = "manual";
+export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
 
 export type RunModel = {
   provider: Provider;
