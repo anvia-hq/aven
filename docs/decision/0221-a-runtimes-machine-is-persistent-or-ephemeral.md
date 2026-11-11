@@ -1,6 +1,6 @@
 # A runtime's machine is persistent or ephemeral
 
-Status: accepted. Adds to 0220. It settles where a thread's work lives on a machine that stops by itself, before the first provider that makes one arrives. Of it, only two seams are built, with no change to how `manual` behaves: `reachRunner` is given the thread as well as the runtime (`RunnerPlace`), and putting a thread away frees its sandbox through its runtime's provider (`RuntimeProvider.release`, `releaseThread` in `apps/control-plane/src/modules/runtimes/providers.ts`).
+Status: accepted. Adds to 0220. Partly superseded by 0222: the native agent runs in the control plane, not on the machine, and a machine is needed only while a tool acts on it. It settles where a thread's work lives on a machine that stops by itself, before the first provider that makes one arrives. Of it, only two seams are built, with no change to how `manual` behaves: `reachRunner` is given the thread as well as the runtime (`RunnerPlace`), and putting a thread away frees its sandbox through its runtime's provider (`RuntimeProvider.release`, `releaseThread` in `apps/control-plane/src/modules/runtimes/providers.ts`).
 
 ## Context
 
