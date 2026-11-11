@@ -38,7 +38,8 @@ export function SentImage({
       <img
         src={attempt === 0 || local ? src : `${src}?attempt=${attempt}`}
         alt={file.name}
-        loading="lazy"
+        loading={local ? "eager" : "lazy"}
+        decoding={local ? "sync" : "async"}
         onError={local ? undefined : retry}
         className="max-h-40 max-w-60 rounded-lg border bg-muted/30 object-contain"
       />
