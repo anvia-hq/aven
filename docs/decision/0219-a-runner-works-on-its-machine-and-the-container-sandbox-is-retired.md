@@ -36,3 +36,7 @@ Continuing a thread on another runner looks the runner up as the person, so a pr
 ## A fork copies on write, or shares the git objects
 
 A fork of a git folder is a copy of its parent's clone, with uncommitted work and ignored files. `copyTreeSharingObjects` makes it copy-on-write where the filesystem can (`clonefile` on macOS, `cp --reflink=always` on Linux). On one that cannot, such as ext4, it copies the working files and hard-links `.git/objects`, which git never changes in place, so history costs no space. A worktree is not used: the host-side git expects a standalone `.git`. A folder that is not a git repository has no clone and no copy.
+
+## The control plane's own runner
+
+The built-in runner (`AVEN_LOCAL_RUNNER=host`) has no owner to turn Share on, so the control plane marks it shared when it says it is a host runner: it is the workspace's, as it was before 0218. It works as the user running the runner, in the folders of `AVEN_DIRS`. Set `AVEN_LOCAL_RUNNER=off` to keep a server's own machine out of reach.

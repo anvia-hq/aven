@@ -113,7 +113,10 @@ export const runtimesService = {
   },
 
   async setHost(id: string, host: boolean) {
-    await db.update(runtimes).set({ host }).where(eq(runtimes.id, id));
+    await db
+      .update(runtimes)
+      .set(id === LOCAL_RUNTIME_ID && host ? { host, shared: true } : { host })
+      .where(eq(runtimes.id, id));
   },
 
   async setDirectories(id: string, directories: string[]) {

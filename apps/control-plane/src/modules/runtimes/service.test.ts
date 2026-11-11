@@ -96,6 +96,16 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.get(seed.orgA, runtime.id, "a-teammate")).toBeNull();
   });
 
+  test("the control plane's own runner has no owner to share it, so it is the workspace's", async () => {
+    await runtimesService.ensureLocal();
+    await runtimesService.setHost(LOCAL_RUNTIME_ID, true);
+
+    expect(await runtimesService.isPrivateHost(LOCAL_RUNTIME_ID)).toBe(false);
+    expect((await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID, "a-teammate"))?.id).toBe(
+      LOCAL_RUNTIME_ID,
+    );
+  });
+
   test("a runner in a container is the workspace's, shared or not", async () => {
     const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "docker" });
 
