@@ -1,4 +1,4 @@
-import { Check, FolderMinus, FolderPlus, FolderOne } from "@mynaui/icons-react";
+import { Archive, Check, Dots, FolderMinus, FolderPlus, FolderOne } from "@mynaui/icons-react";
 
 import {
   DropdownMenu,
@@ -21,21 +21,29 @@ type Props = {
   currentFolderId: string | undefined;
   onMove: (folderId: string | null) => void;
   onNewFolder: () => void;
+  onArchive: () => void;
 };
 
-export function MoveToFolderMenu({ title, folders, currentFolderId, onMove, onNewFolder }: Props) {
+export function ThreadActionsMenu({
+  title,
+  folders,
+  currentFolderId,
+  onMove,
+  onNewFolder,
+  onArchive,
+}: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <SidebarMenuAction
-            className="right-8 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground md:opacity-0"
+            className="right-2 group-has-focus-visible/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground data-popup-open:opacity-100 md:opacity-0"
             aria-label={`Options for ${title}`}
-            title="Move to folder"
+            title="More"
           />
         }
       >
-        <FolderOne />
+        <Dots />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuSub>
@@ -65,6 +73,10 @@ export function MoveToFolderMenu({ title, folders, currentFolderId, onMove, onNe
             )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuItem onClick={onArchive}>
+          <Archive />
+          Archive
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
