@@ -313,6 +313,7 @@ export function startRuntime(options: RuntimeOptions) {
         runs: outbox.ids(),
         build: options.build,
         canUpdate: options.update ? true : undefined,
+        host: options.host ? true : undefined,
       });
       resend();
       connected.resolve();

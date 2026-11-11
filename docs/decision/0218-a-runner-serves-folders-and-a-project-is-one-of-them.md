@@ -39,7 +39,9 @@ Amp's runner (`amp --no-tui`, run on a machine) is the other model. It registers
 
 - `AVEN_SANDBOX=host` (`HostSandboxes`): commands as the runner's user in `workspaces/<thread id>` under the runner's home, cloned or forked as for a container, the project's variables in each command's environment, no desktop or tunnel, the thread's shell opened in its folder. A thread with no repository, which is how a bot's computer is made, gets a folder of its own (a default path per bot). Tested with real git and real processes.
 - The agent is told real paths: `paths(threadId)` on the workspaces, `forPaths` for the instructions and the notes of mentions and attachments, and uploads and skills as real-path stores. The sandbox's paths and text are unchanged.
-- Not built: served folders, the owner-only rule and its column, a project that is a folder, the platform's side, `aven runner` options for it, and a real run through a control plane.
+- Owner-only: a runner reports `host` in its `hello` (an optional field, no wire version change); `runtimes.host` and `runtimes.shared` (migration 0055) keep it, and `runtimesService.list` and `get` hide a host runner that is not shared from everyone but its owner. A thread cannot be made on such a runner by anyone else, nor can multiplayer be turned on for a thread there. Settings > Runtimes shows `This computer · private` or `· shared`, and the owner has a Share switch (`PATCH /runtimes/:id/share`).
+- Tried for real: a host runner on the author's Mac, a thread started in the web app, working in its own folder.
+- Not built: served folders, a project that is a folder, `aven runner` options for it, and the machine's own login as the way to ship.
 
 ## Not verified
 

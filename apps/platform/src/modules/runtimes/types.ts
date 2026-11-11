@@ -13,6 +13,8 @@ export type Runtime = {
   id: string;
   name: string;
   ownerId: string | null;
+  host: boolean;
+  shared: boolean;
   tokenHint: string;
   online: boolean;
   build: string | null;

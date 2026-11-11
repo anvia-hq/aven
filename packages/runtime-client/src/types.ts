@@ -407,6 +407,7 @@ export type RuntimeOptions = {
   url: string;
   token: string;
   build?: string;
+  host?: boolean;
   update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
   createBotAgent?: CreateBotReplyAgent;

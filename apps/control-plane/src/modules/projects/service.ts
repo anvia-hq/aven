@@ -63,7 +63,7 @@ export const projectsService = {
       .orderBy(desc(projects.updatedAt)),
 
   async import(organizationId: string, userId: string, body: ImportProjectBody) {
-    if (!(await runtimesService.get(organizationId, body.runtimeId))) {
+    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
     const repo = await githubService.repo(organizationId, body.installationId, body.repository);
@@ -97,7 +97,7 @@ export const projectsService = {
   async update(organizationId: string, userId: string, id: string, body: UpdateProjectBody) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     await projectsService.requireManager(organizationId, userId, project);
-    if (!(await runtimesService.get(organizationId, body.runtimeId))) {
+    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
     const [updated] = await db

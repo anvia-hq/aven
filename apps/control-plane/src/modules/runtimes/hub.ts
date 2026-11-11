@@ -184,7 +184,13 @@ export class RuntimeConnection {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
     if (message.type === "hello")
-      return this.#hello(message.version, message.runs, message.build, message.canUpdate);
+      return this.#hello(
+        message.version,
+        message.runs,
+        message.build,
+        message.canUpdate,
+        message.host,
+      );
     if (!this.#ready) return;
     await this.#dispatch(message);
   }
@@ -199,12 +205,14 @@ export class RuntimeConnection {
     runs: string[],
     build: string | undefined,
     canUpdate: boolean | undefined,
+    host: boolean | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
       this.#build = build;
       this.#canUpdate = canUpdate === true;
       void runtimesService.touch(this.runtimeId);
+      void runtimesService.setHost(this.runtimeId, host === true);
       this.hub.reclaim(this, runs);
       return;
     }

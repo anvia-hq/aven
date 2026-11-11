@@ -36,6 +36,31 @@ run("threadsService (postgres)", async () => {
     await cleanup();
   });
 
+  test("a thread on a computer that is private to its owner is the owner's alone until it is shared", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });
+    await runtimesService.setHost(runtime.id, true);
+    const { project } = await seedProject(orgA, userId, runtime.id, "on-my-mac");
+
+    const mine = await threadsService.create(orgA, userId, { projectId: project.id });
+    await expect(
+      threadsService.create(orgA, teammateId, { projectId: project.id }),
+    ).rejects.toThrow("private to its owner");
+    await expect(
+      threadsService.update({ organizationId: orgA, userId }, mine.id, {
+        visibility: "workspace",
+        driving: 1,
+      }),
+    ).rejects.toThrow("share the computer");
+
+    await runtimesService.share(orgA, userId, runtime.id, true);
+
+    await threadsService.create(orgA, teammateId, { projectId: project.id });
+    await threadsService.update({ organizationId: orgA, userId }, mine.id, {
+      visibility: "workspace",
+      driving: 1,
+    });
+  });
+
   test("keeps the time of every run that carried on an answer, added up", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     await threadsService.saveWorkedTime(thread.id, 3, 40_000);

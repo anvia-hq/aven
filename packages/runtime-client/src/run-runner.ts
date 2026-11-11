@@ -47,6 +47,7 @@ export async function runRunner({
     url: runtimeConnectUrl(base),
     token,
     build,
+    host: process.env.AVEN_SANDBOX === "host",
     update,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),

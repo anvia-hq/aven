@@ -957,7 +957,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     await expect(open(full.server?.port, token, "/runtimes/connect")).rejects.toThrow();
     await open(full.server?.port, rotated.token, "/runtimes/connect");
     await until(() => hub.isOnline(runtime.id));
-    const listed = await runtimesService.list(owner.organizationId);
+    const listed = await runtimesService.list(owner.organizationId, owner.userId);
     expect(JSON.stringify(listed)).not.toContain(rotated.token);
   });
 

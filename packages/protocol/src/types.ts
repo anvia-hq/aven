@@ -662,7 +662,14 @@ export type ProcessEnded = {
 };
 
 export type RuntimeToControlPlane =
-  | { type: "hello"; version: number; runs: string[]; build?: string; canUpdate?: boolean }
+  | {
+      type: "hello";
+      version: number;
+      runs: string[];
+      build?: string;
+      canUpdate?: boolean;
+      host?: boolean;
+    }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }

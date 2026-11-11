@@ -41,6 +41,9 @@ const localToken = configuredLocalToken
 const visibleTo = (organizationId: string) =>
   or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
 
+const usableBy = (userId: string) =>
+  or(eq(runtimes.host, false), eq(runtimes.shared, true), eq(runtimes.ownerId, userId));
+
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 function issueToken() {
@@ -76,20 +79,27 @@ export const runtimesService = {
       .onConflictDoNothing();
   },
 
-  async list(organizationId: string) {
+  async list(organizationId: string, userId: string) {
     const rows = await db
       .select()
       .from(runtimes)
-      .where(and(visibleTo(organizationId), isNull(runtimes.revokedAt)))
+      .where(and(visibleTo(organizationId), usableBy(userId), isNull(runtimes.revokedAt)))
       .orderBy(desc(runtimes.createdAt));
     return rows.map(publicRuntime);
   },
 
-  async get(organizationId: string, id: string) {
+  async get(organizationId: string, id: string, userId?: string) {
     const [row] = await db
       .select()
       .from(runtimes)
-      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+      .where(
+        and(
+          visibleTo(organizationId),
+          eq(runtimes.id, id),
+          userId === undefined ? undefined : usableBy(userId),
+          isNull(runtimes.revokedAt),
+        ),
+      );
     return row ? publicRuntime(row) : null;
   },
 
@@ -100,6 +110,27 @@ export const runtimesService = {
       .values({ organizationId, ownerId, name: body.name, ...columns })
       .returning();
     return { runtime: publicRuntime(row!), token };
+  },
+
+  async setHost(id: string, host: boolean) {
+    await db.update(runtimes).set({ host }).where(eq(runtimes.id, id));
+  },
+
+  async isPrivateHost(id: string) {
+    const [row] = await db
+      .select({ host: runtimes.host, shared: runtimes.shared })
+      .from(runtimes)
+      .where(eq(runtimes.id, id));
+    return Boolean(row?.host && !row.shared);
+  },
+
+  async share(organizationId: string, ownerId: string, id: string, shared: boolean) {
+    const [row] = await db
+      .update(runtimes)
+      .set({ shared })
+      .where(ownedBy(organizationId, ownerId, id))
+      .returning();
+    return row ? publicRuntime(row) : null;
   },
 
   async rename(organizationId: string, id: string, name: string) {
