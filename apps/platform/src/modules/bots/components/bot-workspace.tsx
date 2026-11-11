@@ -10,7 +10,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
   useDefaultTimezone();
 
   return (
-    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-[calc(100svh-0.5rem)]">
+    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
       <div className="@container flex min-h-0 flex-1 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border">
         <BotHeader bot={bot} />
         <BotChat bot={bot} />
