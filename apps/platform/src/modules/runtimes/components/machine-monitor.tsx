@@ -9,7 +9,7 @@ export function MachineMonitor() {
   );
 
   return (
-    <div className="-mx-2 border-b px-2 pb-2 group-data-[collapsible=icon]:hidden">
+    <div className="-mx-2 border-b px-2 pb-2 group-data-[collapsible=icon]:hidden md:border-b-0 md:pb-0">
       <ul aria-label="Machines" className="flex flex-col gap-1">
         {ordered.map((runtime) => (
           <MachineRow key={runtime.id} runtime={runtime} />

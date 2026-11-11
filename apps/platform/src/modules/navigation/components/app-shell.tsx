@@ -15,7 +15,7 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/sidebar";
-import { TooltipProvider } from "@/components/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
@@ -71,6 +71,21 @@ export function AppShell({ user, sidebar }: Props) {
             <CockpitRailLink />
             <CenterRailLink />
           </div>
+          <div className="mt-auto flex flex-col items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger render={<ThemeSelector className="size-11 rounded-xl" />} />
+              <TooltipContent side="right" sideOffset={10}>
+                Toggle theme
+              </TooltipContent>
+            </Tooltip>
+            <RailLink
+              to="/settings/general"
+              label="Settings"
+              active={pathname.startsWith("/settings")}
+            >
+              <Cog className="size-5" />
+            </RailLink>
+          </div>
         </nav>
       </TooltipProvider>
       <div className="flex min-w-0 flex-1 md:my-2 md:mr-2">
@@ -108,16 +123,16 @@ export function AppShell({ user, sidebar }: Props) {
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
             <MachineMonitor />
-            <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+            <div className="flex items-center gap-1 md:hidden">
               <Button
                 variant="ghost"
                 size="sm"
                 aria-label="Settings"
-                className="h-9 min-w-0 flex-1 justify-start md:h-7 group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:p-0"
+                className="h-9 min-w-0 flex-1 justify-start"
                 onClick={() => navigate({ to: "/settings/general" })}
               >
                 <Cog />
-                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                <span>Settings</span>
               </Button>
               <ThemeSelector />
             </div>

@@ -47,9 +47,7 @@ const stats = (overrides: Record<string, unknown>) =>
   });
 
 test.describe("machine monitor", () => {
-  test("the sidebar has a single row for each runtime above Settings, with its load", async ({
-    page,
-  }) => {
+  test("the sidebar has a single row for each runtime, with its load", async ({ page }) => {
     await registerUser(page, "mon", "Monitor User");
     await runner(page, "build-box", { FAKE_STATS: stats({}) });
     await runner(page, "hot-box", { FAKE_STATS: stats({ cpuPercent: 96, sandboxes: 1 }) });
@@ -63,9 +61,6 @@ test.describe("machine monitor", () => {
     expect(
       await rows.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual(["build-box", "hot-box", "old-box", "sleeping-box"]);
-    const settings = await page.getByRole("button", { name: "Settings" }).boundingBox();
-    const last = await rows.last().boundingBox();
-    expect(last!.y + last!.height).toBeLessThanOrEqual(settings!.y);
     for (const box of await Promise.all((await rows.all()).map((row) => row.boundingBox()))) {
       expect(box!.height).toBeLessThanOrEqual(34);
     }
