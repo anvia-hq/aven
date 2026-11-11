@@ -3,13 +3,13 @@ import { Terminal } from "@mynaui/icons-react";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { Skeleton } from "@/components/skeleton";
-import { SandboxAsleepNotice } from "@/modules/desktop/components/sandbox-asleep-notice";
-import { useDesktopStatus } from "@/modules/desktop/hooks/use-desktop-status";
-import { useDesktopWake } from "@/modules/desktop/hooks/use-desktop-wake";
-import { sandboxView } from "@/modules/desktop/sandbox-view";
+import { ComputerAsleepNotice } from "@/modules/computer/components/computer-asleep-notice";
+import { computerView } from "@/modules/computer/computer-view";
+import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status";
+import { useComputerWake } from "@/modules/computer/hooks/use-computer-wake";
 
 import { TerminalViewer } from "./terminal-viewer";
-import type { Computer } from "@/modules/desktop/types";
+import type { Computer } from "@/modules/computer/types";
 
 type Props = {
   computer: Computer;
@@ -17,9 +17,9 @@ type Props = {
 };
 
 export function TerminalPanel({ computer, onClose }: Props) {
-  const { status, problem, refresh } = useDesktopStatus(computer);
-  const { waking, wake } = useDesktopWake(computer, refresh);
-  const view = sandboxView(status, problem);
+  const { status, problem, refresh } = useComputerStatus(computer);
+  const { waking, wake } = useComputerWake(computer, refresh);
+  const view = computerView(status, problem);
 
   return (
     <SidePanel title="Terminal" icon={Terminal} onClose={onClose}>
@@ -27,8 +27,8 @@ export function TerminalPanel({ computer, onClose }: Props) {
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "loading" && <Skeleton className="size-full rounded-none" />}
         {view === "ready" && <TerminalViewer computer={computer} />}
-        {view === "no-sandbox" && (
-          <SandboxAsleepNotice
+        {view === "no-computer" && (
+          <ComputerAsleepNotice
             computer={computer}
             purpose="open a terminal"
             waking={waking}

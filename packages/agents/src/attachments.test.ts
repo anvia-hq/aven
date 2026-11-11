@@ -42,7 +42,7 @@ describe("sentPrompt with attachments", () => {
     expect(said).toEqual({ type: "text", text: "summarise these" });
     expect(note?.type === "text" && note.text).toBe(
       [
-        "The user attached 2 files. They are in the sandbox, read-only, in /uploads:",
+        "The user attached 2 files. They are on this machine, read-only, in /uploads:",
         "- /uploads/chart.png (image/png, 2.0 KB, shown to you below)",
         `- /uploads/Q3_deck.pptx (${deck.mediaType}, 3.0 MB)`,
       ].join("\n"),

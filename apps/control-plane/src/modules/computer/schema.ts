@@ -1,19 +1,6 @@
 import { z } from "zod";
-import type { DesktopControl, DesktopInfo } from "@aven/protocol/types";
+import type { ComputerInfo } from "@aven/protocol/types";
 
-const control = z.object({
-  held: z.boolean(),
-  holder: z.string().optional(),
-  expiresAt: z.string().optional(),
-});
-
-export const desktopInfo: z.ZodType<DesktopInfo | null> = z
-  .object({
-    state: z.enum(["running", "stopped", "starting", "restarting", "failed"]),
-    width: z.number(),
-    height: z.number(),
-    control,
-  })
+export const computerInfo: z.ZodType<ComputerInfo | null> = z
+  .object({ state: z.enum(["asleep", "waking", "awake"]) })
   .nullable();
-
-export const desktopControl: z.ZodType<DesktopControl | null> = control.nullable();

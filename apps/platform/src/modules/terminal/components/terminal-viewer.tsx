@@ -6,7 +6,7 @@ import { Button } from "@/components/button";
 import { Spinner } from "@/components/spinner";
 
 import { useTerminal } from "../hooks/use-terminal";
-import type { Computer } from "@/modules/desktop/types";
+import type { Computer } from "@/modules/computer/types";
 
 type Props = {
   computer: Computer;

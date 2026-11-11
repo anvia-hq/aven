@@ -14,22 +14,22 @@ type Props = {
   onWake: () => void;
 };
 
-export function SandboxAsleepNotice({ computer, purpose, waking, onWake }: Props) {
+export function ComputerAsleepNotice({ computer, purpose, waking, onWake }: Props) {
   const exists = useWorkspaceExists(computer);
   if (exists === false) {
     return (
       <PanelNotice>
-        This thread has no workspace yet, so there is no sandbox to {purpose}. It is made when the
-        agent first works on the thread.
+        This thread has no folder yet, so there is nothing to {purpose}. It is made when the agent
+        first works on the thread.
       </PanelNotice>
     );
   }
   return (
     <PanelNotice>
       <span className="flex flex-col items-center gap-4">
-        {computer.asleep} You can also wake it up to {purpose}.
+        {computer.asleep} You can also start it to {purpose}.
         <Button variant="outline" disabled={waking} onClick={onWake}>
-          {waking ? <Spinner /> : <Power />} {waking ? "Waking up" : "Wake up"}
+          {waking ? <Spinner /> : <Power />} {waking ? "Starting" : "Start"}
         </Button>
       </span>
     </PanelNotice>

@@ -57,7 +57,6 @@ function slowSandbox() {
         state: () => (asleep ? "asleep" : "awake"),
       };
     },
-    desktop: () => undefined,
     workspace: async () => undefined,
     async signInGithub() {
       events.push("signed in");

@@ -59,7 +59,7 @@ export async function update(args: Args) {
 
 export async function finish() {
   const server = await serverUpgrade(version);
-  const runner = await runnerUpgrade(version);
+  const runner = await runnerUpgrade();
   if (!server && !runner)
     console.log("Neither a server nor a runner is installed on this machine.");
   else await removeStaleImages(version);

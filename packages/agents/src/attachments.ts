@@ -20,7 +20,7 @@ function attachmentNote(kept: readonly KeptAttachment[], paths: SandboxPaths) {
     return `- ${file.path} (${file.mediaType}, ${formatSize(file.size)}${shown})`;
   });
   return [
-    `The user attached ${kept.length === 1 ? "a file" : `${kept.length} files`}. They are ${paths.host ? "on this machine" : "in the sandbox"}, read-only, in ${paths.uploads}:`,
+    `The user attached ${kept.length === 1 ? "a file" : `${kept.length} files`}. They are on this machine, read-only, in ${paths.uploads}:`,
     ...lines,
   ].join("\n");
 }

@@ -4,7 +4,6 @@ import {
   Eye,
   GitBranch,
   Image as ImageIcon,
-  Save,
   Search,
   Terminal,
 } from "@mynaui/icons-react";
@@ -39,20 +38,13 @@ const meta: Record<string, Meta> = {
   git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
   computer_status: { icon: Eye, running: "Checking the computer", done: "Checked the computer" },
   computer_wake: { icon: Eye, running: "Waking the computer", done: "Woke the computer" },
-  save_environment: {
-    icon: Save,
-    running: "Saving the environment",
-    done: "Saved the environment",
-  },
 };
 
-const fallback = (name: string): Meta => {
-  if (!name.startsWith("desktop_")) {
-    return { icon: Terminal, running: `Running ${name}`, done: `Ran ${name}` };
-  }
-  const action = name.slice("desktop_".length).replaceAll("_", " ");
-  return { icon: Eye, running: `Desktop: ${action}`, done: `Desktop: ${action}` };
-};
+const fallback = (name: string): Meta => ({
+  icon: Terminal,
+  running: `Running ${name}`,
+  done: `Ran ${name}`,
+});
 
 export function ToolCall({ tool }: { tool: ToolPart }) {
   const { icon: Icon, running, done } = meta[tool.name] ?? fallback(tool.name);

@@ -11,7 +11,7 @@ import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
 import { ensureLocalExcludes } from "./local-excludes";
 import { envOf, withProjectEnv } from "./project-env";
-import { runtimeHome } from "./sandbox";
+import { runtimeHome } from "./runtime-home";
 import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import { startedOnUse } from "./started-on-use";
@@ -71,7 +71,6 @@ export class HostSandboxes implements ThreadWorkspaces {
       workspace: this.#workspaceDir(threadId),
       uploads: join(this.uploads.root, threadId),
       skills: join(this.skills.root, "threads", threadId),
-      host: true,
     };
   }
 

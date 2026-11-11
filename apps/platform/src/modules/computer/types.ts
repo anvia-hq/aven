@@ -1,14 +1,6 @@
-export type DesktopStatus =
+export type ComputerStatus =
   | { available: false }
-  | {
-      available: true;
-      state: "running" | "stopped" | "starting" | "restarting" | "failed";
-      width: number;
-      height: number;
-      held: boolean;
-      heldByMe: boolean;
-      expiresAt?: string;
-    };
+  | { available: true; state: "asleep" | "waking" | "awake" };
 
 export type Computer = {
   path: string;

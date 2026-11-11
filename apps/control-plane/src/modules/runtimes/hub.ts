@@ -156,16 +156,8 @@ export class RuntimeConnection {
     if (run.cancel) this.post({ type: "run.cancel", runId, reason: run.cancel });
   }
 
-  openViewer(threadId: string, sink: ViewerSink) {
-    return this.#viewers.open(threadId, sink);
-  }
-
   openTerminal(threadId: string, size: { cols: number; rows: number }, sink: ViewerSink) {
     return this.#viewers.openTerminal(threadId, size, sink);
-  }
-
-  openPort(threadId: string, port: number, sink: ViewerSink) {
-    return this.#viewers.openPort(threadId, port, sink);
   }
 
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
@@ -256,23 +248,11 @@ export class RuntimeConnection {
       case "call":
         await this.#answer(message.id, message.method, message.params);
         return;
-      case "desktop.opened":
-        this.#viewers.opened(message.viewerId, "desktop");
-        return;
-      case "desktop.closed":
-        this.#viewers.closed(message.viewerId, "desktop", message.reason);
-        return;
       case "terminal.opened":
         this.#viewers.opened(message.viewerId, "terminal");
         return;
       case "terminal.closed":
         this.#viewers.closed(message.viewerId, "terminal", message.reason);
-        return;
-      case "port.opened":
-        this.#viewers.opened(message.viewerId, "port");
-        return;
-      case "port.closed":
-        this.#viewers.closed(message.viewerId, "port", message.reason);
         return;
       case "reply":
         this.#calls.settle(message);

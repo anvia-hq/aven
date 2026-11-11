@@ -10,9 +10,6 @@ import {
   scheduler,
   threadWatcher,
   actionsService,
-  environmentService,
-  browser,
-  browserService,
   shipService,
   threadMessages,
   putAwayThread,
@@ -25,14 +22,10 @@ import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
-import { browserRouter } from "./modules/browser/router";
-import { startBrowserProxy } from "./modules/browser/proxy";
-import { runnerFor } from "./modules/runtimes/ask-runner";
 import { cockpitRouter } from "./modules/cockpit/router";
-import { desktopRouter } from "./modules/desktop/router";
+import { computerRouter } from "./modules/computer/router";
 import { diffRouter } from "./modules/diff/router";
 import { actionsRouter } from "./modules/actions/router";
-import { environmentRouter } from "./modules/environment/router";
 import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { processesRouter } from "./modules/processes/router";
@@ -69,17 +62,15 @@ export const app = new Elysia()
   .use(authRouter)
   .use(botsRouter(botChats))
   .use(botComputerRouter(runtimeHub, botRuntimeId))
-  .use(browserRouter(browserService))
   .use(cockpitRouter)
-  .use(desktopRouter(runtimeHub))
+  .use(computerRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
   .use(shipRouter(shipService))
   .use(actionsRouter(actionsService))
-  .use(environmentRouter(environmentService))
   .use(filesRouter(runtimeHub))
   .use(processesRouter(runtimeHub))
   .use(githubRouter())
-  .use(platformRouter(putAwayThread, runtimeHub))
+  .use(platformRouter(putAwayThread))
   .use(foldersRouter)
   .use(preferencesRouter)
   .use(profileRouter)
@@ -103,31 +94,10 @@ if (!Number.isInteger(port) || port <= 0)
   throw new Error(`PORT must be a port number, got "${process.env.PORT}"`);
 app.listen(port);
 
-const browserProxy = browser.origin
-  ? startBrowserProxy({
-      hostname: browser.hostname,
-      port: browser.port,
-      secret: browser.secret,
-      secure: browser.secure,
-      open: async (claims, sink) => {
-        const connection = await runnerFor(runtimeHub).connection(
-          claims.organizationId,
-          claims.threadId,
-        );
-        return connection.openPort(claims.threadId, claims.port, sink);
-      },
-    })
-  : undefined;
-if (browserProxy)
-  console.log(
-    `the Browser is served at ${browser.hostname}:${browserProxy.port} for ${browser.origin}`,
-  );
-
 const localRunner = await startLocalRunner(port);
 
 const shutdown = async () => {
   botRunner.dispose();
-  browserProxy?.stop();
   await localRunner?.stop();
   await scheduler.close();
   await goalDriver.close();

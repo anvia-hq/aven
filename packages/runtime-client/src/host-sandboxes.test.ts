@@ -37,7 +37,6 @@ describe("a runner that works on this machine", () => {
 
     const paths = sandbox.paths("t1");
     expect(paths.workspace).toBe(join(home, "workspaces", "t1"));
-    expect(paths.host).toBe(true);
     expect(await sandbox.workspace("t1")).toBe(paths.workspace);
     const ran = await call(box.tools, "exec_command", {
       command: "pwd; git branch --show-current",

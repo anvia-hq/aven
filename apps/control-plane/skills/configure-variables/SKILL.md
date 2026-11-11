@@ -24,7 +24,7 @@ Some names are reserved and refused: `PATH`, `HOME`, `USER`, `SHELL`, `PWD`, and
 - **Never ask for a secret in a message, and never write one into a file, a commit or a reply.**
 - **In a thread**, use `request_secret`: the run waits while the person types it into a masked form that also asks whether it becomes the project's variable or their own. The id of each question is the variable's name in UPPER_SNAKE_CASE (`STRIPE_API_KEY`). You never see the value; afterwards it is `$NAME` in your commands. Check the instructions first: the project's variables are listed there by name, so do not ask for one that is set.
 - **A bot** has no variables of its own; for a key a bot should not hold, put the value where it belongs (for an API key of a model, a provider, see `configure-providers`).
-- **A value that is not a secret** (a region, a feature flag): tell the person to add it, or put it in the repository's `.aven/setup` if it belongs to the environment (see `setup-env`).
+- **A value that is not a secret** (a region, a feature flag): tell the person to add it, or put it in the repository if it belongs there.
 
 ## When a command fails
 

@@ -1,6 +1,6 @@
 ---
 name: setup-ship
-description: Set up how this repository's changes are shipped, so the Ship button does what the team does, by writing .aven/ship.md from the repository's own conventions. Use when the user asks to set up shipping, to change what Ship does, or after /setup-env has finished.
+description: Set up how this repository's changes are shipped, so the Ship button does what the team does, by writing .aven/ship.md from the repository's own conventions. Use when the user asks to set up shipping, to change what Ship does.
 ---
 
 # Setting up shipping
@@ -41,7 +41,7 @@ Then ask the user, in one message, with your guess for each so they can just con
 - Squash, rebase or merge? Should the agent turn on auto-merge, or leave merging to people?
 - Anything that must **not** happen (pushing to the default branch, touching a lockfile by hand, shipping with failing tests)?
 
-Check what the proof needs before promising it: Playwright and its browsers are in the sandbox only if the project's `.aven/setup` installs them (`ffmpeg` and Chromium are in the sandbox image). If the user wants Playwright proof and the project lacks it, say so and suggest adding it to `/setup-env`.
+Check what the proof needs before promising it: Playwright and its browsers are on the machine only if someone installed them. If the user wants Playwright proof and the machine lacks it, say so.
 
 ## 2. Write `.aven/ship.md`
 

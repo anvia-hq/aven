@@ -3,13 +3,13 @@ import { useState } from "react";
 import { api, attempt } from "@/lib/api";
 import type { Computer } from "../types";
 
-export function useDesktopWake({ path }: Computer, onAwake: () => void) {
+export function useComputerWake({ path }: Computer, onAwake: () => void) {
   const [waking, setWaking] = useState(false);
 
   async function wake() {
     setWaking(true);
-    await attempt("Could not wake the sandbox", async () => {
-      await api(`${path}/desktop/wake`, { method: "POST" });
+    await attempt("Could not start the computer", async () => {
+      await api(`${path}/computer/wake`, { method: "POST" });
       onAwake();
     });
     setWaking(false);

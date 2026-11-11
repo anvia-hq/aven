@@ -51,7 +51,7 @@ export function createShowArtifactTool(files: ArtifactFiles) {
 
   return createTool({
     name: SHOW_ARTIFACT_TOOL_NAME,
-    description: `Show the user files from the sandbox in the conversation: images (PNG, JPEG, GIF or WebP, up to 8 MiB each) and videos (MP4 or WebM, up to 10 MiB each), such as a chart you plotted, a screenshot or a short screen recording, and interactive HTML pages (up to 2 MiB each, one self-contained file: every script and style inline, no network). A page runs in a sandboxed frame with no access to the app, the network or storage, and is drawn in the conversation as a live component. Give every file you want shown in one call, up to ${MAX_ARTIFACTS_PER_CALL}: several appear together as a grid. Save the files first; SVG is not supported, so save plots as PNG.`,
+    description: `Show the user files from this machine in the conversation: images (PNG, JPEG, GIF or WebP, up to 8 MiB each) and videos (MP4 or WebM, up to 10 MiB each), such as a chart you plotted, a screenshot or a short screen recording, and interactive HTML pages (up to 2 MiB each, one self-contained file: every script and style inline, no network). A page runs in a sandboxed frame with no access to the app, the network or storage, and is drawn in the conversation as a live component. Give every file you want shown in one call, up to ${MAX_ARTIFACTS_PER_CALL}: several appear together as a grid. Save the files first; SVG is not supported, so save plots as PNG.`,
     inputSchema: z.object({
       items: z
         .array(itemSchema)

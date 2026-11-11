@@ -283,7 +283,6 @@ export function directoryWorkspaces(seed?: (root: string) => Promise<void>): Thr
     artifacts,
     uploads,
     skills,
-    desktop: () => undefined,
     workspace: async (threadId) => roots.get(threadId),
     release: free,
     async dispose() {

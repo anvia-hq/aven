@@ -7,14 +7,12 @@ import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 type Viewer = {
   sink: ViewerSink;
   ready: boolean;
-  kind: "desktop" | "terminal" | "port";
+  kind: "terminal";
   waiting: Uint8Array[];
   waitingBytes: number;
 };
 
 const MAX_VIEWERS = 32;
-const MAX_PORT_VIEWERS = 64;
-const MAX_WAITING_BYTES = 1024 * 1024;
 
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
@@ -24,12 +22,6 @@ export class ViewerStreams {
     private sendFrame: (frame: Uint8Array) => void,
     private connectionClosed: () => boolean,
   ) {}
-
-  open(threadId: string, sink: ViewerSink): ViewerHandle {
-    const viewerId = this.#add("desktop", sink);
-    this.post({ type: "desktop.open", viewerId, threadId });
-    return this.#handle(viewerId, "desktop.close");
-  }
 
   openTerminal(
     threadId: string,
@@ -48,46 +40,21 @@ export class ViewerStreams {
     };
   }
 
-  openPort(threadId: string, port: number, sink: ViewerSink): ViewerHandle {
-    const viewerId = this.#add("port", sink);
-    this.post({ type: "port.open", viewerId, threadId, port });
-    return this.#handle(viewerId, "port.close");
-  }
-
-  #count(ports: boolean) {
-    return [...this.#viewers.values()].filter((viewer) => (viewer.kind === "port") === ports)
-      .length;
-  }
-
   #add(kind: Viewer["kind"], sink: ViewerSink) {
-    if (kind === "port") {
-      if (this.#count(true) >= MAX_PORT_VIEWERS) {
-        throw new UnavailableError("Too many connections to ports are open on this runner");
-      }
-    } else if (this.#count(false) >= MAX_VIEWERS) {
-      throw new UnavailableError("Too many desktops and terminals are open on this runner");
+    if (this.#viewers.size >= MAX_VIEWERS) {
+      throw new UnavailableError("Too many terminals are open on this runner");
     }
     const viewerId = crypto.randomUUID();
     this.#viewers.set(viewerId, { sink, ready: false, kind, waiting: [], waitingBytes: 0 });
     return viewerId;
   }
 
-  #handle(
-    viewerId: string,
-    closeType: "desktop.close" | "terminal.close" | "port.close",
-  ): ViewerHandle {
+  #handle(viewerId: string, closeType: "terminal.close"): ViewerHandle {
     return {
       write: (bytes) => {
         const viewer = this.#viewers.get(viewerId);
         if (!viewer) return;
         if (viewer.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
-        else if (
-          viewer.kind === "port" &&
-          viewer.waitingBytes + bytes.length <= MAX_WAITING_BYTES
-        ) {
-          viewer.waiting.push(bytes.slice());
-          viewer.waitingBytes += bytes.length;
-        }
       },
       close: () => {
         if (!this.#viewers.delete(viewerId) || this.connectionClosed()) return;

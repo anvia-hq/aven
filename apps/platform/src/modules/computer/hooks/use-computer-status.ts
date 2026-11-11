@@ -2,15 +2,15 @@ import { useState } from "react";
 
 import { useRequest } from "@/hooks/use-request";
 
-import type { Computer, DesktopStatus } from "../types";
+import type { Computer, ComputerStatus } from "../types";
 
 const POLL_MS = 5_000;
 
-export function useDesktopStatus({ path }: Computer) {
+export function useComputerStatus({ path }: Computer) {
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const answer = useRequest<DesktopStatus>(`${path}/desktop`, {
-    key: "desktop",
+  const answer = useRequest<ComputerStatus>(`${path}/computer`, {
+    key: "computer",
     pollMs: POLL_MS,
     resetOn: path,
     refreshKey: refreshCount,

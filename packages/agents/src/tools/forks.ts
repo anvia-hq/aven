@@ -14,9 +14,9 @@ const forkId = z.string().uuid().describe("The id fork_thread gave you.");
 export function createForkTools(host: ForkHost) {
   const forkThread = createTool({
     name: FORK_THREAD_TOOL_NAME,
-    description: `Fork this thread: start another thread that works on one task apart from you, in a sandbox of its own that begins as a copy of your workspace, uncommitted changes included. It does not share your files, processes or conversation, so what you do next does not touch it and what it does does not touch you. Returns at once; it keeps working while you do.
+    description: `Fork this thread: start another thread that works on one task apart from you, in a folder of its own that begins as a copy of your workspace, uncommitted changes included. It does not share your files, processes or conversation, so what you do next does not touch it and what it does does not touch you. Returns at once; it keeps working while you do.
 
-Use it only when the user asks you to fork or to work on something in parallel. Never on your own: it costs a whole sandbox. At most ${FORKS_PER_THREAD} forks that are not archived, and a fork cannot fork.
+Use it only when the user asks you to fork or to work on something in parallel. Never on your own: it costs a whole clone. At most ${FORKS_PER_THREAD} forks that are not archived, and a fork cannot fork.
 - \`task\` is what it must do, and what to send back.
 - \`context\` is a summary of what you know that the task needs: what the user wants, what you have done, learned and decided, the files that matter and what is already failing. The fork has none of your conversation, only this.
 - Look at it with fork_status, and take what it changed with take_fork_changes.`,

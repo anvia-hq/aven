@@ -1,5 +1,5 @@
 import { NotFoundError } from "../../errors";
-import { WAKE_TIMEOUT_MS } from "../desktop/service";
+import { WAKE_TIMEOUT_MS } from "../computer/service";
 import { createFilesService } from "../files/service";
 import { runnerFor } from "../runtimes/ask-runner";
 import { ACTIONS_FILE, parseActions } from "./parse";

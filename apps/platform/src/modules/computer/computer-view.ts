@@ -1,9 +1,9 @@
-import type { DesktopStatus } from "./types";
+import type { ComputerStatus } from "./types";
 
-type SandboxView = "loading" | "problem" | "no-sandbox" | "ready";
+type ComputerView = "loading" | "problem" | "no-computer" | "ready";
 
-export function sandboxView(status: DesktopStatus | null, problem: string | null): SandboxView {
+export function computerView(status: ComputerStatus | null, problem: string | null): ComputerView {
   if (problem) return "problem";
   if (!status) return "loading";
-  return status.available ? "ready" : "no-sandbox";
+  return status.available ? "ready" : "no-computer";
 }

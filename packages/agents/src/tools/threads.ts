@@ -118,7 +118,7 @@ export function createThreadTools(host: ThreadsHost) {
   const stop = createTool({
     name: STOP_THREAD_TOOL_NAME,
     description:
-      "Stop the run of one of the person's own threads, as their Stop button does: the agent stops at once and what it started in its sandbox, such as a dev server, is left running. What it did so far is kept, and continue_thread carries on from it. Look at the thread with get_thread first.",
+      "Stop the run of one of the person's own threads, as their Stop button does: the agent stops at once and what it started on the machine, such as a dev server, is left running. What it did so far is kept, and continue_thread carries on from it. Look at the thread with get_thread first.",
     inputSchema: z.object({ id }),
     execute: async ({ id }) => ({ thread: await host.stop(id) }),
   });

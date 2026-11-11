@@ -1,5 +1,4 @@
 import type { faces } from "./avatar";
-import type { useBotPanels } from "./hooks/use-bot-panels";
 import type { Bot, BotChatMessage } from "@aven/protocol/types";
 
 export type { Bot, BotChatMessage, BotChatPeer, BotEvent, BotQuestion } from "@aven/protocol/types";
@@ -42,8 +41,6 @@ export type Avatar = {
 };
 
 export type BotMood = "idle" | "working";
-
-export type BotPanels = ReturnType<typeof useBotPanels>;
 
 export type BotsWorkingStore = {
   subscribe: (listener: () => void) => () => void;

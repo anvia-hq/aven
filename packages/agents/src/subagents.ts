@@ -8,7 +8,6 @@ import {
 
 import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
-import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import type { SandboxToolName, SubagentType } from "./types";
 
 export const SUBAGENT_TYPES = ["explore", "general"] as const;
@@ -21,7 +20,6 @@ const PARENT_ONLY = new Set<string>([
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
   DEFINE_GOAL_TOOL_NAME,
-  SAVE_ENVIRONMENT_TOOL_NAME,
   COMPUTER_STATUS_TOOL_NAME,
   COMPUTER_WAKE_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,

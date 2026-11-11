@@ -8,7 +8,7 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { projectsService } from "../projects/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadsService } from "../threads/service";
-import { SETUP_FILE, SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
+import { SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
 import type { ModelSelection } from "../providers/types";
 import type { ShipMode } from "./types";
 import type { ThreadPullRequest } from "../threads/types";
@@ -83,12 +83,11 @@ export function createShipService(
   return {
     async readiness(organizationId: string, threadId: string) {
       const project = await load(organizationId, threadId);
-      const [setup, ship, appKey] = await Promise.all([
-        hasFile(organizationId, threadId, SETUP_FILE),
+      const [ship, appKey] = await Promise.all([
         hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
         project.githubInstallationId ? github.appKeyOf(project.githubInstallationId) : null,
       ]);
-      return { ready: setup && ship, setup, ship, appKey };
+      return { ready: ship, ship, appKey };
     },
 
     async ship(

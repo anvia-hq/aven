@@ -8,7 +8,6 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
-import { finishedEnvironmentSaves } from "@/modules/overview/environment-saves";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { ProjectInfo } from "@/modules/projects/components/project-info";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -56,10 +55,8 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const canCompact = owned && !running && !question;
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
-  const { overview, desktop, diff, files, terminal, browser } = panels;
-  const sideOpen =
-    !split &&
-    (diff.open || files.open || browser.open || (owned && (desktop.open || terminal.open)));
+  const { overview, diff, files, terminal } = panels;
+  const sideOpen = !split && (diff.open || files.open || (owned && terminal.open));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({
@@ -118,7 +115,6 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
                         usage={usage}
                         synced={synced}
                         owned={owned}
-                        saves={finishedEnvironmentSaves(messages)}
                         onCompact={{
                           run: () => void compact(),
                           busy: compacting,
