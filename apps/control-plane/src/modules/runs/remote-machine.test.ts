@@ -123,7 +123,10 @@ run(
         const replied =
           Array.isArray(last.content) &&
           last.content.some((part: { type: string }) => part.type === "tool_result");
-        const reply = replied ? answer("done") : toolCall("pwd; echo made > proof.txt");
+        const command = body.includes("please sleep")
+          ? "echo up > ready; sleep 30"
+          : "pwd; echo made > proof.txt";
+        const reply = replied ? answer("done") : toolCall(command);
         return new Response(reply, { headers: { "content-type": "text/event-stream" } });
       },
     });
@@ -258,5 +261,31 @@ run(
       expect(await readFile(join(uploads, kept[0]!), "utf8")).toBe("hello");
       expect(toolResultOf(bodies[before + 1])).toContain(`${uploads}/${kept[0]}`);
     }, 30_000);
+
+    test("cancelling the run stops the command that is running on the machine", async () => {
+      await machineRunner.ready;
+      await until(() => hub.isOnline(LOCAL_RUNTIME_ID) && hub.isOnline(machine.id));
+      const started = Date.now();
+      await manager.start(thread, "please sleep", model);
+      const ready = join(machineSandbox.paths(thread.id).workspace, "ready");
+      const deadline = Date.now() + 15_000;
+      let wrote = false;
+      while (!wrote && Date.now() < deadline) {
+        try {
+          wrote = (await readFile(ready, "utf8")).includes("up");
+        } catch {
+          await Bun.sleep(25);
+        }
+      }
+      expect(wrote).toBe(true);
+
+      expect(manager.cancel(thread.id)).toBe(true);
+      await until(() => !manager.isRunning(thread.id), 10_000);
+      expect(Date.now() - started).toBeLessThan(20_000);
+      const listing = await new Response(
+        Bun.spawn(["ps", "-eo", "args"], { stdout: "pipe" }).stdout,
+      ).text();
+      expect(listing).not.toContain("echo up > ready");
+    }, 25_000);
   },
 );
