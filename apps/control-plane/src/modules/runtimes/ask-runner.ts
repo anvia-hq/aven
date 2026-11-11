@@ -56,5 +56,5 @@ export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
 export const runnerFor = (hub: RuntimeHub) =>
   runnerVia(async (organizationId, threadId) => {
     const thread = await threadsService.require(organizationId, threadId);
-    return reachRunner(hub, thread.runtimeId);
+    return reachRunner(hub, { runtimeId: thread.runtimeId, threadId: thread.id });
   });

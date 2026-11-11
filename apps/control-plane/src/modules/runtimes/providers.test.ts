@@ -11,23 +11,33 @@ describe("reaching a runtime's runner", () => {
     const hub = { get: (id: string) => (id === "r1" ? connection : undefined) };
     const providerOf = () => Promise.reject(new Error("the provider was looked up"));
 
-    expect(await reachRunner(hub, "r1", undefined, providerOf)).toBe(connection);
+    expect(await reachRunner(hub, { runtimeId: "r1" }, undefined, providerOf)).toBe(connection);
   });
 
   test("cannot start a manual runner that is not connected, and says why", async () => {
     const manual = async () => "manual" as const;
 
-    await expect(reachRunner(nothingConnected, "r1", undefined, manual)).rejects.toThrow(
-      new RuntimeOfflineError("The runtime for this project is offline"),
-    );
     await expect(
-      reachRunner(nothingConnected, "r1", "The bot's computer is offline", manual),
+      reachRunner(nothingConnected, { runtimeId: "r1", threadId: "t1" }, undefined, manual),
+    ).rejects.toThrow(new RuntimeOfflineError("The runtime for this project is offline"));
+    await expect(
+      reachRunner(
+        nothingConnected,
+        { runtimeId: "r1", threadId: "t1" },
+        "The bot's computer is offline",
+        manual,
+      ),
     ).rejects.toThrow(new RuntimeOfflineError("The bot's computer is offline"));
   });
 
   test("treats a revoked or missing runtime as offline", async () => {
     await expect(
-      reachRunner(nothingConnected, "r1", undefined, async () => undefined),
+      reachRunner(
+        nothingConnected,
+        { runtimeId: "r1", threadId: "t1" },
+        undefined,
+        async () => undefined,
+      ),
     ).rejects.toBeInstanceOf(RuntimeOfflineError);
   });
 });

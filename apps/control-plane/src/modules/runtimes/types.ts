@@ -46,9 +46,14 @@ export type Refusal = {
 
 export type FindRunner = (scope: string, id: string) => Promise<RuntimeConnection>;
 
+export type RunnerPlace = { runtimeId: string; threadId?: string };
+
+export type ThreadPlace = Required<RunnerPlace>;
+
 export interface RuntimeProvider {
   readonly kind: RuntimeProviderKind;
-  start(runtimeId: string, offline?: string): Promise<RuntimeConnection>;
+  start(place: RunnerPlace, offline?: string): Promise<RuntimeConnection>;
+  release(place: ThreadPlace, runner: RuntimeConnection | undefined): Promise<void>;
 }
 
 export type ProviderOf = (runtimeId: string) => Promise<RuntimeProviderKind | undefined>;
