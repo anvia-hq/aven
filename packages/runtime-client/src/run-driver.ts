@@ -9,7 +9,6 @@ import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 
 import { keepAttachments, promptOf } from "./attachments";
-import { DurableRuns } from "./durable-runs";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
@@ -21,6 +20,7 @@ import { markTurn } from "./thread-diff";
 import { timing } from "./timing";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
+  AgentBackend,
   ConnectedMcp,
   DriverContext,
   DurableEnd,
@@ -52,7 +52,7 @@ type RunScope = {
   readonly thread: RunThreadInfo;
   readonly run: Live;
   readonly clock: Timing;
-  readonly journaled: DurableRuns;
+  readonly backend: AgentBackend;
   readonly record: RunRecord;
   save(changes: Partial<RunRecord>): void;
   current(): readonly AnyTool[] | undefined;
@@ -221,7 +221,7 @@ export function createRunDriver(context: DriverContext) {
       thread,
       run,
       clock,
-      journaled: await context.journal,
+      backend: await context.backend,
       current: () => undefined,
       get record() {
         return state.record;
@@ -292,7 +292,7 @@ export function createRunDriver(context: DriverContext) {
     if (run.cancelReason) throw new Error(run.cancelReason);
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     clock.mark("skills");
-    const journaled = await context.journal;
+    const backend = await context.backend;
     const redact = secretRedactor(env);
     const current = () => {
       const live = context.boxes.get(thread.id)?.tools;
@@ -315,7 +315,7 @@ export function createRunDriver(context: DriverContext) {
       thread,
       run,
       clock,
-      journaled,
+      backend,
       current,
       get record() {
         return state.record;
@@ -409,17 +409,17 @@ export function createRunDriver(context: DriverContext) {
   }
 
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
-    const { runId, thread, run, journaled, save, build, forward } = scope;
+    const { runId, thread, run, backend, save, build, forward } = scope;
     let followed: FollowedRun;
     if (scope.record.durableId) {
-      followed = await journaled.rejoin(
+      followed = await backend.rejoin(
         scope.record.durableId,
         build(scope.record.agentId, true),
         outbox.cursor(runId, scope.record.durableId),
         forward,
       );
     } else if (scope.record.kind === "start") {
-      followed = await journaled.start(
+      followed = await backend.start(
         runId,
         thread.id,
         await promptOf(
@@ -431,12 +431,12 @@ export function createRunDriver(context: DriverContext) {
         forward,
       );
     } else {
-      const asked = await journaled.asked(thread.id);
+      const asked = await backend.asked(thread.id);
       if (!asked) throw new Error("This thread has no question waiting for an answer");
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
-      followed = await journaled.answer(
+      followed = await backend.answer(
         asked,
         interaction,
         parseAgentInteractionResponse(resume?.response),
@@ -447,35 +447,33 @@ export function createRunDriver(context: DriverContext) {
     save({ durableId: followed.durableId });
     scope.clock.mark("started");
     run.followed = followed;
-    await handOverSteers(run, journaled, followed.durableId);
+    await handOverSteers(run, backend, followed.durableId);
     if (run.cancelReason) void followed.cancel();
     const end = await followed.done;
     if (end.type !== "error") {
-      save({ turn: journaled.transcriptTurn(followed.durableId, end) });
+      save({ turn: backend.transcriptTurn(followed.durableId, end) });
       await scope.file(end.messages);
     } else {
-      await scope
-        .file(await journaled.unfinishedMessages(followed.durableId))
-        .catch(() => undefined);
+      await scope.file(await backend.unfinishedMessages(followed.durableId)).catch(() => undefined);
     }
     if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
     else save({ goal: undefined });
     return end;
   }
 
-  async function handOverSteers(run: Live, journaled: DurableRuns, durableId: string) {
+  async function handOverSteers(run: Live, backend: AgentBackend, durableId: string) {
     for (const { steerId, message } of run.steers.splice(0)) {
-      await journaled.steer(durableId, message, steerId).catch((error: unknown) => {
+      await backend.steer(durableId, message, steerId).catch((error: unknown) => {
         console.warn(`Could not hand a message to run ${durableId}:`, errorMessage(error));
       });
     }
   }
 
   async function runGoal(scope: RunScope, goal: GoalRequest): Promise<DurableEnd> {
-    const { runId, run, journaled, save, build, forward } = scope;
+    const { runId, run, backend, save, build, forward } = scope;
     scope.stopIfCancelled();
     const exec = scope.current()?.find((tool) => tool.name === "exec_command");
-    const working = await journaled.startGoal({
+    const working = await backend.startGoal({
       runId,
       request: goal,
       input: build(`goal-${runId}`, false),
@@ -504,13 +502,13 @@ export function createRunDriver(context: DriverContext) {
     goal: GoalRequest,
     goalEnd?: Exclude<GoalEnd, { type: "error" }>,
   ): Promise<DurableEnd> {
-    const { runId, thread, run, journaled, save, build, forward } = scope;
+    const { runId, thread, run, backend, save, build, forward } = scope;
     scope.stopIfCancelled();
     const reportAgent = build(`run-${runId}-report`, false);
     let closing: FollowedRun;
     const { reportId } = scope.record;
     if (reportId) {
-      closing = await journaled.rejoin(
+      closing = await backend.rejoin(
         reportId,
         reportAgent,
         outbox.cursor(runId, reportId),
@@ -518,7 +516,7 @@ export function createRunDriver(context: DriverContext) {
       );
     } else {
       if (!goalEnd) throw new Error("The goal's outcome is gone, so it cannot be reported");
-      closing = await journaled.start(
+      closing = await backend.start(
         `${runId}-report`,
         thread.id,
         goalReport(goal.objective, goalEnd),
@@ -612,7 +610,7 @@ export function createRunDriver(context: DriverContext) {
         run.steers.push({ steerId, message });
         return { status: "queued" };
       }
-      const taken = await (await context.journal).steer(record.durableId, message, steerId);
+      const taken = await (await context.backend).steer(record.durableId, message, steerId);
       return { status: taken ? "queued" : "closed" };
     },
 
@@ -625,7 +623,7 @@ export function createRunDriver(context: DriverContext) {
       }
       const record = records.get(runId);
       if (!record || record.done) return;
-      if (record.durableId) await (await context.journal).cancelRun(record.durableId);
+      if (record.durableId) await (await context.backend).cancelRun(record.durableId);
       outbox.attach(runId, Number.MAX_SAFE_INTEGER);
       finish(runId, { type: "error", error: reason }, reason);
     },

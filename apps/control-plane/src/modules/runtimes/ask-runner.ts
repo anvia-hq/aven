@@ -2,7 +2,8 @@ import type { z } from "zod";
 
 import { describeError, UnavailableError } from "../../errors";
 import { threadsService } from "../threads/service";
-import { RuntimeOfflineError, type RuntimeHub } from "./hub";
+import type { RuntimeHub } from "./hub";
+import { manualProvider } from "./providers";
 import type { FindRunner, Refusal } from "./types";
 import type {
   ActionRunParams,
@@ -55,7 +56,5 @@ export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
 export const runnerFor = (hub: RuntimeHub) =>
   runnerVia(async (organizationId, threadId) => {
     const thread = await threadsService.require(organizationId, threadId);
-    const found = hub.get(thread.runtimeId);
-    if (!found) throw new RuntimeOfflineError();
-    return found;
+    return manualProvider(hub).reach(thread.runtimeId);
   });

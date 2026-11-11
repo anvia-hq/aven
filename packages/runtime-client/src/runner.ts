@@ -21,6 +21,7 @@ import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
 import type { ControlPlaneToRuntime, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
+  AgentBackend,
   CreateRuntimeAgent,
   DriverContext,
   RuntimeOptions,
@@ -102,11 +103,11 @@ export function startRuntime(options: RuntimeOptions) {
   const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
   const records = new RunRecords(state);
   const outbox = new RunOutbox(state);
-  const journal = DurableRuns.open(
+  const backend: Promise<AgentBackend> = DurableRuns.open(
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
-  journal.catch(() => undefined);
+  backend.catch(() => undefined);
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -176,7 +177,7 @@ export function startRuntime(options: RuntimeOptions) {
   });
 
   const driver = createRunDriver({
-    journal,
+    backend,
     records,
     outbox,
     sandbox: options.sandbox,
@@ -351,7 +352,7 @@ export function startRuntime(options: RuntimeOptions) {
       socket?.close();
       await idle.settled();
       await options.sandbox.dispose();
-      await journal.then((journaled) => journaled.close()).catch(() => undefined);
+      await backend.then((opened) => opened.close()).catch(() => undefined);
       state.close();
     },
   };
