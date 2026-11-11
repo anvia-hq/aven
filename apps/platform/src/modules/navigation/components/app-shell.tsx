@@ -73,11 +73,11 @@ export function AppShell({ user, sidebar }: Props) {
           </div>
         </nav>
       </TooltipProvider>
-      <div className="flex min-w-0 flex-1 md:my-2 md:mr-2">
+      <div className="flex min-w-0 flex-1 md:my-1 md:mr-2">
         <Sidebar
           collapsible="icon"
           className={cn(
-            "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-xl md:rounded-xl md:border md:border-sidebar-border",
+            "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-1 md:h-[calc(100svh-0.5rem)] md:*:rounded-xl md:rounded-xl md:border md:border-sidebar-border",
             drawsOwnCards && "md:bg-background",
           )}
         >
@@ -129,7 +129,7 @@ export function AppShell({ user, sidebar }: Props) {
             "pb-(--mobile-tab-bar) md:ml-2 md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
-              : "md:h-[calc(100svh-1rem)] md:min-h-0 md:overflow-y-auto md:rounded-xl md:border md:border-sidebar-border",
+              : "md:h-[calc(100svh-0.5rem)] md:min-h-0 md:overflow-y-auto md:rounded-xl md:border md:border-sidebar-border",
           )}
         >
           <MobileAppBar />
