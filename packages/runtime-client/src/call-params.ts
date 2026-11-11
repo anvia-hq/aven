@@ -6,6 +6,7 @@ import type {
   DiffGetParams,
   DiffScope,
   FilesCallParams,
+  FoldersCommitsParams,
   FoldersCreateParams,
   FoldersFilesParams,
   FoldersListParams,
@@ -114,4 +115,14 @@ export function foldersReadmeParams(params: unknown): FoldersReadmeParams {
   const { folder } = asRecord(params);
   if (typeof folder !== "string" || folder.length > 4096) throw invalid();
   return { folder };
+}
+
+export function foldersCommitsParams(params: unknown): FoldersCommitsParams {
+  const { folder, page } = asRecord(params);
+  if (typeof folder !== "string" || folder.length > 4096) throw invalid();
+  if (page === undefined || page === null) return { folder };
+  if (typeof page !== "number" || !Number.isInteger(page) || page < 1 || page > 10_000) {
+    throw invalid();
+  }
+  return { folder, page };
 }

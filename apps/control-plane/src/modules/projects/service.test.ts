@@ -24,6 +24,9 @@ import type { ProjectFolders } from "./types";
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 const noFolders: ProjectFolders = {
+  commits: async () => {
+    throw new Error("A GitHub project does not ask a runner for its commits");
+  },
   files: async () => {
     throw new Error("A GitHub project does not ask a runner for its files");
   },
@@ -108,6 +111,10 @@ run("projectsService (postgres)", async () => {
     });
     const asked: unknown[] = [];
     const folders: ProjectFolders = {
+      commits: async (runtimeId, folder, page) => {
+        asked.push([runtimeId, folder, page]);
+        return { commits: [], hasMore: false };
+      },
       files: async (runtimeId, folder, path) => {
         asked.push([runtimeId, folder, path]);
         return { entries: [{ name: "src", path: "src", type: "directory" }] };
@@ -124,9 +131,15 @@ run("projectsService (postgres)", async () => {
     expect(await projectsService.readme(orgA, userId, project.id, folders)).toEqual({
       readme: null,
     });
+    expect(await projectsService.commits(orgA, userId, project.id, 2, folders)).toEqual({
+      commits: [],
+      hasMore: false,
+      page: 2,
+    });
     expect(asked).toEqual([
       [runtime.id, "/home/me/work/site", "src"],
       [runtime.id, "/home/me/work/site"],
+      [runtime.id, "/home/me/work/site", 2],
     ]);
     const stranger = await personIn(orgA, "member");
     await expect(
@@ -209,7 +222,7 @@ run("projectsService (postgres)", async () => {
     try {
       const project = (await projectsService.list(orgA))[0]!;
 
-      expect(await projectsService.commits(orgA, project.id, 2)).toEqual({
+      expect(await projectsService.commits(orgA, userId, project.id, 2, noFolders)).toEqual({
         commits: [commit],
         hasMore: true,
         page: 2,
@@ -223,15 +236,15 @@ run("projectsService (postgres)", async () => {
       );
 
       commits.mockClear();
-      await expect(projectsService.commits(orgB, project.id, 1)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        projectsService.commits(orgB, userId, project.id, 1, noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
       expect(commits).not.toHaveBeenCalled();
 
       commits.mockImplementation(async () => null);
-      await expect(projectsService.commits(orgA, project.id, 1)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        projectsService.commits(orgA, userId, project.id, 1, noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
     } finally {
       commits.mockRestore();
     }

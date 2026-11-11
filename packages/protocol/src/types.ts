@@ -434,7 +434,8 @@ export type RunnerSelfCallMethod =
   | "folders.list"
   | "folders.create"
   | "folders.files"
-  | "folders.readme";
+  | "folders.readme"
+  | "folders.commits";
 
 export type FoldersListParams = { path?: string };
 
@@ -461,6 +462,21 @@ export type FoldersReadmeParams = { folder: string };
 export type FolderReadme = { name: string; path: string; text: string; truncated: boolean };
 
 export type FoldersReadmeResult = { readme: FolderReadme | null };
+
+export type FoldersCommitsParams = { folder: string; page?: number };
+
+export type FolderCommit = {
+  sha: string;
+  message: string;
+  author: string | null;
+  authorAvatar: null;
+  date: string;
+  parents: string[];
+  refs: string[];
+  tags: string[];
+};
+
+export type FoldersCommitsResult = { commits: FolderCommit[]; hasMore: boolean };
 
 export type RunnerUpdateParams = { release?: string };
 

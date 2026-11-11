@@ -72,9 +72,9 @@ export const projectsRouter = (putAway: PutAwayThread, folders: ProjectFolders) 
     )
     .get(
       "/:id/commits",
-      ({ params, query, organizationId }) => {
+      ({ params, query, organizationId, user }) => {
         const { page, ...filters } = query;
-        return projectsService.commits(organizationId, params.id, page, filters);
+        return projectsService.commits(organizationId, user.id, params.id, page, folders, filters);
       },
       { auth: true, org: true, params: projectParams, query: commitsQuery },
     )

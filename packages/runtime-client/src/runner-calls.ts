@@ -5,6 +5,7 @@ import {
   diffGetParams,
   filesCallParams,
   foldersCreateParams,
+  foldersCommitsParams,
   foldersFilesParams,
   foldersListParams,
   foldersReadmeParams,
@@ -15,7 +16,7 @@ import {
   steerParams,
 } from "./call-params";
 import { createFolder, listFolders } from "./folder-browser";
-import { listFiles, readReadme } from "./folder-contents";
+import { listCommits, listFiles, readReadme } from "./folder-contents";
 import { currentBranch, threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import type {
@@ -129,6 +130,10 @@ export function createRunnerCalls({
       return listFiles(dirs, folder, path);
     }
     if (method === "folders.readme") return readReadme(dirs, foldersReadmeParams(params).folder);
+    if (method === "folders.commits") {
+      const { folder, page } = foldersCommitsParams(params);
+      return listCommits(dirs, folder, page);
+    }
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
     if (method === "computer.status") return computerOf(params);

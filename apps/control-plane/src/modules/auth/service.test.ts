@@ -14,6 +14,7 @@ run("bearer sessions for native clients (real postgres)", () => {
   const email = `native-${crypto.randomUUID().slice(0, 8)}@aven.test`;
   const app = new Elysia().use(
     projectsRouter(() => {}, {
+      commits: async () => ({ commits: [], hasMore: false }),
       files: async () => ({ entries: [] }),
       readme: async () => ({ readme: null }),
     }),

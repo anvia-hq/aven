@@ -74,7 +74,7 @@ function ProjectPage() {
             {project.repoFullName && (
               <RepoTracked key={`tracked-${project.id}`} projectId={project.id} />
             )}
-            {project.repoFullName && <RepoCommits key={project.id} project={project} />}
+            <RepoCommits key={project.id} project={project} />
           </div>
         </div>
       </main>

@@ -448,6 +448,33 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         ];
     return reply({ entries });
   }
+  if (call.method === "folders.commits") {
+    return reply({
+      commits: [
+        {
+          sha: "b".repeat(40),
+          message: "Write the notes",
+          author: "Ana",
+          authorAvatar: null,
+          date: "2026-11-01T10:00:00+07:00",
+          parents: ["a".repeat(40)],
+          refs: ["main"],
+          tags: [],
+        },
+        {
+          sha: "a".repeat(40),
+          message: "Start the notes folder",
+          author: "Ana",
+          authorAvatar: null,
+          date: "2026-10-31T10:00:00+07:00",
+          parents: [],
+          refs: [],
+          tags: ["v1"],
+        },
+      ],
+      hasMore: false,
+    });
+  }
   if (call.method === "folders.readme") {
     return reply({
       readme: {

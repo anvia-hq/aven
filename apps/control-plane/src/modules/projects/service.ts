@@ -234,8 +234,23 @@ export const projectsService = {
     };
   },
 
-  async commits(organizationId: string, id: string, page: number, filters?: GithubCommitFilters) {
+  async commits(
+    organizationId: string,
+    userId: string,
+    id: string,
+    page: number,
+    folders: ProjectFolders,
+    filters?: GithubCommitFilters,
+  ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    if (project.directory) {
+      const { runtimeId, directory } = await projectsService.folderRunner(
+        organizationId,
+        userId,
+        project,
+      );
+      return { ...(await folders.commits(runtimeId, directory, page)), page };
+    }
     const github = githubOf(project);
     const found = await githubService.commits(
       github.installationId,
