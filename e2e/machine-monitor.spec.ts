@@ -47,9 +47,7 @@ const stats = (overrides: Record<string, unknown>) =>
   });
 
 test.describe("machine monitor", () => {
-  test("the sidebar has a single row for each runtime above Settings, with its load", async ({
-    page,
-  }) => {
+  test("the sidebar has a single row for each runtime, with its load", async ({ page }) => {
     await registerUser(page, "mon", "Monitor User");
     await runner(page, "build-box", { FAKE_STATS: stats({}) });
     await runner(page, "hot-box", { FAKE_STATS: stats({ cpuPercent: 96, sandboxes: 1 }) });
@@ -63,9 +61,6 @@ test.describe("machine monitor", () => {
     expect(
       await rows.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual(["build-box", "hot-box", "old-box", "sleeping-box"]);
-    const settings = await page.getByRole("button", { name: "Settings" }).boundingBox();
-    const last = await rows.last().boundingBox();
-    expect(last!.y + last!.height).toBeLessThanOrEqual(settings!.y);
     for (const box of await Promise.all((await rows.all()).map((row) => row.boundingBox()))) {
       expect(box!.height).toBeLessThanOrEqual(34);
     }
@@ -112,8 +107,8 @@ test.describe("machine monitor", () => {
     const machines = page.getByRole("list", { name: "Machines" });
     const rows = machines.locator("[data-slot=machine-row]");
     await expect(rows).toHaveCount(3);
-    const settings = page.getByRole("button", { name: "Settings" });
-    const settingsAt = await settings.boundingBox();
+    const footer = page.locator("[data-slot=sidebar-footer]");
+    const footerAt = await footer.boundingBox();
     const stackedFirst = await rows.nth(0).boundingBox();
     const stackedLast = await rows.nth(2).boundingBox();
     expect(stackedLast!.y - stackedFirst!.y).toBeLessThan(20);
@@ -126,9 +121,9 @@ test.describe("machine monitor", () => {
         return last!.y - first!.y;
       })
       .toBeGreaterThanOrEqual(70);
-    expect(await settings.boundingBox()).toEqual(settingsAt);
+    expect(await footer.boundingBox()).toEqual(footerAt);
     const fannedLast = await rows.nth(2).boundingBox();
-    expect(fannedLast!.y + fannedLast!.height).toBeLessThanOrEqual(settingsAt!.y);
+    expect(fannedLast!.y + fannedLast!.height).toBeLessThanOrEqual(footerAt!.y + footerAt!.height);
   });
 
   test("a runner behind the server has an Update button that asks it, and says Updating (decision 0146)", async ({

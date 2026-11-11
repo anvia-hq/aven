@@ -23,7 +23,7 @@ export function MachineMonitor() {
   } as CSSProperties;
 
   return (
-    <div className="-mx-2 border-b px-2 pb-2 group-data-[collapsible=icon]:hidden">
+    <div className="-mx-2 border-b px-2 pb-2 group-data-[collapsible=icon]:hidden md:border-b-0 md:pb-0">
       <ul
         aria-label="Machines"
         data-slot="machine-stack"
