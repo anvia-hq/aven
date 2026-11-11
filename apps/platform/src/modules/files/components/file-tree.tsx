@@ -42,7 +42,7 @@ function Nodes({ folder, depth, ...rest }: NodeProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start font-normal"
+              className="w-full justify-start font-normal aria-expanded:bg-transparent"
               style={indent}
               aria-expanded={open}
               onClick={() => onToggleFolder(path)}
