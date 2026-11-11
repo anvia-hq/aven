@@ -17,12 +17,14 @@ export function ProjectAbout({ project }: { project: Project }) {
             <ProjectRunner project={project} />
           </dd>
         </div>
+        {project.defaultBranch && (
+          <div className={row}>
+            <dt className="text-muted-foreground">Default branch</dt>
+            <dd className="font-mono text-xs">{project.defaultBranch}</dd>
+          </div>
+        )}
         <div className={row}>
-          <dt className="text-muted-foreground">Default branch</dt>
-          <dd className="font-mono text-xs">{project.defaultBranch}</dd>
-        </div>
-        <div className={row}>
-          <dt className="text-muted-foreground">Imported</dt>
+          <dt className="text-muted-foreground">{project.directory ? "Added" : "Imported"}</dt>
           <dd>{timeAgo(project.createdAt, true)}</dd>
         </div>
       </dl>

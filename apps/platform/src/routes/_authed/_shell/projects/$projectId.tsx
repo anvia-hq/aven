@@ -53,8 +53,8 @@ function ProjectPage() {
         </div>
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-4">
-            {project.repoFullName && <RepoFiles project={project} path={path} />}
-            {project.repoFullName && path === "" && <RepoReadme project={project} />}
+            <RepoFiles project={project} path={path} />
+            {path === "" && <RepoReadme project={project} />}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -74,7 +74,7 @@ function ProjectPage() {
             {project.repoFullName && (
               <RepoTracked key={`tracked-${project.id}`} projectId={project.id} />
             )}
-            {project.repoFullName && <RepoCommits key={project.id} project={project} />}
+            <RepoCommits key={project.id} project={project} />
           </div>
         </div>
       </main>

@@ -19,6 +19,7 @@ import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import type { AddFolderBody, ImportProjectBody, UpdateProjectBody } from "./schema";
+import type { ProjectFolders } from "./types";
 import type {
   GithubCommitFilters,
   GithubTrackedFilters,
@@ -185,23 +186,71 @@ export const projectsService = {
     for (const thread of archivedThreads) putAway(thread);
   },
 
-  async folder(organizationId: string, id: string, path: string) {
+  async folderRunner(
+    organizationId: string,
+    userId: string,
+    project: { runtimeId: string; directory: string | null },
+  ) {
+    if (!(await runtimesService.get(organizationId, project.runtimeId, userId))) {
+      throw new ForbiddenError("This project is on a computer that is private to its owner");
+    }
+    return { runtimeId: project.runtimeId, directory: project.directory! };
+  },
+
+  async folder(
+    organizationId: string,
+    userId: string,
+    id: string,
+    path: string,
+    folders: ProjectFolders,
+  ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    if (project.directory) {
+      const { runtimeId, directory } = await projectsService.folderRunner(
+        organizationId,
+        userId,
+        project,
+      );
+      return folders.files(runtimeId, directory, path);
+    }
     const github = githubOf(project);
     const entries = await githubService.folder(github.installationId, github.repo, path);
     return { entries: orNotFound(entries, "Folder not found") };
   },
 
-  async readme(organizationId: string, id: string) {
+  async readme(organizationId: string, userId: string, id: string, folders: ProjectFolders) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    if (project.directory) {
+      const { runtimeId, directory } = await projectsService.folderRunner(
+        organizationId,
+        userId,
+        project,
+      );
+      return folders.readme(runtimeId, directory);
+    }
     if (!project.githubInstallationId || !project.repoFullName) return { readme: null };
     return {
       readme: await githubService.readme(project.githubInstallationId, project.repoFullName),
     };
   },
 
-  async commits(organizationId: string, id: string, page: number, filters?: GithubCommitFilters) {
+  async commits(
+    organizationId: string,
+    userId: string,
+    id: string,
+    page: number,
+    folders: ProjectFolders,
+    filters?: GithubCommitFilters,
+  ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    if (project.directory) {
+      const { runtimeId, directory } = await projectsService.folderRunner(
+        organizationId,
+        userId,
+        project,
+      );
+      return { ...(await folders.commits(runtimeId, directory, page)), page };
+    }
     const github = githubOf(project);
     const found = await githubService.commits(
       github.installationId,

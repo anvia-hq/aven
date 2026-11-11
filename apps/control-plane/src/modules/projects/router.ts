@@ -15,8 +15,9 @@ import {
 } from "./schema";
 import { projectsService } from "./service";
 import type { PutAwayThread } from "../threads/types";
+import type { ProjectFolders } from "./types";
 
-export const projectsRouter = (putAway: PutAwayThread) =>
+export const projectsRouter = (putAway: PutAwayThread, folders: ProjectFolders) =>
   new Elysia({ prefix: "/projects" })
     .use(authRouter)
     .get("/", ({ organizationId }) => projectsService.list(organizationId), {
@@ -55,13 +56,14 @@ export const projectsRouter = (putAway: PutAwayThread) =>
     )
     .get(
       "/:id/files",
-      ({ params, query, organizationId }) =>
-        projectsService.folder(organizationId, params.id, query.path),
+      ({ params, query, organizationId, user }) =>
+        projectsService.folder(organizationId, user.id, params.id, query.path, folders),
       { auth: true, org: true, params: projectParams, query: folderQuery },
     )
     .get(
       "/:id/readme",
-      ({ params, organizationId }) => projectsService.readme(organizationId, params.id),
+      ({ params, organizationId, user }) =>
+        projectsService.readme(organizationId, user.id, params.id, folders),
       {
         auth: true,
         org: true,
@@ -70,9 +72,9 @@ export const projectsRouter = (putAway: PutAwayThread) =>
     )
     .get(
       "/:id/commits",
-      ({ params, query, organizationId }) => {
+      ({ params, query, organizationId, user }) => {
         const { page, ...filters } = query;
-        return projectsService.commits(organizationId, params.id, page, filters);
+        return projectsService.commits(organizationId, user.id, params.id, page, folders, filters);
       },
       { auth: true, org: true, params: projectParams, query: commitsQuery },
     )

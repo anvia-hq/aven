@@ -96,15 +96,21 @@ function Commit({
           {commit.date ? ` · ${timeAgo(commit.date, true)}` : ""}
         </span>
       </div>
-      <a
-        href={commitUrl(project.repoFullName ?? "", commit.sha)}
-        target="_blank"
-        rel="noreferrer noopener"
-        aria-label={`Open commit ${commit.sha.slice(0, 7)} on GitHub`}
-        className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground hover:text-foreground"
-      >
-        {commit.sha.slice(0, 7)}
-      </a>
+      {project.repoFullName ? (
+        <a
+          href={commitUrl(project.repoFullName, commit.sha)}
+          target="_blank"
+          rel="noreferrer noopener"
+          aria-label={`Open commit ${commit.sha.slice(0, 7)} on GitHub`}
+          className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground hover:text-foreground"
+        >
+          {commit.sha.slice(0, 7)}
+        </a>
+      ) : (
+        <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+          {commit.sha.slice(0, 7)}
+        </span>
+      )}
     </li>
   );
 }
@@ -134,6 +140,16 @@ export function RepoCommits({
   );
   const graph = useMemo(() => layoutGraph(commits ?? []), [commits]);
 
+  if (
+    !project.repoFullName &&
+    !loading &&
+    problem === undefined &&
+    page === 1 &&
+    !commits?.length
+  ) {
+    return null;
+  }
+
   return (
     <SectionCard
       label="Commits"
@@ -155,7 +171,10 @@ export function RepoCommits({
       )}
       {problem !== undefined && (
         <p className="p-4 text-sm text-muted-foreground">
-          Could not read the commits on GitHub. {problem}
+          {project.repoFullName
+            ? "Could not read the commits on GitHub. "
+            : "Could not read the commits of this folder on its computer. "}
+          {problem}
         </p>
       )}
       {commits && (

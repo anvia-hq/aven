@@ -429,7 +429,13 @@ export type SteerResult =
 
 export type SandboxCallMethod = "sandbox.release";
 
-export type RunnerSelfCallMethod = "runner.update" | "folders.list" | "folders.create";
+export type RunnerSelfCallMethod =
+  | "runner.update"
+  | "folders.list"
+  | "folders.create"
+  | "folders.files"
+  | "folders.readme"
+  | "folders.commits";
 
 export type FoldersListParams = { path?: string };
 
@@ -444,6 +450,33 @@ export type FoldersListResult = {
 export type FoldersCreateParams = { path: string; name: string };
 
 export type FoldersCreateResult = { path: string };
+
+export type FoldersFilesParams = { folder: string; path?: string };
+
+export type FolderFileEntry = { name: string; path: string; type: "file" | "directory" };
+
+export type FoldersFilesResult = { entries: FolderFileEntry[] };
+
+export type FoldersReadmeParams = { folder: string };
+
+export type FolderReadme = { name: string; path: string; text: string; truncated: boolean };
+
+export type FoldersReadmeResult = { readme: FolderReadme | null };
+
+export type FoldersCommitsParams = { folder: string; page?: number };
+
+export type FolderCommit = {
+  sha: string;
+  message: string;
+  author: string | null;
+  authorAvatar: null;
+  date: string;
+  parents: string[];
+  refs: string[];
+  tags: string[];
+};
+
+export type FoldersCommitsResult = { commits: FolderCommit[]; hasMore: boolean };
 
 export type RunnerUpdateParams = { release?: string };
 
