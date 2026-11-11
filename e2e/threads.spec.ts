@@ -593,6 +593,8 @@ test.describe("a message sent to an idle agent", () => {
       "src",
       /^data:image\/png;base64,/,
     );
+    await expect(shown.getByRole("img", { name: "shot.png" })).toHaveJSProperty("complete", true);
+    await expect(shown.getByRole("img", { name: "shot.png" })).toHaveAttribute("loading", "eager");
     await page.setViewportSize({ width: 1200, height: 800 });
     await shown.getByRole("button", { name: "Open shot.png" }).click();
     const dialog = page.getByRole("dialog", { name: "shot.png" });
