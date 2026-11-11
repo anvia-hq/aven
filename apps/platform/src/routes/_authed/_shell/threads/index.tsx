@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { ImportRepositoryDialog } from "@/modules/projects/components/import-repository-dialog";
+import { AddFolderDialog } from "@/modules/projects/components/add-folder-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -40,7 +40,7 @@ function NewThread() {
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {loaded && projects.length > 0 && (
-          <ImportRepositoryDialog size="sm" onImported={(project) => setProjectId(project.id)} />
+          <AddFolderDialog size="sm" onAdded={(project) => setProjectId(project.id)} />
         )}
       </header>
 
@@ -57,8 +57,8 @@ function NewThread() {
         {loaded &&
           (projects.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
-              <p className="text-sm text-muted-foreground">Import a repository to get started.</p>
-              <ImportRepositoryDialog onImported={(project) => setProjectId(project.id)} />
+              <p className="text-sm text-muted-foreground">Add a folder to get started.</p>
+              <AddFolderDialog onAdded={(project) => setProjectId(project.id)} />
             </div>
           ) : (
             <PromptInput

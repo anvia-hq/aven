@@ -43,11 +43,22 @@ export async function connectGithub(page: Page) {
 }
 
 export async function importRepository(page: Page, name: string) {
-  await page.getByRole("button", { name: "Import repository" }).click();
-  await page.getByRole("combobox", { name: "Repository" }).click();
-  await page.getByRole("option", { name: `acme/${name}` }).click();
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(page.getByText("Repository imported")).toBeVisible();
+  const installations = (await (await page.request.get("/api/github/installations")).json()) as {
+    id: string;
+  }[];
+  const runtimes = (await (await page.request.get("/api/runtimes")).json()) as { id: string }[];
+  const created = await page.request.post("/api/projects", {
+    data: {
+      installationId: installations[0]!.id,
+      repository: `acme/${name}`,
+      runtimeId: runtimes.at(-1)!.id,
+    },
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  const here = new URL(page.url());
+  if (here.pathname === "/threads") await page.goto(`/threads?project=${project.id}`);
+  else await page.reload();
 }
 
 const API_URL = process.env.E2E_API_URL ?? "http://localhost:8100";

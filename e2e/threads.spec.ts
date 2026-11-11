@@ -24,23 +24,14 @@ async function startThread(page: Page, prompt: string) {
 }
 
 test.describe("threads", () => {
-  test("the new thread page asks to import a repository first", async ({ page }) => {
+  test("the new thread page asks to add a folder first", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByText("Import a repository to get started.")).toBeVisible();
+    await expect(page.getByText("Add a folder to get started.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
-  });
-
-  test("a project needs a runner, and the dialog says where to add one", async ({ page }) => {
-    await registerUser(page, "thr", "Thread User");
-    await connectGithub(page);
-    await page.goto("/threads");
-    await page.getByRole("button", { name: "Import repository" }).click();
-    await expect(page.getByText("A project needs a runner")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Add a runner" })).toBeVisible();
   });
 
   test("a thread started from a project opens with its prompt as the title", async ({ page }) => {

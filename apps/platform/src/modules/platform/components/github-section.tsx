@@ -27,7 +27,7 @@ export function GithubSection() {
       {configured && (
         <SettingsRow
           title="GitHub App is set up"
-          description="People connect it to their GitHub account when they import a repository. An app made private can be installed only by its owner: to install it on another organization, make it public in its settings on GitHub (Advanced > Make public)."
+          description="People connect it to their GitHub account when they connect it. An app made private can be installed only by its owner: to install it on another organization, make it public in its settings on GitHub (Advanced > Make public)."
         />
       )}
       {!configured && !canSetUp && (

@@ -1,5 +1,4 @@
 import type { useAddFolder } from "./hooks/use-add-folder";
-import type { useImportRepository } from "./hooks/use-import-repository";
 
 export type Project = {
   id: string;
@@ -95,8 +94,6 @@ export type TrackedItem = {
 };
 
 export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };
-
-export type ImportRepositoryState = ReturnType<typeof useImportRepository>;
 
 export type AddFolderState = ReturnType<typeof useAddFolder>;
 
