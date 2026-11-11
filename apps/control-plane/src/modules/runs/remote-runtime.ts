@@ -10,10 +10,9 @@ import {
   type RuntimeHub,
 } from "../runtimes/hub";
 import { reachRunner } from "../runtimes/providers";
-import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
+import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
-  AgentHostOf,
   Placement,
   ResumeRunInput,
   RunResult,
@@ -87,7 +86,7 @@ export class RemoteRuntime implements Runtime {
     private hub: RuntimeHub,
     private gateway: Pick<RunGateway, "issue" | "revoke">,
     private identities: Pick<RunIdentities, "issue" | "revoke"> = runIdentities,
-    private agentHostOf: AgentHostOf = (runtimeId) => runtimesService.agentHostOf(runtimeId),
+    private agentOnControlPlane = true,
   ) {}
 
   async start({
@@ -239,14 +238,11 @@ export class RemoteRuntime implements Runtime {
 
   async #placementFor(thread: RunThread): Promise<Placement> {
     const backend = thread.agentBackend ?? "native";
-    if (
-      backend === "native" &&
-      thread.runtimeId !== LOCAL_RUNTIME_ID &&
-      (await this.agentHostOf(thread.runtimeId)) === "control_plane"
-    ) {
+    if (this.agentOnControlPlane && backend === "native" && thread.runtimeId !== LOCAL_RUNTIME_ID) {
       const connection = this.hub.get(LOCAL_RUNTIME_ID);
       if (!connection)
         throw new RuntimeOfflineError("The control plane's own runner is not running");
+      if (!connection.offers(backend)) throw new BackendUnavailableError();
       return { connection, hostId: LOCAL_RUNTIME_ID, machine: thread.runtimeId };
     }
     const connection = await reachRunner(this.hub, {

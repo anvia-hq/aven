@@ -4,12 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { db } from "@aven/db/client";
-import { runtimes } from "@aven/db/schema/runtimes";
 import { HostSandboxes } from "@aven/runtime-client/host-sandboxes";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { journalPath } from "@aven/runtime-client/testing/journal-path";
 import { createRemoteRepo } from "@aven/runtime-client/testing/remote-repo";
-import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 
 import { createMemoryStore } from "../../memory-store";
@@ -157,10 +155,6 @@ run(
     const { runtime: machine, token } = await runtimesService.create(seed.orgA, seed.userId, {
       name: "remote machine",
     });
-    await db
-      .update(runtimes)
-      .set({ agentHost: "control_plane" })
-      .where(eq(runtimes.id, machine.id));
     const machineSandbox = await HostSandboxes.start({ home: machineHome });
     let machineRunner = startRuntime({
       url,

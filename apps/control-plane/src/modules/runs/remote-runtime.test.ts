@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { BackendUnavailableError, RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { RemoteRuntime } from "./remote-runtime";
-import type { AgentHost, ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
+import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
 
 const thread = { id: "t1", organizationId: "org-1", runtimeId: "rt-1" };
 const model: RunModel = {
@@ -23,8 +23,8 @@ const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" 
 function runtime({
   failPost = false,
   backends = ["native"],
-  agentHost = "machine" as AgentHost,
   builtIn = true,
+  agentOnControlPlane = true,
 } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
   const asked: string[] = [];
@@ -68,7 +68,7 @@ function runtime({
         revoke() {},
       },
       identities,
-      async () => agentHost,
+      agentOnControlPlane,
     ),
   };
 }
@@ -190,18 +190,8 @@ describe("where a run's agent runs (decision 0222)", () => {
   const sentThread = (posted: ControlPlaneToRuntime[]) =>
     (posted[0] as Extract<ControlPlaneToRuntime, { type: "run.start" }>).thread;
 
-  test("on its runtime's own runner, by default, with no machine named", async () => {
+  test("on the control plane's runner, naming the thread's runtime as its machine", async () => {
     const { posted, asked, cancelled, remote } = runtime();
-    const run = await remote.start({ thread, prompt: "go" } as never);
-    run.cancel("stop");
-
-    expect(asked).toEqual([thread.runtimeId]);
-    expect(sentThread(posted).machine).toBeUndefined();
-    expect(cancelled).toEqual([thread.runtimeId]);
-  });
-
-  test("on the control plane's runner when its runtime says so, naming the runtime as its machine", async () => {
-    const { posted, asked, cancelled, remote } = runtime({ agentHost: "control_plane" });
     const run = await remote.start({ thread, prompt: "go" } as never);
     run.cancel("stop");
 
@@ -211,18 +201,28 @@ describe("where a run's agent runs (decision 0222)", () => {
   });
 
   test("starts even when the machine is offline, but not when the control plane has no runner", async () => {
-    const { posted, remote } = runtime({ agentHost: "control_plane" });
+    const { posted, remote } = runtime();
     await remote.start({ thread, prompt: "go" } as never);
     expect(posted).toHaveLength(1);
 
-    const without = runtime({ agentHost: "control_plane", builtIn: false });
+    const without = runtime({ builtIn: false });
     await expect(without.remote.start({ thread, prompt: "go" } as never)).rejects.toBeInstanceOf(
       RuntimeOfflineError,
     );
   });
 
+  test("on its runtime's own runner when the control plane has no runner of its own (AVEN_LOCAL_RUNNER=off)", async () => {
+    const { posted, asked, cancelled, remote } = runtime({ agentOnControlPlane: false });
+    const run = await remote.start({ thread, prompt: "go" } as never);
+    run.cancel("stop");
+
+    expect(asked).toEqual([thread.runtimeId]);
+    expect(sentThread(posted).machine).toBeUndefined();
+    expect(cancelled).toEqual([thread.runtimeId]);
+  });
+
   test("a thread on the control plane's own runtime runs there, naming no machine", async () => {
-    const { posted, remote } = runtime({ agentHost: "control_plane" });
+    const { posted, remote } = runtime();
     await remote.start({
       thread: { ...thread, runtimeId: LOCAL_RUNTIME_ID },
       prompt: "go",

@@ -5,7 +5,6 @@ import type { ModelConfig } from "@aven/agents/types";
 import type { RuntimeConnection } from "../runtimes/hub";
 import type {
   AgentBackendKind,
-  AgentHost,
   MessageMention,
   QueuedSteer,
   RunAttachment,
@@ -19,8 +18,6 @@ import type {
   RunWebSearch,
   SteerResult,
 } from "@aven/protocol/types";
-
-export type AgentHostOf = (runtimeId: string) => Promise<AgentHost | undefined>;
 
 export type Placement = {
   connection: RuntimeConnection;

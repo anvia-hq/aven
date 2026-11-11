@@ -17,7 +17,7 @@ import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RunGateway } from "../runtimes/gateway";
 import { RuntimeHub } from "../runtimes/hub";
-import { runtimesService } from "../runtimes/service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { RemoteRuntime } from "./remote-runtime";
 import { RunManager } from "./service";
 
@@ -93,11 +93,11 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     )
     .listen({ port: 0 });
 
-  const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "e2e" });
+  await runtimesService.ensureLocal();
   const workspaces = directoryWorkspaces();
   const client = startRuntime({
     url: `ws://localhost:${controlPlane.server?.port}/connect`,
-    token,
+    token: runtimesService.localToken,
     sandbox: workspaces,
     journalPath: journalPath(),
   });
@@ -125,7 +125,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
   const thread = {
     id: threadId,
     organizationId: seed.orgA,
-    runtimeId: runtime.id,
+    runtimeId: LOCAL_RUNTIME_ID,
   };
   const model = {
     provider: "anthropic",
@@ -143,7 +143,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
 
   test("the agent answers through the gateway and the conversation is stored by the control plane", async () => {
     await client.ready;
-    await until(() => hub.isOnline(runtime.id));
+    await until(() => hub.isOnline(LOCAL_RUNTIME_ID));
 
     await manager.start(thread, "first question", model);
     await until(() => !manager.isRunning(thread.id) && requests.length === 1);

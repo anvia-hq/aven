@@ -13,9 +13,11 @@ import { createScheduler } from "./modules/schedules/scheduler";
 import { schedulesService } from "./modules/schedules/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
+import { runIdentities } from "./modules/workload-identity/grants";
 import { RunManager } from "./modules/runs/service";
 import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
+import { localRunnerMode } from "./modules/runtimes/local";
 import { reachRunner } from "./modules/runtimes/providers";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createActionsService } from "./modules/actions/service";
@@ -47,7 +49,12 @@ export const runtimeHub = new RuntimeHub(
 
 export const runsService = new RunManager({
   store: memoryStore,
-  runtime: new RemoteRuntime(runtimeHub, runGateway),
+  runtime: new RemoteRuntime(
+    runtimeHub,
+    runGateway,
+    runIdentities,
+    localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
+  ),
   onRunFinished: async (thread, ending, run) => {
     const updated = (async () => {
       await threadsService.touch(thread.id);
