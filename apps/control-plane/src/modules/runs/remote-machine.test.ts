@@ -256,6 +256,7 @@ run(
       const kept = (await readdir(uploads)).filter((name) => name.startsWith("notes-"));
       expect(kept).toHaveLength(1);
       expect(await readFile(join(uploads, kept[0]!), "utf8")).toBe("hello");
+      expect(toolResultOf(bodies[before + 1])).toContain(`${uploads}/${kept[0]}`);
     }, 30_000);
   },
 );
