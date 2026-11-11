@@ -18,11 +18,14 @@ import {
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { seedOrgPair } from "../../testing/seed-org-pair";
+import { seedProject } from "../../testing/seed-project";
 import { connectRouter } from "../runtimes/connect";
 import { RunGateway } from "../runtimes/gateway";
 import { RuntimeHub } from "../runtimes/hub";
 import { reachRunner } from "../runtimes/providers";
 import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
+import { createThreadForks } from "../threads/forks";
+import { threadsService } from "../threads/service";
 import { RemoteRuntime } from "./remote-runtime";
 import { RunManager } from "./service";
 
@@ -44,7 +47,7 @@ const opening = {
   },
 };
 
-const toolCall = (command: string) =>
+const tool = (name: string, input: unknown) =>
   sse([
     ["message_start", opening],
     [
@@ -55,7 +58,7 @@ const toolCall = (command: string) =>
         content_block: {
           type: "tool_use",
           id: `toolu_${crypto.randomUUID().slice(0, 8)}`,
-          name: "exec_command",
+          name,
           input: {},
         },
       },
@@ -65,7 +68,7 @@ const toolCall = (command: string) =>
       {
         type: "content_block_delta",
         index: 0,
-        delta: { type: "input_json_delta", partial_json: JSON.stringify({ command }) },
+        delta: { type: "input_json_delta", partial_json: JSON.stringify(input) },
       },
     ],
     ["content_block_stop", { type: "content_block_stop", index: 0 }],
@@ -79,6 +82,51 @@ const toolCall = (command: string) =>
     ],
     ["message_stop", { type: "message_stop" }],
   ]);
+
+const toolCall = (command: string) => tool("exec_command", { command });
+
+const FORK_MARK = "FORK-AND-TAKE";
+const FORK_TITLE = "Write the file";
+
+const hasToolResult = (body: string) => {
+  const content = JSON.parse(body).messages.at(-1).content;
+  return (
+    Array.isArray(content) && content.some((part: { type?: string }) => part.type === "tool_result")
+  );
+};
+
+const forkIdFrom = (body: string) => {
+  const text = JSON.stringify(JSON.parse(body).messages);
+  return (
+    /"id":"([0-9a-f-]{36})","title":"Write the file"/.exec(text)?.[1] ??
+    /\\"id\\":\\"([0-9a-f-]{36})\\",\\"title\\":\\"Write the file\\"/.exec(text)?.[1]
+  );
+};
+
+const parentForkReply = (body: string) => {
+  if (body.includes(".git/aven-forks/")) return answer("taken");
+  const id = forkIdFrom(body);
+  if (body.includes("forks have stopped") && id) return tool("take_fork_changes", { id });
+  if (body.includes("The fork is working") && id) {
+    return tool("wait_for_forks", { ids: [id], timeoutSeconds: 30 });
+  }
+  if (hasToolResult(body)) {
+    return tool("fork_thread", {
+      task: "Create fork.txt containing from-fork.",
+      context: "The parent workspace is already prepared.",
+      title: FORK_TITLE,
+    });
+  }
+  return toolCall("echo parent > parent.txt");
+};
+
+const scripted = (body: string) => {
+  if (body.includes("You are a fork of the thread")) {
+    return hasToolResult(body) ? answer("wrote fork.txt") : toolCall("echo from-fork > fork.txt");
+  }
+  if (body.includes(FORK_MARK)) return parentForkReply(body);
+  return hasToolResult(body) ? answer("done") : toolCall("pwd; echo made > proof.txt");
+};
 
 const answer = (text: string) =>
   sse([
@@ -119,12 +167,7 @@ run(
       async fetch(req) {
         const body = await req.text();
         bodies.push(body);
-        const last = JSON.parse(body).messages.at(-1);
-        const replied =
-          Array.isArray(last.content) &&
-          last.content.some((part: { type: string }) => part.type === "tool_result");
-        const reply = replied ? answer("done") : toolCall("pwd; echo made > proof.txt");
-        return new Response(reply, { headers: { "content-type": "text/event-stream" } });
+        return new Response(scripted(body), { headers: { "content-type": "text/event-stream" } });
       },
     });
     const pointed = new RunGateway({
@@ -188,6 +231,18 @@ run(
     });
     const thread = { id: threadId, organizationId: seed.orgA, runtimeId: machine.id };
     const model = { provider: "anthropic", modelId: "claude-sonnet-5", apiKey: "sk-key" } as const;
+    hub.forks = createThreadForks({
+      runs: manager,
+      messages: {
+        async start(organizationId, _userId, threadId, { prompt }) {
+          const forked = await threadsService.require(organizationId, threadId);
+          await manager.start(forked, prompt, model);
+        },
+        async send() {
+          return { steered: false };
+        },
+      },
+    });
 
     const until = async (check: () => boolean, ms = 15_000) => {
       const deadline = Date.now() + ms;
@@ -254,5 +309,46 @@ run(
       expect(kept).toHaveLength(1);
       expect(await readFile(join(uploads, kept[0]!), "utf8")).toBe("hello");
     }, 30_000);
+
+    test("an agent forks onto the machine and takes the fork's changes back", async () => {
+      await machineRunner.ready;
+      await until(() => hub.isOnline(LOCAL_RUNTIME_ID) && hub.isOnline(machine.id));
+      const { project } = await seedProject(seed.orgA, seed.userId, machine.id, "fork-app");
+      const parent = await threadsService.create(seed.orgA, seed.userId, {
+        projectId: project.id,
+        title: "Parent",
+      });
+      const before = bodies.length;
+
+      await manager.start(parent, FORK_MARK, model);
+      const deadline = Date.now() + 50_000;
+      while (manager.isRunning(parent.id) || bodies.length < before + 5) {
+        if (!manager.isRunning(parent.id) && bodies.length > before && bodies.length < before + 5) {
+          throw new Error(`the parent run ended early: ${bodies.at(-1)?.slice(-1200)}`);
+        }
+        if (Date.now() > deadline) {
+          throw new Error(`timed out waiting for the fork: ${bodies.at(-1)?.slice(-1200)}`);
+        }
+        await Bun.sleep(25);
+      }
+
+      const workspace = machineSandbox.paths(parent.id).workspace;
+      const patchName = (await readdir(join(workspace, ".git", "aven-forks")))[0];
+      const patch = await readFile(join(workspace, ".git", "aven-forks", patchName!), "utf8");
+      expect(patch).toContain("+from-fork");
+      expect(patch).toContain("fork.txt");
+      expect(await readFile(join(workspace, "parent.txt"), "utf8")).toBe("parent\n");
+      expect(await Bun.file(join(workspace, "fork.txt")).exists()).toBe(false);
+
+      const wrote = [];
+      for (const id of await readdir(join(machineHome, "workspaces"))) {
+        if (id === parent.id) continue;
+        const file = join(machineHome, "workspaces", id, "fork.txt");
+        if (await Bun.file(file).exists()) wrote.push(file);
+      }
+      expect(wrote).toHaveLength(1);
+      expect(await readFile(wrote[0]!, "utf8")).toBe("from-fork\n");
+      expect(JSON.stringify(await manager.history(parent))).toContain("taken");
+    }, 60_000);
   },
 );
