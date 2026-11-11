@@ -59,6 +59,7 @@ export async function importRepository(page: Page, name: string) {
   const here = new URL(page.url());
   if (here.pathname === "/threads") await page.goto(`/threads?project=${project.id}`);
   else await page.reload();
+  await page.waitForLoadState("networkidle");
 }
 
 const API_URL = process.env.E2E_API_URL ?? "http://localhost:8100";
