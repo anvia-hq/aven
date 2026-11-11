@@ -70,7 +70,7 @@ export function FolderSection({
         {editing ? (
           <div className="flex min-w-0 flex-1 items-center gap-1.5 pr-2 pl-1">
             <ChevronRight className={cn("size-4 shrink-0", folder.open && "rotate-90")} />
-            <Icon className="size-4 shrink-0 text-muted-foreground" />
+            <Icon className="mx-0.5 size-4 shrink-0 text-muted-foreground" />
             <FolderNameField initial={folder.name} onDone={onRenamed} />
           </div>
         ) : (
@@ -78,7 +78,7 @@ export function FolderSection({
             variant="ghost"
             data-slot="folder-toggle"
             aria-expanded={folder.open}
-            className="h-full min-w-0 flex-1 justify-start gap-1.5 rounded-lg pr-10 pl-1 text-left text-sm font-medium hover:bg-transparent"
+            className="h-full min-w-0 flex-1 justify-start gap-1.5 rounded-lg pr-10 pl-1 text-left text-sm font-medium hover:bg-transparent aria-expanded:bg-transparent"
             onClick={pending ? undefined : onToggle}
             onDoubleClick={pending ? undefined : onEdit}
           >
@@ -89,7 +89,10 @@ export function FolderSection({
               )}
             />
             <Icon
-              className={cn("size-4 shrink-0", over ? "text-primary" : "text-muted-foreground")}
+              className={cn(
+                "mx-0.5 size-4 shrink-0",
+                over ? "text-primary" : "text-muted-foreground",
+              )}
             />
             <span className="min-w-0 flex-1 truncate">{folder.name}</span>
           </Button>
