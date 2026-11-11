@@ -1,12 +1,22 @@
+import { AGENT_HOSTS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 export const runtimeParams = z.object({ id: z.uuid() });
 
 export const createRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
 
-export const renameRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
+export const changeRuntimeBody = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    agentHost: z.enum(AGENT_HOSTS).optional(),
+  })
+  .refine((body) => body.name !== undefined || body.agentHost !== undefined, {
+    message: "Say what to change: name or agentHost",
+  });
 
 export type CreateRuntimeBody = z.infer<typeof createRuntimeBody>;
+
+export type RuntimeChanges = z.infer<typeof changeRuntimeBody>;
 
 export const updateRuntimeBody = z
   .object({

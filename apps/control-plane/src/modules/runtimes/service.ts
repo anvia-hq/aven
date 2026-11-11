@@ -4,7 +4,7 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
-import type { CreateRuntimeBody } from "./schema";
+import type { CreateRuntimeBody, RuntimeChanges } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
 
 const TOKEN_PREFIX = "avrt_";
@@ -120,10 +120,10 @@ export const runtimesService = {
     await db.update(runtimes).set({ directories }).where(eq(runtimes.id, id));
   },
 
-  async rename(organizationId: string, id: string, name: string) {
+  async change(organizationId: string, id: string, changes: RuntimeChanges) {
     const [row] = await db
       .update(runtimes)
-      .set({ name })
+      .set(changes)
       .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)))
       .returning();
     return row ? publicRuntime(row) : null;

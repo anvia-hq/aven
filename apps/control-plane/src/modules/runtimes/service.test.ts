@@ -104,10 +104,12 @@ run("runtimes service (real postgres)", async () => {
   test("a runtime is renamed in its own organization only, and a revoked one is not found", async () => {
     const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "old name" });
 
-    expect(await runtimesService.rename(seed.orgB, runtime.id, "stolen")).toBeNull();
+    expect(await runtimesService.change(seed.orgB, runtime.id, { name: "stolen" })).toBeNull();
     expect((await runtimesService.get(seed.orgA, runtime.id))?.name).toBe("old name");
 
-    expect((await runtimesService.rename(seed.orgA, runtime.id, "Homelab"))?.name).toBe("Homelab");
+    expect((await runtimesService.change(seed.orgA, runtime.id, { name: "Homelab" }))?.name).toBe(
+      "Homelab",
+    );
     expect((await runtimesService.get(seed.orgA, runtime.id))?.name).toBe("Homelab");
     expect(
       (
@@ -118,6 +120,21 @@ run("runtimes service (real postgres)", async () => {
     ).toBe("Homelab");
 
     await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
-    expect(await runtimesService.rename(seed.orgA, runtime.id, "again")).toBeNull();
+    expect(await runtimesService.change(seed.orgA, runtime.id, { name: "again" })).toBeNull();
+  });
+
+  test("a runtime's agent runs on its machine until it is moved to the control plane (decision 0222)", async () => {
+    const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "vm" });
+    expect(runtime.agentHost).toBe("machine");
+    expect(await runtimesService.agentHostOf(runtime.id)).toBe("machine");
+
+    const moved = await runtimesService.change(seed.orgA, runtime.id, {
+      agentHost: "control_plane",
+    });
+    expect(moved).toMatchObject({ name: "vm", agentHost: "control_plane" });
+    expect(await runtimesService.agentHostOf(runtime.id)).toBe("control_plane");
+
+    await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
+    expect(await runtimesService.agentHostOf(runtime.id)).toBeUndefined();
   });
 });

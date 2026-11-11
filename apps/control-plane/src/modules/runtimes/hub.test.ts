@@ -13,7 +13,7 @@ import type { LatestRelease } from "./types";
 import { connectRouter } from "./connect";
 import { RuntimeHub } from "./hub";
 import { threadCockpit } from "../cockpit/commands";
-import { runtimesService } from "./service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 const noReleases: LatestRelease = { get: async () => undefined };
@@ -797,6 +797,30 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       method,
       headers: { authorization: `Bearer ${token}` },
     });
+
+  test("a runtime's owner moves its agent to the control plane, an outsider cannot, and the built-in runner refuses", async () => {
+    const { runtime } = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "moved",
+    });
+    const change = (id: string, body: unknown, token = owner.token) =>
+      fetch(`http://localhost:${full.server?.port}/runtimes/${id}`, {
+        method: "PATCH",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+    const moved = await change(runtime.id, { agentHost: "control_plane" });
+    expect(moved.status).toBe(200);
+    expect(await moved.json()).toMatchObject({ name: "moved", agentHost: "control_plane" });
+    expect((await change(runtime.id, { agentHost: "elsewhere" })).status).toBe(422);
+    expect((await change(runtime.id, {})).status).toBe(422);
+    expect((await change(runtime.id, { agentHost: "machine" }, outsider.token)).status).toBe(404);
+    expect(await runtimesService.agentHostOf(runtime.id)).toBe("control_plane");
+
+    await runtimesService.ensureLocal();
+    const builtIn = await change(LOCAL_RUNTIME_ID, { agentHost: "control_plane" });
+    expect([403, 422]).toContain(builtIn.status);
+  });
 
   test("the release a runtime says it is shows in the list, marked when it is behind the server", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
