@@ -29,7 +29,12 @@ const operationIdOf = (value: unknown) => {
 
 const commandKey = (threadId: string, operationId: string) => `${threadId}\0${operationId}`;
 
-export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext) {
+export function createMachineCalls({
+  sandbox,
+  boxes,
+  idle,
+  machineProcesses,
+}: MachineCallsContext) {
   const running = new Map<string, AbortController>();
   const stopped = new Set<string>();
 
@@ -62,6 +67,7 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
       folder: async () => folder ?? null,
     });
     boxes.set(threadId, box);
+    await machineProcesses.begin(threadId);
     return { paths: sandbox.paths?.(threadId) ?? null };
   }
 
@@ -148,10 +154,13 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
         return null;
       case "listFiles":
         return (await runtimeOf(threadId)).listFiles({ path: args.path as string | undefined });
-      case "startProcess":
-        return (await runtimeOf(threadId)).startProcess(
+      case "startProcess": {
+        const runtime = await runtimeOf(threadId);
+        await machineProcesses.begin(threadId);
+        return runtime.startProcess(
           args as unknown as Parameters<SandboxRuntime["startProcess"]>[0],
         );
+      }
       case "listProcesses":
         return (await runtimeOf(threadId)).listProcesses();
       case "readProcessLogs": {

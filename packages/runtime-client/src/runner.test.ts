@@ -1009,6 +1009,58 @@ describe("startRuntime", () => {
     });
   });
 
+  test("a run whose computer is another machine does not watch processes on this runner", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const plane = fakeControlPlane({
+      answer: (message) => {
+        if (message.method !== "machine.call") return undefined;
+        const { op } = message.params as { op: string };
+        if (op === "listProcesses") {
+          return [
+            {
+              id: "p1",
+              command: "sh",
+              args: ["-c", "bun test"],
+              status: "exited",
+              exitCode: 0,
+              startedAt: new Date().toISOString(),
+              endedAt: new Date().toISOString(),
+            },
+          ];
+        }
+        if (op === "readProcessLogs") {
+          return {
+            stdout: btoa("7 pass"),
+            stderr: btoa(""),
+            stdoutTruncated: false,
+            stderrTruncated: false,
+          };
+        }
+        return null;
+      },
+    });
+    const runtime = startRuntime({
+      url: plane.url,
+      token: "t",
+      journalPath: journalPath(),
+      sandbox,
+      createAgent: reply(),
+      processPollMs: 20,
+    });
+    cleanups.push(() => runtime.stop(), plane.stop);
+    await runtime.ready;
+    plane.send({
+      type: "run.start",
+      runId: "run-machine",
+      thread: { ...thread, machine: "machine-1" },
+      prompt: "hi",
+    });
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    await Bun.sleep(80);
+    expect(plane.received.some((message) => message.type === "process.ended")).toBe(false);
+  });
+
   test("a run that starts while the idle check is asking keeps the sandbox", async () => {
     const { sandbox, up, released } = slowSandbox();
     up();

@@ -37,6 +37,11 @@ async function machineAndAgent({
       schedule: () => undefined,
       releaseNow: async () => true,
     },
+    machineProcesses: {
+      begin: async () => undefined,
+      end: () => undefined,
+      has: () => false,
+    },
   });
   const ops: string[] = [];
   const callFor =
