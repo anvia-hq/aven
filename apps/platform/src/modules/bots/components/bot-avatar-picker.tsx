@@ -43,7 +43,7 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
       >
         <BotAvatar bot={{ id: botId, avatar: value }} className="size-18" />
       </PopoverTrigger>
-      <PopoverContent align="center" className="w-88 gap-3 p-3">
+      <PopoverContent className="w-88 gap-3 p-3">
         <Tabs defaultValue="bot" className="flex-col">
           <div className="flex items-center gap-2">
             <TabsList>
