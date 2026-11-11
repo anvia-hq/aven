@@ -43,7 +43,7 @@ test.describe("a thread's terminal", () => {
     await page.goto(`/threads/${threadId}`);
     await page.getByRole("button", { name: "Terminal", exact: true }).click();
     const panel = page.getByRole("region", { name: "Terminal" });
-    await panel.getByRole("button", { name: "Wake up" }).click();
+    await panel.getByRole("button", { name: "Start" }).click();
     await expect(panel.locator(".xterm-rows")).toContainText("fake$");
   });
 });
