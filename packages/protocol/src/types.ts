@@ -350,6 +350,7 @@ export type RunThreadInfo = {
   forkOf?: string;
   projectId?: string;
   ownerId?: string;
+  machine?: string;
 };
 
 export type Provider = (typeof PROVIDERS)[number];
@@ -444,6 +445,8 @@ export type MachineCallMethod = "machine.call";
 export type MachineOp = (typeof MACHINE_OPS)[number];
 
 export type MachineCallParams = { threadId: string; op: MachineOp; args?: unknown };
+
+export type MachineRelayParams = { runId: string; op: MachineOp; args?: unknown };
 
 export type RunnerSelfCallMethod =
   | "runner.update"
@@ -716,6 +719,7 @@ export type CallMethod =
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
+  | MachineCallMethod
   | BotCallMethod;
 
 export type RepoAccess = {
@@ -917,6 +921,7 @@ export type RuntimeCalls = {
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };
+  "machine.call": { params: MachineRelayParams; result: unknown };
 };
 
 export type ScheduleStatus = "started" | "late" | "busy" | "missed" | "failed";

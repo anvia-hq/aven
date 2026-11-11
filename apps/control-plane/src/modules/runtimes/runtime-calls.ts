@@ -21,10 +21,21 @@ import {
   parseCockpitReadParams,
   parseForkStartParams,
   parseForkStatusParams,
+  parseMachineRelayParams,
   parseSkillsGetParams,
 } from "./wire";
 import type { CallBotReply, RuntimeCallContext } from "./types";
 import type { CallMethod } from "@aven/protocol/types";
+
+const MACHINE_CALL_TIMEOUT_MS = 5 * 60_000;
+const MACHINE_CALL_MARGIN_MS = 30_000;
+
+function machineCallTimeout(args: unknown) {
+  const asked = (args as { timeoutMs?: unknown } | undefined)?.timeoutMs;
+  return typeof asked === "number" && asked > 0
+    ? asked + MACHINE_CALL_MARGIN_MS
+    : MACHINE_CALL_TIMEOUT_MS;
+}
 
 function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   const { runId } = parseMemoryParams(params);
@@ -57,6 +68,7 @@ export async function answerRuntimeCall(
     skillArchive,
     mcpReport,
     forks,
+    machines,
   }: RuntimeCallContext,
 ) {
   if (method === "bot.memory") {
@@ -146,6 +158,19 @@ export async function answerRuntimeCall(
   }
   if (method === "fork.start") return forks.start(run.thread, parseForkStartParams(params));
   if (method === "fork.status") return forks.status(run.thread, parseForkStatusParams(params).id);
+  if (method === "machine.call") {
+    const { op, args } = parseMachineRelayParams(params);
+    if (!run.thread.machine) throw new Error("This run's tools act on its own runner");
+    const machine = await machines.reach({
+      runtimeId: run.thread.machine,
+      threadId: run.thread.id,
+    });
+    return machine.call(
+      "machine.call",
+      { threadId: run.thread.id, op, args },
+      machineCallTimeout(args),
+    );
+  }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {
     sessionId: run.thread.id,

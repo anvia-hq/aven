@@ -9,7 +9,7 @@ import { ViewerStreams } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
 import type { CockpitCaller } from "../cockpit/types";
 import type { MemoryCaller } from "../memory/types";
-import type { BotReplySink, RunSink, ViewerSink } from "./types";
+import type { BotReplySink, MachineRelay, RunSink, ViewerSink } from "./types";
 import type { ProcessEnds, ThreadForks } from "../threads/types";
 import type {
   AgentBackendKind,
@@ -305,6 +305,7 @@ export class RuntimeConnection {
         skillArchive: this.hub.skillArchive,
         mcpReport: this.hub.mcpReport,
         forks: this.hub.forks,
+        machines: this.hub.machines,
       });
       this.#reply({ type: "reply", id, ok: true, result });
     } catch (error) {
@@ -362,6 +363,10 @@ export class RuntimeHub {
   };
 
   processEnds: ProcessEnds = { ended: async () => undefined };
+
+  machines: MachineRelay = {
+    reach: () => Promise.reject(new Error("Machines are not available")),
+  };
 
   attach(
     runtimeId: string,

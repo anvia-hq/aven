@@ -22,6 +22,7 @@ import {
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
+  MACHINE_OPS,
   SKILL_DIGEST,
   PROVIDERS,
 } from "@aven/protocol/runtime-wire";
@@ -79,6 +80,7 @@ const callMethods = [
   "cockpit.read",
   "fork.start",
   "fork.status",
+  "machine.call",
 ] as const satisfies readonly CallMethod[];
 
 const BOT_SAY_MAX = 2000;
@@ -492,6 +494,11 @@ const forkStartParams = z.object({
   title: z.string().trim().min(1).max(120).optional(),
 });
 const forkStatusParams = z.object({ runId, id: z.string().uuid() });
+const machineRelayParams = z.object({
+  runId,
+  op: z.enum(MACHINE_OPS),
+  args: z.unknown().optional(),
+});
 const botCockpitParams = z.object({ replyId, command: z.unknown() });
 
 const botThreadParams = z.discriminatedUnion("op", [
@@ -566,6 +573,7 @@ export const parseBotNotesParams = (params: unknown) => parseParams(botNotesPara
 export const parseCockpitReadParams = (params: unknown) => parseParams(cockpitReadParams, params);
 export const parseForkStartParams = (params: unknown) => parseParams(forkStartParams, params);
 export const parseForkStatusParams = (params: unknown) => parseParams(forkStatusParams, params);
+export const parseMachineRelayParams = (params: unknown) => parseParams(machineRelayParams, params);
 export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

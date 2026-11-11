@@ -16,6 +16,7 @@ import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { RunManager } from "./modules/runs/service";
 import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
+import { reachRunner } from "./modules/runtimes/providers";
 import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
 import { createActionsService } from "./modules/actions/service";
 import { createShipService } from "./modules/ship/service";
@@ -84,6 +85,9 @@ export const threadMessages = createThreadMessages(runsService);
 runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessages });
 
 runtimeHub.processEnds = createProcessEnds({ messages: threadMessages });
+runtimeHub.machines = {
+  reach: (place) => reachRunner(runtimeHub, place, "The computer is offline"),
+};
 
 const diffService = createDiffService(runtimeHub);
 export const threadContinuation = createThreadContinuation({
