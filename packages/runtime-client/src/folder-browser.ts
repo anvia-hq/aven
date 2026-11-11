@@ -3,13 +3,13 @@ import { basename, dirname, join, sep } from "node:path";
 
 import type { FoldersListResult } from "@aven/protocol/types";
 
-const insideAny = (dirs: readonly string[], path: string) =>
+export const insideAny = (dirs: readonly string[], path: string) =>
   dirs.some((dir) => path === dir || path.startsWith(dir + sep));
 
-const resolved = (dirs: readonly string[]) =>
+export const resolved = (dirs: readonly string[]) =>
   Promise.all(dirs.map((dir) => realpath(dir).catch(() => dir)));
 
-async function servedPath(dirs: readonly string[], path: string) {
+export async function servedPath(dirs: readonly string[], path: string) {
   const real = await realpath(path).catch(() => {
     throw new Error(`The folder ${path} is not on this machine`);
   });

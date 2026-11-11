@@ -12,7 +12,12 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("bearer sessions for native clients (real postgres)", () => {
   const email = `native-${crypto.randomUUID().slice(0, 8)}@aven.test`;
-  const app = new Elysia().use(projectsRouter(() => {}));
+  const app = new Elysia().use(
+    projectsRouter(() => {}, {
+      files: async () => ({ entries: [] }),
+      readme: async () => ({ readme: null }),
+    }),
+  );
 
   afterAll(async () => {
     await db.delete(users).where(eq(users.email, email));

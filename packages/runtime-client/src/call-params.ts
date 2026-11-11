@@ -7,7 +7,9 @@ import type {
   DiffScope,
   FilesCallParams,
   FoldersCreateParams,
+  FoldersFilesParams,
   FoldersListParams,
+  FoldersReadmeParams,
   FilesSearchParams,
   MessageMention,
   ActionRunParams,
@@ -98,4 +100,18 @@ export function foldersCreateParams(params: unknown): FoldersCreateParams {
   const { path, name } = asRecord(params);
   if (typeof path !== "string" || typeof name !== "string") throw invalid();
   return { path, name };
+}
+
+export function foldersFilesParams(params: unknown): FoldersFilesParams {
+  const { folder, path } = asRecord(params);
+  if (typeof folder !== "string" || folder.length > 4096) throw invalid();
+  if (path === undefined || path === null) return { folder };
+  if (typeof path !== "string" || path.length > 4096) throw invalid();
+  return { folder, path };
+}
+
+export function foldersReadmeParams(params: unknown): FoldersReadmeParams {
+  const { folder } = asRecord(params);
+  if (typeof folder !== "string" || folder.length > 4096) throw invalid();
+  return { folder };
 }

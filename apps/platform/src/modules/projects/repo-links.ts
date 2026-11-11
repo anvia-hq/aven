@@ -9,8 +9,10 @@ export const blobUrl = (repo: string, branch: string, path: string) =>
 
 export const commitUrl = (repo: string, sha: string) => `${repoUrl(repo)}/commit/${sha}`;
 
+export const isAbsoluteUrl = (href: string) => /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href);
+
 export function resolveRepoUrl(href: string, repo: string, branch: string, kind: "link" | "image") {
-  if (/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href)) return href;
+  if (isAbsoluteUrl(href)) return href;
   const base =
     kind === "image"
       ? `https://raw.githubusercontent.com/${repo}/${branch}/`

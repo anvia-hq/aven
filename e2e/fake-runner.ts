@@ -437,6 +437,27 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     folderTree.set(path, names.concat(name));
     return reply({ path: `${path}/${name}` });
   }
+  if (call.method === "folders.files") {
+    const { path } = call.params as { path?: string };
+    const entries = path
+      ? [{ name: "index.ts", path: `${path}/index.ts`, type: "file" }]
+      : [
+          { name: "src", path: "src", type: "directory" },
+          { name: "package.json", path: "package.json", type: "file" },
+          { name: "README.md", path: "README.md", type: "file" },
+        ];
+    return reply({ entries });
+  }
+  if (call.method === "folders.readme") {
+    return reply({
+      readme: {
+        name: "README.md",
+        path: "README.md",
+        text: "# Notes folder\n\nKept on the computer. [Docs](docs/start.md)",
+        truncated: false,
+      },
+    });
+  }
   if (call.method === "run.steer") {
     const { runId, steerId, prompt } = call.params as {
       runId: string;

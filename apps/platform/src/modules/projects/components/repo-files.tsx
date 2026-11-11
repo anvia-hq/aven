@@ -58,6 +58,14 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       </Link>
     );
   }
+  if (!project.repoFullName) {
+    return (
+      <div className={rowClass}>
+        <File className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+      </div>
+    );
+  }
   return (
     <a
       href={blobUrl(project.repoFullName ?? "", project.defaultBranch ?? "main", entry.path)}
@@ -87,8 +95,10 @@ export function RepoFiles({ project, path }: Props) {
       )}
       {problem !== undefined && (
         <p className="p-4 text-sm text-muted-foreground">
-          Could not read this repository on GitHub. It may be empty, or the app may no longer see
-          it. {problem}
+          {project.repoFullName
+            ? "Could not read this repository on GitHub. It may be empty, or the app may no longer see it. "
+            : "Could not read this folder on its computer. "}
+          {problem}
         </p>
       )}
       {entries && (
