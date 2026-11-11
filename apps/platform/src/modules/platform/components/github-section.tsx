@@ -22,7 +22,7 @@ export function GithubSection() {
   return (
     <SettingsSection
       title="GitHub"
-      description="The GitHub App that imports repositories and opens pull requests."
+      description="The GitHub App people sign in to GitHub with, and the agent opens pull requests through."
     >
       {configured && (
         <SettingsRow

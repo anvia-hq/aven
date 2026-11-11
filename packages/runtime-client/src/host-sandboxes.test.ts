@@ -144,6 +144,17 @@ describe("a runner that works on this machine", () => {
       expect(await sandbox.workspace("t1")).toBe(await realpath(dir));
     });
 
+    test("refuses to fork a thread in a folder that is not a git repository", async () => {
+      const dir = await mkdtemp(join(tmpdir(), "aven-plain-"));
+      homes.push(dir);
+      const { sandbox } = await runner([dir]);
+      await sandbox.acquire({ id: "parent" }, undefined, { folder: folderOf(dir) });
+
+      await expect(
+        sandbox.acquire({ id: "child", forkOf: "parent" }, undefined, { folder: folderOf(dir) }),
+      ).rejects.toThrow("not a git repository");
+    });
+
     test("refuses a folder it was not asked to serve", async () => {
       const { dir } = await createRemoteRepo();
       const { sandbox } = await runner([]);

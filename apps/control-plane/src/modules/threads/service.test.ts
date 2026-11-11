@@ -59,6 +59,11 @@ run("threadsService (postgres)", async () => {
       visibility: "workspace",
       driving: 1,
     });
+    await threadsService.drivable(teammate, mine.id);
+
+    await runtimesService.share(orgA, userId, runtime.id, false);
+    await expect(threadsService.drivable(teammate, mine.id)).rejects.toThrow();
+    await threadsService.drivable({ organizationId: orgA, userId }, mine.id);
   });
 
   test("keeps the time of every run that carried on an answer, added up", async () => {

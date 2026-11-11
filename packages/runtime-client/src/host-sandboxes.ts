@@ -122,6 +122,11 @@ export class HostSandboxes implements ThreadWorkspaces {
     }
     const inside = await run(["rev-parse", "--is-inside-work-tree"], { cwd: source });
     if (inside.code !== 0) {
+      if (thread.forkOf) {
+        throw new Error(
+          `${directory} is not a git repository, so a fork of this thread would work on the same files: put the folder under git to fork it`,
+        );
+      }
       if ((await lstat(dir)).isSymbolicLink()) return dir;
       await rmdir(dir);
       await symlink(source, dir);
