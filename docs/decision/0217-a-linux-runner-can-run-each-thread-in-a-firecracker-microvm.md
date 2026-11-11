@@ -35,11 +35,12 @@ On a Linux host (Ubuntu 24.04, kernel 6.8, Intel i5-6400T, 15 GB), with Firecrac
 
 - A microVM with 2 vCPU and 2 GiB booted from the sandbox image's exported filesystem, with a one-file init. `dockerd` was up about 1 second after init began, and the whole run to power-off took 3.4 seconds.
 - A tiny image loaded from a second disk ran with `--network none` and on the default bridge (it got `172.17.0.2`), so overlayfs, cgroups v2, iptables and the bridge work in this kernel.
+- With a bridge, a tap device and NAT set up once with sudo (the host's Docker firewall needed two accept rules in `DOCKER-USER` for the bridge), a guest on `10.77.0.2` reached a listener on the host at `10.77.0.1`, fetched `https://example.com` (200), pulled `busybox` from Docker Hub with its own `dockerd`, and ran a container in it that reached the internet too, through the guest's own NAT. The whole run, with the pull, took 20 seconds.
 - Both Firecracker and the CI kernel were checked: Firecracker by its published SHA-256; the kernel has none published, so `f5735774e2570d9df451fc5665f3525d3baf723fa6a8a413a03591d5742b39a5` is what the spike downloaded.
 
 ## Not verified
 
-- A guest with network access to the outside (the spike had no tap device, so no pull from a registry, git clone or package install).
+- That the guest's DNS comes from the host's resolver (the spike wrote public resolvers into it) and that the guest's clock is right after a restore (the spike set it from the host).
 - The daemon dialing the runner's hub from the guest, and everything the daemon does there: commands, files, the terminal, the desktop through Xvnc, the Browser's port tunnel.
 - The workspace on its own disk, and the host-side operations moved into the guest.
 - Memory and start time under load, with several VMs, and how many a host takes.
