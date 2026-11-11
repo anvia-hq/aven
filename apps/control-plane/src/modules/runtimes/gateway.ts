@@ -21,6 +21,11 @@ const DEFAULT_UPSTREAMS: Upstreams = {
   gemini: "https://generativelanguage.googleapis.com",
 };
 
+export function gatewayUpstreams(env: Record<string, string | undefined> = process.env): Upstreams {
+  const anthropic = env.AVEN_ANTHROPIC_BASE_URL?.trim();
+  return anthropic ? { ...DEFAULT_UPSTREAMS, anthropic } : DEFAULT_UPSTREAMS;
+}
+
 const SEGMENTS = {
   anthropic: "anthropic",
   openai: "openai",
@@ -244,4 +249,4 @@ function pinOpenAiEffort(body: Record<string, unknown>, effort: string | undefin
   }
 }
 
-export const runGateway = new RunGateway();
+export const runGateway = new RunGateway(gatewayUpstreams());

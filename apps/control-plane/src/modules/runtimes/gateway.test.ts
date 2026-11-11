@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { createCodingAgent } from "@aven/agents/coding-agent";
 
 import { GoogleAuthError } from "../providers/google-auth";
-import { RunGateway } from "./gateway";
+import { RunGateway, gatewayUpstreams } from "./gateway";
 
 const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
 process.env.PROVIDER_ALLOWED_HOSTS = "localhost";
@@ -483,5 +483,20 @@ describe("RunGateway", () => {
       if (encryptionKey !== undefined) process.env.PROVIDER_ENCRYPTION_KEY = encryptionKey;
       if (authSecret !== undefined) process.env.BETTER_AUTH_SECRET = authSecret;
     }
+  });
+});
+
+describe("gatewayUpstreams", () => {
+  test("Anthropic stays on its own API unless AVEN_ANTHROPIC_BASE_URL names another", () => {
+    expect(gatewayUpstreams({}).anthropic).toBe("https://api.anthropic.com");
+    expect(gatewayUpstreams({ AVEN_ANTHROPIC_BASE_URL: "  " }).anthropic).toBe(
+      "https://api.anthropic.com",
+    );
+    expect(gatewayUpstreams({ AVEN_ANTHROPIC_BASE_URL: "http://127.0.0.1:9" }).anthropic).toBe(
+      "http://127.0.0.1:9",
+    );
+    expect(gatewayUpstreams({ AVEN_ANTHROPIC_BASE_URL: "http://127.0.0.1:9" }).openai).toBe(
+      "https://api.openai.com/v1",
+    );
   });
 });
