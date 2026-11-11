@@ -4,7 +4,7 @@ Status: accepted.
 
 ## Context
 
-A message sent with an image shows at once from a `data:` URL (decision 0126). The image was marked `loading="lazy"`, so the browser deferred it to a later frame. The message showed first as text and the picture appeared a few milliseconds after, moving the thread.
+A message sent with an image shows at once from a `data:` URL (decision 0117). The image was marked `loading="lazy"`, so the browser deferred it to a later frame. The message showed first as text and the picture appeared a few milliseconds after, moving the thread.
 
 ## Decision
 
