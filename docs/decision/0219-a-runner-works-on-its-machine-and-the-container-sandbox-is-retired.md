@@ -32,3 +32,7 @@ The runner was tried on one Mac with a git folder and a plain folder. Removing t
 A host-mode command and shell run as the runner's user, so they would inherit the runner's own environment, with its token (`AVEN_RUNTIME_TOKEN`) and, in the control plane's built-in runner, the server's secrets. `withoutRunnerSecrets` drops every `AVEN_*` variable and any name that looks like a secret (`SECRET`, `PASSWORD`, `PRIVATE_KEY`, `API_KEY`, `*_TOKEN`, `DATABASE_URL`) from what a command and the Terminal start with; what a project gives a thread is added after it. The agent still runs as the user and can read their files, which 0218 states.
 
 Continuing a thread on another runner looks the runner up as the person, so a private host runner of someone else cannot be chosen.
+
+## A fork copies on write, or shares the git objects
+
+A fork of a git folder is a copy of its parent's clone, with uncommitted work and ignored files. `copyTreeSharingObjects` makes it copy-on-write where the filesystem can (`clonefile` on macOS, `cp --reflink=always` on Linux). On one that cannot, such as ext4, it copies the working files and hard-links `.git/objects`, which git never changes in place, so history costs no space. A worktree is not used: the host-side git expects a standalone `.git`. A folder that is not a git repository has no clone and no copy.

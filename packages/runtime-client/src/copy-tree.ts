@@ -1,5 +1,5 @@
-import { mkdir, rmdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, readdir, rm, rmdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import { runCommand } from "./run-command";
 
@@ -40,4 +40,29 @@ export async function copyTree(from: string, to: string) {
     failures.push(copied.stderr.trim());
   }
   throw new Error(`Could not copy ${from}: ${failures[0]}`);
+}
+
+async function copyEach(from: string, to: string, skip: string, flags: string[]) {
+  const failures: string[] = [];
+  for (const name of await readdir(from)) {
+    if (name === skip) continue;
+    const copied = await runCommand(["cp", ...flags, "--", join(from, name), `${to}/`]);
+    if (copied.code !== 0) failures.push(copied.stderr.trim());
+  }
+  if (failures.length > 0) throw new Error(`Could not copy ${from}: ${failures[0]}`);
+}
+
+export async function copyTreeSharingObjects(from: string, to: string) {
+  if (process.platform === "darwin") return copyTree(from, to);
+  await mkdir(to, { recursive: true });
+  const shared = await runCommand(["cp", "-a", "--reflink=always", `${from}/.`, to]);
+  if (shared.code === 0) return;
+  for (const name of await readdir(to)) await rm(join(to, name), { recursive: true, force: true });
+  await copyEach(from, to, ".git", ["-a"]);
+  const gitDir = join(from, ".git");
+  const target = join(to, ".git");
+  await mkdir(target, { recursive: true });
+  await copyEach(gitDir, target, "objects", ["-a"]);
+  const linked = await runCommand(["cp", "-al", "--", join(gitDir, "objects"), `${target}/`]);
+  if (linked.code !== 0) await copyTree(join(gitDir, "objects"), join(target, "objects"));
 }
