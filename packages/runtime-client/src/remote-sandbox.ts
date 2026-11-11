@@ -35,7 +35,25 @@ export class RemoteSandbox implements SandboxRuntime {
     return this.workspace() ?? ".";
   }
 
-  async exec({ abortSignal: _signal, ...options }: SandboxExecOptions): Promise<SandboxExecResult> {
+  async exec({ abortSignal, ...options }: SandboxExecOptions): Promise<SandboxExecResult> {
+    if (!abortSignal) return this.#command(options);
+    const operationId = options.operationId || crypto.randomUUID();
+    let stopping = false;
+    const stop = () => {
+      if (stopping) return;
+      stopping = true;
+      void this.call("exec.abort", { operationId }).catch(() => undefined);
+    };
+    abortSignal.addEventListener("abort", stop, { once: true });
+    if (abortSignal.aborted) stop();
+    try {
+      return await this.#command({ ...options, operationId });
+    } finally {
+      abortSignal.removeEventListener("abort", stop);
+    }
+  }
+
+  async #command(options: Omit<SandboxExecOptions, "abortSignal">) {
     return decoded(
       (await this.call("exec", options)) as Encoded<SandboxExecResult & { stdout: Uint8Array }>,
     );

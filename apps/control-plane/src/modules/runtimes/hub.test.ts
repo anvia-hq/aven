@@ -214,6 +214,53 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(sent).toHaveLength(1);
   });
 
+  test("a stop reaches the machine while its command is still running", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const machine = crypto.randomUUID();
+    const sent: string[] = [];
+    let releaseExec: (() => void) | undefined;
+    hub.machines = {
+      reach: async (place) => {
+        if (place.runtimeId !== machine) throw new Error("The computer is offline");
+        return {
+          call: async (_method, params) => {
+            const op = (params as { op?: string }).op ?? "";
+            sent.push(op);
+            if (op === "exec") await new Promise<void>((resolve) => (releaseExec = resolve));
+            return null;
+          },
+        };
+      },
+    };
+    connection.startRun(
+      "run-stop",
+      { id: crypto.randomUUID(), organizationId: seed.orgA, machine },
+      { event: () => undefined, end: () => undefined, lost: () => undefined },
+    );
+
+    const exec = ask(ws, received, "machine.call", {
+      runId: "run-stop",
+      op: "exec",
+      args: { command: "sleep 30", operationId: "cmd-1" },
+    });
+    await until(() => sent.includes("exec"));
+    const abort = ask(ws, received, "machine.call", {
+      runId: "run-stop",
+      op: "exec.abort",
+      args: { operationId: "cmd-1" },
+    });
+    await until(() => sent.includes("exec.abort"));
+    expect(sent).toEqual(["exec", "exec.abort"]);
+    releaseExec?.();
+
+    expect(await abort).toMatchObject({ ok: true, result: null });
+    expect(await exec).toMatchObject({ ok: true, result: null });
+  });
+
   test("a runtime fetches only the skills of its own runs", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "s" });
     const ws = await open(server.server?.port, token);
