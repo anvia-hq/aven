@@ -1,3 +1,5 @@
+import type { AgentHost } from "@aven/protocol/types";
+
 export type RuntimeStats = {
   cores: number;
   cpuPercent: number | null;
@@ -16,6 +18,7 @@ export type Runtime = {
   host: boolean;
   shared: boolean;
   directories: string[];
+  agentHost: AgentHost;
   tokenHint: string;
   online: boolean;
   build: string | null;

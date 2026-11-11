@@ -12,6 +12,7 @@ import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config"
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import { updatingAtom } from "../atoms/updating-atom";
 import { isUpdating as isStillUpdating, UPDATE_WAIT_MS, updateEnd } from "../updating";
+import type { AgentHost } from "@aven/protocol/types";
 import type { CreatedRuntime, Runtime } from "../types";
 
 const runtimesStore = createListStore<Runtime>({
@@ -66,6 +67,13 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
       postJson<Runtime>(`/runtimes/${runtime.id}`, { name }, "PATCH"),
     );
     return renamed !== null;
+  }
+
+  async function moveAgent(runtime: Runtime, agentHost: AgentHost) {
+    const moved = await change("Could not change where the agent runs", () =>
+      postJson<Runtime>(`/runtimes/${runtime.id}`, { agentHost }, "PATCH"),
+    );
+    return moved !== null;
   }
 
   async function revoke(runtime: Runtime) {
@@ -126,6 +134,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     rotate,
     rename,
     canRename,
+    moveAgent,
     revoke,
     canUpdate,
     update,
