@@ -131,38 +131,3 @@ test.describe("renaming a runtime", () => {
     expect(listed.map((runtime) => runtime.name)).toEqual(["Homelab VPS"]);
   });
 });
-
-test.describe("where a runtime's agent runs", () => {
-  test("moves to the control plane and back, shown in the list and kept on the server", async ({
-    page,
-  }) => {
-    await registerUser(page, "rthost", "Runtime Host");
-    const created = await page.request.post("/api/runtimes", { data: { name: "vps-1" } });
-    expect(created.ok()).toBe(true);
-    await page.goto("/settings/runtimes");
-    const table = page.getByRole("table", { name: "Runtimes" });
-    const row = table.getByRole("row", { name: /vps-1/ });
-    await expect(row).toBeVisible();
-    await expect(row).not.toContainText("Agent on control plane");
-
-    await page.getByRole("button", { name: "Where the agent of vps-1 runs" }).click();
-    const dialog = page.getByRole("dialog", { name: "Where the agent runs" });
-    const save = dialog.getByRole("button", { name: "Save" });
-    await expect(save).toBeDisabled();
-    await dialog.getByText("On the control plane", { exact: true }).click();
-    await save.click();
-
-    await expect(dialog).toHaveCount(0);
-    await expect(row).toContainText("Agent on control plane");
-    const listed = (await (await page.request.get("/api/runtimes")).json()) as {
-      name: string;
-      agentHost: string;
-    }[];
-    expect(listed.find((runtime) => runtime.name === "vps-1")?.agentHost).toBe("control_plane");
-
-    await page.getByRole("button", { name: "Where the agent of vps-1 runs" }).click();
-    await dialog.getByText("On this machine", { exact: true }).click();
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(row).not.toContainText("Agent on control plane");
-  });
-});

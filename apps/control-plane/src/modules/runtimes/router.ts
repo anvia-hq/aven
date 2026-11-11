@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
+import { ForbiddenError, orNotFound } from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
 import { platformService } from "../platform/service";
@@ -13,7 +13,7 @@ import {
   createFolderBody,
   createRuntimeBody,
   foldersQuery,
-  changeRuntimeBody,
+  renameRuntimeBody,
   runtimeParams,
   updateRuntimeBody,
 } from "./schema";
@@ -79,21 +79,16 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
         if (!allowed) {
           throw new ForbiddenError(
             runtime.id === LOCAL_RUNTIME_ID
-              ? "Only a platform owner can change the built-in runner"
-              : "Only the runner's owner, an owner or an admin can change it",
-          );
-        }
-        if (body.agentHost && runtime.id === LOCAL_RUNTIME_ID) {
-          throw new UnprocessableError(
-            "The built-in runner's agent always runs on the control plane",
+              ? "Only a platform owner can rename the built-in runner"
+              : "Only the runner's owner, an owner or an admin can rename it",
           );
         }
         return orNotFound(
-          await runtimesService.change(organizationId, params.id, body),
+          await runtimesService.rename(organizationId, params.id, body.name),
           "Runtime not found",
         );
       },
-      { auth: true, org: true, params: runtimeParams, body: changeRuntimeBody },
+      { auth: true, org: true, params: runtimeParams, body: renameRuntimeBody },
     )
     .post(
       "/:id/rotate",

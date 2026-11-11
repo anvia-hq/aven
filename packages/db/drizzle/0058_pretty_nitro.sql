@@ -1,1 +1,0 @@
-ALTER TABLE "runtimes" ADD COLUMN "agent_host" text DEFAULT 'machine' NOT NULL;

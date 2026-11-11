@@ -9,7 +9,6 @@ import { timeAgo } from "@/lib/format";
 import { useRuntimes } from "../hooks/use-runtimes";
 import { isStale, machineMetrics } from "../machine-metrics";
 import type { Runtime } from "../types";
-import { AgentHostDialog } from "./agent-host-dialog";
 import { MeterBar } from "./meter-bar";
 import { RenameRuntimeDialog } from "./rename-runtime-dialog";
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
@@ -93,14 +92,6 @@ export function RuntimesList() {
                       This computer
                     </Badge>
                   )}
-                  {runtime.agentHost === "control_plane" && (
-                    <Badge
-                      variant="outline"
-                      title="The agent runs on the control plane and uses this machine for its commands and files"
-                    >
-                      Agent on control plane
-                    </Badge>
-                  )}
                   {runtime.ownerId === null && (
                     <span
                       role="img"
@@ -138,9 +129,6 @@ export function RuntimesList() {
               <td className="px-3 py-3">
                 <span className="flex items-center justify-end gap-1">
                   <UpdateRuntimeDialog runtime={runtime} />
-                  {canRename(runtime) && !runtime.isControlPlane && (
-                    <AgentHostDialog runtime={runtime} />
-                  )}
                   {canRename(runtime) && <RenameRuntimeDialog runtime={runtime} />}
                   {isOwnedByMe(runtime) && (
                     <>

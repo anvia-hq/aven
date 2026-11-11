@@ -13,8 +13,6 @@ export const AGENT_BACKENDS = ["native"] as const;
 
 export const RUNTIME_PROVIDERS = ["manual"] as const;
 
-export const AGENT_HOSTS = ["machine", "control_plane"] as const;
-
 export const MACHINE_OPS = [
   "prepare",
   "workspace",
