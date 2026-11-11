@@ -1,6 +1,6 @@
 # Projects are imported GitHub repositories
 
-Status: accepted. Supersedes the part of 0010 that made a project only a name and a runner; builds on 0011 and 0012. Its "Clone only" bullet is superseded by 0040.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Supersedes the part of 0010 that made a project only a name and a runner; builds on 0011 and 0012. Its "Clone only" bullet is superseded by 0040.
 
 ## Context
 

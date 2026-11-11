@@ -1,6 +1,6 @@
 # Connect GitHub
 
-Projects are GitHub repositories. In **Settings > Platform** (as the platform owner: the first account
+A project is a folder on a runner, not a GitHub import. GitHub is still connected so the agent can push and open pull requests, and read CI, as the person. In **Settings > Platform** (as the platform owner: the first account
 made on this server, or an email you gave the installer) press **Create GitHub App**: GitHub asks you to confirm the app's name and permissions
 and to install it on your account or organization, and Aven keeps the credentials itself. Nothing
 to copy into `.env`. Then each person presses **Connect GitHub** once, so that what the agent
@@ -29,8 +29,8 @@ GitHub App**, the same steps as above), so the app is owned by that workspace's 
 its own key and is approved on its own. A workspace without one keeps using the platform's app, and
 nothing changes for it.
 
-- Each workspace makes its own app once. Repositories already imported keep working through the app
-  they were imported with, and importing after the change uses the new app.
+- Each workspace makes its own app once. Folders already connected keep working through the app
+  they were connected with, and connecting after the change uses the new app.
 - A GitHub account is connected for one app, so a person in two workspaces with different apps
   presses **Connect GitHub** for each, and Ship asks for the one of the thread's project.
 - Rolling back to a release before this one runs old code against the new tables, which it ignores;

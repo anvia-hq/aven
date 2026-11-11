@@ -1,21 +1,22 @@
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { delimiter, dirname } from "node:path";
 
 import { parseEnv, setEnv } from "./env-file";
 import type { RunnerSettings } from "./types";
 
 const HEADER = `# The settings of this machine's Aven runner, written by \`aven runner install\`.
-# Other AVEN_SANDBOX_* and AVEN_RUNTIME_HOME settings (see .env.example in the repository) can be
+# Other AVEN_RUNTIME_HOME settings (see .env.example in the repository) can be
 # added here; \`aven runner restart\` applies a change.
 `;
 
 export async function writeRunnerEnv(file: string, settings: RunnerSettings) {
   const existing = await readFile(file, "utf8").catch(() => HEADER);
-  const text = setEnv(existing, {
+  const values: Record<string, string> = {
     AVEN_URL: settings.url,
     AVEN_RUNTIME_TOKEN: settings.token,
-    AVEN_SANDBOX_IMAGE: settings.image,
-  });
+    AVEN_DIRS: settings.dirs.join(delimiter),
+  };
+  const text = setEnv(existing, values);
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, text, { mode: 0o600 });
   await chmod(file, 0o600);

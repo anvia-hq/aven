@@ -7,9 +7,8 @@ import type { FindRunner, Refusal } from "./types";
 import type {
   ActionRunParams,
   ArtifactsReadParams,
-  DesktopCallParams,
+  ComputerCallParams,
   DiffGetParams,
-  EnvironmentSaveParams,
   FilesCallParams,
   FilesSearchParams,
   ProcessesCallParams,
@@ -25,9 +24,8 @@ function refuse(refusal: Refusal, error: unknown): never {
 type CallParams =
   | ActionRunParams
   | ArtifactsReadParams
-  | DesktopCallParams
+  | ComputerCallParams
   | DiffGetParams
-  | EnvironmentSaveParams
   | FilesCallParams
   | FilesSearchParams
   | ProcessesCallParams;

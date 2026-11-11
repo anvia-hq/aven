@@ -14,7 +14,7 @@ export function createComputerTools(host: ComputerHost) {
   const status = createTool({
     name: COMPUTER_STATUS_TOOL_NAME,
     description:
-      "Say whether your computer, the sandbox where your commands, files and processes are, is asleep, waking or awake. It goes to sleep after a while with nothing running in it, and what was running stops. Your command and file tools wake it themselves, so you need this only to know before you rely on something that was running in it.",
+      "Say whether your computer, where your commands, files and processes are, is asleep, waking or awake. Your command and file tools start it themselves, so you need this only to know before you rely on something that was running in it.",
     inputSchema: z.object({}),
     async execute() {
       return { state: await host.status() };

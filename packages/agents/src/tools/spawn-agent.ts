@@ -44,7 +44,7 @@ const NOTHING = "The subagent finished without saying anything.";
 export function createSpawnAgentTool(run: RunSubagent) {
   return createTool({
     name: SPAWN_AGENT_TOOL_NAME,
-    description: `Hand tasks to subagents: agents that work on their own with a clean context, in this sandbox, and send you back only their last message. Their searching and reading never fills your context, and several work at once.
+    description: `Hand tasks to subagents: agents that work on their own with a clean context, on this machine, and send you back only their last message. Their searching and reading never fills your context, and several work at once.
 
 Use it to search or understand a large codebase, to look into several independent questions in parallel, or for a self-contained piece of work that would take many steps. Do not use it for something you can do in one or two steps, or for work that needs what the user and you have said: a subagent knows only its prompt.
 - Several tasks in one call run at the same time, up to ${MAX_PARALLEL_SUBAGENTS}. Give tasks that change files separate files; explorers can overlap freely.

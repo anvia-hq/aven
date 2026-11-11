@@ -23,17 +23,13 @@ export function useProjects() {
     if (projects === null) void projectsStore.refresh();
   }, [projects]);
 
-  async function importRepository(input: {
-    installationId: string;
-    repository: string;
-    runtimeId: string;
-  }) {
-    const project = await attempt("Could not import repository", () =>
-      postJson<Project>("/projects", input),
+  async function addFolder(input: { runtimeId: string; path: string; name?: string }) {
+    const project = await attempt("Could not add the folder", () =>
+      postJson<Project>("/projects/folder", input),
     );
     if (!project) return null;
     setProjects((current) => (current ? [project, ...current] : [project]));
-    toast.add({ title: "Repository imported", description: project.name, type: "success" });
+    toast.add({ title: "Folder added", description: project.name, type: "success" });
     return project;
   }
 
@@ -57,7 +53,7 @@ export function useProjects() {
     projects: projects ?? [],
     loaded: projects !== null,
     refresh: projectsStore.refresh,
-    importRepository,
+    addFolder,
     moveProject,
   };
 }

@@ -1,4 +1,5 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { organizations } from "./organizations";
 import { users } from "./users";
@@ -12,6 +13,12 @@ export const runtimes = pgTable(
     }),
     ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    host: boolean("host").notNull().default(false),
+    shared: boolean("shared").notNull().default(false),
+    directories: text("directories")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     tokenHash: text("token_hash").notNull(),
     tokenHint: text("token_hint").notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),

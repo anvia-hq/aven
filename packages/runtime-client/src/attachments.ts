@@ -1,7 +1,7 @@
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 
-import type { KeptAttachment } from "@aven/agents/types";
+import type { KeptAttachment, SandboxPaths } from "@aven/agents/types";
 import type { RunAttachment } from "@aven/protocol/types";
 import type { RunRecord, ThreadWorkspaces } from "./types";
 
@@ -23,12 +23,16 @@ export async function keepAttachments(
   return kept;
 }
 
-export async function promptOf(record: RunRecord, { artifacts }: Stores): Promise<AgentPrompt> {
+export async function promptOf(
+  record: RunRecord,
+  { artifacts }: Stores,
+  paths?: SandboxPaths,
+): Promise<AgentPrompt> {
   const { attachments = [], mentions, skillListing: skills } = record;
   const images = new Map<string, string>();
   for (const { image } of attachments) {
     const content = image && (await artifacts?.read(record.thread.id, image));
     if (image && content) images.set(image, content.data);
   }
-  return sentPrompt(record.prompt ?? "", { attachments, images, mentions, skills });
+  return sentPrompt(record.prompt ?? "", { attachments, images, mentions, skills, paths });
 }

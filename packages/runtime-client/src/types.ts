@@ -5,9 +5,6 @@ import type {
   CockpitAccess,
   ComputerState,
   ControlPlaneToRuntime,
-  DockerLeftovers,
-  DockerRemoveParams,
-  DockerRemoveResult,
   McpConnectResult,
   MessageMention,
   ProcessLogs,
@@ -48,7 +45,13 @@ import type {
   AnyTool,
   Message,
 } from "@anvia/core";
-import type { KeptAttachment, McpNote, SkillListing, SubagentType } from "@aven/agents/types";
+import type {
+  KeptAttachment,
+  McpNote,
+  SandboxPaths,
+  SkillListing,
+  SubagentType,
+} from "@aven/agents/types";
 import type {
   DefinedGoal,
   DurableAgentRegistration,
@@ -60,11 +63,8 @@ import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunOutbox } from "./run-outbox";
 import type { DurableRuns } from "./durable-runs";
 import type { RunRecords } from "./run-records";
-import type { DesktopViewers } from "./desktop-viewers";
 import type { IdleRelease } from "./idle-release";
 import type { ProcessEndWatch } from "./process-end-watch";
-import type { SandboxDesktop } from "@anvia/sandbox";
-import type { SandboxTunnel } from "@anvia/sandbox/remote";
 import type { ArtifactStore } from "./artifacts";
 import type { UploadStore } from "./uploads";
 import type { SkillStore } from "./skills";
@@ -77,6 +77,7 @@ export type CreateBotReplyAgent = (input: {
   send: SendMessage;
   memory: AgentMemoryOptions;
   computer: readonly AnyTool[];
+  paths?: SandboxPaths;
   createBot?: CreateBot;
   askQuestion?: AskQuestion;
   goals: GoalHost;
@@ -192,59 +193,12 @@ export type FollowedRun = {
   cancel(): Promise<void>;
 };
 
-export type DockerRun = (
-  args: string[],
-  options?: { timeoutMs?: number },
-) => Promise<CommandOutput>;
-
-export type SetupInput = {
-  docker: DockerRun;
-  key: string;
-  baseImage: string;
-  image: string;
-  root: string;
-  logPath: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  platform?: string;
-  runtime?: string;
-  hostUser?: string;
-  timeoutMs?: number;
-};
-
-export type ContainerBase = {
-  name: string;
-  label: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  platform?: string;
-  runtime?: string;
-};
-
 export type ThreadRef = {
   id: string;
   organizationId?: string;
   forkOf?: string;
   projectId?: string;
   ownerId?: string;
-};
-
-export type EnvironmentsConfig = {
-  image: string;
-  platform?: string;
-  runtime?: string;
-  runner: string;
-  memoryMb: number;
-  cpus: number;
-  pidsLimit: number;
-  home: string;
-  docker: DockerRun;
-  git: Git;
-  spareDelayMs?: number;
 };
 
 export type Fetched = { branch: string; commit: string; previous: string | null };
@@ -258,15 +212,6 @@ export type CommandResult = {
   command: string;
   exitCode: number | null;
   output: string;
-};
-
-export type LeftoversOptions = {
-  docker: DockerRun;
-  runner: string;
-  image: string;
-  home: string;
-  inUse(threadId: string): boolean;
-  now?: () => number;
 };
 
 export type IdleReleaseContext = {
@@ -306,6 +251,7 @@ export type CreateRuntimeAgent = (input: {
   tools: readonly AnyTool[];
   skills?: readonly SkillListing[];
   envNames?: readonly string[];
+  paths?: SandboxPaths;
   mcp?: McpNote;
   memory?: RunMemory;
   webSearch?: RunWebSearch;
@@ -385,7 +331,6 @@ export type RunToolsInput = {
 export type RunnerCallsContext = {
   sandbox: ThreadWorkspaces;
   boxes: Map<string, ThreadSandbox>;
-  viewers: Pick<DesktopViewers, "call">;
   idle: Pick<IdleRelease, "schedule" | "starting" | "releaseNow">;
   update?: {
     start(release: string | undefined): void;
@@ -399,6 +344,8 @@ export type RuntimeOptions = {
   url: string;
   token: string;
   build?: string;
+  host?: boolean;
+  dirs?: string[];
   update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
   createBotAgent?: CreateBotReplyAgent;
@@ -413,29 +360,9 @@ export type RuntimeOptions = {
   statsIntervalMs?: number;
 };
 
-export type PreflightConfig = { image: string; platform?: string; runtime?: string };
-
-export type HostCommands = { docker: DockerRun; git: Git };
-
-export type SandboxConfig = {
-  image: string;
-  platform?: string;
-  runtime?: string;
-  home?: string;
-  memoryMb?: number;
-  cpus?: number;
-  pidsLimit?: number;
-  hostName?: string;
-  connectTimeoutMs?: number;
-  reachCheckAfterMs?: number;
-  git?: Git;
-  docker?: DockerRun;
-  archivedKeepDays?: number;
-  browserProfileKeepDays?: number;
-};
-
 export type AcquireOptions = {
   lazy?: boolean;
+  folder?: () => Promise<string | null>;
 };
 
 export type ThreadSandbox = {
@@ -452,17 +379,14 @@ export interface ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
     options?: AcquireOptions,
   ): Promise<ThreadSandbox>;
-  desktop(threadId: string): SandboxDesktop | undefined;
-  tunnel?(threadId: string): SandboxTunnel | undefined;
   shell?(
     threadId: string,
     sessionId: string,
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
+  paths?(threadId: string): SandboxPaths;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
-  leftovers?(): Promise<DockerLeftovers>;
-  removeLeftovers?(request: DockerRemoveParams): Promise<DockerRemoveResult>;
   running?(): number;
   signInGithub?(threadId: string, github: RunGithub | undefined): Promise<void>;
   signInIdentity?(
@@ -471,48 +395,19 @@ export interface ThreadWorkspaces {
     controlPlane: string,
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
-  saveEnvironment?(thread: ThreadRef, access: RepoAccess): Promise<{ image: string }>;
-  environmentSavedAt?(thread: ThreadRef, access: RepoAccess): Promise<string | null>;
   readonly artifacts?: ArtifactStore;
   readonly uploads?: UploadStore;
   readonly skills?: SkillStore;
   dispose(): Promise<void>;
 }
 
-export type BrowserProfile = { name: string; dir: string; shared: boolean };
-
-export type BrowserProfilesOptions = { home: string; keepMs: number; now?: () => number };
-
-export type ArchivedCleanupOptions = {
-  home: string;
-  keepMs: number;
-  docker: DockerRun;
-  inUse(threadId: string): boolean;
-  now?: () => number;
-};
-
 export type FetchSkill = (digest: string) => Promise<Uint8Array>;
-
-export type Snapshot = {
-  key: string;
-  image: string;
-  baseImageId: string;
-  createdAt: string;
-  workspace: string;
-  logPath: string;
-};
 
 export type CreateSubagent = (input: {
   type: SubagentType;
   id: string;
   tools: AnyTool[];
 }) => Agent<unknown>;
-
-export type TerminalShellInput = {
-  container: string;
-  sessionId: string;
-  project: Readonly<Record<string, string>>;
-};
 
 export type FakeControlPlaneOptions = {
   storesTranscripts?: boolean;
@@ -532,4 +427,19 @@ export type Timing = {
 
 export type IdentityRelay = { port: number; stop: () => void };
 
-export type HostReach = { ok: boolean; detail: string; skipped?: boolean };
+export type Spawned = ReturnType<typeof Bun.spawn>;
+
+export type Terminate = (proc: Spawned) => Promise<void>;
+
+export type Launch = (input: {
+  argv: string[];
+  cwd: string;
+  inside: string;
+  env?: Readonly<Record<string, string>>;
+}) => Spawned;
+
+export type HostSandboxConfig = {
+  home?: string;
+  dirs?: string[];
+  git?: Git;
+};

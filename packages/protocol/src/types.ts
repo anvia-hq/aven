@@ -369,24 +369,11 @@ export type Reply = {
   code?: string;
 };
 
-export type DesktopControl = {
-  held: boolean;
-  holder?: string;
-  expiresAt?: string;
-};
+export type ComputerCallMethod = "computer.status" | "computer.wake";
 
-export type DesktopInfo = {
-  state: "running" | "stopped" | "starting" | "restarting" | "failed";
-  width: number;
-  height: number;
-  control: DesktopControl;
-};
+export type ComputerInfo = { state: ComputerState };
 
-export type DesktopCallMethod =
-  | "desktop.status"
-  | "desktop.takeover"
-  | "desktop.release"
-  | "desktop.wake";
+export type ComputerCallParams = { threadId: string; bot?: boolean };
 
 export type DiffCallMethod = "diff.get";
 
@@ -412,18 +399,6 @@ export type ArtifactsCallMethod = "artifacts.read";
 export type ArtifactContent = { mediaType: string; data: string };
 
 export type ThreadAction = { name: string; kind: "run" | "prompt" };
-
-export type EnvironmentCallMethod = "environment.save" | "environment.read";
-
-export type EnvironmentSaveParams = {
-  threadId: string;
-  organizationId: string;
-  access: RepoAccess;
-};
-
-export type EnvironmentSaveResult = { image: string };
-
-export type EnvironmentReadResult = { savedAt: string | null };
 
 export type ActionsCallMethod = "actions.run";
 
@@ -456,39 +431,6 @@ export type SandboxCallMethod = "sandbox.release";
 
 export type RunnerSelfCallMethod = "runner.update";
 
-export type DockerCallMethod = "docker.leftovers" | "docker.remove";
-
-export type DockerLeftoverContainer = {
-  ref: string;
-  name: string;
-  state: string;
-  image: string;
-  thread: string | null;
-  createdAt: string;
-  reason: string;
-};
-
-export type DockerLeftoverImage = {
-  ref: string;
-  id: string;
-  size: string;
-  createdAt: string;
-  reason: string;
-};
-
-export type DockerLeftovers = {
-  containers: DockerLeftoverContainer[];
-  images: DockerLeftoverImage[];
-};
-
-export type DockerRemoveParams = { containers: string[]; images: string[] };
-
-export type DockerRemoveResult = {
-  removedContainers: number;
-  removedImages: number;
-  failed: { ref: string; reason: string }[];
-};
-
 export type RunnerUpdateParams = { release?: string };
 
 export type RunnerUpdateResult =
@@ -501,25 +443,15 @@ export type SandboxReleaseParams = { threadId: string };
 export type SandboxReleaseResult = { released: boolean };
 
 export type RunnerCallMethod =
-  | DesktopCallMethod
+  | ComputerCallMethod
   | DiffCallMethod
   | FilesCallMethod
   | ArtifactsCallMethod
   | ProcessesCallMethod
   | ActionsCallMethod
-  | EnvironmentCallMethod
   | RunCallMethod
   | SandboxCallMethod
-  | DockerCallMethod
   | RunnerSelfCallMethod;
-
-export type DesktopCallParams = {
-  threadId: string;
-  holder?: string;
-  leaseMs?: number;
-  force?: boolean;
-  bot?: boolean;
-};
 
 export type DiffGetParams = { threadId: string; scope: DiffScope };
 
@@ -623,13 +555,9 @@ export type ControlPlaneToRuntime =
   | { type: "bot.cancel"; replyId: string; reason: string }
   | { type: "run.attach"; runId: string; after: number; secrets?: RunSecrets }
   | { type: "run.ack"; runId: string }
-  | { type: "desktop.open"; viewerId: string; threadId: string }
-  | { type: "desktop.close"; viewerId: string }
   | { type: "terminal.open"; viewerId: string; threadId: string; cols: number; rows: number }
   | { type: "terminal.resize"; viewerId: string; cols: number; rows: number }
   | { type: "terminal.close"; viewerId: string }
-  | { type: "port.open"; viewerId: string; threadId: string; port: number }
-  | { type: "port.close"; viewerId: string }
   | {
       type: "call";
       id: string;
@@ -662,7 +590,15 @@ export type ProcessEnded = {
 };
 
 export type RuntimeToControlPlane =
-  | { type: "hello"; version: number; runs: string[]; build?: string; canUpdate?: boolean }
+  | {
+      type: "hello";
+      version: number;
+      runs: string[];
+      build?: string;
+      canUpdate?: boolean;
+      host?: boolean;
+      dirs?: string[];
+    }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)
   | { type: "run.event"; runId: string; seq: number; event: RunEvent }
@@ -677,12 +613,8 @@ export type RuntimeToControlPlane =
   | { type: "call"; id: string; method: CallMethod; params: unknown }
   | { type: "bot.say"; replyId: string; text: string }
   | { type: "bot.end"; replyId: string; error?: string }
-  | { type: "desktop.opened"; viewerId: string }
-  | { type: "desktop.closed"; viewerId: string; reason: string }
   | { type: "terminal.opened"; viewerId: string }
   | { type: "terminal.closed"; viewerId: string; reason: string }
-  | { type: "port.opened"; viewerId: string }
-  | { type: "port.closed"; viewerId: string; reason: string }
   | Reply;
 
 export type MemoryCallMethod = "memory.append" | "memory.notes";
@@ -691,7 +623,7 @@ export type CockpitCallMethod = "cockpit.read";
 
 export type ForkCallMethod = "fork.start" | "fork.status";
 
-export type RepoCallMethod = "repo.access";
+export type RepoCallMethod = "repo.access" | "repo.folder";
 
 export type SkillsCallMethod = "skills.get";
 
@@ -916,6 +848,7 @@ export type RuntimeCalls = {
   "fork.start": { params: ForkStartParams; result: { id: string; title: string } };
   "fork.status": { params: ForkStatusParams; result: ForkView };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
+  "repo.folder": { params: RepoAccessParams; result: { directory: string | null } };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };

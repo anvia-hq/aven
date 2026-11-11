@@ -121,17 +121,15 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       return fetch(`${base}/threads/${thread.id}/ship`, { headers });
     };
 
-    workspaceFiles = [".aven/setup"];
+    workspaceFiles = [];
     expect(await (await readiness(owner.token)).json()).toEqual({
       ready: false,
-      setup: true,
       ship: false,
       appKey: "platform",
     });
-    workspaceFiles = [".aven/setup", ".aven/ship.md"];
+    workspaceFiles = [".aven/ship.md"];
     expect(await (await readiness(owner.token)).json()).toEqual({
       ready: true,
-      setup: true,
       ship: true,
       appKey: "platform",
     });

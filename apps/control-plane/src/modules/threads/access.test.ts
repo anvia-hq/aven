@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { errorsRouter } from "../../errors";
 import { createMemoryStore } from "../../memory-store";
 import { artifactsRouter } from "../artifacts/router";
-import { desktopRouter } from "../desktop/router";
+import { computerRouter } from "../computer/router";
 import { diffRouter } from "../diff/router";
 import { filesRouter } from "../files/router";
 import { processesRouter } from "../processes/router";
@@ -52,8 +52,8 @@ run("a thread's access (real postgres)", async () => {
     .use(diffRouter(hub))
     .use(artifactsRouter(hub))
     .use(processesRouter(hub))
-    .use(desktopRouter(hub))
     .use(terminalRouter(hub))
+    .use(computerRouter(hub))
     .use(shipRouter(createShipService(hub, { send: async () => {} })))
     .listen({ port: 0 });
   const base = `http://localhost:${server.server?.port}`;
@@ -111,10 +111,8 @@ run("a thread's access (real postgres)", async () => {
     ["GET", `/threads/${id}/processes`],
     ["POST", `/threads/${id}/processes/p1/stop`],
     ["GET", `/threads/${id}/processes/p1/logs`],
-    ["GET", `/threads/${id}/desktop`],
-    ["POST", `/threads/${id}/desktop/wake`],
-    ["POST", `/threads/${id}/desktop/takeover`],
-    ["POST", `/threads/${id}/desktop/release`],
+    ["GET", `/threads/${id}/computer`],
+    ["POST", `/threads/${id}/computer/wake`],
   ];
 
   test("a private thread is not found by a teammate, whatever they ask", async () => {
@@ -181,12 +179,9 @@ run("a thread's access (real postgres)", async () => {
       };
       socket.onerror = () => resolve(false);
     });
-  const sockets = [
-    `/threads/${id}/desktop/stream`,
-    `/threads/${id}/terminal/stream?cols=80&rows=24`,
-  ];
+  const sockets = [`/threads/${id}/terminal/stream?cols=80&rows=24`];
 
-  test("a teammate cannot open the Desktop or the Terminal of a thread, shared or not", async () => {
+  test("a teammate cannot open the Terminal of a thread, shared or not", async () => {
     for (const visibility of ["private", "workspace"] as const) {
       await call("PATCH", `/threads/${id}`, owner.token, { visibility });
       for (const path of sockets) {

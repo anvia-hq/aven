@@ -59,6 +59,7 @@ const outcomes = [
 const callMethods = [
   "memory.append",
   "repo.access",
+  "repo.folder",
   "skills.get",
   "mcp.report",
   "bot.memory",
@@ -200,6 +201,8 @@ const frame = z.discriminatedUnion("type", [
     runs: z.array(runId).default([]),
     build: z.string().max(64).optional(),
     canUpdate: z.boolean().optional(),
+    host: z.boolean().optional(),
+    dirs: z.array(z.string().min(1).max(1024)).max(50).optional(),
   }),
   z.object({ type: z.literal("host.stats"), stats: hostStats }),
   z.object({
@@ -232,21 +235,9 @@ const frame = z.discriminatedUnion("type", [
     replyId: z.string().min(1),
     error: z.string().optional(),
   }),
-  z.object({ type: z.literal("desktop.opened"), viewerId: z.string().min(1) }),
-  z.object({
-    type: z.literal("desktop.closed"),
-    viewerId: z.string().min(1),
-    reason: z.string(),
-  }),
   z.object({ type: z.literal("terminal.opened"), viewerId: z.string().min(1) }),
   z.object({
     type: z.literal("terminal.closed"),
-    viewerId: z.string().min(1),
-    reason: z.string(),
-  }),
-  z.object({ type: z.literal("port.opened"), viewerId: z.string().min(1) }),
-  z.object({
-    type: z.literal("port.closed"),
     viewerId: z.string().min(1),
     reason: z.string(),
   }),

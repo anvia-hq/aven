@@ -246,10 +246,11 @@ export function createRunDriver(context: DriverContext) {
     const { runId, thread, model } = initial;
     if (initial.compact) return compactionScope(initial, state, run, clock);
     const repoAccess = () => context.call("repo.access", { runId });
+    const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
     await context.starting(thread.id);
     run.mcpGoing = connectMcp(run, runId, thread.id, secrets);
     run.mcpGoing.catch(() => undefined);
-    const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
+    const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true, folder });
     context.boxes.set(thread.id, box);
     let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
     const markCurrentTurn = async () => {
@@ -329,6 +330,7 @@ export function createRunDriver(context: DriverContext) {
           id,
           attended,
           forks: forking,
+          paths: context.sandbox.paths?.(thread.id),
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
@@ -375,6 +377,7 @@ export function createRunDriver(context: DriverContext) {
                 tools,
                 skills,
                 envNames,
+                paths: context.sandbox.paths?.(thread.id),
                 mcp: mcp?.note,
                 webSearch: state.record.webSearch,
                 model,
@@ -419,7 +422,11 @@ export function createRunDriver(context: DriverContext) {
       followed = await journaled.start(
         runId,
         thread.id,
-        await promptOf(scope.record, context.sandbox),
+        await promptOf(
+          scope.record,
+          context.sandbox,
+          context.sandbox.paths?.(scope.record.thread.id),
+        ),
         build(scope.record.agentId, true),
         forward,
       );
@@ -592,7 +599,11 @@ export function createRunDriver(context: DriverContext) {
           reason: "The agent is writing up how the goal ended: wait for it to finish",
         };
       }
-      const message = sentPrompt(prompt, { mentions, skills: record.skillListing });
+      const message = sentPrompt(prompt, {
+        mentions,
+        skills: record.skillListing,
+        paths: context.sandbox.paths?.(record.thread.id),
+      });
       if (record.phase === "goal") {
         const taken = (await run.goal?.steer(message, steerId)) ?? false;
         return { status: taken ? "queued" : "closed" };

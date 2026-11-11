@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { wsUrl } from "@/lib/api";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
-import type { Computer } from "@/modules/desktop/types";
+import type { Computer } from "@/modules/computer/types";
 
 type TerminalPhase = "connecting" | "connected" | "ended";
 

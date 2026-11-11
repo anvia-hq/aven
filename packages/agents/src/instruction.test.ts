@@ -84,24 +84,15 @@ test("the agent is told its commands already start in /workspace, so it does not
   expect(codingInstructions(200, true)).toContain("do not begin one with cd /workspace");
 });
 
-test("the agent is pointed at the setup-env skill instead of building a service by hand in /tmp", () => {
-  const text = codingInstructions(200, true);
-  expect(text).toContain("setup-env skill");
-  expect(text).toContain("do not build it by hand in /tmp");
-});
-
 test("the instructions tell the agent about the people in a thread and @agent", () => {
   const text = codingInstructions(200);
   expect(text).toContain("[driver: Name]");
   expect(text).toContain("@agent");
 });
 
-test("the agent is told how a person sees what it serves, and that localhost is theirs in the page", () => {
-  const section = codingInstructions(200).split("<browser>")[1]!.split("</browser>")[0]!;
-  expect(section).toContain("Browser tab");
-  expect(section).toContain("wait_for_port");
-  expect(section).toContain("list_ports");
-  expect(section).toContain("localhost and 127.0.0.1 mean their machine");
+test("the agent is told a server runs on the machine and that localhost is the page's own in the person's browser", () => {
+  const section = codingInstructions(200).split("<servers>")[1]!.split("</servers>")[0]!;
+  expect(section).toContain("tell them the port");
+  expect(section).toContain("localhost and 127.0.0.1 mean the machine the page is opened on");
   expect(section).toContain("relative URLs");
-  expect(section).toContain("server.proxy");
 });

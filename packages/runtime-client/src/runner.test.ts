@@ -7,12 +7,9 @@ import { COMPACT_PROMPT, COMPACTED, createCompactionAgent } from "@aven/agents/c
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
 import { z } from "zod";
 
-import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
-
 import { startRuntime } from "./runner";
 import { noProcesses } from "./thread-processes";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
-import { fakeDesktop } from "./testing/fake-desktop";
 import { goalSessionMarker } from "./goal-report";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { gitFixture, sh } from "./testing/git-fixture";
@@ -38,7 +35,6 @@ function slowSandbox() {
       await gate.promise;
       return { tools: [], hasRunningProcesses: async () => busy.now, processes: noProcesses };
     },
-    desktop: () => undefined,
     workspace: async () => undefined,
     async release(threadId) {
       released.push(threadId);
@@ -193,8 +189,7 @@ describe("startRuntime processes", () => {
   test("lists, reads and stops the processes of a thread's sandbox, and never starts one", async () => {
     const workspaces = directoryWorkspaces();
     cleanups.push(() => workspaces.dispose());
-    const fake = fakeDesktop();
-    const { plane, runtime } = connect({ sandbox: { ...workspaces, desktop: () => fake.desktop } });
+    const { plane, runtime } = connect({ sandbox: workspaces });
     await runtime.ready;
     const ask = async (id: string, method: string, params: object) => {
       plane.send({ type: "call", id, method, params } as never);
@@ -211,7 +206,7 @@ describe("startRuntime processes", () => {
       ok: false,
     });
 
-    await ask("w", "desktop.wake", { threadId: "t1" });
+    await ask("w", "computer.wake", { threadId: "t1" });
     const started = await workspaces.sandboxes
       .get("t1")!
       .startProcess({ command: "sh", args: ["-c", "echo up; sleep 30"] });
@@ -263,90 +258,6 @@ describe("startRuntime processes", () => {
   });
 });
 
-describe("startRuntime saving an environment", () => {
-  const access = {
-    cloneUrl: "https://example.test/acme/app.git",
-    defaultBranch: "main",
-    token: "t",
-  };
-
-  test("saves the thread's environment for the organization and repository it is told, and refuses bad parameters", async () => {
-    const workspaces = directoryWorkspaces();
-    cleanups.push(() => workspaces.dispose());
-    const saved: { thread: unknown; access: unknown }[] = [];
-    const { plane } = connect({
-      sandbox: {
-        ...workspaces,
-        saveEnvironment: async (thread: unknown, repo: unknown) => {
-          saved.push({ thread, access: repo });
-          return { image: "aven-env-abc" };
-        },
-      } as never,
-    });
-    await until(() => plane.received.some((m) => m.type === "hello"));
-    const ask = async (id: string, params: object) => {
-      plane.send({ type: "call", id, method: "environment.save", params } as never);
-      await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
-      return plane.received.find((m) => m.type === "reply" && m.id === id);
-    };
-
-    expect(await ask("a", { threadId: "t1", organizationId: "org-1", access })).toMatchObject({
-      ok: true,
-      result: { image: "aven-env-abc" },
-    });
-    expect(saved).toEqual([{ thread: { id: "t1", organizationId: "org-1" }, access }]);
-    expect(await ask("b", { threadId: "t1", access })).toMatchObject({
-      ok: false,
-      error: "Invalid parameters",
-    });
-  });
-
-  test("tells when the thread's environment was last saved, and says so when it cannot", async () => {
-    const workspaces = directoryWorkspaces();
-    cleanups.push(() => workspaces.dispose());
-    const seen: { thread: unknown; access: unknown }[] = [];
-    const { plane } = connect({
-      sandbox: {
-        ...workspaces,
-        environmentSavedAt: async (thread: unknown, repo: unknown) => {
-          seen.push({ thread, access: repo });
-          return "2026-11-09T22:00:00.000Z";
-        },
-      } as never,
-    });
-    await until(() => plane.received.some((m) => m.type === "hello"));
-    plane.send({
-      type: "call",
-      id: "r",
-      method: "environment.read",
-      params: { threadId: "t1", organizationId: "org-1", access },
-    } as never);
-    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "r"));
-    expect(plane.received.find((m) => m.type === "reply" && m.id === "r")).toMatchObject({
-      ok: true,
-      result: { savedAt: "2026-11-09T22:00:00.000Z" },
-    });
-    expect(seen).toEqual([{ thread: { id: "t1", organizationId: "org-1" }, access }]);
-  });
-
-  test("says so when the runner cannot save one", async () => {
-    const workspaces = directoryWorkspaces();
-    cleanups.push(() => workspaces.dispose());
-    const { plane } = connect({ sandbox: workspaces });
-    await until(() => plane.received.some((m) => m.type === "hello"));
-    plane.send({
-      type: "call",
-      id: "x",
-      method: "environment.save",
-      params: { threadId: "t1", organizationId: "org-1", access },
-    } as never);
-    await until(() => plane.received.some((m) => m.type === "reply" && m.id === "x"));
-    expect(plane.received.find((m) => m.type === "reply" && m.id === "x")).toMatchObject({
-      ok: false,
-    });
-  });
-});
-
 describe("startRuntime host stats", () => {
   test("tells the control plane how loaded the machine is, as soon as it connects and again after", async () => {
     const workspaces = directoryWorkspaces();
@@ -382,57 +293,11 @@ describe("startRuntime host stats", () => {
   });
 });
 
-describe("startRuntime desktops", () => {
-  const viewerId = crypto.randomUUID();
-  const withDesktop = (desktop: ReturnType<typeof fakeDesktop>["desktop"] | undefined) => {
-    const { sandbox, ...rest } = slowSandbox();
-    return { sandbox: { ...sandbox, desktop: () => desktop }, ...rest };
-  };
+describe("startRuntime computers", () => {
+  const withDesktop = (_desktop?: unknown) => slowSandbox();
 
-  test("streams a thread's desktop to a viewer and relays the viewer's bytes back", async () => {
-    const fake = fakeDesktop();
-    const { plane, runtime } = connect({ sandbox: withDesktop(fake.desktop).sandbox });
-    await runtime.ready;
-
-    plane.send({ type: "desktop.open", viewerId, threadId: "thread-1" });
-    await until(() => plane.received.some((message) => message.type === "desktop.opened"));
-    await fake.push(new Uint8Array([82, 70, 66]));
-    await until(() => plane.receivedBinary.length === 1);
-    expect(decodeViewerFrame(plane.receivedBinary[0]!)).toEqual({
-      viewerId,
-      payload: new Uint8Array([82, 70, 66]),
-    });
-
-    plane.sendBinary(encodeViewerFrame(viewerId, new Uint8Array([9])));
-    await until(() => fake.record.written.length === 1);
-    expect(fake.record.written[0]).toEqual(new Uint8Array([9]));
-
-    plane.send({ type: "desktop.close", viewerId });
-    await until(() => fake.record.closed);
-  });
-
-  test("answers a desktop call with its result, or with why it failed", async () => {
-    const { plane, runtime } = connect({ sandbox: withDesktop(fakeDesktop().desktop).sandbox });
-    await runtime.ready;
-
-    plane.send({ type: "call", id: "c1", method: "desktop.status", params: { threadId: "t1" } });
-    plane.send({ type: "call", id: "c2", method: "desktop.takeover", params: { threadId: "t1" } });
-
-    await until(() => plane.received.filter((message) => message.type === "reply").length === 2);
-    const replies = plane.received.filter((message) => message.type === "reply");
-    expect(replies.find((reply) => reply.id === "c1")).toMatchObject({
-      ok: true,
-      result: { state: "running", control: { held: false } },
-    });
-    expect(replies.find((reply) => reply.id === "c2")).toMatchObject({
-      ok: false,
-      error: "Invalid parameters",
-    });
-  });
-
-  test("wakes a thread's sandbox without a run, answers with its desktop, and frees it when idle", async () => {
-    const fake = fakeDesktop();
-    const { sandbox, up, released } = withDesktop(fake.desktop);
+  test("wakes a thread's sandbox without a run, answers that it is awake, and frees it when idle", async () => {
+    const { sandbox, up, released } = withDesktop();
     const acquired: string[] = [];
     const counting: ThreadWorkspaces = {
       ...sandbox,
@@ -442,12 +307,12 @@ describe("startRuntime desktops", () => {
     await runtime.ready;
     up();
 
-    plane.send({ type: "call", id: "w1", method: "desktop.wake", params: { threadId: "t1" } });
+    plane.send({ type: "call", id: "w1", method: "computer.wake", params: { threadId: "t1" } });
 
     await until(() => plane.received.some((message) => message.type === "reply"));
     expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
       ok: true,
-      result: { state: "running", control: { held: false } },
+      result: { state: "awake" },
     });
     expect(acquired).toEqual(["t1"]);
     await until(() => released.length === 1);
@@ -455,8 +320,7 @@ describe("startRuntime desktops", () => {
   });
 
   test("wakes a bot's computer with no repository, and starts its container", async () => {
-    const fake = fakeDesktop();
-    const { sandbox, up } = withDesktop(fake.desktop);
+    const { sandbox, up } = withDesktop();
     const acquired: { id: string; repo: unknown }[] = [];
     const starts: string[] = [];
     const lazy: ThreadWorkspaces = {
@@ -474,14 +338,14 @@ describe("startRuntime desktops", () => {
     plane.send({
       type: "call",
       id: "w1",
-      method: "desktop.wake",
+      method: "computer.wake",
       params: { threadId: "bot-1", bot: true },
     });
 
     await until(() => plane.received.some((message) => message.type === "reply"));
     expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
       ok: true,
-      result: { state: "running" },
+      result: { state: "awake" },
     });
     expect(acquired).toEqual([{ id: "bot-1", repo: undefined }]);
     expect(starts).toEqual(["bot-1"]);
@@ -497,35 +361,13 @@ describe("startRuntime desktops", () => {
     await runtime.ready;
     up();
 
-    plane.send({ type: "call", id: "w2", method: "desktop.wake", params: { threadId: "t1" } });
+    plane.send({ type: "call", id: "w2", method: "computer.wake", params: { threadId: "t1" } });
 
     await until(() => plane.received.some((message) => message.type === "reply"));
     expect(plane.received.find((message) => message.type === "reply")).toMatchObject({
       ok: false,
       error: "The thread has no workspace yet",
     });
-  });
-
-  test("a sandbox someone is watching is not released as idle", async () => {
-    const fake = fakeDesktop();
-    const { sandbox, up, released } = withDesktop(fake.desktop);
-    const { plane, runtime } = connect({
-      sandbox,
-      idleReleaseMs: 50,
-      createAgent: reply(),
-    });
-    await runtime.ready;
-    up();
-    plane.send(runStart);
-    await until(() => plane.received.some((message) => message.type === "run.end"));
-    plane.send({ type: "desktop.open", viewerId, threadId: "thread-1" });
-    await until(() => plane.received.some((message) => message.type === "desktop.opened"));
-
-    await Bun.sleep(250);
-    expect(released).toEqual([]);
-
-    plane.send({ type: "desktop.close", viewerId });
-    await until(() => released.length === 1);
   });
 });
 
@@ -537,7 +379,6 @@ describe("startRuntime", () => {
       async acquire(): Promise<ThreadSandbox> {
         return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
-      desktop: () => undefined,
       workspace: async () => fixture.root,
       async release() {},
       async dispose() {},
@@ -585,55 +426,6 @@ describe("startRuntime", () => {
     expect(await Bun.file(`${fixture.root}/.git/config`).text()).not.toContain("secret-token");
   });
 
-  test("the agent's save_environment has the sandbox set the repository up, with the run's own repo access", async () => {
-    const access = {
-      cloneUrl: "https://github.com/acme/web.git",
-      defaultBranch: "main",
-      token: "t",
-    };
-    const saved: { thread: unknown; access: unknown }[] = [];
-    const sandbox: ThreadWorkspaces = {
-      async acquire(): Promise<ThreadSandbox> {
-        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
-      },
-      desktop: () => undefined,
-      workspace: async () => undefined,
-      async saveEnvironment(thread, given) {
-        saved.push({ thread, access: given });
-        return { image: "aven-env-k" };
-      },
-      async release() {},
-      async dispose() {},
-    };
-    const { plane, runtime } = connect({
-      sandbox,
-      createAgent: ({ id, tools }) => ({
-        agent: new Agent({
-          id,
-          instructions: "x",
-          tools: [...tools],
-          model: scriptedModel([
-            [{ type: "tool-call", toolCallId: "s1", toolName: "save_environment", input: {} }],
-            [text("saved")],
-          ]),
-        }),
-      }),
-    });
-    await runtime.ready;
-    plane.send(runStart);
-
-    await until(() => plane.received.some((message) => message.type === "call"));
-    const call = plane.received.find((message) => message.type === "call");
-    expect(call).toMatchObject({ method: "repo.access", params: { runId: "run-1" } });
-    plane.send({ type: "reply", id: (call as { id: string }).id, ok: true, result: access });
-
-    await until(() => plane.received.some((message) => message.type === "run.end"));
-    expect(saved).toEqual([{ thread, access }]);
-    expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
-      outcome: "response",
-    });
-  });
-
   describe("signing the sandbox in to GitHub for a run (decision 0044)", () => {
     const ada = { token: "ghu_very-secret", id: 42, login: "ada", name: "Ada L" };
 
@@ -644,7 +436,6 @@ describe("startRuntime", () => {
         async acquire(): Promise<ThreadSandbox> {
           return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
         },
-        desktop: () => undefined,
         workspace: async () => undefined,
         async signInGithub(threadId, github) {
           signedIn.push({ threadId, github });
@@ -782,7 +573,6 @@ describe("startRuntime", () => {
         async acquire(): Promise<ThreadSandbox> {
           return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
         },
-        desktop: () => undefined,
         workspace: async () => undefined,
         setProjectEnv(threadId, variables) {
           given.push({ threadId, env: variables });
@@ -910,7 +700,6 @@ describe("startRuntime", () => {
       async acquire(): Promise<ThreadSandbox> {
         return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
-      desktop: () => undefined,
       workspace: async () => undefined,
       async release() {},
       async dispose() {},
@@ -1046,7 +835,6 @@ describe("startRuntime", () => {
         given = await repo?.();
         return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
       },
-      desktop: () => undefined,
       workspace: async () => undefined,
       async release() {},
       async dispose() {},

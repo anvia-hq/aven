@@ -66,7 +66,7 @@ test.describe("a thread's changes", () => {
     await expect(panel.getByText("2 files")).toContainText("+2 -1");
   });
 
-  test("shares its width with the desktop, so switching between them does not move the edge", async ({
+  test("shares its width with the terminal, so switching between them does not move the edge", async ({
     page,
   }) => {
     await registerUser(page, "wid", "Width User");
@@ -77,7 +77,7 @@ test.describe("a thread's changes", () => {
     await page.goto(`/threads/${threadId}`);
     await page.getByRole("button", { name: "Changes", exact: true }).click();
     const changes = page.getByRole("region", { name: "Changes" });
-    const desktop = page.getByRole("region", { name: "Desktop" });
+    const terminal = page.getByRole("region", { name: "Terminal" });
     const width = (region: typeof changes) =>
       region.evaluate((el) => Math.round(el.getBoundingClientRect().width));
 
@@ -89,8 +89,8 @@ test.describe("a thread's changes", () => {
     const resized = await width(changes);
 
     await page.getByRole("button", { name: "Close changes" }).click();
-    await page.getByRole("button", { name: "Desktop", exact: true }).click();
-    await expect(desktop).toBeVisible();
-    expect(Math.abs((await width(desktop)) - resized)).toBeLessThan(8);
+    await page.getByRole("button", { name: "Terminal", exact: true }).click();
+    await expect(terminal).toBeVisible();
+    expect(Math.abs((await width(terminal)) - resized)).toBeLessThan(8);
   });
 });

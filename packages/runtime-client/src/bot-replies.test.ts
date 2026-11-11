@@ -89,7 +89,6 @@ const sandboxWith = (
       processes: noProcesses,
     };
   },
-  desktop: () => undefined,
   workspace: async () => undefined,
   release: async () => undefined,
   dispose: async () => undefined,

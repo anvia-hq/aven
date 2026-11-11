@@ -422,7 +422,7 @@ test.describe("shipping a thread", () => {
       return { threadId, events };
     }
 
-    test("with no way of shipping it offers to set it up, and sends /setup-env", async ({
+    test("with no way of shipping it offers to set it up, and sends /setup-ship", async ({
       page,
     }) => {
       const { events } = await threadWith(page, "");
@@ -434,32 +434,12 @@ test.describe("shipping a thread", () => {
       await setUpButton(page).click();
       await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
       const started = events.find((event) => event.type === "started");
-      expect(started?.prompt).toBe("/setup-env");
-      expect(started?.mentions).toEqual([{ type: "skill", name: "setup-env", from: 0, to: 10 }]);
-    });
-
-    test("with only the environment it sends /setup-ship", async ({ page }) => {
-      const { events } = await threadWith(page, "setup");
-
-      await expect(setUpButton(page)).toBeEnabled();
-      await expect(shipButton(page)).toHaveCount(0);
-
-      await setUpButton(page).click();
-      await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
-      const started = events.find((event) => event.type === "started");
       expect(started?.prompt).toBe("/setup-ship");
       expect(started?.mentions).toEqual([{ type: "skill", name: "setup-ship", from: 0, to: 11 }]);
     });
 
-    test("with only the way of shipping, still it is set up first", async ({ page }) => {
-      await threadWith(page, "ship");
-
-      await expect(setUpButton(page)).toBeEnabled();
-      await expect(shipButton(page)).toHaveCount(0);
-    });
-
     test("with both it can be shipped", async ({ page }) => {
-      await threadWith(page, "setup,ship");
+      await threadWith(page, "ship");
 
       await expect(shipButton(page)).toBeEnabled();
       await expect(setUpButton(page)).toHaveCount(0);

@@ -12,7 +12,11 @@ beforeEach(async () => {
 });
 afterEach(() => rm(dir, { recursive: true, force: true }));
 
-const settings = { url: "http://localhost:3000/api", token: "avrt_x", image: "img:1" };
+const settings = {
+  url: "http://localhost:3000/api",
+  token: "avrt_x",
+  dirs: ["/home/me/code", "/srv/work"],
+};
 
 test("writes the settings readable by the owner only", async () => {
   const file = join(dir, "runner.env");
@@ -20,7 +24,7 @@ test("writes the settings readable by the owner only", async () => {
   expect(parseEnv(await readFile(file, "utf8"))).toEqual({
     AVEN_URL: settings.url,
     AVEN_RUNTIME_TOKEN: "avrt_x",
-    AVEN_SANDBOX_IMAGE: "img:1",
+    AVEN_DIRS: "/home/me/code:/srv/work",
   });
   expect((await stat(file)).mode & 0o777).toBe(0o600);
 });
@@ -28,11 +32,11 @@ test("writes the settings readable by the owner only", async () => {
 test("a second install replaces the three and keeps what a person added", async () => {
   const file = join(dir, "runner.env");
   await writeRunnerEnv(file, settings);
-  await writeFile(file, `${await readFile(file, "utf8")}AVEN_SANDBOX_MEMORY_MB=4096\n`);
+  await writeFile(file, `${await readFile(file, "utf8")}AVEN_RUNTIME_HOME=/x\n`);
   await writeRunnerEnv(file, { ...settings, token: "avrt_new" });
   const env = parseEnv(await readFile(file, "utf8"));
   expect(env.AVEN_RUNTIME_TOKEN).toBe("avrt_new");
-  expect(env.AVEN_SANDBOX_MEMORY_MB).toBe("4096");
+  expect(env.AVEN_RUNTIME_HOME).toBe("/x");
 });
 
 test("loading fills the environment without overriding it", async () => {

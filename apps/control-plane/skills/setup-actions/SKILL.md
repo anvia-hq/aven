@@ -35,7 +35,7 @@ Read before asking:
 - `package.json` scripts, a `Makefile`, `justfile`, `Taskfile`, `pyproject.toml`, `Cargo.toml`, `go.mod`: what the test, typecheck, lint, format and build commands are, and the package manager that is used (use its commands, never another's);
 - `.github/workflows`: the checks CI runs, which are the ones worth a button;
 - `AGENTS.md`, `CONTRIBUTING`, the README: how the team says to check a change;
-- `.aven/setup`: what the environment installs, since an action runs in that environment. A command the sandbox cannot run (a tool `/setup-env` does not install, a service that is not started) should not be an action, or `/setup-env` should be run first.
+- What the machine has: an action runs on the runner's own machine, so a command that needs a tool or a service the machine lacks should not be an action.
 
 Then ask the user, in one message with your proposal so they can confirm or edit it: which actions to have, what each is called, and whether any should be a `prompt` and not a command. Offer the usual ones the repository supports (Test, Typecheck, Lint, Format, Build) and a prompt or two it would suit (fix lint, update the changelog, review my changes). Do not add an action nobody asked for.
 

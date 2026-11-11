@@ -17,7 +17,7 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.authenticate(`${token}x`)).toBeNull();
     expect(await runtimesService.authenticate("nope")).toBeNull();
 
-    const listed = await runtimesService.list(seed.orgA);
+    const listed = await runtimesService.list(seed.orgA, seed.userId);
     expect(JSON.stringify(listed)).not.toContain(token);
     expect(listed[0]).not.toHaveProperty("tokenHash");
     expect(runtime.tokenHint).toBe(token.slice(-4));
@@ -26,7 +26,9 @@ run("runtimes service (real postgres)", async () => {
   test("another organization does not see it", async () => {
     const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "a-only" });
     expect(await runtimesService.get(seed.orgB, runtime.id)).toBeNull();
-    expect((await runtimesService.list(seed.orgB)).map((r) => r.id)).not.toContain(runtime.id);
+    expect((await runtimesService.list(seed.orgB, seed.userId)).map((r) => r.id)).not.toContain(
+      runtime.id,
+    );
   });
 
   test("only the owner can revoke, and a revoked token stops working", async () => {
@@ -60,7 +62,7 @@ run("runtimes service (real postgres)", async () => {
     await runtimesService.ensureLocal();
 
     for (const org of [seed.orgA, seed.orgB]) {
-      const listed = await runtimesService.list(org);
+      const listed = await runtimesService.list(org, seed.userId);
       expect(listed.map((runtime) => runtime.id)).toContain(LOCAL_RUNTIME_ID);
       expect((await runtimesService.get(org, LOCAL_RUNTIME_ID))?.name).toBe("Control plane");
     }
@@ -71,6 +73,34 @@ run("runtimes service (real postgres)", async () => {
       LOCAL_RUNTIME_ID,
     );
     expect(await runtimesService.authenticate("avrt_local_guess")).toBeNull();
+  });
+
+  test("a runner that works on its own machine is private to its owner until the owner shares it", async () => {
+    const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "my mac" });
+    await runtimesService.setHost(runtime.id, true);
+
+    expect((await runtimesService.get(seed.orgA, runtime.id, seed.userId))?.id).toBe(runtime.id);
+    expect(await runtimesService.get(seed.orgA, runtime.id, "a-teammate")).toBeNull();
+    expect((await runtimesService.list(seed.orgA, "a-teammate")).map((r) => r.id)).not.toContain(
+      runtime.id,
+    );
+    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(true);
+    expect(await runtimesService.share(seed.orgA, "a-teammate", runtime.id, true)).toBeNull();
+
+    await runtimesService.share(seed.orgA, seed.userId, runtime.id, true);
+
+    expect((await runtimesService.get(seed.orgA, runtime.id, "a-teammate"))?.id).toBe(runtime.id);
+    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(false);
+
+    await runtimesService.share(seed.orgA, seed.userId, runtime.id, false);
+    expect(await runtimesService.get(seed.orgA, runtime.id, "a-teammate")).toBeNull();
+  });
+
+  test("a runner in a container is the workspace's, shared or not", async () => {
+    const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "docker" });
+
+    expect((await runtimesService.get(seed.orgA, runtime.id, "a-teammate"))?.id).toBe(runtime.id);
+    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(false);
   });
 
   test("a runtime is renamed in its own organization only, and a revoked one is not found", async () => {

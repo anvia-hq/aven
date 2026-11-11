@@ -1,6 +1,6 @@
 # A workspace may have its own GitHub App
 
-Status: accepted. Extends 0074 (the GitHub App is created from the platform) and 0044 (the agent acts as the person on GitHub); 0074's app becomes the default a workspace falls back to.
+Status: accepted. Extends 0074 (the GitHub App is created from the platform) and 0044 (the agent acts as the person on GitHub); 0074's app becomes the default a workspace falls back to. Partly superseded by 0219: a project is no longer made by importing a repository in the app.
 
 ## Context
 

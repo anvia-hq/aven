@@ -1,6 +1,6 @@
 # A repository sets up its environment once, and threads start from a snapshot
 
-Status: accepted. Builds on 0010 (a container per thread, the workspace mounted at `/workspace`), 0013 (the clone) and 0035 (`.aven/skills`). Follows Amp's orbs: a setup script in the repository and a snapshot of what it made.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0010 (a container per thread, the workspace mounted at `/workspace`), 0013 (the clone) and 0035 (`.aven/skills`). Follows Amp's orbs: a setup script in the repository and a snapshot of what it made.
 
 ## Context
 

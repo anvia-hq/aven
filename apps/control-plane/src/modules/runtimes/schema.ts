@@ -6,6 +6,8 @@ export const createRuntimeBody = z.object({ name: z.string().trim().min(1).max(1
 
 export const renameRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
 
+export const shareRuntimeBody = z.object({ shared: z.boolean() });
+
 export type CreateRuntimeBody = z.infer<typeof createRuntimeBody>;
 
 export const updateRuntimeBody = z

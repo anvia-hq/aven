@@ -60,7 +60,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
   }
   return (
     <a
-      href={blobUrl(project.repoFullName, project.defaultBranch, entry.path)}
+      href={blobUrl(project.repoFullName ?? "", project.defaultBranch ?? "main", entry.path)}
       target="_blank"
       rel="noreferrer noopener"
       className={`${rowClass} group/file`}

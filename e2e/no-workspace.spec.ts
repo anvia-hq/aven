@@ -43,7 +43,7 @@ test.describe("a thread the agent has not worked on yet", () => {
     await page.getByRole("button", { name: "Terminal", exact: true }).click();
     const panel = page.getByRole("region", { name: "Terminal" });
 
-    await expect(panel.getByText("This thread has no workspace yet")).toBeVisible();
-    await expect(panel.getByRole("button", { name: "Wake up" })).toHaveCount(0);
+    await expect(panel.getByText("This thread has no folder yet")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Start" })).toHaveCount(0);
   });
 });

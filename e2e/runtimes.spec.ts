@@ -1,15 +1,10 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
 
-import { connectGithub, registerUser } from "./helpers";
-
-const hasSandboxImage =
-  spawnSync("docker", ["image", "inspect", "aven-sandbox-desktop:dev"]).status === 0;
+import { registerUser } from "./helpers";
 
 test.describe("runtimes", () => {
-  test.skip(!hasSandboxImage, "needs Docker and the aven-sandbox-desktop:dev image");
-
   let runtime: ChildProcess | undefined;
   test.afterEach(() => {
     runtime?.kill();
@@ -65,12 +60,6 @@ test.describe("runtimes", () => {
       await page.reload();
       await expect(row).toContainText("Online", { timeout: 1000 });
     }).toPass({ timeout: 15_000 });
-
-    await connectGithub(page);
-    await page.goto("/threads");
-    await page.getByRole("button", { name: "Import repository" }).click();
-    await expect(page.getByRole("combobox", { name: "Runner" })).toBeVisible();
-    await page.keyboard.press("Escape");
 
     await page.goto("/settings/runtimes");
     await page.getByRole("button", { name: "Revoke e2e-laptop" }).click();

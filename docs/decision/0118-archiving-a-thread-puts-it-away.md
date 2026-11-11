@@ -1,6 +1,6 @@
 # Archiving a thread stops its work and frees its sandbox
 
-Status: accepted.
+Status: accepted. Partly superseded by 0219: archiving still puts a thread away, but there is no sandbox to free.
 
 ## Context
 

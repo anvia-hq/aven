@@ -19,12 +19,13 @@ export const projects = pgTable(
     runtimeId: uuid("runtime_id")
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
-    githubInstallationId: uuid("github_installation_id")
-      .notNull()
-      .references(() => githubInstallations.id, { onDelete: "restrict" }),
-    repoFullName: text("repo_full_name").notNull(),
-    cloneUrl: text("clone_url").notNull(),
-    defaultBranch: text("default_branch").notNull(),
+    githubInstallationId: uuid("github_installation_id").references(() => githubInstallations.id, {
+      onDelete: "restrict",
+    }),
+    repoFullName: text("repo_full_name"),
+    cloneUrl: text("clone_url"),
+    defaultBranch: text("default_branch"),
+    directory: text("directory"),
     name: text("name").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -36,6 +37,9 @@ export const projects = pgTable(
   (table) => [
     index("projects_organization_updated_idx").on(table.organizationId, table.updatedAt),
     index("projects_runtime_idx").on(table.runtimeId),
+    uniqueIndex("projects_runtime_directory_idx")
+      .on(table.runtimeId, table.directory)
+      .where(sql`${table.deletedAt} is null`),
     uniqueIndex("projects_org_repo_idx")
       .on(table.organizationId, table.repoFullName)
       .where(sql`${table.deletedAt} is null`),

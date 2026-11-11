@@ -1,6 +1,6 @@
 # The sandbox works for the host user's uid
 
-Status: accepted. Builds on 0009 and 0010 (a thread's sandbox is a container with the workspace mounted), 0016 (what limits the container) and 0043 (the setup container is where `sudo` works).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0009 and 0010 (a thread's sandbox is a container with the workspace mounted), 0016 (what limits the container) and 0043 (the setup container is where `sudo` works).
 
 ## Context
 

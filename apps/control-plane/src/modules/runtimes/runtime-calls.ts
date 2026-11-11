@@ -48,7 +48,16 @@ function answerBotCall<Params extends { replyId: string }, Result>(
 export async function answerRuntimeCall(
   method: CallMethod,
   params: unknown,
-  { findRun, findBotReply, store, repoAccess, skillArchive, mcpReport, forks }: RuntimeCallContext,
+  {
+    findRun,
+    findBotReply,
+    store,
+    repoAccess,
+    folderOf,
+    skillArchive,
+    mcpReport,
+    forks,
+  }: RuntimeCallContext,
 ) {
   if (method === "bot.memory") {
     return answerBotCall(params, parseBotMemoryParams, findBotReply, (reply, call) =>
@@ -115,6 +124,7 @@ export async function answerRuntimeCall(
   }
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
+  if (method === "repo.folder") return { directory: await folderOf(run.thread.id) };
   if (method === "skills.get") {
     const { digest } = parseSkillsGetParams(params);
     const archive = run.skills.has(digest) ? await skillArchive(digest) : undefined;

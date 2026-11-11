@@ -1,6 +1,6 @@
 # 0199: The Browser shows a port of the sandbox
 
-Status: accepted. Builds on 0015 and 0053 (a runner relays bytes between a sandbox and the browser as binary frames), 0039 (a person can wake a sandbox) and 0181 (a page the agent wrote runs apart from the app).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0015 and 0053 (a runner relays bytes between a sandbox and the browser as binary frames), 0039 (a person can wake a sandbox) and 0181 (a page the agent wrote runs apart from the app).
 
 ## Context
 

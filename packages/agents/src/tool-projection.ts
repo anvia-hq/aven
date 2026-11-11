@@ -13,7 +13,6 @@ import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
-import { SAVE_ENVIRONMENT_TOOL_NAME } from "./tools/save-environment";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
@@ -66,7 +65,6 @@ const SUMMARISED_TOOLS = new Set<string>([
   COMPUTER_STATUS_TOOL_NAME,
   COMPUTER_WAKE_TOOL_NAME,
   GIT_FETCH_TOOL_NAME,
-  SAVE_ENVIRONMENT_TOOL_NAME,
   WAIT_FOR_PROCESS_TOOL_NAME,
   WAIT_FOR_FORKS_TOOL_NAME,
 ]);

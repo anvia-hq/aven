@@ -10,7 +10,8 @@ import type { Project } from "../types";
 
 export function RepoReadme({ project }: { project: Project }) {
   const { readme, problem, loading } = useProjectReadme(project.id);
-  const { repoFullName: repo, defaultBranch: branch } = project;
+  const repo = project.repoFullName ?? "";
+  const branch = project.defaultBranch ?? "main";
 
   if (!loading && (!readme || problem !== undefined)) return null;
 

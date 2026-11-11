@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import {
+  addFolderBody,
   commitParams,
   commitsQuery,
   pullParams,
@@ -26,6 +27,11 @@ export const projectsRouter = (putAway: PutAwayThread) =>
       "/",
       ({ body, organizationId, user }) => projectsService.import(organizationId, user.id, body),
       { auth: true, org: true, body: importProjectBody },
+    )
+    .post(
+      "/folder",
+      ({ body, organizationId, user }) => projectsService.addFolder(organizationId, user.id, body),
+      { auth: true, org: true, body: addFolderBody },
     )
     .get(
       "/:id",

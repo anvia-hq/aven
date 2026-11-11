@@ -37,7 +37,7 @@ export function createThreadContinuation({
       if (old.runtimeId === runtimeId) {
         throw new ConflictError("This thread is on that runner already");
       }
-      const runner = await runtimesService.get(viewer.organizationId, runtimeId);
+      const runner = await runtimesService.get(viewer.organizationId, runtimeId, viewer.userId);
       if (!runner) throw new UnprocessableError("Runner not found");
       if (!hub.isOnline(runtimeId)) throw new ConflictError(`${runner.name} is offline`);
       if (runs.isRunning(old.id)) {

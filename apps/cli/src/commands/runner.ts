@@ -1,9 +1,10 @@
 import { startDetachedUpdate } from "../detached-update";
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
 
 import { stringFlag } from "../args";
-import { capture, dockerProblem, exec, run } from "../compose";
+import { capture, run } from "../compose";
 import { waitForHealthy } from "../health";
 import { logsDir, runnerEnvFile } from "../home";
 import { parseEnv } from "../env-file";
@@ -17,9 +18,6 @@ import type { Args, ServiceDefinition } from "../types";
 const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
 const manager = () => serviceManager(names);
 const logFile = () => join(logsDir(), "runner.log");
-
-const IMAGE_REPOSITORY = "ghcr.io/anvia-hq/aven-sandbox";
-const imageFor = (release: string) => `${IMAGE_REPOSITORY}:${release}`;
 
 function serviceDefinition(): ServiceDefinition {
   const env: Record<string, string> = {
@@ -41,7 +39,18 @@ async function storedSettings() {
   if (text === undefined) return undefined;
   const env = parseEnv(text);
   if (!env.AVEN_URL || !env.AVEN_RUNTIME_TOKEN) return undefined;
-  return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN };
+  return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN, dirs: env.AVEN_DIRS };
+}
+
+function folders(value: string | undefined) {
+  const dirs = (value ?? "")
+    .split(delimiter)
+    .map((dir) => dir.trim())
+    .filter(Boolean)
+    .map((dir) => resolve(dir));
+  if (dirs.length === 0) return [homedir()];
+  if (dirs.some((dir) => !isAbsolute(dir))) throw new Error("--dir needs absolute folders");
+  return dirs;
 }
 
 export async function runnerInstall(args: Args) {
@@ -50,7 +59,7 @@ export async function runnerInstall(args: Args) {
   const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN ?? stored?.token;
   if (!url || !token)
     throw new Error(
-      `Usage: aven runner install --url <control plane address> --token <token> (or AVEN_RUNTIME_TOKEN). The settings in ${runnerEnvFile()} are used when they are given nowhere.`,
+      `Usage: aven runner install --url <control plane address> --token <token> [--dir <folder[:folder]>] (or AVEN_RUNTIME_TOKEN). The settings in ${runnerEnvFile()} are used when they are given nowhere.`,
     );
   if (!/^https?:\/\//.test(url)) throw new Error("--url must start with http:// or https://");
   if (!token.startsWith("avrt_"))
@@ -58,22 +67,15 @@ export async function runnerInstall(args: Args) {
       "--token is not a runner token (they start with avrt_). Create one in Settings > Runtimes.",
     );
 
-  const problem = await dockerProblem();
-  if (problem) throw new Error(problem);
   if ((await capture(["git", "--version"])) === undefined)
-    throw new Error("git is not installed. A runner clones each project's repository with it.");
+    throw new Error("git is not installed. A runner works on its folders with it.");
+  const dirs = folders(stringFlag(args, "dir") ?? stored?.dirs);
 
   const base = url.replace(/\/$/, "");
   if (!(await waitForHealthy(`${base}/health`, { timeoutMs: 0 })))
     throw new Error(`Cannot reach the control plane at ${base}/health. Check the address.`);
 
-  const image = stringFlag(args, "image") ?? imageFor(version === "dev" ? "latest" : version);
-  if ((await exec(["docker", "image", "inspect", image])).code !== 0) {
-    console.log(`Pulling the sandbox image ${image} (several GB the first time)...`);
-    if ((await run(["docker", "pull", image])) !== 0) throw new Error(`Could not pull ${image}`);
-  }
-
-  await writeRunnerEnv(runnerEnvFile(), { url: base, token, image });
+  await writeRunnerEnv(runnerEnvFile(), { url: base, token, dirs });
   const logSize = (await stat(logFile()).catch(() => undefined))?.size ?? 0;
   const unit = await serviceUnitState({
     platform: process.platform,
@@ -139,30 +141,18 @@ export async function runnerLogs(follow: boolean) {
 export async function runnerUninstall() {
   await manager().uninstall();
   console.log(
-    `The runner service is removed. Its settings stay in ${runnerEnvFile()} and its sandboxes' files in the runtime home (AVEN_RUNTIME_HOME, ~/.aven/runtime by default).`,
+    `The runner service is removed. Its settings stay in ${runnerEnvFile()} and its threads' folders in the runtime home (AVEN_RUNTIME_HOME, ~/.aven/runtime by default).`,
   );
 }
 
-export async function runnerUpgrade(release: string) {
-  const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
-  if (text === undefined) return false;
-  const env = parseEnv(text);
-  if (
-    env.AVEN_URL &&
-    env.AVEN_RUNTIME_TOKEN &&
-    env.AVEN_SANDBOX_IMAGE?.startsWith(`${IMAGE_REPOSITORY}:`)
-  ) {
-    const image = imageFor(release);
-    if ((await exec(["docker", "image", "inspect", image])).code !== 0) {
-      console.log(`Pulling the sandbox image ${image}...`);
-      if ((await run(["docker", "pull", image])) !== 0) throw new Error(`Could not pull ${image}`);
-    }
-    await writeRunnerEnv(runnerEnvFile(), {
-      url: env.AVEN_URL,
-      token: env.AVEN_RUNTIME_TOKEN,
-      image,
-    });
-  }
+export async function runnerUpgrade() {
+  const stored = await storedSettings();
+  if (stored === undefined) return false;
+  await writeRunnerEnv(runnerEnvFile(), {
+    url: stored.url,
+    token: stored.token,
+    dirs: folders(stored.dirs),
+  });
   await manager().install(serviceDefinition());
   return true;
 }

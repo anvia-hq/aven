@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
+const API_URL = "http://localhost:8100";
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
@@ -49,7 +50,7 @@ test.describe("a person's photo", () => {
 
   test("refuses an oversized upload before reading it", async ({ page }) => {
     await registerUser(page, "photo", "Photo Person");
-    const response = await page.request.put("/api/profile/avatar", {
+    const response = await page.request.put(`${API_URL}/profile/avatar`, {
       data: Buffer.alloc(300 * 1024),
       headers: { "content-type": "image/png" },
     });

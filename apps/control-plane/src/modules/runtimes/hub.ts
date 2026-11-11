@@ -156,16 +156,8 @@ export class RuntimeConnection {
     if (run.cancel) this.post({ type: "run.cancel", runId, reason: run.cancel });
   }
 
-  openViewer(threadId: string, sink: ViewerSink) {
-    return this.#viewers.open(threadId, sink);
-  }
-
   openTerminal(threadId: string, size: { cols: number; rows: number }, sink: ViewerSink) {
     return this.#viewers.openTerminal(threadId, size, sink);
-  }
-
-  openPort(threadId: string, port: number, sink: ViewerSink) {
-    return this.#viewers.openPort(threadId, port, sink);
   }
 
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
@@ -184,7 +176,14 @@ export class RuntimeConnection {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
     if (message.type === "hello")
-      return this.#hello(message.version, message.runs, message.build, message.canUpdate);
+      return this.#hello(
+        message.version,
+        message.runs,
+        message.build,
+        message.canUpdate,
+        message.host,
+        message.dirs,
+      );
     if (!this.#ready) return;
     await this.#dispatch(message);
   }
@@ -199,12 +198,16 @@ export class RuntimeConnection {
     runs: string[],
     build: string | undefined,
     canUpdate: boolean | undefined,
+    host: boolean | undefined,
+    dirs: string[] | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
       this.#build = build;
       this.#canUpdate = canUpdate === true;
       void runtimesService.touch(this.runtimeId);
+      void runtimesService.setHost(this.runtimeId, host === true);
+      void runtimesService.setDirectories(this.runtimeId, dirs ?? []);
       this.hub.reclaim(this, runs);
       return;
     }
@@ -245,23 +248,11 @@ export class RuntimeConnection {
       case "call":
         await this.#answer(message.id, message.method, message.params);
         return;
-      case "desktop.opened":
-        this.#viewers.opened(message.viewerId, "desktop");
-        return;
-      case "desktop.closed":
-        this.#viewers.closed(message.viewerId, "desktop", message.reason);
-        return;
       case "terminal.opened":
         this.#viewers.opened(message.viewerId, "terminal");
         return;
       case "terminal.closed":
         this.#viewers.closed(message.viewerId, "terminal", message.reason);
-        return;
-      case "port.opened":
-        this.#viewers.opened(message.viewerId, "port");
-        return;
-      case "port.closed":
-        this.#viewers.closed(message.viewerId, "port", message.reason);
         return;
       case "reply":
         this.#calls.settle(message);
@@ -290,6 +281,7 @@ export class RuntimeConnection {
         findBotReply: (replyId) => this.#botReplies.get(replyId),
         store: this.hub.store,
         repoAccess: this.hub.repoAccess,
+        folderOf: this.hub.folderOf,
         skillArchive: this.hub.skillArchive,
         mcpReport: this.hub.mcpReport,
         forks: this.hub.forks,
@@ -340,6 +332,7 @@ export class RuntimeHub {
     readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined> = async () =>
       undefined,
     readonly mcpReport: (results: McpConnectResult[]) => Promise<void> = async () => undefined,
+    readonly folderOf: (threadId: string) => Promise<string | null> = async () => null,
   ) {}
 
   forks: ThreadForks = {

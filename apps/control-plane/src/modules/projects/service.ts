@@ -4,13 +4,21 @@ import { memoryNotes } from "@aven/db/schema/memory-notes";
 import { members } from "@aven/db/schema/members";
 import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
+import { basename, isAbsolute, normalize, sep } from "node:path";
+
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { ConflictError, ForbiddenError, orNotFound, UnprocessableError } from "../../errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  orNotFound,
+  UnprocessableError,
+} from "../../errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
-import type { ImportProjectBody, UpdateProjectBody } from "./schema";
+import type { AddFolderBody, ImportProjectBody, UpdateProjectBody } from "./schema";
 import type {
   GithubCommitFilters,
   GithubTrackedFilters,
@@ -21,6 +29,27 @@ import type {
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryNotFoundError extends UnprocessableError {}
 export class RepositoryAlreadyImportedError extends ConflictError {}
+export class FolderNotServedError extends UnprocessableError {}
+
+const insideServed = (served: readonly string[], path: string) =>
+  served.some((dir) => path === dir || path.startsWith(dir.endsWith(sep) ? dir : dir + sep));
+
+type GithubProject = {
+  githubInstallationId: string | null;
+  repoFullName: string | null;
+  defaultBranch: string | null;
+};
+
+function githubOf(project: GithubProject) {
+  if (!project.githubInstallationId || !project.repoFullName) {
+    throw new NotFoundError("This project is a folder on a computer, not a GitHub repository");
+  }
+  return {
+    installationId: project.githubInstallationId,
+    repo: project.repoFullName,
+    branch: project.defaultBranch ?? "main",
+  };
+}
 
 export const projectsService = {
   list: (organizationId: string) =>
@@ -63,7 +92,7 @@ export const projectsService = {
       .orderBy(desc(projects.updatedAt)),
 
   async import(organizationId: string, userId: string, body: ImportProjectBody) {
-    if (!(await runtimesService.get(organizationId, body.runtimeId))) {
+    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
     const repo = await githubService.repo(organizationId, body.installationId, body.repository);
@@ -87,6 +116,33 @@ export const projectsService = {
     return project;
   },
 
+  async addFolder(organizationId: string, userId: string, body: AddFolderBody) {
+    const runtime = await runtimesService.get(organizationId, body.runtimeId, userId);
+    if (!runtime) throw new RuntimeNotFoundError("Runner not found");
+    const path = normalize(body.path).replace(/[\\/]+$/, "") || sep;
+    if (!isAbsolute(path)) throw new FolderNotServedError("Give the folder as an absolute path");
+    if (!insideServed(runtime.directories, path)) {
+      throw new FolderNotServedError(
+        runtime.directories.length === 0
+          ? `${runtime.name} serves no folders: start its runner with --dir <folder>`
+          : `${runtime.name} does not serve that folder. It serves: ${runtime.directories.join(", ")}`,
+      );
+    }
+    const [project] = await db
+      .insert(projects)
+      .values({
+        organizationId,
+        createdBy: userId,
+        runtimeId: runtime.id,
+        directory: path,
+        name: body.name ?? (basename(path) || path),
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!project) throw new RepositoryAlreadyImportedError("This folder is already a project");
+    return project;
+  },
+
   async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {
     if (project.createdBy === userId || (await isOwnerOrAdmin(organizationId, userId))) return;
     throw new ForbiddenError(
@@ -97,7 +153,7 @@ export const projectsService = {
   async update(organizationId: string, userId: string, id: string, body: UpdateProjectBody) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     await projectsService.requireManager(organizationId, userId, project);
-    if (!(await runtimesService.get(organizationId, body.runtimeId))) {
+    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
     const [updated] = await db
@@ -131,16 +187,14 @@ export const projectsService = {
 
   async folder(organizationId: string, id: string, path: string) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
-    const entries = await githubService.folder(
-      project.githubInstallationId,
-      project.repoFullName,
-      path,
-    );
+    const github = githubOf(project);
+    const entries = await githubService.folder(github.installationId, github.repo, path);
     return { entries: orNotFound(entries, "Folder not found") };
   },
 
   async readme(organizationId: string, id: string) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    if (!project.githubInstallationId || !project.repoFullName) return { readme: null };
     return {
       readme: await githubService.readme(project.githubInstallationId, project.repoFullName),
     };
@@ -148,11 +202,12 @@ export const projectsService = {
 
   async commits(organizationId: string, id: string, page: number, filters?: GithubCommitFilters) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const github = githubOf(project);
     const found = await githubService.commits(
-      project.githubInstallationId,
-      project.repoFullName,
+      github.installationId,
+      github.repo,
       page,
-      project.defaultBranch,
+      github.branch,
       filters,
     );
     return { ...orNotFound(found, "Repository not found"), page };
@@ -167,9 +222,10 @@ export const projectsService = {
     filters?: GithubTrackedFilters,
   ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const github = githubOf(project);
     const found = await githubService.tracked(
-      project.githubInstallationId,
-      project.repoFullName,
+      github.installationId,
+      github.repo,
       kind,
       state,
       page,
@@ -180,28 +236,36 @@ export const projectsService = {
 
   async pull(organizationId: string, id: string, number: number) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const github = githubOf(project);
     return orNotFound(
-      await githubService.pull(project.githubInstallationId, project.repoFullName, number),
+      await githubService.pull(github.installationId, github.repo, number),
       "Pull request not found",
     );
   },
 
   async branches(organizationId: string, id: string) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
-    const found = await githubService.branches(
-      project.githubInstallationId,
-      project.repoFullName,
-      project.defaultBranch,
-    );
+    const github = githubOf(project);
+    const found = await githubService.branches(github.installationId, github.repo, github.branch);
     return orNotFound(found, "Repository not found");
   },
 
   async commit(organizationId: string, id: string, sha: string) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+    const github = githubOf(project);
     return orNotFound(
-      await githubService.commit(project.githubInstallationId, project.repoFullName, sha),
+      await githubService.commit(github.installationId, github.repo, sha),
       "Commit not found",
     );
+  },
+
+  async folderOf(threadId: string) {
+    const [row] = await db
+      .select({ directory: projects.directory })
+      .from(threads)
+      .innerJoin(projects, eq(projects.id, threads.projectId))
+      .where(eq(threads.id, threadId));
+    return row?.directory ?? null;
   },
 
   async repoAccess(threadId: string) {
@@ -217,6 +281,9 @@ export const projectsService = {
       .where(eq(threads.id, threadId));
     if (!row) throw new Error("Unknown thread");
     if (row.deletedAt) throw new Error("The thread's project was deleted");
+    if (!row.cloneUrl || !row.defaultBranch || !row.githubInstallationId) {
+      throw new Error("The thread's project is a folder on a computer, not a repository to clone");
+    }
     return {
       cloneUrl: row.cloneUrl,
       defaultBranch: row.defaultBranch,

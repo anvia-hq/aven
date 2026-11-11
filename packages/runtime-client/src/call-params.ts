@@ -2,15 +2,13 @@ import { asRecord } from "@aven/agents/values";
 import { DIFF_SCOPES } from "@aven/protocol/runtime-wire";
 import type {
   ArtifactsReadParams,
-  DesktopCallParams,
+  ComputerCallParams,
   DiffGetParams,
   DiffScope,
-  DockerRemoveParams,
   FilesCallParams,
   FilesSearchParams,
   MessageMention,
   ActionRunParams,
-  EnvironmentSaveParams,
   ProcessesCallParams,
   RunnerUpdateParams,
   SandboxReleaseParams,
@@ -26,19 +24,6 @@ export function diffGetParams(params: unknown): DiffGetParams {
   const { threadId, scope } = asRecord(params);
   if (typeof threadId !== "string" || !isDiffScope(scope)) throw invalid();
   return { threadId, scope };
-}
-
-const refs = (value: unknown) => {
-  if (!Array.isArray(value) || value.length > 500) throw invalid();
-  return value.map((item) => {
-    if (typeof item !== "string" || item === "" || item.length > 300) throw invalid();
-    return item;
-  });
-};
-
-export function dockerRemoveParams(params: unknown): DockerRemoveParams {
-  const { containers, images } = asRecord(params);
-  return { containers: refs(containers), images: refs(images) };
 }
 
 export function filesCallParams(params: unknown): FilesCallParams {
@@ -86,18 +71,10 @@ export function sandboxReleaseParams(params: unknown): SandboxReleaseParams {
   return { threadId };
 }
 
-export function desktopCallParams(
-  params: unknown,
-): DesktopCallParams & { force: boolean; bot: boolean } {
-  const { threadId, holder, leaseMs, force, bot } = asRecord(params);
+export function computerCallParams(params: unknown): ComputerCallParams & { bot: boolean } {
+  const { threadId, bot } = asRecord(params);
   if (typeof threadId !== "string") throw invalid();
-  return {
-    threadId,
-    holder: typeof holder === "string" ? holder : undefined,
-    leaseMs: typeof leaseMs === "number" ? leaseMs : undefined,
-    force: force === true,
-    bot: bot === true,
-  };
+  return { threadId, bot: bot === true };
 }
 
 export function steerParams(params: unknown): SteerParams {
@@ -106,13 +83,4 @@ export function steerParams(params: unknown): SteerParams {
     throw invalid();
   if (mentions !== undefined && !Array.isArray(mentions)) throw invalid();
   return { runId, steerId, prompt, mentions: mentions as MessageMention[] | undefined };
-}
-
-export function environmentSaveParams(params: unknown): EnvironmentSaveParams {
-  const { threadId, organizationId, access } = asRecord(params);
-  if (typeof threadId !== "string" || typeof organizationId !== "string") throw invalid();
-  const { cloneUrl, defaultBranch, token } = asRecord(access);
-  if (typeof cloneUrl !== "string" || typeof defaultBranch !== "string") throw invalid();
-  if (typeof token !== "string") throw invalid();
-  return { threadId, organizationId, access: { cloneUrl, defaultBranch, token } };
 }

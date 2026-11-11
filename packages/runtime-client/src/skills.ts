@@ -32,7 +32,7 @@ async function isInside(root: string, path: string) {
   return real !== undefined && real.startsWith(root + sep);
 }
 
-async function repositorySkills(threadId: string, workspace: string) {
+async function repositorySkills(threadId: string, workspace: string, shown: string) {
   const root = await realpath(workspace);
   const { skills, problems } = await readSkillFolders(join(root, REPO_SKILLS_DIR));
   for (const { folder, problem } of problems)
@@ -48,14 +48,17 @@ async function repositorySkills(threadId: string, workspace: string) {
     listed.push({
       name: skill.name,
       description: skill.description,
-      path: `${WORKSPACE_DIR}/${REPO_SKILLS_DIR}/${skill.name}/SKILL.md`,
+      path: `${shown}/${REPO_SKILLS_DIR}/${skill.name}/SKILL.md`,
     });
   }
   return listed;
 }
 
 export class SkillStore {
-  constructor(readonly root: string) {}
+  constructor(
+    readonly root: string,
+    readonly real = false,
+  ) {}
 
   async dir(threadId: string) {
     if (!/^[\w-]+$/.test(threadId)) throw new Error("Invalid thread id");
@@ -89,7 +92,9 @@ export class SkillStore {
         listed.set(read.skill.name, {
           name: read.skill.name,
           description: read.skill.description,
-          path: `${SKILLS_DIR}/${read.skill.name}/SKILL.md`,
+          path: this.real
+            ? join(dir, read.skill.name, "SKILL.md")
+            : `${SKILLS_DIR}/${read.skill.name}/SKILL.md`,
         });
       } catch (error) {
         console.warn(`Skill "${wanted.name}" is left out for ${threadId}: ${errorMessage(error)}`);
@@ -97,7 +102,11 @@ export class SkillStore {
     }
 
     if (workspace)
-      for (const skill of await repositorySkills(threadId, workspace))
+      for (const skill of await repositorySkills(
+        threadId,
+        workspace,
+        this.real ? await realpath(workspace) : WORKSPACE_DIR,
+      ))
         listed.set(skill.name, skill);
     return [...listed.values()].sort((a, b) => a.name.localeCompare(b.name));
   }

@@ -64,7 +64,7 @@ type BotInstructionsInput = {
 
 const TALK_ONLY = "You only talk: you have no files, commands or internet.";
 
-const COMPUTER = `You have a computer of your own: a Linux machine with a desktop, a shell and the internet. Its home is ${WORKSPACE_DIR}, which is kept from one chat to the next, so files you leave there are still there later.`;
+const COMPUTER = `You have a computer of your own: a folder on the person's machine, with a shell and the internet. Its home is ${WORKSPACE_DIR}, which is kept from one chat to the next, so files you leave there are still there later.`;
 
 const COMPUTER_SECTION = `
 

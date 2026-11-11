@@ -1,8 +1,16 @@
+import { delimiter } from "node:path";
+
+import { HostSandboxes } from "./host-sandboxes";
 import { startRuntime } from "./runner";
-import { Sandboxes, journalPathIn } from "./sandbox";
-import { sandboxConfigFromEnv } from "./sandbox-config";
+import { journalPathIn } from "./runtime-home";
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+export const servedFolders = (value: string | undefined) =>
+  (value ?? "")
+    .split(delimiter)
+    .map((dir) => dir.trim())
+    .filter(Boolean);
 
 export const runtimeConnectUrl = (base: string) =>
   `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;
@@ -30,9 +38,12 @@ export async function runRunner({
   process.on("SIGINT", () => void exit(0));
   process.on("SIGTERM", () => void exit(0));
 
-  let sandbox: Sandboxes;
+  let sandbox: HostSandboxes;
   try {
-    sandbox = await Sandboxes.start(sandboxConfigFromEnv());
+    sandbox = await HostSandboxes.start({
+      home: process.env.AVEN_RUNTIME_HOME || undefined,
+      dirs: servedFolders(process.env.AVEN_DIRS),
+    });
   } catch (error) {
     console.error(errorMessage(error));
     process.exit(1);
@@ -42,6 +53,8 @@ export async function runRunner({
     url: runtimeConnectUrl(base),
     token,
     build,
+    host: true,
+    dirs: sandbox.dirs,
     update,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),

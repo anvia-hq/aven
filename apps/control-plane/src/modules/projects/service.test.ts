@@ -13,6 +13,7 @@ import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "../threads/messages";
 import { threadsService } from "../threads/service";
 import {
+  FolderNotServedError,
   projectsService,
   RepositoryAlreadyImportedError,
   RepositoryNotFoundError,
@@ -46,6 +47,59 @@ run("projectsService (postgres)", async () => {
           description: null,
         }
       : null;
+  });
+
+  test("a project can be a folder that its runner serves", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });
+    await runtimesService.setDirectories(runtime.id, ["/home/me/code"]);
+
+    const project = await projectsService.addFolder(orgA, userId, {
+      runtimeId: runtime.id,
+      path: "/home/me/code/aven/",
+    });
+
+    expect(project).toMatchObject({
+      directory: "/home/me/code/aven",
+      name: "aven",
+      githubInstallationId: null,
+      repoFullName: null,
+    });
+    await expect(
+      projectsService.addFolder(orgA, userId, {
+        runtimeId: runtime.id,
+        path: "/home/me/code/aven",
+      }),
+    ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+    await expect(
+      projectsService.addFolder(orgA, userId, { runtimeId: runtime.id, path: "/home/me/other" }),
+    ).rejects.toBeInstanceOf(FolderNotServedError);
+    await expect(
+      projectsService.addFolder(orgA, userId, {
+        runtimeId: runtime.id,
+        path: "/home/me/code/../x",
+      }),
+    ).rejects.toBeInstanceOf(FolderNotServedError);
+    await expect(
+      projectsService.addFolder(orgA, userId, { runtimeId: runtime.id, path: "relative/dir" }),
+    ).rejects.toBeInstanceOf(FolderNotServedError);
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    expect(await projectsService.folderOf(thread.id)).toBe("/home/me/code/aven");
+    await expect(projectsService.repoAccess(thread.id)).rejects.toThrow("folder on a computer");
+    await expect(projectsService.readme(orgA, project.id)).resolves.toEqual({ readme: null });
+    await expect(projectsService.branches(orgA, project.id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  test("a runner's folders cannot be used through another person's private computer", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "private mac" });
+    await runtimesService.setHost(runtime.id, true);
+    await runtimesService.setDirectories(runtime.id, ["/srv/code"]);
+
+    await expect(
+      projectsService.addFolder(orgA, "someone-else", {
+        runtimeId: runtime.id,
+        path: "/srv/code/x",
+      }),
+    ).rejects.toBeInstanceOf(RuntimeNotFoundError);
   });
 
   afterAll(async () => {

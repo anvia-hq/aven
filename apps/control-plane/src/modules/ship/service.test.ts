@@ -78,27 +78,10 @@ function setup(
 }
 
 describe("whether a thread's repository is set up to ship (decision 0083)", () => {
-  test("is ready only with both the environment script and the way of shipping", async () => {
-    const both = setup({ has: [".aven/setup", ".aven/ship.md"] });
-    expect(await both.service.readiness("org-1", threadId)).toEqual({
-      ready: true,
-      setup: true,
-      ship: true,
-      appKey: "app-1",
-    });
-
-    const environment = setup({ has: [".aven/setup"] });
-    expect(await environment.service.readiness("org-1", threadId)).toEqual({
-      ready: false,
-      setup: true,
-      ship: false,
-      appKey: "app-1",
-    });
-
+  test("is ready with the way of shipping", async () => {
     const shipping = setup({ has: [".aven/ship.md"] });
     expect(await shipping.service.readiness("org-1", threadId)).toEqual({
-      ready: false,
-      setup: false,
+      ready: true,
       ship: true,
       appKey: "app-1",
     });
@@ -106,7 +89,6 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     const neither = setup();
     expect(await neither.service.readiness("org-1", threadId)).toEqual({
       ready: false,
-      setup: false,
       ship: false,
       appKey: "app-1",
     });

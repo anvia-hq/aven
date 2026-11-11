@@ -1,8 +1,9 @@
 import type { AgentPrompt, JsonValue, Message, UserContentPart } from "@anvia/core";
 
 import { mentionNote, mentionOf } from "./mentions";
+import { SANDBOX_PATHS } from "./sandbox-paths";
 import { asRecord } from "./values";
-import type { KeptAttachment, SentExtras } from "./types";
+import type { KeptAttachment, SandboxPaths, SentExtras } from "./types";
 import type { MessageAttachment, MessageMention } from "@aven/protocol/types";
 
 export const UPLOADS_DIR = "/uploads";
@@ -13,13 +14,13 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function attachmentNote(kept: readonly KeptAttachment[]) {
+function attachmentNote(kept: readonly KeptAttachment[], paths: SandboxPaths) {
   const lines = kept.map((file) => {
     const shown = file.image ? ", shown to you below" : "";
     return `- ${file.path} (${file.mediaType}, ${formatSize(file.size)}${shown})`;
   });
   return [
-    `The user attached ${kept.length === 1 ? "a file" : `${kept.length} files`}. They are in the sandbox, read-only, in ${UPLOADS_DIR}:`,
+    `The user attached ${kept.length === 1 ? "a file" : `${kept.length} files`}. They are on this machine, read-only, in ${paths.uploads}:`,
     ...lines,
   ].join("\n");
 }
@@ -30,14 +31,21 @@ function forTranscript({ name, mediaType, size, image }: KeptAttachment): Messag
 
 export function sentPrompt(
   prompt: string,
-  { attachments = [], images = new Map(), mentions = [], skills = [] }: SentExtras = {},
+  {
+    attachments = [],
+    images = new Map(),
+    mentions = [],
+    skills = [],
+    paths = SANDBOX_PATHS,
+  }: SentExtras = {},
 ): AgentPrompt {
   if (attachments.length === 0 && mentions.length === 0) return prompt;
   const content: UserContentPart[] = [];
   if (prompt) content.push({ type: "text", text: prompt });
-  const mentioned = mentionNote(mentions, skills);
+  const mentioned = mentionNote(mentions, skills, paths);
   if (mentioned) content.push({ type: "text", text: mentioned });
-  if (attachments.length > 0) content.push({ type: "text", text: attachmentNote(attachments) });
+  if (attachments.length > 0)
+    content.push({ type: "text", text: attachmentNote(attachments, paths) });
   for (const file of attachments) {
     const data = file.image && images.get(file.image);
     if (data)

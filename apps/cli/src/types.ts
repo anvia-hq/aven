@@ -17,7 +17,7 @@ export type ServerEnvOptions = {
 
 export type ExposureReport = { ok: boolean; detail: string };
 
-export type RunnerSettings = { url: string; token: string; image: string };
+export type RunnerSettings = { url: string; token: string; dirs: string[] };
 
 export type ServerPlanInput = {
   port?: string;

@@ -8,9 +8,10 @@ import { users } from "@aven/db/schema/users";
 import { isDriving } from "@aven/protocol/drivers";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
-import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
+import { runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
@@ -206,13 +207,19 @@ export const threadsService = {
   ) {
     const project = await projectsService.get(organizationId, body.projectId);
     if (!project) throw new ProjectNotFoundError("Project not found");
+    const runtimeId = placement?.runtimeId ?? project.runtimeId;
+    if (!(await runtimesService.get(organizationId, runtimeId, userId))) {
+      throw new ForbiddenError(
+        "This project runs on a computer that is private to its owner, who has not shared it",
+      );
+    }
     const [thread] = await db
       .insert(threads)
       .values({
         organizationId,
         projectId: project.id,
         createdBy: userId,
-        runtimeId: placement?.runtimeId ?? project.runtimeId,
+        runtimeId,
         parentThreadId: placement?.parentThreadId,
         title: body.title ?? project.name,
       })
@@ -231,7 +238,9 @@ export const threadsService = {
       thread.visibility === "workspace" &&
       isDriving(thread.drivingUntil) &&
       (await isMember(organizationId, thread.createdBy));
-    if (!driven) throw new ThreadNotFoundError();
+    if (!driven || (await runtimesService.isPrivateHost(thread.runtimeId))) {
+      throw new ThreadNotFoundError();
+    }
     return thread;
   },
 
@@ -249,6 +258,17 @@ export const threadsService = {
         throw new ConflictError(
           "Share the thread with the workspace before turning on multiplayer",
         );
+      }
+      if (driving !== null) {
+        const [placed] = await db
+          .select({ runtimeId: threads.runtimeId })
+          .from(threads)
+          .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
+        if (placed && (await runtimesService.isPrivateHost(placed.runtimeId))) {
+          throw new ConflictError(
+            "This thread runs on a computer that is private to its owner: share the computer with the workspace before turning on multiplayer",
+          );
+        }
       }
       if (driving !== null && !(await decisionModelService.get(organizationId))) {
         throw new ConflictError(

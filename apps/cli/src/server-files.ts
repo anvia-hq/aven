@@ -20,7 +20,6 @@ export function installEnvValues(args: Args, options: ServerEnvOptions) {
   const domain = stringFlag(args, "domain");
   const bind = stringFlag(args, "bind");
   const origin = stringFlag(args, "origin");
-  const browserOrigin = stringFlag(args, "browser-origin");
   const ownerEmail = stringFlag(args, "owner-email");
   const release = stringFlag(args, "release");
 
@@ -28,7 +27,6 @@ export function installEnvValues(args: Args, options: ServerEnvOptions) {
   if (httpsPort !== undefined) values.AVEN_HTTPS_PORT = httpsPort;
   if (apiPort !== undefined) values.AVEN_API_PORT = apiPort;
   if (bind !== undefined) values.AVEN_BIND = bind;
-  if (browserOrigin !== undefined) values.AVEN_BROWSER_ORIGIN = browserOrigin;
   if (domain !== undefined) values.AVEN_SITE_ADDRESS = domain;
   if (ownerEmail !== undefined) values.PLATFORM_OWNER_EMAILS = ownerEmail;
   if (release !== undefined) values.AVEN_VERSION = release;
