@@ -29,6 +29,7 @@ export function toolsForRun({
   computer,
 }: RunToolsInput): AnyTool[] {
   const gitFetch = createGitFetchTool(async (branch) => {
+    if (sandbox.fetchBranch) return sandbox.fetchBranch(thread.id, await repoAccess(), branch);
     const root = await sandbox.workspace(thread.id);
     if (!root) throw new Error("The thread has no workspace yet");
     return fetchBranch(root, await repoAccess(), branch);

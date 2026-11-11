@@ -1,7 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-
-import { forkChanges } from "./thread-diff";
+import { takeFork } from "./take-fork";
 import type { ForkHost } from "@aven/agents/tools/types";
 import type { ForkView, RuntimeCalls } from "@aven/protocol/types";
 import type { ThreadWorkspaces } from "./types";
@@ -10,11 +7,6 @@ type ForkCall = <M extends "fork.start" | "fork.status">(
   method: M,
   params: RuntimeCalls[M]["params"],
 ) => Promise<RuntimeCalls[M]["result"]>;
-
-const PATCHES = "aven-forks";
-
-const filesOf = (patch: string) =>
-  [...patch.matchAll(/^diff --git a\/.+ b\/(.+)$/gm)].map((match) => match[1]!);
 
 export function createForkHost({
   runId,
@@ -25,7 +17,7 @@ export function createForkHost({
 }: {
   runId: string;
   thread: { id: string };
-  sandbox: Pick<ThreadWorkspaces, "workspace" | "paths">;
+  sandbox: Pick<ThreadWorkspaces, "workspace" | "paths" | "takeFork">;
   call: ForkCall;
   redact?: (text: string) => string;
 }): ForkHost {
@@ -38,26 +30,7 @@ export function createForkHost({
     status,
     async take(id) {
       await status(id);
-      const forked = await sandbox.workspace(id);
-      if (!forked) throw new Error("The fork has no workspace on this runner");
-      const parent = await sandbox.workspace(thread.id);
-      if (!parent) throw new Error("This thread has no workspace yet");
-      const changes = await forkChanges(forked);
-      if (!changes) throw new Error("The fork's workspace was not made as a fork of this one");
-      if (changes.truncated) {
-        throw new Error(
-          "The fork's changes are too large to take as one patch: ask it to commit them in parts and say which files",
-        );
-      }
-      if (!changes.patch) return { empty: true };
-      const directory = join(parent, ".git", PATCHES);
-      await mkdir(directory, { recursive: true });
-      await writeFile(join(directory, `${id.slice(0, 8)}.patch`), changes.patch);
-      return {
-        empty: false,
-        patchPath: `${sandbox.paths?.(thread.id).workspace ?? "/workspace"}/.git/${PATCHES}/${id.slice(0, 8)}.patch`,
-        files: filesOf(changes.patch),
-      };
+      return sandbox.takeFork ? sandbox.takeFork(thread.id, id) : takeFork(sandbox, thread.id, id);
     },
   };
 }

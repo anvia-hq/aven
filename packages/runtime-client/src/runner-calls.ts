@@ -10,12 +10,14 @@ import {
   foldersListParams,
   foldersReadmeParams,
   filesSearchParams,
+  machineCallParams,
   processesCallParams,
   runnerUpdateParams,
   sandboxReleaseParams,
   steerParams,
 } from "./call-params";
 import { createFolder, listFolders } from "./folder-browser";
+import { createMachineCalls } from "./machine-calls";
 import { listCommits, listFiles, readReadme } from "./folder-contents";
 import { currentBranch, threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
@@ -38,6 +40,8 @@ export function createRunnerCalls({
   steer,
   dirs = [],
 }: RunnerCallsContext) {
+  const machineCall = createMachineCalls({ sandbox, boxes, idle });
+
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
     const root = await sandbox.workspace(threadId);
@@ -144,6 +148,7 @@ export function createRunnerCalls({
     if (method === "files.search") return searchOf(params);
     if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
       return processesOf(method, params);
+    if (method === "machine.call") return machineCall(machineCallParams(params));
     if (method === "sandbox.release") {
       const { threadId } = sandboxReleaseParams(params);
       return idle.releaseNow(threadId).then(async (released) => {

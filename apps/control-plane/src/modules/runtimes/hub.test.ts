@@ -160,6 +160,60 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect((await ask(ws, received, "repo.access", { runId: "run-git" })).ok).toBe(false);
   });
 
+  test("a run reaches the machine its thread names, for that thread only, and an offline one is said so", async () => {
+    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "m" });
+    const ws = await open(server.server?.port, token);
+    const received = inbox(ws);
+    await until(() => hub.isOnline(runtime.id));
+    const connection = hub.get(runtime.id)!;
+    const machine = crypto.randomUUID();
+    const reached: unknown[] = [];
+    const sent: unknown[] = [];
+    hub.machines = {
+      reach: async (place) => {
+        reached.push(place);
+        if (place.runtimeId !== machine) throw new Error("The computer is offline");
+        return {
+          call: async (method, params, timeoutMs) => {
+            sent.push({ method, params, timeoutMs });
+            return { path: "/home/aven/workspaces/t" };
+          },
+        };
+      },
+    };
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    const onMachine = { id: crypto.randomUUID(), organizationId: seed.orgA, machine };
+    const onItsRunner = { id: crypto.randomUUID(), organizationId: seed.orgA };
+    const elsewhere = { ...onMachine, id: crypto.randomUUID(), machine: crypto.randomUUID() };
+    connection.startRun("run-machine", onMachine, sink);
+    connection.startRun("run-own", onItsRunner, sink);
+    connection.startRun("run-away", elsewhere, sink);
+
+    const answered = await ask(ws, received, "machine.call", {
+      runId: "run-machine",
+      threadId: "someone-elses",
+      op: "exec",
+      args: { command: "ls", timeoutMs: 1000 },
+    });
+    expect(answered).toMatchObject({ ok: true, result: { path: "/home/aven/workspaces/t" } });
+    expect(reached).toEqual([{ runtimeId: machine, threadId: onMachine.id }]);
+    expect(sent).toEqual([
+      {
+        method: "machine.call",
+        params: { threadId: onMachine.id, op: "exec", args: { command: "ls", timeoutMs: 1000 } },
+        timeoutMs: 31_000,
+      },
+    ]);
+
+    const own = await ask(ws, received, "machine.call", { runId: "run-own", op: "workspace" });
+    expect(own).toMatchObject({ ok: false, error: "This run's tools act on its own runner" });
+    const offline = await ask(ws, received, "machine.call", { runId: "run-away", op: "workspace" });
+    expect(offline).toMatchObject({ ok: false, error: "The computer is offline" });
+    const unknownOp = await ask(ws, received, "machine.call", { runId: "run-machine", op: "rm" });
+    expect(unknownOp.ok).toBe(false);
+    expect(sent).toHaveLength(1);
+  });
+
   test("a runtime fetches only the skills of its own runs", async () => {
     const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name: "s" });
     const ws = await open(server.server?.port, token);

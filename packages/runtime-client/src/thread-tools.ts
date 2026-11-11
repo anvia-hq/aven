@@ -13,7 +13,7 @@ const READ_FILE_MAX_LINES = 10_000;
 
 export function sandboxTools(
   sandbox: SandboxRuntime,
-  thread: { id: string; artifacts: ArtifactStore },
+  thread: { id: string; artifacts: Pick<ArtifactStore, "save"> },
 ): readonly AnyTool[] {
   const own = createSandboxTools({
     sandbox,

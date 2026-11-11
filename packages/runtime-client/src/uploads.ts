@@ -1,4 +1,4 @@
-import { mkdir, open } from "node:fs/promises";
+import { mkdir, open, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { UPLOADS_DIR } from "@aven/agents/attachments";
 
@@ -24,6 +24,13 @@ export class UploadStore {
     const dir = join(this.root, threadId);
     await mkdir(dir, { recursive: true });
     return dir;
+  }
+
+  async put(threadId: string, name: string, bytes: Uint8Array) {
+    const dir = await this.dir(threadId);
+    const safe = safeFileName(name);
+    await writeFile(join(dir, safe), bytes);
+    return this.real ? join(dir, safe) : `${UPLOADS_DIR}/${safe}`;
   }
 
   async save(threadId: string, name: string, bytes: Uint8Array) {

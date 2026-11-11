@@ -6,6 +6,7 @@ import type {
   CockpitAccess,
   ComputerState,
   ControlPlaneToRuntime,
+  MachineOp,
   McpConnectResult,
   MessageMention,
   ProcessLogs,
@@ -35,6 +36,7 @@ import type {
   ProvidersHost,
   ScheduleHost,
   SendMessage,
+  TakenChanges,
   ThreadsHost,
   UpdateSelf,
 } from "@aven/agents/tools/types";
@@ -59,6 +61,7 @@ import type {
   DurableRun,
   DurableRuntime,
 } from "@anvia/durable";
+import type { SandboxRuntime } from "@anvia/sandbox";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
@@ -226,6 +229,7 @@ export interface AgentBackend {
 
 export type ThreadRef = {
   id: string;
+  machine?: string;
   organizationId?: string;
   forkOf?: string;
   projectId?: string;
@@ -372,6 +376,12 @@ export type RunnerCallsContext = {
   dirs?: string[];
 };
 
+export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
+
+export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
+
+export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
+
 export type RuntimeOptions = {
   url: string;
   token: string;
@@ -399,6 +409,7 @@ export type AcquireOptions = {
 
 export type ThreadSandbox = {
   tools: readonly AnyTool[];
+  runtime?: SandboxRuntime;
   hasRunningProcesses(): Promise<boolean>;
   processes: ThreadProcesses;
   start?(): Promise<void>;
@@ -416,7 +427,10 @@ export interface ThreadWorkspaces {
     sessionId: string,
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
-  paths?(threadId: string): SandboxPaths;
+  paths?(threadId: string): SandboxPaths | undefined;
+  markTurn?(threadId: string): Promise<boolean>;
+  fetchBranch?(threadId: string, access: RepoAccess, branch?: string): Promise<Fetched>;
+  takeFork?(threadId: string, forkId: string): Promise<TakenChanges>;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
   running?(): number;
@@ -427,9 +441,9 @@ export interface ThreadWorkspaces {
     controlPlane: string,
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
-  readonly artifacts?: ArtifactStore;
-  readonly uploads?: UploadStore;
-  readonly skills?: SkillStore;
+  readonly artifacts?: ThreadArtifacts;
+  readonly uploads?: Pick<UploadStore, "save"> & Partial<Pick<UploadStore, "put">>;
+  readonly skills?: Pick<SkillStore, "install">;
   dispose(): Promise<void>;
 }
 

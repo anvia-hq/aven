@@ -1,7 +1,13 @@
 import type { COCKPIT_KINDS, TASK_PRIORITIES, TASK_STATUSES } from "./cockpit";
 import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
-import type { AGENT_BACKENDS, DIFF_SCOPES, PROVIDERS, RUNTIME_PROVIDERS } from "./runtime-wire";
+import type {
+  AGENT_BACKENDS,
+  DIFF_SCOPES,
+  MACHINE_OPS,
+  PROVIDERS,
+  RUNTIME_PROVIDERS,
+} from "./runtime-wire";
 
 export type Bot = {
   id: string;
@@ -344,6 +350,7 @@ export type RunThreadInfo = {
   forkOf?: string;
   projectId?: string;
   ownerId?: string;
+  machine?: string;
 };
 
 export type Provider = (typeof PROVIDERS)[number];
@@ -433,6 +440,14 @@ export type SteerResult =
 
 export type SandboxCallMethod = "sandbox.release";
 
+export type MachineCallMethod = "machine.call";
+
+export type MachineOp = (typeof MACHINE_OPS)[number];
+
+export type MachineCallParams = { threadId: string; op: MachineOp; args?: unknown };
+
+export type MachineRelayParams = { runId: string; op: MachineOp; args?: unknown };
+
 export type RunnerSelfCallMethod =
   | "runner.update"
   | "folders.list"
@@ -502,6 +517,7 @@ export type RunnerCallMethod =
   | ActionsCallMethod
   | RunCallMethod
   | SandboxCallMethod
+  | MachineCallMethod
   | RunnerSelfCallMethod;
 
 export type DiffGetParams = { threadId: string; scope: DiffScope };
@@ -703,6 +719,7 @@ export type CallMethod =
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
+  | MachineCallMethod
   | BotCallMethod;
 
 export type RepoAccess = {
@@ -904,6 +921,7 @@ export type RuntimeCalls = {
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };
+  "machine.call": { params: MachineRelayParams; result: unknown };
 };
 
 export type ScheduleStatus = "started" | "late" | "busy" | "missed" | "failed";

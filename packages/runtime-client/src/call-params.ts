@@ -1,5 +1,5 @@
 import { asRecord } from "@aven/agents/values";
-import { DIFF_SCOPES } from "@aven/protocol/runtime-wire";
+import { DIFF_SCOPES, MACHINE_OPS } from "@aven/protocol/runtime-wire";
 import type {
   ArtifactsReadParams,
   ComputerCallParams,
@@ -12,6 +12,7 @@ import type {
   FoldersListParams,
   FoldersReadmeParams,
   FilesSearchParams,
+  MachineCallParams,
   MessageMention,
   ActionRunParams,
   ProcessesCallParams,
@@ -125,4 +126,12 @@ export function foldersCommitsParams(params: unknown): FoldersCommitsParams {
     throw invalid();
   }
   return { folder, page };
+}
+
+export function machineCallParams(params: unknown): MachineCallParams {
+  const { threadId, op, args } = asRecord(params);
+  if (typeof threadId !== "string" || !(MACHINE_OPS as readonly unknown[]).includes(op)) {
+    throw invalid();
+  }
+  return { threadId, op: op as MachineCallParams["op"], args };
 }

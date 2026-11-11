@@ -22,7 +22,7 @@ import {
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { connectRouter } from "../runtimes/connect";
 import { RuntimeHub } from "../runtimes/hub";
-import { runtimesService } from "../runtimes/service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { RunGateway } from "../runtimes/gateway";
 import { RemoteRuntime } from "./remote-runtime";
 import { RunBusyError, RunManager } from "./service";
@@ -52,7 +52,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
   const seed = await seedOrgPair();
   const server = new Elysia().use(connectRouter(hub)).listen({ port: 0 });
   const clients: { stop(): Promise<void> }[] = [];
-  let runtimeId: string | null = null;
 
   const managerWith = async (
     steps: ScriptStep[],
@@ -62,21 +61,20 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const onRunFinished = () => {
       finished++;
     };
-    const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, {
-      name: "loopback",
-    });
+    await Promise.all(clients.splice(0).map((client) => client.stop()));
+    await until(() => !hub.isOnline(LOCAL_RUNTIME_ID));
+    await runtimesService.ensureLocal();
     const workspaces = directoryWorkspaces((root) => writeFile(join(root, "a.txt"), "hello\n"));
     const client = startRuntime({
       url: `ws://localhost:${server.server!.port}/connect`,
-      token,
+      token: runtimesService.localToken,
       sandbox: workspaces,
       journalPath: journalPath(),
       createAgent: ({ id, tools }) => createCodingAgent({ id, tools, model, retries: false }),
     });
     clients.push(client);
     await client.ready;
-    await until(() => hub.isOnline(runtime.id));
-    runtimeId = runtime.id;
+    await until(() => hub.isOnline(LOCAL_RUNTIME_ID));
     return new RunManager({
       store,
       runtime: new RemoteRuntime(hub, scriptedGateway),
@@ -93,7 +91,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const thread = {
       id: crypto.randomUUID(),
       organizationId: "org-test",
-      runtimeId: runtimeId!,
+      runtimeId: LOCAL_RUNTIME_ID,
     };
     threads.push(thread);
     return thread;
@@ -380,7 +378,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     expect(kept.saved.get(thread.id)).toBe(said);
 
     const restarted = await managerWith([[text("fine now")]], { failures: kept.store });
-    const again: RunThread = { ...thread, runtimeId: runtimeId! };
+    const again = thread;
     const fresh = attach(restarted, again);
     await until(() => fresh.events.length > 0);
     expect(fresh.events[0]).toMatchObject({ type: "snapshot", error: said });
@@ -524,7 +522,9 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
 
   test("a thread whose runner is offline says so and persists nothing", async () => {
     const manager = await managerWith([]);
-    const offline = { ...newThread(), runtimeId: crypto.randomUUID() };
+    await Promise.all(clients.splice(0).map((client) => client.stop()));
+    await until(() => !hub.isOnline(LOCAL_RUNTIME_ID));
+    const offline = newThread();
     await expect(manager.start(offline, "hi")).rejects.toThrow("offline");
     await expect(manager.start(offline, "hi")).rejects.toBeInstanceOf(UnavailableError);
     expect(await manager.history(offline)).toEqual([]);

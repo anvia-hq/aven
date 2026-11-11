@@ -101,8 +101,13 @@ export type CallBotReply = {
   cockpit(params: Omit<BotCockpitParams, "command"> & { command: unknown }): Promise<string>;
 };
 
+export type MachineRelay = {
+  reach(place: ThreadPlace): Promise<Pick<RuntimeConnection, "call">>;
+};
+
 export type RuntimeCallContext = {
   forks: ThreadForks;
+  machines: MachineRelay;
   findRun(runId: string): CallRun | undefined;
   findBotReply(replyId: string): CallBotReply | undefined;
   store: MemoryStore;

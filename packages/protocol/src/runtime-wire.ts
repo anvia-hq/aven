@@ -12,6 +12,31 @@ export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 export const AGENT_BACKENDS = ["native"] as const;
 
 export const RUNTIME_PROVIDERS = ["manual"] as const;
+
+export const MACHINE_OPS = [
+  "prepare",
+  "workspace",
+  "paths",
+  "release",
+  "putAway",
+  "setProjectEnv",
+  "exec",
+  "readFile",
+  "readTextFilePage",
+  "writeFile",
+  "listFiles",
+  "startProcess",
+  "listProcesses",
+  "readProcessLogs",
+  "stopProcess",
+  "uploads.save",
+  "artifacts.keep",
+  "artifacts.save",
+  "skills.install",
+  "git.fetch",
+  "turn.mark",
+  "fork.take",
+] as const;
 export const ARTIFACT_MEDIA_TYPES = [
   "image/png",
   "image/jpeg",

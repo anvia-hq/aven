@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { BackendUnavailableError, type RuntimeHub } from "../runtimes/hub";
+import { BackendUnavailableError, RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { RemoteRuntime } from "./remote-runtime";
 import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
 
@@ -19,8 +20,15 @@ const identity = {
 };
 const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" };
 
-function runtime({ failPost = false, backends = ["native"] } = {}) {
+function runtime({
+  failPost = false,
+  backends = ["native"],
+  builtIn = true,
+  agentOnControlPlane = true,
+} = {}) {
   const posted: ControlPlaneToRuntime[] = [];
+  const asked: string[] = [];
+  const cancelled: string[] = [];
   const revoked: string[] = [];
   const issued: { runId: string; tokenOf: string | undefined }[] = [];
   const connection = {
@@ -32,7 +40,14 @@ function runtime({ failPost = false, backends = ["native"] } = {}) {
       posted.push(message);
     },
   };
-  const hub = { get: () => connection, cancelRun() {}, closeAll() {} } as unknown as RuntimeHub;
+  const hub = {
+    get: (runtimeId: string) => {
+      asked.push(runtimeId);
+      return runtimeId === LOCAL_RUNTIME_ID && !builtIn ? undefined : connection;
+    },
+    cancelRun: (runtimeId: string) => cancelled.push(runtimeId),
+    closeAll() {},
+  } as unknown as RuntimeHub;
   const identities = {
     issue: () => "avid_credential",
     revoke: (runId: string) => revoked.push(runId),
@@ -41,6 +56,8 @@ function runtime({ failPost = false, backends = ["native"] } = {}) {
     posted,
     revoked,
     issued,
+    asked,
+    cancelled,
     remote: new RemoteRuntime(
       hub,
       {
@@ -51,6 +68,7 @@ function runtime({ failPost = false, backends = ["native"] } = {}) {
         revoke() {},
       },
       identities,
+      agentOnControlPlane,
     ),
   };
 }
@@ -165,6 +183,51 @@ describe("a run's message to its runtime", () => {
       BackendUnavailableError,
     );
     expect(posted).toEqual([]);
+  });
+});
+
+describe("where a run's agent runs (decision 0222)", () => {
+  const sentThread = (posted: ControlPlaneToRuntime[]) =>
+    (posted[0] as Extract<ControlPlaneToRuntime, { type: "run.start" }>).thread;
+
+  test("on the control plane's runner, naming the thread's runtime as its machine", async () => {
+    const { posted, asked, cancelled, remote } = runtime();
+    const run = await remote.start({ thread, prompt: "go" } as never);
+    run.cancel("stop");
+
+    expect(asked).toEqual([LOCAL_RUNTIME_ID]);
+    expect(sentThread(posted)).toMatchObject({ id: thread.id, machine: thread.runtimeId });
+    expect(cancelled).toEqual([LOCAL_RUNTIME_ID]);
+  });
+
+  test("starts even when the machine is offline, but not when the control plane has no runner", async () => {
+    const { posted, remote } = runtime();
+    await remote.start({ thread, prompt: "go" } as never);
+    expect(posted).toHaveLength(1);
+
+    const without = runtime({ builtIn: false });
+    await expect(without.remote.start({ thread, prompt: "go" } as never)).rejects.toBeInstanceOf(
+      RuntimeOfflineError,
+    );
+  });
+
+  test("on its runtime's own runner when the control plane has no runner of its own (AVEN_LOCAL_RUNNER=off)", async () => {
+    const { posted, asked, cancelled, remote } = runtime({ agentOnControlPlane: false });
+    const run = await remote.start({ thread, prompt: "go" } as never);
+    run.cancel("stop");
+
+    expect(asked).toEqual([thread.runtimeId]);
+    expect(sentThread(posted).machine).toBeUndefined();
+    expect(cancelled).toEqual([thread.runtimeId]);
+  });
+
+  test("a thread on the control plane's own runtime runs there, naming no machine", async () => {
+    const { posted, remote } = runtime();
+    await remote.start({
+      thread: { ...thread, runtimeId: LOCAL_RUNTIME_ID },
+      prompt: "go",
+    } as never);
+    expect(sentThread(posted).machine).toBeUndefined();
   });
 });
 
