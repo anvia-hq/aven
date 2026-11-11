@@ -52,3 +52,14 @@ describe("UploadStore", () => {
     expect(store().dir("../t1")).rejects.toThrow("Invalid thread id");
   });
 });
+
+describe("UploadStore.put", () => {
+  test("writes a file under the name it is given, and again when it is sent twice", async () => {
+    const uploads = store();
+    const first = await uploads.put("t1", "notes-1a2b.txt", new TextEncoder().encode("one"));
+    const again = await uploads.put("t1", "notes-1a2b.txt", new TextEncoder().encode("one"));
+
+    expect(again).toBe(first);
+    expect(await readdir(await uploads.dir("t1"))).toEqual(["notes-1a2b.txt"]);
+  });
+});

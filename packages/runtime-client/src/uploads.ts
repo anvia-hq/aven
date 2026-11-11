@@ -29,7 +29,7 @@ export class UploadStore {
   async put(threadId: string, name: string, bytes: Uint8Array) {
     const dir = await this.dir(threadId);
     const safe = safeFileName(name);
-    await writeFile(join(dir, safe), bytes, { flag: "wx" });
+    await writeFile(join(dir, safe), bytes);
     return this.real ? join(dir, safe) : `${UPLOADS_DIR}/${safe}`;
   }
 

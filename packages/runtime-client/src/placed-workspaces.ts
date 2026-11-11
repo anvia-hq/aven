@@ -84,8 +84,8 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
     return takeFork(workspaces, threadId, forkId);
   }
 
-  release(threadId: string) {
-    return this.#of(threadId).release(threadId);
+  async release(threadId: string) {
+    await Promise.all([this.host.release(threadId), this.machines.release(threadId)]);
   }
 
   async putAway(threadId: string) {

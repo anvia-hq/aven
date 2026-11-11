@@ -30,6 +30,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   #env = new Map<string, Readonly<Record<string, string>>>();
   #images = new Map<string, Map<string, ArtifactContent>>();
   #waiting = new Map<string, Waiting[]>();
+  #flushing = new Set<string>();
 
   constructor(private callFor: (threadId: string) => MachineCall) {}
 
@@ -94,6 +95,16 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     this.#waiting.delete(threadId);
   }
 
+  #flush(threadId: string, call: MachineCall) {
+    if (!this.#waiting.has(threadId) || this.#flushing.has(threadId)) return;
+    this.#flushing.add(threadId);
+    this.#deliver(threadId, call)
+      .catch((error: unknown) => {
+        console.warn(`Files kept for ${threadId} are still waiting:`, errorMessage(error));
+      })
+      .finally(() => this.#flushing.delete(threadId));
+  }
+
   readonly skills = {
     install: async (threadId: string, skills: readonly RunSkill[], fetch: FetchSkill) => {
       const call = this.callFor(threadId);
@@ -119,7 +130,12 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
     { folder }: AcquireOptions = {},
   ): Promise<ThreadSandbox> {
-    const call = this.callFor(thread.id);
+    const raw = this.callFor(thread.id);
+    const call: MachineCall = async (op, args) => {
+      const result = await raw(op, args);
+      this.#flush(thread.id, raw);
+      return result;
+    };
     let preparing: Promise<void> | undefined;
     const start = () =>
       (preparing ??= (async () => {
@@ -130,7 +146,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
           folder: folder ? await folder() : null,
         })) as { paths: SandboxPaths | null };
         if (prepared.paths) this.#paths.set(thread.id, prepared.paths);
-        await this.#deliver(thread.id, call);
+        await this.#deliver(thread.id, raw);
       })().catch((error: unknown) => {
         preparing = undefined;
         throw error;

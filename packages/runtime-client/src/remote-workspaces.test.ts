@@ -167,4 +167,43 @@ describe("an agent whose computer is another machine", () => {
       await readFile(join(sandbox.paths("t1").workspace, ".git/aven-forks/abcdef12.patch"), "utf8"),
     ).toContain("+new");
   });
+
+  test("a file kept while the machine was offline is written once the machine answers any call, even after the folder was prepared", async () => {
+    let up = true;
+    const { sandbox, agent } = await machineAndAgent({ online: () => up });
+    const { access } = await createRemoteRepo();
+    const box = await agent.acquire({ id: "t1" }, async () => access);
+    await box.start?.();
+    up = false;
+    const path = await agent.uploads.save("t1", "late.txt", new TextEncoder().encode("late"));
+    up = true;
+
+    await box.runtime!.exec({ command: "true" });
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    await until(async () =>
+      readFile(join(sandbox.paths("t1").uploads, name), "utf8").then(
+        (text) => text === "late",
+        () => false,
+      ),
+    );
+  });
+
+  test("forgets what it kept for a thread when the thread is released", async () => {
+    const { agent } = await machineAndAgent();
+    const image = `${crypto.randomUUID()}.png`;
+    await agent.artifacts.keep("t1", image, new TextEncoder().encode("picture"));
+    expect(await agent.artifacts.read("t1", image)).not.toBeNull();
+
+    await agent.release("t1");
+
+    expect(await agent.artifacts.read("t1", image)).toBeNull();
+  });
 });
+
+async function until(check: () => Promise<boolean>) {
+  const deadline = Date.now() + 3000;
+  while (!(await check())) {
+    if (Date.now() > deadline) throw new Error("timed out");
+    await Bun.sleep(20);
+  }
+}

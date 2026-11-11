@@ -31,7 +31,7 @@ So a machine keeps a runner that answers calls, and the agent moves.
 - What acts on a machine outside the tool set moves to calls too: `git_fetch` (`fetch-branch.ts`), preparing a thread's folder (`repo.access`, `git-clone.ts`), uploads written to a thread's folder, the mark a turn starts from (`markTurn`), and a fork's copy of its parent's folder (`fork-workspace.ts`).
 - An MCP server is reached from where the agent runs. A run on the control plane reaches none at a private or local address (`allowLocal` is off for it), or it could reach the control plane's own network.
 - Secrets stay off the machine's disk as now: a run's variables go with each command, merged where the agent runs (`withProjectEnv`), and the machine's runner keeps them in memory only, for its Terminal.
-- Bot replies (`bot-replies.ts`) run their agent on the runner too, and move the same way.
+- Bot replies (`bot-replies.ts`) run their agent on the runner too, and would move the same way; they have not yet (see "What is not done yet").
 - It is not opt-in: every native run moves at once, since Aven has no installs to keep as they were. A runner from before this answers no `machine.*` calls, so its tools fail until it is updated (`aven update`).
 
 ## What is built
