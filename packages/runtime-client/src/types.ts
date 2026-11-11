@@ -60,8 +60,8 @@ import type {
 } from "@anvia/durable";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import type { RunOutbox } from "./run-outbox";
-import type { DurableRuns } from "./durable-runs";
 import type { RunRecords } from "./run-records";
 import type { IdleRelease } from "./idle-release";
 import type { ProcessEndWatch } from "./process-end-watch";
@@ -193,6 +193,38 @@ export type FollowedRun = {
   cancel(): Promise<void>;
 };
 
+export type AgentBackendKind = "native";
+
+export type AskedRun = { runId: string; agentId: string };
+
+export type AskedQuestion = { id: string; toolCallId: string };
+
+export interface AgentBackend {
+  readonly kind: AgentBackendKind;
+  asked(threadId: string): Promise<AskedRun | undefined>;
+  start(
+    runId: string,
+    threadId: string,
+    prompt: AgentPrompt,
+    input: RunInput,
+    onEvent: Emit,
+  ): Promise<FollowedRun>;
+  rejoin(durableId: string, input: RunInput, after: number, onEvent: Emit): Promise<FollowedRun>;
+  answer(
+    asked: AskedRun,
+    question: AskedQuestion,
+    response: AgentInteractionResponse,
+    restore: () => RunInput,
+    onEvent: Emit,
+  ): Promise<FollowedRun>;
+  steer(durableId: string, prompt: AgentPrompt, requestId: string): Promise<boolean>;
+  startGoal(goal: GoalSpec): Promise<FollowedGoal>;
+  transcriptTurn(durableId: string, end: Exclude<DurableEnd, { type: "error" }>): number;
+  unfinishedMessages(durableId: string): Promise<Message[]>;
+  cancelRun(durableId: string): Promise<void>;
+  close(): Promise<void>;
+}
+
 export type ThreadRef = {
   id: string;
   organizationId?: string;
@@ -264,7 +296,7 @@ export type CreateRuntimeAgent = (input: {
 export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
 
 export type DriverContext = {
-  journal: Promise<DurableRuns>;
+  backend: Promise<AgentBackend>;
   records: RunRecords;
   outbox: RunOutbox;
   sandbox: ThreadWorkspaces;

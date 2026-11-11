@@ -21,6 +21,7 @@ import { assertDurableToolConcurrency } from "./durable-tool-concurrency";
 import { openRunDatabase } from "./run-outbox";
 import type { SandboxToolName } from "@aven/agents/types";
 import type {
+  AgentBackend,
   DurableEnd,
   Emit,
   FollowedGoal,
@@ -103,7 +104,8 @@ const INTERRUPTED =
 
 const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 };
 
-export class DurableRuns {
+export class DurableRuns implements AgentBackend {
+  readonly kind = "native";
   #runtime: DurableRuntime;
   #goals: GoalJournal;
   #turns: TranscriptTurns;
