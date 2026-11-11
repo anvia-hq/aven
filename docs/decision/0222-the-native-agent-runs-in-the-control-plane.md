@@ -52,3 +52,5 @@ So a machine keeps a runner that answers calls, and the agent moves.
 - Bot replies still run on the bot's runner.
 - A runner from before this answers `machine.call` with "Unknown call", which the agent reads as its tool failing; the platform does not yet say that the machine's runner needs updating.
 - The platform does not show a tool call that failed because the machine was offline apart from the tool's own error.
+- A fork on a machine is tested by its parts (`remote-workspaces.test.ts`), not end to end through an agent that forks and takes the changes.
+- The Playwright suite runs with `AVEN_LOCAL_RUNNER=off`, so its runs stay on their runner's own agent and none of it covers an agent on the control plane; only `remote-machine.test.ts` does.
