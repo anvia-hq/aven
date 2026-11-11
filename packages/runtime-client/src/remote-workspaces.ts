@@ -30,7 +30,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   #env = new Map<string, Readonly<Record<string, string>>>();
   #images = new Map<string, Map<string, ArtifactContent>>();
   #waiting = new Map<string, Waiting[]>();
-  #flushing = new Set<string>();
+  #delivering = new Map<string, Promise<void>>();
 
   constructor(private callFor: (threadId: string) => MachineCall) {}
 
@@ -85,24 +85,30 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     this.#waiting.set(threadId, list);
   }
 
-  async #deliver(threadId: string, call: MachineCall) {
-    const waiting = this.#waiting.get(threadId) ?? [];
-    while (waiting.length) {
-      const { op, args } = waiting[0]!;
-      await call(op, args);
+  #deliver(threadId: string, call: MachineCall) {
+    const earlier = this.#delivering.get(threadId) ?? Promise.resolve();
+    const delivery = earlier.catch(() => undefined).then(() => this.#drain(threadId, call));
+    this.#delivering.set(threadId, delivery);
+    return delivery.finally(() => {
+      if (this.#delivering.get(threadId) === delivery) this.#delivering.delete(threadId);
+    });
+  }
+
+  async #drain(threadId: string, call: MachineCall) {
+    const waiting = this.#waiting.get(threadId);
+    while (waiting?.length) {
+      const next = waiting[0]!;
+      await call(next.op, next.args);
       waiting.shift();
     }
     this.#waiting.delete(threadId);
   }
 
   #flush(threadId: string, call: MachineCall) {
-    if (!this.#waiting.has(threadId) || this.#flushing.has(threadId)) return;
-    this.#flushing.add(threadId);
-    this.#deliver(threadId, call)
-      .catch((error: unknown) => {
-        console.warn(`Files kept for ${threadId} are still waiting:`, errorMessage(error));
-      })
-      .finally(() => this.#flushing.delete(threadId));
+    if (!this.#waiting.has(threadId) || this.#delivering.has(threadId)) return;
+    this.#deliver(threadId, call).catch((error: unknown) => {
+      console.warn(`Files kept for ${threadId} are still waiting:`, errorMessage(error));
+    });
   }
 
   readonly skills = {

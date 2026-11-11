@@ -188,6 +188,29 @@ describe("an agent whose computer is another machine", () => {
     );
   });
 
+  test("several files kept while the machine was offline are all written, though the folder's preparation and another call both deliver them", async () => {
+    let up = false;
+    const { sandbox, agent } = await machineAndAgent({ online: () => up });
+    const { access } = await createRemoteRepo();
+    const names = await Promise.all(
+      ["a.txt", "b.txt", "c.txt"].map(async (name) =>
+        (await agent.uploads.save("t1", name, new TextEncoder().encode(name))).split("/").pop()!,
+      ),
+    );
+    const box = await agent.acquire({ id: "t1" }, async () => access);
+    up = true;
+
+    await Promise.all([box.start?.(), box.runtime!.exec({ command: "true" })]);
+
+    await until(async () =>
+      (
+        await Promise.all(
+          names.map((name) => Bun.file(join(sandbox.paths("t1").uploads, name)).exists()),
+        )
+      ).every(Boolean),
+    );
+  });
+
   test("forgets what it kept for a thread when the thread is released", async () => {
     const { agent } = await machineAndAgent();
     const image = `${crypto.randomUUID()}.png`;
