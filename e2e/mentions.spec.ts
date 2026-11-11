@@ -68,7 +68,7 @@ test.describe("mentions in the composer", () => {
     await page.keyboard.type("/setup");
 
     const menu = page.getByRole("listbox", { name: "Mention" });
-    for (const skill of ["setup-env", "setup-ship", "setup-actions"]) {
+    for (const skill of ["setup-ship", "setup-actions"]) {
       await expect(
         menu.getByRole("option").filter({ has: page.getByText(skill, { exact: true }) }),
       ).toBeVisible();

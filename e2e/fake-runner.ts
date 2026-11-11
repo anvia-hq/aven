@@ -1,6 +1,5 @@
 import { WIRE_VERSION } from "../packages/protocol/src/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
-import { FakeDesktop, HEIGHT, WIDTH } from "./fake-desktop";
 import { readFakeRunnerConfig } from "./fake-runner-config";
 import type { ControlPlaneToRuntime } from "../packages/protocol/src/types";
 import type { FakeRunnerRun } from "./types";
@@ -56,68 +55,9 @@ const ws = new WebSocket(`${base.replace(/^http/, "ws").replace(/\/$/, "")}/runt
   headers: { authorization: `Bearer ${token}` },
 } as unknown as string[]);
 ws.binaryType = "arraybuffer";
-const viewers = new Map<string, FakeDesktop>();
 const terminals = new Map<string, { line: string }>();
-const ports = new Map<string, { request: string; answered: boolean }>();
-const realPorts = new Map<string, { write(bytes: Uint8Array): number; end(): void }>();
 
 const send = (message: object) => ws.send(JSON.stringify(message));
-
-const FAKE_APP_PORT = 3000;
-
-function serveFakeApp(
-  viewerId: string,
-  port: { request: string; answered: boolean },
-  bytes: string,
-) {
-  port.request += bytes;
-  const end = port.request.indexOf("\r\n\r\n");
-  if (end < 0 || port.answered) return;
-  port.answered = true;
-  const [line = "", ...lines] = port.request.slice(0, end).split("\r\n");
-  const header = (name: string) =>
-    lines
-      .find((entry) => entry.toLowerCase().startsWith(`${name}:`))
-      ?.slice(name.length + 1)
-      .trim() ?? "";
-  const path = line.split(" ")[1] ?? "/";
-  event({ type: "port.request", path, host: header("host"), cookie: header("cookie") });
-  const respond = (status: string, headers: Record<string, string>, body: string) => {
-    const head = Object.entries({
-      ...headers,
-      "Content-Length": String(text(body).length),
-      Connection: "close",
-    })
-      .map(([name, value]) => `${name}: ${value}`)
-      .join("\r\n");
-    ws.send(encodeViewerFrame(viewerId, text(`HTTP/1.1 ${status}\r\n${head}\r\n\r\n${body}`)));
-    setTimeout(() => {
-      if (ports.delete(viewerId)) {
-        send({ type: "port.closed", viewerId, reason: "The port closed the connection" });
-      }
-    }, 20);
-  };
-  if (path === "/") {
-    respond(
-      "200 OK",
-      {
-        "Content-Type": "text/html",
-        "Set-Cookie": "theme=dark; Path=/",
-        "X-Frame-Options": "DENY",
-        "Strict-Transport-Security": "max-age=63072000",
-      },
-      `<!doctype html><title>Sandbox app</title><h1>Hello from the sandbox</h1><p id="out">loading</p><pre id="seen">host=${header("host")} cookie=${header("cookie")}</pre><a id="old" href="/old">old</a><script src="/app.js"></script>`,
-    );
-  } else if (path === "/app.js") {
-    respond(
-      "200 OK",
-      { "Content-Type": "application/javascript" },
-      "document.getElementById('out').textContent = 'script ran on ' + location.origin;",
-    );
-  } else if (path === "/old") {
-    respond("302 Found", { Location: `http://localhost:${FAKE_APP_PORT}/` }, "");
-  } else respond("404 Not Found", { "Content-Type": "text/plain" }, "not here");
-}
 
 const seqs = new Map<string, number>();
 const streamed = new Map<string, number>();
@@ -128,11 +68,8 @@ const numbered = (runId: string) => {
   return seq;
 };
 
-type Lease = { holder: string; expiresAt: string };
-
 type Sandbox = {
   running: boolean;
-  lease: Lease | null;
 };
 
 const sandboxes = new Map<string, Sandbox>();
@@ -140,7 +77,7 @@ const sandboxes = new Map<string, Sandbox>();
 function sandboxFor(threadId: string): Sandbox {
   const known = sandboxes.get(threadId);
   if (known) return known;
-  const made: Sandbox = { running: config.sandboxStartsRunning, lease: null };
+  const made: Sandbox = { running: config.sandboxStartsRunning };
   sandboxes.set(threadId, made);
   return made;
 }
@@ -159,19 +96,8 @@ ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
     if (!frame) return;
-    const real = realPorts.get(frame.viewerId);
-    if (real) {
-      real.write(frame.payload);
-      return;
-    }
-    const port = ports.get(frame.viewerId);
-    if (port) {
-      serveFakeApp(frame.viewerId, port, new TextDecoder().decode(frame.payload));
-      return;
-    }
     const terminal = terminals.get(frame.viewerId);
-    if (!terminal) viewers.get(frame.viewerId)?.feed(frame.payload);
-    else {
+    if (terminal) {
       const reply = (value: string) => ws.send(encodeViewerFrame(frame.viewerId, text(value)));
       for (const char of new TextDecoder().decode(frame.payload)) {
         if (char === "\r") {
@@ -186,20 +112,7 @@ ws.onmessage = ({ data }) => {
     return;
   }
   const message = JSON.parse(String(data)) as ControlPlaneToRuntime;
-  if (message.type === "desktop.open") {
-    const { viewerId, threadId } = message;
-    if (!sandboxFor(threadId).running) {
-      send({ type: "desktop.closed", viewerId, reason: "The sandbox is not running" });
-      return;
-    }
-    send({ type: "desktop.opened", viewerId });
-    viewers.set(
-      viewerId,
-      new FakeDesktop((bytes) => ws.send(encodeViewerFrame(viewerId, bytes)), event),
-    );
-  } else if (message.type === "desktop.close") {
-    viewers.delete(message.viewerId);
-  } else if (message.type === "terminal.open") {
+  if (message.type === "terminal.open") {
     const { viewerId, threadId, cols, rows } = message;
     if (!sandboxFor(threadId).running) {
       send({ type: "terminal.closed", viewerId, reason: "The sandbox is not running" });
@@ -213,49 +126,6 @@ ws.onmessage = ({ data }) => {
     event({ type: "terminal.resize", cols: message.cols, rows: message.rows });
   } else if (message.type === "terminal.close") {
     terminals.delete(message.viewerId);
-  } else if (message.type === "port.open") {
-    const { viewerId, threadId, port } = message;
-    if (!sandboxFor(threadId).running) {
-      send({ type: "port.closed", viewerId, reason: "The sandbox is not running" });
-      return;
-    }
-    event({ type: "port.open", port });
-    if (config.realPort !== undefined && port === config.realPort) {
-      void Bun.connect({
-        hostname: "127.0.0.1",
-        port,
-        socket: {
-          data: (_socket, bytes) => ws.send(encodeViewerFrame(viewerId, new Uint8Array(bytes))),
-          close: () => {
-            if (realPorts.delete(viewerId)) {
-              send({ type: "port.closed", viewerId, reason: "The port closed the connection" });
-            }
-          },
-          error: () => {
-            if (realPorts.delete(viewerId)) {
-              send({ type: "port.closed", viewerId, reason: "connection refused" });
-            }
-          },
-        },
-      }).then(
-        (socket) => {
-          realPorts.set(viewerId, socket);
-          send({ type: "port.opened", viewerId });
-        },
-        () => send({ type: "port.closed", viewerId, reason: "connection refused" }),
-      );
-      return;
-    }
-    if (port !== FAKE_APP_PORT) {
-      send({ type: "port.closed", viewerId, reason: "connection refused" });
-      return;
-    }
-    ports.set(viewerId, { request: "", answered: false });
-    send({ type: "port.opened", viewerId });
-  } else if (message.type === "port.close") {
-    ports.delete(message.viewerId);
-    realPorts.get(message.viewerId)?.end();
-    realPorts.delete(message.viewerId);
   } else if (message.type === "call") {
     answer(message);
   } else if (message.type === "run.cancel") {
@@ -507,7 +377,6 @@ type PretendProcess = {
   endedAt?: string;
 };
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-let savedSnapshotAt: string | null = null;
 const PROCESSES: PretendProcess[] = config.backgroundProcesses
   ? [
       { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
@@ -527,7 +396,7 @@ const PROCESS_LOGS: Record<string, string> = {
 };
 
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
-  const params = call.params as { threadId?: string; holder?: string; leaseMs?: number };
+  const params = call.params as { threadId?: string };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
   if (call.method === "run.steer") {
     const { runId, steerId, prompt } = call.params as {
@@ -592,23 +461,6 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     PROCESS_LOGS[started.id] = failing ? "src/greeting.ts(2,3): error TS2322\n" : "7 pass\n";
     return reply({ process: started });
   }
-  if (call.method === "environment.read") {
-    const { snapshotSavedMinutesAgo } = config;
-    const savedAt =
-      savedSnapshotAt ??
-      (snapshotSavedMinutesAgo === undefined ? null : ago(snapshotSavedMinutesAgo * 60_000));
-    return reply({ savedAt });
-  }
-  if (call.method === "environment.save") {
-    const { snapshotFailure } = config;
-    setTimeout(() => {
-      if (snapshotFailure)
-        return send({ type: "reply", id: call.id, ok: false, error: snapshotFailure });
-      savedSnapshotAt = new Date().toISOString();
-      reply({ image: "aven-env-fake" });
-    }, 700);
-    return;
-  }
   if (call.method === "processes.list") return reply({ processes: PROCESSES });
   if (call.method === "processes.stop") {
     const { processId } = call.params as { processId: string };
@@ -632,31 +484,12 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     event({ type: "sandbox.release", threadId });
     const released = sandboxFor(threadId);
     released.running = false;
-    released.lease = null;
     return reply({ released: true });
   }
   const sandbox = sandboxFor(params.threadId ?? "");
-  if (call.method === "desktop.wake") sandbox.running = true;
+  if (call.method === "computer.wake") sandbox.running = true;
   if (!sandbox.running) return reply(null);
-  if (call.method === "desktop.takeover") {
-    sandbox.lease = {
-      holder: params.holder!,
-      expiresAt: new Date(Date.now() + params.leaseMs!).toISOString(),
-    };
-    event({ type: "takeover", holder: sandbox.lease.holder });
-    return reply({ held: true, ...sandbox.lease });
-  }
-  if (call.method === "desktop.release") {
-    sandbox.lease = null;
-    event({ type: "release", holder: params.holder });
-    return reply({ held: false });
-  }
-  reply({
-    state: "running",
-    width: WIDTH,
-    height: HEIGHT,
-    control: sandbox.lease ? { held: true, ...sandbox.lease } : { held: false },
-  });
+  reply({ state: "awake" });
 }
 
 console.log("READY");

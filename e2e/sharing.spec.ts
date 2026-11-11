@@ -90,7 +90,6 @@ test.describe("sharing a thread", () => {
     await expect(
       mate.page.getByRole("button", { name: /^(Share|Shared to workspace)$/ }),
     ).toHaveCount(0);
-    await expect(mate.page.getByRole("button", { name: "Desktop" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Terminal" })).toHaveCount(0);
     await expect(mate.page.getByRole("button", { name: "Files" })).toBeVisible();
     expect(processCalls).toEqual([]);

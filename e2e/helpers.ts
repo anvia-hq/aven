@@ -57,7 +57,7 @@ export function tempRuntimeHome() {
 }
 
 export async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) {
-  const created = await page.request.post("/api/runtimes", { data: { name: "fake desktop" } });
+  const created = await page.request.post("/api/runtimes", { data: { name: "fake runner" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
   const child = spawn("bun", ["e2e/fake-runner.ts"], {
     env: fakeRunnerProcessEnv(

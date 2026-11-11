@@ -1,15 +1,10 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
 
 import { connectGithub, registerUser } from "./helpers";
 
-const hasSandboxImage =
-  spawnSync("docker", ["image", "inspect", "aven-sandbox-desktop:dev"]).status === 0;
-
 test.describe("runtimes", () => {
-  test.skip(!hasSandboxImage, "needs Docker and the aven-sandbox-desktop:dev image");
-
   let runtime: ChildProcess | undefined;
   test.afterEach(() => {
     runtime?.kill();

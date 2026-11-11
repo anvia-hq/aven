@@ -444,12 +444,12 @@ test.describe("bots", () => {
     await page.goto("/bot");
     const message = page.getByRole("textbox", { name: "Message" });
     await message.click();
-    await page.keyboard.type("/setup-e");
+    await page.keyboard.type("/setup-s");
     const menu = page.getByRole("listbox", { name: "Mention" });
-    await expect(menu.getByRole("option", { name: /setup-env/ })).toBeVisible();
-    await expect(menu.getByRole("option", { name: /setup-ship/ })).toHaveCount(0);
+    await expect(menu.getByRole("option", { name: /setup-ship/ })).toBeVisible();
+    await expect(menu.getByRole("option", { name: /setup-actions/ })).toHaveCount(0);
     await page.keyboard.press("Enter");
-    await expect(message.locator('[data-mention="skill"]')).toHaveText("setup-env");
+    await expect(message.locator('[data-mention="skill"]')).toHaveText("setup-ship");
   });
 
   test("the person mentions a thread, and it goes to the bot with its id and shows as a chip that opens it", async ({
@@ -885,44 +885,6 @@ test.describe("bots", () => {
     await field.fill("");
     await field.press("Enter");
     await expect.poll(size).toBeNull();
-  });
-
-  test("the person wakes the bot's computer and watches and takes over its desktop", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1400, height: 800 });
-    await registerUser(page, "bot-computer", "Computer Person");
-    await page.goto("/bot");
-
-    await page.getByRole("button", { name: "Desktop", exact: true }).click();
-    const desktop = page.getByRole("region", { name: "Desktop" });
-    await expect(desktop.getByText("The bot's computer is not running.")).toBeVisible();
-    await expect(desktop.locator("canvas")).toHaveCount(0);
-
-    await desktop.getByRole("button", { name: "Wake up" }).click();
-    const canvas = desktop.locator("canvas");
-    await expect(canvas).toBeVisible();
-    await expect(async () => {
-      const pixel = await canvas.evaluate((element) => {
-        const context = (element as HTMLCanvasElement).getContext("2d")!;
-        return Array.from(context.getImageData(10, 10, 1, 1).data);
-      });
-      expect(pixel).toEqual([255, 0, 0, 255]);
-    }).toPass({ timeout: 10_000 });
-
-    await expect(desktop.getByText("Watching. Take over to click and type.")).toBeVisible();
-    await desktop.getByRole("button", { name: "Take over" }).click();
-    await expect(
-      desktop.getByText("You are in control. The agent's inputs are paused."),
-    ).toBeVisible();
-    await desktop.getByRole("button", { name: "Give back" }).click();
-
-    await page.reload();
-    await expect(page.getByRole("region", { name: "Desktop" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
-
-    await page.getByRole("button", { name: "Close desktop" }).click();
-    await expect(page.getByRole("region", { name: "Desktop" })).toBeHidden();
   });
 
   test("on a phone the chat fits the screen, composer included", async ({ page }) => {
