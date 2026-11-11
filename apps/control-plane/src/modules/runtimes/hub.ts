@@ -1,5 +1,5 @@
 import type { MemoryStore } from "@anvia/core";
-import { CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
+import { AGENT_BACKENDS, CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
 import { PendingCalls } from "./pending-calls";
@@ -12,6 +12,7 @@ import type { MemoryCaller } from "../memory/types";
 import type { BotReplySink, RunSink, ViewerSink } from "./types";
 import type { ProcessEnds, ThreadForks } from "../threads/types";
 import type {
+  AgentBackendKind,
   BotReplyInfo,
   CallMethod,
   CockpitAccess,
@@ -36,6 +37,12 @@ export class RuntimeOfflineError extends UnavailableError {
   }
 }
 
+export class BackendUnavailableError extends UnavailableError {
+  constructor() {
+    super("This thread's runner cannot drive its agent: update the runner");
+  }
+}
+
 type Run = {
   thread: RunThreadInfo;
   sink: RunSink;
@@ -53,6 +60,11 @@ type RunEnd = Extract<RuntimeToControlPlane, { type: "run.end" }>;
 
 export const DEFAULT_GRACE_MS = 60_000;
 
+const BEFORE_BACKENDS: readonly AgentBackendKind[] = ["native"];
+
+const knownBackends = (sent: readonly string[] | undefined): readonly AgentBackendKind[] =>
+  sent === undefined ? BEFORE_BACKENDS : AGENT_BACKENDS.filter((kind) => sent.includes(kind));
+
 export class RuntimeConnection {
   #runs = new Map<string, Run>();
   #botReplies = new Map<string, BotReplySink>();
@@ -62,6 +74,7 @@ export class RuntimeConnection {
   #ready = false;
   #build: string | undefined;
   #canUpdate = false;
+  #backends: readonly AgentBackendKind[] = BEFORE_BACKENDS;
   #stats: ReportedStats | undefined;
 
   constructor(
@@ -89,6 +102,10 @@ export class RuntimeConnection {
 
   get canUpdate() {
     return this.#canUpdate;
+  }
+
+  offers(backend: AgentBackendKind) {
+    return this.#backends.includes(backend);
   }
 
   get stats() {
@@ -183,6 +200,7 @@ export class RuntimeConnection {
         message.canUpdate,
         message.host,
         message.dirs,
+        message.backends,
       );
     if (!this.#ready) return;
     await this.#dispatch(message);
@@ -200,9 +218,11 @@ export class RuntimeConnection {
     canUpdate: boolean | undefined,
     host: boolean | undefined,
     dirs: string[] | undefined,
+    backends: string[] | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
+      this.#backends = knownBackends(backends);
       this.#build = build;
       this.#canUpdate = canUpdate === true;
       void runtimesService.touch(this.runtimeId);

@@ -33,6 +33,7 @@ import type {
   RunEvent,
   RunOutcome,
   RunThreadInfo,
+  RuntimeProviderKind,
 } from "@aven/protocol/types";
 
 export type Available<T> = { available: false } | ({ available: true } & T);
@@ -45,12 +46,12 @@ export type Refusal = {
 
 export type FindRunner = (scope: string, id: string) => Promise<RuntimeConnection>;
 
-export type RuntimeProviderKind = "manual";
-
 export interface RuntimeProvider {
   readonly kind: RuntimeProviderKind;
-  reach(runtimeId: string, offline?: string): Promise<RuntimeConnection>;
+  start(runtimeId: string, offline?: string): Promise<RuntimeConnection>;
 }
+
+export type ProviderOf = (runtimeId: string) => Promise<RuntimeProviderKind | undefined>;
 
 export type Runner = ReturnType<typeof runnerVia>;
 

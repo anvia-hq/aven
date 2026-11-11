@@ -203,6 +203,7 @@ const frame = z.discriminatedUnion("type", [
     canUpdate: z.boolean().optional(),
     host: z.boolean().optional(),
     dirs: z.array(z.string().min(1).max(1024)).max(50).optional(),
+    backends: z.array(z.string().min(1).max(40)).max(20).optional(),
   }),
   z.object({ type: z.literal("host.stats"), stats: hostStats }),
   z.object({

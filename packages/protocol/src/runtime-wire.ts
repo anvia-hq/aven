@@ -8,6 +8,10 @@ export const PROVIDERS = [
   "openai-compatible",
 ] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
+
+export const AGENT_BACKENDS = ["native"] as const;
+
+export const RUNTIME_PROVIDERS = ["manual"] as const;
 export const ARTIFACT_MEDIA_TYPES = [
   "image/png",
   "image/jpeg",

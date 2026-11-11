@@ -50,6 +50,7 @@ type Channel = {
   thread: RunThread;
   subscribers: Set<(event: RunEvent) => void>;
   run?: ActiveRun;
+  starting?: boolean;
   failure?: string | null;
 };
 
@@ -117,11 +118,8 @@ export class RunManager {
       senderId,
     }: RunExtras = {},
   ) {
-    const channel = this.#channel(thread);
-    if (channel.run) throw new RunBusyError();
-
-    try {
-      const handle = this.#runtime.start({
+    await this.#reserved(this.#channel(thread), async (channel) => {
+      const handle = await this.#runtime.start({
         thread,
         prompt,
         compact,
@@ -142,10 +140,7 @@ export class RunManager {
       if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
       if (mentions.length > 0) opening.mentions = mentions;
       await this.#begin(channel, handle, opening);
-    } catch (error) {
-      this.#release(channel);
-      throw error;
-    }
+    });
   }
 
   async answer(
@@ -164,10 +159,7 @@ export class RunManager {
       cockpit,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
-    const channel = this.#channel(thread);
-    if (channel.run) throw new RunBusyError();
-
-    try {
+    await this.#reserved(this.#channel(thread), async (channel) => {
       const saved = parseSaved(continuation);
       const response = { type: "tool-question", answers } as const;
       try {
@@ -180,7 +172,7 @@ export class RunManager {
         console.warn(`Could not load the history of thread ${thread.id}:`, error);
         throw new UnavailableError("The thread's history could not be loaded; try again shortly");
       });
-      const handle = this.#runtime.resume({
+      const handle = await this.#runtime.resume({
         thread,
         continuation: saved,
         response,
@@ -197,9 +189,17 @@ export class RunManager {
       await this.#begin(channel, handle, { type: "run_resume" }, () =>
         this.#continuations.clear(thread.id),
       );
-    } catch (error) {
+    });
+  }
+
+  async #reserved(channel: Channel, work: (channel: Channel) => Promise<void>) {
+    if (channel.run || channel.starting) throw new RunBusyError();
+    channel.starting = true;
+    try {
+      await work(channel);
+    } finally {
+      channel.starting = false;
       this.#release(channel);
-      throw error;
     }
   }
 
@@ -386,7 +386,7 @@ export class RunManager {
   }
 
   #release(channel: Channel) {
-    if (channel.run || channel.subscribers.size > 0) return;
+    if (channel.run || channel.starting || channel.subscribers.size > 0) return;
     this.#channels.delete(channel.thread.id);
   }
 

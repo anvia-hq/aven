@@ -28,7 +28,13 @@ function liveRun() {
 }
 
 function managerRunning(handle: RuntimeRun, store: Partial<ConversationStore> = {}) {
-  const runtime: Runtime = { start: () => handle, resume: () => handle, dispose: () => undefined };
+  return managerWith(
+    { start: async () => handle, resume: async () => handle, dispose: () => undefined },
+    store,
+  );
+}
+
+function managerWith(runtime: Runtime, store: Partial<ConversationStore> = {}) {
   return new RunManager({
     store: { load: async () => [], ...store } as ConversationStore,
     runtime,
@@ -80,6 +86,50 @@ describe("starting a run", () => {
     expect(manager.cancel(thread.id)).toBe(true);
     expect(cancelled).toBe("Cancelled by user");
     expect(manager.cancel(newThread().id)).toBe(false);
+  });
+
+  test("a thread is held while its runner is reached, so a second start meanwhile is busy", async () => {
+    const { handle } = liveRun();
+    const reached = Promise.withResolvers<RuntimeRun>();
+    let asked = 0;
+    const held = managerWith({
+      start: () => {
+        asked++;
+        return reached.promise;
+      },
+      resume: () => reached.promise,
+      dispose: () => undefined,
+    });
+    const thread = newThread();
+
+    const first = held.start(thread, "one");
+    await expect(held.start(thread, "two")).rejects.toBeInstanceOf(RunBusyError);
+    reached.resolve(handle);
+    await first;
+
+    expect(asked).toBe(1);
+    expect(held.isRunning(thread.id)).toBe(true);
+  });
+
+  test("a runner that cannot be reached leaves the thread free for the next start", async () => {
+    const { handle } = liveRun();
+    let reachable = false;
+    const manager = managerWith({
+      start: async () => {
+        if (!reachable) throw new UnavailableError("The runtime for this project is offline");
+        return handle;
+      },
+      resume: async () => handle,
+      dispose: () => undefined,
+    });
+    const thread = newThread();
+
+    await expect(manager.start(thread, "one")).rejects.toBeInstanceOf(UnavailableError);
+    expect(manager.isRunning(thread.id)).toBe(false);
+    reachable = true;
+    await manager.start(thread, "two");
+
+    expect(manager.isRunning(thread.id)).toBe(true);
   });
 });
 

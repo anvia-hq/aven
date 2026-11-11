@@ -1,6 +1,6 @@
 # Runtime providers and agent backends
 
-Status: accepted. Adds to 0008 and 0219: a runner still works on the machine it runs on. This prepares two seams and changes no behaviour; each has one implementation.
+Status: accepted. Adds to 0008 and 0219: a runner still works on the machine it runs on. This prepares two seams, each with one implementation, and records which one a runtime and a thread use.
 
 ## Context
 
@@ -13,17 +13,23 @@ Aven should run threads on more than a machine someone installed a runner on: a 
 Two axes, named apart from the runner:
 
 - **A runner** is the process that connects to the control plane and drives runs. It keeps working on the machine it runs on, as 0219 says.
-- **A runtime provider** is how a runner's machine comes to exist and is woken, on the control plane. A VM or a hosted sandbox is a provider that makes a machine and starts `aven runner` on it with a token; the runner connects out as any runner does, so the wire and the runner do not change. `manual` is today's provider: someone installed the runner, so the control plane can only find it connected or not. `RuntimeProvider` in `apps/control-plane/src/modules/runtimes/types.ts`, `manualProvider` in `runtimes/providers.ts`.
+- **A runtime provider** is how a runner's machine comes to exist and is woken, on the control plane. A VM or a hosted sandbox is a provider that makes a machine and starts `aven runner` on it with a token; the runner connects out as any runner does, so the wire and the runner do not change. `manual` is today's provider: someone installed the runner, so the control plane can only find it connected or not. `RuntimeProvider` in `apps/control-plane/src/modules/runtimes/types.ts`, `manualProvider` and `reachRunner` in `runtimes/providers.ts`.
 - **An agent backend** is what turns a run's prompt into the events of a thread, on the runner. `native` is today's: an Anvia agent journaled by `@anvia/durable`. `AgentBackend` in `packages/runtime-client/src/types.ts`, implemented by `DurableRuns`; the run driver depends on the interface only.
 
 Since the runner and the agent share a machine, a backend such as the Claude Agent SDK or Codex runs beside the runner and uses its own tools there, and Aven does not need a remote-command layer.
 
+## Where each is kept
+
+- **A runtime records its provider**, `runtimes.provider`, `manual` for every runtime there is. A runner that is connected is used at once; one that is not is reached through the provider its runtime records (`reachRunner` in `runtimes/providers.ts`), which for `manual` says it is offline, with the same message as before. Every call to a thread's or a bot's runner (`runnerFor`, `botRunnerFor`) and every run (`RemoteRuntime`) reaches its runner this way.
+- **Starting a run waits for its runner.** `Runtime.start` and `resume` are asynchronous, so a provider can bring a machine up first. `RunManager` holds the thread from its busy check until the run has begun (`#reserved`), so a second start in between is busy and a start that fails leaves the thread free.
+- **A thread records its backend**, `threads.agent_backend`, `native` for every thread, and keeps it for its life, as it keeps its runner (0177).
+- **A runner names the backends it drives** in `hello` (`backends`, optional, so the wire version stays 56). A runner that names none is older and drives `native` only; names the control plane does not know are dropped. A run whose thread's backend its runner does not drive is refused with a 503 telling the person to update the runner, and nothing is sent to it.
+
 ## What is not done yet
 
-- No provider other than `manual` and no backend other than `native`. The interfaces are shaped by their one implementation and will change when the second arrives; nothing outside them depends on that shape.
-- A runtime does not record its provider: every runtime is `manual`, so `runnerFor` and `botRunnerFor` use `manualProvider` directly. A second provider adds a provider kind and its settings to `runtimes`, and those two find the provider of the runtime.
-- A thread does not record its backend, and a runner does not say which backends it offers. Both arrive with the second backend: a thread keeps one backend for its life, as it keeps one runner (0177), and `hello` gains an optional field.
-- `RemoteRuntime` starts a run synchronously on a connected runner. A provider that boots a machine needs that start made asynchronous, waiting for the runner's `hello`; until then, a provider is asked only by the calls that already wait: `runnerFor` and `botRunnerFor`, which every call to a thread's or a bot's runner goes through, the computer's wake among them.
+- No provider other than `manual` and no backend other than `native`. The interfaces are shaped by their one implementation and will change when the second arrives; a provider's settings (its account, region, machine size) go on `runtimes` with it.
+- The runner drives every run with its one backend: it does not yet choose a backend by the thread's. That comes with the second backend, with `backend` on `run.start`.
+- A thread's backend cannot be chosen: every new thread is `native`.
 - A cloud machine has no folder of its own to serve, so a project on it is a repository that the runner clones (`repo.access`, `git-clone.ts`), which a project can already be.
 
 ## Consequences for the backends to come

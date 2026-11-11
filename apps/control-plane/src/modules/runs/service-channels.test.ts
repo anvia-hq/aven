@@ -50,7 +50,7 @@ function fakeRun(): FakeRun {
 
 function scriptedRuntime() {
   const runs: FakeRun[] = [];
-  const open = () => {
+  const open = async () => {
     const run = fakeRun();
     runs.push(run);
     return run.handle;

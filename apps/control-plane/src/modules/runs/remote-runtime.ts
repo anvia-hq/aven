@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
-import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import { BackendUnavailableError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import { reachRunner } from "../runtimes/providers";
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
@@ -80,7 +81,7 @@ export class RemoteRuntime implements Runtime {
     private identities: Pick<RunIdentities, "issue" | "revoke"> = runIdentities,
   ) {}
 
-  start({
+  async start({
     thread,
     prompt,
     compact,
@@ -95,7 +96,7 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
-  }: StartRunInput): RuntimeRun {
+  }: StartRunInput): Promise<RuntimeRun> {
     const extras = { skills, mcp, identity, memory, cockpit };
     return this.#launch(thread, model, extras, undefined, (runId, runModel, credential) => ({
       type: "run.start",
@@ -117,7 +118,7 @@ export class RemoteRuntime implements Runtime {
     }));
   }
 
-  resume({
+  async resume({
     thread,
     continuation,
     response,
@@ -130,7 +131,7 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
-  }: ResumeRunInput): RuntimeRun {
+  }: ResumeRunInput): Promise<RuntimeRun> {
     const extras = { skills, mcp, identity, memory, cockpit };
     return this.#launch(
       thread,
@@ -156,7 +157,7 @@ export class RemoteRuntime implements Runtime {
     );
   }
 
-  #launch(
+  async #launch(
     thread: RunThread,
     model: ModelConfig | undefined,
     {
@@ -174,8 +175,8 @@ export class RemoteRuntime implements Runtime {
       runModel: RunModel,
       credential: RunIdentityCredential | undefined,
     ) => ControlPlaneToRuntime,
-  ): RuntimeRun {
-    const connection = this.#connectionFor(thread);
+  ): Promise<RuntimeRun> {
+    const connection = await this.#connectionFor(thread);
     const runId = crypto.randomUUID();
     const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
@@ -219,9 +220,9 @@ export class RemoteRuntime implements Runtime {
     this.hub.closeAll();
   }
 
-  #connectionFor(thread: RunThread) {
-    const connection = this.hub.get(thread.runtimeId);
-    if (!connection) throw new RuntimeOfflineError();
+  async #connectionFor(thread: RunThread) {
+    const connection = await reachRunner(this.hub, thread.runtimeId);
+    if (!connection.offers(thread.agentBackend ?? "native")) throw new BackendUnavailableError();
     return connection;
   }
 

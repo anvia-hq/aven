@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
+import { RUNTIME_PROVIDERS } from "@aven/protocol/runtime-wire";
+
 import { organizations } from "./organizations";
 import { users } from "./users";
 
@@ -14,6 +16,7 @@ export const runtimes = pgTable(
     ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     host: boolean("host").notNull().default(false),
+    provider: text("provider", { enum: RUNTIME_PROVIDERS }).notNull().default("manual"),
     shared: boolean("shared").notNull().default(false),
     directories: text("directories")
       .array()
