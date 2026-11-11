@@ -146,10 +146,12 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     const start = () =>
       (preparing ??= (async () => {
         const { id: _id, machine: _machine, ...rest } = thread;
+        const directory = folder ? await folder() : null;
+        const access = !directory && repo ? await repo() : undefined;
         const prepared = (await call("prepare", {
           thread: rest,
-          repo: repo ? await repo() : undefined,
-          folder: folder ? await folder() : null,
+          repo: access,
+          folder: directory,
         })) as { paths: SandboxPaths | null };
         if (prepared.paths) this.#paths.set(thread.id, prepared.paths);
         await this.#deliver(thread.id, raw);

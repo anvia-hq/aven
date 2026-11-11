@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
@@ -18,10 +18,13 @@ afterEach(async () => {
   await Promise.all(homes.splice(0).map((home) => rm(home, { recursive: true, force: true })));
 });
 
-async function machineAndAgent({ online = (): boolean => true }: { online?: () => boolean } = {}) {
+async function machineAndAgent({
+  online = (): boolean => true,
+  dirs = [] as string[],
+}: { online?: () => boolean; dirs?: string[] } = {}) {
   const home = await mkdtemp(join(tmpdir(), "aven-remote-"));
   homes.push(home);
-  const sandbox = await HostSandboxes.start({ home });
+  const sandbox = await HostSandboxes.start({ home, dirs });
   sandboxes.push(sandbox);
   const boxes = new Map<string, ThreadSandbox>();
   const answer = createMachineCalls({
@@ -220,6 +223,78 @@ describe("an agent whose computer is another machine", () => {
     await agent.release("t1");
 
     expect(await agent.artifacts.read("t1", image)).toBeNull();
+  });
+});
+
+const FOLDER_NOT_A_CLONE =
+  "The thread's project is a folder on a computer, not a repository to clone";
+
+describe("a project that is a folder on the machine", () => {
+  const refusedClone = () => Promise.reject(new Error(FOLDER_NOT_A_CLONE));
+
+  test("runs git status, pull, branch and remote in a checkout, and does not ask to clone a repository", async () => {
+    const { dir } = await createRemoteRepo();
+    homes.push(dir);
+    const { agent } = await machineAndAgent({ dirs: [dir] });
+    let asked = false;
+    const box = await agent.acquire(
+      { id: "t1" },
+      async () => {
+        asked = true;
+        return refusedClone();
+      },
+      { folder: async () => dir },
+    );
+
+    const status = await call(box.tools, "exec_command", { command: "git status -sb" });
+    const remote = await call(box.tools, "exec_command", { command: "git remote -v" });
+    const branch = await call(box.tools, "exec_command", { command: "git branch -vv" });
+    const pull = await call(box.tools, "exec_command", { command: "git pull" });
+
+    expect(asked).toBe(false);
+    expect(status.exitCode).toBe(0);
+    expect(String(status.stdout)).toContain("aven/t1");
+    expect(remote.exitCode).toBe(0);
+    expect(String(remote.stdout)).toContain(await realpath(dir));
+    expect(branch.exitCode).toBe(0);
+    expect(String(branch.stdout)).toContain("aven/t1");
+    expect(pull.exitCode).toBe(0);
+    expect(String(pull.stdout)).toContain("Already up to date");
+  });
+
+  test("runs git in a folder that is not a repository, and git itself says so", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "aven-plain-"));
+    homes.push(dir);
+    await writeFile(join(dir, "notes.txt"), "mine");
+    const { agent } = await machineAndAgent({ dirs: [dir] });
+    let asked = false;
+    const box = await agent.acquire(
+      { id: "t1" },
+      async () => {
+        asked = true;
+        return refusedClone();
+      },
+      { folder: async () => dir },
+    );
+
+    const status = await call(box.tools, "exec_command", { command: "git status" });
+    const remote = await call(box.tools, "exec_command", { command: "git remote -v" });
+
+    expect(asked).toBe(false);
+    expect(status.exitCode).not.toBe(0);
+    expect(`${status.stderr}`).toMatch(/not a git repository/i);
+    expect(remote.exitCode).not.toBe(0);
+    expect(`${remote.stderr}`).toMatch(/not a git repository/i);
+    expect(`${status.stderr}${remote.stderr}`).not.toContain("repository to clone");
+  });
+
+  test("still refuses to prepare a repository that has no folder when clone access is refused", async () => {
+    const { agent } = await machineAndAgent();
+    const box = await agent.acquire({ id: "t1" }, refusedClone);
+
+    await expect(call(box.tools, "exec_command", { command: "git status" })).rejects.toThrow(
+      "not a repository to clone",
+    );
   });
 });
 
