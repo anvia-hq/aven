@@ -14,6 +14,9 @@ export const runtimes = pgTable(
     ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     host: boolean("host").notNull().default(false),
+    provider: text("provider", { enum: ["manual"] })
+      .notNull()
+      .default("manual"),
     shared: boolean("shared").notNull().default(false),
     directories: text("directories")
       .array()

@@ -1,4 +1,5 @@
 import type {
+  AgentBackendKind,
   BotMemoryParams,
   BotPeer,
   BotReplyInfo,
@@ -192,8 +193,6 @@ export type FollowedRun = {
   done: Promise<DurableEnd>;
   cancel(): Promise<void>;
 };
-
-export type AgentBackendKind = "native";
 
 export type AskedRun = { runId: string; agentId: string };
 

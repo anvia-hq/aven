@@ -350,6 +350,10 @@ export type Provider = (typeof PROVIDERS)[number];
 
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
+export type AgentBackendKind = "native";
+
+export type RuntimeProviderKind = "manual";
+
 export type RunModel = {
   provider: Provider;
   modelId?: string;
