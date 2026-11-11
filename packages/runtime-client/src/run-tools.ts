@@ -5,7 +5,6 @@ import { createGitFetchTool } from "@aven/agents/tools/git-fetch";
 import { createComputerTools } from "@aven/agents/tools/computer";
 import { createCockpitTool } from "@aven/agents/tools/cockpit";
 import { createMemoryTool } from "@aven/agents/tools/memory";
-import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 
 import { fetchBranch } from "./fetch-branch";
@@ -50,10 +49,5 @@ export function toolsForRun({
   const reading = cockpit ? [createCockpitTool(cockpit, "read")] : [];
   const forking = forks ? createForkTools(forks) : [];
   const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking];
-  const saveEnvironment = sandbox.saveEnvironment
-    ? [createSaveEnvironmentTool(async () => sandbox.saveEnvironment!(thread, await repoAccess()))]
-    : [];
-  return attended
-    ? [...withSubagents, ...saveEnvironment, createDefineGoalTool(defineGoal)]
-    : withSubagents;
+  return attended ? [...withSubagents, createDefineGoalTool(defineGoal)] : withSubagents;
 }

@@ -1,6 +1,8 @@
 import { startRuntime } from "@aven/runtime-client/runner";
-import { Sandboxes, journalPathIn } from "@aven/runtime-client/sandbox";
-import { sandboxConfigFromEnv } from "@aven/runtime-client/sandbox-config";
+import { delimiter } from "node:path";
+
+import { HostSandboxes } from "@aven/runtime-client/host-sandboxes";
+import { journalPathIn } from "@aven/runtime-client/runtime-home";
 
 import { describeError } from "../../errors";
 import { localRunnerToken, runtimesService } from "./service";
@@ -22,16 +24,21 @@ export async function startLocalRunner(port: number) {
     await runtimesService.ensureLocal();
     return undefined;
   }
-  const config = sandboxConfigFromEnv();
+  const home = process.env.AVEN_RUNTIME_HOME || undefined;
   await runtimesService.ensureLocal();
 
   try {
-    const sandbox = await Sandboxes.start(config);
+    const sandbox = await HostSandboxes.start({
+      home,
+      dirs: (process.env.AVEN_DIRS ?? "").split(delimiter).filter(Boolean),
+    });
     return startRuntime({
       url: `ws://localhost:${port}/runtimes/connect`,
       token: runtimesService.localToken,
       sandbox,
-      journalPath: journalPathIn(config.home),
+      host: true,
+      dirs: sandbox.dirs,
+      journalPath: journalPathIn(home),
     });
   } catch (error) {
     console.warn(`The control plane's own runner is offline: ${describeError(error)}`);

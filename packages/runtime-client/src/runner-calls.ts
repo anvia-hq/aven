@@ -1,10 +1,8 @@
 import {
   actionRunParams,
   artifactsReadParams,
-  desktopCallParams,
-  environmentSaveParams,
+  computerCallParams,
   diffGetParams,
-  dockerRemoveParams,
   filesCallParams,
   filesSearchParams,
   processesCallParams,
@@ -27,7 +25,6 @@ const UPDATE_DELAY_MS = 1000;
 export function createRunnerCalls({
   sandbox,
   boxes,
-  viewers,
   idle,
   processEnds,
   update,
@@ -72,8 +69,13 @@ export function createRunnerCalls({
     return box.processes.logs(processId);
   }
 
+  async function computerOf(params: unknown) {
+    const { threadId } = computerCallParams(params);
+    return (await sandbox.workspace(threadId)) ? { state: "awake" as const } : null;
+  }
+
   async function wakeOf(params: unknown) {
-    const { threadId, bot } = desktopCallParams(params);
+    const { threadId, bot } = computerCallParams(params);
     await idle.starting(threadId);
     const box = await sandbox.acquire(
       { id: threadId },
@@ -86,29 +88,17 @@ export function createRunnerCalls({
     boxes.set(threadId, box);
     await box.start?.();
     idle.schedule(threadId);
-    return viewers.call("desktop.status", { threadId });
+    return { state: "awake" as const };
   }
 
   async function actionOf(params: unknown) {
     const { threadId, command } = actionRunParams(params);
     await wakeOf({ threadId });
     const box = boxes.get(threadId);
-    if (!box) throw new Error("The sandbox is not running");
+    if (!box) throw new Error("The computer is not running");
     const process = await box.processes.start(command);
     processEnds.ignore(threadId, process.id);
     return { process };
-  }
-
-  async function saveEnvironmentOf(params: unknown) {
-    const { threadId, organizationId, access } = environmentSaveParams(params);
-    if (!sandbox.saveEnvironment) throw new Error("This runner cannot save environments");
-    return sandbox.saveEnvironment({ id: threadId, organizationId }, access);
-  }
-
-  async function readEnvironmentOf(params: unknown) {
-    const { threadId, organizationId, access } = environmentSaveParams(params);
-    if (!sandbox.environmentSavedAt) throw new Error("This runner cannot read environments");
-    return { savedAt: await sandbox.environmentSavedAt({ id: threadId, organizationId }, access) };
   }
 
   async function updateOf(params: unknown): Promise<RunnerUpdateResult> {
@@ -124,23 +114,14 @@ export function createRunnerCalls({
     if (method === "runner.update") return updateOf(params);
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
-    if (method === "environment.save") return saveEnvironmentOf(params);
-    if (method === "environment.read") return readEnvironmentOf(params);
-    if (method === "desktop.wake") return wakeOf(params);
+    if (method === "computer.status") return computerOf(params);
+    if (method === "computer.wake") return wakeOf(params);
     if (method === "diff.get") return diffOf(params);
     if (method === "artifacts.read") return artifactOf(params);
     if (method === "files.list" || method === "files.read") return filesOf(method, params);
     if (method === "files.search") return searchOf(params);
     if (method === "processes.list" || method === "processes.stop" || method === "processes.logs")
       return processesOf(method, params);
-    if (method === "docker.leftovers") {
-      if (!sandbox.leftovers) throw new Error("This runner cannot list Docker leftovers");
-      return sandbox.leftovers();
-    }
-    if (method === "docker.remove") {
-      if (!sandbox.removeLeftovers) throw new Error("This runner cannot remove Docker leftovers");
-      return sandbox.removeLeftovers(dockerRemoveParams(params));
-    }
     if (method === "sandbox.release") {
       const { threadId } = sandboxReleaseParams(params);
       return idle.releaseNow(threadId).then(async (released) => {
@@ -148,6 +129,6 @@ export function createRunnerCalls({
         return { released };
       });
     }
-    return viewers.call(method, params);
+    throw new Error(`Unknown call ${method}`);
   };
 }

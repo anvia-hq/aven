@@ -20,7 +20,7 @@ the first account, so nobody else can take the server before you do. Invite peop
 
 1. Create the machine and point a DNS name at it.
 2. In the cloud firewall (security group) open **80 and 443 and nothing else**. Aven's API (2837),
-   its database and the sandboxes are not meant to be reached from outside, and are published on
+   its database and the runners' own ports are not meant to be reached from outside, and are published on
    the machine itself or not at all.
 3. Install: `curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bash -s -- --domain aven.example.com --owner-email you@example.com`
 4. Open `https://aven.example.com`, register with that email, and add a model provider.
@@ -28,9 +28,9 @@ the first account, so nobody else can take the server before you do. Invite peop
 
 ## Runners
 
-A runner is a computer with Docker that connects out, so it needs no open port. Install more from
+A runner is a computer with git that connects out, so it needs no open port. Install more from
 **Settings > Runtimes** as in [Self-hosting](self-hosting.md#more-runners). The runner `aven install`
-puts beside the server shares its machine: agents run commands in sandboxes there. For a server
+puts beside the server shares its machine: agents run commands there, as the server's user, in the folders `AVEN_DIRS` names. Nothing is isolated. For a server
 many people use, prefer `aven install --no-runner` on the server and runners on other machines.
 
 ## Changing an install

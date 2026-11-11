@@ -4,8 +4,6 @@ import type { FileContent } from "@aven/protocol/types";
 
 export const SHIP_PROMPT_FILE = ".aven/ship.md";
 
-export const SETUP_FILE = ".aven/setup";
-
 export const MAX_SHIP_PROMPT_CHARS = 10_000;
 
 export class ShipPromptError extends UnprocessableError {}

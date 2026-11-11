@@ -37,7 +37,6 @@ describe("a runner that works on this machine", () => {
 
     const paths = sandbox.paths("t1");
     expect(paths.workspace).toBe(join(home, "workspaces", "t1"));
-    expect(paths.host).toBe(true);
     expect(await sandbox.workspace("t1")).toBe(paths.workspace);
     const ran = await call(box.tools, "exec_command", {
       command: "pwd; git branch --show-current",
@@ -143,6 +142,17 @@ describe("a runner that works on this machine", () => {
       expect((await lstat(sandbox.paths("t1").workspace)).isSymbolicLink()).toBe(true);
       expect(await readFile(join(dir, "more.txt"), "utf8")).toBe("agent");
       expect(await sandbox.workspace("t1")).toBe(await realpath(dir));
+    });
+
+    test("refuses to fork a thread in a folder that is not a git repository", async () => {
+      const dir = await mkdtemp(join(tmpdir(), "aven-plain-"));
+      homes.push(dir);
+      const { sandbox } = await runner([dir]);
+      await sandbox.acquire({ id: "parent" }, undefined, { folder: folderOf(dir) });
+
+      await expect(
+        sandbox.acquire({ id: "child", forkOf: "parent" }, undefined, { folder: folderOf(dir) }),
+      ).rejects.toThrow("not a git repository");
     });
 
     test("refuses a folder it was not asked to serve", async () => {

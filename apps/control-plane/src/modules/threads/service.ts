@@ -238,7 +238,9 @@ export const threadsService = {
       thread.visibility === "workspace" &&
       isDriving(thread.drivingUntil) &&
       (await isMember(organizationId, thread.createdBy));
-    if (!driven) throw new ThreadNotFoundError();
+    if (!driven || (await runtimesService.isPrivateHost(thread.runtimeId))) {
+      throw new ThreadNotFoundError();
+    }
     return thread;
   },
 

@@ -8,7 +8,6 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
-import { finishedEnvironmentSaves } from "@/modules/overview/environment-saves";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { ProjectInfo } from "@/modules/projects/components/project-info";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -24,9 +23,9 @@ import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
-type Props = { threadId: string; split?: boolean; last?: boolean; onClose?: () => void };
+type Props = { threadId: string; split?: boolean; onClose?: () => void };
 
-export function ThreadPane({ threadId, split, last, onClose }: Props) {
+export function ThreadPane({ threadId, split, onClose }: Props) {
   const {
     thread,
     owned,
@@ -56,10 +55,8 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
   const canCompact = owned && !running && !question;
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
-  const { overview, desktop, diff, files, terminal, browser } = panels;
-  const sideOpen =
-    !split &&
-    (diff.open || files.open || browser.open || (owned && (desktop.open || terminal.open)));
+  const { overview, diff, files, terminal } = panels;
+  const sideOpen = !split && (diff.open || files.open || (owned && terminal.open));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({
@@ -90,8 +87,7 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div
               className={cn(
-                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border-sidebar-border",
-                last ? "md:rounded-xl md:border" : "md:rounded-r-xl md:border-y md:border-r",
+                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border",
               )}
             >
               <ThreadHeader thread={thread} panels={panels} owned={owned} onClose={onClose} />
@@ -118,7 +114,6 @@ export function ThreadPane({ threadId, split, last, onClose }: Props) {
                         usage={usage}
                         synced={synced}
                         owned={owned}
-                        saves={finishedEnvironmentSaves(messages)}
                         onCompact={{
                           run: () => void compact(),
                           busy: compacting,

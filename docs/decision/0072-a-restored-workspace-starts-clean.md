@@ -1,6 +1,6 @@
 # A workspace restored from a snapshot starts with no untracked files
 
-Status: accepted. Amends 0043 (environments: setup script and snapshots), which said untracked files stay when a restored workspace is brought up to date.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Amends 0043 (environments: setup script and snapshots), which said untracked files stay when a restored workspace is brought up to date.
 
 ## Context
 

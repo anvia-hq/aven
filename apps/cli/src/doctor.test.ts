@@ -43,7 +43,7 @@ async function writeUnit(command: string) {
 async function runnerEnv() {
   await write(
     join(home, "runner.env"),
-    "AVEN_URL=http://localhost:2837\nAVEN_RUNTIME_TOKEN=avrt_x\nAVEN_SANDBOX_IMAGE=ghcr.io/anvia-hq/aven-sandbox:0.3.0\n",
+    `AVEN_URL=http://localhost:2837\nAVEN_RUNTIME_TOKEN=avrt_x\nAVEN_DIRS=${home}\n`,
   );
 }
 

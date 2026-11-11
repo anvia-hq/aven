@@ -43,11 +43,23 @@ export async function connectGithub(page: Page) {
 }
 
 export async function importRepository(page: Page, name: string) {
-  await page.getByRole("button", { name: "Import repository" }).click();
-  await page.getByRole("combobox", { name: "Repository" }).click();
-  await page.getByRole("option", { name: `acme/${name}` }).click();
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(page.getByText("Repository imported")).toBeVisible();
+  const installations = (await (await page.request.get("/api/github/installations")).json()) as {
+    id: string;
+  }[];
+  const runtimes = (await (await page.request.get("/api/runtimes")).json()) as { id: string }[];
+  const created = await page.request.post("/api/projects", {
+    data: {
+      installationId: installations[0]!.id,
+      repository: `acme/${name}`,
+      runtimeId: runtimes.at(-1)!.id,
+    },
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  const here = new URL(page.url());
+  if (here.pathname === "/threads") await page.goto(`/threads?project=${project.id}`);
+  else await page.reload();
+  await page.waitForLoadState("networkidle");
 }
 
 const API_URL = process.env.E2E_API_URL ?? "http://localhost:8100";
@@ -57,7 +69,7 @@ export function tempRuntimeHome() {
 }
 
 export async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) {
-  const created = await page.request.post("/api/runtimes", { data: { name: "fake desktop" } });
+  const created = await page.request.post("/api/runtimes", { data: { name: "fake runner" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
   const child = spawn("bun", ["e2e/fake-runner.ts"], {
     env: fakeRunnerProcessEnv(

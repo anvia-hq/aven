@@ -20,7 +20,6 @@ const sandbox: ThreadWorkspaces = {
   async acquire(): Promise<ThreadSandbox> {
     return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
   },
-  desktop: () => undefined,
   workspace: async () => undefined,
   async release() {},
   async dispose() {},

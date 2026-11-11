@@ -39,7 +39,7 @@ Everything:
               database and ~/.aven
 
 Server:
-  server install [--domain D] [--port N] [--bind ADDRESS] [--origin URL] [--browser-origin URL]
+  server install [--domain D] [--port N] [--bind ADDRESS] [--origin URL]
                  [--release X]
               Install and start the server (Postgres, API and web) in ~/.aven/server
   start       Start the server
@@ -49,9 +49,8 @@ Server:
   logs [service] [--follow]
 
 Runner (this machine hosts sandboxes for a server):
-  runner install --url <address> --token <token> [--image X]
-  runner install --url <address> --token <token> --host --dir <folder[:folder]>
-              Work on this machine itself, with no sandbox, in the folders given
+  runner install --url <address> --token <token> [--dir <folder[:folder]>]
+              Work on this machine in the folders given (its home by default)
               Install this machine as a runner and start it as a service
   runner start | stop | restart | status | uninstall
   runner logs [--follow]
@@ -73,7 +72,6 @@ async function main(argv: string[]) {
     "api-port",
     "domain",
     "origin",
-    "browser-origin",
     "release",
     "url",
     "token",

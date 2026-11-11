@@ -22,12 +22,12 @@ export function GithubSection() {
   return (
     <SettingsSection
       title="GitHub"
-      description="The GitHub App that imports repositories and opens pull requests."
+      description="The GitHub App people sign in to GitHub with, and the agent opens pull requests through."
     >
       {configured && (
         <SettingsRow
           title="GitHub App is set up"
-          description="People connect it to their GitHub account when they import a repository. An app made private can be installed only by its owner: to install it on another organization, make it public in its settings on GitHub (Advanced > Make public)."
+          description="People connect it to their GitHub account when they connect it. An app made private can be installed only by its owner: to install it on another organization, make it public in its settings on GitHub (Advanced > Make public)."
         />
       )}
       {!configured && !canSetUp && (

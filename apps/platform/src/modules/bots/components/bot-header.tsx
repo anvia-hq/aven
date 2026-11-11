@@ -1,11 +1,7 @@
-import { Monitor } from "@mynaui/icons-react";
-
-import { PanelToggle } from "@/components/panel-toggle";
-
-import type { Bot, BotPanels } from "../types";
+import type { Bot } from "../types";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
-export function BotHeader({ bot, panels }: { bot: Bot; panels: BotPanels }) {
+export function BotHeader({ bot }: { bot: Bot }) {
   return (
     <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10 md:px-4">
       <h1 className="min-w-0 truncate text-sm font-medium">{bot.name}</h1>
@@ -14,12 +10,6 @@ export function BotHeader({ bot, panels }: { bot: Bot; panels: BotPanels }) {
       </p>
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {!bot.isMain && <BotSettingsDialog bot={bot} />}
-        <PanelToggle
-          label="Desktop"
-          icon={Monitor}
-          open={panels.desktop.open}
-          onToggle={panels.desktop.toggle}
-        />
       </div>
     </header>
   );

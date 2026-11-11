@@ -1,6 +1,6 @@
 # One control plane, many runtimes, many clients
 
-Status: accepted and built, except that the macOS app's SwiftUI layer (`clients/macos/AvenMac`) is written but not compiled: it needs full Xcode, which the machine it was written on lacks. Its library (`AvenKit`) is built and tested, including against a live server. Builds on 0004 (server-owned runs, SSE). Changes where 0003 (agent execution), 0005 (project paths) and 0006 (provider keys) apply: they keep holding for the control plane, and the agent side moves to runtimes.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted and built, except that the macOS app's SwiftUI layer (`clients/macos/AvenMac`) is written but not compiled: it needs full Xcode, which the machine it was written on lacks. Its library (`AvenKit`) is built and tested, including against a live server. Builds on 0004 (server-owned runs, SSE). Changes where 0003 (agent execution), 0005 (project paths) and 0006 (provider keys) apply: they keep holding for the control plane, and the agent side moves to runtimes.
 
 ## Context
 

@@ -30,7 +30,6 @@ import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsDecisionModelRouteImport } from './routes/_authed/settings/decision-model'
-import { Route as AuthedSettingsDockerRouteImport } from './routes/_authed/settings/docker'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsGithubRouteImport } from './routes/_authed/settings/github'
@@ -154,11 +153,6 @@ const AuthedSettingsDecisionModelRoute =
     path: '/decision-model',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
-const AuthedSettingsDockerRoute = AuthedSettingsDockerRouteImport.update({
-  id: '/docker',
-  path: '/docker',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
 const AuthedSettingsEnvironmentVariablesRoute =
   AuthedSettingsEnvironmentVariablesRouteImport.update({
     id: '/environment-variables',
@@ -266,7 +260,6 @@ export interface FileRoutesByFullPath {
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
-  '/settings/docker': typeof AuthedSettingsDockerRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
@@ -301,7 +294,6 @@ export interface FileRoutesByTo {
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
-  '/settings/docker': typeof AuthedSettingsDockerRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
@@ -343,7 +335,6 @@ export interface FileRoutesById {
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
-  '/_authed/settings/docker': typeof AuthedSettingsDockerRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
   '/_authed/settings/github': typeof AuthedSettingsGithubRoute
@@ -384,7 +375,6 @@ export interface FileRouteTypes {
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/decision-model'
-    | '/settings/docker'
     | '/settings/environment-variables'
     | '/settings/general'
     | '/settings/github'
@@ -419,7 +409,6 @@ export interface FileRouteTypes {
     | '/cockpit/tasks'
     | '/settings/bots'
     | '/settings/decision-model'
-    | '/settings/docker'
     | '/settings/environment-variables'
     | '/settings/general'
     | '/settings/github'
@@ -460,7 +449,6 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
     | '/_authed/settings/decision-model'
-    | '/_authed/settings/docker'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/general'
     | '/_authed/settings/github'
@@ -639,13 +627,6 @@ declare module '@tanstack/react-router' {
       path: '/decision-model'
       fullPath: '/settings/decision-model'
       preLoaderRoute: typeof AuthedSettingsDecisionModelRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/docker': {
-      id: '/_authed/settings/docker'
-      path: '/docker'
-      fullPath: '/settings/docker'
-      preLoaderRoute: typeof AuthedSettingsDockerRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/settings/environment-variables': {
@@ -837,7 +818,6 @@ const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
 interface AuthedSettingsRouteChildren {
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsDecisionModelRoute: typeof AuthedSettingsDecisionModelRoute
-  AuthedSettingsDockerRoute: typeof AuthedSettingsDockerRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
   AuthedSettingsGithubRoute: typeof AuthedSettingsGithubRoute
@@ -857,7 +837,6 @@ interface AuthedSettingsRouteChildren {
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
   AuthedSettingsDecisionModelRoute: AuthedSettingsDecisionModelRoute,
-  AuthedSettingsDockerRoute: AuthedSettingsDockerRoute,
   AuthedSettingsEnvironmentVariablesRoute:
     AuthedSettingsEnvironmentVariablesRoute,
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,

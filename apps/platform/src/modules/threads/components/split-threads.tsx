@@ -38,7 +38,7 @@ export function SplitThreads({ threadId, split }: Props) {
         </ResizablePanel>
         <ResizableHandle className={GAP_HANDLE} />
         <ResizablePanel id="split" defaultSize="50" minSize="30">
-          <ThreadPane key={split} threadId={split} split last onClose={() => void only(threadId)} />
+          <ThreadPane key={split} threadId={split} split onClose={() => void only(threadId)} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

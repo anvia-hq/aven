@@ -29,7 +29,7 @@ test.describe("continuing a thread on another runner (decision 0152)", () => {
     await page.goto(`/threads/${threadId}`);
 
     const environment = page.getByRole("region", { name: "Environment" });
-    await expect(environment).toContainText("fake desktop");
+    await expect(environment).toContainText("fake runner");
     await expect(
       environment.getByRole("button", { name: "Continue on another runner" }),
     ).toHaveCount(0);

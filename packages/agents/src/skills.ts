@@ -47,7 +47,7 @@ export function skillsInstructions(skills: readonly SkillListing[]) {
   if (skills.length === 0) return "";
   return [
     "<skills>",
-    "You have skills: instructions for particular kinds of task, kept as files in the sandbox. Before a task one of them fits, read its SKILL.md and follow it. Read it with exec_command, for example cat /skills/<name>/SKILL.md: read_file only reaches /workspace, and the skills are in /skills (one of the repository's, in /workspace/.aven/skills, can be read with read_file too). A skill's other files (references/, scripts/) are next to its SKILL.md; read them the same way when it says to, and run its scripts with exec_command. Skills are read-only.",
+    "You have skills: instructions for particular kinds of task, kept as files on this machine. Before a task one of them fits, read its SKILL.md and follow it. Read it with exec_command, for example cat /skills/<name>/SKILL.md: read_file only reaches /workspace, and the skills are in /skills (one of the repository's, in /workspace/.aven/skills, can be read with read_file too). A skill's other files (references/, scripts/) are next to its SKILL.md; read them the same way when it says to, and run its scripts with exec_command. Skills are read-only.",
     "Available skills:",
     ...skills.map((entry) => `- ${entry.name}: ${entry.description} (${entry.path})`),
     "</skills>",

@@ -21,10 +21,7 @@ export const FAKE_RUNNER_SWITCHES = {
   branch: "FAKE_BRANCH",
   processes: "FAKE_PROCESSES",
   updateBusy: "FAKE_UPDATE_BUSY",
-  snapshotFails: "FAKE_SNAPSHOT_FAILS",
-  realPort: "FAKE_REAL_PORT",
   noWorkspace: "FAKE_NO_WORKSPACE",
-  snapshotSaved: "FAKE_SNAPSHOT_SAVED_MINUTES_AGO",
   steerRefuses: "FAKE_STEER_REFUSES",
   steerAppliesAfterMs: "FAKE_STEER_APPLIES_AFTER",
   build: "FAKE_BUILD",
@@ -109,9 +106,6 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     avenFiles,
     branch,
     processes,
-    snapshotFails,
-    snapshotSaved,
-    realPort,
     noWorkspace,
   } = FAKE_RUNNER_SWITCHES;
   return {
@@ -130,11 +124,6 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     avenFiles: (given(env, avenFiles) ?? "").split(","),
     branch: valueOf(env, branch) ?? "aven/fake-branch",
     backgroundProcesses: on(env, processes),
-    snapshotFailure: valueOf(env, snapshotFails),
     noWorkspace: on(env, noWorkspace),
-    realPort: valueOf(env, realPort) ? countOf(env, realPort, 0) : undefined,
-    snapshotSavedMinutesAgo: valueOf(env, snapshotSaved)
-      ? countOf(env, snapshotSaved, 0)
-      : undefined,
   };
 }

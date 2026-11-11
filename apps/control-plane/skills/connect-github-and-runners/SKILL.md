@@ -24,7 +24,7 @@ A person who will ship pull requests also connects **their own** GitHub account,
 
 ## Why Ship is off or refused
 
-- Off with a tooltip: the repository has no `.aven/setup` or `.aven/ship.md` yet. Read `setup-env`, then `setup-ship`.
+- Off with a tooltip: the repository has no `.aven/ship.md` yet. Read `setup-ship`.
 - "Connect GitHub to ship": the person's account is not connected.
 - Refused with a 409: the app has not been approved for write access, or the person cannot push to the repository. Check their access on GitHub.
 

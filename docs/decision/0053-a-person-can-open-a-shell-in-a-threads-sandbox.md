@@ -1,6 +1,6 @@
 # A person can open a shell in a thread's sandbox from a Terminal panel
 
-Status: accepted. Builds on 0010 (a container per thread, freed when idle), 0015 (a runner streams bytes between a sandbox and the browser as binary frames) and 0039 (a person can wake a sandbox).
+Status: accepted. Builds on 0010 (a container per thread, freed when idle), 0015 (a runner streams bytes between a sandbox and the browser as binary frames) and 0039 (a person can wake a sandbox). Partly superseded by 0219: the Terminal stays, now in the runner's own machine, not a container.
 
 ## Context
 

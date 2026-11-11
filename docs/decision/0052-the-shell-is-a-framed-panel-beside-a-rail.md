@@ -1,6 +1,6 @@
 # The shell is a framed panel beside a rail
 
-Status: accepted. The rail's width and appearance are superseded by [0111](0111-the-navigation-rail-is-minimal.md).
+Status: accepted. The sidebar and the page are now two separate rounded panels with a gap, as the right-hand panels are (the first try this decision dropped was taken up again, at the user's request). The rail's width and appearance are superseded by [0111](0111-the-navigation-rail-is-minimal.md).
 
 ## Context
 

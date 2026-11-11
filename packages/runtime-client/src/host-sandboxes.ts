@@ -1,3 +1,4 @@
+import { withoutRunnerSecrets } from "./runner-secrets";
 import { mkdirSync, realpathSync } from "node:fs";
 import { lstat, mkdir, realpath, rmdir, symlink } from "node:fs/promises";
 import { join, sep } from "node:path";
@@ -11,7 +12,7 @@ import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
 import { ensureLocalExcludes } from "./local-excludes";
 import { envOf, withProjectEnv } from "./project-env";
-import { runtimeHome } from "./sandbox";
+import { runtimeHome } from "./runtime-home";
 import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import { startedOnUse } from "./started-on-use";
@@ -71,7 +72,6 @@ export class HostSandboxes implements ThreadWorkspaces {
       workspace: this.#workspaceDir(threadId),
       uploads: join(this.uploads.root, threadId),
       skills: join(this.skills.root, "threads", threadId),
-      host: true,
     };
   }
 
@@ -122,6 +122,11 @@ export class HostSandboxes implements ThreadWorkspaces {
     }
     const inside = await run(["rev-parse", "--is-inside-work-tree"], { cwd: source });
     if (inside.code !== 0) {
+      if (thread.forkOf) {
+        throw new Error(
+          `${directory} is not a git repository, so a fork of this thread would work on the same files: put the folder under git to fork it`,
+        );
+      }
       if ((await lstat(dir)).isSymbolicLink()) return dir;
       await rmdir(dir);
       await symlink(source, dir);
@@ -192,7 +197,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     return {
       argv: ["bash", "-c", `cd "$AVEN_THREAD_DIR" && exec bash`],
       env: {
-        ...process.env,
+        ...withoutRunnerSecrets(process.env),
         ...project,
         AVEN_THREAD_DIR: root,
         TERM: "xterm-256color",

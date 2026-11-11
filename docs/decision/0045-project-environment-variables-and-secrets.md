@@ -1,6 +1,6 @@
 # A project has environment variables and secrets, set in the app
 
-Status: accepted. Builds on 0043 (environments: setup script and snapshots). Follows Amp, whose projects have "Secrets & Env Vars" in their settings, applied to a thread's environment and not written to a file.
+Status: accepted. Builds on 0043 (environments: setup script and snapshots). Follows Amp, whose projects have "Secrets & Env Vars" in their settings, applied to a thread's environment and not written to a file. Partly superseded by 0219: project variables stay, now given to the thread on the runner's machine.
 
 ## Context
 

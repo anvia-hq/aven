@@ -106,7 +106,7 @@ export function CenterPage() {
       </header>
       {loaded && projects.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Import a repository to see its pull requests and commits here.
+          Add a project to see its pull requests and commits here.
         </p>
       )}
       {feed && feed.unreadable.length > 0 && (

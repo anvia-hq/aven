@@ -49,7 +49,7 @@ export function WorkspaceGithubSection() {
   return (
     <SettingsSection
       title="GitHub App"
-      description="The GitHub App this workspace imports repositories and opens pull requests through."
+      description="The GitHub App this workspace connects people to GitHub and opens pull requests through."
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3 rounded-xl border bg-card/50 p-4">
@@ -73,7 +73,7 @@ export function WorkspaceGithubSection() {
               <h3 className="text-sm font-medium">Create this workspace's own GitHub App</h3>
               <p className="text-xs text-muted-foreground">
                 GitHub asks you to confirm the app's name and permissions, then to install it.
-                Repositories already imported keep working through the app they were imported with.
+                Projects already imported keep working through the app they were imported with.
               </p>
             </div>
 

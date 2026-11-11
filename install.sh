@@ -14,7 +14,7 @@
 #   AVEN_INSTALL_VERSION  a release such as 0.3.0 (default: the latest)
 #   AVEN_BIN_DIR          where to put `aven` (default: /usr/local/bin if writable, else ~/.local/bin)
 #   AVEN_RELEASES_URL     where releases are (default: https://github.com/anvia-hq/aven/releases)
-#   AVEN_YES=1            install Docker and git without asking when they are missing
+#   AVEN_YES=1            install git, and Docker for a server, without asking when they are missing
 set -euo pipefail
 
 RELEASES="${AVEN_RELEASES_URL:-https://github.com/anvia-hq/aven/releases}"
@@ -100,7 +100,7 @@ wait_for_docker() {
 }
 
 install_docker() {
-  say "Docker is missing. Aven runs its server and every thread's sandbox in containers."
+  say "Docker is missing. Aven runs its server in containers."
   if [ "$os" = darwin ]; then
     have brew || fail "Install Docker Desktop (https://www.docker.com/products/docker-desktop) or OrbStack (https://orbstack.dev), start it, then run this again."
     ask "Install Docker Desktop with Homebrew now?" || fail "Install Docker, then run this again."
@@ -131,6 +131,11 @@ ensure_docker_running() {
 
 ensure_dependencies() {
   if ! { have git && git --version >/dev/null 2>&1; }; then install_git; fi
+  # A runner alone works on this machine itself (decision 0219): only the server needs Docker.
+  local arg
+  for arg in "$@"; do
+    if [ "$arg" = "--runner" ]; then return 0; fi
+  done
   have docker || install_docker
   if [ "$use_docker_group" = 0 ]; then ensure_docker_running; fi
 }
@@ -216,7 +221,7 @@ Settings, as environment variables:
   AVEN_INSTALL_VERSION  a release such as 0.3.0 (default: the latest)
   AVEN_BIN_DIR          where to put `aven` (default: /usr/local/bin if writable, else ~/.local/bin)
   AVEN_RELEASES_URL     where releases are (default: https://github.com/anvia-hq/aven/releases)
-  AVEN_YES=1            install Docker and git without asking when they are missing
+  AVEN_YES=1            install git, and Docker for a server, without asking when they are missing
 USAGE
 }
 
@@ -226,7 +231,7 @@ main() {
   esac
   detect_platform
   need_tools
-  ensure_dependencies
+  ensure_dependencies "$@"
   resolve_version
   pick_bin_dir
   download_aven

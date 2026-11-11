@@ -40,9 +40,7 @@ describe("the built-in skills", () => {
       "configure-variables",
       "connect-github-and-runners",
       "setup-actions",
-      "setup-env",
       "setup-ship",
-      "use-identity-tokens",
       "writing-skills",
     ]);
     for (const skill of skills) {

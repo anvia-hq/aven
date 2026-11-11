@@ -235,21 +235,9 @@ const frame = z.discriminatedUnion("type", [
     replyId: z.string().min(1),
     error: z.string().optional(),
   }),
-  z.object({ type: z.literal("desktop.opened"), viewerId: z.string().min(1) }),
-  z.object({
-    type: z.literal("desktop.closed"),
-    viewerId: z.string().min(1),
-    reason: z.string(),
-  }),
   z.object({ type: z.literal("terminal.opened"), viewerId: z.string().min(1) }),
   z.object({
     type: z.literal("terminal.closed"),
-    viewerId: z.string().min(1),
-    reason: z.string(),
-  }),
-  z.object({ type: z.literal("port.opened"), viewerId: z.string().min(1) }),
-  z.object({
-    type: z.literal("port.closed"),
     viewerId: z.string().min(1),
     reason: z.string(),
   }),

@@ -19,13 +19,11 @@ const list: Kind = { label: (count) => `listed ${plural(count, "directory", "dir
 const search: Kind = {
   label: (count) => (count === 1 ? "searched once" : `searched ${count} times`),
 };
-const desktop: Kind = { label: (count) => plural(count, "desktop action") };
 const artifacts: Kind = { label: () => "showed files" };
 const fetch: Kind = { label: () => "fetched from GitHub" };
 const computer: Kind = {
   label: (count) => (count === 1 ? "used the computer" : `used the computer ${count} times`),
 };
-const environment: Kind = { label: () => "saved the environment" };
 const other: Kind = { label: (count) => `used ${plural(count, "tool")}` };
 
 function kindOf(name: string): Kind {
@@ -54,13 +52,11 @@ function kindOf(name: string): Kind {
       return artifacts;
     case "git_fetch":
       return fetch;
-    case "save_environment":
-      return environment;
     case "computer_status":
     case "computer_wake":
       return computer;
     default:
-      return name.startsWith("desktop_") ? desktop : other;
+      return other;
   }
 }
 

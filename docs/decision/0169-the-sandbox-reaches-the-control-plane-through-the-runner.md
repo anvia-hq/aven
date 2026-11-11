@@ -1,6 +1,6 @@
 # A sandbox mints identity tokens through a relay on its runner
 
-Status: accepted. Replaces the way decision 0049 had a container reach the control plane.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Replaces the way decision 0049 had a container reach the control plane.
 
 ## Context
 

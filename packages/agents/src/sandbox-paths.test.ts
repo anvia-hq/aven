@@ -11,7 +11,6 @@ const host: SandboxPaths = {
   workspace: "/home/me/.aven/workspaces/t1",
   uploads: "/home/me/.aven/uploads/t1",
   skills: "/home/me/.aven/skills/threads/t1",
-  host: true,
 };
 
 describe("the paths an agent is told about", () => {
@@ -20,15 +19,12 @@ describe("the paths an agent is told about", () => {
     expect(forPaths(text, SANDBOX_PATHS)).toBe(text);
   });
 
-  test("a machine's real paths replace the sandbox's, and its section replaces the sandbox's", () => {
+  test("a thread's real paths replace the ones the instructions are written with", () => {
     const text = forPaths(codingInstructions(40), host);
 
-    expect(text).toContain("<machine>");
-    expect(text).not.toContain("<sandbox>");
     expect(text).not.toMatch(/(^|[^\w./-])\/(workspace|uploads|skills)(?![\w-])/);
     expect(text).toContain(`Every command starts in ${host.workspace}`);
     expect(text).toContain("on the person's own computer");
-    expect(text).not.toContain("no sudo");
   });
 
   test("does the same for a subagent's instructions", () => {
@@ -51,7 +47,6 @@ describe("the paths an agent is told about", () => {
     );
 
     expect(text).toContain(host.workspace);
-    expect(text).not.toContain("a Linux machine with a desktop");
     expect(text).not.toMatch(/(^|[^\w./-])\/(workspace|uploads)(?![\w-])/);
   });
 
@@ -72,7 +67,7 @@ describe("the paths an agent is told about", () => {
 
     const text = JSON.stringify(prompt);
     expect(text).toContain(`${host.workspace}/src/a.ts`);
-    expect(text).toContain(`on this machine`);
+    expect(text).toContain("on this machine");
     expect(text).toContain(`${host.uploads}/a.png`);
   });
 });

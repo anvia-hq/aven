@@ -1,6 +1,6 @@
 # Doctor and the runner check that a sandbox reaches its runner
 
-Status: accepted. Follows decision 0010 (a Docker sandbox per thread).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Follows decision 0010 (a Docker sandbox per thread).
 
 ## Context
 

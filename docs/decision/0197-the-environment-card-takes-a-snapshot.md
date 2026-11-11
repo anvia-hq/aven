@@ -1,6 +1,6 @@
 # The Environment card takes a snapshot
 
-Status: accepted. Builds on 0043 (a repository sets up its environment once, and threads start from a snapshot).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0043 (a repository sets up its environment once, and threads start from a snapshot).
 
 ## Context
 

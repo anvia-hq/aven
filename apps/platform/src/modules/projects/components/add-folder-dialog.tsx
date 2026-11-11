@@ -65,7 +65,8 @@ export function AddFolderDialog({ onAdded, variant, size }: Props) {
           ) : (
             <p className="text-sm text-muted-foreground">
               No computer serves a folder yet. On the computer, run a runner that works on it
-              directly and gives the folders it may use: AVEN_SANDBOX=host AVEN_DIRS=/path/to/code.
+              directly and gives the folders it may use: AVEN_DIRS=/path/to/code (or aven runner
+              install --dir /path/to/code).
             </p>
           )}
           <DialogFooter>

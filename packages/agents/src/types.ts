@@ -11,7 +11,6 @@ export type SandboxPaths = {
   workspace: string;
   uploads: string;
   skills: string;
-  host?: boolean;
 };
 
 export type SentExtras = {

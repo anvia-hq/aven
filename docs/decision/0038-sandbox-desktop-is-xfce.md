@@ -1,6 +1,6 @@
 # The sandbox desktop is Xfce
 
-Status: accepted. Supersedes the KDE Plasma desktop of 0014; the browser choice (Chrome on amd64, Chromium on arm64, started through `anvia-chromium`), the daemon, the tag `aven-sandbox-desktop:dev` and everything that talks to it are unchanged.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Supersedes the KDE Plasma desktop of 0014; the browser choice (Chrome on amd64, Chromium on arm64, started through `anvia-chromium`), the daemon, the tag `aven-sandbox-desktop:dev` and everything that talks to it are unchanged.
 
 ## Context
 

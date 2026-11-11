@@ -24,7 +24,6 @@ export function loopbackReplier(options: {
               hasRunningProcesses: async () => false,
               processes: noProcesses,
             }),
-            desktop: () => undefined,
             workspace: async () => undefined,
             release: async () => undefined,
             dispose: async () => undefined,

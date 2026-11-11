@@ -5,7 +5,7 @@ import { parseEnv, setEnv } from "./env-file";
 import type { RunnerSettings } from "./types";
 
 const HEADER = `# The settings of this machine's Aven runner, written by \`aven runner install\`.
-# Other AVEN_SANDBOX_* and AVEN_RUNTIME_HOME settings (see .env.example in the repository) can be
+# Other AVEN_RUNTIME_HOME settings (see .env.example in the repository) can be
 # added here; \`aven runner restart\` applies a change.
 `;
 
@@ -14,12 +14,8 @@ export async function writeRunnerEnv(file: string, settings: RunnerSettings) {
   const values: Record<string, string> = {
     AVEN_URL: settings.url,
     AVEN_RUNTIME_TOKEN: settings.token,
+    AVEN_DIRS: settings.dirs.join(delimiter),
   };
-  if (settings.image) values.AVEN_SANDBOX_IMAGE = settings.image;
-  if (settings.host) {
-    values.AVEN_SANDBOX = "host";
-    values.AVEN_DIRS = settings.host.dirs.join(delimiter);
-  }
   const text = setEnv(existing, values);
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, text, { mode: 0o600 });

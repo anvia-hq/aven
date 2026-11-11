@@ -3,9 +3,7 @@ import { useDefaultLayout } from "react-resizable-panels";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
-import { threadComputer } from "@/modules/desktop/computer";
-import { BrowserPanel } from "@/modules/browser/components/browser-panel";
-import { DesktopPanel } from "@/modules/desktop/components/desktop-panel";
+import { threadComputer } from "@/modules/computer/computer";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
 import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
@@ -20,10 +18,10 @@ type Props = {
 };
 
 export function ThreadSidePanels({ threadId, running, panels, owned, handleClassName }: Props) {
-  const { diff, desktop, files, terminal, browser } = panels;
+  const { diff, files, terminal } = panels;
   const side = useDefaultLayout({
     id: `aven.thread.${threadId}.side`,
-    panelIds: ["files", "diff", "desktop", "terminal", "browser"],
+    panelIds: ["files", "diff", "terminal"],
     storage: safeStorage,
   });
 
@@ -42,32 +40,10 @@ export function ThreadSidePanels({ threadId, running, panels, owned, handleClass
       node: <DiffPanel threadId={threadId} running={running} onClose={diff.close} />,
     });
   }
-  if (owned && desktop.open) {
-    sidePanels.push({
-      id: "desktop",
-      node: <DesktopPanel computer={threadComputer(threadId)} onClose={desktop.close} />,
-    });
-  }
-
   if (owned && terminal.open) {
     sidePanels.push({
       id: "terminal",
       node: <TerminalPanel computer={threadComputer(threadId)} onClose={terminal.close} />,
-    });
-  }
-
-  if (browser.open) {
-    sidePanels.push({
-      id: "browser",
-      node: (
-        <BrowserPanel
-          key={threadId}
-          threadId={threadId}
-          computer={threadComputer(threadId)}
-          owned={owned}
-          onClose={browser.close}
-        />
-      ),
     });
   }
 

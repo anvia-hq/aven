@@ -24,23 +24,14 @@ async function startThread(page: Page, prompt: string) {
 }
 
 test.describe("threads", () => {
-  test("the new thread page asks to import a repository first", async ({ page }) => {
+  test("the new thread page asks to add a folder first", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByText("Import a repository to get started.")).toBeVisible();
+    await expect(page.getByText("Add a folder to get started.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
-  });
-
-  test("a project needs a runner, and the dialog says where to add one", async ({ page }) => {
-    await registerUser(page, "thr", "Thread User");
-    await connectGithub(page);
-    await page.goto("/threads");
-    await page.getByRole("button", { name: "Import repository" }).click();
-    await expect(page.getByText("A project needs a runner")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Add a runner" })).toBeVisible();
   });
 
   test("a thread started from a project opens with its prompt as the title", async ({ page }) => {
@@ -234,47 +225,6 @@ test.describe("threads", () => {
     await expect(call).toBeVisible();
     await call.click();
     await expect(page.getByText("origin/main is now at bbbbbbb (was aaaaaaa).")).toBeVisible();
-  });
-
-  test("saving the environment reads as one step, with what it did", async ({ page }) => {
-    const events = [
-      { type: "snapshot", running: true, messages: [] },
-      { type: "run_start", prompt: "Set up this repo" },
-      {
-        type: "tool_start",
-        tool: { id: "e1", name: "save_environment", target: "", status: "running" },
-      },
-      {
-        type: "tool_end",
-        id: "e1",
-        status: "done",
-        output: "The environment is saved. New threads start from it.",
-      },
-      { type: "text", delta: "Done." },
-      { type: "done" },
-    ];
-    await page.route("**/api/threads/*/events", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: `retry: 600000\n\n${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}`,
-      }),
-    );
-
-    await registerUser(page, "thr", "Thread User");
-    await startThread(page, "Set up this repo");
-
-    await page.locator('[data-role="worked"]').click();
-    const group = page.getByRole("button", { name: "Saved the environment" });
-    await expect(group).toBeVisible();
-    await group.click();
-    await page
-      .getByRole("button", { name: /Saved the environment/ })
-      .last()
-      .click();
-    await expect(
-      page.getByText("The environment is saved. New threads start from it."),
-    ).toBeVisible();
   });
 
   test("files the agent showed in one call are a grid, its images open in a viewer and a video that cannot load says so (decision 0136)", async ({

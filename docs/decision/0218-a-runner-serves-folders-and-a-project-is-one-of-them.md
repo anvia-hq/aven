@@ -1,6 +1,6 @@
 # A runner serves folders, and a project is one of them
 
-Status: proposed. Step 1 of the order below is built (`AVEN_SANDBOX=host`); the rest is not. Supersedes 0013 (projects are imported GitHub repositories) once it ships; changes 0044 (the agent acts as the person on GitHub) and the sandbox decisions (0008, 0095, 0211) for the new mode. Nothing is removed by this decision.
+Status: accepted and built, with 0219. Supersedes 0013 (projects are imported GitHub repositories); changes 0044 (the agent acts as the person on GitHub) for a folder project; the sandbox decisions are superseded by 0219.
 
 ## Context
 
