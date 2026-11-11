@@ -978,6 +978,85 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     }
   });
 
+  test("a run on the control plane settles the machine's process watch, and suspends it when the machine connects late", async () => {
+    const agent = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "watch-agent",
+    });
+    const machine = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "watch-machine",
+    });
+    const late = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "watch-late",
+    });
+    const agentWs = await open(server.server?.port, agent.token);
+    const machineWs = await open(server.server?.port, machine.token);
+    const heard: ControlPlaneToRuntime[] = [];
+    const take = (ws: WebSocket, into: ControlPlaneToRuntime[]) => {
+      ws.addEventListener("message", (event) => {
+        if (typeof event.data !== "string") return;
+        const message = JSON.parse(event.data) as ControlPlaneToRuntime;
+        into.push(message);
+        if (message.type === "call" && message.method === "process.watch") {
+          ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
+        }
+      });
+    };
+    take(machineWs, heard);
+    await until(() => hub.isOnline(agent.runtime.id) && hub.isOnline(machine.runtime.id));
+    const thread = {
+      id: crypto.randomUUID(),
+      organizationId: owner.organizationId,
+      machine: machine.runtime.id,
+    };
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    hub.get(agent.runtime.id)!.startRun("run-watch", thread, sink);
+    agentWs.send(
+      JSON.stringify({ type: "run.end", runId: "run-watch", seq: 1, outcome: "response" }),
+    );
+    await until(() => heard.some((message) => message.type === "call"));
+    expect(heard.find((message) => message.type === "call")).toMatchObject({
+      method: "process.watch",
+      params: { threadId: thread.id, phase: "settle" },
+    });
+
+    const own = { id: crypto.randomUUID(), organizationId: owner.organizationId };
+    hub.get(agent.runtime.id)!.startRun("run-own", own, sink);
+    agentWs.send(
+      JSON.stringify({ type: "run.end", runId: "run-own", seq: 1, outcome: "response" }),
+    );
+    await Bun.sleep(50);
+    expect(heard.filter((message) => message.type === "call")).toHaveLength(1);
+
+    const waiting = {
+      id: crypto.randomUUID(),
+      organizationId: owner.organizationId,
+      machine: late.runtime.id,
+    };
+    hub.get(agent.runtime.id)!.startRun("run-late", waiting, sink);
+    agentWs.send(
+      JSON.stringify({ type: "run.end", runId: "run-late", seq: 1, outcome: "interaction" }),
+    );
+    await Bun.sleep(30);
+    const lateHeard: ControlPlaneToRuntime[] = [];
+    const lateWs = new WebSocket(`ws://localhost:${server.server?.port}/connect`, {
+      headers: { authorization: `Bearer ${late.token}` },
+    } as unknown as string[]);
+    sockets.push(lateWs);
+    take(lateWs, lateHeard);
+    await new Promise<void>((resolve, reject) => {
+      lateWs.onopen = () => {
+        lateWs.send(JSON.stringify({ type: "hello", version: WIRE_VERSION, runs: [] }));
+        resolve();
+      };
+      lateWs.onerror = () => reject(new Error("connect failed"));
+    });
+    await until(() => lateHeard.some((message) => message.type === "call"));
+    expect(lateHeard.find((message) => message.type === "call")).toMatchObject({
+      method: "process.watch",
+      params: { threadId: waiting.id, phase: "suspend" },
+    });
+  });
+
   test("revoking cuts a connected runtime off and fails its live runs", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "x",
