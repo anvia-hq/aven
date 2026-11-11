@@ -16,7 +16,6 @@ import { wakingTools } from "./late-bound-tools";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
-import { markTurn } from "./thread-diff";
 import { timing } from "./timing";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
@@ -38,6 +37,7 @@ import type {
 
 type Live = {
   threadId: string;
+  machine?: string;
   save(changes: Partial<RunRecord>): void;
   followed?: Pick<FollowedRun, "cancel">;
   goal?: FollowedGoal;
@@ -126,7 +126,8 @@ export function createRunDriver(context: DriverContext) {
   sweeper.unref();
 
   async function connectMcp(run: Live, runId: string, threadId: string, secrets: RunSecrets) {
-    const configs = secrets.mcp ?? [];
+    const asked = secrets.mcp ?? [];
+    const configs = run.machine ? asked.map((config) => ({ ...config, allowLocal: false })) : asked;
     if (!configs.length) return undefined;
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
@@ -163,7 +164,7 @@ export function createRunDriver(context: DriverContext) {
       state.record = { ...state.record, ...changes };
       if (!context.stopped()) records.save(state.record);
     };
-    const run: Live = { threadId: thread.id, save, steers: [] };
+    const run: Live = { threadId: thread.id, machine: thread.machine, save, steers: [] };
     live.set(runId, run);
     let ended: DurableEnd["type"] | undefined;
     try {
@@ -254,11 +255,10 @@ export function createRunDriver(context: DriverContext) {
     context.boxes.set(thread.id, box);
     let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
     const markCurrentTurn = async () => {
-      if (turnMarked) return;
-      const root = await context.sandbox.workspace(thread.id);
-      if (!root) return;
+      if (turnMarked || !context.sandbox.markTurn) return;
+      if (!(await context.sandbox.workspace(thread.id))) return;
       turnMarked = true;
-      await markTurn(root).catch(() => false);
+      await context.sandbox.markTurn(thread.id).catch(() => false);
     };
     await markCurrentTurn();
     let waking: Promise<void> | undefined;
@@ -324,7 +324,7 @@ export function createRunDriver(context: DriverContext) {
       build(id, attended) {
         const skills = state.record.skillListing;
         const envNames = env?.map(({ name }) => name);
-        const forking = attended && !thread.forkOf;
+        const forking = attended && !thread.forkOf && !thread.machine;
         const { agent, compaction } = context.createAgent({
           thread,
           id,

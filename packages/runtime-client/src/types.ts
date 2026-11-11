@@ -6,6 +6,7 @@ import type {
   CockpitAccess,
   ComputerState,
   ControlPlaneToRuntime,
+  MachineOp,
   McpConnectResult,
   MessageMention,
   ProcessLogs,
@@ -227,6 +228,7 @@ export interface AgentBackend {
 
 export type ThreadRef = {
   id: string;
+  machine?: string;
   organizationId?: string;
   forkOf?: string;
   projectId?: string;
@@ -373,6 +375,10 @@ export type RunnerCallsContext = {
   dirs?: string[];
 };
 
+export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
+
+export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
+
 export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
 
 export type RuntimeOptions = {
@@ -420,7 +426,9 @@ export interface ThreadWorkspaces {
     sessionId: string,
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
-  paths?(threadId: string): SandboxPaths;
+  paths?(threadId: string): SandboxPaths | undefined;
+  markTurn?(threadId: string): Promise<boolean>;
+  fetchBranch?(threadId: string, access: RepoAccess, branch?: string): Promise<Fetched>;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
   running?(): number;
@@ -431,9 +439,9 @@ export interface ThreadWorkspaces {
     controlPlane: string,
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
-  readonly artifacts?: ArtifactStore;
-  readonly uploads?: UploadStore;
-  readonly skills?: SkillStore;
+  readonly artifacts?: ThreadArtifacts;
+  readonly uploads?: Pick<UploadStore, "save">;
+  readonly skills?: Pick<SkillStore, "install">;
   dispose(): Promise<void>;
 }
 

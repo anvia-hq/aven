@@ -13,6 +13,9 @@ import { createControlPlaneCalls } from "./control-plane-calls";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
 import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
+import { machineCallWait } from "./machine-call-wait";
+import { PlacedWorkspaces } from "./placed-workspaces";
+import { RemoteWorkspaces } from "./remote-workspaces";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { DurableRuns } from "./durable-runs";
@@ -176,11 +179,22 @@ export function startRuntime(options: RuntimeOptions) {
     pause: options.typingPause,
   });
 
+  const runOnMachine = (threadId: string) =>
+    [...driver.live].find(([, run]) => run.threadId === threadId && run.machine)?.[0];
+  const machines = new RemoteWorkspaces((threadId) => (op, args) => {
+    const runId = runOnMachine(threadId);
+    if (!runId) return Promise.reject(new Error("The computer is reached only during a run"));
+    return call("machine.call", { runId, op, args }, machineCallWait(args));
+  });
+  const placed = new PlacedWorkspaces(options.sandbox, machines, (threadId) =>
+    Boolean(runOnMachine(threadId)),
+  );
+
   const driver = createRunDriver({
     backend,
     records,
     outbox,
-    sandbox: options.sandbox,
+    sandbox: placed,
     createAgent,
     call,
     report,

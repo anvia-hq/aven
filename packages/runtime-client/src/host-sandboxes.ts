@@ -9,6 +9,7 @@ import type { ComputerState, RepoAccess, RunEnvVar } from "@aven/protocol/types"
 
 import { ArtifactStore } from "./artifacts";
 import { DirectorySandbox } from "./directory-sandbox";
+import { fetchBranch } from "./fetch-branch";
 import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
 import { ensureLocalExcludes } from "./local-excludes";
@@ -17,6 +18,7 @@ import { runtimeHome } from "./runtime-home";
 import { secretRedactor } from "./secret-redaction";
 import { SkillStore } from "./skills";
 import { startedOnUse } from "./started-on-use";
+import { markTurn } from "./thread-diff";
 import { threadProcesses } from "./thread-processes";
 import { hasRunningProcesses, sandboxTools } from "./thread-tools";
 import { UploadStore } from "./uploads";
@@ -224,6 +226,17 @@ export class HostSandboxes implements ThreadWorkspaces {
 
   running() {
     return this.#sandboxes.size;
+  }
+
+  async markTurn(threadId: string) {
+    const root = await this.workspace(threadId);
+    return root ? markTurn(root).catch(() => false) : false;
+  }
+
+  async fetchBranch(threadId: string, access: RepoAccess, branch?: string) {
+    const root = await this.workspace(threadId);
+    if (!root) throw new Error("The thread has no workspace yet");
+    return fetchBranch(root, access, branch, this.#config.git ?? git);
   }
 
   async release(threadId: string) {

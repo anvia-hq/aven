@@ -34,6 +34,7 @@ export const MACHINE_OPS = [
   "artifacts.save",
   "skills.install",
   "git.fetch",
+  "turn.mark",
 ] as const;
 export const ARTIFACT_MEDIA_TYPES = [
   "image/png",

@@ -3,6 +3,7 @@ import type { SandboxExecOptions, SandboxRuntime } from "@anvia/sandbox";
 import type { MachineCallParams, RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
 
 import { fetchBranch } from "./fetch-branch";
+import { markTurn } from "./thread-diff";
 import type { MachineCallsContext, ThreadRef } from "./types";
 
 const bytesOf = (data: unknown) => {
@@ -126,6 +127,10 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
         };
       case "skills.install":
         return installSkills(threadId, args);
+      case "turn.mark": {
+        const root = await sandbox.workspace(threadId);
+        return root ? markTurn(root).catch(() => false) : false;
+      }
       case "git.fetch": {
         const root = await sandbox.workspace(threadId);
         if (!root) throw new Error("The thread has no workspace yet");
