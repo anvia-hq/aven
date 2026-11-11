@@ -273,8 +273,10 @@ export function createRunDriver(context: DriverContext) {
         clock.mark("turn");
       })().catch((error: unknown) => {
         waking = undefined;
-        run.cancelReason ??= errorMessage(error);
-        void run.followed?.cancel();
+        if (!run.machine) {
+          run.cancelReason ??= errorMessage(error);
+          void run.followed?.cancel();
+        }
         throw error;
       });
       return waking;

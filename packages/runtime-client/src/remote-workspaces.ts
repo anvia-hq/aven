@@ -2,6 +2,7 @@ import type { SandboxPaths } from "@aven/agents/types";
 import type { RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
 import type { SkillListing } from "@aven/agents/types";
 
+import { errorMessage } from "@aven/agents/values";
 import { envOf, withProjectEnv } from "./project-env";
 import { RemoteSandbox } from "./remote-sandbox";
 import { startedOnUse } from "./started-on-use";
@@ -48,12 +49,20 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   readonly skills = {
     install: async (threadId: string, skills: readonly RunSkill[], fetch: FetchSkill) => {
       const call = this.callFor(threadId);
-      const first = (await call("skills.install", { skills })) as InstallAnswer;
-      if (!("missing" in first)) return first.listings;
-      const archives: Record<string, string> = {};
-      for (const digest of first.missing) archives[digest] = (await fetch(digest)).toBase64();
-      const second = (await call("skills.install", { skills, archives })) as InstallAnswer;
-      return "listings" in second ? second.listings : [];
+      try {
+        const first = (await call("skills.install", { skills })) as InstallAnswer;
+        if (!("missing" in first)) return first.listings;
+        const archives: Record<string, string> = {};
+        for (const digest of first.missing) archives[digest] = (await fetch(digest)).toBase64();
+        const second = (await call("skills.install", { skills, archives })) as InstallAnswer;
+        return "listings" in second ? second.listings : [];
+      } catch (error) {
+        console.warn(
+          `No skills for ${threadId}, its computer is unreachable:`,
+          errorMessage(error),
+        );
+        return [];
+      }
     },
   };
 
