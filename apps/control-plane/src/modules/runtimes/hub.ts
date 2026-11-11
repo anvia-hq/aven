@@ -266,6 +266,10 @@ export class RuntimeConnection {
         this.#endBotReply(message.replyId, message.error);
         return;
       case "call":
+        if (message.method === "machine.call") {
+          void this.#answer(message.id, message.method, message.params);
+          return;
+        }
         await this.#answer(message.id, message.method, message.params);
         return;
       case "terminal.opened":
