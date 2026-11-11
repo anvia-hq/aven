@@ -42,24 +42,6 @@ Runners on other machines then connect over `wss://`, so their tokens never cros
 clear. The full checklist for a server in the cloud is in [Cloud](cloud.md); `aven doctor` shows
 what is open.
 
-## The Browser tab
-
-A thread's **Browser** tab shows a page the agent serves in its sandbox (a dev server, a docs site): you type the port, and the page opens beside the conversation. It is **off until you give it an address**, because the page is the agent's own code and must not run on Aven's address, where it could act as you. The tab says "The Browser is not set up on this server" until you do.
-
-The server listens for the Browser on a second port, `127.0.0.1:2839` (`AVEN_BROWSER_PORT`). Give that port an address of its own, different from the one you open Aven at, and tell the server:
-
-```sh
-aven server install --browser-origin https://aven.example.com:8444
-```
-
-- **On this machine only**, with the default address: `aven server install --browser-origin http://localhost:2839`.
-- **On a tailnet**: `tailscale serve --bg --https=8444 http://127.0.0.1:2839`, then `--browser-origin https://<machine name>.<tailnet>.ts.net:8444`.
-- **With a domain**: put an HTTPS reverse proxy in front of `127.0.0.1:2839` (it must pass WebSocket upgrades, which hot reload uses) and use its address. An address on another host name than Aven's, such as `https://browser.example.com`, is the safest: a page on the same host name as Aven can set a cookie that signs you out of Aven, though it cannot read your session or act as you.
-
-`aven server install` writes `AVEN_BROWSER_ORIGIN` to the server's `.env` and restarts the server, which ends the runs in progress, so do it when no thread is working. Then open a thread, choose **Browser**, type the port and press Open.
-
-Good to know: one page at a time per browser (opening another port or thread replaces it until you reload), and the page runs in **your** browser, so `localhost` in its code is your own machine: an app must call its own origin (`/api/...`) and let its dev server proxy to the API. The agent is told this. See [decision 0199](../decision/0199-the-browser-shows-a-port-of-the-sandbox.md).
-
 ## More runners
 
 One server can have any number of runners: a laptop, a build machine, a cloud VM. In **Settings >

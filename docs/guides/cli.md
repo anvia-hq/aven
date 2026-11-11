@@ -11,6 +11,6 @@ aven doctor                                                check Docker, git, th
 aven uninstall [--purge --yes]                             remove the services; --purge also deletes the data
 ```
 
-`aven server install --browser-origin <address>` turns on the thread Browser tab (see [Self-hosting](self-hosting.md#the-browser-tab)). `aven stop` keeps the database. Settings are in `~/.aven/server/.env`; edit it and run
+`aven stop` keeps the database. Settings are in `~/.aven/server/.env`; edit it and run
 `aven restart`. `--bind` is who can connect (this machine only unless a domain or `--bind` says
 otherwise) and `--owner-email` is required for a server others can reach: see [Cloud](cloud.md). See [`deploy/env.example`](../../deploy/env.example) for what each one does.

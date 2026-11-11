@@ -39,7 +39,7 @@ Everything:
               database and ~/.aven
 
 Server:
-  server install [--domain D] [--port N] [--bind ADDRESS] [--origin URL] [--browser-origin URL]
+  server install [--domain D] [--port N] [--bind ADDRESS] [--origin URL]
                  [--release X]
               Install and start the server (Postgres, API and web) in ~/.aven/server
   start       Start the server
@@ -72,7 +72,6 @@ async function main(argv: string[]) {
     "api-port",
     "domain",
     "origin",
-    "browser-origin",
     "release",
     "url",
     "token",
