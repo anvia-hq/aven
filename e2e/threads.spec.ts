@@ -76,6 +76,9 @@ test.describe("threads", () => {
     await expect(more).toHaveCSS("opacity", "1");
     await expect(time).toHaveCSS("opacity", "0");
     await more.click();
+    await page.mouse.move(800, 400);
+    await expect(more).toHaveCSS("opacity", "1");
+    await expect(time).toHaveCSS("opacity", "0");
     await page.getByRole("menuitem", { name: "Archive" }).click();
 
     await expect(page).toHaveURL(/\/threads$/);

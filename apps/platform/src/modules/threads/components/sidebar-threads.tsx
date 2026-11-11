@@ -59,7 +59,7 @@ function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolea
       className={cn(
         "pointer-events-none absolute inset-y-0 right-2 flex items-center justify-end text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
         yields &&
-          "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 max-md:hidden",
+          "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 group-has-data-popup-open/menu-item:opacity-0 max-md:hidden",
       )}
     >
       {shortTimeAgo(thread.updatedAt)}
