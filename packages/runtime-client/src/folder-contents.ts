@@ -121,6 +121,13 @@ export async function listCommits(
   page = 1,
 ): Promise<FoldersCommitsResult> {
   const { target } = await insideFolder(dirs, folder, "");
+  const top = await runCommand(["git", "rev-parse", "--show-toplevel"], {
+    cwd: target,
+    timeoutMs: COMMITS_TIMEOUT_MS,
+  });
+  const root =
+    top.code === 0 ? await realpath(top.stdout.trim()).catch(() => undefined) : undefined;
+  if (root !== target) return { commits: [], hasMore: false };
   const format = ["%H", "%P", "%an", "%aI", "%D", "%s"].join("%x1f") + "%x1e";
   const done = await runCommand(
     [

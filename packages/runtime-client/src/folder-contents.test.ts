@@ -122,6 +122,21 @@ describe("the files of a folder project", () => {
       expect(await listCommits([root], project)).toEqual({ commits: [], hasMore: false });
     });
 
+    test("has none for a folder inside a repository that is not itself the repository's root", async () => {
+      const { root, project } = await served();
+      await rm(join(project, ".git"), { recursive: true });
+      await git(project, "init", "-q", "-b", "main");
+      await writeFile(join(project, "a.txt"), "a");
+      await git(project, "add", ".");
+      await git(project, "commit", "-qm", "parent");
+
+      expect((await listCommits([root], project)).commits).toHaveLength(1);
+      expect(await listCommits([root], join(project, "src"))).toEqual({
+        commits: [],
+        hasMore: false,
+      });
+    });
+
     test("refuses a folder the runner does not serve", async () => {
       const { project } = await served();
 
