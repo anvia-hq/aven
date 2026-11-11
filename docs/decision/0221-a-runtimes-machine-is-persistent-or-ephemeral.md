@@ -24,7 +24,7 @@ Rejected. The diff, the files, the terminal, processes, forks, git, uploads and 
 - **A provider is persistent or ephemeral**, and that decides how many threads a machine holds:
   - **A persistent runtime is one machine for many threads**, as every runtime is today. `manual` and a plain VM are. The control plane does not stop it, and a project on it may be a folder of the machine (0218) or a repository.
   - **An ephemeral runtime is one machine per thread.** The runtime is a template: the provider and its settings (account, region, machine size). Each thread gets a machine of its own from it, made when the thread first needs one, and removed when the thread is archived (0118) or deleted. A project on it is a repository, cloned into each thread's machine (`repo.access`, `git-clone.ts`), since a folder lives on one machine only.
-- **A fork follows its runtime.** On a persistent runtime it works as it does today: the fork is a thread on the parent's machine, with a copy of the parent's folder (`fork-workspace.ts`, 0135). On an ephemeral runtime a fork is a thread like any other, so it gets a new sandbox of its own, made from the same runtime, and it is removed when the fork is archived.
+- **A fork follows its runtime.** On a persistent runtime it works as it does today: the fork is a thread on the parent's machine, with a copy of the parent's folder (`fork-workspace.ts`, 0135). On an ephemeral runtime a fork is a thread like any other, so it gets a new sandbox of its own, made from a snapshot of the parent's machine. The fork starts where the parent is, uncommitted changes included, as a copy on one disk does today. Its sandbox is removed when the fork is archived. A provider that cannot make a machine from another's snapshot offers no forks.
 - **An ephemeral provider says how its machines live:** what survives a stop (the disk, a snapshot, or nothing), how long one may stay idle, and the cap on how long it may be awake, if it has one.
 - **The runner stays on the machine for every provider**, as 0220 says. The SDK backends run beside it. A provider makes a machine and starts `aven runner` on it, which connects out, and the wire does not change.
 - **A thread's state on the machine is its folder and the journal**, so a provider must keep the disk, or a snapshot of it, across a stop. A provider that keeps nothing cannot hold a thread that goes on after its machine stops, and is not offered until there is a way to save a folder somewhere else.
@@ -36,7 +36,6 @@ Rejected. The diff, the files, the terminal, processes, forks, git, uploads and 
 
 ## What is not decided yet
 
-- **How a fork's folder reaches its sandbox:** a snapshot of the parent's machine, which keeps uncommitted changes as a copy on one disk does, or a branch the parent pushes. This is chosen with the first provider, by what it offers.
 - **Bots.** A bot's computer is a runtime's machine. Whether a bot may use an ephemeral runtime, and with which machine, is chosen when one does.
 - The idle time and the time limit for waking, per provider.
 - What the platform shows while a machine is waking, and how much a workspace may spend on machines.
