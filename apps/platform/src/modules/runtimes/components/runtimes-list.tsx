@@ -3,8 +3,6 @@ import { cn } from "cn";
 
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
-import { Label } from "@/components/label";
-import { Switch } from "@/components/switch";
 import { SettingsEmpty } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 
@@ -60,7 +58,7 @@ function Load({ runtime }: { runtime: Runtime }) {
 }
 
 export function RuntimesList() {
-  const { runtimes, loaded, revoke, share, isOwnedByMe, canRename } = useRuntimes({ poll: true });
+  const { runtimes, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
 
   if (!loaded) return null;
   if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
@@ -91,7 +89,7 @@ export function RuntimesList() {
                       variant="outline"
                       title="Works on this computer itself, with no sandbox: the agent runs as the person who runs it"
                     >
-                      {runtime.shared ? "This computer · shared" : "This computer · private"}
+                      This computer
                     </Badge>
                   )}
                   {runtime.ownerId === null && (
@@ -130,17 +128,6 @@ export function RuntimesList() {
               </td>
               <td className="px-3 py-3">
                 <span className="flex items-center justify-end gap-1">
-                  {runtime.host && isOwnedByMe(runtime) && (
-                    <Label className="mr-2 flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
-                      Share
-                      <Switch
-                        size="sm"
-                        aria-label={`Share ${runtime.name} with the workspace`}
-                        checked={runtime.shared}
-                        onCheckedChange={(shared) => void share(runtime, shared)}
-                      />
-                    </Label>
-                  )}
                   <UpdateRuntimeDialog runtime={runtime} />
                   {canRename(runtime) && <RenameRuntimeDialog runtime={runtime} />}
                   {isOwnedByMe(runtime) && (

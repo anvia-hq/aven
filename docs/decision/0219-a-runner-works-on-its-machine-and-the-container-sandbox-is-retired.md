@@ -37,6 +37,6 @@ Continuing a thread on another runner looks the runner up as the person, so a pr
 
 A fork of a git folder is a copy of its parent's clone, with uncommitted work and ignored files. `copyTreeSharingObjects` makes it copy-on-write where the filesystem can (`clonefile` on macOS, `cp --reflink=always` on Linux). On one that cannot, such as ext4, it copies the working files and hard-links `.git/objects`, which git never changes in place, so history costs no space. A worktree is not used: the host-side git expects a standalone `.git`. A folder that is not a git repository has no clone and no copy.
 
-## The control plane's own runner
+## A runner is its owner's, and a thread is what is shared
 
-The built-in runner (`AVEN_LOCAL_RUNNER=host`) has no owner to turn Share on, so the control plane marks it shared when it says it is a host runner: it is the workspace's, as it was before 0218. It works as the user running the runner, in the folders of `AVEN_DIRS`. Set `AVEN_LOCAL_RUNNER=off` to keep a server's own machine out of reach.
+A host runner is usable only by its owner: only they can put a project on it or start a thread there. There is no switch to share the computer. A teammate gets in through a thread: when its owner shares the thread with the workspace and turns on multiplayer, a teammate can send messages to its agent, which acts as the owner on their computer. The owner turning that on for one thread is the consent, and a workspace's people are trusted by the person who shares. 0218's Share switch on a runner is removed (the `shared` column stays, unused). The control plane's own runner (`AVEN_LOCAL_RUNNER=host`) has no owner, so it is the workspace's, as before 0218; set `AVEN_LOCAL_RUNNER=off` to keep a server's machine out of reach.

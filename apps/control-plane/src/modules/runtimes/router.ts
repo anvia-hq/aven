@@ -9,13 +9,7 @@ import { connectRouter } from "./connect";
 import { createLatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
-import {
-  createRuntimeBody,
-  renameRuntimeBody,
-  runtimeParams,
-  shareRuntimeBody,
-  updateRuntimeBody,
-} from "./schema";
+import { createRuntimeBody, renameRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
@@ -86,15 +80,6 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
         );
       },
       { auth: true, org: true, params: runtimeParams, body: renameRuntimeBody },
-    )
-    .patch(
-      "/:id/share",
-      async ({ params, body, organizationId, user }) =>
-        orNotFound(
-          await runtimesService.share(organizationId, user.id, params.id, body.shared),
-          "Runtime not found",
-        ),
-      { auth: true, org: true, params: runtimeParams, body: shareRuntimeBody },
     )
     .post(
       "/:id/rotate",

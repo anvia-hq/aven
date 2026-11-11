@@ -68,20 +68,6 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     return renamed !== null;
   }
 
-  async function share(runtime: Runtime, shared: boolean) {
-    const changed = await change("Could not change who may use the runtime", () =>
-      postJson<Runtime>(`/runtimes/${runtime.id}/share`, { shared }, "PATCH"),
-    );
-    if (changed !== null) {
-      toast.add({
-        title: shared ? "Shared with the workspace" : "Private to you again",
-        description: shared
-          ? `Members can now start threads on ${runtime.name}, and they run as you on that computer.`
-          : `Only you can start threads on ${runtime.name}.`,
-      });
-    }
-  }
-
   async function revoke(runtime: Runtime) {
     const revoked = await change("Could not revoke runtime", () =>
       api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" }),
@@ -139,7 +125,6 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     create,
     rotate,
     rename,
-    share,
     canRename,
     revoke,
     canUpdate,
