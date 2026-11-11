@@ -104,6 +104,7 @@ function harness(
     exec?: Exec;
     stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills">;
     archives?: Map<string, Uint8Array>;
+    machines?: ThreadWorkspaces;
   } = {},
 ) {
   const sent: RuntimeToControlPlane[] = [];
@@ -114,6 +115,7 @@ function harness(
   const boxes = new Map<string, ThreadSandbox>();
   const replies = new BotReplies({
     sandbox: sandboxWith(acquired, options.exec, options.stores),
+    machines: options.machines,
     createAgent,
     send: (frame) => {
       if (options.linkUp && !options.linkUp()) return false;
@@ -457,6 +459,95 @@ describe("BotReplies", () => {
 
     expect(most).toBe(1);
     expect(sent.filter((frame) => frame.type === "bot.say")).toHaveLength(3);
+  });
+
+  describe("a computer on another machine (decision 0222)", () => {
+    const skill = { name: "notes", description: "Personal notes.", digest: "1".repeat(64) };
+
+    test("tools and skills run there, and this runner's computer is left alone", async () => {
+      const there: { id: string; repo: unknown }[] = [];
+      const installed: unknown[] = [];
+      const machines: ThreadWorkspaces = {
+        ...sandboxWith(there),
+        skills: {
+          async install(_id, skills) {
+            installed.push(skills);
+            return skills.map((each) => ({
+              name: each.name,
+              description: each.description,
+              path: `/skills/${each.name}/SKILL.md`,
+            }));
+          },
+        },
+      };
+      let computer: readonly { name: string }[] = [];
+      const run = harness(
+        (input) => {
+          computer = input.computer;
+          return agentThat(
+            [toolCall("exec_command", { command: "pwd" })],
+            [toolCall("send_message", { text: "ran" })],
+            [text("")],
+          )(input);
+        },
+        { machines },
+      );
+
+      run.replies.start({ ...message, machine: "rt-bot", skills: [skill] });
+      await run.until();
+
+      expect(there).toEqual([{ id: "bot-1", repo: undefined }]);
+      expect(run.acquired).toEqual([]);
+      expect(computer.map((each) => each.name)).toEqual(["exec_command"]);
+      expect(installed).toEqual([[skill]]);
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
+
+    test("a reply with no machine keeps this runner's computer, even when another can be reached", async () => {
+      const there: { id: string; repo: unknown }[] = [];
+      const run = harness(agentThat([text("")]), { machines: sandboxWith(there) });
+
+      run.replies.start(message);
+      await run.until();
+
+      expect(run.acquired).toEqual([{ id: "bot-1", repo: undefined }]);
+      expect(there).toEqual([]);
+    });
+
+    test("a reply that names a machine this runner cannot reach fails, and says so", async () => {
+      const run = harness(agentThat([text("")]));
+      run.replies.start({ ...message, machine: "rt-bot" });
+      await run.until();
+      expect(run.sent).toEqual([
+        { type: "bot.end", replyId: "r1", error: "This runner cannot reach another computer" },
+      ]);
+    });
+
+    test("an MCP server on a private address is refused, since the agent runs elsewhere", async () => {
+      const run = harness(agentThat([text("")]), { machines: sandboxWith() });
+      run.replies.start({
+        ...message,
+        machine: "rt-bot",
+        mcp: [
+          {
+            id: "m1",
+            name: "Notes",
+            url: "http://127.0.0.1:9/mcp",
+            headers: {},
+            allowLocal: true,
+          },
+        ],
+      });
+      await run.until();
+
+      const reported = run.calls.find(
+        (call) =>
+          (call as { method: string; params: { op?: string } }).method === "bot.mcp" &&
+          (call as { params: { op?: string } }).params.op === "report",
+      ) as { params: { results: { error?: string }[] } } | undefined;
+      expect(reported?.params.results[0]?.error).toContain("MCP URL blocked");
+      expect(run.sent.at(-1)).toEqual({ type: "bot.end", replyId: "r1" });
+    });
   });
 
   test("the bot works on its own computer: no repository, and no show_image, which has nowhere to go", async () => {

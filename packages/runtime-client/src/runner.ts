@@ -168,8 +168,15 @@ export function startRuntime(options: RuntimeOptions) {
     new ProcessWatchRecords(state),
   );
 
-  const bots = new BotReplies({
+  const botMachines = new RemoteWorkspaces((botId) => (op, args) => {
+    const replyId = bots.replyOnMachine(botId);
+    if (!replyId) return Promise.reject(new Error("The computer is reached only during a reply"));
+    return call("machine.call", { replyId, op, args }, machineCallWait(args));
+  });
+
+  const bots: BotReplies = new BotReplies({
     sandbox: options.sandbox,
+    machines: botMachines,
     createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),
     send,
     call,
