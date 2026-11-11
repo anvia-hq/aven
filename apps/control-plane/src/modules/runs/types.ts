@@ -87,8 +87,8 @@ export type RuntimeRun = {
 };
 
 export interface Runtime {
-  start(input: StartRunInput): RuntimeRun;
-  resume(input: ResumeRunInput): RuntimeRun;
+  start(input: StartRunInput): Promise<RuntimeRun>;
+  resume(input: ResumeRunInput): Promise<RuntimeRun>;
   dispose(): void;
 }
 
