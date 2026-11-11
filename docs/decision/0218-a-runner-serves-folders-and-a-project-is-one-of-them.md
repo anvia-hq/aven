@@ -21,6 +21,7 @@ Amp's runner (`amp --no-tui`, run on a machine) is the other model. It registers
 ## Consequences
 
 - **There is no boundary between the agent and the machine.** It runs with the runner user's access: their files and ssh keys, every other served folder, the Docker daemon (a member of the `docker` group is effectively root), their network. A prompt injected into something the agent reads can act as that user. This is the same trade Amp makes, and it is acceptable on a machine the person owns and runs the runner on, and not on a shared one. The runner should be run as its own unprivileged user where it can be, and the docs say so and that it is not a sandbox.
+- **Anyone who may use the runner is running as its user.** A runner belongs to a workspace, so a member who can start a thread on it, or message one in multiplayer (0179), runs commands as that user. There is no owner-only rule: register a machine in a workspace whose members you trust with it.
 - Two threads can collide on a port or a global tool, since they share the machine's network and home.
 - The Desktop and Browser panels have nothing to show unless the machine has a display; they are off in this mode at first.
 - A thread's secrets (project variables) are in its processes' environment, which other processes of the same user can read.
