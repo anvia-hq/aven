@@ -36,7 +36,7 @@ function NewThread() {
     startThread(projectId, message, selection);
 
   return (
-    <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-0.5rem-2px)]">
+    <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-1rem-2px)]">
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {loaded && projects.length > 0 && (

@@ -27,7 +27,7 @@ export function SplitThreads({ threadId, split }: Props) {
     return navigate({ to: "/threads/$threadId", params: { threadId: id } });
   };
   return (
-    <div className="h-[calc(100svh-var(--mobile-chrome))] min-w-0 md:h-[calc(100svh-0.5rem)]">
+    <div className="h-[calc(100svh-var(--mobile-chrome))] min-w-0 md:h-[calc(100svh-1rem)]">
       <ResizablePanelGroup
         orientation="horizontal"
         defaultLayout={layout.defaultLayout}

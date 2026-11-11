@@ -71,7 +71,7 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-0.5rem-2px)]">
+    <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-1rem-2px)]">
       <PageHeader
         title="Projects"
         description="Open a project to see its files, README and threads. Each one is a folder on a computer that runs a runner."
