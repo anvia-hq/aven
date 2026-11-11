@@ -12,7 +12,7 @@ function Runtimes() {
   return (
     <SettingsPage
       title="Runtimes"
-      description="Computers and VMs that host sandboxes for this workspace. A project runs on one; the control plane is always available as a built-in runner."
+      description="Computers that run agents in their own folders. A project runs on one, and only its owner can start threads on it. Share a thread to let teammates drive it; the control plane is always available as a built-in runner."
       actions={<NewRuntimeDialog />}
     >
       <RuntimesList />

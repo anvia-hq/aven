@@ -13,9 +13,9 @@ import {
 } from "@/components/dialog";
 import { Form } from "@/components/form";
 import { LabeledSelect } from "@/components/labeled-select";
-import { TextField } from "@/components/text-field";
 
 import { useAddFolder } from "../hooks/use-add-folder";
+import { FolderPicker } from "./folder-picker";
 import type { Project } from "../types";
 
 type Props = {
@@ -50,17 +50,11 @@ export function AddFolderDialog({ onAdded, variant, size }: Props) {
                 onChange={state.chooseRunner}
                 placeholder="Choose a computer"
               />
-              <TextField
-                label="Folder"
-                value={state.path}
-                onChange={(event) => state.setPath(event.target.value)}
-                placeholder={state.served[0] ?? "/path/to/the/project"}
+              <FolderPicker
+                runtimeId={state.chosenRunner}
+                path={state.path}
+                onChange={state.setPath}
               />
-              {state.served.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  It serves: {state.served.join(", ")}
-                </p>
-              )}
             </>
           ) : (
             <p className="text-sm text-muted-foreground">

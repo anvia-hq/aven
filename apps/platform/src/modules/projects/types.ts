@@ -120,3 +120,7 @@ export type Dot = {
 };
 
 export type OrbShape = { light: number; rings: Ring[]; dots: Dot[] };
+
+export type FolderEntry = { name: string; path: string; git: boolean };
+
+export type FolderListing = { path: string | null; parent: string | null; folders: FolderEntry[] };

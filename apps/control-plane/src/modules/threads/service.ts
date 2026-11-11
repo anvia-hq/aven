@@ -209,9 +209,7 @@ export const threadsService = {
     if (!project) throw new ProjectNotFoundError("Project not found");
     const runtimeId = placement?.runtimeId ?? project.runtimeId;
     if (!(await runtimesService.get(organizationId, runtimeId, userId))) {
-      throw new ForbiddenError(
-        "This project runs on a computer that is private to its owner, who has not shared it",
-      );
+      throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
     const [thread] = await db
       .insert(threads)
@@ -238,9 +236,7 @@ export const threadsService = {
       thread.visibility === "workspace" &&
       isDriving(thread.drivingUntil) &&
       (await isMember(organizationId, thread.createdBy));
-    if (!driven || (await runtimesService.isPrivateHost(thread.runtimeId))) {
-      throw new ThreadNotFoundError();
-    }
+    if (!driven) throw new ThreadNotFoundError();
     return thread;
   },
 
@@ -258,17 +254,6 @@ export const threadsService = {
         throw new ConflictError(
           "Share the thread with the workspace before turning on multiplayer",
         );
-      }
-      if (driving !== null) {
-        const [placed] = await db
-          .select({ runtimeId: threads.runtimeId })
-          .from(threads)
-          .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
-        if (placed && (await runtimesService.isPrivateHost(placed.runtimeId))) {
-          throw new ConflictError(
-            "This thread runs on a computer that is private to its owner: share the computer with the workspace before turning on multiplayer",
-          );
-        }
       }
       if (driving !== null && !(await decisionModelService.get(organizationId))) {
         throw new ConflictError(

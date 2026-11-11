@@ -4,12 +4,15 @@ import {
   computerCallParams,
   diffGetParams,
   filesCallParams,
+  foldersCreateParams,
+  foldersListParams,
   filesSearchParams,
   processesCallParams,
   runnerUpdateParams,
   sandboxReleaseParams,
   steerParams,
 } from "./call-params";
+import { createFolder, listFolders } from "./folder-browser";
 import { currentBranch, threadDiff } from "./thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "./workspace-files";
 import type {
@@ -29,6 +32,7 @@ export function createRunnerCalls({
   processEnds,
   update,
   steer,
+  dirs = [],
 }: RunnerCallsContext) {
   async function diffOf(params: unknown) {
     const { threadId, scope } = diffGetParams(params);
@@ -112,6 +116,11 @@ export function createRunnerCalls({
 
   return function callOf(method: RunnerCallMethod, params: unknown) {
     if (method === "runner.update") return updateOf(params);
+    if (method === "folders.list") return listFolders(dirs, foldersListParams(params).path);
+    if (method === "folders.create") {
+      const { path, name } = foldersCreateParams(params);
+      return createFolder(dirs, path, name);
+    }
     if (method === "run.steer") return steer(steerParams(params));
     if (method === "actions.run") return actionOf(params);
     if (method === "computer.status") return computerOf(params);

@@ -1,0 +1,15 @@
+export const SHELL_START = [
+  'cd -P "$AVEN_THREAD_DIR" || exit 1',
+  "origin=$(git remote get-url origin 2>/dev/null)",
+  "branch=$(git branch --show-current 2>/dev/null)",
+  'if [ -n "$origin" ] && [ -n "$branch" ]; then',
+  '  AVEN_PROMPT_NAME=$(basename "${origin%.git}")',
+  `  printf 'Aven: this thread works in its own copy of %s, on branch %s.\\n' "$origin" "$branch"`,
+  "else",
+  '  AVEN_PROMPT_NAME=$(basename "$PWD")',
+  `  printf 'Aven: this thread works directly in %s.\\n' "$PWD"`,
+  "fi",
+  "export AVEN_PROMPT_NAME",
+  `export PROMPT_COMMAND='PS1="\\[\\e[32m\\]aven\\[\\e[0m\\] \\[\\e[34m\\]$AVEN_PROMPT_NAME\\[\\e[0m\\]$(b=$(git branch --show-current 2>/dev/null); [ -n "$b" ] && printf " (%s)" "$b")\\$ "'`,
+  "exec bash",
+].join("\n");

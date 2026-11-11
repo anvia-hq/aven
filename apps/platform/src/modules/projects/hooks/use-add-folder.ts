@@ -15,8 +15,7 @@ export function useAddFolder(onAdded?: (project: Project) => void) {
 
   const hosts = runtimes.filter((runtime) => runtime.directories.length > 0);
   const chosenRunner = runtimeId || (hosts.find((runtime) => runtime.online) ?? hosts[0])?.id || "";
-  const served = hosts.find((runtime) => runtime.id === chosenRunner)?.directories ?? [];
-  const canSubmit = Boolean(chosenRunner && path.trim().startsWith("/"));
+  const canSubmit = Boolean(chosenRunner && path.startsWith("/"));
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -58,7 +57,6 @@ export function useAddFolder(onAdded?: (project: Project) => void) {
     })),
     chosenRunner,
     chooseRunner,
-    served,
     path,
     setPath,
   };

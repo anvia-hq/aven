@@ -75,7 +75,7 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.authenticate("avrt_local_guess")).toBeNull();
   });
 
-  test("a runner that works on its own machine is private to its owner until the owner shares it", async () => {
+  test("a runner that works on its own machine is its owner's alone", async () => {
     const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "my mac" });
     await runtimesService.setHost(runtime.id, true);
 
@@ -84,23 +84,21 @@ run("runtimes service (real postgres)", async () => {
     expect((await runtimesService.list(seed.orgA, "a-teammate")).map((r) => r.id)).not.toContain(
       runtime.id,
     );
-    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(true);
-    expect(await runtimesService.share(seed.orgA, "a-teammate", runtime.id, true)).toBeNull();
-
-    await runtimesService.share(seed.orgA, seed.userId, runtime.id, true);
-
-    expect((await runtimesService.get(seed.orgA, runtime.id, "a-teammate"))?.id).toBe(runtime.id);
-    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(false);
-
-    await runtimesService.share(seed.orgA, seed.userId, runtime.id, false);
-    expect(await runtimesService.get(seed.orgA, runtime.id, "a-teammate")).toBeNull();
   });
 
-  test("a runner in a container is the workspace's, shared or not", async () => {
+  test("the control plane's own runner has no owner, so it is the workspace's", async () => {
+    await runtimesService.ensureLocal();
+    await runtimesService.setHost(LOCAL_RUNTIME_ID, true);
+
+    expect((await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID, "a-teammate"))?.id).toBe(
+      LOCAL_RUNTIME_ID,
+    );
+  });
+
+  test("a runner in a container is the workspace's", async () => {
     const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "docker" });
 
     expect((await runtimesService.get(seed.orgA, runtime.id, "a-teammate"))?.id).toBe(runtime.id);
-    expect(await runtimesService.isPrivateHost(runtime.id)).toBe(false);
   });
 
   test("a runtime is renamed in its own organization only, and a revoked one is not found", async () => {

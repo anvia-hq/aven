@@ -6,6 +6,8 @@ import type {
   DiffGetParams,
   DiffScope,
   FilesCallParams,
+  FoldersCreateParams,
+  FoldersListParams,
   FilesSearchParams,
   MessageMention,
   ActionRunParams,
@@ -83,4 +85,17 @@ export function steerParams(params: unknown): SteerParams {
     throw invalid();
   if (mentions !== undefined && !Array.isArray(mentions)) throw invalid();
   return { runId, steerId, prompt, mentions: mentions as MessageMention[] | undefined };
+}
+
+export function foldersListParams(params: unknown): FoldersListParams {
+  const { path } = asRecord(params);
+  if (path === undefined || path === null) return {};
+  if (typeof path !== "string" || path.length > 4096) throw invalid();
+  return { path };
+}
+
+export function foldersCreateParams(params: unknown): FoldersCreateParams {
+  const { path, name } = asRecord(params);
+  if (typeof path !== "string" || typeof name !== "string") throw invalid();
+  return { path, name };
 }

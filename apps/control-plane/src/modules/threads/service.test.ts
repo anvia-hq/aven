@@ -36,7 +36,7 @@ run("threadsService (postgres)", async () => {
     await cleanup();
   });
 
-  test("a thread on a computer that is private to its owner is the owner's alone until it is shared", async () => {
+  test("a teammate cannot start a thread on a computer that is private to its owner, but can drive a thread the owner shared", async () => {
     const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });
     await runtimesService.setHost(runtime.id, true);
     const { project } = await seedProject(orgA, userId, runtime.id, "on-my-mac");
@@ -45,25 +45,13 @@ run("threadsService (postgres)", async () => {
     await expect(
       threadsService.create(orgA, teammateId, { projectId: project.id }),
     ).rejects.toThrow("private to its owner");
-    await expect(
-      threadsService.update({ organizationId: orgA, userId }, mine.id, {
-        visibility: "workspace",
-        driving: 1,
-      }),
-    ).rejects.toThrow("share the computer");
+    await expect(threadsService.drivable(teammate, mine.id)).rejects.toThrow();
 
-    await runtimesService.share(orgA, userId, runtime.id, true);
-
-    await threadsService.create(orgA, teammateId, { projectId: project.id });
     await threadsService.update({ organizationId: orgA, userId }, mine.id, {
       visibility: "workspace",
       driving: 1,
     });
     await threadsService.drivable(teammate, mine.id);
-
-    await runtimesService.share(orgA, userId, runtime.id, false);
-    await expect(threadsService.drivable(teammate, mine.id)).rejects.toThrow();
-    await threadsService.drivable({ organizationId: orgA, userId }, mine.id);
   });
 
   test("keeps the time of every run that carried on an answer, added up", async () => {

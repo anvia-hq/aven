@@ -429,7 +429,21 @@ export type SteerResult =
 
 export type SandboxCallMethod = "sandbox.release";
 
-export type RunnerSelfCallMethod = "runner.update";
+export type RunnerSelfCallMethod = "runner.update" | "folders.list" | "folders.create";
+
+export type FoldersListParams = { path?: string };
+
+export type FolderEntry = { name: string; path: string; git: boolean };
+
+export type FoldersListResult = {
+  path: string | null;
+  parent: string | null;
+  folders: FolderEntry[];
+};
+
+export type FoldersCreateParams = { path: string; name: string };
+
+export type FoldersCreateResult = { path: string };
 
 export type RunnerUpdateParams = { release?: string };
 

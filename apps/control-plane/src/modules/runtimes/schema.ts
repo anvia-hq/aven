@@ -6,8 +6,6 @@ export const createRuntimeBody = z.object({ name: z.string().trim().min(1).max(1
 
 export const renameRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
 
-export const shareRuntimeBody = z.object({ shared: z.boolean() });
-
 export type CreateRuntimeBody = z.infer<typeof createRuntimeBody>;
 
 export const updateRuntimeBody = z
@@ -18,3 +16,10 @@ export const updateRuntimeBody = z
       .optional(),
   })
   .optional();
+
+export const foldersQuery = z.object({ path: z.string().max(4096).optional() });
+
+export const createFolderBody = z.object({
+  path: z.string().min(1).max(4096),
+  name: z.string().trim().min(1).max(255),
+});
