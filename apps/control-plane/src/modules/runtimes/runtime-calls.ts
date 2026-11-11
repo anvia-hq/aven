@@ -37,6 +37,36 @@ function machineCallTimeout(args: unknown) {
     : MACHINE_CALL_TIMEOUT_MS;
 }
 
+async function answerMachineCall(
+  params: unknown,
+  findRun: RuntimeCallContext["findRun"],
+  findBotReply: RuntimeCallContext["findBotReply"],
+  machines: RuntimeCallContext["machines"],
+) {
+  const relay = parseMachineRelayParams(params);
+  const place =
+    "replyId" in relay ? replyPlace(relay.replyId, findBotReply) : runPlace(params, findRun);
+  const machine = await machines.reach(place);
+  return machine.call(
+    "machine.call",
+    { threadId: place.threadId, op: relay.op, args: relay.args },
+    machineCallTimeout(relay.args),
+  );
+}
+
+function replyPlace(replyId: string, findBotReply: RuntimeCallContext["findBotReply"]) {
+  const reply = findBotReply(replyId);
+  if (!reply) throw new Error("Unknown or finished reply");
+  if (!reply.machine || !reply.botId) throw new Error("This reply's tools act on its own runner");
+  return { runtimeId: reply.machine, threadId: reply.botId };
+}
+
+function runPlace(params: unknown, findRun: RuntimeCallContext["findRun"]) {
+  const { run } = liveRun(params, findRun);
+  if (!run.thread.machine) throw new Error("This run's tools act on its own runner");
+  return { runtimeId: run.thread.machine, threadId: run.thread.id };
+}
+
 function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   const { runId } = parseMemoryParams(params);
   const run = findRun(runId);
@@ -134,6 +164,7 @@ export async function answerRuntimeCall(
       reply.update(call),
     );
   }
+  if (method === "machine.call") return answerMachineCall(params, findRun, findBotReply, machines);
   const { runId, run } = liveRun(params, findRun);
   if (method === "repo.access") return repoAccess(run.thread.id);
   if (method === "repo.folder") return { directory: await folderOf(run.thread.id) };
@@ -158,19 +189,6 @@ export async function answerRuntimeCall(
   }
   if (method === "fork.start") return forks.start(run.thread, parseForkStartParams(params));
   if (method === "fork.status") return forks.status(run.thread, parseForkStatusParams(params).id);
-  if (method === "machine.call") {
-    const { op, args } = parseMachineRelayParams(params);
-    if (!run.thread.machine) throw new Error("This run's tools act on its own runner");
-    const machine = await machines.reach({
-      runtimeId: run.thread.machine,
-      threadId: run.thread.id,
-    });
-    return machine.call(
-      "machine.call",
-      { threadId: run.thread.id, op, args },
-      machineCallTimeout(args),
-    );
-  }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {
     sessionId: run.thread.id,
