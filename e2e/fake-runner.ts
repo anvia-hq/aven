@@ -89,6 +89,8 @@ ws.onopen = () => {
     runs: [],
     build: config.self.build,
     canUpdate: config.self.canUpdate ? true : undefined,
+    host: config.self.dirs.length > 0 ? true : undefined,
+    dirs: config.self.dirs.length > 0 ? config.self.dirs : undefined,
   });
   if (config.self.stats) send({ type: "host.stats", stats: JSON.parse(config.self.stats) });
 };
@@ -377,6 +379,8 @@ type PretendProcess = {
   endedAt?: string;
 };
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+const folderTree = new Map<string, string[]>();
+
 const PROCESSES: PretendProcess[] = config.backgroundProcesses
   ? [
       { id: "p1", command: "npm run dev", status: "running", startedAt: ago(180_000) },
@@ -398,6 +402,41 @@ const PROCESS_LOGS: Record<string, string> = {
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { threadId?: string };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
+  if (call.method === "folders.list") {
+    const { path } = call.params as { path?: string };
+    if (!path) {
+      return reply({
+        path: null,
+        parent: null,
+        folders: config.self.dirs.map((dir) => ({
+          name: dir.split("/").pop(),
+          path: dir,
+          git: false,
+        })),
+      });
+    }
+    const root = config.self.dirs.find((dir) => path === dir || path.startsWith(`${dir}/`));
+    if (!root) {
+      return send({
+        type: "reply",
+        id: call.id,
+        ok: false,
+        error: "This runner does not serve that folder",
+      });
+    }
+    const names = folderTree.get(path) ?? (path === root ? ["app", "notes"] : []);
+    return reply({
+      path,
+      parent: path === root ? null : path.slice(0, path.lastIndexOf("/")),
+      folders: names.map((name) => ({ name, path: `${path}/${name}`, git: name === "app" })),
+    });
+  }
+  if (call.method === "folders.create") {
+    const { path, name } = call.params as { path: string; name: string };
+    const names = folderTree.get(path) ?? ["app", "notes"];
+    folderTree.set(path, names.concat(name));
+    return reply({ path: `${path}/${name}` });
+  }
   if (call.method === "run.steer") {
     const { runId, steerId, prompt } = call.params as {
       runId: string;

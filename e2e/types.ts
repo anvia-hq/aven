@@ -16,13 +16,13 @@ export type FakeRunnerSwitch =
   | "FAKE_PROCESSES"
   | "FAKE_SNAPSHOT_FAILS"
   | "FAKE_NO_WORKSPACE"
-  | "FAKE_SNAPSHOT_SAVED_MINUTES_AGO"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
   | "FAKE_STEER_APPLIES_AFTER"
   | "FAKE_BUILD"
   | "FAKE_CAN_UPDATE"
-  | "FAKE_STATS";
+  | "FAKE_STATS"
+  | "FAKE_DIRS";
 
 export type FakeRunEnding =
   | { kind: "at-once" }
@@ -40,6 +40,7 @@ export type FakeRunnerSelf = {
   build: string | undefined;
   canUpdate: boolean;
   stats: string | undefined;
+  dirs: string[];
   updateBusyReason: string | undefined;
 };
 

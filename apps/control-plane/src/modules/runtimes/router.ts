@@ -9,14 +9,23 @@ import { connectRouter } from "./connect";
 import { createLatestRelease } from "./latest-release";
 import { runGateway } from "./gateway";
 import type { RuntimeHub } from "./hub";
-import { createRuntimeBody, renameRuntimeBody, runtimeParams, updateRuntimeBody } from "./schema";
+import {
+  createFolderBody,
+  createRuntimeBody,
+  foldersQuery,
+  renameRuntimeBody,
+  runtimeParams,
+  updateRuntimeBody,
+} from "./schema";
+import { runnerFolders } from "./folders";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { LatestRelease } from "./types";
 
-export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) =>
-  new Elysia({ prefix: "/runtimes" })
+export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) => {
+  const folders = runnerFolders(hub);
+  return new Elysia({ prefix: "/runtimes" })
     .use(authRouter)
     .use(connectRouter(hub))
     .get(
@@ -113,6 +122,28 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       },
       { auth: true, org: true, params: runtimeParams, body: updateRuntimeBody },
     )
+    .get(
+      "/:id/folders",
+      async ({ params, query, organizationId, user }) => {
+        orNotFound(
+          await runtimesService.get(organizationId, params.id, user.id),
+          "Runtime not found",
+        );
+        return folders.list(params.id, query.path);
+      },
+      { auth: true, org: true, params: runtimeParams, query: foldersQuery },
+    )
+    .post(
+      "/:id/folders",
+      async ({ params, body, organizationId, user }) => {
+        orNotFound(
+          await runtimesService.get(organizationId, params.id, user.id),
+          "Runtime not found",
+        );
+        return folders.create(params.id, body.path, body.name);
+      },
+      { auth: true, org: true, params: runtimeParams, body: createFolderBody },
+    )
     .delete(
       "/:id",
       async ({ params, organizationId, user }) => {
@@ -125,3 +156,4 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       },
       { auth: true, org: true, params: runtimeParams },
     );
+};

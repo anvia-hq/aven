@@ -338,6 +338,7 @@ export type RunnerCallsContext = {
   };
   processEnds: Pick<ProcessEndWatch, "ignore">;
   steer(params: SteerParams): Promise<SteerResult>;
+  dirs?: string[];
 };
 
 export type RuntimeOptions = {

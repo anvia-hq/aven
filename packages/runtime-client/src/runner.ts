@@ -218,6 +218,7 @@ export function startRuntime(options: RuntimeOptions) {
           : undefined,
     },
     steer: (params) => driver.steer(params),
+    dirs: options.dirs,
   });
 
   async function handle(message: ControlPlaneToRuntime) {

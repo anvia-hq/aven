@@ -16,3 +16,10 @@ export const updateRuntimeBody = z
       .optional(),
   })
   .optional();
+
+export const foldersQuery = z.object({ path: z.string().max(4096).optional() });
+
+export const createFolderBody = z.object({
+  path: z.string().min(1).max(4096),
+  name: z.string().trim().min(1).max(255),
+});
