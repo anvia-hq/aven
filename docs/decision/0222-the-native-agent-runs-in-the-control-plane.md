@@ -1,6 +1,6 @@
 # The native agent runs in the control plane, and a machine answers its tools
 
-Status: accepted. Supersedes the part of 0221 that keeps the runner, and with it the agent, on the machine for every provider, and the alternative 0221 rejected. Adds to 0220 and 0219. Nothing here is built yet.
+Status: accepted. Supersedes the part of 0221 that keeps the runner, and with it the agent, on the machine for every provider, and the alternative 0221 rejected. Adds to 0220 and 0219. Built behind a setting per runtime, `machine` by default: see "What is built".
 
 ## Context
 
@@ -24,17 +24,30 @@ So a machine keeps a runner that answers calls, and the agent moves.
 
 ## Consequences
 
-- `run.start` and its kin go to the built-in runner for every native run, and name the thread's runtime. The control plane relays the built-in runner's `machine.*` calls to that runtime's runner. A run on the built-in runner's own runtime calls its own host sandbox, as now.
+- `run.start` and its kin go to the built-in runner for every native run of a runtime set so, and name the thread's runtime. The control plane relays the built-in runner's `machine.*` calls to that runtime's runner. A run on the built-in runner's own runtime calls its own host sandbox, as now.
 - The journal of every native run is on the control plane's machine (`runs.db` of the built-in runner). A control plane with more than one process would need the journal elsewhere, which is chosen if that happens.
 - The control plane carries every workspace's agent loops. They spend their time waiting on the model and on tool calls, but a large installation will see the load move from its runners to its server.
 - Each tool call is a round trip from the control plane to the machine. Their results are bounded already (`bounded-result.ts`), and the wire carries them as it carries the files and diff now.
-- What acts on a machine outside the tool set moves to calls too: `git_fetch` (`fetch-branch.ts`), preparing a thread's folder (`repo.access`, `git-clone.ts`), uploads written to a thread's folder, a fork's copy of its parent's folder (`fork-workspace.ts`), and MCP servers set to run locally on the machine.
-- Secrets stay off the machine's disk as now: a run's variables go with each `exec` call, and the machine's runner keeps them only for the call.
+- What acts on a machine outside the tool set moves to calls too: `git_fetch` (`fetch-branch.ts`), preparing a thread's folder (`repo.access`, `git-clone.ts`), uploads written to a thread's folder, the mark a turn starts from (`markTurn`), and a fork's copy of its parent's folder (`fork-workspace.ts`).
+- An MCP server is reached from where the agent runs. A run on the control plane reaches none at a private or local address (`allowLocal` is off for it), or it could reach the control plane's own network.
+- Secrets stay off the machine's disk as now: a run's variables go with each command, merged where the agent runs (`withProjectEnv`), and the machine's runner keeps them in memory only, for its Terminal.
 - Bot replies (`bot-replies.ts`) run their agent on the runner too, and move the same way.
 - A runner keeps working for an install that does not update its control plane at once: a runner that answers no `machine.*` calls keeps driving its runs itself, until the wire version that drops that is released (`docs/rules/0005-releasing.md`).
 
-## What is not decided yet
+## What is built
 
-- The `machine.*` calls themselves, and the wire version that adds them.
-- Whether a thread's run moves to the built-in runner all at once, or per runtime behind a setting while it is proven.
-- How the platform shows a tool call that waited for a machine to wake, or failed because it was offline.
+- **The machine side.** A runner answers `machine.call` for a thread with its `HostSandboxes` (`machine-calls.ts`): `prepare` (clone or link the thread's folder with the repository access the run sends), the `SandboxRuntime` operations, uploads, images, skills (it asks for the archives it lacks), `git.fetch` and `turn.mark`. A process the agent starts there is one the platform lists and stops on that runner, and the runner frees the thread's computer when it is idle as for its own runs.
+- **The relay.** A run whose thread names a machine (`RunThreadInfo.machine`) may send `machine.call`; the control plane reaches that runtime for the run's own thread (`hub.machines`, `reachRunner`) and passes the call on, with the command's own time limit and a margin (`runtime-calls.ts`). A run that names none, an unknown operation or an offline machine is refused.
+- **The agent side.** On a runner, `PlacedWorkspaces` sends a thread whose run names a machine to `RemoteWorkspaces` (`remote-workspaces.ts`, `remote-sandbox.ts`), and every other thread to the runner's own. The thread's folder is prepared on the first tool that needs it. A machine call is never sent again after a reconnect, since running a command twice is worse than failing it (`control-plane-calls.ts`).
+- **Where a run goes.** `runtimes.agent_host` is `machine` or `control_plane`, set with `PATCH /runtimes/:id` and from Settings > Runtimes by whoever may rename the runtime. A native run of a `control_plane` runtime goes to the built-in runner and is cancelled there (`RemoteRuntime`); the built-in runner's own runtime refuses the setting.
+- **An offline machine.** The run starts, with no skills from the machine, and a tool that cannot reach the machine fails alone with "The computer is offline" (`run-driver.ts`'s `wake`). `remote-machine.test.ts` runs this end to end with the built-in runner and a second runner as the machine.
+
+## What is not done yet
+
+- A run on the control plane has no forks: forking copies the parent's folder on one disk (`fork-host.ts`, `fork-workspace.ts`).
+- Files attached to a message are written to the machine before the run starts, so a message with files to an offline machine fails.
+- A process the agent left running on the machine does not wake the thread when it ends (0144): the machine's runner watches only the processes of its own runs.
+- Cancelling a run does not stop a command that is running on the machine; it runs to its time limit.
+- Bot replies still run on the bot's runner.
+- A runner from before this answers `machine.call` with "Unknown call", which the agent reads as its tool failing; the platform does not yet say that the machine's runner needs updating.
+- The platform does not show a tool call that failed because the machine was offline apart from the tool's own error.
