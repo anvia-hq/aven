@@ -10,7 +10,7 @@ type Deps = {
   project: (
     organizationId: string,
     projectId: string,
-  ) => Promise<{ githubInstallationId: string; repoFullName: string } | null>;
+  ) => Promise<{ githubInstallationId: string | null; repoFullName: string | null } | null>;
   find: (
     installationRowId: string,
     fullName: string,
@@ -24,7 +24,7 @@ export function createPullRequestSync(deps: Deps) {
     const row = await deps.thread(thread.organizationId, thread.id);
     if (!row) return [];
     const project = await deps.project(thread.organizationId, row.projectId);
-    if (!project) return [];
+    if (!project?.githubInstallationId || !project.repoFullName) return [];
     const found = await deps.find(
       project.githubInstallationId,
       project.repoFullName,

@@ -3,6 +3,7 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 
 import type { FolderSection, MemoryEvent, MemoryNote } from "../types";
 import { useMemory } from "./use-memory";
+import { projectPlace } from "@/modules/projects/place";
 
 type Placed = Pick<MemoryNote, "scope" | "projectId" | "botId">;
 
@@ -29,7 +30,7 @@ export function useMemoryFolders() {
     sections.set(`project:${project.id}`, {
       key: `project:${project.id}`,
       label: project.name,
-      description: `Your work in ${project.repoFullName}, for its threads.`,
+      description: `Your work in ${projectPlace(project)}, for its threads.`,
       folder: { scope: "project", projectId: project.id },
       notes: [],
     });

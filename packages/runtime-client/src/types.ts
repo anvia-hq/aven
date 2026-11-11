@@ -408,6 +408,7 @@ export type RuntimeOptions = {
   token: string;
   build?: string;
   host?: boolean;
+  dirs?: string[];
   update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
   createBotAgent?: CreateBotReplyAgent;
@@ -445,6 +446,7 @@ export type SandboxConfig = {
 
 export type AcquireOptions = {
   lazy?: boolean;
+  folder?: () => Promise<string | null>;
 };
 
 export type ThreadSandbox = {
@@ -557,5 +559,6 @@ export type Launch = (input: {
 
 export type HostSandboxConfig = {
   home?: string;
+  dirs?: string[];
   git?: Git;
 };

@@ -59,6 +59,7 @@ const outcomes = [
 const callMethods = [
   "memory.append",
   "repo.access",
+  "repo.folder",
   "skills.get",
   "mcp.report",
   "bot.memory",
@@ -201,6 +202,7 @@ const frame = z.discriminatedUnion("type", [
     build: z.string().max(64).optional(),
     canUpdate: z.boolean().optional(),
     host: z.boolean().optional(),
+    dirs: z.array(z.string().min(1).max(1024)).max(50).optional(),
   }),
   z.object({ type: z.literal("host.stats"), stats: hostStats }),
   z.object({

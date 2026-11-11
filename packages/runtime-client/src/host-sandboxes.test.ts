@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
@@ -10,10 +10,10 @@ import { createRemoteRepo } from "./testing/remote-repo";
 const homes: string[] = [];
 const sandboxes: HostSandboxes[] = [];
 
-async function runner() {
+async function runner(dirs: string[] = []) {
   const home = await mkdtemp(join(tmpdir(), "aven-host-"));
   homes.push(home);
-  const sandbox = await HostSandboxes.start({ home });
+  const sandbox = await HostSandboxes.start({ home, dirs });
   sandboxes.push(sandbox);
   return { sandbox, home: await realpath(home) };
 }
@@ -105,5 +105,75 @@ describe("a runner that works on this machine", () => {
     expect(sandbox.desktop()).toBeUndefined();
     const shell = sandbox.shell("t1", "s1");
     expect(shell.env.AVEN_THREAD_DIR).toBe(sandbox.paths("t1").workspace);
+  });
+
+  describe("a project that is a folder on the machine", () => {
+    const folderOf = (dir: string) => async () => dir;
+
+    test("works in its own clone of a git folder, on its own branch, which can be pushed back", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox } = await runner([dir]);
+
+      const box = await sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(dir) });
+
+      const { workspace } = sandbox.paths("t1");
+      expect(await sandbox.workspace("t1")).toBe(workspace);
+      const ran = await call(box.tools, "exec_command", {
+        command:
+          "git branch --show-current && echo edit > edit.txt && git add . && git -c user.name=a -c user.email=a@a commit -qm edit && git push -q origin HEAD",
+      });
+      expect(String(ran.stdout)).toContain("aven/t1");
+      expect(ran.exitCode).toBe(0);
+      const pushed = await Bun.$`git -C ${dir} show aven/t1:edit.txt`.text();
+      expect(pushed).toBe("edit\n");
+    });
+
+    test("works in place in a folder that is not a git repository", async () => {
+      const dir = await mkdtemp(join(tmpdir(), "aven-plain-"));
+      homes.push(dir);
+      await writeFile(join(dir, "notes.txt"), "mine");
+      const { sandbox } = await runner([dir]);
+
+      const box = await sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(dir) });
+      await call(box.tools, "write_file", {
+        path: join(sandbox.paths("t1").workspace, "more.txt"),
+        content: "agent",
+      });
+
+      expect((await lstat(sandbox.paths("t1").workspace)).isSymbolicLink()).toBe(true);
+      expect(await readFile(join(dir, "more.txt"), "utf8")).toBe("agent");
+      expect(await sandbox.workspace("t1")).toBe(await realpath(dir));
+    });
+
+    test("refuses a folder it was not asked to serve", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox } = await runner([]);
+
+      await expect(
+        sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(dir) }),
+      ).rejects.toThrow("does not serve");
+    });
+
+    test("forks a thread's clone, with what it has not committed", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox } = await runner([dir]);
+      await sandbox.acquire({ id: "parent" }, undefined, { folder: folderOf(dir) });
+      await writeFile(join(sandbox.paths("parent").workspace, "wip.txt"), "unsaved");
+
+      await sandbox.acquire({ id: "child", forkOf: "parent" }, undefined, {
+        folder: folderOf(dir),
+      });
+
+      expect(await readFile(join(sandbox.paths("child").workspace, "wip.txt"), "utf8")).toBe(
+        "unsaved",
+      );
+    });
+
+    test("lists the folders it serves", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox } = await runner([dir]);
+
+      expect(sandbox.dirs).toEqual([await realpath(dir)]);
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { mkdirSync, realpathSync } from "node:fs";
-import { mkdir, realpath } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, realpath, rmdir, symlink } from "node:fs/promises";
+import { join, sep } from "node:path";
 
 import type { SandboxPaths } from "@aven/agents/types";
 import type { ComputerState, RepoAccess, RunEnvVar } from "@aven/protocol/types";
@@ -32,6 +32,7 @@ export class HostSandboxes implements ThreadWorkspaces {
   readonly skills: SkillStore;
   #config: HostSandboxConfig;
   #home: string;
+  #dirs: string[];
   #roots = new Map<string, Promise<string>>();
   #sandboxes = new Map<string, DirectorySandbox>();
   #projectEnv = new Map<string, Readonly<Record<string, string>>>();
@@ -42,6 +43,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     const home = runtimeHome(config.home);
     mkdirSync(home, { recursive: true });
     this.#home = realpathSync(home);
+    this.#dirs = (config.dirs ?? []).map((dir) => realpathSync(dir));
     this.artifacts = new ArtifactStore(join(this.#home, "artifacts"));
     this.uploads = new UploadStore(join(this.#home, "uploads"), true);
     this.skills = new SkillStore(join(this.#home, "skills"), true);
@@ -54,6 +56,10 @@ export class HostSandboxes implements ThreadWorkspaces {
       throw new Error("A runner that works on this machine needs git on its PATH");
     }
     return new HostSandboxes(config);
+  }
+
+  get dirs() {
+    return [...this.#dirs];
   }
 
   #workspaceDir(threadId: string) {
@@ -69,18 +75,28 @@ export class HostSandboxes implements ThreadWorkspaces {
     };
   }
 
-  #workspace(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
+  #workspace(
+    thread: ThreadRef,
+    repo?: () => Promise<RepoAccess>,
+    folder?: () => Promise<string | null>,
+  ) {
     const known = this.#roots.get(thread.id);
     if (known) return known;
-    const preparing = this.#fill(thread, repo);
+    const preparing = this.#fill(thread, repo, folder);
     this.#roots.set(thread.id, preparing);
     preparing.catch(() => this.#roots.delete(thread.id));
     return preparing;
   }
 
-  async #fill(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
+  async #fill(
+    thread: ThreadRef,
+    repo?: () => Promise<RepoAccess>,
+    folder?: () => Promise<string | null>,
+  ) {
     const dir = this.#workspaceDir(thread.id);
     await mkdir(dir, { recursive: true });
+    const directory = await folder?.();
+    if (directory) return this.#fillFromFolder(thread, dir, directory);
     const root = await realpath(dir);
     if (!repo || (await isCloned(root))) return root;
     const run = this.#config.git ?? git;
@@ -96,13 +112,51 @@ export class HostSandboxes implements ThreadWorkspaces {
     return root;
   }
 
+  async #fillFromFolder(thread: ThreadRef, dir: string, directory: string) {
+    const run = this.#config.git ?? git;
+    const source = await realpath(directory).catch(() => {
+      throw new Error(`The folder ${directory} is not on this machine`);
+    });
+    if (!this.#dirs.some((served) => source === served || source.startsWith(served + sep))) {
+      throw new Error(`This runner does not serve ${directory}`);
+    }
+    const inside = await run(["rev-parse", "--is-inside-work-tree"], { cwd: source });
+    if (inside.code !== 0) {
+      if ((await lstat(dir)).isSymbolicLink()) return dir;
+      await rmdir(dir);
+      await symlink(source, dir);
+      return dir;
+    }
+    const root = await realpath(dir);
+    if (await isCloned(root)) return root;
+    const parent = thread.forkOf ? this.#workspaceDir(thread.forkOf) : undefined;
+    if (parent && (await isCloned(parent))) {
+      await forkWorkspace(await realpath(parent), root, thread.id, run);
+    } else {
+      const branch = await run(["symbolic-ref", "--short", "-q", "HEAD"], { cwd: source });
+      if (branch.code !== 0 || !branch.stdout.trim()) {
+        throw new Error(`Check out a branch in ${directory} first: it is on no branch`);
+      }
+      await cloneRepository(
+        root,
+        thread.id,
+        { cloneUrl: source, defaultBranch: branch.stdout.trim(), token: "local" },
+        run,
+      );
+    }
+    await ensureLocalExcludes(root).catch((error: unknown) => {
+      console.warn(`Could not keep package stores out of git in ${root}:`, error);
+    });
+    return root;
+  }
+
   async acquire(
     thread: ThreadRef,
     repo?: () => Promise<RepoAccess>,
-    { lazy = false }: AcquireOptions = {},
+    { lazy = false, folder }: AcquireOptions = {},
   ): Promise<ThreadSandbox> {
     const start = async () => {
-      await this.#workspace(thread, repo);
+      await this.#workspace(thread, repo, folder);
     };
     if (!(lazy && repo)) await start();
     await mkdir(this.#workspaceDir(thread.id), { recursive: true });
@@ -149,7 +203,16 @@ export class HostSandboxes implements ThreadWorkspaces {
 
   async workspace(threadId: string) {
     const dir = this.#workspaceDir(threadId);
-    return (await isCloned(dir)) ? realpath(dir) : undefined;
+    if (
+      (await isCloned(dir)) ||
+      (await lstat(dir).then(
+        (s) => s.isSymbolicLink(),
+        () => false,
+      ))
+    ) {
+      return realpath(dir);
+    }
+    return undefined;
   }
 
   running() {

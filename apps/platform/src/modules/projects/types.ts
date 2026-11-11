@@ -1,10 +1,12 @@
+import type { useAddFolder } from "./hooks/use-add-folder";
 import type { useImportRepository } from "./hooks/use-import-repository";
 
 export type Project = {
   id: string;
   name: string;
-  repoFullName: string;
-  defaultBranch: string;
+  repoFullName: string | null;
+  defaultBranch: string | null;
+  directory: string | null;
   runtimeId: string;
   createdBy: string;
   createdAt: string;
@@ -95,6 +97,8 @@ export type TrackedItem = {
 export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };
 
 export type ImportRepositoryState = ReturnType<typeof useImportRepository>;
+
+export type AddFolderState = ReturnType<typeof useAddFolder>;
 
 export type OrbColors = readonly [string, string, string];
 

@@ -37,6 +37,16 @@ export function useProjects() {
     return project;
   }
 
+  async function addFolder(input: { runtimeId: string; path: string; name?: string }) {
+    const project = await attempt("Could not add the folder", () =>
+      postJson<Project>("/projects/folder", input),
+    );
+    if (!project) return null;
+    setProjects((current) => (current ? [project, ...current] : [project]));
+    toast.add({ title: "Folder added", description: project.name, type: "success" });
+    return project;
+  }
+
   async function moveProject(project: Project, runtimeId: string) {
     const moved = await attempt("Could not change the runner", () =>
       postJson<Project>(`/projects/${project.id}`, { runtimeId }, "PATCH"),
@@ -58,6 +68,7 @@ export function useProjects() {
     loaded: projects !== null,
     refresh: projectsStore.refresh,
     importRepository,
+    addFolder,
     moveProject,
   };
 }

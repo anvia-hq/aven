@@ -68,7 +68,7 @@ function Commit({
         <div className="flex min-w-0 items-center gap-2">
           {onOpen ? (
             <a
-              href={commitUrl(project.repoFullName, commit.sha)}
+              href={commitUrl(project.repoFullName ?? "", commit.sha)}
               title={commit.message}
               onClick={(event) => {
                 event.preventDefault();
@@ -83,7 +83,7 @@ function Commit({
               {commit.message || "No message"}
             </span>
           )}
-          <Branches refs={commit.refs} defaultBranch={project.defaultBranch} />
+          <Branches refs={commit.refs} defaultBranch={project.defaultBranch ?? ""} />
           {commit.tags.slice(0, 2).map((name) => (
             <Badge key={name} variant="default" title={`Tag ${name}`} className="max-w-28">
               <Tag />
@@ -97,7 +97,7 @@ function Commit({
         </span>
       </div>
       <a
-        href={commitUrl(project.repoFullName, commit.sha)}
+        href={commitUrl(project.repoFullName ?? "", commit.sha)}
         target="_blank"
         rel="noreferrer noopener"
         aria-label={`Open commit ${commit.sha.slice(0, 7)} on GitHub`}

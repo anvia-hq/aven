@@ -53,8 +53,8 @@ function ProjectPage() {
         </div>
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-4">
-            <RepoFiles project={project} path={path} />
-            {path === "" && <RepoReadme project={project} />}
+            {project.repoFullName && <RepoFiles project={project} path={path} />}
+            {project.repoFullName && path === "" && <RepoReadme project={project} />}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -71,8 +71,10 @@ function ProjectPage() {
               empty="None yet. Add what the project needs to run, such as a database URL or an API key."
             />
             <InheritedVariables framed projectId={project.id} />
-            <RepoTracked key={`tracked-${project.id}`} projectId={project.id} />
-            <RepoCommits key={project.id} project={project} />
+            {project.repoFullName && (
+              <RepoTracked key={`tracked-${project.id}`} projectId={project.id} />
+            )}
+            {project.repoFullName && <RepoCommits key={project.id} project={project} />}
           </div>
         </div>
       </main>

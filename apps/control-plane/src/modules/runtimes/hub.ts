@@ -190,6 +190,7 @@ export class RuntimeConnection {
         message.build,
         message.canUpdate,
         message.host,
+        message.dirs,
       );
     if (!this.#ready) return;
     await this.#dispatch(message);
@@ -206,6 +207,7 @@ export class RuntimeConnection {
     build: string | undefined,
     canUpdate: boolean | undefined,
     host: boolean | undefined,
+    dirs: string[] | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
@@ -213,6 +215,7 @@ export class RuntimeConnection {
       this.#canUpdate = canUpdate === true;
       void runtimesService.touch(this.runtimeId);
       void runtimesService.setHost(this.runtimeId, host === true);
+      void runtimesService.setDirectories(this.runtimeId, dirs ?? []);
       this.hub.reclaim(this, runs);
       return;
     }
@@ -298,6 +301,7 @@ export class RuntimeConnection {
         findBotReply: (replyId) => this.#botReplies.get(replyId),
         store: this.hub.store,
         repoAccess: this.hub.repoAccess,
+        folderOf: this.hub.folderOf,
         skillArchive: this.hub.skillArchive,
         mcpReport: this.hub.mcpReport,
         forks: this.hub.forks,
@@ -348,6 +352,7 @@ export class RuntimeHub {
     readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined> = async () =>
       undefined,
     readonly mcpReport: (results: McpConnectResult[]) => Promise<void> = async () => undefined,
+    readonly folderOf: (threadId: string) => Promise<string | null> = async () => null,
   ) {}
 
   forks: ThreadForks = {

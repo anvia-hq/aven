@@ -10,6 +10,7 @@ import type { Thread } from "@/modules/threads/types";
 
 import type { Project } from "../types";
 import { ProjectTile } from "./project-tile";
+import { projectPlace } from "../place";
 
 type Props = {
   project: Project;
@@ -49,14 +50,14 @@ export function ProjectCard({ project, palette, threads }: Props) {
           <span className="truncate font-medium">{project.name}</span>
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <GithubMark className="size-3.5 shrink-0" />
-            <span className="truncate">{project.repoFullName}</span>
+            <span className="truncate">{projectPlace(project)}</span>
           </span>
         </span>
       </Link>
       <div className="flex items-center justify-between gap-2 border-t px-3 py-2 text-xs text-muted-foreground">
         <span className="flex min-w-0 items-center gap-1">
           <GitBranch className="size-3.5 shrink-0" />
-          <span className="truncate font-mono">{project.defaultBranch}</span>
+          <span className="truncate font-mono">{project.defaultBranch ?? "folder"}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <span

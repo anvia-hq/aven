@@ -45,6 +45,7 @@ export const runtimeHub = new RuntimeHub(
   DEFAULT_GRACE_MS,
   (digest) => skillsService.archive(digest),
   (results) => mcpService.record(results),
+  (threadId) => projectsService.folderOf(threadId),
 );
 
 export const runsService = new RunManager({

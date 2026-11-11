@@ -5,6 +5,7 @@ import type {
   ProjectsSearch,
   ProjectsView,
 } from "./types";
+import { projectPlace } from "./place";
 
 const VIEWS: ProjectsView[] = ["all", "mine", "working"];
 
@@ -40,7 +41,7 @@ export function filterProjects(
 ): Project[] {
   const query = filters.query?.trim().toLowerCase();
   return projects.filter((project) => {
-    if (query && !`${project.name} ${project.repoFullName}`.toLowerCase().includes(query)) {
+    if (query && !`${project.name} ${projectPlace(project)}`.toLowerCase().includes(query)) {
       return false;
     }
     if (filters.view === "mine" && project.createdBy !== me) return false;

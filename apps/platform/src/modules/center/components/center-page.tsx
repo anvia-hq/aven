@@ -19,6 +19,7 @@ import { clearCommits, CommitFilters, commitChips, CommitSearch } from "./commit
 import { FilterChips } from "./filter-chips";
 import { QuickViews } from "./quick-views";
 import type { CenterSearch, PullsView } from "../types";
+import { projectPlace } from "@/modules/projects/place";
 
 export function CenterPage() {
   const search = useSearch({ from: "/_authed/center/" });
@@ -86,7 +87,7 @@ export function CenterPage() {
             {one ? one.name : "Center"}
           </h1>
           {one ? (
-            <p className="truncate text-sm text-muted-foreground">{one.repoFullName}</p>
+            <p className="truncate text-sm text-muted-foreground">{projectPlace(one)}</p>
           ) : (
             <p className="hidden text-sm text-muted-foreground md:block">
               Pull requests and commits across all your projects, read from GitHub.

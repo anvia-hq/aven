@@ -50,6 +50,8 @@ Server:
 
 Runner (this machine hosts sandboxes for a server):
   runner install --url <address> --token <token> [--image X]
+  runner install --url <address> --token <token> --host --dir <folder[:folder]>
+              Work on this machine itself, with no sandbox, in the folders given
               Install this machine as a runner and start it as a service
   runner start | stop | restart | status | uninstall
   runner logs [--follow]
@@ -76,6 +78,7 @@ async function main(argv: string[]) {
     "url",
     "token",
     "image",
+    "dir",
     "owner-email",
     "bind",
   ]);

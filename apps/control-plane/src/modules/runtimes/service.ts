@@ -116,6 +116,10 @@ export const runtimesService = {
     await db.update(runtimes).set({ host }).where(eq(runtimes.id, id));
   },
 
+  async setDirectories(id: string, directories: string[]) {
+    await db.update(runtimes).set({ directories }).where(eq(runtimes.id, id));
+  },
+
   async isPrivateHost(id: string) {
     const [row] = await db
       .select({ host: runtimes.host, shared: runtimes.shared })

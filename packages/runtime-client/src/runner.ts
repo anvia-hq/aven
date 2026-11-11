@@ -314,6 +314,7 @@ export function startRuntime(options: RuntimeOptions) {
         build: options.build,
         canUpdate: options.update ? true : undefined,
         host: options.host ? true : undefined,
+        dirs: options.dirs?.length ? options.dirs : undefined,
       });
       resend();
       connected.resolve();

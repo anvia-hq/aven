@@ -11,6 +11,7 @@ import { anyFilterSet, filterProjects, filtersOf } from "../filters";
 import { useProjectPalettes } from "../hooks/use-project-palettes";
 import { useProjects } from "../hooks/use-projects";
 import type { ProjectsSearch } from "../types";
+import { AddFolderDialog } from "./add-folder-dialog";
 import { ImportRepositoryDialog } from "./import-repository-dialog";
 import { ProjectFilterBar } from "./project-filters";
 import { ProjectListEmpty } from "./project-list-empty";
@@ -74,8 +75,13 @@ export function ProjectsPage() {
     <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-1rem-2px)]">
       <PageHeader
         title="Projects"
-        description="Open a project to see its files, README and threads. Each one is an imported GitHub repository and the runner that hosts its sandboxes."
-        actions={<ImportRepositoryDialog />}
+        description="Open a project to see its files, README and threads. Each one is a folder on a computer that runs a runner, or an imported GitHub repository."
+        actions={
+          <span className="flex items-center gap-2">
+            <AddFolderDialog />
+            <ImportRepositoryDialog />
+          </span>
+        }
       />
 
       <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-2">

@@ -669,6 +669,7 @@ export type RuntimeToControlPlane =
       build?: string;
       canUpdate?: boolean;
       host?: boolean;
+      dirs?: string[];
     }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)
@@ -698,7 +699,7 @@ export type CockpitCallMethod = "cockpit.read";
 
 export type ForkCallMethod = "fork.start" | "fork.status";
 
-export type RepoCallMethod = "repo.access";
+export type RepoCallMethod = "repo.access" | "repo.folder";
 
 export type SkillsCallMethod = "skills.get";
 
@@ -923,6 +924,7 @@ export type RuntimeCalls = {
   "fork.start": { params: ForkStartParams; result: { id: string; title: string } };
   "fork.status": { params: ForkStatusParams; result: ForkView };
   "repo.access": { params: RepoAccessParams; result: RepoAccess };
+  "repo.folder": { params: RepoAccessParams; result: { directory: string | null } };
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };

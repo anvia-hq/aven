@@ -25,6 +25,21 @@ test("writes the settings readable by the owner only", async () => {
   expect((await stat(file)).mode & 0o777).toBe(0o600);
 });
 
+test("a runner that works on its own machine writes its folders and no image", async () => {
+  const file = join(dir, "runner.env");
+  await writeRunnerEnv(file, {
+    url: settings.url,
+    token: "avrt_x",
+    host: { dirs: ["/home/me/code", "/srv/work"] },
+  });
+  expect(parseEnv(await readFile(file, "utf8"))).toEqual({
+    AVEN_URL: settings.url,
+    AVEN_RUNTIME_TOKEN: "avrt_x",
+    AVEN_SANDBOX: "host",
+    AVEN_DIRS: "/home/me/code:/srv/work",
+  });
+});
+
 test("a second install replaces the three and keeps what a person added", async () => {
   const file = join(dir, "runner.env");
   await writeRunnerEnv(file, settings);

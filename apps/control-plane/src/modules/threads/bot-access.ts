@@ -41,7 +41,7 @@ export function createBotThreads({
     new Map(
       (await projectsService.listForPerson(userId)).map((project) => [
         project.id,
-        project.repoFullName,
+        project.repoFullName ?? project.directory ?? project.name,
       ]),
     );
 
@@ -112,8 +112,8 @@ export function createBotThreads({
       return (await projectsService.listForPerson(userId)).map((project) => ({
         id: project.id,
         name: project.name,
-        repository: project.repoFullName,
-        defaultBranch: project.defaultBranch,
+        repository: project.repoFullName ?? project.directory ?? project.name,
+        defaultBranch: project.defaultBranch ?? "",
       }));
     },
 
@@ -163,7 +163,7 @@ export function createBotThreads({
         throw error;
       }
       await watchRun(actor, thread.id);
-      return viewOf(userId, thread, project.repoFullName);
+      return viewOf(userId, thread, project.repoFullName ?? project.directory ?? project.name);
     },
 
     async continue(actor, id, { prompt, ...selection }) {

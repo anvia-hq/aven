@@ -12,6 +12,16 @@ export const importProjectBody = z.object({
   name: z.string().trim().min(1).max(200).optional(),
 });
 
+export const addFolderBody = z.object({
+  runtimeId: z.uuid(),
+  path: z
+    .string()
+    .min(1)
+    .max(1024)
+    .refine((path) => !path.includes("\0")),
+  name: z.string().trim().min(1).max(200).optional(),
+});
+
 export const folderQuery = z.object({
   path: z
     .string()
@@ -76,4 +86,6 @@ export const commitParams = z.object({ id: z.uuid(), sha: z.string().regex(/^[0-
 export const updateProjectBody = z.object({ runtimeId: z.string().uuid() });
 
 export type ImportProjectBody = z.infer<typeof importProjectBody>;
+
+export type AddFolderBody = z.infer<typeof addFolderBody>;
 export type UpdateProjectBody = z.infer<typeof updateProjectBody>;

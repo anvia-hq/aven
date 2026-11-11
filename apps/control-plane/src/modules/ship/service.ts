@@ -27,9 +27,9 @@ type ShipDeps = {
     organizationId: string,
     threadId: string,
   ) => Promise<{
-    githubInstallationId: string;
-    repoFullName: string;
-    defaultBranch: string;
+    githubInstallationId: string | null;
+    repoFullName: string | null;
+    defaultBranch: string | null;
     pullRequests: ThreadPullRequest[];
   }>;
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
@@ -86,7 +86,7 @@ export function createShipService(
       const [setup, ship, appKey] = await Promise.all([
         hasFile(organizationId, threadId, SETUP_FILE),
         hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
-        github.appKeyOf(project.githubInstallationId),
+        project.githubInstallationId ? github.appKeyOf(project.githubInstallationId) : null,
       ]);
       return { ready: setup && ship, setup, ship, appKey };
     },
@@ -98,21 +98,23 @@ export function createShipService(
       { mode, ...selection }: ModelSelection & { mode?: "update" | "new" } = {},
     ) {
       const project = await load(organizationId, threadId);
-      const connection = await userTokens.use(
-        userId,
-        await github.appKeyOf(project.githubInstallationId),
-      );
-      if (!connection) throw new GithubNotConnectedError();
-      await github.requireWritable(project.githubInstallationId);
-      await github.requirePush(
-        project.githubInstallationId,
-        connection.token,
-        project.repoFullName,
-      );
+      if (project.githubInstallationId && project.repoFullName) {
+        const connection = await userTokens.use(
+          userId,
+          await github.appKeyOf(project.githubInstallationId),
+        );
+        if (!connection) throw new GithubNotConnectedError();
+        await github.requireWritable(project.githubInstallationId);
+        await github.requirePush(
+          project.githubInstallationId,
+          connection.token,
+          project.repoFullName,
+        );
+      }
 
       const prompt = shipPrompt(await readShipFile(organizationId, threadId), {
         branch: threadBranch(threadId),
-        base: project.defaultBranch,
+        base: project.defaultBranch ?? "the repository's default branch",
         mode: shipMode(mode, project.pullRequests),
         pullRequests: project.pullRequests,
       });

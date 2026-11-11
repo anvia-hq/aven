@@ -1,6 +1,6 @@
 import { startDetachedUpdate } from "../detached-update";
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
 
 import { stringFlag } from "../args";
 import { capture, dockerProblem, exec, run } from "../compose";
@@ -44,6 +44,20 @@ async function storedSettings() {
   return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN };
 }
 
+function hostDirs(value: string | undefined) {
+  const dirs = (value ?? "")
+    .split(delimiter)
+    .map((dir) => dir.trim())
+    .filter(Boolean)
+    .map((dir) => resolve(dir));
+  if (dirs.length === 0 || dirs.some((dir) => !isAbsolute(dir))) {
+    throw new Error(
+      "--host needs the folders the runner may work in: --dir <folder>, several separated by a colon.",
+    );
+  }
+  return dirs;
+}
+
 export async function runnerInstall(args: Args) {
   const stored = await storedSettings();
   const url = stringFlag(args, "url") ?? stored?.url;
@@ -58,8 +72,12 @@ export async function runnerInstall(args: Args) {
       "--token is not a runner token (they start with avrt_). Create one in Settings > Runtimes.",
     );
 
-  const problem = await dockerProblem();
-  if (problem) throw new Error(problem);
+  const host = args.flags.host === true;
+  const dirs = host ? hostDirs(stringFlag(args, "dir")) : [];
+  if (!host) {
+    const problem = await dockerProblem();
+    if (problem) throw new Error(problem);
+  }
   if ((await capture(["git", "--version"])) === undefined)
     throw new Error("git is not installed. A runner clones each project's repository with it.");
 
@@ -67,13 +85,20 @@ export async function runnerInstall(args: Args) {
   if (!(await waitForHealthy(`${base}/health`, { timeoutMs: 0 })))
     throw new Error(`Cannot reach the control plane at ${base}/health. Check the address.`);
 
-  const image = stringFlag(args, "image") ?? imageFor(version === "dev" ? "latest" : version);
-  if ((await exec(["docker", "image", "inspect", image])).code !== 0) {
+  const image = host
+    ? undefined
+    : (stringFlag(args, "image") ?? imageFor(version === "dev" ? "latest" : version));
+  if (image && (await exec(["docker", "image", "inspect", image])).code !== 0) {
     console.log(`Pulling the sandbox image ${image} (several GB the first time)...`);
     if ((await run(["docker", "pull", image])) !== 0) throw new Error(`Could not pull ${image}`);
   }
 
-  await writeRunnerEnv(runnerEnvFile(), { url: base, token, image });
+  await writeRunnerEnv(runnerEnvFile(), {
+    url: base,
+    token,
+    image,
+    host: host ? { dirs } : undefined,
+  });
   const logSize = (await stat(logFile()).catch(() => undefined))?.size ?? 0;
   const unit = await serviceUnitState({
     platform: process.platform,

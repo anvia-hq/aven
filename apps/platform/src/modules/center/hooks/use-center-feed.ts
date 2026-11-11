@@ -36,26 +36,28 @@ export function useCenterFeed(
     void (async () => {
       const feed: Feed = { pulls: [], commits: [], unreadable: [] };
       await Promise.all(
-        projects.map(async (project) => {
-          try {
-            const [pulls, commits] = await Promise.all([
-              pullsQuery === null
-                ? { items: [], total: 0, hasMore: false }
-                : api<TrackedPage>(`/projects/${project.id}/pulls?${pullsQuery}`),
-              commitsQuery === null
-                ? undefined
-                : api<RepoCommitPage>(`/projects/${project.id}/commits?${commitsQuery}`),
-            ]);
-            feed.pulls.push(...pulls.items.map((item) => ({ project, item })));
-            feed.commits.push(
-              ...(commits?.commits ?? [])
-                .filter((commit) => hasWords(commit.message, grep))
-                .map((commit) => ({ project, commit })),
-            );
-          } catch {
-            feed.unreadable.push(project);
-          }
-        }),
+        projects
+          .filter((project) => project.repoFullName)
+          .map(async (project) => {
+            try {
+              const [pulls, commits] = await Promise.all([
+                pullsQuery === null
+                  ? { items: [], total: 0, hasMore: false }
+                  : api<TrackedPage>(`/projects/${project.id}/pulls?${pullsQuery}`),
+                commitsQuery === null
+                  ? undefined
+                  : api<RepoCommitPage>(`/projects/${project.id}/commits?${commitsQuery}`),
+              ]);
+              feed.pulls.push(...pulls.items.map((item) => ({ project, item })));
+              feed.commits.push(
+                ...(commits?.commits ?? [])
+                  .filter((commit) => hasWords(commit.message, grep))
+                  .map((commit) => ({ project, commit })),
+              );
+            } catch {
+              feed.unreadable.push(project);
+            }
+          }),
       );
       feed.pulls.sort(PULL_ORDER[sort]);
       feed.commits.sort((a, b) => b.commit.date.localeCompare(a.commit.date));

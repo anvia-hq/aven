@@ -15,6 +15,7 @@ export type Runtime = {
   ownerId: string | null;
   host: boolean;
   shared: boolean;
+  directories: string[];
   tokenHint: string;
   online: boolean;
   build: string | null;

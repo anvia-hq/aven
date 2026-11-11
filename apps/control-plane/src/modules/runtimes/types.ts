@@ -94,6 +94,7 @@ export type RuntimeCallContext = {
   findBotReply(replyId: string): CallBotReply | undefined;
   store: MemoryStore;
   repoAccess(threadId: string): Promise<RepoAccess>;
+  folderOf(threadId: string): Promise<string | null>;
   skillArchive(digest: string): Promise<Uint8Array | undefined>;
   mcpReport(results: McpConnectResult[]): Promise<void>;
 };

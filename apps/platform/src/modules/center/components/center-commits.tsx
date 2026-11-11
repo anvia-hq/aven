@@ -69,7 +69,7 @@ export function CenterCommits({
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <div className="flex min-w-0 items-center gap-2">
                         <a
-                          href={commitUrl(project.repoFullName, commit.sha)}
+                          href={commitUrl(project.repoFullName ?? "", commit.sha)}
                           title={commit.message}
                           onClick={(event) => {
                             event.preventDefault();
@@ -103,7 +103,7 @@ export function CenterCommits({
                       </span>
                     </div>
                     <a
-                      href={commitUrl(project.repoFullName, commit.sha)}
+                      href={commitUrl(project.repoFullName ?? "", commit.sha)}
                       target="_blank"
                       rel="noreferrer noopener"
                       aria-label={`Open commit ${commit.sha.slice(0, 7)} on GitHub`}

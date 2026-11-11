@@ -12,6 +12,7 @@ import type { Thread } from "@/modules/threads/types";
 import type { SnapshotState } from "../types";
 import { useEnvironmentSnapshot } from "../hooks/use-environment-snapshot";
 import { OverviewCard } from "./overview-card";
+import { projectPlace } from "@/modules/projects/place";
 
 export function EnvironmentCard({
   thread,
@@ -44,7 +45,7 @@ export function EnvironmentCard({
       </Row>
       {project && (
         <Row icon={<Folder />}>
-          {project.name} <span className="text-muted-foreground">· {project.repoFullName}</span>
+          {project.name} <span className="text-muted-foreground">· {projectPlace(project)}</span>
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>

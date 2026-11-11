@@ -246,10 +246,11 @@ export function createRunDriver(context: DriverContext) {
     const { runId, thread, model } = initial;
     if (initial.compact) return compactionScope(initial, state, run, clock);
     const repoAccess = () => context.call("repo.access", { runId });
+    const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
     await context.starting(thread.id);
     run.mcpGoing = connectMcp(run, runId, thread.id, secrets);
     run.mcpGoing.catch(() => undefined);
-    const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true });
+    const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true, folder });
     context.boxes.set(thread.id, box);
     let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
     const markCurrentTurn = async () => {

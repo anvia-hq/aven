@@ -49,13 +49,15 @@ async function runIdentity(
   return identity;
 }
 
-async function senderExtras(userId: string, installationRowId: string, driverId?: string) {
+async function senderExtras(userId: string, installationRowId: string | null, driverId?: string) {
   const skills = await skillsService.forRun(userId);
   const mcp = driverId === undefined ? await mcpService.forRun(userId, "threads") : [];
-  const github = await githubUserTokenService.forRun(
-    driverId ?? userId,
-    await githubService.appKeyOf(installationRowId),
-  );
+  const github = installationRowId
+    ? await githubUserTokenService.forRun(
+        driverId ?? userId,
+        await githubService.appKeyOf(installationRowId),
+      )
+    : undefined;
   return { skills, mcp, github };
 }
 
