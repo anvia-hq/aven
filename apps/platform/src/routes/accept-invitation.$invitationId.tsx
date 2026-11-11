@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Button, buttonVariants } from "@/components/button";
+import { AuthShell } from "@/modules/auth/components/auth-shell";
 import { useInvitation } from "@/modules/auth/hooks/use-invitation";
 import { ROLE_LABELS } from "@/modules/settings/types";
 
@@ -16,28 +17,33 @@ function AcceptInvitation() {
   if (sessionPending) return null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xs flex-col justify-center gap-4 p-4">
-      <h1 className="text-lg font-semibold">You've been invited</h1>
+    <AuthShell
+      title="You've been invited"
+      description={
+        signedIn
+          ? undefined
+          : "Sign in, or create an account with the email address that was invited, to join."
+      }
+    >
       {!signedIn ? (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Sign in, or create an account with the email address that was invited, to join.
-          </p>
-          <div className="flex gap-2">
-            <Link to="/register" search={{ invitation: invitationId }} className={buttonVariants()}>
-              Create account
-            </Link>
-            <Link
-              to="/login"
-              search={{ invitation: invitationId }}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Sign in
-            </Link>
-          </div>
-        </>
+        <div className="flex flex-col gap-2">
+          <Link
+            to="/register"
+            search={{ invitation: invitationId }}
+            className={buttonVariants({ size: "lg" })}
+          >
+            Create account
+          </Link>
+          <Link
+            to="/login"
+            search={{ invitation: invitationId }}
+            className={buttonVariants({ variant: "outline", size: "lg" })}
+          >
+            Sign in
+          </Link>
+        </div>
       ) : (
-        <>
+        <div className="flex flex-col gap-4">
           {invitation && (
             <p className="text-sm text-muted-foreground">
               {invitation.inviterEmail} invited you to join{" "}
@@ -46,17 +52,20 @@ function AcceptInvitation() {
             </p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
               {error}
             </p>
           )}
           {invitation && (
-            <Button onClick={accept} disabled={accepting} className="self-start">
+            <Button size="lg" onClick={accept} disabled={accepting}>
               Join organization
             </Button>
           )}
-        </>
+        </div>
       )}
-    </main>
+    </AuthShell>
   );
 }

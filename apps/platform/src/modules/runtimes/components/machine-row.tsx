@@ -1,5 +1,7 @@
-import { cn } from "cn";
 import { Link } from "@tanstack/react-router";
+import { cn } from "cn";
+import type { CSSProperties } from "react";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
 import { timeAgo } from "@/lib/format";
 
@@ -71,7 +73,9 @@ function Busiest({ metric, runtime }: { metric: MachineMetric; runtime: Runtime 
   );
 }
 
-export function MachineRow({ runtime }: { runtime: Runtime }) {
+type Props = { runtime: Runtime; className?: string; style?: CSSProperties };
+
+export function MachineRow({ runtime, className, style }: Props) {
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
   const metrics = stats ? machineMetrics(stats) : [];
   const busiest = busiestMetric(metrics);
@@ -81,7 +85,11 @@ export function MachineRow({ runtime }: { runtime: Runtime }) {
     <li
       data-slot="machine-row"
       aria-label={runtime.name}
-      className="flex h-8 items-center gap-1 rounded-lg bg-card pr-1 hover:bg-sidebar-accent"
+      style={style}
+      className={cn(
+        "flex h-8 items-center gap-1 rounded-lg bg-card pr-1 hover:bg-sidebar-accent",
+        className,
+      )}
     >
       <Tooltip>
         <TooltipTrigger
