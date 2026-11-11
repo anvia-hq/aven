@@ -1,3 +1,4 @@
+import { SHELL_START } from "./shell-start";
 import { withoutRunnerSecrets } from "./runner-secrets";
 import { mkdirSync, realpathSync } from "node:fs";
 import { lstat, mkdir, realpath, rmdir, symlink } from "node:fs/promises";
@@ -195,7 +196,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     const root = this.#workspaceDir(threadId);
     const project = this.#projectEnv.get(threadId) ?? {};
     return {
-      argv: ["bash", "-c", `cd "$AVEN_THREAD_DIR" && exec bash`],
+      argv: ["bash", "-c", SHELL_START],
       env: {
         ...withoutRunnerSecrets(process.env),
         ...project,

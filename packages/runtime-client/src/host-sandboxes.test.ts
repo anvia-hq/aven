@@ -127,6 +127,25 @@ describe("a runner that works on this machine", () => {
       expect(pushed).toBe("edit\n");
     });
 
+    test("opens a shell that says what the thread's folder is, and whose prompt names the project", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox } = await runner([dir]);
+      await sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(dir) });
+
+      const shell = sandbox.shell("t1", "s1");
+      const proc = Bun.spawn(shell.argv, {
+        env: shell.env,
+        stdin: new Blob(["pwd\nexit\n"]),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const out = await new Response(proc.stdout).text();
+
+      expect(out).toContain(`its own copy of ${await realpath(dir)}`);
+      expect(out).toContain("on branch aven/t1");
+      expect(shell.env.AVEN_THREAD_DIR).toBe(sandbox.paths("t1").workspace);
+    });
+
     test("works in place in a folder that is not a git repository", async () => {
       const dir = await mkdtemp(join(tmpdir(), "aven-plain-"));
       homes.push(dir);
