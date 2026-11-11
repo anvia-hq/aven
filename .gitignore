@@ -13,3 +13,4 @@ playwright-report
 !.aven/ship.md
 !.aven/proof/
 !.aven/skills/
+.tanstack/
