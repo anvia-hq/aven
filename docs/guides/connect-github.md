@@ -35,3 +35,12 @@ nothing changes for it.
   presses **Connect GitHub** for each, and Ship asks for the one of the thread's project.
 - Rolling back to a release before this one runs old code against the new tables, which it ignores;
   a person's connection made in a workspace's own app is not seen by it.
+
+## An app made before it had Workflows and Actions write
+
+An app asks for Workflows and Actions read and write (decision 0216) when it is created. One made earlier
+does not have them: the agent's push of a file under `.github/workflows/` is refused with `without
+'workflows' permission`, and it cannot start or re-run a workflow. On GitHub, open the app's settings
+(**Developer settings > GitHub Apps**, or the organization's), then **Permissions & events**, and set
+**Workflows** and **Actions** to **Read and write**. An owner of each installation then approves the
+request (GitHub emails them, or it is on the installation's page); until they do, nothing changes.
