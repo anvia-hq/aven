@@ -329,6 +329,7 @@ export function createRunDriver(context: DriverContext) {
           id,
           attended,
           forks: forking,
+          paths: context.sandbox.paths?.(thread.id),
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
@@ -375,6 +376,7 @@ export function createRunDriver(context: DriverContext) {
                 tools,
                 skills,
                 envNames,
+                paths: context.sandbox.paths?.(thread.id),
                 mcp: mcp?.note,
                 webSearch: state.record.webSearch,
                 model,
@@ -419,7 +421,11 @@ export function createRunDriver(context: DriverContext) {
       followed = await journaled.start(
         runId,
         thread.id,
-        await promptOf(scope.record, context.sandbox),
+        await promptOf(
+          scope.record,
+          context.sandbox,
+          context.sandbox.paths?.(scope.record.thread.id),
+        ),
         build(scope.record.agentId, true),
         forward,
       );
@@ -592,7 +598,11 @@ export function createRunDriver(context: DriverContext) {
           reason: "The agent is writing up how the goal ended: wait for it to finish",
         };
       }
-      const message = sentPrompt(prompt, { mentions, skills: record.skillListing });
+      const message = sentPrompt(prompt, {
+        mentions,
+        skills: record.skillListing,
+        paths: context.sandbox.paths?.(record.thread.id),
+      });
       if (record.phase === "goal") {
         const taken = (await run.goal?.steer(message, steerId)) ?? false;
         return { status: taken ? "queued" : "closed" };

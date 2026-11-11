@@ -1,6 +1,6 @@
 # A runner serves folders, and a project is one of them
 
-Status: proposed. Not built. Supersedes 0013 (projects are imported GitHub repositories) once it ships; changes 0044 (the agent acts as the person on GitHub) and the sandbox decisions (0008, 0095, 0211) for the new mode. Nothing is removed by this decision.
+Status: proposed. Step 1 of the order below is built (`AVEN_SANDBOX=host`); the rest is not. Supersedes 0013 (projects are imported GitHub repositories) once it ships; changes 0044 (the agent acts as the person on GitHub) and the sandbox decisions (0008, 0095, 0211) for the new mode. Nothing is removed by this decision.
 
 ## Context
 
@@ -35,6 +35,12 @@ Amp's runner (`amp --no-tui`, run on a machine) is the other model. It registers
 2. **Served folders** on the wire, with the migration, the control plane's list and the platform's "add a project from a runner's folder".
 3. Retire the import and the container sandbox, in a decision of their own.
 
+## Built so far
+
+- `AVEN_SANDBOX=host` (`HostSandboxes`): commands as the runner's user in `workspaces/<thread id>` under the runner's home, cloned or forked as for a container, the project's variables in each command's environment, no desktop or tunnel, the thread's shell opened in its folder. A thread with no repository, which is how a bot's computer is made, gets a folder of its own (a default path per bot). Tested with real git and real processes.
+- The agent is told real paths: `paths(threadId)` on the workspaces, `forPaths` for the instructions and the notes of mentions and attachments, and uploads and skills as real-path stores. The sandbox's paths and text are unchanged.
+- Not built: served folders, the owner-only rule and its column, a project that is a folder, the platform's side, `aven runner` options for it, and a real run through a control plane.
+
 ## Not verified
 
-None of it is built. What a runner does for a folder that is a worktree of another, a bare repository or a repository with submodules; how threads started by a bot (0060) pick a folder; how a folder of one runner shows in the platform when the runner is offline; whether the runner's current `git` requirement is enough; and Amp's own behaviour beyond what a person saw in its runner's output (it served `~` and `~/test` and resumed a thread it had served before).
+What a runner does for a folder that is a worktree of another, a bare repository or a repository with submodules; how threads started by a bot (0060) pick a folder; how a folder of one runner shows in the platform when the runner is offline; whether the runner's current `git` requirement is enough; and Amp's own behaviour beyond what a person saw in its runner's output (it served `~` and `~/test` and resumed a thread it had served before).

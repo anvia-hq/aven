@@ -2,6 +2,7 @@ import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
+import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { createAskQuestionTool } from "./tools/ask-question";
 import { createCreateBotTool } from "./tools/create-bot";
 import { createGoalTools } from "./tools/goals";
@@ -14,7 +15,7 @@ import { createMemoryTool } from "./tools/memory";
 import { createScheduleTools } from "./tools/schedules";
 import { createSendMessageTool } from "./tools/send-message";
 import { createUpdateSelfTool } from "./tools/update-self";
-import type { McpNote, ModelSource, SkillListing } from "./types";
+import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type {
   AskQuestion,
   CockpitHost,
@@ -35,6 +36,7 @@ export const BOT_MAX_TURNS = 8;
 export const BOT_COMPUTER_MAX_TURNS = 30;
 
 type BotAgentOptions = ModelSource & {
+  paths?: SandboxPaths;
   id: string;
   name: string;
   handle: string;
@@ -84,6 +86,7 @@ export function createBotAgent({
   threads,
   notes,
   cockpit,
+  paths,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -91,24 +94,27 @@ export function createBotAgent({
   return new Agent({
     ...agentModel,
     id: `bot-${id}`,
-    instructions: botInstructions({
-      name,
-      handle,
-      instruction,
-      computer: computer.length > 0,
-      createBots: Boolean(createBot),
-      questions: Boolean(askQuestion),
-      goals: Boolean(goals),
-      schedules: schedules && timezone ? { timezone } : undefined,
-      peers,
-      self: updateSelf ? { description } : undefined,
-      skills,
-      mcp: mcp?.note,
-      mcpServers: Boolean(mcpServers),
-      providers: providers ? { keyForm: Boolean(providers.askKey) } : undefined,
-      threads: Boolean(threads),
-      notes: notes?.memory,
-    }),
+    instructions: forPaths(
+      botInstructions({
+        name,
+        handle,
+        instruction,
+        computer: computer.length > 0,
+        createBots: Boolean(createBot),
+        questions: Boolean(askQuestion),
+        goals: Boolean(goals),
+        schedules: schedules && timezone ? { timezone } : undefined,
+        peers,
+        self: updateSelf ? { description } : undefined,
+        skills,
+        mcp: mcp?.note,
+        mcpServers: Boolean(mcpServers),
+        providers: providers ? { keyForm: Boolean(providers.askKey) } : undefined,
+        threads: Boolean(threads),
+        notes: notes?.memory,
+      }),
+      paths ?? SANDBOX_PATHS,
+    ),
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
     tools: [

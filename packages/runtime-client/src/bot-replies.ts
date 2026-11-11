@@ -202,7 +202,11 @@ export class BotReplies {
     const images = new Map(
       attachments.flatMap(({ image, data }) => (image ? [[image, data] as const] : [])),
     );
-    return sentPrompt(prompt, { attachments: kept, images });
+    return sentPrompt(prompt, {
+      attachments: kept,
+      images,
+      paths: this.#context.sandbox.paths?.(botId),
+    });
   }
 
   async #installSkills(replyId: string, botId: string, skills: readonly RunSkill[]) {
@@ -275,6 +279,7 @@ export class BotReplies {
         savePolicy: "turn",
       },
       computer,
+      paths: sandbox.paths?.(bot.id),
       goals: {
         get: async () => (await call("bot.goal", { replyId, op: "get" })) as BotGoalView | null,
         start: async (input) =>

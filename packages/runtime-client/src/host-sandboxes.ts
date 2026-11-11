@@ -1,0 +1,184 @@
+import { mkdirSync, realpathSync } from "node:fs";
+import { mkdir, realpath } from "node:fs/promises";
+import { join } from "node:path";
+
+import type { SandboxPaths } from "@aven/agents/types";
+import type { ComputerState, RepoAccess, RunEnvVar } from "@aven/protocol/types";
+
+import { ArtifactStore } from "./artifacts";
+import { DirectorySandbox } from "./directory-sandbox";
+import { forkWorkspace } from "./fork-workspace";
+import { cloneRepository, git, isCloned } from "./git-clone";
+import { ensureLocalExcludes } from "./local-excludes";
+import { envOf, withProjectEnv } from "./project-env";
+import { runtimeHome } from "./sandbox";
+import { secretRedactor } from "./secret-redaction";
+import { SkillStore } from "./skills";
+import { startedOnUse } from "./started-on-use";
+import { threadProcesses } from "./thread-processes";
+import { hasRunningProcesses, sandboxTools } from "./thread-tools";
+import { UploadStore } from "./uploads";
+import type {
+  AcquireOptions,
+  HostSandboxConfig,
+  ThreadRef,
+  ThreadSandbox,
+  ThreadWorkspaces,
+} from "./types";
+
+export class HostSandboxes implements ThreadWorkspaces {
+  readonly artifacts: ArtifactStore;
+  readonly uploads: UploadStore;
+  readonly skills: SkillStore;
+  #config: HostSandboxConfig;
+  #home: string;
+  #roots = new Map<string, Promise<string>>();
+  #sandboxes = new Map<string, DirectorySandbox>();
+  #projectEnv = new Map<string, Readonly<Record<string, string>>>();
+  #redactors = new Map<string, ReturnType<typeof secretRedactor>>();
+
+  private constructor(config: HostSandboxConfig) {
+    this.#config = config;
+    const home = runtimeHome(config.home);
+    mkdirSync(home, { recursive: true });
+    this.#home = realpathSync(home);
+    this.artifacts = new ArtifactStore(join(this.#home, "artifacts"));
+    this.uploads = new UploadStore(join(this.#home, "uploads"), true);
+    this.skills = new SkillStore(join(this.#home, "skills"), true);
+  }
+
+  static async start(config: HostSandboxConfig = {}) {
+    const run = config.git ?? git;
+    const version = await run(["--version"], { cwd: process.cwd() });
+    if (version.code !== 0) {
+      throw new Error("A runner that works on this machine needs git on its PATH");
+    }
+    return new HostSandboxes(config);
+  }
+
+  #workspaceDir(threadId: string) {
+    return join(this.#home, "workspaces", threadId);
+  }
+
+  paths(threadId: string): SandboxPaths {
+    return {
+      workspace: this.#workspaceDir(threadId),
+      uploads: join(this.uploads.root, threadId),
+      skills: join(this.skills.root, "threads", threadId),
+      host: true,
+    };
+  }
+
+  #workspace(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
+    const known = this.#roots.get(thread.id);
+    if (known) return known;
+    const preparing = this.#fill(thread, repo);
+    this.#roots.set(thread.id, preparing);
+    preparing.catch(() => this.#roots.delete(thread.id));
+    return preparing;
+  }
+
+  async #fill(thread: ThreadRef, repo?: () => Promise<RepoAccess>) {
+    const dir = this.#workspaceDir(thread.id);
+    await mkdir(dir, { recursive: true });
+    const root = await realpath(dir);
+    if (!repo || (await isCloned(root))) return root;
+    const run = this.#config.git ?? git;
+    const parent = thread.forkOf ? this.#workspaceDir(thread.forkOf) : undefined;
+    if (parent && (await isCloned(parent))) {
+      await forkWorkspace(await realpath(parent), root, thread.id, run);
+    } else {
+      await cloneRepository(root, thread.id, await repo(), run);
+    }
+    await ensureLocalExcludes(root).catch((error: unknown) => {
+      console.warn(`Could not keep package stores out of git in ${root}:`, error);
+    });
+    return root;
+  }
+
+  async acquire(
+    thread: ThreadRef,
+    repo?: () => Promise<RepoAccess>,
+    { lazy = false }: AcquireOptions = {},
+  ): Promise<ThreadSandbox> {
+    const start = async () => {
+      await this.#workspace(thread, repo);
+    };
+    if (!(lazy && repo)) await start();
+    await mkdir(this.#workspaceDir(thread.id), { recursive: true });
+    const sandbox = new DirectorySandbox(thread.id, this.#workspaceDir(thread.id));
+    this.#sandboxes.set(thread.id, sandbox);
+    const runtime = withProjectEnv(startedOnUse(sandbox, start), () =>
+      this.#projectEnv.get(thread.id),
+    );
+    return {
+      tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
+      hasRunningProcesses: () => hasRunningProcesses(runtime),
+      processes: threadProcesses(
+        runtime,
+        () => true,
+        () => this.#redactors.get(thread.id),
+      ),
+      start,
+      state: () => this.computerState(thread.id),
+    };
+  }
+
+  computerState(_threadId: string): ComputerState {
+    return "awake";
+  }
+
+  desktop() {
+    return undefined;
+  }
+
+  shell(threadId: string, _sessionId: string) {
+    const root = this.#workspaceDir(threadId);
+    const project = this.#projectEnv.get(threadId) ?? {};
+    return {
+      argv: ["bash", "-c", `cd "$AVEN_THREAD_DIR" && exec bash`],
+      env: {
+        ...process.env,
+        ...project,
+        AVEN_THREAD_DIR: root,
+        TERM: "xterm-256color",
+      } as Record<string, string>,
+      hangup: ["true"],
+    };
+  }
+
+  async workspace(threadId: string) {
+    const dir = this.#workspaceDir(threadId);
+    return (await isCloned(dir)) ? realpath(dir) : undefined;
+  }
+
+  running() {
+    return this.#sandboxes.size;
+  }
+
+  async release(threadId: string) {
+    await this.#sandboxes.get(threadId)?.dispose();
+    this.#sandboxes.delete(threadId);
+    this.#roots.delete(threadId);
+    this.#projectEnv.delete(threadId);
+    this.#redactors.delete(threadId);
+  }
+
+  setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
+    if (env?.length) this.#projectEnv.set(threadId, envOf(env));
+    else this.#projectEnv.delete(threadId);
+    const redact = secretRedactor(env);
+    if (redact) this.#redactors.set(threadId, redact);
+    else this.#redactors.delete(threadId);
+  }
+
+  async dispose() {
+    await Promise.all(
+      [...this.#sandboxes.keys()].map((id) =>
+        this.release(id).catch((error: unknown) => {
+          console.error(`Could not stop thread ${id}:`, error);
+        }),
+      ),
+    );
+  }
+}

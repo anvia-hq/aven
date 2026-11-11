@@ -48,7 +48,13 @@ import type {
   AnyTool,
   Message,
 } from "@anvia/core";
-import type { KeptAttachment, McpNote, SkillListing, SubagentType } from "@aven/agents/types";
+import type {
+  KeptAttachment,
+  McpNote,
+  SandboxPaths,
+  SkillListing,
+  SubagentType,
+} from "@aven/agents/types";
 import type {
   DefinedGoal,
   DurableAgentRegistration,
@@ -77,6 +83,7 @@ export type CreateBotReplyAgent = (input: {
   send: SendMessage;
   memory: AgentMemoryOptions;
   computer: readonly AnyTool[];
+  paths?: SandboxPaths;
   createBot?: CreateBot;
   askQuestion?: AskQuestion;
   goals: GoalHost;
@@ -306,6 +313,7 @@ export type CreateRuntimeAgent = (input: {
   tools: readonly AnyTool[];
   skills?: readonly SkillListing[];
   envNames?: readonly string[];
+  paths?: SandboxPaths;
   mcp?: McpNote;
   memory?: RunMemory;
   webSearch?: RunWebSearch;
@@ -459,6 +467,7 @@ export interface ThreadWorkspaces {
     sessionId: string,
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
+  paths?(threadId: string): SandboxPaths;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
   leftovers?(): Promise<DockerLeftovers>;
@@ -533,3 +542,19 @@ export type Timing = {
 export type IdentityRelay = { port: number; stop: () => void };
 
 export type HostReach = { ok: boolean; detail: string; skipped?: boolean };
+
+export type Spawned = ReturnType<typeof Bun.spawn>;
+
+export type Terminate = (proc: Spawned) => Promise<void>;
+
+export type Launch = (input: {
+  argv: string[];
+  cwd: string;
+  inside: string;
+  env?: Readonly<Record<string, string>>;
+}) => Spawned;
+
+export type HostSandboxConfig = {
+  home?: string;
+  git?: Git;
+};

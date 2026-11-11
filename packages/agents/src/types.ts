@@ -7,7 +7,15 @@ export type ModelSource = ModelConfig | { model: CompletionModel };
 
 export type KeptAttachment = MessageAttachment & { path: string };
 
+export type SandboxPaths = {
+  workspace: string;
+  uploads: string;
+  skills: string;
+  host?: boolean;
+};
+
 export type SentExtras = {
+  paths?: SandboxPaths;
   attachments?: readonly KeptAttachment[];
   images?: ReadonlyMap<string, string>;
   mentions?: readonly MessageMention[];

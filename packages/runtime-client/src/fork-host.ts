@@ -25,7 +25,7 @@ export function createForkHost({
 }: {
   runId: string;
   thread: { id: string };
-  sandbox: Pick<ThreadWorkspaces, "workspace">;
+  sandbox: Pick<ThreadWorkspaces, "workspace" | "paths">;
   call: ForkCall;
   redact?: (text: string) => string;
 }): ForkHost {
@@ -55,7 +55,7 @@ export function createForkHost({
       await writeFile(join(directory, `${id.slice(0, 8)}.patch`), changes.patch);
       return {
         empty: false,
-        patchPath: `/workspace/.git/${PATCHES}/${id.slice(0, 8)}.patch`,
+        patchPath: `${sandbox.paths?.(thread.id).workspace ?? "/workspace"}/.git/${PATCHES}/${id.slice(0, 8)}.patch`,
         files: filesOf(changes.patch),
       };
     },

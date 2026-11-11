@@ -1,8 +1,8 @@
 import { mentionToken } from "@aven/protocol/events";
 
-import { WORKSPACE_DIR } from "./sandbox-tools";
+import { SANDBOX_PATHS } from "./sandbox-paths";
 import { asRecord } from "./values";
-import type { SkillListing } from "./types";
+import type { SandboxPaths, SkillListing } from "./types";
 import type { MessageMention } from "@aven/protocol/types";
 
 const unique = (names: string[]) => [...new Set(names)];
@@ -10,6 +10,7 @@ const unique = (names: string[]) => [...new Set(names)];
 export function mentionNote(
   mentions: readonly MessageMention[],
   skills: readonly SkillListing[],
+  paths: SandboxPaths = SANDBOX_PATHS,
 ): string | undefined {
   const of = (type: MessageMention["type"]) =>
     unique(mentions.filter((mention) => mention.type === type).map(({ name }) => name));
@@ -20,7 +21,7 @@ export function mentionNote(
     sections.push(
       [
         `The user pointed at ${files.length === 1 ? "this file" : "these files"} of the workspace with @:`,
-        ...files.map((path) => `- ${WORKSPACE_DIR}/${path}`),
+        ...files.map((path) => `- ${paths.workspace}/${path}`),
       ].join("\n"),
     );
   }

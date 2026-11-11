@@ -9,9 +9,10 @@ import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
+import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
-import type { McpNote, ModelSource, SkillListing } from "./types";
+import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type { RunMemory, RunWebSearch } from "@aven/protocol/types";
 
 type CodingAgentOptions = ModelSource & {
@@ -27,6 +28,7 @@ type CodingAgentOptions = ModelSource & {
   mcp?: McpNote;
   forks?: boolean;
   memory?: RunMemory;
+  paths?: SandboxPaths;
 };
 
 export function createCodingAgent(options: CodingAgentOptions) {
@@ -41,16 +43,19 @@ export function createCodingAgent(options: CodingAgentOptions) {
     ...agentModel,
     retries: options.retries ?? agentModel.retries,
     id: options.id ?? "coding",
-    instructions: [
-      options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
-      skillsInstructions(options.skills ?? []),
-      environmentInstructions(options.envNames ?? []),
-      mcpInstructions(options.mcp),
-      memoryInstructions(options.memory),
-      options.forks ? forkInstructions() : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
+    instructions: forPaths(
+      [
+        options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
+        skillsInstructions(options.skills ?? []),
+        environmentInstructions(options.envNames ?? []),
+        mcpInstructions(options.mcp),
+        memoryInstructions(options.memory),
+        options.forks ? forkInstructions() : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      options.paths ?? SANDBOX_PATHS,
+    ),
     maxTurns,
     tools,
   });

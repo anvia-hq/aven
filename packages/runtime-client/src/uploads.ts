@@ -14,7 +14,10 @@ export function safeFileName(name: string) {
 }
 
 export class UploadStore {
-  constructor(readonly root: string) {}
+  constructor(
+    readonly root: string,
+    readonly real = false,
+  ) {}
 
   async dir(threadId: string) {
     if (!/^[\w-]+$/.test(threadId)) throw new Error("Invalid thread id");
@@ -40,7 +43,7 @@ export class UploadStore {
       } finally {
         await file.close();
       }
-      return `${UPLOADS_DIR}/${candidate}`;
+      return this.real ? join(dir, candidate) : `${UPLOADS_DIR}/${candidate}`;
     }
   }
 }
