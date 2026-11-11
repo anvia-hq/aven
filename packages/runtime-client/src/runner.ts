@@ -297,6 +297,7 @@ export function startRuntime(options: RuntimeOptions) {
         canUpdate: options.update ? true : undefined,
         host: options.host ? true : undefined,
         dirs: options.dirs?.length ? options.dirs : undefined,
+        backends: ["native"],
       });
       resend();
       connected.resolve();

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RuntimeHub } from "../runtimes/hub";
+import { BackendUnavailableError, type RuntimeHub } from "../runtimes/hub";
 import { RemoteRuntime } from "./remote-runtime";
 import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
 
@@ -19,11 +19,12 @@ const identity = {
 };
 const github: RunGithub = { token: "ghu_a", id: 42, login: "ada", name: "Ada L" };
 
-function runtime({ failPost = false } = {}) {
+function runtime({ failPost = false, backends = ["native"] } = {}) {
   const posted: ControlPlaneToRuntime[] = [];
   const revoked: string[] = [];
   const issued: { runId: string; tokenOf: string | undefined }[] = [];
   const connection = {
+    offers: (kind: string) => backends.includes(kind),
     startRun() {},
     endRun() {},
     post(message: ControlPlaneToRuntime) {
@@ -152,6 +153,16 @@ describe("a run's message to its runtime", () => {
     expect(() => remote.start({ thread, prompt: "hi", identity })).toThrow("connection lost");
 
     expect(revoked).toHaveLength(1);
+  });
+
+  test("is never sent to a runner that cannot drive the thread's agent backend", () => {
+    const { posted, remote } = runtime({ backends: [] });
+
+    expect(() => remote.start({ thread, prompt: "hi" })).toThrow(BackendUnavailableError);
+    expect(() => remote.resume({ thread, continuation: {}, response: {} })).toThrow(
+      BackendUnavailableError,
+    );
+    expect(posted).toEqual([]);
   });
 });
 

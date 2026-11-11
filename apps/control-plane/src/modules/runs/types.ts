@@ -3,6 +3,7 @@ import type { MemoryCaller } from "../memory/types";
 import type { RunIdentity } from "../workload-identity/types";
 import type { ModelConfig } from "@aven/agents/types";
 import type {
+  AgentBackendKind,
   MessageMention,
   QueuedSteer,
   RunAttachment,
@@ -21,6 +22,7 @@ export type RunThread = {
   id: string;
   organizationId: string;
   runtimeId: string;
+  agentBackend?: AgentBackendKind;
   parentThreadId?: string | null;
   projectId?: string;
   createdBy?: string;

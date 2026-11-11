@@ -785,6 +785,22 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     expect(hub.buildOf(runtime.id)).toBeUndefined();
   });
 
+  test("a runtime offers the agent backends it names that this server knows, and native when it names none", async () => {
+    const said = async (backends?: string[]) => {
+      const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
+        name: "backends",
+      });
+      const ws = await open(full.server?.port, token, "/runtimes/connect", null);
+      ws.send(JSON.stringify({ type: "hello", version: WIRE_VERSION, runs: [], backends }));
+      await until(() => hub.isOnline(runtime.id));
+      return hub.get(runtime.id)!;
+    };
+
+    expect((await said()).offers("native")).toBe(true);
+    expect((await said(["native", "not-yet-known"])).offers("native")).toBe(true);
+    expect((await said(["not-yet-known"])).offers("native")).toBe(false);
+  });
+
   test("how loaded a runtime's machine is shows in the list while it is online, and not after", async () => {
     const { runtime, token } = await runtimesService.create(owner.organizationId, owner.userId, {
       name: "monitored",

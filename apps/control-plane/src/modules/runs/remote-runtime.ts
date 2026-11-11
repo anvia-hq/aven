@@ -3,7 +3,12 @@ import { z } from "zod";
 
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
-import { RuntimeOfflineError, type RuntimeConnection, type RuntimeHub } from "../runtimes/hub";
+import {
+  BackendUnavailableError,
+  RuntimeOfflineError,
+  type RuntimeConnection,
+  type RuntimeHub,
+} from "../runtimes/hub";
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   ResumeRunInput,
@@ -222,6 +227,7 @@ export class RemoteRuntime implements Runtime {
   #connectionFor(thread: RunThread) {
     const connection = this.hub.get(thread.runtimeId);
     if (!connection) throw new RuntimeOfflineError();
+    if (!connection.offers(thread.agentBackend ?? "native")) throw new BackendUnavailableError();
     return connection;
   }
 
