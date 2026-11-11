@@ -1,20 +1,15 @@
-import { Archive, GitBranch, Plus, Share } from "@mynaui/icons-react";
+import { GitBranch, Plus, Share } from "@mynaui/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import {
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
 import { shortTimeAgo, timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { FolderSection } from "@/modules/folders/components/folder-section";
-import { MoveToFolderMenu } from "@/modules/folders/components/move-to-folder-menu";
+import { ThreadActionsMenu } from "@/modules/folders/components/thread-actions-menu";
 import { NewFolderButton } from "@/modules/folders/components/new-folder-button";
 import { NewFolderRow } from "@/modules/folders/components/new-folder-row";
 import { UnfiledArea } from "@/modules/folders/components/unfiled-area";
@@ -259,7 +254,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
-          className={cn("pr-16", nested && "pl-8")}
+          className={cn("pr-9", nested && "pl-8")}
         >
           <SidebarProjectTile
             thread={thread}
@@ -281,21 +276,14 @@ export function SidebarThreads() {
           <CrowdMark thread={thread} />
         </SidebarMenuButton>
         <UpdatedAt thread={thread} yields />
-        <MoveToFolderMenu
+        <ThreadActionsMenu
           title={thread.title}
           folders={folders}
           currentFolderId={folderOfThread(thread)}
           onMove={(folderId) => file(thread.id, folderId)}
           onNewFolder={() => setDraft({ threadId: thread.id })}
+          onArchive={() => void archive(thread)}
         />
-        <SidebarMenuAction
-          className="right-2 peer-data-active/menu-button:text-sidebar-accent-foreground group-hover/menu-item:opacity-100 group-has-focus-visible/menu-item:opacity-100 md:opacity-0"
-          aria-label={`Archive ${thread.title}`}
-          title="Archive"
-          onClick={() => void archive(thread)}
-        >
-          <Archive />
-        </SidebarMenuAction>
       </SidebarMenuItem>
     );
   }
