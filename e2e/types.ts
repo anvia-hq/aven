@@ -14,7 +14,6 @@ export type FakeRunnerSwitch =
   | "FAKE_AVEN_FILES"
   | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
-  | "FAKE_SNAPSHOT_FAILS"
   | "FAKE_NO_WORKSPACE"
   | "FAKE_UPDATE_BUSY"
   | "FAKE_STEER_REFUSES"
