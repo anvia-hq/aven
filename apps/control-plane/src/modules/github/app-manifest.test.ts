@@ -21,6 +21,8 @@ describe("appManifest", () => {
       contents: "write",
       pull_requests: "write",
       issues: "read",
+      actions: "write",
+      workflows: "write",
       metadata: "read",
     });
     expect(manifest.default_events).toEqual([]);
