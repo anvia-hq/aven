@@ -378,6 +378,13 @@ export type RunnerCallsContext = {
 
 export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
 
+export type UploadPlacement = {
+  settle(threadId: string): Promise<void>;
+  placed(threadId: string, name: string): string | undefined;
+  claim(threadId: string, name: string): void;
+  placedNote(threadId: string): string | undefined;
+};
+
 export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
 
 export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
@@ -442,7 +449,9 @@ export interface ThreadWorkspaces {
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
   readonly artifacts?: ThreadArtifacts;
-  readonly uploads?: Pick<UploadStore, "save"> & Partial<Pick<UploadStore, "put">>;
+  readonly uploads?: Pick<UploadStore, "save"> &
+    Partial<Pick<UploadStore, "put">> &
+    Partial<UploadPlacement>;
   readonly skills?: Pick<SkillStore, "install">;
   dispose(): Promise<void>;
 }
