@@ -7,7 +7,7 @@ aven install --runner --url <address> --token <token>      only a runner
 aven start | stop | restart | status | logs [--follow]     the server
 aven runner start | stop | restart | status | logs | uninstall
 aven update [--release X]
-aven doctor                                                check Docker, git, the server and the runner
+aven doctor                                                check git, the server (and Docker) and the runner
 aven uninstall [--purge --yes]                             remove the services; --purge also deletes the data
 ```
 

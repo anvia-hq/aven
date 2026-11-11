@@ -11,14 +11,15 @@
                   ┌───────────────┴───────────────┐
           ┌───────┴───────┐               ┌───────┴───────┐
           │ runner        │               │ runner        │   a laptop, a build
-          │ Docker + git  │               │ Docker + git  │   machine, a VM ...
-          │ ▢ ▢ ▢ sandboxes               │ ▢ ▢ sandboxes │
+          │ git + folders │               │ git + folders │   machine, a VM ...
+          │ works here    │               │ works here    │
           └───────────────┘               └───────────────┘
 ```
 
 The **server** holds accounts, projects, threads and the encrypted keys. A **runner** is any computer
-with Docker and git that connects out to the server (so it needs no open port) and runs a sandbox
-for each thread. `aven` installs and updates both.
+with git that connects out to the server (so it needs no open port) and works on that machine itself,
+as the user running it, in the folders it serves. A project is one of those folders. `aven` installs
+and updates both; Docker is needed only for the server, which runs in containers.
 
 ## Where things live
 
@@ -52,6 +53,14 @@ curl -fsSL https://raw.githubusercontent.com/anvia-hq/aven/main/install.sh | bas
   --runner --url https://aven.example.com/api --token avrt_...
 ```
 
+The runner works in its user's home folder. To serve other folders, add `--dir <folder>` (or
+several, separated by `:`) to `aven runner install`; it is saved as `AVEN_DIRS`. A runner needs no
+Docker. The server's own built-in runner serves folders too: `AVEN_LOCAL_RUNNER` in
+`~/.aven/server/.env` turns it `on`, `off` or `host`, and `AVEN_DIRS` there sets its folders.
+
+A runner is private to the person who registered it until they turn on **Share** in **Settings >
+Runtimes**; sharing lets workspace members run commands on it as its user.
+
 ## Update
 
 Run the install command again, or:
@@ -64,7 +73,7 @@ It moves the `aven` command, the server and the runner on that machine to the la
 a prerelease): settings and secrets are kept, new settings are added, the new images are pulled and
 the database is migrated when the server starts. A server's runners are updated one machine at a
 time, the same way; Settings > Runtimes marks a runner that is behind with "Update available".
-The images of earlier releases are removed afterwards (a sandbox image is several gigabytes). `aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
+The images of earlier releases are removed afterwards. `aven update --release 0.3.0` installs a specific release. Migrations only go forward, so take a
 backup before updating (below) if you may want to go back.
 
 ## Backup and restore
@@ -83,7 +92,8 @@ keys, variables and GitHub App readable. `aven stop` and `aven update` keep the 
 
 ## Security
 
-Good to know: agents act without asking for approval for each step, inside their sandbox. A sandbox
-holds only its thread's workspace, but it can reach the network, and any member of an organization can
-run commands on the organization's runners. Invite people you trust, and keep sign-up closed unless
-you want it open. Plain HTTP across a network is not private: see [Cloud](cloud.md).
+Good to know: agents act without asking for approval for each step, and nothing is isolated: a
+thread's commands run on the runner's machine as the user running it, with that user's files, keys
+and network. Use machines you own, ideally with a dedicated unprivileged user for the runner. A
+runner is private to its owner until they share it, and a member who may use a shared runner runs
+commands as that user. Invite people you trust, and keep sign-up closed unless you want it open. Plain HTTP across a network is not private: see [Cloud](cloud.md).
