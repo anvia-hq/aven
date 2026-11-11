@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useContinueAfterAuth } from "@/modules/auth/hooks/use-continue-after-auth";
 import { validateInvitationSearch } from "@/modules/auth/invitation-search";
 import { redirectIfSignedIn } from "@/modules/auth/redirect-if-signed-in";
+import { AuthShell } from "@/modules/auth/components/auth-shell";
 import { AuthForm } from "@/modules/auth/components/auth-form";
 
 export const Route = createFileRoute("/login")({
@@ -16,19 +17,23 @@ function Login() {
   const { invitation } = search;
   const onSuccess = useContinueAfterAuth(search);
   return (
-    <main className="mx-auto flex min-h-screen max-w-xs flex-col justify-center gap-4 p-4">
-      <h1 className="text-lg font-semibold">Sign in to Aven</h1>
+    <AuthShell
+      title="Sign in to Aven"
+      description="Welcome back. Enter your details to continue."
+      footer={
+        <>
+          Don't have an account?{" "}
+          <Link
+            to="/register"
+            search={{ invitation }}
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Register
+          </Link>
+        </>
+      }
+    >
       <AuthForm mode="sign-in" onSuccess={onSuccess} />
-      <p className="text-sm text-muted-foreground">
-        Don't have an account?{" "}
-        <Link
-          to="/register"
-          search={{ invitation }}
-          className="font-medium text-foreground underline"
-        >
-          Register
-        </Link>
-      </p>
-    </main>
+    </AuthShell>
   );
 }
