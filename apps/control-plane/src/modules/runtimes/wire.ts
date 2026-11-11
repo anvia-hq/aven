@@ -494,11 +494,11 @@ const forkStartParams = z.object({
   title: z.string().trim().min(1).max(120).optional(),
 });
 const forkStatusParams = z.object({ runId, id: z.string().uuid() });
-const machineRelayParams = z.object({
-  runId,
+const machineOp = z.object({
   op: z.enum(MACHINE_OPS),
   args: z.unknown().optional(),
 });
+const machineRelayParams = z.union([machineOp.extend({ runId }), machineOp.extend({ replyId })]);
 const botCockpitParams = z.object({ replyId, command: z.unknown() });
 
 const botThreadParams = z.discriminatedUnion("op", [
