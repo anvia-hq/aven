@@ -18,10 +18,13 @@ afterEach(async () => {
   await Promise.all(homes.splice(0).map((home) => rm(home, { recursive: true, force: true })));
 });
 
-async function machineAndAgent({ online = (): boolean => true }: { online?: () => boolean } = {}) {
+async function machineAndAgent({
+  online = (): boolean => true,
+  dirs = [],
+}: { online?: () => boolean; dirs?: string[] } = {}) {
   const home = await mkdtemp(join(tmpdir(), "aven-remote-"));
   homes.push(home);
-  const sandbox = await HostSandboxes.start({ home });
+  const sandbox = await HostSandboxes.start({ home, dirs });
   sandboxes.push(sandbox);
   const boxes = new Map<string, ThreadSandbox>();
   const answer = createMachineCalls({
@@ -62,6 +65,26 @@ describe("an agent whose computer is another machine", () => {
     expect(String(ran.stdout)).toBe("aven/t1\n");
     expect(ops.slice(0, 3)).toEqual(["paths", "prepare", "exec"]);
     expect(await agent.workspace("t1")).toBe(sandbox.paths("t1").workspace);
+  });
+
+  test("prepares a folder the machine serves without cloning a repository", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "aven-served-"));
+    homes.push(folder);
+    const { agent } = await machineAndAgent({ dirs: [folder] });
+    let asked = false;
+    const box = await agent.acquire(
+      { id: "t1" },
+      async () => {
+        asked = true;
+        throw new Error("no repository");
+      },
+      { folder: async () => folder },
+    );
+
+    await call(box.tools, "exec_command", { command: "echo made > proof.txt" });
+
+    expect(asked).toBe(false);
+    expect(await readFile(join(folder, "proof.txt"), "utf8")).toBe("made\n");
   });
 
   test("edits a file on the machine with the agent's own tools", async () => {
