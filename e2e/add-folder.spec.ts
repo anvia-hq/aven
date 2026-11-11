@@ -36,4 +36,36 @@ test.describe("adding a folder", () => {
     await expect(page.getByText("Folder added")).toBeVisible();
     await expect(page.getByRole("link", { name: /notes/ })).toBeVisible();
   });
+
+  test("a folder project's page lists its files, shows its README and its commits", async ({
+    page,
+  }) => {
+    await registerUser(page, "folderpage", "Folder Page");
+    const started = await threadOnFakeRunner(page, { FAKE_DIRS: "/work/code" });
+    runner = started.child;
+
+    await page.goto("/projects");
+    await page.getByRole("button", { name: "Add a folder" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a folder" });
+    await dialog.getByRole("button", { name: "code" }).click();
+    await dialog.getByRole("button", { name: "notes" }).click();
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("link", { name: /notes/ }).first().click();
+
+    const files = page.getByRole("region", { name: "Files" });
+    await expect(files.getByText("package.json")).toBeVisible();
+    await expect(files.getByRole("link", { name: "src" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notes folder" })).toBeVisible();
+    await expect(page.getByText("Kept on the computer.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Docs" })).toHaveCount(0);
+
+    const commits = page.getByRole("region", { name: "Commits" });
+    await expect(commits.getByText("Write the notes")).toBeVisible();
+    await expect(commits.getByText("Start the notes folder")).toBeVisible();
+    await expect(commits.getByText("v1")).toBeVisible();
+    await expect(commits.getByRole("link")).toHaveCount(0);
+
+    await files.getByRole("link", { name: "src" }).click();
+    await expect(files.getByText("index.ts")).toBeVisible();
+  });
 });

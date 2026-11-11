@@ -19,8 +19,21 @@ import {
   RepositoryNotFoundError,
   RuntimeNotFoundError,
 } from "./service";
+import type { ProjectFolders } from "./types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
+
+const noFolders: ProjectFolders = {
+  commits: async () => {
+    throw new Error("A GitHub project does not ask a runner for its commits");
+  },
+  files: async () => {
+    throw new Error("A GitHub project does not ask a runner for its files");
+  },
+  readme: async () => {
+    throw new Error("A GitHub project does not ask a runner for its README");
+  },
+};
 
 run("projectsService (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
@@ -85,8 +98,56 @@ run("projectsService (postgres)", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: project.id });
     expect(await projectsService.folderOf(thread.id)).toBe("/home/me/code/aven");
     await expect(projectsService.repoAccess(thread.id)).rejects.toThrow("folder on a computer");
-    await expect(projectsService.readme(orgA, project.id)).resolves.toEqual({ readme: null });
     await expect(projectsService.branches(orgA, project.id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  test("a folder project's files and README come from its runner, for a person who may use that computer", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "files mac" });
+    await runtimesService.setHost(runtime.id, true);
+    await runtimesService.setDirectories(runtime.id, ["/home/me/work"]);
+    const project = await projectsService.addFolder(orgA, userId, {
+      runtimeId: runtime.id,
+      path: "/home/me/work/site",
+    });
+    const asked: unknown[] = [];
+    const folders: ProjectFolders = {
+      commits: async (runtimeId, folder, page) => {
+        asked.push([runtimeId, folder, page]);
+        return { commits: [], hasMore: false };
+      },
+      files: async (runtimeId, folder, path) => {
+        asked.push([runtimeId, folder, path]);
+        return { entries: [{ name: "src", path: "src", type: "directory" }] };
+      },
+      readme: async (runtimeId, folder) => {
+        asked.push([runtimeId, folder]);
+        return { readme: null };
+      },
+    };
+
+    expect(await projectsService.folder(orgA, userId, project.id, "src", folders)).toEqual({
+      entries: [{ name: "src", path: "src", type: "directory" }],
+    });
+    expect(await projectsService.readme(orgA, userId, project.id, folders)).toEqual({
+      readme: null,
+    });
+    expect(await projectsService.commits(orgA, userId, project.id, 2, folders)).toEqual({
+      commits: [],
+      hasMore: false,
+      page: 2,
+    });
+    expect(asked).toEqual([
+      [runtime.id, "/home/me/work/site", "src"],
+      [runtime.id, "/home/me/work/site"],
+      [runtime.id, "/home/me/work/site", 2],
+    ]);
+    const stranger = await personIn(orgA, "member");
+    await expect(
+      projectsService.folder(orgA, stranger, project.id, "", folders),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      projectsService.readme(orgA, stranger, project.id, folders),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   test("a runner's folders cannot be used through another person's private computer", async () => {
@@ -161,7 +222,7 @@ run("projectsService (postgres)", async () => {
     try {
       const project = (await projectsService.list(orgA))[0]!;
 
-      expect(await projectsService.commits(orgA, project.id, 2)).toEqual({
+      expect(await projectsService.commits(orgA, userId, project.id, 2, noFolders)).toEqual({
         commits: [commit],
         hasMore: true,
         page: 2,
@@ -175,15 +236,15 @@ run("projectsService (postgres)", async () => {
       );
 
       commits.mockClear();
-      await expect(projectsService.commits(orgB, project.id, 1)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        projectsService.commits(orgB, userId, project.id, 1, noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
       expect(commits).not.toHaveBeenCalled();
 
       commits.mockImplementation(async () => null);
-      await expect(projectsService.commits(orgA, project.id, 1)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        projectsService.commits(orgA, userId, project.id, 1, noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
     } finally {
       commits.mockRestore();
     }
@@ -336,9 +397,9 @@ run("projectsService (postgres)", async () => {
     await expect(
       projectsService.update(orgA, userId, project.id, { runtimeId: runnerA.id }),
     ).rejects.toBeInstanceOf(NotFoundError);
-    await expect(projectsService.folder(orgA, project.id, "")).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
+    await expect(
+      projectsService.folder(orgA, userId, project.id, "", noFolders),
+    ).rejects.toBeInstanceOf(NotFoundError);
     const kept = await db.select().from(threads).where(eq(threads.projectId, project.id));
     expect(kept.map((thread) => [thread.title, thread.state]).sort()).toEqual([
       ["archived", "archived"],
@@ -422,7 +483,7 @@ run("projectsService (postgres)", async () => {
     try {
       const project = (await projectsService.list(orgA))[0]!;
 
-      expect(await projectsService.folder(orgA, project.id, "src")).toEqual({
+      expect(await projectsService.folder(orgA, userId, project.id, "src", noFolders)).toEqual({
         entries: [{ name: "src", path: "src", type: "directory" }],
       });
       expect(folder).toHaveBeenCalledWith(
@@ -430,19 +491,23 @@ run("projectsService (postgres)", async () => {
         project.repoFullName,
         "src",
       );
-      expect((await projectsService.readme(orgA, project.id)).readme?.text).toBe("# Web");
+      expect((await projectsService.readme(orgA, userId, project.id, noFolders)).readme?.text).toBe(
+        "# Web",
+      );
 
       folder.mockClear();
-      await expect(projectsService.folder(orgB, project.id, "")).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
-      await expect(projectsService.readme(orgB, project.id)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(
+        projectsService.folder(orgB, userId, project.id, "", noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
+      await expect(
+        projectsService.readme(orgB, userId, project.id, noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
       expect(folder).not.toHaveBeenCalled();
 
       folder.mockImplementation(async () => null);
-      await expect(projectsService.folder(orgA, project.id, "app.ts")).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        projectsService.folder(orgA, userId, project.id, "app.ts", noFolders),
+      ).rejects.toBeInstanceOf(NotFoundError);
     } finally {
       folder.mockRestore();
       readme.mockRestore();

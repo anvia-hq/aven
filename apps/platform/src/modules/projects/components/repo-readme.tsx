@@ -5,13 +5,14 @@ import { SectionCard } from "@/components/section-card";
 import { Skeleton } from "@/components/skeleton";
 
 import { useProjectReadme } from "../hooks/use-project-readme";
-import { resolveRepoUrl } from "../repo-links";
+import { isAbsoluteUrl, resolveRepoUrl } from "../repo-links";
 import type { Project } from "../types";
 
 export function RepoReadme({ project }: { project: Project }) {
   const { readme, problem, loading } = useProjectReadme(project.id);
   const repo = project.repoFullName ?? "";
   const branch = project.defaultBranch ?? "main";
+  const onGithub = Boolean(project.repoFullName);
 
   if (!loading && (!readme || problem !== undefined)) return null;
 
@@ -36,24 +37,32 @@ export function RepoReadme({ project }: { project: Project }) {
         {readme && (
           <Markdown
             components={{
-              a: ({ node: _node, href, children, ...props }) => (
-                <a
-                  {...props}
-                  href={href ? resolveRepoUrl(href, repo, branch, "link") : href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {children}
-                </a>
-              ),
-              img: ({ node: _node, src, alt, ...props }) => (
-                <img
-                  {...props}
-                  alt={alt ?? ""}
-                  src={typeof src === "string" ? resolveRepoUrl(src, repo, branch, "image") : src}
-                  className="max-w-full"
-                />
-              ),
+              a: ({ node: _node, href, children, ...props }) =>
+                !onGithub && (!href || !isAbsoluteUrl(href)) ? (
+                  <span>{children}</span>
+                ) : (
+                  <a
+                    {...props}
+                    href={href && onGithub ? resolveRepoUrl(href, repo, branch, "link") : href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    {children}
+                  </a>
+                ),
+              img: ({ node: _node, src, alt, ...props }) =>
+                !onGithub && (typeof src !== "string" || !isAbsoluteUrl(src)) ? null : (
+                  <img
+                    {...props}
+                    alt={alt ?? ""}
+                    src={
+                      typeof src === "string" && onGithub
+                        ? resolveRepoUrl(src, repo, branch, "image")
+                        : src
+                    }
+                    className="max-w-full"
+                  />
+                ),
             }}
           >
             {readme.text}
