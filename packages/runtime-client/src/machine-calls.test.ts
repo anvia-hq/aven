@@ -120,4 +120,77 @@ describe("a machine that lends its computer to an agent elsewhere", () => {
     expect(listed.map((process) => process.id)).toContain(started.id);
     await boxes.get("t1")!.processes.stop(started.id);
   });
+
+  test("stopping a command kills it, and a stop for another thread does not", async () => {
+    const { call } = await machine();
+    const { access } = await createRemoteRepo();
+    await call({ threadId: "t1", op: "prepare", args: { thread: {}, repo: access } });
+    const started = Date.now();
+    const running = call({
+      threadId: "t1",
+      op: "exec",
+      args: {
+        command: "echo up > ready; sleep 30",
+        operationId: "cmd-1",
+        timeoutMs: 20_000,
+      },
+    });
+    const deadline = Date.now() + 5_000;
+    let ready = false;
+    while (!ready && Date.now() < deadline) {
+      try {
+        await call({ threadId: "t1", op: "readFile", args: { path: "ready" } });
+        ready = true;
+      } catch {
+        await Bun.sleep(20);
+      }
+    }
+    expect(ready).toBe(true);
+
+    expect(
+      await call({ threadId: "t2", op: "exec.abort", args: { operationId: "cmd-1" } }),
+    ).toBeNull();
+    const still = await Promise.race([
+      running.then(() => "done"),
+      Bun.sleep(200).then(() => "running"),
+    ]);
+    expect(still).toBe("running");
+
+    expect(
+      await call({ threadId: "t1", op: "exec.abort", args: { operationId: "cmd-1" } }),
+    ).toBeNull();
+    const result = (await running) as { status: string };
+    expect(result.status).toBe("exited");
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+
+  test("a stop that arrives before the command kills it as it starts", async () => {
+    const { call } = await machine();
+    const { access } = await createRemoteRepo();
+    await call({ threadId: "t1", op: "prepare", args: { thread: {}, repo: access } });
+    await call({ threadId: "t1", op: "exec.abort", args: { operationId: "early" } });
+
+    const started = Date.now();
+    const result = (await call({
+      threadId: "t1",
+      op: "exec",
+      args: { command: "sleep 30", operationId: "early", timeoutMs: 20_000 },
+    })) as { status: string };
+
+    expect(result.status).toBe("exited");
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
+  test("a stop needs the command's id, and one for a command that is not running does nothing", async () => {
+    const { call } = await machine();
+    expect(
+      await call({ threadId: "t1", op: "exec.abort", args: { operationId: "missing" } }),
+    ).toBeNull();
+    await expect(call({ threadId: "t1", op: "exec.abort", args: {} })).rejects.toThrow(
+      "Invalid parameters",
+    );
+    await expect(
+      call({ threadId: "t1", op: "exec.abort", args: { operationId: "" } }),
+    ).rejects.toThrow("Invalid parameters");
+  });
 });
