@@ -100,6 +100,37 @@ test.describe("machine monitor", () => {
     await expect(page).toHaveURL(/\/settings\/runtimes$/);
   });
 
+  test("the machines are a stack that fans out upward on hover and does not move the sidebar", async ({
+    page,
+  }) => {
+    await registerUser(page, "stack", "Stack User");
+    await runner(page, "build-box", { FAKE_STATS: stats({}) });
+    await runner(page, "hot-box", { FAKE_STATS: stats({ cpuPercent: 96 }) });
+    await runner(page, "old-box");
+
+    await page.goto("/threads");
+    const machines = page.getByRole("list", { name: "Machines" });
+    const rows = machines.locator("[data-slot=machine-row]");
+    await expect(rows).toHaveCount(3);
+    const settings = page.getByRole("button", { name: "Settings" });
+    const settingsAt = await settings.boundingBox();
+    const stackedFirst = await rows.nth(0).boundingBox();
+    const stackedLast = await rows.nth(2).boundingBox();
+    expect(stackedLast!.y - stackedFirst!.y).toBeLessThan(20);
+
+    await rows.nth(0).hover();
+    await expect
+      .poll(async () => {
+        const first = await rows.nth(0).boundingBox();
+        const last = await rows.nth(2).boundingBox();
+        return last!.y - first!.y;
+      })
+      .toBeGreaterThanOrEqual(70);
+    expect(await settings.boundingBox()).toEqual(settingsAt);
+    const fannedLast = await rows.nth(2).boundingBox();
+    expect(fannedLast!.y + fannedLast!.height).toBeLessThanOrEqual(settingsAt!.y);
+  });
+
   test("a runner behind the server has an Update button that asks it, and says Updating (decision 0146)", async ({
     page,
   }) => {
