@@ -1,6 +1,6 @@
 # A snapshot is cloned in one call on macOS
 
-Status: accepted. Adds to 0043 (a repository sets its environment up), whose later threads start from a copy of the snapshot's workspace.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Adds to 0043 (a repository sets its environment up), whose later threads start from a copy of the snapshot's workspace.
 
 ## Context
 

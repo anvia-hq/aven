@@ -1,3 +1,4 @@
+import { withoutRunnerSecrets } from "./runner-secrets";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
 
@@ -24,7 +25,7 @@ export function killGroup(proc: Spawned) {
 export const localLaunch: Launch = ({ argv, cwd, env }) =>
   Bun.spawn(argv, {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...withoutRunnerSecrets(process.env), ...env },
     stdin: "ignore",
     stdout: "pipe",
     stderr: "pipe",

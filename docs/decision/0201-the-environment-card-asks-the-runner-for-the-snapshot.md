@@ -1,6 +1,6 @@
 # 0201: The Environment card asks the runner for the snapshot
 
-Status: accepted. Refines 0197 (the Environment card takes a snapshot).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Refines 0197 (the Environment card takes a snapshot).
 
 ## Context
 

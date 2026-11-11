@@ -1,6 +1,6 @@
 # A runner works on its machine, and the container sandbox is retired
 
-Status: accepted. Follows 0218, which made a runner able to work on its own machine and a project a folder on it. Supersedes the container sandbox (0008, 0095, 0211 for macOS VMs stays a separate question), the Desktop (0015, 0039, 0059), the Browser (0199, 0203), environment snapshots (0043, 0197, 0201), the sandbox image and its release (0073's `aven-sandbox`), and the GitHub import (0013, 0074, 0123) as the way to make a project.
+Status: accepted. Follows 0218, which made a runner able to work on its own machine and a project a folder on it. Supersedes the container sandbox (0008, 0009, 0010, 0012, 0014, 0016, 0037, 0038, 0072, 0095, 0113, 0127, 0128, 0166, 0169, 0171; 0211's macOS VM idea is dropped), the Desktop (0015, 0039; 0059 in part), the Browser (0199, 0203), environment snapshots (0043, 0197, 0201), the sandbox image and its release (0073's `aven-sandbox`), and the GitHub import (0013, 0074, 0123) as the way to make a project.
 
 ## Context
 
@@ -26,3 +26,9 @@ Status: accepted. Follows 0218, which made a runner able to work on its own mach
 ## Not verified
 
 The runner was tried on one Mac with a git folder and a plain folder. Removing the container is a large deletion; what it touches is listed by the compiler and the tests, and a thread through the web app is the proof that nothing the host mode needed went with it.
+
+## What the agent's commands inherit
+
+A host-mode command and shell run as the runner's user, so they would inherit the runner's own environment, with its token (`AVEN_RUNTIME_TOKEN`) and, in the control plane's built-in runner, the server's secrets. `withoutRunnerSecrets` drops every `AVEN_*` variable and any name that looks like a secret (`SECRET`, `PASSWORD`, `PRIVATE_KEY`, `API_KEY`, `*_TOKEN`, `DATABASE_URL`) from what a command and the Terminal start with; what a project gives a thread is added after it. The agent still runs as the user and can read their files, which 0218 states.
+
+Continuing a thread on another runner looks the runner up as the person, so a private host runner of someone else cannot be chosen.

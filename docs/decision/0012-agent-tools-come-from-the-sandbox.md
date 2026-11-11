@@ -1,6 +1,6 @@
 # The agent's tools come from the sandbox
 
-Status: accepted. Supersedes the file-tools-on-the-runner and background-job-notice parts of 0009 and 0010, and the job parts of 0003, 0004, 0006 and 0007.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Supersedes the file-tools-on-the-runner and background-job-notice parts of 0009 and 0010, and the job parts of 0003, 0004, 0006 and 0007.
 
 ## Context
 

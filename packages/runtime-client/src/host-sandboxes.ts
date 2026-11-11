@@ -1,3 +1,4 @@
+import { withoutRunnerSecrets } from "./runner-secrets";
 import { mkdirSync, realpathSync } from "node:fs";
 import { lstat, mkdir, realpath, rmdir, symlink } from "node:fs/promises";
 import { join, sep } from "node:path";
@@ -191,7 +192,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     return {
       argv: ["bash", "-c", `cd "$AVEN_THREAD_DIR" && exec bash`],
       env: {
-        ...process.env,
+        ...withoutRunnerSecrets(process.env),
         ...project,
         AVEN_THREAD_DIR: root,
         TERM: "xterm-256color",

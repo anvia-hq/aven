@@ -1,6 +1,6 @@
 # Sandbox and setup containers start with an init
 
-Status: accepted. Extends 0037 (the 1024-process limit) and 0043 (setup containers).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Extends 0037 (the 1024-process limit) and 0043 (setup containers).
 
 ## Context
 

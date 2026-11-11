@@ -1,6 +1,6 @@
 # A person can wake a thread's sandbox from the Desktop panel
 
-Status: accepted. Builds on 0010 (a container per thread, freed when idle) and 0015 (the portal shows the desktop). Changes one sentence of 0015: a runner never starts a sandbox _to be watched_, and still does not; it now starts one when a person asks.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0010 (a container per thread, freed when idle) and 0015 (the portal shows the desktop). Changes one sentence of 0015: a runner never starts a sandbox _to be watched_, and still does not; it now starts one when a person asks.
 
 ## Context
 

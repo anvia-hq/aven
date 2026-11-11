@@ -1,6 +1,6 @@
 # The platform owner cleans up Docker leftovers
 
-Status: accepted. Follows 0165 (the platform owner's People page) and 0160 (archived threads are swept after a day).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Follows 0165 (the platform owner's People page) and 0160 (archived threads are swept after a day).
 
 ## Context
 

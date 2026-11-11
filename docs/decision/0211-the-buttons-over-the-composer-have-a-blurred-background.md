@@ -1,6 +1,6 @@
 # The buttons over the composer have a blurred background
 
-Status: accepted.
+Status: accepted. Partly superseded by 0219: nothing is built for macOS VMs; the idea is dropped.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # The runtime containers run under is configurable, for gVisor
 
-Status: accepted. Adds to 0010; containers still start the same way.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Adds to 0010; containers still start the same way.
 
 ## Context
 

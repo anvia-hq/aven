@@ -1,6 +1,6 @@
 # The GitHub App is created from the platform
 
-Status: accepted. Extends 0013 (projects are GitHub repositories) and 0073 (install and update with a script).
+Status: accepted. Extends 0013 (projects are GitHub repositories) and 0073 (install and update with a script). Partly superseded by 0219: a project is no longer made by importing a repository in the app.
 
 ## Context
 

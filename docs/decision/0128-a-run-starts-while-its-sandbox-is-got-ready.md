@@ -1,6 +1,6 @@
 # A run starts while its sandbox is got ready, and a spare workspace waits for the next thread
 
-Status: accepted. Adds to 0043 (a repository sets its environment up) and 0119 (a run's start-up is timed and MCP is connected once); follows 0127 (a snapshot is cloned in one call on macOS).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Adds to 0043 (a repository sets its environment up) and 0119 (a run's start-up is timed and MCP is connected once); follows 0127 (a snapshot is cloned in one call on macOS).
 
 ## Context
 

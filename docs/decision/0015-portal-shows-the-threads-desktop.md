@@ -1,6 +1,6 @@
 # The portal shows a thread's desktop and lets a person take it over
 
-Status: accepted. Builds on 0008 (runtimes), 0010 and 0012 (per-thread sandboxes) and 0014 (the KDE desktop image).
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0008 (runtimes), 0010 and 0012 (per-thread sandboxes) and 0014 (the KDE desktop image).
 
 ## Context
 

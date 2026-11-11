@@ -1,6 +1,6 @@
 # A bot has a computer of its own, on a runner
 
-Status: accepted. Supersedes the part of 0058 that says a bot runs in the control plane; the rest of 0058 stands. Builds on 0008, 0010 and 0012.
+Status: accepted. Supersedes the part of 0058 that says a bot runs in the control plane; the rest of 0058 stands. Builds on 0008, 0010 and 0012. Partly superseded by 0219: a bot's computer is a folder on a runner, not a Desktop.
 
 ## Context
 

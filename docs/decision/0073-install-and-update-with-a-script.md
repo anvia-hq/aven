@@ -1,6 +1,6 @@
 # Aven installs and updates with one script
 
-Status: accepted. Replaces the nginx image of `apps/platform` and the control plane's stale Dockerfile.
+Status: accepted. Replaces the nginx image of `apps/platform` and the control plane's stale Dockerfile. Partly superseded by 0219: `aven install` no longer pulls or builds a sandbox image.
 
 ## Context
 

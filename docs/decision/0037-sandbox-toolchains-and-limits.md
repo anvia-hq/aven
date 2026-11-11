@@ -1,6 +1,6 @@
 # The sandbox ships the common toolchains and runs with 4 CPUs and 8 GB
 
-Status: accepted. Extends 0014 (Chrome on amd64, Chromium on arm64, the daemon and the image tag); the desktop it chose is replaced by 0038.
+Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Extends 0014 (Chrome on amd64, Chromium on arm64, the daemon and the image tag); the desktop it chose is replaced by 0038.
 
 ## Context
 
