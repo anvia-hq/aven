@@ -39,11 +39,11 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
     <Popover>
       <PopoverTrigger
         aria-label="Change avatar"
-        className="w-fit rounded-full outline-offset-4 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring data-popup-open:scale-105"
+        className="mx-auto w-fit rounded-full outline-offset-4 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring data-popup-open:scale-105"
       >
         <BotAvatar bot={{ id: botId, avatar: value }} className="size-18" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-88 gap-3 p-3">
+      <PopoverContent align="center" className="w-88 gap-3 p-3">
         <Tabs defaultValue="bot" className="flex-col">
           <div className="flex items-center gap-2">
             <TabsList>

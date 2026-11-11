@@ -29,7 +29,7 @@ export function BotSettingsDialog({ bot }: { bot: Bot }) {
       <DialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Bot settings" />}>
         <Cog />
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <BotSettingsForm bot={bot} onDone={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
