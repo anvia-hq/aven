@@ -326,7 +326,7 @@ export function createRunDriver(context: DriverContext) {
       build(id, attended) {
         const skills = state.record.skillListing;
         const envNames = env?.map(({ name }) => name);
-        const forking = attended && !thread.forkOf && !thread.machine;
+        const forking = attended && !thread.forkOf;
         const { agent, compaction } = context.createAgent({
           thread,
           id,

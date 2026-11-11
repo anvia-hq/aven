@@ -36,6 +36,7 @@ import type {
   ProvidersHost,
   ScheduleHost,
   SendMessage,
+  TakenChanges,
   ThreadsHost,
   UpdateSelf,
 } from "@aven/agents/tools/types";
@@ -429,6 +430,7 @@ export interface ThreadWorkspaces {
   paths?(threadId: string): SandboxPaths | undefined;
   markTurn?(threadId: string): Promise<boolean>;
   fetchBranch?(threadId: string, access: RepoAccess, branch?: string): Promise<Fetched>;
+  takeFork?(threadId: string, forkId: string): Promise<TakenChanges>;
   release(threadId: string): Promise<void>;
   putAway?(threadId: string): Promise<void>;
   running?(): number;
@@ -440,7 +442,7 @@ export interface ThreadWorkspaces {
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
   readonly artifacts?: ThreadArtifacts;
-  readonly uploads?: Pick<UploadStore, "save">;
+  readonly uploads?: Pick<UploadStore, "save"> & Partial<Pick<UploadStore, "put">>;
   readonly skills?: Pick<SkillStore, "install">;
   dispose(): Promise<void>;
 }

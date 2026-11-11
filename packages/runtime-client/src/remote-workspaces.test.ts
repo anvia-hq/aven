@@ -121,4 +121,50 @@ describe("an agent whose computer is another machine", () => {
     expect(again.map((skill) => skill.name)).toEqual(["notes"]);
     expect(fetched).toEqual([digest]);
   });
+
+  test("a file attached while the machine is offline waits, and is written under the name the agent was given once it is reached", async () => {
+    let up = false;
+    const { sandbox, agent } = await machineAndAgent({ online: () => up });
+    const { access } = await createRemoteRepo();
+    const image = `${crypto.randomUUID()}.png`;
+    const bytes = new TextEncoder().encode("picture");
+
+    const path = await agent.uploads.save("t1", "photo.png", bytes);
+    await agent.artifacts.keep("t1", image, bytes);
+    expect(path).toMatch(/^\/uploads\/photo-[0-9a-f]{4}\.png$/);
+    expect(await agent.artifacts.read("t1", image)).toEqual({
+      mediaType: "image/png",
+      data: bytes.toBase64(),
+    });
+
+    const box = await agent.acquire({ id: "t1" }, async () => access);
+    up = true;
+    await box.runtime!.exec({ command: "true" });
+
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    expect(await readFile(join(sandbox.paths("t1").uploads, name), "utf8")).toBe("picture");
+    expect(await sandbox.artifacts.read("t1", image)).toEqual({
+      mediaType: "image/png",
+      data: bytes.toBase64(),
+    });
+  });
+
+  test("a fork's folder is made from its parent's on the machine, and its changes are taken there", async () => {
+    const { sandbox, agent } = await machineAndAgent();
+    const { access } = await createRemoteRepo();
+    const fork = "abcdef12-0000-4000-8000-000000000000";
+    const parent = await agent.acquire({ id: "t1" }, async () => access);
+    await parent.start?.();
+    const forked = await agent.acquire({ id: fork, forkOf: "t1" }, async () => access);
+    await call(forked.tools, "write_file", { path: "b.txt", content: "new\n" });
+
+    const taken = await agent.takeFork("t1", fork);
+
+    if (taken.empty) throw new Error("expected changes");
+    expect(taken.files).toEqual(["b.txt"]);
+    expect(taken.patchPath).toBe(`${sandbox.paths("t1").workspace}/.git/aven-forks/abcdef12.patch`);
+    expect(
+      await readFile(join(sandbox.paths("t1").workspace, ".git/aven-forks/abcdef12.patch"), "utf8"),
+    ).toContain("+new");
+  });
 });

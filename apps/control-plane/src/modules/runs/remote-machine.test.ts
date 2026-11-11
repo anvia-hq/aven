@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -213,14 +213,25 @@ run(
       expect(JSON.stringify(await manager.history(thread))).toContain("done");
     });
 
-    test("with the machine offline the run still starts and ends, and the agent is told why its tool failed", async () => {
+    test("with the machine offline the run still starts and ends, with its file kept, and the agent is told why its tool failed", async () => {
       await machineRunner.stop();
       await until(() => !hub.isOnline(machine.id));
       const before = bodies.length;
 
-      await manager.start(thread, "again", model);
+      await manager.start(thread, "again", model, {
+        attachments: [
+          {
+            name: "notes.txt",
+            mediaType: "text/plain",
+            size: 5,
+            data: new TextEncoder().encode("hello").toBase64(),
+          },
+        ],
+      });
       await until(() => !manager.isRunning(thread.id) && bodies.length === before + 2);
 
+      const uploads = machineSandbox.paths(thread.id).uploads;
+      expect(bodies[before]).toMatch(new RegExp(`${uploads}/notes-[0-9a-f]{4}\\.txt`));
       expect(toolResultOf(bodies[before + 1])).toContain("The computer is offline");
       machineRunner = startRuntime({
         url,
@@ -228,6 +239,20 @@ run(
         sandbox: machineSandbox,
         journalPath: journalPath(),
       });
+    }, 30_000);
+
+    test("a file kept while the machine was offline is written there when the agent next reaches it", async () => {
+      await machineRunner.ready;
+      await until(() => hub.isOnline(machine.id));
+      const before = bodies.length;
+
+      await manager.start(thread, "once more", model);
+      await until(() => !manager.isRunning(thread.id) && bodies.length === before + 2);
+
+      const uploads = machineSandbox.paths(thread.id).uploads;
+      const kept = (await readdir(uploads)).filter((name) => name.startsWith("notes-"));
+      expect(kept).toHaveLength(1);
+      expect(await readFile(join(uploads, kept[0]!), "utf8")).toBe("hello");
     }, 30_000);
   },
 );

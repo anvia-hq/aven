@@ -1,6 +1,7 @@
 import type { RepoAccess, RunEnvVar, RunGithub, RunIdentityCredential } from "@aven/protocol/types";
 
 import { fetchBranch } from "./fetch-branch";
+import { takeFork } from "./take-fork";
 import { markTurn } from "./thread-diff";
 import type { AcquireOptions, ThreadRef, ThreadWorkspaces } from "./types";
 
@@ -75,6 +76,12 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
     const root = await workspaces.workspace(threadId);
     if (!root) throw new Error("The thread has no workspace yet");
     return fetchBranch(root, access, branch);
+  }
+
+  async takeFork(threadId: string, forkId: string) {
+    const workspaces = this.#of(threadId);
+    if (workspaces.takeFork) return workspaces.takeFork(threadId, forkId);
+    return takeFork(workspaces, threadId, forkId);
   }
 
   release(threadId: string) {

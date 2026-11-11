@@ -3,6 +3,7 @@ import type { SandboxExecOptions, SandboxRuntime } from "@anvia/sandbox";
 import type { MachineCallParams, RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
 
 import { fetchBranch } from "./fetch-branch";
+import { takeFork } from "./take-fork";
 import { markTurn } from "./thread-diff";
 import type { MachineCallsContext, ThreadRef } from "./types";
 
@@ -112,8 +113,10 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
         return (await runtimeOf(threadId)).stopProcess({ processId: textOf(args.processId) });
       case "uploads.save": {
         if (!sandbox.uploads) throw new Error("This runner cannot take attached files");
+        const save = args.exact === true ? sandbox.uploads.put : sandbox.uploads.save;
+        if (!save) throw new Error("This runner cannot take attached files under a given name");
         return {
-          path: await sandbox.uploads.save(threadId, textOf(args.name), bytesOf(args.data)),
+          path: await save.call(sandbox.uploads, threadId, textOf(args.name), bytesOf(args.data)),
         };
       }
       case "artifacts.keep":
@@ -131,6 +134,8 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
         const root = await sandbox.workspace(threadId);
         return root ? markTurn(root).catch(() => false) : false;
       }
+      case "fork.take":
+        return takeFork(sandbox, threadId, textOf(args.forkId));
       case "git.fetch": {
         const root = await sandbox.workspace(threadId);
         if (!root) throw new Error("The thread has no workspace yet");
