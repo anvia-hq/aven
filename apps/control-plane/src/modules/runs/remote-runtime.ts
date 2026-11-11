@@ -221,7 +221,10 @@ export class RemoteRuntime implements Runtime {
   }
 
   async #connectionFor(thread: RunThread) {
-    const connection = await reachRunner(this.hub, thread.runtimeId);
+    const connection = await reachRunner(this.hub, {
+      runtimeId: thread.runtimeId,
+      threadId: thread.id,
+    });
     if (!connection.offers(thread.agentBackend ?? "native")) throw new BackendUnavailableError();
     return connection;
   }

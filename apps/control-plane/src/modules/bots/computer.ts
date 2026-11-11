@@ -8,7 +8,7 @@ export const botRunnerFor = (hub: RuntimeHub, runtimeId: string) =>
   runnerVia(
     async (userId, botId) => {
       await requireOwnBot(userId, botId);
-      return reachRunner(hub, runtimeId, "The bot's computer is offline");
+      return reachRunner(hub, { runtimeId }, "The bot's computer is offline");
     },
     { bot: true },
   );
