@@ -91,6 +91,40 @@ describe("an agent whose computer is another machine", () => {
     expect(String(ran.stdout)).toBe("s3cret\n");
   });
 
+  test("cancelling a command stops it on the machine", async () => {
+    const { agent } = await machineAndAgent();
+    const { access } = await createRemoteRepo();
+    const box = await agent.acquire({ id: "t1" }, async () => access);
+    const tool = box.tools.find((item) => item.name === "exec_command");
+    const controller = new AbortController();
+    const started = Date.now();
+    const pending = tool!.call(
+      { command: "echo up > ready; sleep 30", timeoutMs: 20_000 },
+      { abortSignal: controller.signal, operationId: "run/cmd-1" },
+    );
+    const deadline = Date.now() + 8_000;
+    let ready = false;
+    while (!ready && Date.now() < deadline) {
+      const root = agent.paths("t1")?.workspace;
+      if (!root) {
+        await Bun.sleep(20);
+        continue;
+      }
+      try {
+        ready = (await readFile(join(root, "ready"), "utf8")).includes("up");
+      } catch {
+        await Bun.sleep(20);
+      }
+    }
+    expect(ready).toBe(true);
+
+    controller.abort();
+    const ran = await pending;
+
+    expect(ran).toMatchObject({ status: "exited" });
+    expect(Date.now() - started).toBeLessThan(12_000);
+  });
+
   test("a machine that is offline fails the tool, and is tried again on the next one", async () => {
     let up = false;
     const { agent } = await machineAndAgent({ online: () => up });
