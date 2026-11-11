@@ -231,7 +231,10 @@ run(
       await until(() => !manager.isRunning(thread.id) && bodies.length === before + 2);
 
       const uploads = machineSandbox.paths(thread.id).uploads;
-      expect(bodies[before]).toMatch(new RegExp(`${uploads}/notes-[0-9a-f]{4}\\.txt`));
+      expect(bodies[before]).toContain("waiting to be written");
+      expect(bodies[before]).toMatch(/notes-[0-9a-f]{4}\.txt/);
+      expect(bodies[before]).not.toContain(`${uploads}/notes-`);
+      expect(bodies[before]).not.toContain("/uploads/notes-");
       expect(toolResultOf(bodies[before + 1])).toContain("The computer is offline");
       machineRunner = startRuntime({
         url,

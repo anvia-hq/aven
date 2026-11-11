@@ -55,6 +55,28 @@ describe("sentPrompt with attachments", () => {
     expect(rest).toEqual([]);
   });
 
+  test("names a file by the folder it was written to", () => {
+    const prompt = sent("look", {
+      attachments: [{ ...chart, path: "/home/me/.aven/uploads/t1/chart.png" }],
+    });
+    const note = texts(prompt)[1];
+    expect(note).toContain("in /home/me/.aven/uploads/t1:");
+    expect(note).toContain("/home/me/.aven/uploads/t1/chart.png");
+    expect(note).not.toContain("in /uploads");
+  });
+
+  test("a file that is not on the computer yet is named without a folder", () => {
+    const prompt = sent("look", {
+      attachments: [{ ...chart, path: "chart-ab12.png" }, deck],
+    });
+    const note = texts(prompt)[1];
+    expect(note).toContain("in /uploads:");
+    expect(note).toContain("/uploads/Q3_deck.pptx");
+    expect(note).toContain("waiting to be written to the computer");
+    expect(note).toContain("chart-ab12.png");
+    expect(note).not.toContain("/uploads/chart-ab12.png");
+  });
+
   test("a message of files alone still says where they are", () => {
     const prompt = sent("", { attachments: [deck] });
     const content = Array.isArray(prompt.content) ? prompt.content : [];

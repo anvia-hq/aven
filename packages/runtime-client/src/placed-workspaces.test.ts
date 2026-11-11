@@ -13,6 +13,32 @@ function recording(name: string, released: string[]) {
 }
 
 describe("PlacedWorkspaces", () => {
+  test("asks the machine side where a waited attachment was written", async () => {
+    const calls: string[] = [];
+    const machine = {
+      uploads: {
+        save: async () => "unused",
+        settle: async (threadId: string) => {
+          calls.push(`settle:${threadId}`);
+        },
+        placed: (threadId: string, name: string) => `${threadId}/${name}`,
+        claim: (threadId: string, name: string) => {
+          calls.push(`claim:${threadId}:${name}`);
+        },
+        placedNote: (threadId: string) => `note:${threadId}`,
+      },
+      release: async () => undefined,
+      dispose: async () => undefined,
+    } as unknown as ThreadWorkspaces;
+    const placed = new PlacedWorkspaces(machine, machine, () => true);
+
+    await placed.uploads?.settle?.("t1");
+    expect(placed.uploads?.placed?.("t1", "a.txt")).toBe("t1/a.txt");
+    placed.uploads?.claim?.("t1", "a.txt");
+    expect(placed.uploads?.placedNote?.("t1")).toBe("note:t1");
+    expect(calls).toEqual(["settle:t1", "claim:t1:a.txt"]);
+  });
+
   test("releases a thread on both, so what the machine side kept goes once the run is over", async () => {
     const released: string[] = [];
     const placed = new PlacedWorkspaces(
