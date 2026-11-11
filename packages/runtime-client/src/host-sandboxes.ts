@@ -173,6 +173,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     );
     return {
       tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
+      runtime,
       hasRunningProcesses: () => hasRunningProcesses(runtime),
       processes: threadProcesses(
         runtime,

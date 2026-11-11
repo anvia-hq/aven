@@ -1,7 +1,13 @@
 import type { COCKPIT_KINDS, TASK_PRIORITIES, TASK_STATUSES } from "./cockpit";
 import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
-import type { AGENT_BACKENDS, DIFF_SCOPES, PROVIDERS, RUNTIME_PROVIDERS } from "./runtime-wire";
+import type {
+  AGENT_BACKENDS,
+  DIFF_SCOPES,
+  MACHINE_OPS,
+  PROVIDERS,
+  RUNTIME_PROVIDERS,
+} from "./runtime-wire";
 
 export type Bot = {
   id: string;
@@ -433,6 +439,12 @@ export type SteerResult =
 
 export type SandboxCallMethod = "sandbox.release";
 
+export type MachineCallMethod = "machine.call";
+
+export type MachineOp = (typeof MACHINE_OPS)[number];
+
+export type MachineCallParams = { threadId: string; op: MachineOp; args?: unknown };
+
 export type RunnerSelfCallMethod =
   | "runner.update"
   | "folders.list"
@@ -502,6 +514,7 @@ export type RunnerCallMethod =
   | ActionsCallMethod
   | RunCallMethod
   | SandboxCallMethod
+  | MachineCallMethod
   | RunnerSelfCallMethod;
 
 export type DiffGetParams = { threadId: string; scope: DiffScope };

@@ -59,6 +59,7 @@ import type {
   DurableRun,
   DurableRuntime,
 } from "@anvia/durable";
+import type { SandboxRuntime } from "@anvia/sandbox";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
@@ -372,6 +373,8 @@ export type RunnerCallsContext = {
   dirs?: string[];
 };
 
+export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
+
 export type RuntimeOptions = {
   url: string;
   token: string;
@@ -399,6 +402,7 @@ export type AcquireOptions = {
 
 export type ThreadSandbox = {
   tools: readonly AnyTool[];
+  runtime?: SandboxRuntime;
   hasRunningProcesses(): Promise<boolean>;
   processes: ThreadProcesses;
   start?(): Promise<void>;
