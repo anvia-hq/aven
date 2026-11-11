@@ -1,10 +1,11 @@
 import { Moon, Sun } from "@mynaui/icons-react";
+import type { ComponentProps } from "react";
 
 import { Button } from "@/components/button";
 
 import { useTheme } from "../hooks/use-theme";
 
-export function ThemeSelector({ className }: { className?: string }) {
+export function ThemeSelector(props: ComponentProps<typeof Button>) {
   const { toggleTheme } = useTheme();
 
   return (
@@ -12,7 +13,7 @@ export function ThemeSelector({ className }: { className?: string }) {
       variant="ghost"
       size="icon-sm"
       aria-label="Toggle theme"
-      className={className}
+      {...props}
       onClick={toggleTheme}
     >
       <Sun className="size-5 dark:hidden" />

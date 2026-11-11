@@ -54,6 +54,11 @@ test.describe("platform auth", () => {
       page.locator("[data-slot=sidebar]").getByRole("button", { name: "Settings" }),
     ).toBeHidden();
 
+    await rail.getByRole("button", { name: "Toggle theme" }).hover();
+    await expect(
+      page.locator('[data-slot="tooltip-content"]', { hasText: "Toggle theme" }),
+    ).toBeVisible();
+
     await rail.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings\/general/);
   });
