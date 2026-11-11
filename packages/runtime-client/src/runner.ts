@@ -18,13 +18,12 @@ import { PlacedWorkspaces } from "./placed-workspaces";
 import { RemoteWorkspaces } from "./remote-workspaces";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
-import { DurableRuns } from "./durable-runs";
+import { openAgentBackends } from "./agent-backends";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
 import type { ControlPlaneToRuntime, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
-  AgentBackend,
   CreateRuntimeAgent,
   DriverContext,
   RuntimeOptions,
@@ -106,11 +105,10 @@ export function startRuntime(options: RuntimeOptions) {
   const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
   const records = new RunRecords(state);
   const outbox = new RunOutbox(state);
-  const backend: Promise<AgentBackend> = DurableRuns.open(
+  const backends = openAgentBackends(
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
-  backend.catch(() => undefined);
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -191,7 +189,7 @@ export function startRuntime(options: RuntimeOptions) {
   );
 
   const driver = createRunDriver({
-    backend,
+    backend: (kind) => backends.get(kind),
     records,
     outbox,
     sandbox: placed,
@@ -311,7 +309,7 @@ export function startRuntime(options: RuntimeOptions) {
         canUpdate: options.update ? true : undefined,
         host: options.host ? true : undefined,
         dirs: options.dirs?.length ? options.dirs : undefined,
-        backends: ["native"],
+        backends: [...backends.offered],
       });
       resend();
       connected.resolve();
@@ -367,7 +365,7 @@ export function startRuntime(options: RuntimeOptions) {
       socket?.close();
       await idle.settled();
       await options.sandbox.dispose();
-      await backend.then((opened) => opened.close()).catch(() => undefined);
+      await backends.close();
       state.close();
     },
   };

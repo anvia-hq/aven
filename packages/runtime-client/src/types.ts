@@ -298,8 +298,14 @@ export type CreateRuntimeAgent = (input: {
 
 export type RunMessage = Extract<ControlPlaneToRuntime, { type: "run.start" | "run.resume" }>;
 
+export type AgentBackendSet = {
+  readonly offered: readonly AgentBackendKind[];
+  get(kind: string | undefined): Promise<AgentBackend>;
+  close(): Promise<void>;
+};
+
 export type DriverContext = {
-  backend: Promise<AgentBackend>;
+  backend(kind: string | undefined): Promise<AgentBackend>;
   records: RunRecords;
   outbox: RunOutbox;
   sandbox: ThreadWorkspaces;
@@ -344,6 +350,7 @@ export type RunRecord = {
   goalState?: GoalState;
   reportId?: string;
   done?: boolean;
+  backend?: string;
 };
 
 export type RunToolsInput = {

@@ -71,6 +71,10 @@ const MCP_SWEEP_MS = 60_000;
 
 const RUN_GONE = "The run is gone: this runner has no record of it";
 
+function namedBackend(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
 async function prepareRun(
   sandbox: ThreadWorkspaces,
   runId: string,
@@ -168,13 +172,15 @@ export function createRunDriver(context: DriverContext) {
     live.set(runId, run);
     let ended: DurableEnd["type"] | undefined;
     try {
+      const chosen = await context.backend(initial.backend);
+      if (run.cancelReason) throw new Error(run.cancelReason);
       if (message?.type === "run.start" && message.attachments?.length) {
         save({
           attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
         });
       }
       clock.mark("attachments");
-      const scope = await acquire(initial, state, run, secrets, clock);
+      const scope = await acquire(initial, state, run, secrets, clock, chosen);
       const end = await phases(scope, message);
       ended = run.cancelReason ? undefined : end.type;
       finish(runId, end, run.cancelReason);
@@ -215,6 +221,7 @@ export function createRunDriver(context: DriverContext) {
     state: { record: RunRecord },
     run: Live,
     clock: Timing,
+    backend: AgentBackend,
   ): Promise<RunScope> {
     const { runId, thread, model } = initial;
     return {
@@ -222,7 +229,7 @@ export function createRunDriver(context: DriverContext) {
       thread,
       run,
       clock,
-      backend: await context.backend,
+      backend,
       current: () => undefined,
       get record() {
         return state.record;
@@ -242,10 +249,11 @@ export function createRunDriver(context: DriverContext) {
     run: Live,
     secrets: RunSecrets,
     clock: Timing,
+    backend: AgentBackend,
   ): Promise<RunScope> {
     const { env } = secrets;
     const { runId, thread, model } = initial;
-    if (initial.compact) return compactionScope(initial, state, run, clock);
+    if (initial.compact) return compactionScope(initial, state, run, clock, backend);
     const repoAccess = () => context.call("repo.access", { runId });
     const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
     await context.starting(thread.id);
@@ -294,7 +302,6 @@ export function createRunDriver(context: DriverContext) {
     if (run.cancelReason) throw new Error(run.cancelReason);
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     clock.mark("skills");
-    const backend = await context.backend;
     const redact = secretRedactor(env);
     const current = () => {
       const live = context.boxes.get(thread.id)?.tools;
@@ -569,6 +576,7 @@ export function createRunDriver(context: DriverContext) {
         agentId: `run-${message.runId}`,
         turn: 0,
         phase: "chat",
+        backend: namedBackend(message.backend) ?? "native",
       };
       outbox.open(message.runId);
       records.save(record);
@@ -612,7 +620,9 @@ export function createRunDriver(context: DriverContext) {
         run.steers.push({ steerId, message });
         return { status: "queued" };
       }
-      const taken = await (await context.backend).steer(record.durableId, message, steerId);
+      const taken = await (
+        await context.backend(record.backend)
+      ).steer(record.durableId, message, steerId);
       return { status: taken ? "queued" : "closed" };
     },
 
@@ -625,7 +635,8 @@ export function createRunDriver(context: DriverContext) {
       }
       const record = records.get(runId);
       if (!record || record.done) return;
-      if (record.durableId) await (await context.backend).cancelRun(record.durableId);
+      if (record.durableId)
+        await (await context.backend(record.backend)).cancelRun(record.durableId);
       outbox.attach(runId, Number.MAX_SAFE_INTEGER);
       finish(runId, { type: "error", error: reason }, reason);
     },
