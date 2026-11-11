@@ -1,8 +1,10 @@
 const UPDATE_RUNNER = "Update this computer's runner to use its tools";
+const COMPUTER_OFFLINE = "The computer is offline";
 
 export function toolFailureNotice(output: string | undefined): string | undefined {
   if (!output) return undefined;
   if (/unknown call/i.test(output) || output.includes(UPDATE_RUNNER)) return UPDATE_RUNNER;
+  if (/the computer is offline/i.test(output)) return COMPUTER_OFFLINE;
   return undefined;
 }
 

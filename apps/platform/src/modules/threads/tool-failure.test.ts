@@ -10,6 +10,10 @@ describe("toolFailureNotice", () => {
     expect(toolFailureNotice(`Error: ${UPDATE_RUNNER}`)).toBe(UPDATE_RUNNER);
   });
 
+  test("a tool that failed because the computer is offline says so", () => {
+    expect(toolFailureNotice("Error: The computer is offline")).toBe("The computer is offline");
+  });
+
   test("a tool's own failure stays its own", () => {
     expect(toolFailureNotice("not found\n[exit 1]")).toBeUndefined();
     expect(toolFailureNotice(undefined)).toBeUndefined();
@@ -24,6 +28,15 @@ describe("groupFailureNotice", () => {
         { status: "error", output: "Unknown call machine.call" },
       ]),
     ).toBe(UPDATE_RUNNER);
+  });
+
+  test("says the computer is offline when that is why a tool failed", () => {
+    expect(
+      groupFailureNotice([
+        { status: "done", output: "ok" },
+        { status: "error", output: "Error: The computer is offline" },
+      ]),
+    ).toBe("The computer is offline");
   });
 
   test("says nothing when the failures are the tools' own", () => {

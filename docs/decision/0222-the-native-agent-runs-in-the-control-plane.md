@@ -42,7 +42,7 @@ So a machine keeps a runner that answers calls, and the agent moves.
 - **Where a run goes.** Every native run goes to the built-in runner and is cancelled there (`RemoteRuntime`), naming its thread's runtime as its machine, unless the thread is on the built-in runner's own runtime, which runs it with its own computer. A control plane with no built-in runner (`AVEN_LOCAL_RUNNER=off`, "only the runners you attach") has nowhere to run an agent, so there every run stays on its thread's runner as before (`composition.ts`). A setting per runtime that kept the agent on the machine by default was built first and taken out before release, so there is no `agent_host`.
 - **Forks.** A fork is a thread on its parent's runtime, so its run names the same machine, and `prepare` sends `forkOf`: the machine copies the parent's folder on its own disk as before (`fork-workspace.ts`). Taking a fork's changes is the `fork.take` call, which writes the patch on the machine (`take-fork.ts`).
 - **Attached files.** An image a person attaches is kept on the agent's side too, so the model sees it whether or not the machine can be reached. A file that cannot be written to the machine when the run starts waits with the built-in runner under a name of its own (`notes-1a2b.txt`), which the agent is given, and is written under that name when the run's first tool reaches the machine (`remote-workspaces.ts`, `UploadStore.put`).
-- **An offline machine.** The run starts, with no skills from the machine, and a tool that cannot reach the machine fails alone with "The computer is offline" (`run-driver.ts`'s `wake`). `remote-machine.test.ts` runs this end to end with the built-in runner and a second runner as the machine.
+- **An offline machine.** The run starts, with no skills from the machine, and a tool that cannot reach the machine fails alone with "The computer is offline" (`run-driver.ts`'s `wake`). The thread shows that on the tool's row and in the summary of its group, apart from the tool's own error (`tool-failure.ts`). `remote-machine.test.ts` runs this end to end with the built-in runner and a second runner as the machine.
 
 ## What is not done yet
 
@@ -50,6 +50,5 @@ So a machine keeps a runner that answers calls, and the agent moves.
 - A process the agent left running on the machine does not wake the thread when it ends (0144): the machine's runner watches only the processes of its own runs.
 - Cancelling a run does not stop a command that is running on the machine; it runs to its time limit.
 - Bot replies still run on the bot's runner.
-- The platform does not show a tool call that failed because the machine was offline apart from the tool's own error.
 - A fork on a machine is tested by its parts (`remote-workspaces.test.ts`), not end to end through an agent that forks and takes the changes.
 - The Playwright suite runs with `AVEN_LOCAL_RUNNER=off`, so its runs stay on their runner's own agent and none of it covers an agent on the control plane; only `remote-machine.test.ts` does.
