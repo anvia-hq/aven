@@ -169,6 +169,14 @@ export const runtimesService = {
     return row !== undefined && row.revokedAt === null && row.tokenHash === runtime.tokenHash;
   },
 
+  async providerOf(id: string) {
+    const [row] = await db
+      .select({ provider: runtimes.provider })
+      .from(runtimes)
+      .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+    return row?.provider;
+  },
+
   async touch(id: string) {
     await db.update(runtimes).set({ lastSeenAt: new Date() }).where(eq(runtimes.id, id));
   },

@@ -3,7 +3,7 @@ import type { z } from "zod";
 import { describeError, UnavailableError } from "../../errors";
 import { threadsService } from "../threads/service";
 import type { RuntimeHub } from "./hub";
-import { manualProvider } from "./providers";
+import { reachRunner } from "./providers";
 import type { FindRunner, Refusal } from "./types";
 import type {
   ActionRunParams,
@@ -56,5 +56,5 @@ export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
 export const runnerFor = (hub: RuntimeHub) =>
   runnerVia(async (organizationId, threadId) => {
     const thread = await threadsService.require(organizationId, threadId);
-    return manualProvider(hub).reach(thread.runtimeId);
+    return reachRunner(hub, thread.runtimeId);
   });
