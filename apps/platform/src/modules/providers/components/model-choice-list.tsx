@@ -7,6 +7,8 @@ import {
   CommandList,
 } from "@/components/command";
 
+import type { ReactNode } from "react";
+
 import type { ModelChoice, Provider } from "../types";
 import { ProviderLogo } from "./provider-logo";
 
@@ -16,9 +18,15 @@ type Props = {
   loading: boolean;
   selected?: { providerId: string; modelId: string | null };
   onSelect: (choice: ModelChoice) => void;
+  extra?: {
+    heading: ReactNode;
+    items: readonly { id: string; label: string }[];
+    selected: string | null;
+    onSelect: (id: string) => void;
+  };
 };
 
-export function ModelChoiceList({ providers, choices, loading, selected, onSelect }: Props) {
+export function ModelChoiceList({ providers, choices, loading, selected, onSelect, extra }: Props) {
   return (
     <Command>
       <CommandInput placeholder={loading ? "Loading models…" : "Search models…"} />
@@ -50,6 +58,20 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
               ))}
           </CommandGroup>
         ))}
+        {extra && (
+          <CommandGroup heading={extra.heading}>
+            {extra.items.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`${item.label} ${item.id} ${extra.heading}`}
+                data-checked={item.id === extra.selected}
+                onSelect={() => extra.onSelect(item.id)}
+              >
+                <span className="truncate">{item.label}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </Command>
   );

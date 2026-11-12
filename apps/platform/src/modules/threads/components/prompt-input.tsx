@@ -6,14 +6,7 @@ import {
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
 
@@ -26,7 +19,7 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
-import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
+import type { ClaudeControl, MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
@@ -44,8 +37,7 @@ type Props = {
   autoFocus?: boolean;
   threadId?: string;
   tools?: ReactNode;
-  showModel?: boolean;
-  claude?: boolean;
+  claude?: ClaudeControl;
 };
 
 const renderEntity =
@@ -105,21 +97,19 @@ function Composer({
   autoFocus,
   threadId,
   tools,
-  showModel = true,
-  claude = false,
+  claude,
   people,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
-  const [claudeModelId, setClaudeModelId] = useState<string | undefined>();
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: claude ? { modelId: claudeModelId } : model.selection,
+    selection: claude?.choice ? { modelId: claude.choice.modelId } : model.selection,
     running,
     onSubmit,
     onCompact,
@@ -176,8 +166,14 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {showModel && <ModelMenu model={model} />}
-          {claude && <ClaudeModelMenu modelId={claudeModelId} onChange={setClaudeModelId} />}
+          {claude?.only ? (
+            <ClaudeModelMenu
+              modelId={claude.choice?.modelId}
+              onChange={(modelId) => claude.onChange({ modelId })}
+            />
+          ) : (
+            <ModelMenu model={model} claude={claude} />
+          )}
           {running && (
             <Button
               size="icon-sm"
