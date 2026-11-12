@@ -13,6 +13,22 @@ type Call = Extract<BotApiParams, { op: "call" }>;
 
 export type BotApiAsk = { userId: string; params: BotApiParams; onPersonsWord: boolean };
 
+function within<T>(ms: number, work: Promise<T>) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new BotApiRefusal(
+            "The call took too long. It may still finish; look before you try it again",
+          ),
+        ),
+      ms,
+    );
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
 async function bodyOf(response: Response) {
   const type = response.headers.get("content-type") ?? "";
   if (!type.includes("json") && !type.startsWith("text/")) {
@@ -30,7 +46,12 @@ async function bodyOf(response: Response) {
   }
 }
 
-export function createBotApi({ routes, handle, organizationsOf }: BotApiDeps) {
+export function createBotApi({
+  routes,
+  handle,
+  organizationsOf,
+  timeoutMs = API_TIMEOUT_MS,
+}: BotApiDeps) {
   async function organizationFor(userId: string, wanted: string | undefined) {
     const organizations = await organizationsOf(userId);
     if (wanted) {
@@ -75,13 +96,16 @@ export function createBotApi({ routes, handle, organizationsOf }: BotApiDeps) {
         headers.set("content-type", "application/json");
         body = JSON.stringify(params.body);
       }
-      const response = await handle(
-        new Request(`http://aven.internal${sent}${search}`, {
-          method: params.method,
-          headers,
-          body,
-          signal: AbortSignal.timeout(API_TIMEOUT_MS),
-        }),
+      const response = await within(
+        timeoutMs,
+        handle(
+          new Request(`http://aven.internal${sent}${search}`, {
+            method: params.method,
+            headers,
+            body,
+            signal: AbortSignal.timeout(timeoutMs),
+          }),
+        ),
       );
       return { status: response.status, body: await bodyOf(response) };
     } finally {
