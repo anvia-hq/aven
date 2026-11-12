@@ -81,6 +81,16 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
   }
 
+  const chips = (
+    <FollowUpChips
+      suggestions={followUps.suggestions}
+      onPick={(prompt) => {
+        followUps.clear();
+        void send({ prompt, attachments: [], mentions: [] }, selection);
+      }}
+    />
+  );
+
   return (
     <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
       <div className="min-h-0 flex-1">
@@ -144,6 +154,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                         send={send}
                         panels={panels}
                         split={split}
+                        suggestions={question ? null : chips}
                       />
                     )}
                     {!owned && <SharedNotice thread={thread} driven={driven} />}
@@ -157,13 +168,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                         />
                       ) : (
                         <>
-                          <FollowUpChips
-                            suggestions={followUps.suggestions}
-                            onPick={(prompt) => {
-                              followUps.clear();
-                              void send({ prompt, attachments: [], mentions: [] }, selection);
-                            }}
-                          />
+                          {!owned && <div className="flex pb-2">{chips}</div>}
                           <PromptInput
                             threadId={thread.id}
                             running={running}
