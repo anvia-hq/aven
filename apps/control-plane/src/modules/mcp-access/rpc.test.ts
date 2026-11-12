@@ -4,6 +4,10 @@ import { createMcpServer } from "./rpc";
 import type { McpApi, McpCaller } from "./types";
 import type { BotApiParams } from "@aven/protocol/types";
 
+const THREAD = "3b0f6d2e-4c1a-4f7e-9a53-0d2f6a9b1c11";
+
+const PROJECT = "7a1c2d3e-5f60-4a71-8b92-0c3d4e5f6a70";
+
 const calls: BotApiParams[] = [];
 
 const api: McpApi = {
@@ -19,6 +23,10 @@ const api: McpApi = {
         ],
         organizations: [{ id: "org-1", name: "Team" }],
       };
+    }
+
+    if (params.method === "POST" && params.path === "/threads") {
+      return { status: 200, body: { id: THREAD } };
     }
 
     return { status: params.path === "/missing" ? 404 : 200, body: { ok: true } };
@@ -59,7 +67,91 @@ describe("the Aven MCP server", () => {
     const tools = await rpc(caller("read"), "tools/list");
     expect(
       (tools as { result: { tools: { name: string }[] } }).result.tools.map((tool) => tool.name),
-    ).toEqual(["aven_workspaces", "aven_search_api", "aven_call_api"]);
+    ).toEqual([
+      "aven_workspaces",
+      "aven_list_projects",
+      "aven_get_thread",
+      "aven_search_api",
+      "aven_call_api",
+    ]);
+    const changing = await rpc(caller("read", "change"), "tools/list");
+    expect(
+      (changing as { result: { tools: { name: string }[] } }).result.tools.map((tool) => tool.name),
+    ).toEqual([
+      "aven_workspaces",
+      "aven_list_projects",
+      "aven_start_task",
+      "aven_get_thread",
+      "aven_stop_thread",
+      "aven_search_api",
+      "aven_call_api",
+    ]);
+  });
+
+  test("starts a task: makes the thread, then sends the prompt to it", async () => {
+    calls.length = 0;
+    const answer = await rpc(caller("read", "change"), "tools/call", {
+      name: "aven_start_task",
+      arguments: {
+        projectId: PROJECT,
+        prompt: "Fix the build",
+        backend: "claude",
+        organizationId: "o",
+      },
+    });
+    expect(text(answer)).toMatchObject({ threadId: THREAD, started: true, status: 200 });
+    expect(
+      calls.map((call) => (call.op === "call" ? `${call.method} ${call.path}` : call.op)),
+    ).toEqual(["POST /threads", `POST /threads/${THREAD}/messages`]);
+    expect(calls[0]).toMatchObject({
+      body: { projectId: PROJECT, backend: "claude" },
+      organizationId: "o",
+    });
+    expect(calls[1]).toMatchObject({ body: { prompt: "Fix the build" }, organizationId: "o" });
+  });
+
+  test("does not start a task without the change permission, or without a project and a task", async () => {
+    calls.length = 0;
+    const refused = await rpc(caller("read"), "tools/call", {
+      name: "aven_start_task",
+      arguments: { projectId: PROJECT, prompt: "Fix the build" },
+    });
+    expect(text(refused)).toBe("This token does not have the change permission");
+    const noProject = await rpc(caller("change"), "tools/call", {
+      name: "aven_start_task",
+      arguments: { projectId: "../auth", prompt: "x" },
+    });
+    expect(noProject).toMatchObject({ result: { isError: true } });
+    const noPrompt = await rpc(caller("change"), "tools/call", {
+      name: "aven_start_task",
+      arguments: { projectId: PROJECT, prompt: "  " },
+    });
+    expect(noPrompt).toMatchObject({ result: { isError: true } });
+    expect(calls).toEqual([]);
+  });
+
+  test("reads and stops a thread by its id", async () => {
+    calls.length = 0;
+    await rpc(caller("read", "change"), "tools/call", {
+      name: "aven_get_thread",
+      arguments: { threadId: THREAD },
+    });
+    await rpc(caller("read", "change"), "tools/call", {
+      name: "aven_stop_thread",
+      arguments: { threadId: THREAD },
+    });
+    await rpc(caller("read", "change"), "tools/call", {
+      name: "aven_list_projects",
+      arguments: {},
+    });
+    expect(
+      calls.map((call) => (call.op === "call" ? `${call.method} ${call.path}` : call.op)),
+    ).toEqual([`GET /threads/${THREAD}`, `POST /threads/${THREAD}/cancel`, "GET /projects"]);
+    const bad = await rpc(caller("read"), "tools/call", {
+      name: "aven_get_thread",
+      arguments: { threadId: "not-an-id" },
+    });
+    expect(bad).toMatchObject({ result: { isError: true } });
   });
 
   test("answers a notification with nothing", async () => {
@@ -108,7 +200,7 @@ describe("the Aven MCP server", () => {
         organizationId: "o",
       },
     });
-    expect(text(answer)).toEqual({ status: 200, body: { ok: true } });
+    expect(text(answer)).toEqual({ status: 200, body: { id: THREAD } });
     expect(calls[0]).toMatchObject({
       op: "call",
       method: "POST",
