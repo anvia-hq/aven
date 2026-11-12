@@ -33,6 +33,7 @@ export function useSidebarWidth() {
     onPointerCancel: () => setDragging(false),
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
       if (event.key === "ArrowLeft") setWidth((current) => clamp(current - KEY_STEP));
+
       if (event.key === "ArrowRight") setWidth((current) => clamp(current + KEY_STEP));
     },
   };

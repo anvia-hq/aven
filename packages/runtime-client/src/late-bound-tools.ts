@@ -15,7 +15,9 @@ export function lateBoundTools(
     parseInput: tool.parseInput && ((args) => tool.parseInput!(args)),
     call: async (args, context) => {
       const live = current()?.find((candidate) => candidate.name === tool.name);
+
       if (!live) throw new Error(unavailable(tool.name));
+
       return boundResult(await live.call(args, context));
     },
   }));

@@ -146,6 +146,7 @@ test.describe("threads", () => {
     await createProject(page, "project");
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       await new Promise((resolve) => setTimeout(resolve, 2000));
       return route.continue();
     });
@@ -498,6 +499,7 @@ test.describe("a message sent to an idle agent", () => {
     await idleThread(page);
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       await new Promise((resolve) => setTimeout(resolve, 1500));
       return route.continue();
     });
@@ -521,6 +523,7 @@ test.describe("a message sent to an idle agent", () => {
     await idleThread(page);
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       await new Promise((resolve) => setTimeout(resolve, 1500));
       return route.continue();
     });
@@ -568,6 +571,7 @@ test.describe("a message sent to an idle agent", () => {
   }) => {
     await page.route("**/api/threads/*/messages", (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       return route.fulfill({ status: 409, contentType: "text/plain", body: "Not like that" });
     });
     await idleThread(page);

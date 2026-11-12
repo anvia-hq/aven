@@ -29,10 +29,12 @@ export function BotQuestionForm({
 
   async function submit() {
     if (sending) return;
+
     setSending(true);
     const values = Object.fromEntries(
       questions.map((question) => [question.id, valueOf(drafts[question.id])]),
     );
+
     if (!(await onSubmit(answerText(questions, values)))) setSending(false);
   }
 

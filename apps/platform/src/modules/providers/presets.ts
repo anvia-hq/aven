@@ -62,6 +62,7 @@ export function presetOf(provider: {
   baseUrl: string | null;
 }): CompatiblePreset | undefined {
   if (provider.kind !== "openai-compatible") return undefined;
+
   const address = provider.baseUrl?.replace(/\/+$/, "");
   return COMPATIBLE_PRESETS.find((preset) => preset.baseUrl === address);
 }

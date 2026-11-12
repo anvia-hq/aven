@@ -87,6 +87,7 @@ test("finishing an update clears the marker it was started with", async () => {
     expect(log.mock.calls.map((call) => String(call[0])).join("\n")).toContain("is installed");
   } finally {
     log.mockRestore();
+
     if (previous === undefined) delete process.env.AVEN_HOME;
     else process.env.AVEN_HOME = previous;
   }

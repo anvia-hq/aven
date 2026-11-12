@@ -117,6 +117,7 @@ describe("starting a run", () => {
     const manager = managerWith({
       start: async () => {
         if (!reachable) throw new UnavailableError("The runtime for this project is offline");
+
         return handle;
       },
       resume: async () => handle,

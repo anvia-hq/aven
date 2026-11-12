@@ -32,6 +32,7 @@ export function SmallModelsSection() {
           disabled={settings === null || providers.length === 0}
           onCheckedChange={(enabled) => {
             if (!settings) return;
+
             const fallback = providers.find((item) => item.isDefault) ?? providers[0];
             void save({
               enabled,

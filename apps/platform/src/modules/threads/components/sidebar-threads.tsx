@@ -47,6 +47,7 @@ function SidebarProjectTile({
   palette?: number;
 }) {
   if (!project) return <span className="size-5 shrink-0" aria-hidden />;
+
   return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
 }
 
@@ -62,17 +63,20 @@ function UnreadDot({ label = "Finished, not opened yet" }: { label?: string }) {
 
 function CrowdMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace") return null;
+
   const crowd = crowdOf(thread);
   return crowd && <ParticipantStack crowd={crowd} />;
 }
 
 function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace" || crowdOf(thread)) return null;
+
   return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
 function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
+
   return <GitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
 
@@ -104,6 +108,7 @@ function TitleField({ title, onDone }: { title: string; onDone: (title?: string)
   const finished = useRef(false);
   const finish = (value?: string) => {
     if (finished.current) return;
+
     finished.current = true;
     onDone(value);
   };
@@ -118,7 +123,9 @@ function TitleField({ title, onDone }: { title: string; onDone: (title?: string)
       onClick={(event) => event.preventDefault()}
       onKeyDown={(event) => {
         event.stopPropagation();
+
         if (event.key === "Enter") finish(event.currentTarget.value);
+
         if (event.key === "Escape") finish();
       }}
       onBlur={(event) => finish(event.currentTarget.value)}
@@ -140,6 +147,7 @@ function ThreadTitle({
   onDone: (title?: string) => void;
 }) {
   if (editing) return <TitleField title={thread.title} onDone={onDone} />;
+
   return (
     <span
       className="flex-1 truncate"
@@ -182,12 +190,14 @@ export function SidebarThreads() {
   const anyRunning = [...own, ...others].some((thread) => thread.running);
   useEffect(() => {
     if (!anyRunning) return;
+
     const timer = setInterval(() => void refresh(), RUNNING_REFRESH_MS);
     return () => clearInterval(timer);
   }, [anyRunning, refresh]);
 
   useEffect(() => {
     if (!dragging) return;
+
     const stop = () => setDragging(false);
     window.addEventListener("dragend", stop, true);
     return () => window.removeEventListener("dragend", stop, true);
@@ -196,10 +206,13 @@ export function SidebarThreads() {
   function file(threadId: string, folderId: string | null) {
     setDragging(false);
     const thread = threads.find((candidate) => candidate.id === threadId);
+
     if (!thread) return;
+
     const root = rootOf(thread, threads);
     folderActions.move({ threadId: root.id, folderId });
     const target = folders.find((folder) => folder.id === folderId);
+
     if (target && !target.open) folderActions.setOpen({ id: target.id, open: true });
   }
 
@@ -253,6 +266,7 @@ export function SidebarThreads() {
             onEdit={() => setEditing(thread.id)}
             onDone={(value) => {
               setEditing(null);
+
               if (value !== undefined) void rename(thread, value);
             }}
           />
@@ -315,16 +329,20 @@ export function SidebarThreads() {
   function rows(list: Thread[]) {
     return nestForks(list).map(({ thread, nested }, index, all) => {
       const partner = pairedWith(thread.id, list);
+
       if (partner) {
         const first =
           all.findIndex((each) => each.thread.id === thread.id) <
           all.findIndex((each) => each.thread.id === partner.id);
+
         if (!first) return null;
+
         const ordered: [Thread, Thread] = pairs.some(([left]) => left === partner.id)
           ? [partner, thread]
           : [thread, partner];
         return pairRow(ordered);
       }
+
       const joins = (at: number) => {
         const neighbour = all[at];
         return neighbour?.nested === true && !pairedWith(neighbour.thread.id, list);
@@ -337,13 +355,16 @@ export function SidebarThreads() {
     const current = draft;
     setDraft(null);
     const trimmed = name?.trim();
+
     if (!current || !trimmed) return;
+
     folderActions.create({ tempId: newTempId(), name: trimmed, threadId: current.threadId });
   }
 
   function finishRename(id: string, previous: string, name?: string) {
     setRenaming(null);
     const trimmed = name?.trim();
+
     if (trimmed && trimmed !== previous) folderActions.rename({ id, name: trimmed });
   }
 

@@ -24,9 +24,11 @@ export function subagentRunner(
       const stream = agent.stream({ prompt, abortSignal });
       for await (const event of stream) {
         const projected = projectSubagentEvent(event, index);
+
         if (projected) emit(projected);
       }
       const outcome = await stream.result;
+
       if (outcome.type !== "response") {
         throw new Error(
           outcome.type === "blocked"
@@ -34,6 +36,7 @@ export function subagentRunner(
             : "The subagent stopped to ask a question, which it cannot do",
         );
       }
+
       end("done", outcome.text);
       return outcome.text;
     } catch (error) {

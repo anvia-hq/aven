@@ -44,9 +44,13 @@ export function filterProjects(
     if (query && !`${project.name} ${projectPlace(project)}`.toLowerCase().includes(query)) {
       return false;
     }
+
     if (filters.view === "mine" && project.createdBy !== me) return false;
+
     if (filters.view === "working" && !running.has(project.id)) return false;
+
     if (filters.runnerId && project.runtimeId !== filters.runnerId) return false;
+
     return true;
   });
 }

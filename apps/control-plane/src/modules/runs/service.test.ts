@@ -118,6 +118,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const deadline = Date.now() + ms;
     while (!(await check())) {
       if (Date.now() > deadline) throw new Error("timed out waiting for condition");
+
       await Bun.sleep(25);
     }
   };
@@ -262,11 +263,13 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const flaky = new Proxy(store, {
       get: (target, key) => {
         if (key !== "load") return Reflect.get(target, key, target);
+
         return async (...args: Parameters<typeof target.load>) => {
           if (armed) {
             armed = false;
             throw new Error("database is down");
           }
+
           return target.load(...args);
         };
       },
@@ -337,7 +340,9 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
 
     const snapshot = late.events[0]!;
     expect(snapshot).toMatchObject({ type: "snapshot", running: true });
+
     if (snapshot.type !== "snapshot") throw new Error("expected a snapshot");
+
     expect(snapshot.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
     expect(snapshot.runningMs).toBeGreaterThanOrEqual(100);
     expect(snapshot.runningMs).toBeLessThan(3000);

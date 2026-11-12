@@ -27,6 +27,7 @@ export function NewRuntimeDialog() {
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
+
     if (!next) {
       setName("");
       setCreated(null);

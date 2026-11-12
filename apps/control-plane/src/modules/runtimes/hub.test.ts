@@ -83,6 +83,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       sockets.push(ws);
       ws.onopen = () => {
         if (version !== null) ws.send(JSON.stringify({ type: "hello", version, runs }));
+
         resolve(ws);
       };
       ws.onerror = () => reject(new Error("connect failed"));
@@ -92,6 +93,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const deadline = Date.now() + ms;
     while (!check()) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
   };
@@ -172,13 +174,18 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     hub.machines = {
       reach: async (place) => {
         reached.push(place);
+
         if (place.runtimeId !== machine) throw new Error("The computer is offline");
+
         return {
           call: async (method, params, timeoutMs) => {
             sent.push({ method, params, timeoutMs });
             const op = (params as { op?: string } | undefined)?.op;
+
             if (op === "paths") throw new Error("Unknown call machine.call");
+
             if (op === "listFiles") throw new Error("Could not list files");
+
             return { path: "/home/aven/workspaces/t" };
           },
         };
@@ -256,11 +263,14 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     hub.machines = {
       reach: async (place) => {
         if (place.runtimeId !== machine) throw new Error("The computer is offline");
+
         return {
           call: async (_method, params) => {
             const op = (params as { op?: string }).op ?? "";
             sent.push(op);
+
             if (op === "exec") await new Promise<void>((resolve) => (releaseExec = resolve));
+
             return null;
           },
         };
@@ -444,7 +454,9 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       hub.machines = {
         reach: async (place) => {
           reached.push(place);
+
           if (place.runtimeId !== machine) throw new Error("The computer is offline");
+
           return {
             call: async (method, params, timeoutMs) => {
               sent.push({ method, params, timeoutMs });
@@ -729,7 +741,9 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const terminal = connection.openTerminal("t", { cols: 100, rows: 30 }, sink);
     await until(() => received.some((m) => m.type === "terminal.open"));
     const opened = received.find((m) => m.type === "terminal.open")!;
+
     if (opened.type !== "terminal.open") throw new Error("unreachable");
+
     expect(opened).toMatchObject({ threadId: "t", cols: 100, rows: 30 });
 
     terminal.resize(80, 24);
@@ -1084,8 +1098,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const take = (ws: WebSocket, into: ControlPlaneToRuntime[]) => {
       ws.addEventListener("message", (event) => {
         if (typeof event.data !== "string") return;
+
         const message = JSON.parse(event.data) as ControlPlaneToRuntime;
         into.push(message);
+
         if (message.type === "call" && message.method === "process.watch") {
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
         }
@@ -1169,8 +1185,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     sockets.push(machineWs);
     machineWs.addEventListener("message", (event) => {
       if (typeof event.data !== "string") return;
+
       const message = JSON.parse(event.data) as ControlPlaneToRuntime;
       heard.push(message);
+
       if (message.type === "call") {
         machineWs.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
       }

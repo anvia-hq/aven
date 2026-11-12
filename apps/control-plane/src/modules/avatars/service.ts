@@ -33,17 +33,23 @@ export const avatarUrl = (userId: string, version: number) =>
 
 export async function readCapped(request: Request) {
   const reader = request.body?.getReader();
+
   if (!reader) return new Uint8Array();
+
   const chunks: Uint8Array[] = [];
   let length = 0;
   for (;;) {
     const { done, value } = await reader.read();
+
     if (done) break;
+
     length += value.length;
+
     if (length > AVATAR_MAX_BYTES) {
       await reader.cancel();
       throw new UnprocessableError("The image is too large: keep it under 256 KB");
     }
+
     chunks.push(value);
   }
   const bytes = new Uint8Array(length);
@@ -62,11 +68,15 @@ export function imageTypeOf(bytes: Uint8Array) {
 export const avatarsService = {
   async save(userId: string, bytes: Uint8Array) {
     if (bytes.length === 0) throw new UnprocessableError("Choose an image");
+
     if (bytes.length > AVATAR_MAX_BYTES) {
       throw new UnprocessableError("The image is too large: keep it under 256 KB");
     }
+
     const contentType = imageTypeOf(bytes);
+
     if (!contentType) throw new UnprocessableError("Use a PNG, JPEG or WebP image");
+
     const image = avatarUrl(userId, Date.now());
     await db.transaction(async (tx) => {
       await tx
@@ -99,8 +109,10 @@ export const avatarsService = {
         )
         .where(eq(mine.userId, viewerId))
         .limit(1);
+
       if (!shared) return null;
     }
+
     const [avatar] = await db
       .select({ contentType: userAvatars.contentType, data: userAvatars.data })
       .from(userAvatars)

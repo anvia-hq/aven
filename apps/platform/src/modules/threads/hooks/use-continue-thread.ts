@@ -24,7 +24,9 @@ export function useContinueThread(thread: Thread) {
     } finally {
       setWorking(false);
     }
+
     if (!created) return false;
+
     toast.add({ title: "Continued on another runner", description: thread.title, type: "success" });
     await navigate({ to: "/threads/$threadId", params: { threadId: created.id } });
     void refresh();

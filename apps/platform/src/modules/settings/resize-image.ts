@@ -10,7 +10,9 @@ export async function squareAvatar(file: File, size = AVATAR_SIZE): Promise<Blob
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext("2d");
+
   if (!context) throw new Error("This browser cannot resize images");
+
   context.drawImage(
     bitmap,
     (bitmap.width - side) / 2,
@@ -24,8 +26,12 @@ export async function squareAvatar(file: File, size = AVATAR_SIZE): Promise<Blob
   );
   bitmap.close();
   const webp = await encode(canvas, "image/webp", 0.9);
+
   if (webp?.type === "image/webp") return webp;
+
   const jpeg = await encode(canvas, "image/jpeg", 0.9);
+
   if (!jpeg) throw new Error("This browser cannot save the image");
+
   return jpeg;
 }

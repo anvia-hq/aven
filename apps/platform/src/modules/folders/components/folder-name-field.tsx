@@ -13,6 +13,7 @@ export function FolderNameField({ initial, onDone }: Props) {
   const finished = useRef(false);
   const finish = (value?: string) => {
     if (finished.current) return;
+
     finished.current = true;
     onDone(value);
   };
@@ -26,7 +27,9 @@ export function FolderNameField({ initial, onDone }: Props) {
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={(event) => {
         event.stopPropagation();
+
         if (event.key === "Enter") finish(event.currentTarget.value);
+
         if (event.key === "Escape") finish();
       }}
       onBlur={(event) => finish(event.currentTarget.value)}

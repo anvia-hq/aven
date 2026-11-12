@@ -10,16 +10,23 @@ const KIB = 1024;
 
 export function FileViewer({ threadId, path, running }: Props) {
   const { loaded, file, problem } = useWorkspaceFile(threadId, path, running);
+
   if (path === null) return <PanelNotice>Pick a file in the tree to read it.</PanelNotice>;
+
   if (!loaded) return <Skeleton className="size-full rounded-none" />;
+
   if (problem) return <PanelNotice>{problem}</PanelNotice>;
+
   if (!file?.available) return <PanelNotice>This thread has no workspace yet.</PanelNotice>;
+
   if (file.kind === "missing") return <PanelNotice>This file is no longer there.</PanelNotice>;
+
   if (file.kind === "binary") {
     return (
       <PanelNotice>Binary file, {Math.ceil(file.size / KIB)} KiB. It is not shown.</PanelNotice>
     );
   }
+
   return <Lines key={path} path={path} text={file.text} truncated={file.truncated} />;
 }
 

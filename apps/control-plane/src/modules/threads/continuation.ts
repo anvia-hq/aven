@@ -34,21 +34,28 @@ export function createThreadContinuation({
       selection: ModelSelection = {},
     ) {
       const old = await threadsService.owned(viewer, threadId);
+
       if (old.runtimeId === runtimeId) {
         throw new ConflictError("This thread is on that runner already");
       }
+
       const runner = await runtimesService.get(viewer.organizationId, runtimeId, viewer.userId);
+
       if (!runner) throw new UnprocessableError("Runner not found");
+
       if (!hub.isOnline(runtimeId)) throw new ConflictError(`${runner.name} is offline`);
+
       if (runs.isRunning(old.id)) {
         throw new ConflictError("The agent is working on this thread: stop it or wait first");
       }
+
       if (old.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
       const found = await patchOf(viewer.organizationId, old.id).catch(() => null);
       const bytes = found && !found.truncated ? Buffer.from(found.patch) : null;
       const carried = bytes && bytes.length <= PATCH_MAX_BYTES ? bytes : null;
       let patch: ContinuationPatch = "unavailable";
+
       if (carried) patch = carried.length > 0 ? "attached" : "none";
 
       const { turns, earlier } = threadTurns(await runs.history(old));
@@ -69,6 +76,7 @@ export function createThreadContinuation({
       });
       try {
         const body: SendMessageBody = { prompt, ...selection };
+
         if (patch === "attached" && carried) {
           body.attachments = [
             {
@@ -78,6 +86,7 @@ export function createThreadContinuation({
             },
           ];
         }
+
         await messages.start(viewer.organizationId, viewer.userId, created.id, body);
       } catch (error) {
         await threadsService

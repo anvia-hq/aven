@@ -10,7 +10,9 @@ export function useMentionPeople(threadId: string | undefined): MentionPerson[] 
   const { data: session } = authClient.useSession();
   const { data: organization } = authClient.useActiveOrganization();
   const thread = [...threads, ...shared].find((each) => each.id === threadId);
+
   if (!thread || !isDriving(thread.drivingUntil)) return [];
+
   return (organization?.members ?? [])
     .filter((member) => member.user.id !== session?.user.id)
     .map(({ user }) => ({

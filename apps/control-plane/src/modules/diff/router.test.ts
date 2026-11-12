@@ -94,7 +94,9 @@ run("a thread's changes (real postgres, real WebSocket)", async () => {
       ws.onerror = () => reject(new Error("runtime could not connect"));
       ws.onmessage = (event) => {
         const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
+
         if (message.type !== "call" || message.method !== "diff.get") return;
+
         calls.push(message.params);
         ws.send(JSON.stringify({ type: "reply", id: message.id, ...answer(message.params) }));
       };
@@ -102,6 +104,7 @@ run("a thread's changes (real postgres, real WebSocket)", async () => {
     const deadline = Date.now() + 3000;
     while (!hub.isOnline(runtime.id)) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
     return { thread, calls };

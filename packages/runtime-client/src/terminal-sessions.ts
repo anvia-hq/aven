@@ -38,7 +38,9 @@ export class TerminalSessions {
 
   open(viewerId: string, threadId: string, size: { cols: number; rows: number }) {
     const shell = this.sandbox.shell?.(threadId, viewerId);
+
     if (!shell) return this.#refuse(viewerId, NOT_RUNNING);
+
     let session: Session | undefined;
     try {
       const proc = Bun.spawn(shell.argv, {
@@ -48,10 +50,12 @@ export class TerminalSessions {
           rows: clamp(size.rows, MAX_ROWS),
           data: (_terminal, chunk) => {
             if (!session || session.closing) return;
+
             if (this.link.buffered() > MAX_BUFFERED_BYTES) {
               this.#end(viewerId, session, "The terminal's output was too fast to carry");
               return;
             }
+
             this.link.sendBinary(encodeViewerFrame(viewerId, chunk));
           },
           drain: () => session && this.#flush(session),
@@ -69,9 +73,13 @@ export class TerminalSessions {
 
   write(viewerId: string, bytes: Uint8Array) {
     const session = this.#sessions.get(viewerId);
+
     if (!session) return;
+
     const held = session.unwritten.reduce((sum, chunk) => sum + chunk.length, 0);
+
     if (held + bytes.length > MAX_UNWRITTEN_BYTES) return;
+
     session.unwritten.push(bytes.slice());
     this.#flush(session);
   }
@@ -84,7 +92,9 @@ export class TerminalSessions {
 
   close(viewerId: string) {
     const session = this.#sessions.get(viewerId);
+
     if (!session) return;
+
     this.#stop(viewerId, session);
   }
 
@@ -97,6 +107,7 @@ export class TerminalSessions {
     while (terminal && !terminal.closed && session.unwritten.length > 0) {
       const chunk = session.unwritten[0]!;
       const taken = terminal.write(chunk);
+
       if (taken >= chunk.length) session.unwritten.shift();
       else {
         session.unwritten[0] = chunk.subarray(taken);
@@ -115,6 +126,7 @@ export class TerminalSessions {
 
   #end(viewerId: string, session: Session, reason: string) {
     if (this.#sessions.get(viewerId) !== session) return;
+
     this.#stop(viewerId, session);
     this.link.send({ type: "terminal.closed", viewerId, reason });
   }

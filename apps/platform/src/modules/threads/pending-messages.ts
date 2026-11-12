@@ -10,8 +10,10 @@ function textOf(message: ChatMessage) {
 
 function uploadedSize(data: string) {
   let padding = 0;
+
   if (data.endsWith("==")) padding = 2;
   else if (data.endsWith("=")) padding = 1;
+
   return Math.floor((data.length * 3) / 4) - padding;
 }
 const PREVIEW_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
@@ -24,9 +26,11 @@ function attachmentOf({ name, mediaType, data }: AttachmentUpload) {
     mediaType: mediaType ?? "application/octet-stream",
     size: uploadedSize(data),
   };
+
   if (mediaType && PREVIEW_TYPES.has(mediaType)) {
     attachment.image = `data:${mediaType};base64,${data}`;
   }
+
   return attachment;
 }
 
@@ -36,8 +40,11 @@ export function pendingMessage(id: string, message: OutgoingMessage): PendingMes
     role: "user",
     parts: [{ type: "text", text: message.prompt }],
   };
+
   if (message.attachments.length > 0) user.attachments = message.attachments.map(attachmentOf);
+
   if (message.mentions.length > 0) user.mentions = message.mentions;
+
   return { id, message: user };
 }
 
@@ -64,6 +71,7 @@ export function withoutPending(pending: PendingMessage[], id: string): PendingMe
 
 export function settlePending(pending: PendingMessage[], event: RunEvent): PendingMessage[] {
   if (pending.length === 0) return pending;
+
   switch (event.type) {
     case "run_start": {
       const at = pending.findIndex(({ message }) => sameRequest(message, event.prompt));

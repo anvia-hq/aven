@@ -29,9 +29,13 @@ export function useBots() {
     const saved = await attempt("Could not save the bot", () =>
       postJson<Bot>(`/bots/${bot.id}`, patch, "PATCH"),
     );
+
     if (!saved) return false;
+
     await botsStore.refresh();
+
     if (!quiet) toast.add({ title: "Bot saved", description: saved.name, type: "success" });
+
     return true;
   }
 

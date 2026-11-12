@@ -24,16 +24,24 @@ export function installEnvValues(args: Args, options: ServerEnvOptions) {
   const release = stringFlag(args, "release");
 
   if (port !== undefined) values.AVEN_PORT = port;
+
   if (httpsPort !== undefined) values.AVEN_HTTPS_PORT = httpsPort;
+
   if (apiPort !== undefined) values.AVEN_API_PORT = apiPort;
+
   if (bind !== undefined) values.AVEN_BIND = bind;
+
   if (domain !== undefined) values.AVEN_SITE_ADDRESS = domain;
+
   if (ownerEmail !== undefined) values.PLATFORM_OWNER_EMAILS = ownerEmail;
+
   if (release !== undefined) values.AVEN_VERSION = release;
+
   if (origin !== undefined) {
     values.BETTER_AUTH_URL = origin;
     values.TRUSTED_ORIGINS = origin;
   }
+
   if (domain !== undefined) {
     fill(values, "AVEN_PORT", String(options.port));
     fill(values, "AVEN_HTTPS_PORT", String(options.httpsPort ?? 443));
@@ -42,6 +50,7 @@ export function installEnvValues(args: Args, options: ServerEnvOptions) {
     fill(values, "BETTER_AUTH_URL", options.origin);
     fill(values, "TRUSTED_ORIGINS", options.origin);
   }
+
   return values;
 }
 
@@ -61,6 +70,7 @@ export async function writeServerFiles(
 
   const envPath = join(dir, ".env");
   const existing = await readFile(envPath, "utf8").catch(() => undefined);
+
   if (existing === undefined) {
     const fresh = setEnv(newServerEnv(files.envTemplate, options), {
       COMPOSE_PROJECT_NAME: projectName(dirname(resolve(dir))),
@@ -76,9 +86,11 @@ export async function writeServerFiles(
   const changed = Object.keys(values)
     .filter((key) => after[key] !== before[key])
     .map((key) => ({ key, from: before[key], to: after[key]! }));
+
   if (changed.length > 0) {
     await writeFile(envPath, updated);
     await chmod(envPath, 0o600);
   }
+
   return { created: false, changed };
 }

@@ -67,6 +67,7 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
               onClick={async () => {
                 saveTitle.cancel();
                 saveBody.cancel();
+
                 if (await remove(item)) onClose();
               }}
             >
@@ -84,6 +85,7 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
         }}
         onCommit={() => {
           saveTitle.flush();
+
           if (!title.trim()) setTitle(item.title);
         }}
       />

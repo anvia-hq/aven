@@ -22,6 +22,7 @@ export const safeStorage = {
 
 function parseStored<T>(raw: string | null, initial: T): T {
   if (raw === null) return initial;
+
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -48,7 +49,9 @@ export function useLocalStorage<T>(key: string, initial: T) {
 
   useEffect(() => {
     const raw = serializeStored(value);
+
     if (raw === null || raw === safeStorage.getItem(key)) return;
+
     safeStorage.setItem(key, raw);
   }, [key, value]);
 

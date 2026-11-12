@@ -20,9 +20,11 @@ export function createListStore<T>({ path, atom, label }: ListStoreOptions<T>) {
     const hadData = store.get(atom) !== null;
     try {
       const result = await api<T[]>(path);
+
       if (startedIn === generation) store.set(atom, result);
     } catch (failure) {
       if (startedIn !== generation) return;
+
       if (!hadData) {
         toast.add({
           title: `Could not load ${label}`,
@@ -30,6 +32,7 @@ export function createListStore<T>({ path, atom, label }: ListStoreOptions<T>) {
           type: "error",
         });
       }
+
       store.set(atom, (current: T[] | null) => current ?? []);
     }
   }

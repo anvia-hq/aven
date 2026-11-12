@@ -29,7 +29,9 @@ const unsealed = (stored: string): Record<string, string> =>
 
 const isDuplicate = (error: unknown): boolean => {
   if (typeof error !== "object" || error === null) return false;
+
   if ("code" in error && error.code === "23505") return true;
+
   return "cause" in error && isDuplicate(error.cause);
 };
 
@@ -55,9 +57,11 @@ export const mcpService = {
       .select({ total: count() })
       .from(mcpServers)
       .where(eq(mcpServers.userId, userId));
+
     if (total >= MCP_LIMIT) {
       throw new UnprocessableError(`You can have at most ${MCP_LIMIT} MCP servers`);
     }
+
     const headers = Object.fromEntries(body.headers.map((header) => [header.name, header.value]));
     try {
       const [row] = await db
@@ -77,39 +81,51 @@ export const mcpService = {
       return view(row!);
     } catch (error) {
       if (isDuplicate(error)) throw new ConflictError(SAME_NAME);
+
       throw error;
     }
   },
 
   async update(userId: string, id: string, body: UpdateMcpBody) {
     const [current] = await db.select().from(mcpServers).where(ownServer(userId, id));
+
     if (!current) return null;
 
     const changes: Partial<typeof mcpServers.$inferInsert> = {};
+
     if (body.name !== undefined) {
       changes.name = body.name;
       changes.slug = mcpSlug(body.name);
     }
+
     if (body.url !== undefined) changes.url = body.url;
+
     if (body.url !== undefined && body.url !== current.url && body.allowLocal === undefined) {
       changes.allowLocal = false;
     }
+
     if (body.target !== undefined) changes.target = body.target;
+
     if (body.enabled !== undefined) changes.enabled = body.enabled;
+
     if (body.allowLocal !== undefined) changes.allowLocal = body.allowLocal;
+
     if (body.headers !== undefined) {
       const saved = unsealed(current.headers);
       const next: Record<string, string> = {};
       for (const header of body.headers) {
         const value = header.value ?? saved[header.name];
+
         if (value === undefined) {
           throw new UnprocessableError(`There is no saved value for the header ${header.name}`);
         }
+
         next[header.name] = value;
       }
       changes.headers = sealed(next);
       changes.headerNames = Object.keys(next);
     }
+
     if (body.url !== undefined || body.headers !== undefined || body.allowLocal !== undefined) {
       changes.lastError = null;
     }
@@ -123,6 +139,7 @@ export const mcpService = {
       return row ? view(row) : null;
     } catch (error) {
       if (isDuplicate(error)) throw new ConflictError(SAME_NAME);
+
       throw error;
     }
   },

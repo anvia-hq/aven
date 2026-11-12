@@ -9,6 +9,7 @@ function headline(tool: ToolPart, count: number) {
   if (tool.name === SECRET_TOOL_NAME) {
     return "A secret was asked for; you answered privately";
   }
+
   return `You answered ${count === 1 ? "a question" : `${count} questions`}`;
 }
 
@@ -16,6 +17,7 @@ export function QuestionBlock({ tool }: { tool: ToolPart }) {
   const answers = new Map(questionAnswers(tool).map((answer) => [answer.questionId, answer.value]));
   const prompts = tool.questions ?? [];
   const waiting = tool.status === "running";
+
   if (waiting) return null;
 
   return (

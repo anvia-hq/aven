@@ -5,6 +5,7 @@ type BlockLike = { content?: unknown; children?: unknown };
 
 export function blocksOf(body: string): unknown[] | null {
   if (!body.trimStart().startsWith("[")) return null;
+
   try {
     const parsed: unknown = JSON.parse(body);
     return isBlockDocument(parsed) ? parsed : null;
@@ -15,19 +16,24 @@ export function blocksOf(body: string): unknown[] | null {
 
 function partText(part: InlineLike | string): string {
   if (typeof part === "string") return part;
+
   if (typeof part !== "object" || part === null) return "";
+
   if (typeof part.text === "string") return part.text;
+
   return inlineText(part.content);
 }
 
 function inlineText(content: unknown): string {
   if (typeof content === "string") return content;
+
   if (!Array.isArray(content)) {
     const rows = (content as { rows?: { cells?: unknown[] }[] } | null)?.rows;
     const cellText = (cell: unknown) =>
       inlineText(Array.isArray(cell) ? cell : (cell as InlineLike | null)?.content);
     return rows ? rows.flatMap((row) => (row.cells ?? []).map(cellText)).join(" ") : "";
   }
+
   return content.map(partText).join("");
 }
 

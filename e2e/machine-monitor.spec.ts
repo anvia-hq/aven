@@ -120,10 +120,11 @@ test.describe("machine monitor", () => {
             seen.push({
               at,
               y: cards.map((card) =>
-                parseFloat(getComputedStyle(card).translate.split(" ")[1] ?? "0"),
+                Number.parseFloat(getComputedStyle(card).translate.split(" ")[1] ?? "0"),
               ),
               glow: Number(getComputedStyle(cards[0]!, "::before").opacity),
             });
+
             if (at < 500) requestAnimationFrame(tick);
             else resolve(seen);
           };

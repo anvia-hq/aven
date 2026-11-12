@@ -9,9 +9,12 @@ export function useElementHeight<T extends HTMLElement, U extends HTMLElement>(
 
   useEffect(() => {
     if (!ready) return;
+
     const from = source.current;
     const to = target.current;
+
     if (!from || !to) return;
+
     const write = () => to.style.setProperty(variable, `${from.offsetHeight}px`);
     write();
     const observer = new ResizeObserver(write);

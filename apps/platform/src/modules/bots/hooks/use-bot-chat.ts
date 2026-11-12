@@ -27,9 +27,11 @@ function botSaid(event: BotEvent) {
       event.messages.findLast((message) => message.role === "bot" && !message.peer)?.text ?? ""
     );
   }
+
   if (event.type === "message" && event.message.role === "bot" && !event.message.peer) {
     return event.message.text;
   }
+
   return undefined;
 }
 
@@ -47,13 +49,19 @@ export function useBotChat(botId: string) {
     const source = new EventSource(`/api/bots/${botId}/events`);
     source.onmessage = (message) => {
       const event = parseEvent(message.data);
+
       if (!event) return;
+
       setMessages((current) => applyBotEvent(current, event));
       setTyping((current) => isTyping(current, event));
       const last = botSaid(event);
+
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
+
       if (event.type === "error") setError(event.message);
+
       if (event.type === "typing" && event.typing) setError(null);
+
       if (event.type === "snapshot" || (event.type === "typing" && !event.typing)) {
         void refreshBots();
         refreshMcpServers();
@@ -63,6 +71,7 @@ export function useBotChat(botId: string) {
     };
     source.onerror = () => {
       setTyping(false);
+
       if (source.readyState === EventSource.CLOSED) setError("Lost the connection to the server");
     };
     return () => source.close();

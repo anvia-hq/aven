@@ -23,12 +23,15 @@ export function localRunnerToken(configured: string | undefined, localRunner: st
       throw new Error(
         `AVEN_LOCAL_RUNNER_TOKEN must start with ${TOKEN_PREFIX} and be at least 32 characters long`,
       );
+
     return configured;
   }
+
   if (localRunner !== LOCAL_RUNNER_OFF)
     throw new Error(
       `AVEN_LOCAL_RUNNER_TOKEN is required while the built-in runner is on, since a token made up here would exist in this process alone: make one with ${TOKEN_COMMAND} (${TOKEN_RULE}), or set AVEN_LOCAL_RUNNER=${LOCAL_RUNNER_OFF} to run only with the runners you attach`,
     );
+
   return `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
 }
 
@@ -150,10 +153,12 @@ export const runtimesService = {
 
   async authenticate(token: string) {
     if (!token.startsWith(TOKEN_PREFIX)) return null;
+
     if (sameToken(token, localToken)) {
       const [local] = await db.select().from(runtimes).where(eq(runtimes.id, LOCAL_RUNTIME_ID));
       return local ?? null;
     }
+
     const [row] = await db
       .select()
       .from(runtimes)

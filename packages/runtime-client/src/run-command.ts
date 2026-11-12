@@ -10,7 +10,9 @@ async function collect(stream: ReadableStream<Uint8Array>, stop: Promise<void>) 
   try {
     for (;;) {
       const next = await Promise.race([reader.read(), cut]);
+
       if (next === CUT || next.done) break;
+
       chunks.push(next.value);
     }
   } finally {
@@ -37,8 +39,11 @@ export async function runCommand(
     stderr: "pipe";
     detached: true;
   } = { stdout: "pipe", stderr: "pipe", detached: true };
+
   if (cwd !== undefined) spawnOptions.cwd = cwd;
+
   if (env !== undefined) spawnOptions.env = env;
+
   const proc = Bun.spawn(argv, spawnOptions);
 
   const stdoutStop = Promise.withResolvers<void>();
@@ -70,7 +75,9 @@ export async function runCommand(
     collect(proc.stderr, stderrStop.promise),
     exited,
   ]);
+
   if (!timedOut) return { code, stdout, stderr };
+
   return {
     code,
     stdout,

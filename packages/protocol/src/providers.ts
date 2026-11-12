@@ -20,14 +20,18 @@ const VERTEX_ENDPOINT =
 
 export function vertexPartsOf(baseUrl: string | null | undefined) {
   const match = baseUrl ? VERTEX_ENDPOINT.exec(baseUrl) : null;
+
   if (!match) return null;
+
   const [, hostRegion, project, location] = match as unknown as [
     string,
     string | undefined,
     string,
     string,
   ];
+
   if ((hostRegion ?? "global") !== location) return null;
+
   return { project, location };
 }
 

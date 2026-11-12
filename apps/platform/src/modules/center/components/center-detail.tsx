@@ -22,7 +22,9 @@ export function openOf(search: { pr?: string; commit?: string }): Open | undefin
   const [kind, value] = search.pr
     ? (["pr", search.pr] as const)
     : (["commit", search.commit] as const);
+
   if (!value) return undefined;
+
   const [projectId, what] = value.split(":") as [string, string];
   return { kind, projectId, what };
 }
@@ -54,6 +56,7 @@ const CHECK_ICON = {
 
 function Checks({ checks }: { checks: PullDetail["checks"] }) {
   if (checks.state === "none") return null;
+
   return (
     <section aria-label="Checks" className="flex flex-col gap-1.5">
       <h3 className="flex items-center gap-2 text-sm font-medium">
@@ -91,6 +94,7 @@ const REVIEW_LABEL = {
 
 function People({ pull }: { pull: PullDetail }) {
   if (pull.reviews.length === 0 && pull.requestedReviewers.length === 0) return null;
+
   return (
     <section aria-label="Reviewers" className="flex flex-col gap-1.5">
       <h3 className="text-sm font-medium">Reviewers</h3>
@@ -150,8 +154,11 @@ function Header({ title, subtitle, url }: { title: string; subtitle: string; url
 
 function PullView({ projectId, number }: { projectId: string; number: string }) {
   const loaded = useRequest<PullDetail>(`/projects/${projectId}/pulls/${number}`);
+
   if (!loaded) return <Loading />;
+
   if (loaded.data === null) return <Problem text={loaded.error} />;
+
   const pull = loaded.data;
   const status = TRACKED_STATUS[pull.status];
   return (
@@ -186,8 +193,11 @@ function PullView({ projectId, number }: { projectId: string; number: string }) 
 
 function CommitView({ projectId, sha }: { projectId: string; sha: string }) {
   const loaded = useRequest<CommitDetail>(`/projects/${projectId}/commits/${sha}`);
+
   if (!loaded) return <Loading />;
+
   if (loaded.data === null) return <Problem text={loaded.error} />;
+
   const commit = loaded.data;
   const [subject = "", ...rest] = commit.message.split("\n");
   const body = rest.join("\n").trim();

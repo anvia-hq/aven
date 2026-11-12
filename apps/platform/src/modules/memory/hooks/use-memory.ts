@@ -39,7 +39,9 @@ export function useMemory({ fresh = false } = {}) {
       await request();
       return true;
     });
+
     if (!changed) return false;
+
     await refresh();
     return true;
   }
@@ -48,7 +50,9 @@ export function useMemory({ fresh = false } = {}) {
     const created = await change("Could not save the note", () =>
       postJson<MemoryNote>("/memory", { ...folder, ...input }),
     );
+
     if (created) toast.add({ title: "Note saved", description: input.name, type: "success" });
+
     return created;
   }
 
@@ -56,7 +60,9 @@ export function useMemory({ fresh = false } = {}) {
     const saved = await change("Could not save the note", () =>
       postJson<MemoryNote>(`/memory/${note.id}`, input, "PATCH"),
     );
+
     if (saved) toast.add({ title: "Note saved", description: input.name, type: "success" });
+
     return saved;
   }
 
@@ -64,6 +70,7 @@ export function useMemory({ fresh = false } = {}) {
     const removed = await change("Could not delete the note", () =>
       api<void>(`/memory/${note.id}`, { method: "DELETE" }),
     );
+
     if (removed) toast.add({ title: "Note deleted", description: note.name });
   }
 

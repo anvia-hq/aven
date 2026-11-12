@@ -24,11 +24,13 @@ function withThread(
 function save(threadId: string | undefined, selection: SavedSelection) {
   const store = getDefaultStore();
   store.set(modelSelectionAtom, selection);
+
   if (threadId) store.set(threadModelSelectionsAtom, (all) => withThread(all, threadId, selection));
 }
 
 export function rememberModelSelection(threadId: string, selection: RunSelection) {
   if (!selection.providerId) return;
+
   save(threadId, {
     providerId: selection.providerId,
     modelId: selection.modelId,

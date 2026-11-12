@@ -42,7 +42,8 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
         className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
         <span
-          {...(status === "error" && { role: "img", "aria-label": "Failed" })}
+          role={status === "error" ? "img" : undefined}
+          aria-label={status === "error" ? "Failed" : undefined}
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
             status === "error" && "bg-destructive/10 text-destructive",

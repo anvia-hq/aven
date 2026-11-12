@@ -130,8 +130,10 @@ export const listModelsBody = z
   })
   .superRefine((body, ctx) => {
     if (body.apiKey === undefined) return;
+
     const check = body.kind === "vertex" ? vertexCredential : apiKey;
     const result = check.safeParse(body.apiKey);
+
     if (!result.success) {
       ctx.addIssue({
         code: "custom",

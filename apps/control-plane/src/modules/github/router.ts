@@ -83,8 +83,10 @@ export const githubRouter = (
           if (query.installation_id === undefined) {
             throw new InstallationNotAllowedError("The GitHub connection link is invalid");
           }
+
           return redirect(await service.claimUrl(organizationId, user.id, query.installation_id));
         }
+
         const { next } = await service.connect(organizationId, user.id, {
           installationId: query.installation_id,
           state: query.state,

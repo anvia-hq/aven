@@ -37,7 +37,9 @@ describe("a sandbox reached on another machine", () => {
     });
     const call: MachineCall = async (op, args) => {
       seen.push({ op, args });
+
       if (op === "exec.abort") return null;
+
       started();
       return new Promise((resolve) => {
         release = resolve;
@@ -89,6 +91,7 @@ describe("a sandbox reached on another machine", () => {
     });
     const call: MachineCall = async (op) => {
       if (op === "exec.abort") throw new Error("Invalid parameters");
+
       started();
       return new Promise((resolve) => {
         release = resolve;

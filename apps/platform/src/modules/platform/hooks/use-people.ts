@@ -14,7 +14,9 @@ export function usePeople() {
     const removed = await attempt("Could not remove the account", () =>
       api<{ removed: true }>(`/platform/users/${person.id}`, { method: "DELETE" }),
     );
+
     if (!removed) return;
+
     toast.add({ title: "Account removed", description: person.email, type: "success" });
     setRefreshKey((key) => key + 1);
   }

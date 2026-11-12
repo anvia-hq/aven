@@ -30,16 +30,21 @@ export function ProviderKeyForm({
 
   async function submit() {
     if (!provider || sending || (!saved && !key.trim())) return;
+
     setSending(true);
+
     if (!saved) {
       if (!(await update(provider, { apiKey: key.trim() }))) {
         setSending(false);
         return;
       }
+
       setKey("");
       setSaved(true);
     }
+
     if (await onSaved(`I saved the API key for ${provider.name}.`)) return;
+
     setSending(false);
   }
 
@@ -98,6 +103,7 @@ function KeyField({
       </p>
     );
   }
+
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={`provider-key-${provider.id}`} className="text-base leading-6 font-medium">

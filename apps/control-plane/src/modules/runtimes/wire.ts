@@ -553,10 +553,12 @@ const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST
 
 function parseParams<T>(schema: z.ZodType<T>, params: unknown) {
   const parsed = schema.safeParse(params);
+
   if (!parsed.success) {
     const issue = parsed.error.issues[0]!;
     throw new Error(`Invalid parameters: ${issue.path.join(".") || "params"} ${issue.message}`);
   }
+
   return parsed.data;
 }
 

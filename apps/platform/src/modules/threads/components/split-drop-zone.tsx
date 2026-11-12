@@ -14,6 +14,7 @@ export function SplitDropZone({ threadId, split, enabled, children }: Props) {
 
   const aim = (event: DragEvent<HTMLDivElement>) => {
     if (!enabled || !dragsThread(event)) return null;
+
     const box = event.currentTarget.getBoundingClientRect();
     return sideOf(event.clientX, box.left, box.width);
   };
@@ -24,7 +25,9 @@ export function SplitDropZone({ threadId, split, enabled, children }: Props) {
       className="relative min-w-0"
       onDragOver={(event) => {
         const side = aim(event);
+
         if (!side) return;
+
         event.preventDefault();
         setOver(side);
       }}
@@ -34,10 +37,14 @@ export function SplitDropZone({ threadId, split, enabled, children }: Props) {
       onDrop={(event) => {
         const side = aim(event);
         setOver(null);
+
         if (!side) return;
+
         event.preventDefault();
         const next = splitWith(event.dataTransfer.getData(THREAD_DRAG), side, threadId, split);
+
         if (!next) return;
+
         void navigate({
           to: "/threads/$threadId",
           params: { threadId: next.threadId },

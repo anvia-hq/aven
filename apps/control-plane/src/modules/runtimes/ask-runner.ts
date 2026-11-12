@@ -47,7 +47,9 @@ export function runnerVia(connection: FindRunner, kind?: { bot: true }) {
       const call = runner.call(method, { ...params, ...kind }, timeoutMs);
       const answer = await (refusal ? call.catch((error) => refuse(refusal, error)) : call);
       const parsed = schema.safeParse(answer);
+
       if (!parsed.success) throw new UnavailableError("The runtime gave an unexpected answer");
+
       return parsed.data;
     },
   };

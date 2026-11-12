@@ -377,6 +377,7 @@ describe("createModel", () => {
     } finally {
       if (saved === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = saved;
+
       server.stop(true);
     }
   });

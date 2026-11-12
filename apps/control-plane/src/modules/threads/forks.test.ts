@@ -40,11 +40,13 @@ run("a thread's forks (postgres)", async () => {
       options?: { onPersonsWord?: boolean },
     ) => {
       if (asking.has(thread)) throw new ConflictError("Answer the agent's question first");
+
       told.push({ thread, prompt, onWord: options?.onPersonsWord });
       return { steered: true };
     },
     start: async (_org: string, _user: string, thread: string, { prompt }: { prompt: string }) => {
       if (failSend) throw new Error("no runner");
+
       sent.push({ thread, prompt });
     },
   };

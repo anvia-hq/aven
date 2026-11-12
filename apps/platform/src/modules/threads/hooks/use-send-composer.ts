@@ -16,6 +16,7 @@ function outgoing({ input, entities }: Draft) {
   for (const entity of entities) {
     const mention = mentionOf(entity.triggerId, entity.id);
     const from = entity.range.from - lead;
+
     if (mention) mentions.push({ ...mention, from, to: from + entity.text.length });
   }
   return { prompt: input.trim(), mentions };
@@ -52,6 +53,7 @@ export function useSendComposer({
 
   async function submit() {
     if (!canSend) return;
+
     if (onCompact && attachments.files.length === 0 && isCompactCommand(composer)) {
       setSending(true);
       try {
@@ -64,7 +66,9 @@ export function useSendComposer({
       }
       return;
     }
+
     const { prompt, mentions } = outgoing(composer);
+
     if (mentions.length > MENTION_LIMIT) {
       toast.add({
         title: "Too many mentions",
@@ -73,14 +77,18 @@ export function useSendComposer({
       });
       return;
     }
+
     const draft = { input: composer.input, entities: composer.entities };
     composer.setInput("");
     composer.setEntities([]);
     const steering = running;
+
     if (!steering) setSending(true);
+
     try {
       const files = steering ? [] : await attachments.encode();
       const sent = await onSubmit({ prompt, attachments: files, mentions }, selection);
+
       if (sent) {
         if (!steering) attachments.clear();
       } else restore(draft, prompt);
@@ -98,6 +106,7 @@ export function useSendComposer({
 
   function restore(draft: Draft, prompt: string) {
     const current = latest.current.input;
+
     if (current.trim() === "" || current === draft.input) {
       latest.current.setInput(draft.input);
       latest.current.setEntities(draft.entities);

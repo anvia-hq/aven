@@ -43,6 +43,7 @@ export const taskKey = (task: { number: number }) => `T-${task.number}`;
 
 export function isOverdue(dueDate: string | null, status: TaskStatus) {
   if (!dueDate || status === "done" || status === "cancelled") return false;
+
   return dueDate < new Date().toLocaleDateString("en-CA");
 }
 

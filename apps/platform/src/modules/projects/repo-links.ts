@@ -13,6 +13,7 @@ export const isAbsoluteUrl = (href: string) => /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.t
 
 export function resolveRepoUrl(href: string, repo: string, branch: string, kind: "link" | "image") {
   if (isAbsoluteUrl(href)) return href;
+
   const base =
     kind === "image"
       ? `https://raw.githubusercontent.com/${repo}/${branch}/`

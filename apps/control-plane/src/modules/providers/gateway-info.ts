@@ -16,7 +16,9 @@ const positive = (value: unknown) =>
 
 function levelsOf(info: Record<string, unknown>) {
   const levels = info.reasoning_effort_levels;
+
   if (info.supports_reasoning_effort !== true || !Array.isArray(levels)) return null;
+
   const names = levels.filter(
     (level): level is string => typeof level === "string" && level !== "",
   );
@@ -30,6 +32,7 @@ function modelsOf(body: unknown) {
     if (!isRecord(entry) || typeof entry.model_name !== "string" || !isRecord(entry.model_info)) {
       continue;
     }
+
     models.set(entry.model_name, {
       contextWindow: positive(entry.model_info.max_input_tokens),
       effortLevels: levelsOf(entry.model_info),
@@ -54,7 +57,9 @@ export function createGatewayInfo(options: { fetch?: Fetch; now?: () => number }
         signal: AbortSignal.timeout(TIMEOUT_MS),
         redirect: "error",
       });
+
       if (!response.ok) return null;
+
       const models = modelsOf(await response.json());
       return models.size > 0 ? models : null;
     } catch {
@@ -70,15 +75,20 @@ export function createGatewayInfo(options: { fetch?: Fetch; now?: () => number }
     const url = `${baseUrl.replace(/\/+$/, "")}/model/info`;
     const key = `${url}\n${apiKey ?? ""}`;
     let entry = known.get(key);
+
     if (!entry || entry.expires <= now()) {
       entry = { models: load(url, apiKey), expires: now() + TTL_MS };
       known.set(key, entry);
     }
+
     const models = await entry.models;
+
     if (!models) {
       if (known.get(key) === entry) known.delete(key);
+
       return NOTHING;
     }
+
     return models.get(modelId) ?? NOTHING;
   };
 }

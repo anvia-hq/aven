@@ -9,6 +9,8 @@ export const Route = createFileRoute("/_authed/bot/")({
 
 function BotPage() {
   const { main } = useBots();
+
   if (!main) return null;
+
   return <BotWorkspace key={main.id} bot={main} />;
 }

@@ -13,6 +13,7 @@ export function DiffStat({ additions, deletions, hideZeros = false }: Props) {
       </>
     );
   }
+
   return (
     <>
       <span className="text-success">+{additions}</span>{" "}

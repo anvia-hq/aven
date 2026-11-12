@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type * as CryptoModule from "./crypto";
 import { UnavailableError } from "./errors";
-
-type Crypto = typeof import("./crypto");
 
 const KEY = Buffer.alloc(32, 7).toString("base64");
 
@@ -12,10 +11,12 @@ const KEY_ERROR = "PROVIDER_ENCRYPTION_KEY must be 32 bytes, base64 (openssl ran
 
 const load = async (key: string | undefined) => {
   const previous = process.env.PROVIDER_ENCRYPTION_KEY;
+
   if (key === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
   else process.env.PROVIDER_ENCRYPTION_KEY = key;
+
   try {
-    return (await import(`./crypto.ts?load=${crypto.randomUUID()}`)) as Crypto;
+    return (await import(`./crypto.ts?load=${crypto.randomUUID()}`)) as typeof CryptoModule;
   } finally {
     if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
     else process.env.PROVIDER_ENCRYPTION_KEY = previous;

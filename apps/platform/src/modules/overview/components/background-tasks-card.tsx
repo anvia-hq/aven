@@ -26,6 +26,7 @@ export function BackgroundTasksCard({ threadId, running }: { threadId: string; r
   const ended = rows.filter((process) => process.status !== "running");
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
   const endedOpen = chosenOpen ?? live.length === 0;
+
   if (rows.length === 0) return null;
 
   const row = (process: ProcessView) => (

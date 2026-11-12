@@ -22,6 +22,7 @@ export function UsageCard({
       </OverviewCard>
     );
   }
+
   if (!totals || totals.inputTokens + totals.outputTokens === 0) return null;
 
   const uncached = Math.max(

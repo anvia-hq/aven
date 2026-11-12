@@ -21,8 +21,11 @@ const periodOf = (since: string | undefined, now = Date.now()) =>
 
 export function periodLabel(search: CenterSearch, now = Date.now()) {
   if (!search.since && !search.until) return undefined;
+
   const preset = !search.until ? periodOf(search.since, now) : undefined;
+
   if (preset) return preset.label;
+
   return `${search.since ?? "…"} → ${search.until ?? "now"}`;
 }
 
@@ -39,12 +42,19 @@ export function commitChips(search: CenterSearch, change: (next: CenterSearch) =
   const chips: Chip[] = [];
   const add = (key: string, label: string, remove: CenterSearch) =>
     chips.push({ key, label, remove: () => change(remove) });
+
   if (search.grep) add("grep", `“${search.grep}”`, { grep: undefined });
+
   if (search.commitAuthor) add("author", `By ${search.commitAuthor}`, { commitAuthor: undefined });
+
   const period = periodLabel(search);
+
   if (period) add("period", period, { since: undefined, until: undefined });
+
   if (search.path) add("path", `File: ${search.path}`, { path: undefined });
+
   if (search.branch) add("branch", `Branch: ${search.branch}`, { branch: undefined });
+
   return chips;
 }
 
@@ -106,7 +116,9 @@ export function CommitFilters({
           ]}
           onChange={(value) => {
             const chosen = PERIODS.find((period) => period.value === value);
+
             if (value === "custom") return;
+
             onChange({ since: chosen ? periodSince(chosen.days) : undefined, until: undefined });
           }}
         />

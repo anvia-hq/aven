@@ -29,7 +29,9 @@ function fakeGithub(routes: Record<string, unknown>) {
     calls.push({ url, init });
     const path = url.replace("https://api.github.com", "").replace("https://github.com", "");
     const key = `${init?.method ?? "GET"} ${path}`;
+
     if (!(key in routes)) return new Response("not found", { status: 404 });
+
     return Response.json(routes[key]);
   };
   return { calls, fetch };
@@ -292,16 +294,24 @@ describe("GithubClient", () => {
       const calls: string[] = [];
       const fetch = async (url: string) => {
         calls.push(url);
+
         if (url.includes("/access_tokens")) return token.clone();
+
         if (url.includes("/tags?")) return tags();
+
         const one = url.match(/\/branches\/([^?]+)$/)?.[1];
+
         if (one && branch) return branch(one);
+
         if (one) {
           const listing = branches();
+
           if (!listing.ok) return listing;
+
           const found = ((await listing.json()) as { name: string }[]).find((b) => b.name === one);
           return found ? Response.json(found) : new Response("none", { status: 404 });
         }
+
         return url.includes("/branches") ? branches() : answer();
       };
       return { calls, client: new GithubClient(config, fetch) };
@@ -524,15 +534,18 @@ describe("GithubClient", () => {
       const calls: string[] = [];
       const fetch = async (url: string, init?: RequestInit) => {
         calls.push(url);
+
         if (url.includes("/access_tokens")) {
           return Response.json({
             token: "ghs_one",
             expires_at: new Date(Date.now() + 3_600_000).toISOString(),
           });
         }
+
         if (url.endsWith("/app/installations/7")) {
           return Response.json({ permissions, account: { login: "acme" } });
         }
+
         void init;
         return answer(new URL(url).searchParams);
       };

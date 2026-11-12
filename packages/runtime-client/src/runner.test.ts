@@ -439,6 +439,7 @@ describe("startRuntime", () => {
         workspace: async () => undefined,
         async signInGithub(threadId, github) {
           signedIn.push({ threadId, github });
+
           if (options.failSignIn) throw new Error("no shell");
         },
         async signInIdentity(threadId, identity, controlPlane) {
@@ -1015,7 +1016,9 @@ describe("startRuntime", () => {
     const plane = fakeControlPlane({
       answer: (message) => {
         if (message.method !== "machine.call") return undefined;
+
         const { op } = message.params as { op: string };
+
         if (op === "listProcesses") {
           return [
             {
@@ -1029,6 +1032,7 @@ describe("startRuntime", () => {
             },
           ];
         }
+
         if (op === "readProcessLogs") {
           return {
             stdout: btoa("7 pass"),
@@ -1037,6 +1041,7 @@ describe("startRuntime", () => {
             stderrTruncated: false,
           };
         }
+
         return null;
       },
     });
@@ -1893,6 +1898,7 @@ describe("startRuntime runs", () => {
     let working = 0;
     const together = async () => {
       if (++working === 2) started.resolve();
+
       await started.promise;
       return [text("found it")];
     };
@@ -2005,6 +2011,7 @@ describe("startRuntime runs", () => {
     await Bun.sleep(50);
     const types = plane.received.flatMap((m) => {
       if (m.type === "run.end") return ["end"];
+
       return m.type === "run.event" ? [m.event.type] : [];
     });
     expect(types.at(-1)).toBe("end");
@@ -2436,10 +2443,15 @@ describe("startRuntime answering for a bot", () => {
     const plane = fakeControlPlane({
       answer: (message) => {
         if (message.type !== "call" || message.method !== "machine.call") return undefined;
+
         const { op } = message.params as { op: string };
+
         if (op === "paths") return paths;
+
         if (op === "prepare") return { paths };
+
         if (op === "skills.install") return { listings: [] };
+
         if (op === "exec") {
           return {
             status: "exited",
@@ -2448,6 +2460,7 @@ describe("startRuntime answering for a bot", () => {
             stderr: new Uint8Array().toBase64(),
           };
         }
+
         return null;
       },
     });

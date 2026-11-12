@@ -104,7 +104,9 @@ function serveEvents(events: unknown[], gapMs: number) {
     let sent = 0;
     const next = () => {
       const event = events[sent++];
+
       if (!event) return response.end();
+
       response.write(`data: ${JSON.stringify(event)}\n\n`);
       setTimeout(next, sent < 3 ? 0 : gapMs);
     };

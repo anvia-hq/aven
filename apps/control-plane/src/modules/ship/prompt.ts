@@ -25,12 +25,15 @@ const startBranch = ({ branch, base }: Context) =>
 function modeNote(context: Context) {
   const { base, mode, pullRequests } = context;
   const [latest] = pullRequests;
+
   if (mode === "update" && latest) {
     return `This ship updates the open pull request #${latest.number}: push the branch that is checked out (git branch --show-current; it should be ${latest.branch}), which updates it, and do not open another pull request. If gh shows #${latest.number} is no longer open, stop and tell me.`;
   }
+
   if (mode === "new") {
     return `This ship is for a new, separate pull request. Work out which of the changes here (uncommitted, or committed and not yet in ${base}) are new work and which the pull requests above already hold; if you cannot tell, ask me. ${startBranch(context)} Then ship that branch as described, and open a pull request for it.`;
   }
+
   return "";
 }
 
@@ -68,6 +71,7 @@ function whereNote(context: Context) {
     `(This thread's branch is ${branch}; the repository's default branch is ${base}.)`,
     `A branch of this thread is named ${branch} or starts with ${branch}-, so that Aven finds its pull request.`,
   ];
+
   if (pullRequests.length > 0) {
     lines.push(
       "This thread's pull requests, newest first, as Aven last saw them (check with gh before relying on a state):",
@@ -76,20 +80,27 @@ function whereNote(context: Context) {
       ),
     );
   }
+
   return lines.join("\n");
 }
 
 export function shipPrompt(file: FileContent | null, context: Context) {
   const where = whereNote(context);
+
   if (!file || file.kind === "missing") return `${defaultPrompt(context)}\n\n${where}`;
+
   if (file.kind === "binary") throw new ShipPromptError(`${SHIP_PROMPT_FILE} is not a text file`);
+
   const text = file.text.trim();
+
   if (file.truncated || text.length > MAX_SHIP_PROMPT_CHARS) {
     throw new ShipPromptError(
       `${SHIP_PROMPT_FILE} is longer than ${MAX_SHIP_PROMPT_CHARS.toLocaleString("en-US")} characters`,
     );
   }
+
   if (!text) return `${defaultPrompt(context)}\n\n${where}`;
+
   const note = modeNote(context);
   return `${text}\n\n${where}${note ? `\n\n${note}` : ""}`;
 }

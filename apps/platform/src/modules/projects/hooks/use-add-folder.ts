@@ -19,7 +19,9 @@ export function useAddFolder(onAdded?: (project: Project) => void) {
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
+
     if (next) void refreshRuntimes();
+
     if (!next) {
       setRuntimeId("");
       setPath("");
@@ -33,10 +35,13 @@ export function useAddFolder(onAdded?: (project: Project) => void) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!canSubmit) return;
+
     setSubmitting(true);
     const project = await addFolder({ runtimeId: chosenRunner, path: path.trim() });
     setSubmitting(false);
+
     if (project) {
       handleOpenChange(false);
       onAdded?.(project);

@@ -21,16 +21,21 @@ export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
           receivedBinary.push(new Uint8Array(data));
           return;
         }
+
         const message = JSON.parse(data) as RuntimeToControlPlane;
         received.push(message);
+
         if (message.type === "call" && message.method === "memory.append" && transcripts.stored)
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
+
         if (message.type === "call" && options.answer) {
           const result = options.answer(message);
+
           if (result !== undefined) {
             ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
           }
         }
+
         if (message.type === "call" && message.method === "bot.memory") {
           const result = (message.params as { op: string }).op === "load" ? [] : null;
           ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));

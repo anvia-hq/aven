@@ -9,7 +9,9 @@ import type { MessageMention } from "@aven/protocol/types";
 
 function sent(prompt: string, extras: SentExtras): UserMessage {
   const message = sentPrompt(prompt, extras);
+
   if (typeof message === "string") throw new Error("Expected a message");
+
   return message;
 }
 

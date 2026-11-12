@@ -115,6 +115,7 @@ export class RuntimeConnection {
 
   post(message: ControlPlaneToRuntime) {
     if (this.#closed) throw new RuntimeOfflineError();
+
     this.send(JSON.stringify(message));
   }
 
@@ -174,6 +175,7 @@ export class RuntimeConnection {
   adopt(runId: string, run: Run) {
     this.#runs.set(runId, run);
     this.post({ type: "run.attach", runId, after: run.lastSeq, secrets: run.secrets });
+
     if (run.cancel) this.post({ type: "run.cancel", runId, reason: run.cancel });
   }
 
@@ -201,7 +203,9 @@ export class RuntimeConnection {
 
   async receive(raw: string) {
     const message = parseRuntimeFrame(raw);
+
     if (!message) return;
+
     if (message.type === "hello")
       return this.#hello(
         message.version,
@@ -213,12 +217,15 @@ export class RuntimeConnection {
         message.backends,
         message.guests,
       );
+
     if (!this.#ready) return;
+
     await this.#dispatch(message);
   }
 
   receiveBinary(frame: Uint8Array) {
     if (!this.#ready) return;
+
     this.#viewers.receive(frame);
   }
 
@@ -246,6 +253,7 @@ export class RuntimeConnection {
       );
       return;
     }
+
     this.close(
       CloseCode.UnsupportedVersion,
       `Unsupported runtime version ${version}; this control plane speaks ${WIRE_VERSION}`,
@@ -256,7 +264,9 @@ export class RuntimeConnection {
     switch (message.type) {
       case "run.event": {
         const run = this.#runs.get(message.runId);
+
         if (!run || message.seq <= run.lastSeq) return;
+
         run.lastSeq = message.seq;
         run.sink.event(message.event);
         return;
@@ -285,6 +295,7 @@ export class RuntimeConnection {
           void this.#answer(message.id, message.method, message.params);
           return;
         }
+
         await this.#answer(message.id, message.method, message.params);
         return;
       case "terminal.opened":
@@ -295,14 +306,15 @@ export class RuntimeConnection {
         return;
       case "reply":
         this.#calls.settle(message);
-        return;
     }
   }
 
   #endRun({ runId, seq, outcome, error, continuation }: RunEnd) {
     const run = this.#runs.get(runId);
     this.post({ type: "run.ack", runId });
+
     if (!run || seq <= run.lastSeq) return;
+
     this.#runs.delete(runId);
     run.sink.end(outcome, error, continuation);
     void this.hub.machineWatches.ended(run.thread.machine, run.thread.id, outcome);
@@ -345,10 +357,12 @@ export class RuntimeConnection {
 
   close(code?: number, reason?: string, endRuns = false) {
     if (this.#closed) return;
+
     this.#closed = true;
     this.closeSocket(code, reason);
     const runs = [...this.#runs.entries()];
     this.#runs.clear();
+
     if (endRuns) {
       for (const [, run] of runs) {
         void this.hub.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
@@ -357,6 +371,7 @@ export class RuntimeConnection {
     } else if (runs.length > 0) {
       this.hub.hold(this.runtimeId, runs);
     }
+
     this.#loseBotReplies();
     this.#viewers.closeAll("The runtime disconnected");
     this.#calls.rejectAll("The runtime disconnected");
@@ -421,6 +436,7 @@ export class RuntimeHub {
     const runs = held?.runs ?? new Map<string, Run>();
     for (const runId of reported) {
       const run = runs.get(runId);
+
       if (run) {
         runs.delete(runId);
         connection.adopt(runId, run);
@@ -440,25 +456,33 @@ export class RuntimeHub {
 
   runsOnMachine(machineId: string, threadId: string) {
     const agents = this.#connections.get(LOCAL_RUNTIME_ID);
+
     if (!agents) return undefined;
+
     if (agents.hasRunOnMachine(machineId, threadId)) return true;
+
     const held = this.#held.get(LOCAL_RUNTIME_ID)?.runs.values() ?? [];
     return [...held].some((run) => run.thread.machine === machineId && run.thread.id === threadId);
   }
 
   cancelRun(runtimeId: string, runId: string, reason: string) {
     const connection = this.#connections.get(runtimeId);
+
     if (connection?.ready && connection.hasRun(runId)) {
       connection.post({ type: "run.cancel", runId, reason });
       return;
     }
+
     const held = this.#held.get(runtimeId)?.runs.get(runId);
+
     if (held) held.cancel = reason;
   }
 
   #giveUp(runtimeId: string, message = "The runtime disconnected") {
     const held = this.#held.get(runtimeId);
+
     if (!held) return;
+
     clearTimeout(held.timer);
     this.#held.delete(runtimeId);
     for (const run of held.runs.values()) {

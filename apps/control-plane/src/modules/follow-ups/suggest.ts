@@ -25,12 +25,18 @@ export const clean = (suggestions: readonly string[]) => [
 
 export async function suggestFollowUps(userId: string, transcript: string) {
   const settings = await preferencesService.followUps(userId);
+
   if (!settings.enabled || !settings.providerId) return [];
+
   try {
     const selection: ModelSelection = { providerId: settings.providerId };
+
     if (settings.modelId) selection.modelId = settings.modelId;
+
     const config = await resolveModel(userId, selection);
+
     if (!config) return [];
+
     const { model } = resolveAgentModel(config);
     const { output: result } = await extract({
       model,

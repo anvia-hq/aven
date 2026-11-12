@@ -27,6 +27,7 @@ test.describe("themes", () => {
       await picker.click();
       await page.getByRole("option", { name, exact: true }).click();
       await expect(picker).toContainText(name);
+
       if (name === "Mint") await expect(html).not.toHaveAttribute("data-theme", /.+/);
       else await expect(html).toHaveAttribute("data-theme", ids[name]);
     }

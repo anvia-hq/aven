@@ -118,11 +118,16 @@ const watched = (tool: AnyTool, results: unknown[]): AnyTool =>
 
 const answerThread: FakeControlPlaneOptions["answer"] = (message) => {
   if (message.method !== "bot.thread") return undefined;
+
   const { op } = message.params as { op: string };
+
   if (op === "projects")
     return [{ id: projectId, name: "app", repository: "acme/app", defaultBranch: "main" }];
+
   if (op === "list") return [thread];
+
   if (op === "get") return { ...thread, turns: [], earlier: 0 };
+
   return thread;
 };
 

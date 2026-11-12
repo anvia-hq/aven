@@ -17,6 +17,7 @@ export class MachineProcessWatch {
 
   ended(machineId: string | undefined, threadId: string, outcome: RunOutcome | "lost") {
     if (!machineId) return Promise.resolve();
+
     const phase: Phase = outcome === "response" ? "settle" : "suspend";
     return this.#enqueue(machineId, () => this.#deliver(machineId, threadId, phase));
   }
@@ -54,11 +55,14 @@ export class MachineProcessWatch {
 
   async #deliver(machineId: string, threadId: string, phase: Phase) {
     if (this.#old.has(machineId)) return;
+
     const connection = this.caller(machineId);
+
     if (!connection) {
       this.#keep(machineId, threadId, phase);
       return;
     }
+
     try {
       await connection.call("process.watch", { threadId, phase }, WATCH_TIMEOUT_MS);
     } catch (error) {
@@ -66,6 +70,7 @@ export class MachineProcessWatch {
         this.#keep(machineId, threadId, phase);
         return;
       }
+
       if (/unknown call/i.test(describeError(error))) {
         this.#old.add(machineId);
         console.warn(
@@ -73,6 +78,7 @@ export class MachineProcessWatch {
         );
         return;
       }
+
       console.warn(`Could not ${phase} the process watch for ${threadId}:`, describeError(error));
     }
   }

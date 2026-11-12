@@ -112,6 +112,7 @@ export function DocumentTitle({
   const chosen = useRef(false);
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+
     event.preventDefault();
     const page = event.currentTarget.closest("article");
     page?.querySelector<HTMLElement>(".bn-editor")?.focus();
@@ -126,6 +127,7 @@ export function DocumentTitle({
       autoFocus={autoFocus}
       onFocus={(event) => {
         if (!autoFocus || chosen.current) return;
+
         chosen.current = true;
         event.currentTarget.select();
       }}

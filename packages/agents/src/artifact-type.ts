@@ -17,9 +17,11 @@ export function videoType(bytes: Uint8Array) {
     const brand = new TextDecoder("latin1").decode(bytes.subarray(8, 12));
     return NOT_VIDEO_BRANDS.includes(brand) ? null : "video/mp4";
   }
+
   if (startsWith(bytes, 0, [0x1a, 0x45, 0xdf, 0xa3]) && contains(bytes, "webm", 64)) {
     return "video/webm";
   }
+
   return null;
 }
 

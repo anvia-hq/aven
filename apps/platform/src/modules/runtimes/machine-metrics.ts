@@ -13,6 +13,7 @@ export const METER_HIGH = 90;
 
 export function meterLevel(percent: number | null): MeterLevel {
   if (percent === null || percent < METER_BUSY) return "low";
+
   return percent >= METER_HIGH ? "high" : "busy";
 }
 
@@ -23,6 +24,7 @@ export function busiestMetric(metrics: MachineMetric[]): MachineMetric | undefin
   let busiest: MachineMetric | undefined;
   for (const metric of metrics) {
     if (metric.percent === null) continue;
+
     if (busiest === undefined || metric.percent > (busiest.percent ?? -1)) busiest = metric;
   }
   return busiest ?? metrics[0];

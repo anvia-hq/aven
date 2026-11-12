@@ -16,6 +16,7 @@ type Props = {
 
 export function ComputerAsleepNotice({ computer, purpose, waking, onWake }: Props) {
   const exists = useWorkspaceExists(computer);
+
   if (exists === false) {
     return (
       <PanelNotice>
@@ -24,6 +25,7 @@ export function ComputerAsleepNotice({ computer, purpose, waking, onWake }: Prop
       </PanelNotice>
     );
   }
+
   return (
     <PanelNotice>
       <span className="flex flex-col items-center gap-4">

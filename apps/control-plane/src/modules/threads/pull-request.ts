@@ -22,9 +22,13 @@ type Deps = {
 export function createPullRequestSync(deps: Deps) {
   return async (thread: { id: string; organizationId: string }) => {
     const row = await deps.thread(thread.organizationId, thread.id);
+
     if (!row) return [];
+
     const project = await deps.project(thread.organizationId, row.projectId);
+
     if (!project?.githubInstallationId || !project.repoFullName) return [];
+
     const found = await deps.find(
       project.githubInstallationId,
       project.repoFullName,

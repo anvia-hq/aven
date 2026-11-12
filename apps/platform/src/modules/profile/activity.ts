@@ -21,10 +21,15 @@ export function handleOf(name: string, email: string) {
 
 export function spanLabel(ms: number) {
   if (ms <= 0) return "—";
+
   const minutes = Math.round(ms / 60_000);
+
   if (minutes < 60) return `${Math.max(1, minutes)}m`;
+
   const hours = ms / 3_600_000;
+
   if (hours < 24) return `${hours.toFixed(1)}h`;
+
   const days = Math.floor(hours / 24);
   const rest = Math.round(hours - days * 24);
   return rest > 0 ? `${days}d ${rest}h` : `${days}d`;
@@ -61,10 +66,12 @@ export function heatmapWeeks(
     const cells: (HeatmapCell | null)[] = [];
     for (let row = 0; row < 7; row += 1) {
       const time = start + row * DAY;
+
       if (time > end) {
         cells.push(null);
         continue;
       }
+
       const date = dayOf(time);
       cells.push({ date, tokens: byDate.get(date) ?? 0 });
     }
@@ -76,10 +83,15 @@ export function heatmapWeeks(
 
 export function levelOf(tokens: number, most: number) {
   if (tokens <= 0) return 0;
+
   const share = tokens / Math.max(1, most);
+
   if (share > 0.75) return 4;
+
   if (share > 0.5) return 3;
+
   if (share > 0.25) return 2;
+
   return 1;
 }
 

@@ -63,6 +63,7 @@ export function createWebSearchTool(options: WebSearchOptions) {
         }),
         signal: context.abortSignal,
       });
+
       if (!response.ok) throw new Error(`Tavily search failed with ${response.status}`);
 
       const body = (await response.json()) as TavilyResponse;

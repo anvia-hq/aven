@@ -10,6 +10,7 @@ export function useAutosave<T>(save: (value: T) => void, delayMs = 700) {
     clearTimeout(timer.current);
     const waiting = pending.current;
     pending.current = null;
+
     if (waiting) latestSave.current(waiting.value);
   }, []);
 

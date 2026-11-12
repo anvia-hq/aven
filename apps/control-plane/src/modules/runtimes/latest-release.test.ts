@@ -7,7 +7,9 @@ function setup(answers: Array<string | Error>) {
   let asked = 0;
   const fetchFn = (async () => {
     const answer = answers[Math.min(asked++, answers.length - 1)]!;
+
     if (answer instanceof Error) throw answer;
+
     return new Response(null, { status: 302, headers: { location: answer } });
   }) as unknown as typeof fetch;
   const latest = createLatestRelease({ fetchFn, now: () => now, url: "https://x.test/releases/" });

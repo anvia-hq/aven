@@ -22,7 +22,9 @@ export function useBotChanges() {
 
   useEffect(() => {
     refreshAll();
+
     if (!key) return undefined;
+
     const timer = setInterval(refreshAll, WHILE_WORKING_MS);
     return () => clearInterval(timer);
   }, [key]);

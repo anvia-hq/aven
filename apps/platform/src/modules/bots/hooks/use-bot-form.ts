@@ -20,6 +20,7 @@ export function useBotForm(bot: Bot, onDone: () => void) {
       instruction: String(data.get("instruction") ?? "").trim(),
     });
     setSubmitting(false);
+
     if (saved) onDone();
   }
 

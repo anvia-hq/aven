@@ -20,12 +20,15 @@ export function useFolderBrowser(runtimeId: string, path: string, onOpen: (path:
 
   async function createFolder(name: string) {
     if (!path || !name.trim()) return false;
+
     setCreating(true);
     const made = await attempt("Could not create the folder", () =>
       postJson<{ path: string }>(`/runtimes/${runtimeId}/folders`, { path, name }),
     );
     setCreating(false);
+
     if (!made) return false;
+
     toast.add({ title: "Folder created", description: made.path, type: "success" });
     setRefreshKey((key) => key + 1);
     onOpen(made.path);

@@ -21,6 +21,7 @@ export const decisionModelRouter = new Elysia({ prefix: "/decision-model" })
     "/",
     async ({ body, organizationId, user }) => {
       if (!(await isOwnerOrAdmin(organizationId, user.id))) throw new ForbiddenError(ONLY_ADMINS);
+
       return decisionModelService.save(organizationId, body);
     },
     { auth: true, org: true, body: saveDecisionModelBody },
@@ -29,9 +30,11 @@ export const decisionModelRouter = new Elysia({ prefix: "/decision-model" })
     "/",
     async ({ organizationId, user }) => {
       if (!(await isOwnerOrAdmin(organizationId, user.id))) throw new ForbiddenError(ONLY_ADMINS);
+
       if (!(await decisionModelService.remove(organizationId))) {
         throw new NotFoundError("No decision model is set");
       }
+
       return { removed: true };
     },
     { auth: true, org: true },

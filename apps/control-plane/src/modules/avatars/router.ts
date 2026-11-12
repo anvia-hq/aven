@@ -13,6 +13,7 @@ export const avatarsRouter = new Elysia()
       if (Number(request.headers.get("content-length") ?? 0) > AVATAR_MAX_BYTES) {
         throw new UnprocessableError("The image is too large: keep it under 256 KB");
       }
+
       const bytes = await readCapped(request);
       return avatarsService.save(user.id, bytes);
     },
@@ -23,7 +24,9 @@ export const avatarsRouter = new Elysia()
     "/users/:id/avatar",
     async ({ params, user }) => {
       const avatar = await avatarsService.read(user.id, params.id);
+
       if (!avatar) return status(404, "No avatar");
+
       return new Response(avatar.data as BodyInit, {
         headers: {
           "content-type": avatar.contentType,

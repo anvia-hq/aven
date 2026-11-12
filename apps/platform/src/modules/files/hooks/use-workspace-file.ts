@@ -16,11 +16,13 @@ type KeptFile = { key: string; file: FileResponse };
 function remember(key: string, file: FileResponse) {
   seen.delete(key);
   seen.set(key, file);
+
   if (seen.size > KEPT) seen.delete(seen.keys().next().value as string);
 }
 
 function keptOf(key: string | null): KeptFile | null {
   if (key === null) return null;
+
   const file = seen.get(key);
   return file === undefined ? null : { key, file };
 }
@@ -38,10 +40,14 @@ export function useWorkspaceFile(threadId: string, path: string | null, running:
 
   useEffect(() => {
     if (key === null) return;
+
     const fetched = answer?.data ?? null;
+
     if (fetched) remember(key, fetched);
+
     setKept((current) => {
       if (current?.key === key) return current;
+
       const file = fetched ?? keptOf(key)?.file ?? null;
       return file ? { key, file } : null;
     });

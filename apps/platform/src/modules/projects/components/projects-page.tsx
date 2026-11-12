@@ -45,6 +45,7 @@ export function ProjectsPage() {
     void navigate({ to: "/projects", search: { ...search, ...next }, replace: true });
 
   let list = <ProjectList projects={shown} threads={threads} palettes={palettes} loaded={loaded} />;
+
   if (loaded && projects.length === 0) {
     list = (
       <ProjectListEmpty>

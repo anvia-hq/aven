@@ -86,8 +86,11 @@ Bun.serve({
   port: agentModelPort,
   async fetch(request) {
     const { pathname } = new URL(request.url);
+
     if (pathname === "/health") return new Response("ok");
+
     if (!pathname.endsWith("/v1/messages")) return new Response("not found", { status: 404 });
+
     const body = await request.text();
     const reply = hasToolResult(body)
       ? answer("Wrote proof.txt on the computer.")

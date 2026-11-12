@@ -16,16 +16,23 @@ export async function requireUsableRuntime(userId: string, runtimeId: string) {
     .from(runtimes)
     .where(and(eq(runtimes.id, runtimeId), isNull(runtimes.revokedAt)));
   const refused = new UnprocessableError("That runner is not one you can use");
+
   if (!row) throw refused;
+
   if (runtimeId === LOCAL_RUNTIME_ID) return;
+
   if (row.host) {
     if (row.ownerId !== userId) throw refused;
+
     return;
   }
+
   if (!row.organizationId) throw refused;
+
   const [member] = await db
     .select({ id: members.id })
     .from(members)
     .where(and(eq(members.organizationId, row.organizationId), eq(members.userId, userId)));
+
   if (!member) throw refused;
 }

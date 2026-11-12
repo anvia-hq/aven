@@ -12,6 +12,7 @@ export function useFirstPrompt(
   useEffect(() => {
     const timer = setTimeout(() => {
       const first = takeFirstPrompt(threadId);
+
       if (first) void latest.current(first.message, first.selection);
     }, 0);
     return () => clearTimeout(timer);

@@ -12,6 +12,7 @@ export const serveDomain = (env: Env) => {
 export function describeExposure(env: Env): ExposureReport {
   const bind = env.AVEN_BIND?.trim() ?? "";
   const domain = serveDomain(env);
+
   if (domain) {
     return bind !== "" && isLoopback(bind)
       ? {
@@ -20,8 +21,10 @@ export function describeExposure(env: Env): ExposureReport {
         }
       : { ok: true, detail: `HTTPS for ${domain}` };
   }
+
   if (bind !== "" && isLoopback(bind))
     return { ok: true, detail: "reachable from this machine only" };
+
   const open = bind === "" || bind === "0.0.0.0" ? "every network this machine is on" : bind;
   return {
     ok: false,
@@ -37,8 +40,11 @@ export function describeSignups(
   registrationEnabled: boolean,
 ): ExposureReport {
   if (!registrationEnabled) return { ok: true, detail: "closed: only owners and invited people" };
+
   const local = isLoopback(env.AVEN_BIND?.trim() ?? "x") && !serveDomain(env);
+
   if (local) return { ok: true, detail: "open, to this machine only" };
+
   return {
     ok: false,
     detail:

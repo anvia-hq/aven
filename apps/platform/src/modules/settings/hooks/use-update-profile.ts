@@ -8,6 +8,7 @@ export function useUpdateProfile() {
 
   return async (name: string) => {
     const { error } = await authClient.updateUser({ name });
+
     if (error) {
       toast.add({
         title: "Could not save profile",
@@ -16,6 +17,7 @@ export function useUpdateProfile() {
       });
       return;
     }
+
     await router.invalidate();
     toast.add({ title: "Profile saved", type: "success" });
   };

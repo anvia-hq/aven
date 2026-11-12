@@ -45,6 +45,7 @@ async function repositorySkills(threadId: string, workspace: string, shown: stri
       );
       continue;
     }
+
     listed.push({
       name: skill.name,
       description: skill.description,
@@ -62,6 +63,7 @@ export class SkillStore {
 
   async dir(threadId: string) {
     if (!/^[\w-]+$/.test(threadId)) throw new Error("Invalid thread id");
+
     const dir = join(this.root, "threads", threadId);
     await mkdir(dir, { recursive: true });
     return dir;
@@ -81,14 +83,18 @@ export class SkillStore {
     for (const wanted of skills) {
       try {
         if (!SKILL_DIGEST.test(wanted.digest)) throw new Error("its digest is not one");
+
         if (!SKILL_NAME.test(wanted.name)) throw new Error("its name is not one");
+
         const target = join(dir, wanted.name);
         await cp(await this.#cached(wanted.digest, fetch), target, { recursive: true });
         const read = await readSkillFolder(target);
+
         if ("problem" in read) {
           await rm(target, { recursive: true, force: true });
           throw new Error(read.problem);
         }
+
         listed.set(read.skill.name, {
           name: read.skill.name,
           description: read.skill.description,
@@ -108,12 +114,15 @@ export class SkillStore {
         this.real ? await realpath(workspace) : WORKSPACE_DIR,
       ))
         listed.set(skill.name, skill);
+
     return [...listed.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async #cached(digest: string, fetch: FetchSkill) {
     const dir = join(this.root, "cache", digest);
+
     if (await exists(dir)) return dir;
+
     const partial = `${dir}.${crypto.randomUUID()}`;
     try {
       await new Bun.Archive(await fetch(digest)).extract(partial);

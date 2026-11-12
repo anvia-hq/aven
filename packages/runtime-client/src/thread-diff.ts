@@ -24,7 +24,9 @@ async function workingTree(root: string, run: Git) {
   const env = { GIT_INDEX_FILE: index };
   try {
     const added = await run(["add", "--all"], { cwd: root, env });
+
     if (added.code !== 0) return null;
+
     const written = await run(["write-tree"], { cwd: root, env });
     return written.code === 0 ? written.stdout.trim() : null;
   } finally {
@@ -35,9 +37,13 @@ async function workingTree(root: string, run: Git) {
 async function markTree(root: string, ref: string, message: string, run: Git) {
   const host = hostGit(run);
   const tree = await workingTree(root, host);
+
   if (!tree) return false;
+
   const commit = await host(["commit-tree", tree, "-m", message], { cwd: root, env: IDENTITY });
+
   if (commit.code !== 0) return false;
+
   const saved = await host(["update-ref", ref, commit.stdout.trim()], { cwd: root });
   return saved.code === 0;
 }
@@ -50,7 +56,9 @@ export const markFork = (root: string, run: Git = git) =>
 
 async function branchPoint(root: string, run: Git) {
   const remote = await remoteBase(root, run);
+
   if (!remote) return "HEAD";
+
   const base = await run(["merge-base", "HEAD", remote], { cwd: root });
   return base.code === 0 ? base.stdout.trim() : "HEAD";
 }
@@ -65,7 +73,9 @@ async function turnStart(root: string, run: Git) {
 async function pushedTree(root: string, run: Git, configure: Git) {
   await trackPushes(root, configure);
   const branch = await run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
+
   if (branch.code !== 0) return null;
+
   const pushed = await run(
     ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch.stdout.trim()}^{tree}`],
     { cwd: root },
@@ -75,14 +85,18 @@ async function pushedTree(root: string, run: Git, configure: Git) {
 
 async function diffStart(root: string, scope: DiffScope, run: Git, configure: Git) {
   if (scope === "turn") return turnStart(root, run);
+
   if (scope === "unshipped")
     return (await pushedTree(root, run, configure)) ?? branchPoint(root, run);
+
   return branchPoint(root, run);
 }
 
 function cut(patch: string): ThreadDiff {
   const bytes = new TextEncoder().encode(patch);
+
   if (bytes.length <= MAX_PATCH_BYTES) return { patch, truncated: false };
+
   const head = new TextDecoder().decode(bytes.subarray(0, MAX_PATCH_BYTES));
   return { patch: head.slice(0, head.lastIndexOf("\n") + 1), truncated: true };
 }
@@ -94,14 +108,21 @@ export async function threadDiff(
 ): Promise<ThreadDiff | null> {
   const host = hostGit(run);
   const now = await workingTree(root, host);
+
   if (!now) return null;
+
   const from = await diffStart(root, scope, host, run);
+
   if (!from) return { patch: "", truncated: false };
+
   const diff = await patchBetween(root, from, now, host);
+
   if (scope === "unshipped" && diff.patch !== "") {
     const whole = await patchBetween(root, await branchPoint(root, host), now, host);
+
     if (whole.patch === "") return whole;
   }
+
   return diff;
 }
 
@@ -113,11 +134,15 @@ export async function currentBranch(root: string, run: Git = git) {
 export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
   const host = hostGit(run);
   const now = await workingTree(root, host);
+
   if (!now) return null;
+
   const start = await host(["rev-parse", "--verify", "--quiet", `${FORK_REF}^{tree}`], {
     cwd: root,
   });
+
   if (start.code !== 0) return null;
+
   return patchBetween(root, start.stdout.trim(), now, host);
 }
 
@@ -138,6 +163,8 @@ async function patchBetween(root: string, from: string, now: string, host: Git) 
     ],
     { cwd: root },
   );
+
   if (diff.code !== 0) throw new Error("Could not compare the thread's changes");
+
   return cut(diff.stdout);
 }

@@ -14,6 +14,7 @@ export function useProvidersModels(providerIds: string[]) {
   useEffect(() => {
     for (const id of key ? key.split(",") : []) {
       if (cache[id] || asked.current.has(id)) continue;
+
       asked.current.add(id);
       api<(typeof cache)[string]>(`/providers/${id}/models`).then(
         (result) => setCache((all) => ({ ...all, [id]: result })),

@@ -35,11 +35,15 @@ function AssistantBlock({
   if (block.type === "text") {
     return <Markdown live={live}>{block.text}</Markdown>;
   }
+
   if (block.type === "question") return <QuestionBlock tool={block.tool} />;
+
   if (block.type === "artifacts") {
     return <ArtifactGrid threadId={threadId} artifacts={block.artifacts} />;
   }
+
   if (block.type === "fork") return <ForkCard tool={block.tool} forkId={block.forkId} />;
+
   if (block.type === "subagents") {
     return (
       <div className="flex min-w-0 flex-col">
@@ -49,6 +53,7 @@ function AssistantBlock({
       </div>
     );
   }
+
   return <ToolGroup entries={block.entries} live={live} />;
 }
 
@@ -72,11 +77,15 @@ export const ThreadMessage = memo(function ThreadMessage({
       shipRequestOf(
         message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
       ) !== null;
+
     if (isShipRequest) return <ShipRequestCard />;
+
     const note = systemNoteOf(
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
     );
+
     if (note?.kind === "process") return null;
+
     if (note) {
       return (
         <p className="my-6 text-center text-sm text-muted-foreground" data-role="note">
@@ -84,6 +93,7 @@ export const ThreadMessage = memo(function ThreadMessage({
         </p>
       );
     }
+
     const text = message.parts.some((part) => part.type === "text" && part.text);
     const author = authorOf(
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
@@ -138,9 +148,12 @@ function AssistantMessage({
 }) {
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
+
   if (parts.length === 0) return null;
+
   const shown = messageBlocks(parts);
   const folded = live ? undefined : foldedSteps(shown);
+
   if (folded) {
     return (
       <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
@@ -172,6 +185,7 @@ function AssistantMessage({
       </div>
     );
   }
+
   return (
     <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
       {shown.map((block, index, all) => (

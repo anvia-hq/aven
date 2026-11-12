@@ -78,6 +78,7 @@ export function useShipAction(
 
   const setUp = useCallback(() => {
     if (action.kind !== "set-up") return;
+
     void send(
       {
         prompt: action.command,

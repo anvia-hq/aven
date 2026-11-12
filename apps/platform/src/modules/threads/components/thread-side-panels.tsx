@@ -26,6 +26,7 @@ export function ThreadSidePanels({ threadId, running, panels, owned, handleClass
   });
 
   const sidePanels: { id: string; node: ReactNode }[] = [];
+
   if (files.open) {
     sidePanels.push({
       id: "files",
@@ -34,12 +35,14 @@ export function ThreadSidePanels({ threadId, running, panels, owned, handleClass
       ),
     });
   }
+
   if (diff.open) {
     sidePanels.push({
       id: "diff",
       node: <DiffPanel threadId={threadId} running={running} onClose={diff.close} />,
     });
   }
+
   if (owned && terminal.open) {
     sidePanels.push({
       id: "terminal",

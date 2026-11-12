@@ -24,6 +24,7 @@ const message = (tokens: number) => ({
 
 const [email, tokensArg, daysArg] = process.argv.slice(2);
 const url = process.env.E2E_DATABASE_URL;
+
 if (!email || !url) throw new Error("Usage: seed-spending.ts <email> [tokens] [days ago,…]");
 
 const tokens = Number(tokensArg ?? 1_000);
@@ -31,6 +32,7 @@ const daysAgo = (daysArg ?? "0,1,2").split(",").map(Number);
 
 const sql = new SQL(url);
 const [person] = await sql`select id from users where email = ${email}`;
+
 if (!person) throw new Error(`No person with the email ${email}`);
 
 const sessionId = crypto.randomUUID();

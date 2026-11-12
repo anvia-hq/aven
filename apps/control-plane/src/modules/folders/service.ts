@@ -17,7 +17,9 @@ async function owned(userId: string, id: string) {
     .select()
     .from(threadFolders)
     .where(and(eq(threadFolders.id, id), eq(threadFolders.userId, userId)));
+
   if (!folder) throw new FolderNotFoundError();
+
   return folder;
 }
 
@@ -87,6 +89,7 @@ export const foldersService = {
         );
       return { threadId, folderId };
     }
+
     await owned(userId, folderId);
     await threadsService.readableForPerson(userId, threadId);
     await db

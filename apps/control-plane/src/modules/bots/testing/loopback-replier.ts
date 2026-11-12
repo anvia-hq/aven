@@ -31,10 +31,12 @@ export function loopbackReplier(options: {
           createAgent: options.createAgent,
           send: (frame) => {
             if (frame.type === "bot.say") say(frame.text);
+
             if (frame.type === "bot.end") {
               if (frame.error) reject(new Error(frame.error));
               else resolve();
             }
+
             return true;
           },
           call: async (_method, params) => memory(params as BotMemoryParams),

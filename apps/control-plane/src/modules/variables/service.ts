@@ -89,7 +89,9 @@ async function requireAdmin(organizationId: string, userId: string) {
 
 async function requireScope(scope: Scope) {
   if (scope.kind !== "project") return;
+
   const project = await projectsService.get(scope.organizationId, scope.projectId);
+
   if (!project) throw new NotFoundError("Project not found");
 }
 
@@ -106,7 +108,9 @@ export const variablesService = {
 
   async set(scope: Scope, name: string, body: SetVariableBody, source: Source = "settings") {
     await requireScope(scope);
+
     if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
+
     const values = {
       valueEncrypted: encryptSecret(body.value),
       secret: body.secret,
@@ -117,17 +121,20 @@ export const variablesService = {
         .select({ id: variables.id })
         .from(variables)
         .where(and(inScope(scope), eq(variables.name, name)));
+
       if (!existing) {
         const [{ total }] = await tx
           .select({ total: count() })
           .from(variables)
           .where(inScope(scope));
+
         if (total! >= MAX_VARIABLES) {
           throw new TooManyVariablesError(
             `A ${SCOPE_LABEL[scope.kind]} has at most ${MAX_VARIABLES} variables`,
           );
         }
       }
+
       const [saved] = await tx
         .insert(variables)
         .values({ ...ownerOf(scope), name, ...values })
@@ -168,13 +175,17 @@ export const variablesService = {
 
   async remove(scope: Scope, name: string) {
     await requireScope(scope);
+
     if (scope.kind === "workspace") await requireAdmin(scope.organizationId, scope.actorId);
+
     await db.transaction(async (tx) => {
       const [removed] = await tx
         .delete(variables)
         .where(and(inScope(scope), eq(variables.name, name)))
         .returning({ secret: variables.secret });
+
       if (!removed) throw new NotFoundError("Variable not found");
+
       await tx.insert(variableEvents).values({
         ...ownerOf(scope),
         actorId: actorOf(scope),
@@ -206,6 +217,7 @@ export const variablesService = {
       );
     const rank = (row: EnvironmentVariableRow) => {
       if (row.userId) return 2;
+
       return row.projectId ? 1 : 0;
     };
     const merged = new Map<string, EnvironmentVariableRow>();

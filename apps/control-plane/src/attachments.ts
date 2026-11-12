@@ -26,20 +26,25 @@ export function prepareAttachments(files: readonly AttachmentBody[]): RunAttachm
   return files.map(({ name, mediaType, data }) => {
     const bytes = Uint8Array.fromBase64(data);
     total += bytes.length;
+
     if (total > ATTACHMENT_LIMITS.totalBytes) {
       throw new UnprocessableError(
         `The files of one message can add up to ${ATTACHMENT_LIMITS.totalBytes / MB} MB`,
       );
     }
+
     const image = imageType(bytes);
+
     if (!image) {
       return { name, mediaType: mediaType ?? "application/octet-stream", size: bytes.length, data };
     }
+
     if (bytes.length > ATTACHMENT_LIMITS.imageBytes) {
       throw new UnprocessableError(
         `${name} is larger than ${ATTACHMENT_LIMITS.imageBytes / MB} MB, the most a model takes for an image`,
       );
     }
+
     const kept = `${crypto.randomUUID()}.${ARTIFACT_EXTENSIONS[image]}`;
     return { name, mediaType: image, size: bytes.length, image: kept, data };
   });

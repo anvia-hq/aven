@@ -22,6 +22,7 @@ export function TaskTable({
   const rows = [...tasks].sort(
     (a, b) => statusOrder(a.status) - statusOrder(b.status) || a.position - b.position,
   );
+
   if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -29,6 +30,7 @@ export function TaskTable({
       </p>
     );
   }
+
   return (
     <div className="overflow-x-auto rounded-xl border">
       <Table aria-label="Tasks">

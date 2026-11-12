@@ -13,6 +13,7 @@ export function PendingAttachments({
   onRemove: (id: string) => void;
 }) {
   if (files.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-2 p-1">
       {files.map(({ id, file, preview }) =>

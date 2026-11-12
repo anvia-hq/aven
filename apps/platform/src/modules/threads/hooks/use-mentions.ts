@@ -81,7 +81,9 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
       const folder = await api<FolderResponse>(
         `/threads/${id}/files?path=${encodeURIComponent(REPO_SKILLS)}`,
       ).catch(() => undefined);
+
       if (!folder?.available) return [];
+
       return folder.entries
         .filter((entry) => entry.type === "directory")
         .map(({ name }) => ({ name, detail: "From the repository" }));
@@ -98,9 +100,11 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
             signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
           }),
         ]);
+
         if (threadId && (query === "" || !repoSkills.current)) {
           repoSkills.current = listRepoSkills(threadId);
         }
+
         const fromRepo = (await repoSkills.current) ?? [];
         const byName = new Map<string, SkillOption>();
         for (const skill of [...fromRepo, ...skills.current]) {
@@ -114,6 +118,7 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
         return threadId && "compact".includes(wanted) ? [compactItem, ...skillItems] : skillItems;
       },
     };
+
     if (!threadId) return [skillTrigger];
 
     const fileTrigger: ComposerTriggerDefinition = {
@@ -127,12 +132,16 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
         const agent =
           mentionable.current.length > 0 && "agent".startsWith(wanted) ? [agentItem] : [];
         const teammates = [...agent, ...people];
+
         if (!(await wait(SEARCH_DELAY_MS, signal))) return teammates;
+
         const found = await api<SearchResponse>(
           `/threads/${threadId}/files/search?q=${encodeURIComponent(query)}`,
           { signal },
         ).catch(() => undefined);
+
         if (!found?.available) return teammates;
+
         return [...teammates, ...found.paths.map((path) => itemOf({ type: "file", name: path }))];
       },
     };

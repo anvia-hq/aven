@@ -6,6 +6,7 @@ export const timingWanted = () => Boolean(process.env.AVEN_TIMING);
 
 export function timing(label: string): Timing {
   if (!timingWanted()) return quiet;
+
   const start = performance.now();
   let last = start;
   return {

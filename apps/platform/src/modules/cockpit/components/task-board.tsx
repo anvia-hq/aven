@@ -17,9 +17,13 @@ type DropAt = { status: TaskStatus; index: number };
 function positionAt(column: CockpitTask[], index: number) {
   const before = column[index - 1];
   const after = column[index];
+
   if (before && after) return (before.position + after.position) / 2;
+
   if (after) return after.position - 1;
+
   if (before) return before.position + 1;
+
   return 0;
 }
 
@@ -113,8 +117,11 @@ export function TaskBoard({
     const at = dropAt?.status === status ? dropAt.index : columnOf(status).length;
     setDragged(null);
     setDropAt(null);
+
     if (!task) return;
+
     if (task.status === status && at === placeOf(task)) return;
+
     void update(task, { status, position: positionAt(columnOf(status), at) });
   }
 
@@ -140,6 +147,7 @@ export function TaskBoard({
               )}
               onDragOver={(event) => {
                 event.preventDefault();
+
                 if (dropAt?.status !== status) setDropAt({ status, index: shown.length });
               }}
               onDrop={(event) => drop(event, status)}

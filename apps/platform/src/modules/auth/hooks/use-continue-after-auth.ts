@@ -11,6 +11,7 @@ export function useContinueAfterAuth({ invitation }: InvitationSearch) {
         params: { invitationId: invitation },
       });
     }
+
     return navigate({ to: "/threads" });
   };
 }

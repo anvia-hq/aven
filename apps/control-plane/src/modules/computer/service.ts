@@ -32,7 +32,9 @@ export function createComputerService(runner: Runner) {
         wakeRefused,
         WAKE_TIMEOUT_MS,
       );
+
       if (!info) throw new UnavailableError("The computer could not be started");
+
       return { available: true, state: info.state };
     },
   };

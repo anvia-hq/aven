@@ -23,6 +23,7 @@ export function AttachButton({
         hidden
         onChange={(event) => {
           if (event.target.files) onPick(event.target.files);
+
           event.target.value = "";
         }}
       />

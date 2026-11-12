@@ -17,16 +17,23 @@ function personOf(prompt: string, viewer: Viewer, senderId: string | undefined, 
 
 export function speakerOf(message: ChatMessage, viewer: Viewer, sending = false): Speaker | null {
   if (message.role !== "user") return message.parts.length === 0 ? null : AGENT;
+
   const text = textOf(message);
+
   if (shipRequestOf(text) !== null) return { kind: "person", key: "me", mine: true };
+
   const note = systemNoteOf(text);
+
   if (note?.kind === "process") return null;
+
   if (note) return AGENT;
+
   return personOf(text, viewer, message.senderId, sending);
 }
 
 export function steerSpeakerOf(steer: QueuedSteer, viewer: Viewer): Speaker | null {
   if (systemNoteOf(steer.prompt)?.kind === "process") return null;
+
   return personOf(steer.prompt, viewer, steer.senderId, false);
 }
 
@@ -35,7 +42,10 @@ export const sameSpeaker = (a: Speaker | null, b: Speaker | null) =>
 
 export function spaceBefore(previous: Speaker | null, current: Speaker) {
   if (!previous) return "";
+
   if (sameSpeaker(previous, current)) return "mt-1";
+
   if (previous.kind !== current.kind) return "mt-16";
+
   return "mt-4";
 }

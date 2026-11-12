@@ -11,6 +11,7 @@ export function useFollowUpSettings() {
 
   useEffect(() => {
     if (settings !== null) return;
+
     let current = true;
     api<{ followUps: FollowUpSettings }>("/preferences")
       .then((preferences) => current && setSettings(preferences.followUps))
@@ -23,7 +24,9 @@ export function useFollowUpSettings() {
       const done = await attempt("Could not save the small model settings", () =>
         postJson<FollowUpSettings>("/preferences/follow-ups", next, "PUT"),
       );
+
       if (done) setSettings(done);
+
       return Boolean(done);
     },
     [setSettings],

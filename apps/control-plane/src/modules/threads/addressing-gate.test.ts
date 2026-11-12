@@ -21,6 +21,7 @@ function gateWith(options: {
   const gate = createAddressingGate({
     configOf: async () => {
       if (options.config instanceof Error) throw options.config;
+
       return options.config === undefined ? config : options.config;
     },
     deciderFor: () => async (input) => {

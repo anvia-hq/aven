@@ -24,9 +24,11 @@ async function insideFolder(dirs: readonly string[], folder: string, path: strin
   const target = await realpath(join(root, path)).catch(() => {
     throw new Error(`${path || "The folder"} is not in the folder`);
   });
+
   if (target !== root && !target.startsWith(root + sep)) {
     throw new Error(`${path} is outside the folder`);
   }
+
   return { root, target };
 }
 
@@ -69,11 +71,15 @@ export async function readReadme(
   const name = README_NAMES.map((wanted) =>
     names.find((candidate) => candidate.toLowerCase() === wanted),
   ).find((found) => found !== undefined);
+
   if (!name) return { readme: null };
+
   const real = await realpath(join(target, name)).catch(() => undefined);
+
   if (!real || !real.startsWith(target + sep) || (await kindOf(real)) !== "file") {
     return { readme: null };
   }
+
   const text = await readFile(real, "utf8");
   return {
     readme: {
@@ -127,7 +133,9 @@ export async function listCommits(
   });
   const root =
     top.code === 0 ? await realpath(top.stdout.trim()).catch(() => undefined) : undefined;
+
   if (root !== target) return { commits: [], hasMore: false };
+
   const format = ["%H", "%P", "%an", "%aI", "%D", "%s"].join("%x1f") + "%x1e";
   const done = await runCommand(
     [
@@ -142,10 +150,13 @@ export async function listCommits(
     ],
     { cwd: target, timeoutMs: COMMITS_TIMEOUT_MS },
   );
+
   if (done.code !== 0) {
     if (NO_COMMITS.test(done.stderr)) return { commits: [], hasMore: false };
+
     throw new Error(`git log failed: ${done.stderr.trim().slice(0, 200)}`);
   }
+
   const records = done.stdout.split(RECORD).filter((record) => record.trim() !== "");
   return {
     commits: records.slice(0, COMMITS_PER_PAGE).map(commitOf),

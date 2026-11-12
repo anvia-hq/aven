@@ -18,5 +18,6 @@ export function AnswerForm({ tool, threadId, onSubmit }: Props) {
   if (tool.name === SECRET_TOOL_NAME) {
     return <SecretForm tool={tool} threadId={threadId} onSubmit={onSubmit} />;
   }
+
   return <QuestionForm tool={tool} threadId={threadId} onSubmit={onSubmit} />;
 }

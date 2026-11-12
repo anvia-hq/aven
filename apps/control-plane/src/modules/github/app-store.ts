@@ -43,7 +43,9 @@ export async function loadGithubApp(
     .select({ value: platformSettings.value })
     .from(platformSettings)
     .where(eq(platformSettings.key, KEY));
+
   if (!row) return null;
+
   try {
     return unseal(row.value, urls);
   } catch (error) {
@@ -67,7 +69,9 @@ export async function saveOrganizationApp(
     })
     .onConflictDoNothing({ target: githubApps.organizationId })
     .returning({ id: githubApps.id });
+
   if (!row) throw new ConflictError("This workspace already has its own GitHub App");
+
   return row.id;
 }
 
@@ -105,6 +109,8 @@ export async function useStoredGithubApp(client: {
   configure: (config: GithubConfig | null) => void;
 }) {
   if (client.configured) return;
+
   const stored = await loadGithubApp();
+
   if (stored) client.configure(stored);
 }

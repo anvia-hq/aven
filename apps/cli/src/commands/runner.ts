@@ -36,9 +36,13 @@ function serviceDefinition(): ServiceDefinition {
 
 async function storedSettings() {
   const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
+
   if (text === undefined) return undefined;
+
   const env = parseEnv(text);
+
   if (!env.AVEN_URL || !env.AVEN_RUNTIME_TOKEN) return undefined;
+
   return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN, dirs: env.AVEN_DIRS };
 }
 
@@ -48,8 +52,11 @@ function folders(value: string | undefined) {
     .map((dir) => dir.trim())
     .filter(Boolean)
     .map((dir) => resolve(dir));
+
   if (dirs.length === 0) return [homedir()];
+
   if (dirs.some((dir) => !isAbsolute(dir))) throw new Error("--dir needs absolute folders");
+
   return dirs;
 }
 
@@ -57,11 +64,14 @@ export async function runnerInstall(args: Args) {
   const stored = await storedSettings();
   const url = stringFlag(args, "url") ?? stored?.url;
   const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN ?? stored?.token;
+
   if (!url || !token)
     throw new Error(
       `Usage: aven runner install --url <control plane address> --token <token> [--dir <folder[:folder]>] (or AVEN_RUNTIME_TOKEN). The settings in ${runnerEnvFile()} are used when they are given nowhere.`,
     );
+
   if (!/^https?:\/\//.test(url)) throw new Error("--url must start with http:// or https://");
+
   if (!token.startsWith("avrt_"))
     throw new Error(
       "--token is not a runner token (they start with avrt_). Create one in Settings > Runtimes.",
@@ -69,9 +79,11 @@ export async function runnerInstall(args: Args) {
 
   if ((await capture(["git", "--version"])) === undefined)
     throw new Error("git is not installed. A runner works on its folders with it.");
+
   const dirs = folders(stringFlag(args, "dir") ?? stored?.dirs);
 
   const base = url.replace(/\/$/, "");
+
   if (!(await waitForHealthy(`${base}/health`, { timeoutMs: 0 })))
     throw new Error(`Cannot reach the control plane at ${base}/health. Check the address.`);
 
@@ -82,7 +94,9 @@ export async function runnerInstall(args: Args) {
     names,
     execPath: process.execPath,
   });
+
   if (unit?.problem) console.log(`Rewriting the runner service: ${unit.problem}`);
+
   await manager().install(serviceDefinition());
   console.log(`The runner is installed as a service. Its log: ${logFile()}`);
   console.log(await outcome(logSize));
@@ -95,7 +109,9 @@ async function outcome(from: number) {
     const last = lines.findLast((line) =>
       /runtime connected|refused|not available|required/.test(line),
     );
+
     if (last) return last;
+
     await Bun.sleep(1000);
   }
   return "No word yet from the runner. See: aven runner logs";
@@ -106,10 +122,12 @@ export async function runnerRun() {
   await loadRunnerEnv(runnerEnvFile());
   const base = process.env.AVEN_URL;
   const token = process.env.AVEN_RUNTIME_TOKEN;
+
   if (!base || !token)
     throw new Error(
       `No runner is set up. Run: aven runner install --url <address> --token <token> (settings are read from ${runnerEnvFile()})`,
     );
+
   const release = version === "dev" ? undefined : version;
   await runRunner({
     base,
@@ -135,7 +153,9 @@ export async function runnerStatus() {
 }
 export async function runnerLogs(follow: boolean) {
   const command = ["tail", "-n", "200"];
+
   if (follow) command.push("-f");
+
   await run([...command, logFile()]);
 }
 export async function runnerUninstall() {
@@ -147,7 +167,9 @@ export async function runnerUninstall() {
 
 export async function runnerUpgrade() {
   const stored = await storedSettings();
+
   if (stored === undefined) return false;
+
   await writeRunnerEnv(runnerEnvFile(), {
     url: stored.url,
     token: stored.token,

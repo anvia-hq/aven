@@ -41,9 +41,11 @@ export function createUpdateSelfTool(updateSelf: UpdateSelf) {
     inputSchema: updateSelfSchema,
     async execute(changes) {
       const { name, description, instruction } = changes;
+
       if ([name, description, instruction].every((value) => value === undefined)) {
         throw new Error("Give a name, a description or an instruction to change");
       }
+
       return { updated: true, ...(await updateSelf(changes)) };
     },
   });

@@ -13,7 +13,9 @@ const tail = (text: string) =>
 export function verifyWith(exec: AnyTool | undefined, commands: readonly string[]) {
   return async (): Promise<CommandResult[]> => {
     if (commands.length === 0) return [];
+
     if (!exec) throw new Error("The sandbox is not running, so the goal cannot be checked");
+
     const results: CommandResult[] = [];
     for (const command of commands) {
       const result = asRecord(await exec.call({ command, timeoutMs: COMMAND_TIMEOUT_MS }));
@@ -34,8 +36,11 @@ export function verifyWith(exec: AnyTool | undefined, commands: readonly string[
 
 function lastAssistantText(messages: readonly Message[]) {
   const last = messages.findLast((message) => message.role === "assistant");
+
   if (!last) return "";
+
   if (typeof last.content === "string") return last.content;
+
   return last.content.map((part) => (part.type === "text" ? part.text : "")).join("");
 }
 
@@ -59,6 +64,7 @@ export async function assessGoal(
 
   const results = await verify();
   const failing = results.filter((result) => result.exitCode !== 0);
+
   if (failing.length === 0) {
     return {
       status: "complete",

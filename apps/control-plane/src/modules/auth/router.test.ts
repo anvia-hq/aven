@@ -86,7 +86,9 @@ run("the auth macros (real postgres)", async () => {
     let answers = 0;
     const lookups = spyOn(authService, "getSession").mockImplementation(async (headers) => {
       answers += 1;
+
       if (answers === 1) throw new Error("the session lookup failed");
+
       return lookUp(headers);
     });
     const request = requestTo("/both", owner.token);

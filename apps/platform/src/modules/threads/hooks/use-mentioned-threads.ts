@@ -24,6 +24,7 @@ export function useMentionedThreads() {
       const fresh = newMentions(known.current, ids, openRef.current);
       known.current = ids;
       setWaiting(ids);
+
       if (fresh.length > 0 && finishedSoundOn()) playMention();
     } catch {}
   }, []);
@@ -43,7 +44,9 @@ export function useMentionedThreads() {
   const openKey = open.join("|");
   useEffect(() => {
     const seen = waiting.filter((id) => openRef.current.includes(id));
+
     if (seen.length === 0) return;
+
     known.current = (known.current ?? []).filter((id) => !seen.includes(id));
     setWaiting((current) => current.filter((id) => !seen.includes(id)));
     for (const id of seen) void postJson(`/threads/${id}/mentions/seen`, {}).catch(() => undefined);

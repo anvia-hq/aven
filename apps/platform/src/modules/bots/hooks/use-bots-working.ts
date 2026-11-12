@@ -15,14 +15,18 @@ function announce() {
 
 function receive(event: MessageEvent) {
   const data: unknown = event.data;
+
   if (typeof data !== "string") return;
+
   let ids: unknown;
   try {
     ids = JSON.parse(data);
   } catch {
     return;
   }
+
   if (!Array.isArray(ids)) return;
+
   working = new Set(ids.filter((id): id is string => typeof id === "string"));
   announce();
 }
@@ -35,10 +39,14 @@ function connect(): EventSource {
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
+
   if (!source) source = connect();
+
   return () => {
     listeners.delete(listener);
+
     if (listeners.size > 0) return;
+
     source?.close();
     source = null;
   };

@@ -37,7 +37,9 @@ beforeEach(() => {
 
 const latest = () => {
   const opened = FakeEventSource.opened.at(-1);
+
   if (!opened) throw new Error("no source was opened");
+
   return opened;
 };
 

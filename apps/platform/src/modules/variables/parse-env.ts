@@ -8,8 +8,10 @@ const ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t" };
 function unquote(raw: string) {
   const text = raw.trim();
   const quote = text[0];
+
   if (quote === '"' || quote === "'") {
     const end = text.indexOf(quote, 1);
+
     if (end > 0 && (text.slice(end + 1).trim() === "" || text.slice(end + 1).trim()[0] === "#")) {
       const inner = text.slice(1, end);
       return quote === '"'
@@ -17,6 +19,7 @@ function unquote(raw: string) {
         : inner;
     }
   }
+
   const comment = text.search(/\s#/);
   return (comment === -1 ? text : text.slice(0, comment)).trim();
 }
@@ -28,10 +31,13 @@ export function parseEnv(source: string): ParsedEnv {
 
   for (let index = 0; index < lines.length; index++) {
     let text = lines[index]!.trim();
+
     if (!text || text.startsWith("#")) continue;
+
     const line = index + 1;
 
     const opening = LINE.exec(text);
+
     if (opening && /^["']/.test(opening[2]!.trim())) {
       const quote = opening[2]!.trim()[0]!;
       while (
@@ -46,12 +52,15 @@ export function parseEnv(source: string): ParsedEnv {
     }
 
     const match = LINE.exec(text);
+
     if (!match) {
       issues.push({ line, text: text.slice(0, 60), reason: "Not NAME=value" });
       continue;
     }
+
     const name = match[1]!;
     const value = unquote(match[2]!);
+
     if (name.length > MAX_NAME_LENGTH) {
       issues.push({ line, text: name.slice(0, 40), reason: "Name is too long" });
     } else if (value.length > MAX_VALUE_LENGTH) {
@@ -63,6 +72,7 @@ export function parseEnv(source: string): ParsedEnv {
   }
 
   const list = [...entries].map(([name, value]) => ({ name, value }));
+
   if (list.length > MAX_VARIABLES) {
     issues.push({
       line: 0,
@@ -70,6 +80,7 @@ export function parseEnv(source: string): ParsedEnv {
       reason: `Only the first ${MAX_VARIABLES} variables are added`,
     });
   }
+
   return { entries: list.slice(0, MAX_VARIABLES), issues };
 }
 

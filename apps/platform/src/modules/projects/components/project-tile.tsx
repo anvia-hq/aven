@@ -25,7 +25,9 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
   useEffect(() => {
     const element = canvas.current;
     const context = element?.getContext("2d");
+
     if (!element || !context) return;
+
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let size = 0;
     let ink = resolveInk(element);
@@ -58,6 +60,7 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
     measure();
 
     const target = working ? 1 : 0;
+
     if (still || (!working && color.current === 0)) {
       color.current = target;
       draw();
@@ -75,6 +78,7 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
         Math.sign(target - color.current) *
         Math.min((step * 1000) / COLOR_MS, Math.abs(target - color.current));
       draw();
+
       if (working || color.current > 0) frame = requestAnimationFrame(tick);
       else animating = false;
     };

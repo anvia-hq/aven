@@ -32,7 +32,9 @@ describe("spawn_agent", () => {
     const everyoneStarted = new Promise<void>((resolve) => (release = resolve));
     const tool = createSpawnAgentTool(async () => {
       peak = Math.max(peak, ++running);
+
       if (running === MAX_PARALLEL_SUBAGENTS) release();
+
       await everyoneStarted;
       running--;
       return "ok";
@@ -45,6 +47,7 @@ describe("spawn_agent", () => {
   test("a failed subagent is reported and the others still answer", async () => {
     const tool = createSpawnAgentTool(async ({ description }) => {
       if (description === "bad") throw new Error("the model refused");
+
       return "fine";
     });
     const result = await tool.call({ tasks: [task("good"), task("bad")] });

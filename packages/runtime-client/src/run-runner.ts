@@ -26,7 +26,7 @@ export async function runRunner({
   build?: string;
   update?: (release: string | undefined) => void;
 }) {
-  let runtime: ReturnType<typeof startRuntime> | undefined;
+  let runtime: ReturnType<typeof startRuntime> | undefined = undefined;
   let stopping: Promise<void> | undefined;
   function exit(code: number) {
     stopping ??= (async () => {

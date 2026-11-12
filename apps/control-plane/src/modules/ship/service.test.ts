@@ -68,10 +68,12 @@ function setup(
       appKeyOf: async () => "app-1",
       requireWritable: async () => {
         checked.push("writable");
+
         if (!approved) throw new GithubWriteNotGrantedError("acme");
       },
       requirePush: async (_installation, token, fullName) => {
         checked.push(`push ${token} ${fullName}`);
+
         if (!canPush) throw new GithubNoPushAccessError(fullName);
       },
     },

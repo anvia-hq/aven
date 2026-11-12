@@ -52,6 +52,7 @@ export function FolderSection({
       )}
       onDragOver={(event) => {
         if (!accepts(event)) return;
+
         event.preventDefault();
         setOver(true);
       }}
@@ -60,6 +61,7 @@ export function FolderSection({
       }}
       onDrop={(event) => {
         if (!accepts(event)) return;
+
         event.preventDefault();
         event.stopPropagation();
         setOver(false);

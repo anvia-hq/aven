@@ -34,16 +34,19 @@ export function createCollection<T extends Item, Create, Update>(options: {
   const list = createListStore<T>({ path, atom, label });
   const set = (change: (items: T[]) => T[]) => {
     const items = store.get(atom);
+
     if (items !== null) store.set(atom, order(change(items)));
   };
   const refreshTags = () => void tagsStore.refresh();
 
   async function create(input: Create, failure: string) {
     const made = await attempt(failure, () => postJson<T>(path, input));
+
     if (made) {
       set((items) => [made, ...items]);
       refreshTags();
     }
+
     return made ?? null;
   }
 
@@ -70,14 +73,18 @@ export function createCollection<T extends Item, Create, Update>(options: {
     waiting.set(id, (waiting.get(id) ?? 0) + 1);
     const saved = await send(id, patch, failure);
     const left = (waiting.get(id) ?? 1) - 1;
+
     if (left > 0) waiting.set(id, left);
     else waiting.delete(id);
+
     if (saved) {
       if (left === 0) set((items) => items.map((each) => (each.id === id ? saved : each)));
+
       if ((patch as { tags?: unknown }).tags !== undefined) refreshTags();
     } else if (!removing.has(id)) {
       await list.refresh();
     }
+
     return Boolean(saved);
   }
 
@@ -91,8 +98,10 @@ export function createCollection<T extends Item, Create, Update>(options: {
         await api<void>(`${path}/${id}`, { method: "DELETE" });
         return true;
       });
+
       if (removed) refreshTags();
       else await list.refresh();
+
       return Boolean(removed);
     } finally {
       removing.delete(id);

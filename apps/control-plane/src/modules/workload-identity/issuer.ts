@@ -48,10 +48,15 @@ async function pemOf(key: CryptoKey) {
 
 async function signingKey({ privateKey, store }: IssuerOptions) {
   const configured = (privateKey ?? process.env.WORKLOAD_IDENTITY_PRIVATE_KEY)?.trim();
+
   if (configured) return importPem(configured);
+
   if (!store) return makeKey();
+
   const stored = await store.load();
+
   if (stored) return importPem(stored);
+
   return importPem(await store.save(await pemOf(await makeKey())));
 }
 
@@ -65,6 +70,7 @@ async function storedValue() {
 
 function decryptOrNull(value: string | null) {
   if (value === null) return null;
+
   try {
     return decryptSecret(value);
   } catch {
@@ -75,9 +81,11 @@ function decryptOrNull(value: string | null) {
 async function readStored() {
   const value = await storedValue();
   const pem = decryptOrNull(value);
+
   if (value !== null && pem === null) {
     console.error("The stored workload identity key cannot be read; a new one is made.");
   }
+
   return pem;
 }
 
@@ -91,9 +99,13 @@ export const workloadIdentityKeyStore: IssuerKeyStore = {
       .values({ key: SETTING_KEY, value })
       .onConflictDoNothing({ target: platformSettings.key })
       .returning({ key: platformSettings.key });
+
     if (made) return pem;
+
     const kept = decryptOrNull(await storedValue());
+
     if (kept) return kept;
+
     await db.update(platformSettings).set({ value }).where(eq(platformSettings.key, SETTING_KEY));
     return pem;
   },

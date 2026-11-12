@@ -39,6 +39,7 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
       if (!(await providersService.remove(user.id, params.id))) {
         throw new NotFoundError("Provider not found");
       }
+
       return { ok: true };
     },
     { auth: true, params: providerParams },

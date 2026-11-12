@@ -64,7 +64,9 @@ export const skillsService = {
         set: { ...values, updatedAt: new Date() },
       })
       .returning();
+
     if (!row) throw new Error("The skill was not saved");
+
     return view(row);
   },
 
@@ -98,7 +100,9 @@ export const skillsService = {
 
   async archive(digest: string) {
     const builtIn = (await builtinSkills()).find((skill) => skill.digest === digest);
+
     if (builtIn) return builtIn.archive;
+
     const [row] = await db
       .select({ archive: skills.archive })
       .from(skills)

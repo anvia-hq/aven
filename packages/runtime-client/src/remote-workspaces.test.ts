@@ -8,9 +8,8 @@ import { promptOf } from "./attachments";
 import { HostSandboxes } from "./host-sandboxes";
 import { createMachineCalls } from "./machine-calls";
 import { RemoteWorkspaces } from "./remote-workspaces";
-import type { RunRecord } from "./types";
+import type { MachineCall, RunRecord, ThreadSandbox } from "./types";
 import { createRemoteRepo } from "./testing/remote-repo";
-import type { MachineCall, ThreadSandbox } from "./types";
 
 const homes: string[] = [];
 const sandboxes: HostSandboxes[] = [];
@@ -48,8 +47,10 @@ async function machineAndAgent({
     (threadId: string): MachineCall =>
     async (op, args) => {
       ops.push(op);
+
       if (!online()) throw new Error("The computer is offline");
-      return answer({ threadId, op, args: JSON.parse(JSON.stringify(args ?? {})) });
+
+      return answer({ threadId, op, args: structuredClone(args ?? {}) });
     };
   return { sandbox, ops, agent: new RemoteWorkspaces(callFor) };
 }
@@ -131,10 +132,12 @@ describe("an agent whose computer is another machine", () => {
     let ready = false;
     while (!ready && Date.now() < deadline) {
       const root = agent.paths("t1")?.workspace;
+
       if (!root) {
         await Bun.sleep(20);
         continue;
       }
+
       try {
         ready = (await readFile(join(root, "ready"), "utf8")).includes("up");
       } catch {
@@ -227,6 +230,7 @@ describe("an agent whose computer is another machine", () => {
     const taken = await agent.takeFork("t1", fork);
 
     if (taken.empty) throw new Error("expected changes");
+
     expect(taken.files).toEqual(["b.txt"]);
     expect(taken.patchPath).toBe(`${sandbox.paths("t1").workspace}/.git/aven-forks/abcdef12.patch`);
     expect(
@@ -407,6 +411,7 @@ async function until(check: () => Promise<boolean>) {
   const deadline = Date.now() + 3000;
   while (!(await check())) {
     if (Date.now() > deadline) throw new Error("timed out");
+
     await Bun.sleep(20);
   }
 }

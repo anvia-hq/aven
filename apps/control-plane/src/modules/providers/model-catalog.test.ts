@@ -74,7 +74,9 @@ describe("modelCatalog", () => {
     const calls = { n: 0 };
     const fetchFn = (async () => {
       calls.n++;
+
       if (!up) throw new Error("down");
+
       return Response.json(catalog);
     }) as unknown as typeof fetch;
     const models = createModelCatalog(fetchFn, () => time, url);
@@ -122,7 +124,9 @@ describe("modelCatalog", () => {
     const calls = { n: 0 };
     const fetchFn = (async () => {
       calls.n++;
+
       if (!up) throw new Error("down");
+
       return Response.json(catalog);
     }) as unknown as typeof fetch;
     const models = createModelCatalog(fetchFn, () => time, url);
@@ -153,6 +157,7 @@ describe("modelCatalog", () => {
       () => time,
       () => {
         if (broken) throw new Error("no catalog address");
+
         return "https://catalog.test/api.json";
       },
     );
@@ -171,6 +176,7 @@ describe("modelCatalog", () => {
     let up = true;
     const fetchFn = (async () => {
       if (!up) throw new Error("down");
+
       return Response.json(catalog);
     }) as unknown as typeof fetch;
     const models = createModelCatalog(fetchFn, () => time, url);

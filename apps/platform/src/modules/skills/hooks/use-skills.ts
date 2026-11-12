@@ -29,17 +29,20 @@ function base64Of(blob: Blob) {
 
 function checkLimits(count: number, bytes: number) {
   if (count > MAX_FILES) throw new UploadRefused(`A skill can have at most ${MAX_FILES} files`);
+
   if (bytes > MAX_BYTES) throw new UploadRefused(`A skill can be at most ${fileSize(MAX_BYTES)}`);
 }
 
 async function readUpload(picked: File[]): Promise<SkillUploadFile[]> {
   const [only] = picked;
+
   if (picked.length === 1 && only && /\.zip$/i.test(only.name)) {
     let total = 0;
     let count = 0;
     const entries = unzipSync(new Uint8Array(await only.arrayBuffer()), {
       filter: (file) => {
         if (file.name.endsWith("/")) return false;
+
         total += file.originalSize;
         count += 1;
         checkLimits(count, total);
@@ -53,6 +56,7 @@ async function readUpload(picked: File[]): Promise<SkillUploadFile[]> {
       })),
     );
   }
+
   checkLimits(
     picked.length,
     picked.reduce((sum, file) => sum + file.size, 0),
@@ -94,13 +98,16 @@ export function useSkills() {
       await request();
       return true;
     });
+
     if (!changed) return false;
+
     await refresh();
     return true;
   }
 
   async function upload(picked: File[]) {
     if (picked.length === 0) return false;
+
     let files: SkillUploadFile[];
     try {
       files = await readUpload(picked);
@@ -113,7 +120,9 @@ export function useSkills() {
     const saved = await attempt("Could not upload skill", () =>
       postJson<Skill>("/skills", { files }),
     );
+
     if (!saved) return false;
+
     await refresh();
     toast.add({ title: "Skill uploaded", description: saved.name, type: "success" });
     return true;
@@ -129,6 +138,7 @@ export function useSkills() {
     const removed = await change("Could not remove skill", () =>
       api<{ ok: true }>(`/skills/${skill.id}`, { method: "DELETE" }),
     );
+
     if (removed) toast.add({ title: "Skill removed", description: skill.name });
   }
 

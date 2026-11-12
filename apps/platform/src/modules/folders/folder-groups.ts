@@ -7,7 +7,9 @@ export function rootOf(thread: Thread, threads: readonly Thread[]): Thread {
   while (current.parentThreadId && !seen.has(current.id)) {
     seen.add(current.id);
     const parent = threads.find((candidate) => candidate.id === current.parentThreadId);
+
     if (!parent) break;
+
     current = parent;
   }
   return current;

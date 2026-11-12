@@ -23,7 +23,9 @@ type Colour = (row: DiffRow) => HighlightedLine | null;
 
 function Code({ row, colour }: { row: DiffRow; colour: Colour }) {
   const tokens = colour(row);
+
   if (!tokens) return row.text;
+
   return tokens.map((token, at) => (
     <span
       key={at}

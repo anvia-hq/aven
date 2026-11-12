@@ -7,7 +7,9 @@ export const earlierMessageId = (index: number) => `e-${index}`;
 
 function startOf(messages: readonly ChatMessage[], end: number, limit: number) {
   const first = Math.max(0, end - limit);
+
   if (first === 0) return 0;
+
   const boundary = messages.findIndex((message, at) => at >= first && message.role === "user");
   return boundary === -1 || boundary >= end ? first : boundary;
 }

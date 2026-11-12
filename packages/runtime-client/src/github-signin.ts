@@ -18,6 +18,7 @@ git config --global user.email "aven@localhost"
 
 export function signInCommand(github: RunGithub | undefined) {
   if (!github) return { script: SIGN_OUT, env: {} as Record<string, string> };
+
   return {
     script: SIGN_IN,
     env: {

@@ -17,7 +17,9 @@ export function useCompactThread(threadId: string) {
         postJson<{ ok: true }>(`/threads/${threadId}/compact`, selection),
       );
       setCompacting(false);
+
       if (!started) return false;
+
       toast.add({
         title: "Compacting",
         description: "The agent is summarizing the conversation so far",

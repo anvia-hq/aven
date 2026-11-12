@@ -22,6 +22,7 @@ function chunked(sizes: number[]) {
   const stream = new ReadableStream<Uint8Array>({
     pull(controller) {
       const size = sizes[sent++];
+
       if (size === undefined) controller.close();
       else controller.enqueue(new Uint8Array(size).fill(7));
     },

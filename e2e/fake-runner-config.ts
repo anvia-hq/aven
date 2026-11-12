@@ -43,6 +43,7 @@ export function fakeRunnerProcessEnv(
   const env: Record<string, string> = {};
   for (const [name, value] of Object.entries(base)) {
     if (value === undefined || isFakeRunnerSwitch(name)) continue;
+
     env[name] = value;
   }
   for (const [name, value] of Object.entries(switches)) {
@@ -51,6 +52,7 @@ export function fakeRunnerProcessEnv(
         `${name} is not a fake runner switch; docs/rules/0006-e2e-fake-runner.md lists them`,
       );
     }
+
     env[name] = value;
   }
   return env;
@@ -75,7 +77,9 @@ function afterMsOf(env: FakeRunnerEnv, name: FakeRunnerSwitch) {
 
 function endingOf(env: FakeRunnerEnv): FakeRunEnding {
   const { runEnds, runEndsAfterMs } = FAKE_RUNNER_SWITCHES;
+
   if (on(env, runEnds)) return { kind: "at-once" };
+
   const ms = afterMsOf(env, runEndsAfterMs);
   return ms === undefined ? { kind: "held-open" } : { kind: "after", ms };
 }
@@ -83,15 +87,23 @@ function endingOf(env: FakeRunnerEnv): FakeRunEnding {
 function runOf(env: FakeRunnerEnv): FakeRunnerRun {
   const { subagents, streamWords, streamLines, streamEveryMs, secret, questions, runFails } =
     FAKE_RUNNER_SWITCHES;
+
   if (on(env, subagents)) return { kind: "subagents" };
+
   const words = countOf(env, streamWords, 0);
   const lines = countOf(env, streamLines, 0);
   const everyMs = countOf(env, streamEveryMs, 500);
+
   if (words > 0) return { kind: "stream", unit: "word", count: words, everyMs };
+
   if (lines > 0) return { kind: "stream", unit: "line", count: lines, everyMs };
+
   if (on(env, secret)) return { kind: "secret" };
+
   const asked = given(env, questions);
+
   if (asked) return { kind: "questions", count: asked === "2" ? 2 : 1 };
+
   return { kind: "plain", ending: endingOf(env), failure: valueOf(env, runFails) };
 }
 

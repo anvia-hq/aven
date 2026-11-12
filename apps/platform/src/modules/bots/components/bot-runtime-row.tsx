@@ -24,6 +24,7 @@ export function BotRuntimeRow({ bot }: { bot: Bot }) {
         items={labels}
         onValueChange={(value) => {
           if (!value) return;
+
           void update(bot, { runtimeId: value === DEFAULT ? null : String(value) });
         }}
       >

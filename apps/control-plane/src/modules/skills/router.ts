@@ -25,6 +25,7 @@ export const skillsRouter = new Elysia({ prefix: "/skills" })
       if (!(await skillsService.remove(user.id, params.id))) {
         throw new NotFoundError("Skill not found");
       }
+
       return { ok: true };
     },
     { auth: true, params: skillParams },

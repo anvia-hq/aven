@@ -24,6 +24,7 @@ export function pullsByBranch(pulls: OpenPullPayload[], fullName: string) {
   const byBranch = new Map<string, { number: number; title: string }>();
   for (const pull of pulls) {
     if (pull.head.repo?.full_name !== fullName || byBranch.has(pull.head.ref)) continue;
+
     byBranch.set(pull.head.ref, { number: pull.number, title: pull.title });
   }
   return byBranch;

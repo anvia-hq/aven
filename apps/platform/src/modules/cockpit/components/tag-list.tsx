@@ -10,6 +10,7 @@ export function TagList({
   to: "/cockpit/inbox" | "/cockpit/tasks" | "/cockpit/notes";
 }) {
   if (tags.length === 0) return null;
+
   return (
     <span className="flex flex-wrap gap-1">
       {tags.map((tag) => (

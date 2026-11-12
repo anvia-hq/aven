@@ -10,6 +10,7 @@ export function createTerminalService(hub: RuntimeHub) {
   return {
     async requireShell(organizationId: string, userId: string, threadId: string) {
       const thread = await threadsService.owned({ organizationId, userId }, threadId);
+
       if ((thread.lastRunBy ?? thread.createdBy) !== userId) {
         throw new ForbiddenError("Only the person the thread last ran as has its terminal");
       }

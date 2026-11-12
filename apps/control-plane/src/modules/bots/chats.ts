@@ -26,7 +26,9 @@ export const createBotChats = (runner: BotRunner) => ({
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
     const attachments = prepareAttachments(files);
     const model = await modelOf(userId, bot);
+
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
+
     await runner.send(bot, userId, text, model, attachments);
   },
 
@@ -39,15 +41,19 @@ export const createBotChats = (runner: BotRunner) => ({
     relaysPersonsWord,
   }: BotLetter): Promise<BotSent> {
     const target = await botsService.getByHandle(userId, handle);
+
     if (!target) {
       throw new UnprocessableError(`No bot with the handle "${handle}". Use list_bots, or "user".`);
     }
+
     if (target.id === from.id) throw new UnprocessableError("A bot cannot message itself");
+
     if (hops + 1 > BOT_MAX_HOPS) {
       throw new UnprocessableError(
         "Too many bot-to-bot messages in a row. Message the person instead.",
       );
     }
+
     await runner.deliver({
       bot: target,
       userId,

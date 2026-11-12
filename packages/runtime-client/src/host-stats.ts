@@ -1,5 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { statfs } from "node:fs/promises";
+import { readFile, statfs } from "node:fs/promises";
 import { cpus, freemem, platform, totalmem } from "node:os";
 
 import { runCommand } from "./run-command";
@@ -36,7 +35,9 @@ export function parseMeminfo(text: string) {
   };
   const total = kib("MemTotal");
   const available = kib("MemAvailable");
+
   if (total === undefined || available === undefined) return undefined;
+
   return { total, used: Math.max(0, total - available) };
 }
 
@@ -45,7 +46,9 @@ export function parseVmStat(text: string, totalBytes: number) {
   const pages = (name: string) =>
     Number(text.match(new RegExp(`^Pages ${name}:\\s+(\\d+)`, "m"))?.[1]);
   const free = pages("free") + pages("inactive") + (pages("speculative") || 0);
+
   if (!Number.isFinite(size) || !Number.isFinite(free)) return undefined;
+
   return { total: totalBytes, used: Math.max(0, totalBytes - free * size) };
 }
 
@@ -53,11 +56,14 @@ async function memory() {
   try {
     if (platform() === "linux") {
       const found = parseMeminfo(await readFile("/proc/meminfo", "utf8"));
+
       if (found) return found;
     }
+
     if (platform() === "darwin") {
       const result = await runCommand(["vm_stat"], { timeoutMs: 3_000 });
       const found = result.code === 0 ? parseVmStat(result.stdout, totalmem()) : undefined;
+
       if (found) return found;
     }
   } catch {}

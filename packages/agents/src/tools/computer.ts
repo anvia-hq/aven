@@ -27,6 +27,7 @@ export function createComputerTools(host: ComputerHost) {
     inputSchema: z.object({}),
     async execute() {
       const { before, state } = await host.wake();
+
       if (before === "asleep") {
         return {
           state,
@@ -34,6 +35,7 @@ export function createComputerTools(host: ComputerHost) {
             "The computer was asleep and is awake now. What was running in it before has stopped; /workspace is as you left it.",
         };
       }
+
       return { state, summary: "The computer was already awake." };
     },
   });

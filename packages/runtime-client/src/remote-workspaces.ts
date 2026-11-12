@@ -1,12 +1,10 @@
-import type { SandboxPaths } from "@aven/agents/types";
-import type { RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
-import type { SkillListing } from "@aven/agents/types";
+import type { SandboxPaths, SkillListing } from "@aven/agents/types";
+import type { ArtifactContent, RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
 import type { TakenChanges } from "@aven/agents/tools/types";
 
 import { extname } from "node:path";
 import { asRecord, errorMessage } from "@aven/agents/values";
 import { ARTIFACT_EXTENSIONS } from "@aven/protocol/runtime-wire";
-import type { ArtifactContent } from "@aven/protocol/types";
 import { envOf, withProjectEnv } from "./project-env";
 import { RemoteSandbox } from "./remote-sandbox";
 import { startedOnUse } from "./started-on-use";
@@ -74,7 +72,9 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     keep: async (threadId: string, name: string, bytes: Uint8Array) => {
       const mediaType = ARTIFACT_MEDIA_TYPES[name.slice(name.lastIndexOf(".") + 1)];
       const data = bytes.toBase64();
+
       if (mediaType) this.#image(threadId, name, { mediaType, data });
+
       await this.callFor(threadId)("artifacts.keep", { name, data }).catch(() =>
         this.#wait(threadId, { op: "artifacts.keep", args: { name, data } }),
       );
@@ -105,6 +105,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
   async #settle(threadId: string) {
     if (!this.#waiting.get(threadId)?.length) return;
+
     await this.#deliver(threadId, this.callFor(threadId)).catch(() => undefined);
   }
 
@@ -113,7 +114,9 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     while (waiting?.length) {
       const next = waiting[0]!;
       const result = await call(next.op, next.args);
+
       if (next.op === "uploads.save") this.#placedUpload(threadId, result);
+
       waiting.shift();
     }
     this.#waiting.delete(threadId);
@@ -121,9 +124,13 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
   #placedUpload(threadId: string, result: unknown) {
     const path = asRecord(result).path;
+
     if (typeof path !== "string" || path.length === 0) return;
+
     const name = path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+
     if (!name) return;
+
     const placed = this.#placed.get(threadId) ?? new Map<string, string>();
     placed.set(name, path);
     this.#placed.set(threadId, placed);
@@ -134,24 +141,34 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
   #claim(threadId: string, name: string) {
     const path = this.#placed.get(threadId)?.get(name);
+
     if (!path) return;
+
     const pending = this.#pending.get(threadId);
+
     if (!pending) return;
+
     const left = pending.filter((item) => item !== path);
+
     if (left.length === 0) this.#pending.delete(threadId);
     else this.#pending.set(threadId, left);
   }
 
   #placedNote(threadId: string) {
     const pending = this.#pending.get(threadId);
+
     if (!pending?.length) return;
+
     this.#pending.delete(threadId);
+
     if (pending.length === 1) return `An attached file is now on the computer at ${pending[0]}.`;
+
     return `Attached files are now on the computer:\n${pending.map((path) => `- ${path}`).join("\n")}`;
   }
 
   #flush(threadId: string, call: MachineCall) {
     if (!this.#waiting.has(threadId) || this.#delivering.has(threadId)) return;
+
     this.#deliver(threadId, call).catch((error: unknown) => {
       console.warn(`Files kept for ${threadId} are still waiting:`, errorMessage(error));
     });
@@ -161,7 +178,9 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     install: async (threadId: string, skills: readonly RunSkill[], fetch: FetchSkill) => {
       const call = this.callFor(threadId);
       const first = (await call("skills.install", { skills })) as InstallAnswer;
+
       if (!("missing" in first)) return first.listings;
+
       const archives: Record<string, string> = {};
       for (const digest of first.missing) archives[digest] = (await fetch(digest)).toBase64();
       const second = (await call("skills.install", { skills, archives })) as InstallAnswer;
@@ -191,16 +210,21 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
           repo: access,
           folder: directory,
         })) as { paths: SandboxPaths | null };
+
         if (prepared.paths) this.#paths.set(thread.id, prepared.paths);
+
         await this.#deliver(thread.id, raw);
       })().catch((error: unknown) => {
         preparing = undefined;
         throw error;
       }));
+
     if (!this.#paths.has(thread.id)) {
       const paths = (await call("paths").catch(() => null)) as SandboxPaths | null;
+
       if (paths) this.#paths.set(thread.id, paths);
     }
+
     const remote = new RemoteSandbox(thread.id, call, () => this.#paths.get(thread.id)?.workspace);
     const runtime = withProjectEnv(startedOnUse(remote, start), () => this.#env.get(thread.id));
     return {
@@ -239,6 +263,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
     if (env?.length) this.#env.set(threadId, envOf(env));
     else this.#env.delete(threadId);
+
     void this.callFor(threadId)("setProjectEnv", { env }).catch(() => undefined);
   }
 

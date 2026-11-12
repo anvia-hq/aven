@@ -7,7 +7,9 @@ import { withUserBus } from "./user-bus";
 
 export function updateCommand(execPath: string, release: string | undefined) {
   const command = [execPath, "update"];
+
   if (release) command.push("--release", release);
+
   return command;
 }
 
@@ -17,14 +19,17 @@ export async function startDetachedUpdate(
   execPath = process.execPath,
 ) {
   const command = updateCommand(execPath, release);
+
   if (process.platform === "linux") {
     const unit = `aven-update-${Date.now()}`;
     const started = Bun.spawnSync(
       ["systemd-run", "--user", "--collect", "--quiet", `--unit=${unit}`, "--", ...command],
       { env: withUserBus(process.env, process.getuid?.()), stdout: "ignore", stderr: "ignore" },
     );
+
     if (started.exitCode === 0) return;
   }
+
   await mkdir(logsDir(home), { recursive: true });
   const log = openSync(join(logsDir(home), "update.log"), "a");
   Bun.spawn(command, {

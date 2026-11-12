@@ -42,7 +42,9 @@ export function compactionFor(
   const contextWindow = "contextWindow" in source ? source.contextWindow : undefined;
   const trigger =
     afterTokens ?? (contextWindow ? Math.floor(contextWindow * COMPACT_AT) : undefined);
+
   if (!trigger) return undefined;
+
   return {
     trigger: { afterTokens: trigger },
     compactor: createSummaryMemoryCompactor({
@@ -55,6 +57,7 @@ export function compactionFor(
 
 function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
   if (config.provider === "anthropic") return withAnthropicReasoning(model);
+
   const responses =
     config.provider === "openai" ||
     (config.provider === "azure" && azureApiFor(config.modelId ?? "") === "responses");
@@ -64,6 +67,7 @@ function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
 function resolveModel(source: ModelSource) {
   if ("model" in source)
     return { model: source.model, providerOptions: undefined, controls: undefined };
+
   return {
     model: withUniqueToolCallIds(
       withoutEmptyAssistantText(withHistoryItOwns(createModel(source, source.apiKey), source)),

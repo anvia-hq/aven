@@ -38,11 +38,15 @@ export function latestReviews(reviews: ReviewPayload[]): GithubPullDetail["revie
   const latest = new Map<string, GithubPullDetail["reviews"][number]["state"]>();
   for (const review of reviews) {
     if (!review.user) continue;
+
     const state = review.state.toLowerCase();
+
     if (state !== "approved" && state !== "changes_requested" && state !== "dismissed") {
       if (!latest.has(review.user.login)) latest.set(review.user.login, "commented");
+
       continue;
     }
+
     latest.set(review.user.login, state);
   }
   return [...latest].map(([login, state]) => ({ login, state }));
@@ -52,18 +56,23 @@ const FAILED = new Set(["failure", "cancelled", "timed_out", "action_required", 
 
 function runState(run: CheckRunPayload): GithubCheckRun["state"] {
   if (run.status !== "completed") return "pending";
+
   return FAILED.has(run.conclusion ?? "") ? "failure" : "success";
 }
 
 export function checksOf(runs: CheckRunPayload[] | null): GithubPullDetail["checks"] {
   if (!runs || runs.length === 0) return { state: "none", runs: [] };
+
   const shaped = runs.map((run): GithubCheckRun => ({
     name: run.name,
     state: runState(run),
     url: run.html_url,
   }));
   let state: GithubCheckRun["state"] = "success";
+
   if (shaped.some((run) => run.state === "pending")) state = "pending";
+
   if (shaped.some((run) => run.state === "failure")) state = "failure";
+
   return { state, runs: shaped };
 }

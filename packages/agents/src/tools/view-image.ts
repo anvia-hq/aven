@@ -18,12 +18,15 @@ export function createViewImageTool(files: ImageFiles) {
     async execute({ path }, context) {
       const bytes = await files.readFile({ path, abortSignal: context?.abortSignal });
       const mediaType = imageType(bytes);
+
       if (!mediaType) throw new Error(`${path} is not a PNG, JPEG, GIF or WebP image`);
+
       if (bytes.length > MAX_VIEW_IMAGE_BYTES) {
         throw new Error(
           `${path} is ${bytes.length} bytes; images up to ${MAX_VIEW_IMAGE_BYTES / 1024 / 1024} MiB can be viewed`,
         );
       }
+
       return ToolOutput.content([
         { type: "text", text: `${path} (${mediaType}, ${bytes.length} bytes)` },
         {

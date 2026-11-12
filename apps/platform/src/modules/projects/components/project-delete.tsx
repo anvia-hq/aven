@@ -20,6 +20,7 @@ export function ProjectDelete({ project }: { project: Project }) {
   const deleteProject = useDeleteProject();
 
   if (!canManage) return null;
+
   return (
     <div className="flex items-center justify-between gap-4 border-t px-4 py-2.5 text-sm">
       <span className="text-muted-foreground">

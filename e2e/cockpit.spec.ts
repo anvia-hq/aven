@@ -60,6 +60,7 @@ test.describe("Cockpit", () => {
 
     await page.route("**/api/cockpit/inbox/*", async (route) => {
       if (route.request().method() === "PATCH") await new Promise((done) => setTimeout(done, 800));
+
       await route.continue();
     });
     await reader.locator(".bn-editor").click();
@@ -103,10 +104,12 @@ test.describe("Cockpit", () => {
       const drawer = page.getByRole("article", { name: "New task" });
       await expect(drawer.getByRole("textbox", { name: "Title" })).toBeFocused();
       await page.keyboard.type(title);
+
       if (tag) {
         await drawer.getByRole("textbox", { name: "Tags" }).fill(tag);
         await drawer.getByRole("textbox", { name: "Tags" }).press("Enter");
       }
+
       await drawer.getByRole("button", { name: "Create task" }).click();
       await expect(drawer).toHaveCount(0);
     };

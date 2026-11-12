@@ -9,6 +9,7 @@ export function useAttachmentDrop(attachments: ReturnType<typeof useAttachments>
     "data-dragging": dragging || undefined,
     onDragOver(event: DragEvent<HTMLDivElement>) {
       if (!event.dataTransfer.types.includes("Files")) return;
+
       event.preventDefault();
       setDragging(true);
     },
@@ -17,13 +18,16 @@ export function useAttachmentDrop(attachments: ReturnType<typeof useAttachments>
     },
     onDropCapture(event: DragEvent<HTMLDivElement>) {
       setDragging(false);
+
       if (event.dataTransfer.files.length === 0) return;
+
       event.preventDefault();
       event.stopPropagation();
       attachments.add(event.dataTransfer.files);
     },
     onPasteCapture(event: ClipboardEvent<HTMLDivElement>) {
       if (event.clipboardData.files.length === 0) return;
+
       event.preventDefault();
       event.stopPropagation();
       attachments.add(event.clipboardData.files);

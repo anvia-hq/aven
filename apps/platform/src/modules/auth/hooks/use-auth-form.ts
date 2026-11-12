@@ -27,6 +27,7 @@ export function useAuthForm(mode: AuthMode, onSuccess: () => void) {
       setError(result.error.message ?? "Something went wrong");
       return;
     }
+
     resetPlatformConfig();
     onSuccess();
   }

@@ -78,7 +78,9 @@ export const threadsRouter = (
           await threadsService.update({ organizationId, userId: user.id }, params.id, body),
           "Thread not found",
         );
+
         if (body.state === "archived") putAway({ id: thread.id, runtimeId: thread.runtimeId });
+
         return thread;
       },
       { thread: "own", params: threadParams, body: updateThreadBody },

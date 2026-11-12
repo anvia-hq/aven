@@ -11,19 +11,25 @@ import type { LocalRunnerMode } from "./types";
 export const MODES = ["on", "off", "host"] as const;
 export function localRunnerMode(env: string | undefined): LocalRunnerMode {
   const mode = env || "on";
+
   if (!MODES.includes(mode as LocalRunnerMode))
     throw new Error(`AVEN_LOCAL_RUNNER must be one of ${MODES.join(", ")}, got "${mode}"`);
+
   return mode as LocalRunnerMode;
 }
 
 export async function startLocalRunner(port: number) {
   const mode = localRunnerMode(process.env.AVEN_LOCAL_RUNNER);
+
   if (mode === "off") return undefined;
+
   localRunnerToken(process.env.AVEN_LOCAL_RUNNER_TOKEN, mode);
+
   if (mode === "host") {
     await runtimesService.ensureLocal();
     return undefined;
   }
+
   const home = process.env.AVEN_RUNTIME_HOME || undefined;
   await runtimesService.ensureLocal();
 

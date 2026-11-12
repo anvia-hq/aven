@@ -119,26 +119,36 @@ function harness(
     createAgent,
     send: (frame) => {
       if (options.linkUp && !options.linkUp()) return false;
+
       sent.push(frame);
       return true;
     },
     call: async (method, params) => {
       calls.push({ method, params });
+
       if (method === "bot.create") {
         const { name } = params as { name: string };
         return { id: "b2", name, handle: name.toLowerCase() };
       }
+
       if (method === "bot.send") {
         if (options.failSend) throw new Error('No bot with the handle "ghost"');
+
         return { handle: "scout", name: "Scout" };
       }
+
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
+
       if (method === "bot.goal") return null;
+
       if (method === "bot.skill") {
         const archive = options.archives?.get((params as { digest: string }).digest);
+
         if (!archive) throw new Error("This reply has no such skill");
+
         return { data: archive.toBase64() };
       }
+
       return memoryAnswer(params);
     },
     boxes,
@@ -771,9 +781,12 @@ describe("BotReplies", () => {
       {
         exec: (command) => {
           ran.push(command);
+
           if (command === "test")
             return { status: "exited", exitCode: 1, stdout: "", stderr: "2 failed" };
+
           if (command === "lint") return { status: "timed_out", stdout: "", stderr: "" };
+
           return { status: "exited", exitCode: 0, stdout: "fine", stderr: "" };
         },
       },

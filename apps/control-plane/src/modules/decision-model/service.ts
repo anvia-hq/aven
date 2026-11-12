@@ -31,7 +31,9 @@ export const decisionModelService = {
 
   async save(organizationId: string, { kind, modelId, apiKey }: SaveDecisionModelBody) {
     const existing = await rowOf(organizationId);
+
     if (!existing && !apiKey) throw new UnprocessableError("Enter the key of the decision model");
+
     const values = {
       kind,
       modelId: modelId ?? DEFAULT_MODEL[kind],
@@ -43,7 +45,9 @@ export const decisionModelService = {
       .values({ organizationId, ...values })
       .onConflictDoUpdate({ target: decisionModels.organizationId, set: values })
       .returning();
+
     if (!saved) throw new UnprocessableError("The decision model could not be saved");
+
     return view(saved);
   },
 
@@ -57,7 +61,9 @@ export const decisionModelService = {
 
   async config(organizationId: string): Promise<DecisionConfig | null> {
     const row = await rowOf(organizationId);
+
     if (!row) return null;
+
     const apiKey = decryptOrUnavailable(row.apiKeyEncrypted, {
       logged: `Could not decrypt the decision model key of workspace ${organizationId}:`,
       message: "The decision model's saved key could not be read; enter it again",

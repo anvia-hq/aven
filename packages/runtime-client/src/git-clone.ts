@@ -55,9 +55,13 @@ export async function cloneRepository(
       ["clone", "--single-branch", "--branch", access.defaultBranch, "--", access.cloneUrl, "."],
       { cwd: dir, env },
     );
+
     if (cloned.code !== 0) throw new Error(redact(cloned.stderr || cloned.stdout));
+
     const branched = await run(["checkout", "-b", threadBranch(threadId)], { cwd: dir });
+
     if (branched.code !== 0) throw new Error(redact(branched.stderr || branched.stdout));
+
     await trackPushes(dir, run);
   } catch (error) {
     await clearDirectory(dir);

@@ -13,7 +13,9 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   const fork = all.find((thread) => thread.id === forkId);
   const archived = fork?.state === "archived";
   let status = "Fork";
+
   if (fork) status = fork.running ? "Working" : "Idle";
+
   if (archived) status = "Archived";
 
   const body = (
@@ -55,6 +57,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
         {body}
       </div>
     );
+
   return (
     <Link
       to="/threads/$threadId"

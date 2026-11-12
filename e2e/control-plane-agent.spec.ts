@@ -29,6 +29,7 @@ function start(command: string, args: string[], env: NodeJS.ProcessEnv): Proc {
   let log = "";
   const take = (chunk: Buffer) => {
     log += chunk.toString();
+
     if (log.length > 24_000) log = log.slice(-24_000);
   };
   child.stdout?.on("data", take);
@@ -38,6 +39,7 @@ function start(command: string, args: string[], env: NodeJS.ProcessEnv): Proc {
 
 async function stop(proc: Proc | undefined) {
   if (!proc || proc.child.exitCode !== null) return;
+
   proc.child.kill("SIGTERM");
   await new Promise((resolve) => proc.child.once("exit", resolve));
 }
@@ -49,9 +51,12 @@ async function untilUp(url: string, proc: Proc) {
     if (proc.child.exitCode !== null) {
       throw new Error(`${url} exited ${proc.child.exitCode}\n${proc.output()}`);
     }
+
     try {
       const response = await fetch(url);
+
       if (response.ok) return;
+
       last = String(response.status);
     } catch (error) {
       last = error instanceof Error ? error.message : String(error);
@@ -92,6 +97,7 @@ test.describe("an agent on the control plane", () => {
       env: { ...process.env, DATABASE_URL: databaseUrl },
       stdio: "inherit",
     });
+
     if ((await new Promise((resolve) => setup.once("exit", resolve))) !== 0) {
       throw new Error("could not prepare the agent database");
     }
@@ -151,6 +157,7 @@ test.describe("an agent on the control plane", () => {
 
   test.afterEach(async ({ page }, info) => {
     if (info.status === info.expectedStatus) return;
+
     console.log(page.url());
     for (const proc of procs) console.log(proc.output());
   });

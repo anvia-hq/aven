@@ -45,6 +45,7 @@ export default function RichTextEditorView({
   const loading = useRef(false);
   useEffect(() => {
     if (blocks || !value.trim()) return;
+
     loading.current = true;
     editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(value));
     loading.current = false;
@@ -54,10 +55,14 @@ export default function RichTextEditorView({
   const frame = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = frame.current;
+
     if (!element) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       const menu = editor.getExtension(SuggestionMenu);
+
       if (event.key !== "Escape" || !menu?.shown()) return;
+
       event.stopPropagation();
       event.preventDefault();
       menu.closeMenu();
@@ -75,6 +80,7 @@ export default function RichTextEditorView({
         className={className}
         onChange={() => {
           if (loading.current || !onChange) return;
+
           onChange(isEmpty(editor.document) ? "" : JSON.stringify(editor.document));
         }}
       />

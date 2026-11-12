@@ -37,6 +37,7 @@ async function load(scope: VariableScope) {
   const startedAt = scopeGeneration(key);
   const known = store.get(variablesAtom)[key] !== undefined;
   let request = inflight.get(key);
+
   if (!request) {
     const started = api<Variable[]>(path(scope)).finally(() => {
       if (inflight.get(key) === started) inflight.delete(key);
@@ -44,12 +45,16 @@ async function load(scope: VariableScope) {
     inflight.set(key, started);
     request = started;
   }
+
   try {
     const list = await request;
+
     if (startedIn !== generation || startedAt !== scopeGeneration(key)) return;
+
     store.set(variablesAtom, (all) => ({ ...all, [key]: list }));
   } catch (failure) {
     if (startedIn !== generation || startedAt !== scopeGeneration(key)) return;
+
     if (!known) {
       toast.add({
         title: "Could not load variables",
@@ -75,7 +80,9 @@ export function useVariables(scope: VariableScope) {
       await request();
       return true;
     });
+
     if (!changed) return false;
+
     invalidate(keyOf(scope));
     await load(scope);
     return true;
@@ -85,7 +92,9 @@ export function useVariables(scope: VariableScope) {
     const saved = await change("Could not save variable", () =>
       postJson<Variable>(path(scope, name), body, "PUT"),
     );
+
     if (saved) toast.add({ title: "Variable saved", description: name, type: "success" });
+
     return saved;
   }
 
@@ -95,6 +104,7 @@ export function useVariables(scope: VariableScope) {
         await postJson<Variable>(path(scope, name), { value, secret }, "PUT");
       }
     });
+
     if (saved) {
       toast.add({
         title: entries.length === 1 ? "Variable saved" : `${entries.length} variables saved`,
@@ -102,6 +112,7 @@ export function useVariables(scope: VariableScope) {
         type: "success",
       });
     }
+
     return saved;
   }
 
@@ -109,6 +120,7 @@ export function useVariables(scope: VariableScope) {
     const removed = await change("Could not remove variable", () =>
       api<void>(path(scope, variable.name), { method: "DELETE" }),
     );
+
     if (removed) toast.add({ title: "Variable removed", description: variable.name });
   }
 

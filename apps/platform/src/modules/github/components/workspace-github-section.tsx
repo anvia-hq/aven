@@ -20,6 +20,7 @@ function standingOf({ configured, own, canSetUpWorkspace }: GithubStatus): Stand
         "Repositories are imported through it, and people connect their GitHub account to it to ship. An app made private can be installed only by its owner: to install it on another organization, make it public in its settings on GitHub (Advanced > Make public).",
     };
   }
+
   if (configured) {
     return {
       badge: "Platform app",
@@ -28,6 +29,7 @@ function standingOf({ configured, own, canSetUpWorkspace }: GithubStatus): Stand
         "The app the owner of this installation set up, shared with every workspace that has none of its own.",
     };
   }
+
   return {
     badge: "Not set up",
     title: "No GitHub App yet",
@@ -43,7 +45,9 @@ export function WorkspaceGithubSection() {
   const [anyAccount, setAnyAccount] = useState(false);
 
   const github = status?.data;
+
   if (!github) return null;
+
   const standing = standingOf(github);
 
   return (

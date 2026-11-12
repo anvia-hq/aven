@@ -100,7 +100,9 @@ describe("botMessagesToChat", () => {
         attachments: files,
         images: new Map([[photo.image!, "AAAA"]]),
       });
+
       if (typeof prompt === "string") throw new Error("a message with files is not plain text");
+
       return prompt as Message;
     };
 

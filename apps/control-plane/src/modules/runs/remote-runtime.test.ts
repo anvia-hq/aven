@@ -37,6 +37,7 @@ function runtime({
     endRun() {},
     post(message: ControlPlaneToRuntime) {
       if (failPost) throw new Error("connection lost");
+
       posted.push(message);
     },
   };

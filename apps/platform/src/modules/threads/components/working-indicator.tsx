@@ -75,6 +75,7 @@ type Props = {
 
 export function WorkingIndicator({ running, startedAt = null }: Props & { running: boolean }) {
   if (!running) return null;
+
   return (
     <div
       data-role="working"

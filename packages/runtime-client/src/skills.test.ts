@@ -21,7 +21,9 @@ const fetched: string[] = [];
 const fetch = async (digest: string) => {
   fetched.push(digest);
   const archive = archives.get(digest);
+
   if (!archive) throw new Error("no such skill");
+
   return archive;
 };
 

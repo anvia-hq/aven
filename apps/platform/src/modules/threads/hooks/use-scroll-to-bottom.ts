@@ -10,24 +10,32 @@ export function useScrollToBottom(count: number) {
 
   const stick = useCallback((element: HTMLDivElement, resume = false) => {
     const end = Math.min(lastEnd.current, element.scrollHeight - element.clientHeight);
+
     if (resume) following.current = true;
     else if (end - element.scrollTop > FOLLOW_DISTANCE) following.current = false;
+
     if (!following.current) return;
+
     element.scrollTop = element.scrollHeight;
     lastEnd.current = element.scrollHeight - element.clientHeight;
   }, []);
 
   useEffect(() => {
     const element = ref.current;
+
     if (!element) return;
+
     const onScroll = () => {
       const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+
       if (distance < FOLLOW_DISTANCE) following.current = true;
     };
     element.addEventListener("scroll", onScroll, { passive: true });
     const observer = new ResizeObserver(() => stick(element));
     const content = element.firstElementChild;
+
     if (content) observer.observe(content);
+
     return () => {
       element.removeEventListener("scroll", onScroll);
       observer.disconnect();
@@ -36,7 +44,9 @@ export function useScrollToBottom(count: number) {
 
   useEffect(() => {
     const element = ref.current;
+
     if (!element) return;
+
     const added = count > seen.current;
     seen.current = count;
     stick(element, added);

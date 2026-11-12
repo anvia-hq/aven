@@ -9,10 +9,13 @@ export function groupByDay(entries: CommitEntry[], now = new Date()): DayGroup[]
   const groups: DayGroup[] = [];
   for (const entry of entries) {
     const time = Date.parse(entry.commit.date);
+
     if (Number.isNaN(time)) continue;
+
     const date = new Date(time);
     const key = dayKey(date);
     let group = groups.at(-1);
+
     if (group?.key !== key) {
       let label = date.toLocaleDateString(undefined, {
         weekday: "short",
@@ -20,11 +23,15 @@ export function groupByDay(entries: CommitEntry[], now = new Date()): DayGroup[]
         month: "short",
         year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
       });
+
       if (key === today) label = "Today";
+
       if (key === yesterday) label = "Yesterday";
+
       group = { key, label, entries: [] };
       groups.push(group);
     }
+
     group.entries.push(entry);
   }
   return groups;

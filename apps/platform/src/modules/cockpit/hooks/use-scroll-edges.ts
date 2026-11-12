@@ -6,7 +6,9 @@ export function useScrollEdges<T extends HTMLElement>() {
 
   const measure = useCallback(() => {
     const element = ref.current;
+
     if (!element) return;
+
     const start = element.scrollLeft > 1;
     const end = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
     setEdges((current) =>
@@ -16,7 +18,9 @@ export function useScrollEdges<T extends HTMLElement>() {
 
   useEffect(() => {
     const element = ref.current;
+
     if (!element) return;
+
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);

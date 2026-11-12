@@ -83,6 +83,7 @@ export function QuestionForm({ tool, threadId, onSubmit }: Props) {
 
   async function submit() {
     if (sending) return;
+
     setSending(true);
     await onSubmit(
       prompts.map((item) => ({ questionId: item.id, value: valueOf(drafts[item.id]) })),

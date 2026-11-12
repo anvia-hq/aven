@@ -31,10 +31,12 @@ export function CommandMenu() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
+
       if (event.key === "k") {
         event.preventDefault();
         setOpen((value) => !value);
       }
+
       if (event.key === ",") {
         event.preventDefault();
         void navigate({ to: "/settings/general" });

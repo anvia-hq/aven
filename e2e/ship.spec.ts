@@ -91,6 +91,7 @@ test.describe("shipping a thread", () => {
     const held = Promise.withResolvers<void>();
     await page.route("**/api/threads/*/ship", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       await held.promise;
       return route.fallback();
     });
@@ -203,6 +204,7 @@ test.describe("shipping a thread", () => {
     const held = Promise.withResolvers<void>();
     await page.route("**/api/threads/*/ship", async (route) => {
       if (route.request().method() !== "GET") return route.fallback();
+
       await held.promise;
       return route.fallback();
     });

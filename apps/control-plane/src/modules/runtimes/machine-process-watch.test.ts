@@ -11,18 +11,23 @@ function calls() {
   let drop = false;
   const watch = new MachineProcessWatch((runtimeId) => {
     if (!online || runtimeId !== "machine") return undefined;
+
     return {
       call: async (method, params) => {
         if (drop) {
           online = false;
           throw new Error("The runtime disconnected");
         }
+
         if (fail) throw fail;
+
         sent.push({
           threadId: (params as { threadId: string }).threadId,
           phase: (params as { phase: string }).phase,
         });
+
         if (method !== "process.watch") throw new Error(method);
+
         return null;
       },
     };

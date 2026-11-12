@@ -37,6 +37,7 @@ run("createGoalDriver (postgres)", async () => {
     const driver = createGoalDriver({
       wake: async (_userId, botId, note) => {
         if (state.refuse) throw new Error("the computer is offline");
+
         woken.push({ botId, note });
       },
       isIdle: (botId) => botId === bot.id && state.idle,

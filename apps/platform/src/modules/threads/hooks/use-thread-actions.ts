@@ -36,7 +36,9 @@ export function useThreadActions(threadId: string, projectId: string, running: b
       }),
     );
     setStarting(null);
+
     if (!started) return;
+
     toast.add({
       title: action.name,
       description:

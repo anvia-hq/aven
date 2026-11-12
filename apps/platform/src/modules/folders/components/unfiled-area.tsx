@@ -22,6 +22,7 @@ export function UnfiledArea({ dragging, onDropThread, children }: Props) {
       )}
       onDragOver={(event) => {
         if (!dragsThread(event)) return;
+
         event.preventDefault();
         setOver(true);
       }}
@@ -30,6 +31,7 @@ export function UnfiledArea({ dragging, onDropThread, children }: Props) {
       }}
       onDrop={(event) => {
         if (!dragsThread(event)) return;
+
         event.preventDefault();
         event.stopPropagation();
         setOver(false);

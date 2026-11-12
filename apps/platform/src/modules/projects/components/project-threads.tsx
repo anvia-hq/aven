@@ -19,6 +19,7 @@ const newestFirst = (threads: Thread[]) =>
 
 function emptyText(tab: ThreadTab) {
   if (tab === "archived") return "No archived threads.";
+
   return "No open threads yet. Start one with New thread.";
 }
 

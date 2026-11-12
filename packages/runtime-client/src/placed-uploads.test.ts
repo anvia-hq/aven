@@ -67,7 +67,9 @@ describe("withPlacedUploads", () => {
       ],
     });
     expect(normalized.type).toBe("content");
+
     if (normalized.type !== "content") return;
+
     expect(normalized.value).toContainEqual({ type: "text", text: note });
   });
 

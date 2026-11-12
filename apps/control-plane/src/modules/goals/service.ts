@@ -50,9 +50,11 @@ export const goalsService = {
 
   async start(userId: string, botId: string, input: GoalInput) {
     const existing = await goalsService.current(botId);
+
     if (existing && UNFINISHED.includes(existing.phase as GoalPhase)) {
       throw new UnprocessableError("You already have a goal. Finish, block or clear it first.");
     }
+
     const values = {
       userId,
       botId,
@@ -72,29 +74,42 @@ export const goalsService = {
         setWhere: inArray(botGoals.phase, ["complete", "cleared"]),
       })
       .returning();
+
     if (!row) {
       throw new UnprocessableError("You already have a goal. Finish, block or clear it first.");
     }
+
     return goalView(row);
   },
 
   async update(botId: string, action: GoalAction, reason?: string) {
     const goal = await goalsService.current(botId);
+
     if (!goal) throw new UnprocessableError("You have no goal.");
+
     if (action === "complete" && goal.phase === "complete") return goalView(goal);
+
     if (!FROM[action].includes(goal.phase as GoalPhase)) {
       throw new UnprocessableError(
         `The goal is ${goal.phase}, so you cannot ${ACTION_VERB[action]} it.`,
       );
     }
+
     const why = reason?.trim();
+
     if (action === "blocked" && !why)
       throw new UnprocessableError("Say what is blocking the goal.");
+
     const changes: Partial<BotGoalRow> = {};
+
     if (action === "complete") changes.phase = "complete";
+
     if (action === "blocked") Object.assign(changes, { phase: "blocked", blockedReason: why });
+
     if (action === "pause") changes.phase = "paused";
+
     if (action === "clear") changes.phase = "cleared";
+
     if (action === "resume") {
       Object.assign(changes, {
         phase: "active",
@@ -105,12 +120,15 @@ export const goalsService = {
             : goal.maxRounds,
       });
     }
+
     const [row] = await db
       .update(botGoals)
       .set(changes)
       .where(and(eq(botGoals.id, goal.id), eq(botGoals.phase, goal.phase)))
       .returning();
+
     if (!row) throw new UnprocessableError("The goal changed meanwhile; look at it again.");
+
     return row.phase === "cleared" ? null : goalView(row);
   },
 

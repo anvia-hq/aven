@@ -11,7 +11,9 @@ const LAYERS = 3;
 
 export function MachineMonitor() {
   const { runtimes } = useRuntimes({ poll: true });
+
   if (runtimes.length === 0) return null;
+
   const ordered = [...runtimes].sort(
     (a, b) => Number(b.online) - Number(a.online) || a.createdAt.localeCompare(b.createdAt),
   );

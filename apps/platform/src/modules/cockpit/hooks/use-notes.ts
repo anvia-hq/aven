@@ -29,7 +29,9 @@ export function useNotes() {
       notes.update(note, patch, "Could not save the note"),
     async remove(note: CockpitNote) {
       const removed = await notes.remove(note, "Could not delete the note");
+
       if (removed) toast.add({ title: "Note deleted", description: note.title });
+
       return removed;
     },
   };

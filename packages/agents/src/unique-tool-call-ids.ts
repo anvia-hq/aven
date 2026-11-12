@@ -54,15 +54,20 @@ export function withUniqueToolCallIds<T extends CompletionModel>(model: T): T {
   return new Proxy(model, {
     get(target, key) {
       const value: unknown = Reflect.get(target, key, target);
+
       if (typeof value !== "function") return value;
+
       const call = (...args: unknown[]) =>
         (value as (...args: unknown[]) => unknown).apply(target, args);
+
       if (key === "streamCompletion")
         return (...args: unknown[]) =>
           renamedStream(call(...args) as AsyncIterable<CompletionModelStreamEvent>, renamer());
+
       if (key === "completion")
         return async (...args: unknown[]) =>
           renameResponse((await call(...args)) as CompletionResponse, renamer());
+
       return value.bind(target);
     },
   });

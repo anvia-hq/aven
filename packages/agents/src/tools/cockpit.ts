@@ -42,7 +42,9 @@ function schemaFor(access: CockpitAccess) {
         "For list of inbox: done or open ones. For create and update of an inbox item: whether it is done.",
       ),
   };
+
   if (access === "read") return z.object(read);
+
   return z.object({
     ...read,
     title: z.string().optional().describe("For create (required) and update: the title."),
@@ -85,7 +87,9 @@ type CockpitInput = {
 
 function required<K extends keyof CockpitInput>(input: CockpitInput, key: K) {
   const value = input[key];
+
   if (value === undefined) throw new Error(`${input.command} needs ${key}`);
+
   return value as NonNullable<CockpitInput[K]>;
 }
 

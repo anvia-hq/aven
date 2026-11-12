@@ -27,12 +27,15 @@ function refusal(file: File, count: number, total: number) {
   if (count >= ATTACHMENT_LIMITS.count) {
     return `A message can carry ${ATTACHMENT_LIMITS.count} files`;
   }
+
   if (total + file.size > ATTACHMENT_LIMITS.totalBytes) {
     return `The files of one message can add up to ${fileSize(ATTACHMENT_LIMITS.totalBytes)}`;
   }
+
   if (MODEL_IMAGES.has(file.type) && file.size > ATTACHMENT_LIMITS.imageBytes) {
     return `Images can be up to ${fileSize(ATTACHMENT_LIMITS.imageBytes)}`;
   }
+
   return undefined;
 }
 
@@ -48,6 +51,7 @@ export function useAttachments() {
 
   const free = (file: PendingFile) => {
     if (!file.preview) return;
+
     URL.revokeObjectURL(file.preview);
     previews.current.delete(file.preview);
   };
@@ -57,13 +61,17 @@ export function useAttachments() {
     let total = next.reduce((sum, { file }) => sum + file.size, 0);
     for (const file of list) {
       const refused = refusal(file, next.length, total);
+
       if (refused) {
         toast.add({ title: `${file.name} was not attached`, description: refused, type: "error" });
         continue;
       }
+
       total += file.size;
       const preview = MODEL_IMAGES.has(file.type) ? URL.createObjectURL(file) : undefined;
+
       if (preview) previews.current.add(preview);
+
       next.push({ id: crypto.randomUUID(), file, preview });
     }
     setFiles(next);
@@ -71,7 +79,9 @@ export function useAttachments() {
 
   function remove(id: string) {
     const gone = files.find((file) => file.id === id);
+
     if (gone) free(gone);
+
     setFiles(files.filter((file) => file.id !== id));
   }
 

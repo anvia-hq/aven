@@ -4,6 +4,7 @@ export function newMentions(
   open: readonly (string | undefined)[],
 ) {
   if (known === null) return [];
+
   return waiting.filter((id) => !known.includes(id) && !open.includes(id));
 }
 

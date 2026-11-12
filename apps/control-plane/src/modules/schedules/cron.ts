@@ -32,8 +32,11 @@ function upperBound(range: {
   number: (part: string) => number;
 }) {
   if (range.range === "*") return range.max;
+
   if (range.to !== undefined) return range.number(range.to);
+
   if (range.step !== undefined) return range.max;
+
   return range.low;
 }
 
@@ -49,22 +52,33 @@ function parseField(
   const number = (part: string) => {
     const index = names.indexOf(part.toLowerCase());
     let value = Number.NaN;
+
     if (index >= 0) value = index + offset;
     else if (/^\d+$/.test(part)) value = Number(part);
+
     if (!Number.isInteger(value) || value < min || value > max) throw bad();
+
     return value;
   };
   const values = new Set<number>();
   for (const item of text.split(",")) {
     const [range = "", step, extra] = item.split("/");
+
     if (extra !== undefined || item === "") throw bad();
+
     const stride = step === undefined ? 1 : Number(step);
+
     if (!Number.isInteger(stride) || stride < 1 || !/^\d*$/.test(step ?? "")) throw bad();
+
     const [from, to, more] = range.split("-");
+
     if (more !== undefined) throw bad();
+
     const low = range === "*" ? min : number(from ?? "");
     const high = upperBound({ range, to, step, low, max, number });
+
     if (low > high) throw bad();
+
     for (let value = low; value <= high; value += stride) values.add(value);
   }
   return { values: [...values].sort((a, b) => a - b), any: text === "*" };
@@ -73,10 +87,12 @@ function parseField(
 export function parseCron(expression: string): Cron {
   const text = NICKNAMES[expression.trim().toLowerCase()] ?? expression;
   const parts = text.trim().split(/\s+/);
+
   if (parts.length !== 5)
     throw new CronError(
       "A schedule needs 5 fields: minute hour day-of-month month day-of-week, for example `0 7 * * *`.",
     );
+
   const [minute, hour, day, month, weekday] = parts as [string, string, string, string, string];
   const days = parseField(weekday, "day-of-week", 0, 7, WEEKDAYS);
   return {
@@ -115,6 +131,7 @@ export function checkTimezone(timezone: string) {
 
 function zoneFormatter(timezone: string) {
   let formatter = formatters.get(timezone);
+
   if (!formatter) {
     formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
@@ -128,6 +145,7 @@ function zoneFormatter(timezone: string) {
     });
     formatters.set(timezone, formatter);
   }
+
   return formatter;
 }
 
@@ -161,7 +179,9 @@ function matches(field: Field, value: number) {
 function dayMatches(cron: Cron, date: Date) {
   const day = matches(cron.day, date.getUTCDate());
   const weekday = matches(cron.weekday, date.getUTCDay());
+
   if (!matches(cron.month, date.getUTCMonth() + 1)) return false;
+
   return !cron.day.any && !cron.weekday.any ? day || weekday : day && weekday;
 }
 
@@ -177,10 +197,13 @@ export function nextRun(expression: string, timezone: string, after: Date): Date
   );
   for (let ahead = 0; ahead <= MAX_DAYS_AHEAD; ahead++) {
     const dayMs = firstDay + ahead * 86_400_000;
+
     if (!dayMatches(cron, new Date(dayMs))) continue;
+
     for (const hour of cron.hour.values)
       for (const minute of cron.minute.values) {
         const instant = instantOf(dayMs + hour * 3_600_000 + minute * MINUTE_MS, timezone);
+
         if (instant > afterMs) return new Date(instant);
       }
   }

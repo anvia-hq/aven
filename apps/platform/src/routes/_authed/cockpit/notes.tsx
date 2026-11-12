@@ -34,6 +34,7 @@ function NotesPage() {
       />
     );
   }
+
   return (
     loaded && (
       <NotesIndex

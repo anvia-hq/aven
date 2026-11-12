@@ -49,6 +49,7 @@ export function AvatarField({ name, image }: Props) {
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
+
           if (file) void upload(file);
         }}
       />

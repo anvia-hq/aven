@@ -13,6 +13,7 @@ export function FilterChips({
   name: string;
 }) {
   if (chips.length === 0) return null;
+
   return (
     <div
       role="group"

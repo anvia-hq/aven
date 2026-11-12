@@ -12,6 +12,7 @@ export const manualProvider: RuntimeProvider = {
   },
   async release(place, runner) {
     if (!runner) return;
+
     await runner.call("sandbox.release", { threadId: place.threadId }, RELEASE_TIMEOUT_MS);
   },
 };
@@ -27,9 +28,13 @@ export async function reachRunner(
   providerOf: ProviderOf = recordedProvider,
 ) {
   const connected = hub.get(place.runtimeId);
+
   if (connected) return connected;
+
   const kind = await providerOf(place.runtimeId);
+
   if (!kind) throw new RuntimeOfflineError(offline);
+
   return PROVIDERS[kind].start(place, offline);
 }
 
@@ -39,6 +44,8 @@ export async function releaseThread(
   providerOf: ProviderOf = recordedProvider,
 ) {
   const kind = await providerOf(place.runtimeId);
+
   if (!kind) return;
+
   await PROVIDERS[kind].release(place, hub.get(place.runtimeId));
 }

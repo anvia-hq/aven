@@ -24,8 +24,10 @@ export function inProcessReplier(options: {
       const send: SendMessage = async ({ to, text }, { abortSignal }) => {
         if (to !== USER_HANDLE) {
           if (!options.sendToBot) throw new Error(`No bot with the handle "${to}"`);
+
           return options.sendToBot({ from: bot, userId, hops, to, text });
         }
+
         await pause(typingDelay(text), abortSignal);
         say(text);
         return "Sent to the person.";

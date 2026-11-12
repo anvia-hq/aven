@@ -17,6 +17,7 @@ const contextLimitsFor = (config: ModelConfig) =>
 
 function controlsFromLevels(levels: readonly string[] | undefined) {
   if (!levels?.length) return undefined;
+
   return defineCompletionModelControls({
     reasoningEffort: {
       type: "select",
@@ -33,7 +34,9 @@ export const azureApiFor = (modelId: string) => (OPENAI_MODEL.test(modelId) ? "r
 export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
   if (config.provider === "openai-compatible") {
     if (!config.baseUrl) throw new Error("An OpenAI-compatible provider needs a base URL");
+
     if (!config.modelId) throw new Error("An OpenAI-compatible provider needs a model id");
+
     return new OpenAIClient({
       apiKey: apiKey || "not-needed",
       baseUrl: config.baseUrl,
@@ -47,8 +50,11 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "bedrock") {
     if (!config.baseUrl) throw new Error("A Bedrock provider needs its regional endpoint");
+
     if (!config.modelId) throw new Error("A Bedrock provider needs a model id");
+
     if (!apiKey) throw new Error("A Bedrock provider needs an API key");
+
     return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId,
       api: "chat",
@@ -59,8 +65,11 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "vertex") {
     if (!config.baseUrl) throw new Error("A Vertex AI provider needs its project endpoint");
+
     if (!config.modelId) throw new Error("A Vertex AI provider needs a model id");
+
     if (!apiKey) throw new Error("A Vertex AI provider needs a credential");
+
     return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId,
       api: "chat",
@@ -71,8 +80,11 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "azure") {
     if (!config.baseUrl) throw new Error("An Azure provider needs a resource URL");
+
     if (!config.modelId) throw new Error("An Azure provider needs a deployment name");
+
     if (!apiKey) throw new Error("An Azure provider needs an API key");
+
     return new AzureOpenAIClient({
       apiKey,
       baseUrl: config.baseUrl,
@@ -87,6 +99,7 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "openai") {
     if (!apiKey) throw new Error("An OpenAI provider needs an API key");
+
     return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.openai,
       api: "responses",
@@ -97,6 +110,7 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "gemini") {
     if (!apiKey) throw new Error("A Gemini provider needs an API key");
+
     const client = new GoogleGenAI({
       apiKey,
       httpOptions: config.baseUrl ? { baseUrl: config.baseUrl } : undefined,
@@ -110,6 +124,7 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   if (config.provider === "anthropic") {
     if (!apiKey) throw new Error("An Anthropic provider needs an API key");
+
     return new AnthropicClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.anthropic,
       controls: controlsFromLevels(config.effortLevels),
@@ -136,7 +151,9 @@ export function reasoningControlsFor(
   ) {
     return null;
   }
+
   if (config.provider === "azure" && !config.modelId) return null;
+
   const controls: CompletionModelControls | undefined = createModel(
     {
       ...config,

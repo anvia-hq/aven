@@ -18,16 +18,21 @@ export async function requestUpdate(
   shown?: string,
 ) {
   const runner = hub.get(runtimeId);
+
   if (!runner) throw new UnavailableError("The runner is offline");
+
   if (!runner.canUpdate) {
     throw new ConflictError(
       "This runner was not installed with aven, so it cannot update itself: run aven update on its machine",
     );
   }
+
   if (!release) throw new ConflictError("This runner is already up to date");
+
   if (shown && shown !== release) {
     throw new ConflictError(`The release to update to is now ${release}: reload and try again`);
   }
+
   const result = await runner
     .call("runner.update", { release }, AGREE_MS)
     .then((reply) => answer.parse(reply))
@@ -35,9 +40,12 @@ export async function requestUpdate(
       console.warn(`Runner ${runtimeId} did not take runner.update:`, describeError(error));
       throw new UnavailableError("The runner did not answer the update");
     });
+
   if (result.status === "busy") throw new ConflictError(result.reason);
+
   if (result.status === "unsupported") {
     throw new ConflictError("This runner cannot update itself: run aven update on its machine");
   }
+
   return result;
 }

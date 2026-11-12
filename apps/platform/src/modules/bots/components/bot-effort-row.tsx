@@ -15,6 +15,7 @@ export function BotEffortRow({ bot }: { bot: Bot }) {
       />
     );
   }
+
   if (levels.length < 2 || !effort) return null;
 
   return (

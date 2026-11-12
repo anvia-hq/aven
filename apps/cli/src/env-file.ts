@@ -5,6 +5,7 @@ export function parseEnv(text: string) {
   const values: Record<string, string> = {};
   for (const line of text.split("\n")) {
     const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+
     if (match) values[match[1]!] = match[2]!;
   }
   return values;
@@ -14,9 +15,11 @@ export function setEnv(text: string, values: Record<string, string>) {
   const lines = text.split("\n");
   for (const [key, value] of Object.entries(values)) {
     const at = lines.findIndex((line) => line.startsWith(`${key}=`));
+
     if (at >= 0) lines[at] = `${key}=${value}`;
     else {
       if (lines.at(-1) === "") lines.pop();
+
       lines.push(`${key}=${value}`, "");
     }
   }
@@ -49,7 +52,9 @@ export function addMissingKeys(existing: string, template: string) {
   const missing: Record<string, string> = {};
   for (const [key, templateValue] of Object.entries(parseEnv(template))) {
     if (key in have) continue;
+
     const policy = ADDED_KEY_POLICY[key];
+
     if (key in secrets) missing[key] = secrets[key]!;
     else if (policy?.from === "template") missing[key] = templateValue;
     else if (policy?.from === "install") missing[key] = policy.value;
@@ -65,10 +70,15 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
     TRUSTED_ORIGINS: options.origin,
     ...newSecrets(),
   };
+
   if (options.bind !== undefined) values.AVEN_BIND = options.bind;
+
   if (options.registration !== undefined) values.AVEN_REGISTRATION = options.registration;
+
   if (options.ownerEmail) values.PLATFORM_OWNER_EMAILS = options.ownerEmail;
+
   if (options.apiPort) values.AVEN_API_PORT = String(options.apiPort);
+
   if (options.domain) {
     values.AVEN_SITE_ADDRESS = options.domain;
     values.AVEN_HTTPS_PORT = String(options.httpsPort ?? 443);
@@ -76,5 +86,6 @@ export function newServerEnv(template: string, options: ServerEnvOptions) {
   } else if (options.httpsPort) {
     values.AVEN_HTTPS_PORT = String(options.httpsPort);
   }
+
   return setEnv(template, values);
 }

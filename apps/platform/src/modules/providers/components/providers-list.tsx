@@ -6,11 +6,11 @@ import { Badge } from "@/components/badge";
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";
 import { useProvidersModels } from "../hooks/use-provider-models";
-import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS, type Provider, type ProviderKind } from "../types";
+import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS } from "../types";
+import type { CompatiblePreset, Provider, ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
-import type { CompatiblePreset } from "../types";
 
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 

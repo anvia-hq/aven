@@ -55,10 +55,12 @@ export async function assertPublicProviderUrl(
   options: { allowed?: Set<string>; resolve?: Resolve } = {},
 ) {
   const host = new URL(rawUrl).hostname.toLowerCase().replace(/^\[(.*)\]$/, "$1");
+
   if ((options.allowed ?? allowedProviderHosts()).has(host)) return;
 
   const literal = isIP(host);
   let addresses: { address: string; family: number }[];
+
   if (literal) {
     addresses = [{ address: host, family: literal }];
   } else {
@@ -68,9 +70,11 @@ export async function assertPublicProviderUrl(
       throw new ProviderAddressError(`The provider's host could not be resolved (${host})`);
     }
   }
+
   if (addresses.length === 0) {
     throw new ProviderAddressError(`The provider's host could not be resolved (${host})`);
   }
+
   for (const { address, family } of addresses) {
     if (isInternalAddress(address, family)) {
       throw new ProviderAddressError(

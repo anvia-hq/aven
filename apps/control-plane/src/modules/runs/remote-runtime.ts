@@ -68,12 +68,16 @@ class EventQueue implements AsyncIterable<RunEvent> {
   async *[Symbol.asyncIterator]() {
     for (;;) {
       const item = this.#items.shift();
+
       if (item) {
         yield item;
         continue;
       }
+
       if (this.#failure) throw this.#failure;
+
       if (this.#done) return;
+
       await new Promise<void>((resolve) => {
         this.#waiting = resolve;
       });
@@ -240,18 +244,25 @@ export class RemoteRuntime implements Runtime {
 
   async #placementFor(thread: RunThread): Promise<Placement> {
     const backend = threadBackend(thread);
+
     if (this.agentOnControlPlane && backend === "native" && thread.runtimeId !== LOCAL_RUNTIME_ID) {
       const connection = this.hub.get(LOCAL_RUNTIME_ID);
+
       if (!connection)
         throw new RuntimeOfflineError("The control plane's own runner is not running");
+
       if (!connection.offers(backend)) throw new BackendUnavailableError();
+
       return { connection, hostId: LOCAL_RUNTIME_ID, machine: thread.runtimeId };
     }
+
     const connection = await reachRunner(this.hub, {
       runtimeId: thread.runtimeId,
       threadId: thread.id,
     });
+
     if (!connection.offers(backend)) throw new BackendUnavailableError();
+
     return { connection, hostId: thread.runtimeId };
   }
 
@@ -261,6 +272,7 @@ export class RemoteRuntime implements Runtime {
       end: (outcome: RunOutcome, error?: string, continuation?: unknown) => {
         this.#revoke(runId);
         queue.close();
+
         if (error) result.reject(new Error(error));
         else result.resolve({ type: outcome, continuation });
       },

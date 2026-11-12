@@ -21,6 +21,7 @@ export function useWorkspaceTree(threadId: string, expanded: string[], running: 
         );
         setAvailable(response.available);
         setProblem(null);
+
         if (response.available) setFolders((current) => ({ ...current, [path]: response.entries }));
       } catch (failure) {
         setProblem(errorMessage(failure));

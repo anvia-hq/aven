@@ -20,6 +20,7 @@ export function FileMatches({ folders, query, active, onOpenFile }: Props) {
     .filter((path) => path.toLowerCase().includes(needle))
     .sort()
     .slice(0, MAX_MATCHES);
+
   if (matches.length === 0) {
     return (
       <p className="px-3 py-2 text-xs text-muted-foreground">
@@ -27,6 +28,7 @@ export function FileMatches({ folders, query, active, onOpenFile }: Props) {
       </p>
     );
   }
+
   return (
     <>
       {matches.map((path) => (

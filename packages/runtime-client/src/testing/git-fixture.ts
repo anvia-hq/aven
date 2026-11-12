@@ -7,7 +7,9 @@ import type { RepoAccess } from "@aven/protocol/types";
 
 export async function sh(cwd: string, ...args: string[]) {
   const result = await git(args, { cwd });
+
   if (result.code !== 0) throw new Error(result.stderr);
+
   return result.stdout.trim();
 }
 

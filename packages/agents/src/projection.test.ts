@@ -19,7 +19,9 @@ const readFile = createTool({
   inputSchema: z.object({ path: z.string() }),
   execute: ({ path }) => {
     const content = files.get(path);
+
     if (content === undefined) throw new Error(`File not found: ${path}`);
+
     return { content, startLine: 1, endLine: 1, nextStartLine: null, truncated: false };
   },
 });
@@ -47,6 +49,7 @@ async function run(prompt: string) {
   const events: RunEvent[] = [];
   for await (const event of stream) {
     const projected = projectStreamEvent(event);
+
     if (projected) events.push(projected);
   }
   return { events, outcome: await stream.result };
@@ -104,6 +107,7 @@ describe("projection", () => {
     const events: RunEvent[] = [];
     for await (const event of stream) {
       const projected = projectStreamEvent(event);
+
       if (projected) events.push(projected);
     }
     expect(events.filter((event) => event.type !== "usage")).toEqual([
@@ -329,6 +333,7 @@ describe("subagents", () => {
     const events: RunEvent[] = [];
     for await (const event of stream) {
       const projected = projectSubagentEvent(event, 2);
+
       if (projected) events.push(projected);
     }
     expect(events.map((event) => event.type)).toEqual(["subagent", "usage", "subagent", "usage"]);
@@ -352,6 +357,7 @@ describe("subagents", () => {
   test("a stored transcript shows how each subagent ended", async () => {
     const spawn = createSpawnAgentTool(async ({ description }) => {
       if (description === "bad") throw new Error("no model");
+
       return "src/auth.ts";
     });
     const { agent } = createCodingAgent({
@@ -377,7 +383,9 @@ describe("subagents", () => {
     const stream = agent.stream({ prompt: "go" });
     for await (const _event of stream);
     const part = messagesToChat((await stream.result).messages)[1]?.parts[0];
+
     if (part?.type !== "tool") throw new Error("expected the tool call");
+
     expect(part.tool).toMatchObject({ name: "spawn_agent", status: "done", target: "2 tasks" });
     expect(part.tool.output).toBe("1 finished, 1 failed");
     expect(

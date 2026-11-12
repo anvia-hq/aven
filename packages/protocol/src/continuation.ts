@@ -14,8 +14,11 @@ export function turnsThatFit(turns: readonly BotThreadTurn[], earlier: number) {
   let used = 0;
   for (const turn of [...turns].reverse()) {
     if (!turn.text) continue;
+
     const line = `${turn.role === "user" ? "Person" : "Agent"}: ${cut(turn.text)}`;
+
     if (used + line.length > BUDGET && kept.length > 0) break;
+
     kept.push(line);
     used += line.length;
   }

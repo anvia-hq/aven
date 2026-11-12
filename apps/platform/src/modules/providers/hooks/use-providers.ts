@@ -37,7 +37,9 @@ export function useProviders() {
       await request();
       return true;
     });
+
     if (!changed) return false;
+
     await refresh();
     return true;
   }
@@ -46,7 +48,9 @@ export function useProviders() {
     const created = await change("Could not add provider", () =>
       postJson<Provider>("/providers", input),
     );
+
     if (created) toast.add({ title: "Provider added", description: input.name, type: "success" });
+
     return created;
   }
 
@@ -58,8 +62,10 @@ export function useProviders() {
     const updated = await change("Could not update provider", () =>
       postJson<Provider>(`/providers/${provider.id}`, patch, "PATCH"),
     );
+
     if (updated)
       toast.add({ title: "Provider updated", description: provider.name, type: "success" });
+
     return updated;
   }
 
@@ -71,6 +77,7 @@ export function useProviders() {
     const updated = await change("Could not update provider", () =>
       postJson<Provider>(`/providers/${provider.id}`, { isDefault: true }, "PATCH"),
     );
+
     if (updated) {
       toast.add({ title: "Default provider changed", description: provider.name, type: "success" });
     }
@@ -80,6 +87,7 @@ export function useProviders() {
     const removed = await change("Could not remove provider", () =>
       api<{ ok: true }>(`/providers/${provider.id}`, { method: "DELETE" }),
     );
+
     if (removed) toast.add({ title: "Provider removed", description: provider.name });
   }
 

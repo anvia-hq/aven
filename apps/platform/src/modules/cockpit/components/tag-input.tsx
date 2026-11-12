@@ -37,13 +37,16 @@ export function TagInput({
   function add(raw: string) {
     const tag = normalizeTag(raw);
     setDraft("");
+
     if (!TAG_PATTERN.test(tag) || value.includes(tag) || value.length >= TAGS_MAX) return;
+
     onChange([...value, tag]);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter" || event.key === ",") {
       if (!draft.trim()) return;
+
       event.preventDefault();
       add(draft);
     } else if (event.key === "Backspace" && draft === "" && value.length > 0) {

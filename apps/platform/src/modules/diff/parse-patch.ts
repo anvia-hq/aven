@@ -15,24 +15,32 @@ export function parsePatch(patch: string): DiffFile[] {
   for (const line of patch.split("\n")) {
     if (hunk && (oldLeft > 0 || newLeft > 0)) {
       const row = rowOf(line, oldNo, newNo);
+
       if (row) {
         hunk.rows.push(row);
+
         if (row.kind !== "add") {
           oldLeft--;
           oldNo++;
         }
+
         if (row.kind !== "del") {
           newLeft--;
           newNo++;
         }
+
         if (file && row.kind === "add") file.additions++;
+
         if (file && row.kind === "del") file.deletions++;
+
         continue;
       }
+
       if (line.startsWith("\\")) continue;
     }
 
     const header = FILE_HEADER.exec(line);
+
     if (header) {
       hunk = undefined;
       file = {
@@ -46,9 +54,11 @@ export function parsePatch(patch: string): DiffFile[] {
       files.push(file);
       continue;
     }
+
     if (!file) continue;
 
     const opening = HUNK_HEADER.exec(line);
+
     if (opening) {
       oldNo = Number(opening[1]);
       newNo = Number(opening[3]);
@@ -97,6 +107,7 @@ export function splitRows(rows: DiffRow[]): SplitRow[] {
   for (const row of rows) {
     if (row.kind === "del") {
       if (added.length > 0) flush();
+
       removed.push(row);
     } else if (row.kind === "add") added.push(row);
     else {

@@ -45,6 +45,7 @@ run("createScheduler (postgres)", async () => {
     createScheduler({
       fire: async ({ botId: target }, note) => {
         if (options.refuse) throw new Error("the bot's computer is offline");
+
         options.fired?.push({ botId: target, note });
       },
       isBusy: () => options.busy ?? false,

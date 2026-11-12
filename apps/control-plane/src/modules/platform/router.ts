@@ -20,6 +20,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
       "/users",
       async ({ user }) => {
         if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+
         return platformService.listPeople();
       },
       { auth: true },
@@ -28,6 +29,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
       "/users/:id",
       async ({ params, user }) => {
         if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+
         await platformService.removePerson(user, params.id, putAway);
         return { removed: true };
       },
@@ -37,6 +39,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
       "/settings",
       async ({ body, user }) => {
         if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+
         await platformService.setRegistrationEnabled(body.registrationEnabled);
         return { registrationEnabled: body.registrationEnabled };
       },

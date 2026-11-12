@@ -17,9 +17,13 @@ export function grantActing(userId: string, organizationId: string | null) {
 export async function actingSession(headers: Headers) {
   const token = headers.get(ACTING_HEADER);
   const grant = token ? grants.get(token) : undefined;
+
   if (!grant) return undefined;
+
   const [user] = await db.select().from(users).where(eq(users.id, grant.userId));
+
   if (!user) return undefined;
+
   const now = new Date();
   return {
     user,

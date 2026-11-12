@@ -57,6 +57,7 @@ const PASS_RESPONSE_HEADERS = ["content-type", "retry-after", "request-id", "x-r
 type Grant = { model: ModelConfig; key: string | undefined; owner: string };
 
 const TOKEN_SECRET = process.env.PROVIDER_ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
+
 if (!TOKEN_SECRET) {
   throw new Error(
     "The model gateway has no token secret: set PROVIDER_ENCRYPTION_KEY or BETTER_AUTH_SECRET",
@@ -83,16 +84,21 @@ export class RunGateway {
   #keyOf(config: ModelConfig) {
     const envKey = ENV_KEYS[config.provider];
     const key = config.apiKey ?? (envKey && process.env[envKey]);
+
     if (!key && config.provider === "azure") {
       throw new ModelUnavailableError("This Azure provider has no API key");
     }
+
     if (!key && config.provider === "bedrock") {
       throw new ModelUnavailableError("This Bedrock provider has no API key");
     }
+
     if (!key && config.provider === "vertex") {
       throw new ModelUnavailableError("This Vertex AI provider has no credential");
     }
+
     if (!key && envKey) throw new ModelUnavailableError(`${envKey} is not set`);
+
     return key;
   }
 
@@ -119,8 +125,11 @@ export class RunGateway {
 
   revoke(runId: string) {
     const token = this.#tokens.get(runId);
+
     if (!token) return;
+
     this.#tokens.delete(runId);
+
     if (this.#grants.get(token)?.owner === runId) this.#grants.delete(token);
   }
 
@@ -130,19 +139,27 @@ export class RunGateway {
       request.headers.get("x-api-key") ??
       request.headers.get("x-goog-api-key");
     const grant = presented ? this.#grants.get(presented) : undefined;
+
     if (!grant) return reject("Unauthorized", 401);
+
     const { provider } = grant.model;
+
     if (SEGMENTS[provider] !== segment) return reject("Wrong provider for this run", 403);
+
     const upstreamPath = `/${path}`;
+
     if (request.method !== "POST" || !allowed(provider, upstreamPath)) {
       return reject("Not allowed", 404);
     }
 
     const body = await request.json().catch(() => null);
+
     if (typeof body !== "object" || body === null) return reject("Invalid JSON", 400);
+
     pin(body as Record<string, unknown>, grant.model, upstreamPath);
 
     let credential = grant;
+
     if (provider === "vertex" && grant.key) {
       try {
         credential = { ...grant, key: await this.accessToken(grant.key) };
@@ -177,6 +194,7 @@ export class RunGateway {
           errorMessage(error),
         );
       }
+
       return reject("The model provider could not be reached", 502);
     }
   }
@@ -188,9 +206,13 @@ export class RunGateway {
       const sse = new URL(request.url).searchParams.get("alt") === "sse" ? "?alt=sse" : "";
       return `${this.upstreams.gemini ?? DEFAULT_UPSTREAMS.gemini}/v1beta/models/${id}${call}${sse}`;
     }
+
     if (model.provider === "anthropic") return `${this.upstreams.anthropic}${path}`;
+
     if (model.provider === "openai") return `${this.upstreams.openai}${path}`;
+
     if (model.provider === "azure") return `${model.baseUrl?.replace(/\/+$/, "")}/openai/v1${path}`;
+
     return `${model.baseUrl?.replace(/\/$/, "")}${path}`;
   }
 }
@@ -201,6 +223,7 @@ function passHeaders(from: Headers, names: readonly string[]) {
   const headers = new Headers();
   for (const name of names) {
     const value = from.get(name);
+
     if (value) headers.set(name, value);
   }
   return headers;
@@ -209,11 +232,15 @@ function passHeaders(from: Headers, names: readonly string[]) {
 function upstreamHeaders(request: Request, grant: Grant) {
   const headers = passHeaders(request.headers, PASS_REQUEST_HEADERS);
   headers.set("content-type", "application/json");
+
   if (!grant.key) return headers;
+
   if (grant.model.provider === "anthropic") headers.set("x-api-key", grant.key);
   else if (grant.model.provider === "gemini") headers.set("x-goog-api-key", grant.key);
   else headers.set("authorization", `Bearer ${grant.key}`);
+
   if (grant.model.provider === "azure") headers.set("api-key", grant.key);
+
   return headers;
 }
 
@@ -222,16 +249,21 @@ const record = (value: unknown) =>
 
 function pin(body: Record<string, unknown>, model: ModelConfig, path: string) {
   if (model.provider === "gemini") return;
+
   body.model = model.modelId ?? defaultModelId(model.provider) ?? body.model;
+
   if (model.provider === "anthropic") pinAnthropicEffort(body, model.reasoningEffort);
+
   if (model.provider === "openai" || model.provider === "azure")
     pinOpenAiEffort(body, model.reasoningEffort, path);
 }
 
 function pinAnthropicEffort(body: Record<string, unknown>, effort: string | undefined) {
   const config = record(body.output_config);
+
   if (effort) config.effort = effort;
   else delete config.effort;
+
   body.output_config = config;
 }
 
@@ -239,9 +271,12 @@ function pinOpenAiEffort(body: Record<string, unknown>, effort: string | undefin
   if (path === "/chat/completions") {
     if (effort) body.reasoning_effort = effort;
     else delete body.reasoning_effort;
+
     return;
   }
+
   const reasoning = record(body.reasoning);
+
   if (effort) body.reasoning = { ...reasoning, effort };
   else if ("effort" in reasoning) {
     delete reasoning.effort;

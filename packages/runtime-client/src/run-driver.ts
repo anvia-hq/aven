@@ -121,6 +121,7 @@ export function createRunDriver(context: DriverContext) {
   async function closeReleasedMcp(threadId: string) {
     for (const [id, connected] of mcpConnections) {
       if (id === threadId || context.boxes.has(id) || runGoing(id)) continue;
+
       mcpConnections.delete(id);
       mcpKeys.delete(id);
       await connected.close().catch(() => undefined);
@@ -128,17 +129,21 @@ export function createRunDriver(context: DriverContext) {
   }
   const sweeper = setInterval(() => {
     if (context.stopped()) return clearInterval(sweeper);
+
     void closeReleasedMcp("");
   }, MCP_SWEEP_MS);
   sweeper.unref();
 
   async function connectMcp(run: Live, runId: string, threadId: string, secrets: RunSecrets) {
     const configs = secrets.mcp ?? [];
+
     if (!configs.length) return undefined;
+
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
     const kept = mcpConnections.get(threadId);
     let connected: ConnectedMcp;
+
     if (kept && mcpKeys.get(threadId) === key && kept.results.every((result) => !result.error)) {
       connected = kept;
     } else {
@@ -147,12 +152,14 @@ export function createRunDriver(context: DriverContext) {
         mcpKeys.delete(threadId);
         await kept.close().catch(() => undefined);
       }
+
       connected = run.machine
         ? await connectMcpForMachine(configs, context.machineCall?.(threadId))
         : await connectMcpServers(configs);
       mcpConnections.set(threadId, connected);
       mcpKeys.set(threadId, key);
     }
+
     run.mcp = connected;
     context.call("mcp.report", { runId, results: connected.results }).catch((error: unknown) => {
       console.warn(`Run ${runId} could not report on its MCP servers:`, errorMessage(error));
@@ -170,6 +177,7 @@ export function createRunDriver(context: DriverContext) {
     const state = { record: initial };
     const save = (changes: Partial<RunRecord>) => {
       state.record = { ...state.record, ...changes };
+
       if (!context.stopped()) records.save(state.record);
     };
     const run: Live = { threadId: thread.id, machine: thread.machine, save, steers: [] };
@@ -177,12 +185,15 @@ export function createRunDriver(context: DriverContext) {
     let ended: DurableEnd["type"] | undefined;
     try {
       const chosen = await context.backend(initial.backend);
+
       if (run.cancelReason) throw new Error(run.cancelReason);
+
       if (message?.type === "run.start" && message.attachments?.length) {
         save({
           attachments: await keepAttachments(context.sandbox, thread.id, message.attachments),
         });
       }
+
       clock.mark("attachments");
       const scope = await acquire(initial, state, run, secrets, clock, chosen);
       const end = await phases(scope, message);
@@ -192,14 +203,18 @@ export function createRunDriver(context: DriverContext) {
       finish(runId, { type: "error", error: errorMessage(error) });
     } finally {
       live.delete(runId);
+
       if (run.mcpGoing) await run.mcpGoing.catch(() => undefined);
+
       context.finished(thread.id, ended);
     }
   }
 
   async function installSkills({ runId, thread, skills = [] }: RunRecord) {
     const store = context.sandbox.skills;
+
     if (!store) return [];
+
     const fetch = async (digest: string) =>
       Uint8Array.fromBase64((await context.call("skills.get", { runId, digest })).data);
     return store.install(thread.id, skills, fetch, await context.sandbox.workspace(thread.id));
@@ -211,6 +226,7 @@ export function createRunDriver(context: DriverContext) {
         report(runId, (seq) => ({ type: "run.event", runId, seq, event }), source)) as Emit,
       async file(messages: Message[]) {
         if (messages.length === 0) return;
+
         await context.call("memory.append", { runId, turn: state.record.turn, messages });
         run.save({ turn: state.record.turn + messages.length });
       },
@@ -257,7 +273,9 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<RunScope> {
     const { env } = secrets;
     const { runId, thread, model } = initial;
+
     if (initial.compact) return compactionScope(initial, state, run, clock, backend);
+
     const repoAccess = () => context.call("repo.access", { runId });
     const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
     await context.starting(thread.id);
@@ -268,7 +286,9 @@ export function createRunDriver(context: DriverContext) {
     let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
     const markCurrentTurn = async () => {
       if (turnMarked || !context.sandbox.markTurn) return;
+
       if (!(await context.sandbox.workspace(thread.id))) return;
+
       turnMarked = true;
       await context.sandbox.markTurn(thread.id).catch(() => false);
     };
@@ -278,17 +298,21 @@ export function createRunDriver(context: DriverContext) {
       waking ??= (async () => {
         await box.start?.();
         clock.mark("sandbox");
+
         if (run.cancelReason) throw new Error(run.cancelReason);
+
         await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
         clock.mark("sign-in");
         await markCurrentTurn();
         clock.mark("turn");
       })().catch((error: unknown) => {
         waking = undefined;
+
         if (!run.machine) {
           run.cancelReason ??= errorMessage(error);
           void run.followed?.cancel();
         }
+
         throw error;
       });
       return waking;
@@ -303,12 +327,15 @@ export function createRunDriver(context: DriverContext) {
     };
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
+
     if (run.cancelReason) throw new Error(run.cancelReason);
+
     if (!state.record.skillListing) {
       try {
         run.save({ skillListing: await installSkills(state.record) });
       } catch (error) {
         if (!run.machine) throw error;
+
         run.skillsUnavailable = (state.record.skills ?? []).map(({ name }) => name);
         console.warn(
           `No skills for ${thread.id}, its computer is unreachable:`,
@@ -316,6 +343,7 @@ export function createRunDriver(context: DriverContext) {
         );
       }
     }
+
     clock.mark("skills");
     const redact = secretRedactor(env);
     const noted = (tools: readonly AnyTool[]) =>
@@ -335,6 +363,7 @@ export function createRunDriver(context: DriverContext) {
         answered = true;
         clock.mark("first output");
       }
+
       send(event, source);
     }) as Emit;
 
@@ -431,16 +460,22 @@ export function createRunDriver(context: DriverContext) {
 
   async function phases(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     let end: DurableEnd = { type: "response", messages: [] };
+
     if (scope.record.phase === "chat") end = await runChat(scope, message);
+
     const goal = scope.record.goal;
+
     if (goal && scope.record.phase === "goal") return runGoal(scope, goal);
+
     if (goal && scope.record.phase === "report") return reportOnGoal(scope, goal);
+
     return end;
   }
 
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build, forward } = scope;
     let followed: FollowedRun;
+
     if (scope.record.durableId) {
       followed = await backend.rejoin(
         scope.record.durableId,
@@ -462,7 +497,9 @@ export function createRunDriver(context: DriverContext) {
       );
     } else {
       const asked = await backend.asked(thread.id);
+
       if (!asked) throw new Error("This thread has no question waiting for an answer");
+
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
@@ -474,20 +511,26 @@ export function createRunDriver(context: DriverContext) {
         forward,
       );
     }
+
     save({ durableId: followed.durableId });
     scope.clock.mark("started");
     run.followed = followed;
     await handOverSteers(run, backend, followed.durableId);
+
     if (run.cancelReason) void followed.cancel();
+
     const end = await followed.done;
+
     if (end.type !== "error") {
       save({ turn: backend.transcriptTurn(followed.durableId, end) });
       await scope.file(end.messages);
     } else {
       await scope.file(await backend.unfinishedMessages(followed.durableId)).catch(() => undefined);
     }
+
     if (end.type === "response" && scope.record.goal) save({ phase: "goal" });
     else save({ goal: undefined });
+
     return end;
   }
 
@@ -517,12 +560,16 @@ export function createRunDriver(context: DriverContext) {
     });
     run.followed = working;
     run.goal = working;
+
     if (run.cancelReason) void working.cancel();
+
     const goalEnd = await working.done;
+
     if (goalEnd.type === "error") {
       save({ goal: undefined });
       return goalEnd;
     }
+
     save({ phase: "report" });
     return reportOnGoal(scope, goal, goalEnd);
   }
@@ -537,6 +584,7 @@ export function createRunDriver(context: DriverContext) {
     const reportAgent = build(`run-${runId}-report`, false);
     let closing: FollowedRun;
     const { reportId } = scope.record;
+
     if (reportId) {
       closing = await backend.rejoin(
         reportId,
@@ -546,6 +594,7 @@ export function createRunDriver(context: DriverContext) {
       );
     } else {
       if (!goalEnd) throw new Error("The goal's outcome is gone, so it cannot be reported");
+
       closing = await backend.start(
         `${runId}-report`,
         thread.id,
@@ -554,15 +603,19 @@ export function createRunDriver(context: DriverContext) {
         forward,
       );
     }
+
     save({ reportId: closing.durableId });
     run.followed = closing;
     const closed = await closing.done;
+
     if (closed.type !== "error") await scope.file(withoutPrompt(closed.messages));
+
     return closed;
   }
 
   function finish(runId: string, end: DurableEnd, cancelReason?: string) {
     if (context.stopped()) return;
+
     report(runId, (seq) =>
       end.type === "error"
         ? { type: "run.end", runId, seq, outcome: "error", error: cancelReason ?? end.error }
@@ -575,6 +628,7 @@ export function createRunDriver(context: DriverContext) {
           },
     );
     const record = records.get(runId);
+
     if (record) records.save({ ...record, done: true });
   }
 
@@ -606,41 +660,51 @@ export function createRunDriver(context: DriverContext) {
 
     restore(runId: string, secrets?: RunSecrets) {
       const record = records.get(runId);
+
       if (!record) {
         outbox.open(runId);
         finish(runId, { type: "error", error: RUN_GONE });
         return;
       }
+
       if (record.done || live.has(runId)) return;
+
       return execute(record, undefined, secrets ?? {});
     },
 
     async steer({ runId, steerId, prompt, mentions }: SteerParams): Promise<SteerResult> {
       const run = live.get(runId);
       const record = records.get(runId);
+
       if (!run || !record || record.done) return { status: "closed" };
+
       if (record.compact) {
         return { status: "refused", reason: "The conversation is being compacted" };
       }
+
       if (record.phase === "report") {
         return {
           status: "refused",
           reason: "The agent is writing up how the goal ended: wait for it to finish",
         };
       }
+
       const message = sentPrompt(prompt, {
         mentions,
         skills: record.skillListing,
         paths: context.sandbox.paths?.(record.thread.id),
       });
+
       if (record.phase === "goal") {
         const taken = (await run.goal?.steer(message, steerId)) ?? false;
         return { status: taken ? "queued" : "closed" };
       }
+
       if (!record.durableId) {
         run.steers.push({ steerId, message });
         return { status: "queued" };
       }
+
       const taken = await (
         await context.backend(record.backend)
       ).steer(record.durableId, message, steerId);
@@ -649,15 +713,20 @@ export function createRunDriver(context: DriverContext) {
 
     async cancel(runId: string, reason: string) {
       const run = live.get(runId);
+
       if (run) {
         run.cancelReason = reason;
         void run.followed?.cancel();
         return;
       }
+
       const record = records.get(runId);
+
       if (!record || record.done) return;
+
       if (record.durableId)
         await (await context.backend(record.backend)).cancelRun(record.durableId);
+
       outbox.attach(runId, Number.MAX_SAFE_INTEGER);
       finish(runId, { type: "error", error: reason }, reason);
     },

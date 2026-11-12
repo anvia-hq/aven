@@ -47,7 +47,9 @@ type Props = {
 export function ProviderLogo({ kind, baseUrl = null, preset }: Props) {
   const service = preset ?? presetOf({ kind, baseUrl })?.id;
   let Logo: ComponentType<SVGProps<SVGSVGElement>> = Servers;
+
   if (kind !== "openai-compatible") Logo = LOGOS[kind];
   else if (service) Logo = PRESET_LOGOS[service];
+
   return <Logo aria-hidden className="size-4 shrink-0 text-foreground" />;
 }

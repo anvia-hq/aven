@@ -12,18 +12,23 @@ export function secretRedactor(variables: readonly RunEnvVar[] | undefined) {
         .map(({ value }) => value),
     ),
   ].sort((a, b) => b.length - a.length);
+
   if (secrets.length === 0) return undefined;
 
   const hide = (text: string) =>
     secrets.reduce((hidden, secret) => hidden.replaceAll(secret, REDACTED), text);
   const walk = (value: unknown): unknown => {
     if (typeof value === "string") return hide(value);
+
     if (Array.isArray(value)) return value.map(walk);
+
     const plain =
       typeof value === "object" &&
       value !== null &&
       [Object.prototype, null].includes(Object.getPrototypeOf(value));
+
     if (!plain) return value;
+
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, walk(entry)]),
     );

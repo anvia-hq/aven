@@ -19,16 +19,20 @@ export function layoutGraph(commits: readonly GraphCommit[]): CommitGraph {
 
     const down: number[] = [];
     const [first, ...others] = parents;
+
     if (first !== undefined) {
       waiting[lane] = first;
       down.push(lane);
     }
+
     for (const parent of others) {
       const joined = waiting.indexOf(parent);
+
       if (joined !== -1) {
         down.push(joined);
         continue;
       }
+
       const opened = free();
       waiting[opened] = parent;
       down.push(opened);

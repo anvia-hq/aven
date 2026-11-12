@@ -43,9 +43,11 @@ export function createScheduler(options: {
       .set({ nextRunAt: nextRun(schedule.cron, schedule.timezone, now) })
       .where(and(eq(botSchedules.id, schedule.id), eq(botSchedules.nextRunAt, due)))
       .returning({ id: botSchedules.id });
+
     if (!claimed) return;
 
     let status: ScheduleStatus;
+
     if (isBusy(schedule.botId)) status = "busy";
     else if (lateness > SCHEDULE_CATCH_UP_MS) status = "missed";
     else {
@@ -57,6 +59,7 @@ export function createScheduler(options: {
         status = "failed";
       }
     }
+
     const ran = status === "started" || status === "late";
     await db
       .update(botSchedules)
@@ -95,6 +98,7 @@ export function createScheduler(options: {
     tick,
     start() {
       if (timer) return;
+
       void guarded();
       timer = setInterval(() => void guarded(), intervalMs);
       timer.unref();

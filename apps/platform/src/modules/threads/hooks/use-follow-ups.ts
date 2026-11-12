@@ -31,12 +31,16 @@ export function useFollowUps(
 
   useEffect(() => {
     if (!loaded) return;
+
     if (baseline.current === undefined) {
       baseline.current = answered;
       return;
     }
+
     if (running || !enabled || answered === null) return;
+
     if (answered === baseline.current || answered === asked.current) return;
+
     asked.current = answered;
     let current = true;
     postJson<{ suggestions: string[] }>(`/threads/${threadId}/follow-ups`, {})

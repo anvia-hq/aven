@@ -5,6 +5,7 @@ import { useProjects } from "../hooks/use-projects";
 export function ProjectInfo({ projectId }: { projectId: string }) {
   const { projects } = useProjects();
   const project = projects.find((item) => item.id === projectId);
+
   if (!project) return null;
 
   return (

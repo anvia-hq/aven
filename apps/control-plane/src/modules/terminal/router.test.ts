@@ -72,6 +72,7 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
     const deadline = Date.now() + ms;
     while (!check()) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
   };
@@ -98,13 +99,17 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
     runner.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
         const frame = decodeViewerFrame(new Uint8Array(event.data));
+
         if (!frame) return;
+
         const typed = new TextDecoder().decode(frame.payload).toUpperCase();
         runner.send(encodeViewerFrame(frame.viewerId, new TextEncoder().encode(typed)));
         return;
       }
+
       const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
       seen.messages.push(message);
+
       if (message.type === "terminal.open") {
         runner.send(JSON.stringify({ type: "terminal.opened", viewerId: message.viewerId }));
       }
@@ -119,7 +124,9 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
     { query = "cols=100&rows=30", headers = {} as Record<string, string> } = {},
   ) {
     const sent = { ...headers };
+
     if (token) sent.authorization = `Bearer ${token}`;
+
     const ws = new WebSocket(`ws://${base}/threads/${threadId}/terminal/stream?${query}`, {
       headers: sent,
     } as unknown as string[]);

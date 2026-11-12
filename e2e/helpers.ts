@@ -57,8 +57,10 @@ export async function importRepository(page: Page, name: string) {
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
   const here = new URL(page.url());
+
   if (here.pathname === "/threads") await page.goto(`/threads?project=${project.id}`);
   else await page.reload();
+
   await page.waitForLoadState("networkidle");
 }
 
@@ -106,7 +108,9 @@ export async function threadOnFakeRunner(page: Page, env: Record<string, string>
 
 export async function registerPlatformOwner(page: Page, index: number) {
   const email = (process.env.E2E_PLATFORM_OWNERS ?? "").split(",")[index];
+
   if (!email) throw new Error(`There is no platform owner number ${index}`);
+
   await page.goto("/register");
   await page.getByLabel("Name").fill(`Platform Owner ${index}`);
   await page.getByLabel("Email").fill(email);

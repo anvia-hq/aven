@@ -31,5 +31,6 @@ export function answerBotMemory(store: MemoryStore, scope: MemoryScope) {
 
 function compactionOf(store: MemoryStore) {
   if (!store.compaction) throw new Error("The bot's conversation cannot be summarized here");
+
   return store.compaction;
 }

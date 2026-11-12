@@ -12,7 +12,9 @@ beforeEach(() => {
     workdir: "/workspace",
     readTextFile: async ({ path }) => {
       const text = files.get(path);
+
       if (text === undefined) throw new Error(`File not found: ${path}`);
+
       return text;
     },
     writeTextFile: async ({ path, text }) => void files.set(path, text),

@@ -37,6 +37,7 @@ export function useFixProcess(threadId: string) {
       });
     });
     setFixing(null);
+
     if (sent !== null) {
       toast.add({
         title: "Asked the agent",

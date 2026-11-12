@@ -24,6 +24,7 @@ export async function fetchBranch(
   run: Git = git,
 ): Promise<Fetched> {
   if (!isBranchName(branch)) throw new Error(`"${branch}" is not a branch name`);
+
   const hardened = hostGit(run);
   const ref = `refs/remotes/origin/${branch}`;
   const read = async () => {
@@ -36,8 +37,12 @@ export async function fetchBranch(
     ["fetch", "--no-tags", "--", access.cloneUrl, `+refs/heads/${branch}:${ref}`],
     { cwd: root, env: authEnv(access), timeoutMs: FETCH_TIMEOUT_MS },
   );
+
   if (fetched.code !== 0) throw gitFailure(`Could not fetch ${branch}`, fetched, access.token);
+
   const commit = await read();
+
   if (!commit) throw new Error(`Could not fetch ${branch}: git left no ${ref}`);
+
   return { branch, commit, previous };
 }

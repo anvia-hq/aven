@@ -16,11 +16,14 @@ import { platformService } from "../platform/service";
 import { parseOrigins } from "./origins";
 
 const secret = process.env.BETTER_AUTH_SECRET;
+
 if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
 
 export async function ensurePersonalOrganization(userId: string) {
   const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId));
+
   if (!user) throw new Error(`Cannot create an organization: user ${userId} does not exist`);
+
   const organizationId = `personal-${userId}`;
   await db.transaction(async (tx) => {
     await tx

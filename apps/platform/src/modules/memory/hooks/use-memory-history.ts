@@ -10,11 +10,13 @@ export function useMemoryHistory(open: boolean) {
 
   useEffect(() => {
     if (!open) return;
+
     let current = true;
     api<MemoryEvent[]>("/memory/history")
       .then((found) => current && setEvents(found))
       .catch((failure: unknown) => {
         if (!current) return;
+
         toast.add({
           title: "Could not load history",
           description: errorMessage(failure),

@@ -28,14 +28,17 @@ export function parseActions(text: string): ParsedActions {
     return { actions: [], problem: error instanceof Error ? error.message : "Not valid YAML" };
   }
   const parsed = file.safeParse(document);
+
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return { actions: [], problem: `${issue?.path.join(".") || "file"}: ${issue?.message}` };
   }
+
   const names = new Set<string>();
   const actions: ThreadActionBody[] = [];
   for (const { name: label, run, prompt } of parsed.data.actions) {
     if (names.has(label)) return { actions: [], problem: `${label} is listed twice` };
+
     names.add(label);
     actions.push(
       run === undefined

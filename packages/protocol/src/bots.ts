@@ -20,7 +20,9 @@ export function botHandleOf(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .slice(0, 30)
     .replace(/^-+|-+$/g, "");
+
   if (!slug) return "bot";
+
   return RESERVED_HANDLES.includes(slug) ? `${slug}-bot` : slug;
 }
 
@@ -49,9 +51,13 @@ export const personPrompt = (text: string) => {
 
 export function parseBotPrompt(prompt: string): { from?: string; note?: boolean; text: string } {
   const bot = FROM_BOT.exec(prompt);
+
   if (bot) return { from: bot[1]!, text: bot[2]! };
+
   const note = NOTE.exec(prompt);
+
   if (note) return { note: true, text: note[1]! };
+
   return { text: prompt.startsWith(PERSON_MARK) ? prompt.slice(PERSON_MARK.length) : prompt };
 }
 
@@ -63,7 +69,9 @@ export const botMessageId = (index: number) => `m-${index}`;
 
 export function applyBotEvent(messages: BotChatMessage[], event: BotEvent): BotChatMessage[] {
   if (event.type === "snapshot") return event.messages;
+
   if (event.type === "message") return [...messages, event.message];
+
   return messages;
 }
 

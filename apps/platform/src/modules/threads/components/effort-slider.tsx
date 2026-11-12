@@ -27,6 +27,7 @@ export function EffortSlider({ levels, value, onChange }: Props) {
         value={[Math.max(levels.indexOf(value), 0)]}
         onValueChange={(next) => {
           const level = levels[Array.isArray(next) ? (next[0] ?? 0) : next];
+
           if (level) onChange(level);
         }}
       >

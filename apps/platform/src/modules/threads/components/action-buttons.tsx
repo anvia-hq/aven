@@ -16,6 +16,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
     thread.running,
   );
   const [open, setOpen] = useState(false);
+
   if (problem) {
     return (
       <Tooltip>
@@ -26,7 +27,9 @@ export function ActionButtons({ thread }: { thread: Thread }) {
       </Tooltip>
     );
   }
+
   if (actions.length === 0) return null;
+
   const disabled = (action: ThreadAction) =>
     starting !== null || (action.kind === "prompt" && thread.running);
   const pinned = actions.filter((action) => favorites.includes(action.name));

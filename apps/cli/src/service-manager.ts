@@ -9,6 +9,7 @@ import type { ServiceManager } from "./types";
 
 async function mustRun(command: string[], env?: Record<string, string | undefined>) {
   const { code, out } = await exec(command, env);
+
   if (code !== 0) throw new Error(`${command.slice(0, 2).join(" ")} failed: ${out}`);
 }
 
@@ -44,7 +45,9 @@ function launchd(label: string): ServiceManager {
     },
     async status() {
       const { code, out } = await exec(["launchctl", "print", target]);
+
       if (code !== 0) return "stopped";
+
       const pid = /\bpid = (\d+)/.exec(out)?.[1];
       return pid ? `running (pid ${pid})` : "loaded, not running";
     },
@@ -87,7 +90,9 @@ export function serviceManager(names: {
   systemdUnit: string;
 }): ServiceManager {
   if (process.platform === "darwin") return launchd(names.launchdLabel);
+
   if (process.platform === "linux") return systemd(names.systemdUnit);
+
   throw new Error(
     `Running a service is not supported on ${process.platform} yet; run \`aven runner run\` in a terminal.`,
   );

@@ -27,8 +27,11 @@ function fakeRun(): FakeRun {
         next: async () => {
           for (;;) {
             const event = said.shift();
+
             if (event) return { done: false as const, value: event };
+
             if (finished) return { done: true as const, value: undefined };
+
             await Bun.sleep(2);
           }
         },
@@ -58,7 +61,9 @@ function scriptedRuntime() {
   const runtime: Runtime = { start: open, resume: open, dispose: () => undefined };
   const current = () => {
     const run = runs.at(-1);
+
     if (!run) throw new Error("no run was started");
+
     return run;
   };
   return { runtime, current };
@@ -107,6 +112,7 @@ async function until(check: () => boolean | Promise<boolean>, ms = 5000) {
   const deadline = Date.now() + ms;
   while (!(await check())) {
     if (Date.now() > deadline) throw new Error("timed out waiting for condition");
+
     await Bun.sleep(5);
   }
 }

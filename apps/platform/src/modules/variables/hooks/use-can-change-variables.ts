@@ -5,6 +5,8 @@ import type { VariableScope } from "../types";
 
 export function useCanChangeVariables(scope: VariableScope) {
   const { data: member } = authClient.useActiveMember();
+
   if (scope.kind !== "workspace") return true;
+
   return isOwnerOrAdminRole(member?.role);
 }

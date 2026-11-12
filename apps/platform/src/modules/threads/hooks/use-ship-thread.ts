@@ -16,10 +16,12 @@ export function useShipThread(thread: Thread, showShip: () => () => void) {
   const [pullRequestsAtShip, setPullRequestsAtShip] = useState(0);
   useEffect(() => {
     if (!waitingForRun) return;
+
     if (thread.running || thread.pullRequests.length !== pullRequestsAtShip) {
       setWaitingForRun(false);
       return;
     }
+
     const timer = setTimeout(() => setWaitingForRun(false), RUN_WAIT_MS);
     return () => clearTimeout(timer);
   }, [waitingForRun, thread.running, thread.pullRequests.length, pullRequestsAtShip]);
@@ -30,6 +32,7 @@ export function useShipThread(thread: Thread, showShip: () => () => void) {
     const started = await attempt("Could not ship the thread", () =>
       postJson<{ ok: true }>(`/threads/${thread.id}/ship`, { ...selection, mode }),
     );
+
     if (started) {
       toast.add({
         title: "Shipping",
@@ -37,8 +40,11 @@ export function useShipThread(thread: Thread, showShip: () => () => void) {
         type: "success",
       });
     }
+
     setShipping(false);
+
     if (!started) dropCard();
+
     if (started) {
       setPullRequestsAtShip(thread.pullRequests.length);
       setWaitingForRun(true);

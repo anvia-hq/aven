@@ -106,8 +106,10 @@ botApiApp.current = {
 };
 
 const port = Number(process.env.PORT ?? 8000);
+
 if (!Number.isInteger(port) || port <= 0)
   throw new Error(`PORT must be a port number, got "${process.env.PORT}"`);
+
 app.listen(port);
 
 const localRunner = await startLocalRunner(port);

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { parseEnv } from "../parse-env";
 import { canSaveRows, rowStates, rowsAfterPaste, rowsToSave } from "../rows";
-import { type EnvIssue, type Variable, type VariableRow, type VariableScope } from "../types";
+import type { EnvIssue, Variable, VariableRow, VariableScope } from "../types";
 import { useVariables } from "./use-variables";
 
 export function useVariableForm(
@@ -57,22 +57,28 @@ export function useVariableForm(
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (rows !== null) {
       if (!savable) return;
+
       setSubmitting(true);
       const saved = await saveMany(entries, secret);
       setSubmitting(false);
+
       if (saved) {
         reset();
         onDone();
       }
+
       return;
     }
+
     const data = new FormData(formRef.current ?? undefined);
     const name = variable?.name ?? String(data.get("name") ?? "").trim();
     setSubmitting(true);
     const saved = await save({ name, value: String(data.get("value") ?? ""), secret });
     setSubmitting(false);
+
     if (saved) {
       reset();
       onDone();

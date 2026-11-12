@@ -40,7 +40,9 @@ const askedOf = (count: 1 | 2) =>
 
 function askedBy(run: FakeRunnerRun): { name: string; questions: Asked[] } | null {
   if (run.kind === "secret") return { name: "request_secret", questions: [SECRET_QUESTION] };
+
   if (run.kind === "questions") return { name: "ask_user", questions: askedOf(run.count) };
+
   return null;
 }
 
@@ -76,7 +78,9 @@ const sandboxes = new Map<string, Sandbox>();
 
 function sandboxFor(threadId: string): Sandbox {
   const known = sandboxes.get(threadId);
+
   if (known) return known;
+
   const made: Sandbox = { running: config.sandboxStartsRunning };
   sandboxes.set(threadId, made);
   return made;
@@ -92,13 +96,17 @@ ws.onopen = () => {
     host: config.self.dirs.length > 0 ? true : undefined,
     dirs: config.self.dirs.length > 0 ? config.self.dirs : undefined,
   });
+
   if (config.self.stats) send({ type: "host.stats", stats: JSON.parse(config.self.stats) });
 };
 ws.onmessage = ({ data }) => {
   if (data instanceof ArrayBuffer) {
     const frame = decodeViewerFrame(new Uint8Array(data));
+
     if (!frame) return;
+
     const terminal = terminals.get(frame.viewerId);
+
     if (terminal) {
       const reply = (value: string) => ws.send(encodeViewerFrame(frame.viewerId, text(value)));
       for (const char of new TextDecoder().decode(frame.payload)) {
@@ -111,15 +119,20 @@ ws.onmessage = ({ data }) => {
         }
       }
     }
+
     return;
   }
+
   const message = JSON.parse(String(data)) as ControlPlaneToRuntime;
+
   if (message.type === "terminal.open") {
     const { viewerId, threadId, cols, rows } = message;
+
     if (!sandboxFor(threadId).running) {
       send({ type: "terminal.closed", viewerId, reason: "The sandbox is not running" });
       return;
     }
+
     event({ type: "terminal.open", cols, rows });
     terminals.set(viewerId, { line: "" });
     send({ type: "terminal.opened", viewerId });
@@ -196,14 +209,18 @@ ws.onmessage = ({ data }) => {
     const timer = setInterval(() => {
       const word = (streamed.get(runId) ?? 0) + 1;
       streamed.set(runId, word);
+
       if (word > stream.count) {
         clearInterval(timer);
         send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
         return;
       }
+
       let gap = " ";
+
       if (word === 1) gap = "";
       else if (word % 30 === 1) gap = "\n\n";
+
       send({
         type: "run.event",
         runId,
@@ -216,11 +233,13 @@ ws.onmessage = ({ data }) => {
     const timer = setInterval(() => {
       const line = (streamed.get(runId) ?? 0) + 1;
       streamed.set(runId, line);
+
       if (line > stream.count) {
         clearInterval(timer);
         send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
         return;
       }
+
       send({
         type: "run.event",
         runId,
@@ -240,8 +259,11 @@ ws.onmessage = ({ data }) => {
     });
     const finish = () => {
       const { runId } = message;
+
       if (ended.has(runId)) return;
+
       ended.add(runId);
+
       if (plain.failure) {
         send({
           type: "run.end",
@@ -252,6 +274,7 @@ ws.onmessage = ({ data }) => {
         });
         return;
       }
+
       send({
         type: "run.event",
         runId,
@@ -260,6 +283,7 @@ ws.onmessage = ({ data }) => {
       });
       send({ type: "run.end", runId, seq: numbered(runId), outcome: "response" });
     };
+
     if (plain.ending.kind === "at-once") finish();
     else if (plain.ending.kind === "after") setTimeout(finish, plain.ending.ms);
   } else if (message.type === "run.start" && asking) {
@@ -353,7 +377,9 @@ const WORKSPACE_FILES: Record<string, string> = {
   "README.md": "# Notes\n",
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
+
 if (config.avenFiles.includes("setup")) WORKSPACE_FILES[".aven/setup"] = "#!/bin/sh\nbun install\n";
+
 if (config.avenFiles.includes("ship")) {
   WORKSPACE_FILES[".aven/ship.md"] = "Commit, push, then open it with gh pr create --draft.\n";
 }
@@ -402,8 +428,10 @@ const PROCESS_LOGS: Record<string, string> = {
 function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   const params = call.params as { threadId?: string };
   const reply = (result: unknown) => send({ type: "reply", id: call.id, ok: true, result });
+
   if (call.method === "folders.list") {
     const { path } = call.params as { path?: string };
+
     if (!path) {
       return reply({
         path: null,
@@ -415,7 +443,9 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         })),
       });
     }
+
     const root = config.self.dirs.find((dir) => path === dir || path.startsWith(`${dir}/`));
+
     if (!root) {
       return send({
         type: "reply",
@@ -424,6 +454,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         error: "This runner does not serve that folder",
       });
     }
+
     const names = folderTree.get(path) ?? (path === root ? ["app", "notes"] : []);
     return reply({
       path,
@@ -431,12 +462,14 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       folders: names.map((name) => ({ name, path: `${path}/${name}`, git: name === "app" })),
     });
   }
+
   if (call.method === "folders.create") {
     const { path, name } = call.params as { path: string; name: string };
     const names = folderTree.get(path) ?? ["app", "notes"];
     folderTree.set(path, names.concat(name));
     return reply({ path: `${path}/${name}` });
   }
+
   if (call.method === "folders.files") {
     const { path } = call.params as { path?: string };
     const entries = path
@@ -448,6 +481,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         ];
     return reply({ entries });
   }
+
   if (call.method === "folders.commits") {
     return reply({
       commits: [
@@ -475,6 +509,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       hasMore: false,
     });
   }
+
   if (call.method === "folders.readme") {
     return reply({
       readme: {
@@ -485,6 +520,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       },
     });
   }
+
   if (call.method === "run.steer") {
     const { runId, steerId, prompt } = call.params as {
       runId: string;
@@ -492,9 +528,11 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       prompt: string;
     };
     event({ type: "steer", prompt });
+
     if (config.steering.refuseReason) {
       return reply({ status: "refused", reason: config.steering.refuseReason });
     }
+
     setTimeout(
       () =>
         send({
@@ -507,6 +545,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     );
     return reply({ status: "queued" });
   }
+
   if (call.method === "diff.get") {
     const { scope } = call.params as { scope: "turn" | "all" };
     return reply({
@@ -515,15 +554,19 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       branch: config.branch,
     });
   }
+
   if (config.noWorkspace && call.method.startsWith("files.")) return reply(null);
+
   if (call.method === "files.list") {
     const { path } = call.params as { path: string };
     return reply({ entries: WORKSPACE[path] ?? [] });
   }
+
   if (call.method === "files.search") {
     const { query } = call.params as { query: string };
     return reply({ paths: Object.keys(WORKSPACE_FILES).filter((path) => path.includes(query)) });
   }
+
   if (call.method === "files.read") {
     const { path } = call.params as { path: string };
     const text = WORKSPACE_FILES[path];
@@ -533,6 +576,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         : { kind: "text", text, size: text.length, truncated: false },
     );
   }
+
   if (call.method === "actions.run") {
     const { command } = call.params as { command: string };
     const failing = command.includes("typecheck");
@@ -548,25 +592,33 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     PROCESS_LOGS[started.id] = failing ? "src/greeting.ts(2,3): error TS2322\n" : "7 pass\n";
     return reply({ process: started });
   }
+
   if (call.method === "processes.list") return reply({ processes: PROCESSES });
+
   if (call.method === "processes.stop") {
     const { processId } = call.params as { processId: string };
     const found = PROCESSES.find((process) => process.id === processId);
+
     if (!found) return send({ type: "reply", id: call.id, ok: false, error: "No such process" });
+
     Object.assign(found, { status: "stopped", endedAt: new Date().toISOString() });
     return reply({ processes: PROCESSES });
   }
+
   if (call.method === "processes.logs") {
     const { processId } = call.params as { processId: string };
     return reply({ stdout: PROCESS_LOGS[processId] ?? "", stderr: "", truncated: false });
   }
+
   if (call.method === "runner.update") {
     const { updateBusyReason } = config.self;
     return reply(
       updateBusyReason ? { status: "busy", reason: updateBusyReason } : { status: "started" },
     );
   }
+
   if (call.method === "process.watch") return reply(null);
+
   if (call.method === "sandbox.release") {
     const { threadId } = call.params as { threadId: string };
     event({ type: "sandbox.release", threadId });
@@ -574,9 +626,13 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     released.running = false;
     return reply({ released: true });
   }
+
   const sandbox = sandboxFor(params.threadId ?? "");
+
   if (call.method === "computer.wake") sandbox.running = true;
+
   if (!sandbox.running) return reply(null);
+
   reply({ state: "awake" });
 }
 
