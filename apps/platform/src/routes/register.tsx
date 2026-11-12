@@ -44,8 +44,10 @@ function Register() {
         </p>
       ) : (
         <>
-          <AuthForm mode="sign-up" onSuccess={onSuccess} />
-          {config?.githubLogin && <GithubSignIn invitation={invitation} />}
+          {config?.emailLogin && <AuthForm mode="sign-up" onSuccess={onSuccess} />}
+          {config?.githubLogin && (
+            <GithubSignIn invitation={invitation} divided={config.emailLogin} />
+          )}
         </>
       )}
     </AuthShell>
