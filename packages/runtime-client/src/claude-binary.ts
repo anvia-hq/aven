@@ -59,13 +59,25 @@ async function download(entry: ClaudeBinaryEntry, target: string, options: Claud
 
     const hash = createHash("sha512");
     const out = createWriteStream(archive);
-    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
-      hash.update(chunk);
+    let failure: Error | undefined;
+    out.on("error", (error) => {
+      failure = error;
+    });
+    try {
+      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+        if (failure) throw failure;
 
-      if (!out.write(chunk)) await once(out, "drain");
+        hash.update(chunk);
+
+        if (!out.write(chunk)) await once(out, "drain");
+      }
+      out.end();
+      await finished(out);
+
+      if (failure) throw failure;
+    } finally {
+      out.destroy();
     }
-    out.end();
-    await finished(out);
 
     if (`sha512-${hash.digest("base64")}` !== entry.integrity) {
       throw new Error("The downloaded Claude binary does not match the version Aven expects");

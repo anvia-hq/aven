@@ -87,6 +87,23 @@ describe("claudeExecutable", () => {
     expect(await readdir(join(dir, "9.9.9"))).toEqual([]);
   });
 
+  test("a download that breaks half way fails and leaves nothing behind", async () => {
+    const dir = join(scratch, "broken");
+    const fetchTarball = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(tarball.subarray(0, 64)));
+            controller.error(new Error("connection reset"));
+          },
+        }),
+      )) as unknown as typeof fetch;
+    await expect(claudeExecutable(options(dir, { fetchTarball }))).rejects.toThrow(
+      "connection reset",
+    );
+    expect(await readdir(join(dir, "9.9.9"))).toEqual([]);
+  });
+
   test("a failed download says so", async () => {
     const dir = join(scratch, "down");
     const { fetchTarball } = served(tarball, 503);
@@ -131,15 +148,10 @@ describe("claudeExecutable", () => {
 describe("the manifest", () => {
   test("matches the SDK version and checksums in bun.lock", () => {
     const lock = readFileSync(join(import.meta.dir, "../../../bun.lock"), "utf8");
-    const sdk = JSON.parse(
-      readFileSync(
-        join(import.meta.dir, "../node_modules/@anthropic-ai/claude-agent-sdk/package.json"),
-        "utf8",
-      ),
-    ) as { version: string };
+    const sdk = /"@anthropic-ai\/claude-agent-sdk@([^"]+)"/.exec(lock)?.[1];
 
     for (const item of Object.values(CLAUDE_BINARIES)) {
-      expect(item.version).toBe(sdk.version);
+      expect(item.version).toBe(sdk);
       const line = lock.split("\n").find((row) => row.trimStart().startsWith(`"${item.package}":`));
       expect(line).toContain(`${item.package}@${item.version}`);
       expect(line).toContain(item.integrity);
