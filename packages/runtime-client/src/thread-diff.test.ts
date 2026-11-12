@@ -106,6 +106,44 @@ describe("a thread's changes", () => {
     expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
   });
 
+  test("a branch moved to a default branch that squash-merged it shows only what is uncommitted, with the folder's main fetched on the way", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    const remote = join(root, "..", "remote");
+    const commit = (cwd: string, message: string) =>
+      sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await writeFile(join(root, "b.txt"), "new\n");
+    await sh(root, "add", ".");
+    await commit(root, "work");
+    await threadDiff(root, "unshipped");
+    await sh(root, "push", "-q", "-u", "origin", "HEAD");
+    expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
+
+    await writeFile(join(remote, "b.txt"), "new\n");
+    await writeFile(join(remote, "c.txt"), "others\n");
+    await sh(remote, "add", ".");
+    await commit(remote, "squashed work and others");
+    await sh(root, "fetch", "-q", "--", remote, "main");
+    await sh(root, "reset", "-q", "--hard", "FETCH_HEAD");
+    await writeFile(join(root, "d.txt"), "edit\n");
+
+    const unshipped = (await threadDiff(root, "unshipped"))?.patch;
+    expect(unshipped).toContain("+++ b/d.txt");
+    expect(unshipped).not.toContain("b.txt");
+    expect(unshipped).not.toContain("c.txt");
+    const whole = (await threadDiff(root, "all"))?.patch;
+    expect(whole).toContain("+++ b/d.txt");
+    expect(whole).not.toContain("c.txt");
+  });
+
+  test("a project cloned from a server is not fetched from while its changes are read", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    await sh(root, "remote", "set-url", "origin", "https://127.0.0.1:9/never.git");
+    const started = Date.now();
+
+    expect(await threadDiff(root, "all")).not.toBeNull();
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
   test("the whole branch shows every change, new files included", async () => {
     const { root } = await workspace();
     await writeFile(join(root, "a.txt"), "one\nthree\n");

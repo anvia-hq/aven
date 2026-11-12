@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { git } from "./git-clone";
 import { hostGit } from "./host-git";
+import { refreshBase } from "./refresh-base";
 import { remoteBase } from "./remote-base";
 import { trackPushes } from "./track-pushes";
 import type { DiffScope, ThreadDiff } from "@aven/protocol/types";
@@ -83,15 +84,6 @@ async function pushedTree(root: string, run: Git, configure: Git) {
   return pushed.code === 0 ? pushed.stdout.trim() : null;
 }
 
-async function diffStart(root: string, scope: DiffScope, run: Git, configure: Git) {
-  if (scope === "turn") return turnStart(root, run);
-
-  if (scope === "unshipped")
-    return (await pushedTree(root, run, configure)) ?? branchPoint(root, run);
-
-  return branchPoint(root, run);
-}
-
 function cut(patch: string): ThreadDiff {
   const bytes = new TextEncoder().encode(patch);
 
@@ -111,19 +103,23 @@ export async function threadDiff(
 
   if (!now) return null;
 
-  const from = await diffStart(root, scope, host, run);
-
-  if (!from) return { patch: "", truncated: false };
-
-  const diff = await patchBetween(root, from, now, host);
-
-  if (scope === "unshipped" && diff.patch !== "") {
-    const whole = await patchBetween(root, await branchPoint(root, host), now, host);
-
-    if (whole.patch === "") return whole;
+  if (scope === "turn") {
+    const start = await turnStart(root, host);
+    return start ? patchBetween(root, start, now, host) : { patch: "", truncated: false };
   }
 
-  return diff;
+  await refreshBase(root, run);
+
+  const point = await patchBetween(root, await branchPoint(root, host), now, host);
+
+  if (scope === "all") return point;
+
+  const pushed = await pushedTree(root, host, run);
+
+  if (!pushed) return point;
+
+  const ahead = await patchBetween(root, pushed, now, host);
+  return point.patch.length < ahead.patch.length ? point : ahead;
 }
 
 export async function currentBranch(root: string, run: Git = git) {
