@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { followUpsBody, timezoneBody } from "./schema";
+import { followUpsBody, noticeParams, timezoneBody } from "./schema";
 import { preferencesService } from "./service";
 
 export const preferencesRouter = new Elysia({ prefix: "/preferences" })
@@ -16,6 +16,14 @@ export const preferencesRouter = new Elysia({ prefix: "/preferences" })
     auth: true,
     body: timezoneBody,
   })
+  .post(
+    "/notices/:id/dismiss",
+    ({ user, params }) => preferencesService.dismissNotice(user.id, params.id),
+    {
+      auth: true,
+      params: noticeParams,
+    },
+  )
   .put("/follow-ups", ({ user, body }) => preferencesService.setFollowUps(user.id, body), {
     auth: true,
     body: followUpsBody,

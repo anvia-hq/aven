@@ -1,4 +1,5 @@
 import { Columns, GitDiff, Menu } from "@mynaui/icons-react";
+import { useMemo, useState } from "react";
 
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
@@ -8,7 +9,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 import { useDiffPreferences } from "../hooks/use-diff-preferences";
 import { useThreadDiff } from "../hooks/use-thread-diff";
 import { isDiffLayout, isDiffScope, type DiffScope } from "../types";
-import { DiffFileCard } from "./diff-file-card";
+import { flatten } from "../flatten";
+import { DiffVirtualList } from "./diff-virtual-list";
 import { DiffStat } from "./diff-stat";
 
 type Props = {
@@ -31,6 +33,8 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
     running,
   );
   const counted = additions > 0 || deletions > 0;
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const items = useMemo(() => flatten(files, layout, opened), [files, layout, opened]);
 
   return (
     <SidePanel
@@ -68,28 +72,30 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           </TabsList>
         </Tabs>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {!loaded && <Skeleton className="size-full rounded-none" />}
-        {problem && <PanelNotice>{problem}</PanelNotice>}
-        {loaded && !problem && available === false && (
-          <PanelNotice>
-            This thread has no workspace yet. It is made when the agent first works on the thread.
-          </PanelNotice>
-        )}
-        {loaded && available && files.length === 0 && <PanelNotice>{EMPTY[scope]}</PanelNotice>}
-        {files.length > 0 && (
-          <div className="flex flex-col gap-3 p-4">
-            {files.map((file) => (
-              <DiffFileCard key={file.path} file={file} layout={layout} />
-            ))}
-            {truncated && (
-              <p className="text-center text-xs text-muted-foreground">
-                The diff is too large to show in full; the end of it is left out.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      {files.length > 0 ? (
+        <DiffVirtualList
+          items={items}
+          files={files}
+          layout={layout}
+          onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
+          footer={
+            truncated
+              ? "The diff is too large to show in full; the end of it is left out."
+              : undefined
+          }
+        />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {!loaded && <Skeleton className="size-full rounded-none" />}
+          {problem && <PanelNotice>{problem}</PanelNotice>}
+          {loaded && !problem && available === false && (
+            <PanelNotice>
+              This thread has no workspace yet. It is made when the agent first works on the thread.
+            </PanelNotice>
+          )}
+          {loaded && available && <PanelNotice>{EMPTY[scope]}</PanelNotice>}
+        </div>
+      )}
     </SidePanel>
   );
 }

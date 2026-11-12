@@ -72,7 +72,7 @@ describe("a Claude run ends when its answer is complete", () => {
       { claude: context() },
       () => undefined,
     );
-    await runs.steer(followed.durableId, "and this");
+    await runs.steer(followed.durableId, "and this", "steer-1");
     release.resolve();
     const end = await withTimeout(followed.done);
     await runs.close();

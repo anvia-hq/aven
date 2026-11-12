@@ -7,6 +7,7 @@ import { sentPrompt } from "@aven/agents/attachments";
 import { environmentInstructions } from "@aven/agents/environment";
 import { forkInstructions } from "@aven/agents/fork-instruction";
 import { codingInstructions } from "@aven/agents/instruction";
+import { forPaths, SANDBOX_PATHS } from "@aven/agents/sandbox-paths";
 import { mcpInstructions } from "@aven/agents/mcp";
 import { memoryInstructions } from "@aven/agents/memory";
 import { skillsInstructions } from "@aven/agents/skills";
@@ -581,7 +582,10 @@ export function createRunDriver(context: DriverContext) {
             workspace: () => Promise.resolve(cwd),
             redact: hideText,
             env: env ?? [],
-            instructions: parts.filter((part) => part.length > 0).join("\n\n"),
+            instructions: forPaths(
+              parts.filter((part) => part.length > 0).join("\n\n"),
+              context.sandbox.paths?.(thread.id) ?? SANDBOX_PATHS,
+            ),
             model: state.record.claudeModel,
             effort: state.record.claudeEffort,
             questions: attended,

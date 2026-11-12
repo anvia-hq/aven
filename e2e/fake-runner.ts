@@ -366,6 +366,24 @@ index 0000000..3333333
 +# Notes
 `;
 
+const bigPatch = (lines: number) =>
+  [
+    "diff --git a/src/big.ts b/src/big.ts",
+    "new file mode 100644",
+    "index 0000000..4444444",
+    "--- /dev/null",
+    "+++ b/src/big.ts",
+    `@@ -0,0 +1,${lines} @@`,
+    ...Array.from({ length: lines }, (_, at) => `+export const value${at} = ${at};`),
+    "",
+  ].join("\n");
+
+const patchFor = (scope: "turn" | "all") => {
+  if (config.self.diffLines > 0) return bigPatch(config.self.diffLines);
+
+  return scope === "turn" ? TURN_PATCH : TURN_PATCH + ALL_ONLY_PATCH;
+};
+
 const WORKSPACE: Record<string, { name: string; type: "file" | "directory" }[]> = {
   "": [
     { name: "src", type: "directory" },
@@ -549,7 +567,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
   if (call.method === "diff.get") {
     const { scope } = call.params as { scope: "turn" | "all" };
     return reply({
-      patch: scope === "turn" ? TURN_PATCH : TURN_PATCH + ALL_ONLY_PATCH,
+      patch: patchFor(scope),
       truncated: false,
       branch: config.branch,
     });

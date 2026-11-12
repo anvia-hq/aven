@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "dismissed_notices" text[] DEFAULT '{}'::text[] NOT NULL;

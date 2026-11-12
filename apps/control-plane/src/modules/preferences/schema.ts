@@ -7,3 +7,7 @@ export const followUpsBody = z.object({
   providerId: z.string().trim().min(1).max(64).nullable(),
   modelId: z.string().trim().min(1).max(200).nullable(),
 });
+
+export const NOTICE_IDS = ["beta"] as const;
+
+export const noticeParams = z.object({ id: z.enum(NOTICE_IDS) });

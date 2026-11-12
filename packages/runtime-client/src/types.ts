@@ -214,6 +214,7 @@ export type ClaudeToolHost = {
   onPark?(question: ClaudeQuestion): Promise<string>;
   runSubagent?: RunSubagent;
   shown?(artifacts: ToolArtifact[]): void;
+  steered?(): string | undefined;
 };
 
 export type ClaudeRunContext = {
@@ -230,6 +231,10 @@ export type ClaudeRunContext = {
   children?: boolean;
 };
 
+export type ClaudeSteer = { id: string; text: string };
+
+export type ClaudeModelUsage = { contextWindow?: number };
+
 export type ClaudeUsage = {
   input_tokens?: number;
   output_tokens?: number;
@@ -241,6 +246,7 @@ export type ClaudeSdkMessage =
   | {
       type: "assistant";
       session_id?: string;
+      parent_tool_use_id?: string | null;
       error?: string;
       message?: { content?: unknown; usage?: ClaudeUsage };
     }
@@ -253,6 +259,7 @@ export type ClaudeSdkMessage =
       result?: string;
       errors?: string[];
       usage?: ClaudeUsage;
+      modelUsage?: Record<string, ClaudeModelUsage>;
     }
   | {
       type: "stream_event";

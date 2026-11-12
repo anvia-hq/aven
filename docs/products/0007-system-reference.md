@@ -84,6 +84,8 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 
 Settings > General > Small models holds a per-person switch and model for follow-up suggestions (`preferences` module, `user_settings`). When a reply settles, the thread page calls `POST /threads/:id/follow-ups` (`modules/follow-ups`), which asks that model for one to three short replies and shows them as buttons in the Ship row, between the Ship and diff buttons and Actions (`components/follow-up-chips.tsx`, `hooks/use-follow-ups.ts`); a button that does not fit is clipped and made `inert` (`hooks/use-fully-visible.ts`), and a thread the person only drives, which has no Ship row, shows them above the input. Pressing one sends it. The model is told never to suggest merging or opening a pull request: Ship does that. A finished `fork_thread` call renders as `components/fork-card.tsx` in the parent's transcript.
 
+`user_settings.dismissed_notices` holds the ids of the notices a person dismissed (`beta`); `GET /preferences` returns them as `dismissedNotices` and `POST /preferences/notices/:id/dismiss` adds one, refusing an id it does not know. The sidebar's beta card (`apps/platform/src/modules/notices`) shows until its id is there. Decision 0248.
+
 ### A bot's computer is on a runner of its choice (decision 0227)
 
 `bots.runtime_id` (null: the built-in runner, or `AVEN_BOT_RUNNER`) is set in the bot's settings under Computer and checked by `requireUsableRuntime`. `RemoteBotReplier` and the bot's computer and artifact routes use the bot's runner; the folder is `<runner home>/bots/<id>`, moved from `workspaces/<id>` on first use (`HostSandboxes`, `ThreadRef.bot`).
@@ -103,6 +105,8 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### Unshipped is the nearer of the pushed copy and the default branch (decision 0232)
 
 `threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.
+
+The Changes panel (`apps/platform/src/modules/diff`) draws one virtual list (`@tanstack/react-virtual`, `components/diff-virtual-list.tsx`) of the items `flatten.ts` makes from the files, highlights only files in view (`hooks/use-file-colours.ts`), and keeps a file's object across polls when it did not change (`same-file.ts`). Decision 0249.
 
 ### A thread compares its changes with every branch it pushed (decision 0233)
 
@@ -143,3 +147,5 @@ Settings > Codex stores that login encrypted (`codex-setup`, `codex_logins`); th
 ### The Claude binary on a runner
 
 `runtime-client/src/claude-binary.ts` (`claudeExecutable`) gives the SDK its Claude Code program. It uses the package installed beside the SDK when there is one, and otherwise downloads the platform's package from npm into `<home>/claude-code/<version>/claude` on the first Claude thread, checks it against the sha512 in `claude-binary-manifest.ts` (tested against `bun.lock`), and passes the path as `pathToClaudeCodeExecutable`. Decision 0246.
+
+A message sent during a Claude run is held in `LiveRun.steers`, appended to the next Aven tool result (`ClaudeToolHost.steered`, `claude-mcp.ts`) and reported as `steer_applied`; one left when the answer completes becomes the next turn, and the run ends only when none is. `ClaudeTurn` reports `usage` with `context` (the last main-thread call's tokens and the model's `contextWindow`), and `claudeInput` runs the instructions through `forPaths`. Decision 0247.
