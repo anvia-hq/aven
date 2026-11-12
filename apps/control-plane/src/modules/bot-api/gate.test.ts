@@ -86,6 +86,39 @@ describe("secrets", () => {
     expect(holdsSecret({ name: "x", title: "token meeting" })).toBe(false);
   });
 
+  test("a field named like a secret is one by any spelling, but a count or a hint is not", () => {
+    for (const key of [
+      "accessToken",
+      "refresh_token",
+      "clientSecret",
+      "apiKeyValue",
+      "runnerToken",
+    ]) {
+      expect(holdsSecret({ [key]: "abc" })).toBe(true);
+    }
+    expect(holdsSecret({ compactAfterTokens: 50000 })).toBe(false);
+    expect(holdsSecret({ tokenHint: "abcd", keyHint: "1234" })).toBe(false);
+    expect(holdsSecret({ apiKey: "" })).toBe(false);
+  });
+
+  test("a header or variable given as a name and a value is a secret by its name", () => {
+    expect(holdsSecret({ headers: [{ name: "Authorization", value: "Bearer x" }] })).toBe(true);
+    expect(holdsSecret({ headers: [{ name: "Accept", value: "text/plain" }] })).toBe(false);
+    expect(
+      redact({
+        headers: [
+          { name: "X-Api-Key", value: "k" },
+          { name: "Accept", value: "a" },
+        ],
+      }),
+    ).toEqual({
+      headers: [
+        { name: "X-Api-Key", value: "[hidden]" },
+        { name: "Accept", value: "a" },
+      ],
+    });
+  });
+
   test("a response hides those fields", () => {
     expect(redact({ id: 1, apiKey: "sk-1", nested: [{ password: "p", keyHint: "1234" }] })).toEqual(
       {

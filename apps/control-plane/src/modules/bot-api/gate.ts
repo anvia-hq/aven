@@ -28,7 +28,15 @@ const CONFIRM: { method: BotApiMethod; path: RegExp }[] = [
   { method: "POST", path: /^\/runtimes\/[^/]+\/update$/i },
 ];
 
-const SECRET_KEY = /^(api[-_]?key|token|secret|password|authorization)$/i;
+const SECRET_KEY =
+  /(api[-_]?key|token|secret|password|passwd|authorization|credential|private[-_]?key)/i;
+
+const isSecretKey = (key: string) => SECRET_KEY.test(key) && !/hint$/i.test(key);
+
+const namesSecret = (entry: object) => {
+  const { name, value } = entry as { name?: unknown; value?: unknown };
+  return typeof name === "string" && isSecretKey(name) && typeof value === "string" && value !== "";
+};
 
 export class BotApiRefusal extends Error {}
 
@@ -67,16 +75,23 @@ export function classify(method: BotApiMethod, path: string): ApiTier {
 export function holdsSecret(body: unknown): boolean {
   if (Array.isArray(body)) return body.some(holdsSecret);
   if (body === null || typeof body !== "object") return false;
-  return Object.entries(body).some(([key, value]) => SECRET_KEY.test(key) || holdsSecret(value));
+  if (namesSecret(body)) return true;
+  return Object.entries(body).some(
+    ([key, value]) =>
+      (isSecretKey(key) && typeof value === "string" && value !== "") || holdsSecret(value),
+  );
 }
 
 export function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
   if (value === null || typeof value !== "object") return value;
+  const hidden = namesSecret(value);
   return Object.fromEntries(
     Object.entries(value).map(([key, inner]) => [
       key,
-      SECRET_KEY.test(key) && typeof inner === "string" ? "[hidden]" : redact(inner),
+      typeof inner === "string" && (isSecretKey(key) || (hidden && key === "value"))
+        ? "[hidden]"
+        : redact(inner),
     ]),
   );
 }

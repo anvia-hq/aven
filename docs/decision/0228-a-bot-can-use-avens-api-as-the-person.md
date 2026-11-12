@@ -23,4 +23,5 @@ A bot could manage threads, goals, schedules, providers, MCP servers, notes and 
 - `confirmed: true` is a flag the model sets, so it protects against a bot acting without asking, not against a bot that has been talked into lying. A hard check would have the control plane see the person's yes in the chat; it does not yet.
 - A change made through a route the app's page also protects with a confirmation dialog (that is client-side) is not asked twice.
 - Streams (a thread's events) are not available: a bot reads a thread with `get_thread`.
+- A call cut off at 30 seconds is not cancelled: the route may still finish, and the bot is told so. A field is a secret by any part of its name (`accessToken`, `clientSecret`), and a name and value pair by its name (`Authorization`), but a number or a `…Hint` is not.
 - An older runner has no `aven_api`; it gets the tool when it updates.

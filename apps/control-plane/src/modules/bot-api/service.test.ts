@@ -28,6 +28,18 @@ const call = (path: string, extra: object = {}, method = "GET") =>
   ({ replyId: "r", op: "call", method, path, ...extra }) as never;
 
 describe("bot api", () => {
+  test("a call that never answers is cut off after the time limit, and the grant ends", async () => {
+    const hung = createBotApi({
+      routes: () => routes,
+      organizationsOf: async () => [{ id: "org1", name: "One" }],
+      handle: () => new Promise<Response>(() => undefined),
+      timeoutMs: 20,
+    });
+    await expect(
+      hung.answer({ userId: "u", params: call("/threads"), onPersonsWord: true }),
+    ).rejects.toThrow("too long");
+  });
+
   test("search lists what is allowed with its tier, never a blocked route, and the workspaces", async () => {
     const { botApi } = api();
     const result = (await botApi.answer({
