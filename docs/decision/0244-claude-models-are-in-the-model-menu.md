@@ -8,7 +8,7 @@ A new thread's prompt had an Agent select (Aven or Claude) beside the model menu
 
 ## Decision
 
-- **There is one model menu.** Its last group, "Claude subscription · Agent SDK", lists Default, Sonnet, Opus and Fable. Choosing one starts the thread on the Claude Agent SDK with that model; choosing any other model starts it on Aven's own agent. The trigger reads "Claude Sonnet" for a Claude choice.
+- **There is one model menu.** Its last group, "Claude subscription · Agent SDK", lists Default, Sonnet, Opus, Fable and Haiku. Choosing one starts the thread on the Claude Agent SDK with that model; choosing any other model starts it on Aven's own agent. The trigger reads "Claude Sonnet" for a Claude choice.
 - **The Agent select is gone.** The backend is still fixed when a thread is created, so it follows from the choice at that moment and is sent as before.
 - **A thread keeps its backend.** Inside a Claude thread the menu offers only the Claude models, and inside a native thread only the person's own, since a thread cannot change backend.
 - **A person with no provider can still pick Claude.** The menu opens on the list instead of asking them to add a provider.

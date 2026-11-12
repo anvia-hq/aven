@@ -13,9 +13,10 @@ export const CODEX_INTERRUPTED =
   "Continue the work that was interrupted. The workspace is as the interrupted call left it. An in-flight tool call was not replayed: check the files, git status and running processes before repeating it, and do not assume it succeeded.";
 
 export const CODEX_MODELS = [
-  { id: "gpt-5.4", label: "GPT-5.4" },
-  { id: "gpt-5.1-codex-max", label: "Codex Max" },
+  { id: "gpt-6-astra", label: "GPT-6 Astra" },
   { id: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
+  { id: "gpt-6.1-terra", label: "GPT-6.1 Terra" },
+  { id: "gpt-6-luna", label: "GPT-6 Luna" },
 ] as const;
 
 const TOKEN = /^[A-Za-z0-9._~+/=-]{20,}$/;

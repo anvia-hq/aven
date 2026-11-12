@@ -293,7 +293,7 @@ describe("the run driver chooses the thread's backend (decision 0220)", () => {
       prompt: "hi",
       backend: "codex",
       codexLogin: login,
-      codexModel: "gpt-5.4",
+      codexModel: "gpt-6.1-sol",
     } as RunMessage);
     await until(() => codex.calls.some((call) => call.method === "start"));
 
@@ -301,7 +301,7 @@ describe("the run driver chooses the thread's backend (decision 0220)", () => {
     expect(native.calls).toEqual([]);
     expect(JSON.stringify(records.get("run-1"))).not.toContain(login);
     expect(codex.inputs[0]).toMatchObject({
-      codex: { login, model: "gpt-5.4" },
+      codex: { login, model: "gpt-6.1-sol" },
     });
     expect(codex.inputs[0]).not.toHaveProperty("agent");
     codex.finish("run-1");

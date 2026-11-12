@@ -3,6 +3,7 @@ export const CLAUDE_MODELS = [
   { id: "sonnet", label: "Sonnet" },
   { id: "opus", label: "Opus" },
   { id: "fable", label: "Fable" },
+  { id: "haiku", label: "Haiku" },
 ] as const;
 
 export const CLAUDE_GROUP = "Claude subscription · Agent SDK";

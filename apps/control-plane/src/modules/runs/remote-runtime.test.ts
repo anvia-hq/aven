@@ -293,7 +293,7 @@ describe("where a run's agent runs (decision 0222)", () => {
       thread: { ...thread, agentBackend: "codex" },
       prompt: "go",
       codexLogin: "login-value",
-      codexModel: "gpt-5.4",
+      codexModel: "gpt-6.1-sol",
     } as never);
 
     expect(asked).toEqual([thread.runtimeId]);
@@ -302,7 +302,7 @@ describe("where a run's agent runs (decision 0222)", () => {
       type: "run.start",
       backend: "codex",
       codexLogin: "login-value",
-      codexModel: "gpt-5.4",
+      codexModel: "gpt-6.1-sol",
     });
     expect(posted[0]).not.toHaveProperty("model");
   });
