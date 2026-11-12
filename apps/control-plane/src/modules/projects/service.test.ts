@@ -16,7 +16,6 @@ import {
   FolderNotServedError,
   projectsService,
   RepositoryAlreadyImportedError,
-  RepositoryNotFoundError,
   RuntimeNotFoundError,
 } from "./service";
 import type { ProjectFolders } from "./types";
@@ -33,6 +32,9 @@ const noFolders: ProjectFolders = {
   readme: async () => {
     throw new Error("A GitHub project does not ask a runner for its README");
   },
+  clone: async () => {
+    throw new Error("A GitHub project does not ask a runner to clone");
+  },
 };
 
 run("projectsService (postgres)", async () => {
@@ -41,26 +43,7 @@ run("projectsService (postgres)", async () => {
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
   const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
-  const { installation } = await seedProject(orgA, userId, runnerA.id, "seed");
-
-  const known: Record<string, string> = {
-    "acme/web": "main",
-    "acme/api": "develop",
-    "acme/web-again": "main",
-  };
-  const repo = spyOn(githubService, "repo").mockImplementation(async (_org, _id, fullName) => {
-    const defaultBranch = known[fullName];
-    return defaultBranch
-      ? {
-          id: 1,
-          fullName,
-          private: true,
-          defaultBranch,
-          cloneUrl: `https://github.com/${fullName}.git`,
-          description: null,
-        }
-      : null;
-  });
+  const { installation, project: seeded } = await seedProject(orgA, userId, runnerA.id, "seed");
 
   test("a project can be a folder that its runner serves", async () => {
     const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });
@@ -101,6 +84,49 @@ run("projectsService (postgres)", async () => {
     await expect(projectsService.branches(orgA, project.id)).rejects.toBeInstanceOf(NotFoundError);
   });
 
+  test("a repository is cloned by the runner and becomes a folder project there", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "repo mac" });
+    await runtimesService.setDirectories(runtime.id, ["/home/me/.aven/runtime/repos"]);
+    const asked: unknown[] = [];
+    const folders: Pick<ProjectFolders, "clone"> = {
+      clone: async (runtimeId, repository) => {
+        asked.push([runtimeId, repository]);
+        return { path: "/home/me/.aven/runtime/repos/github.com/acme/site" };
+      },
+    };
+
+    const project = await projectsService.addRepository(
+      orgA,
+      userId,
+      { runtimeId: runtime.id, repository: "acme/site" },
+      folders,
+    );
+
+    expect(asked).toEqual([[runtime.id, "acme/site"]]);
+    expect(project).toMatchObject({
+      directory: "/home/me/.aven/runtime/repos/github.com/acme/site",
+      name: "site",
+      repoFullName: null,
+    });
+    await expect(
+      projectsService.addRepository(
+        orgA,
+        userId,
+        { runtimeId: runtime.id, repository: "acme/site" },
+        folders,
+      ),
+    ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+    await expect(
+      projectsService.addRepository(
+        orgB,
+        userId,
+        { runtimeId: runtime.id, repository: "acme/site" },
+        folders,
+      ),
+    ).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    expect(asked).toHaveLength(2);
+  });
+
   test("a folder project's files and README come from its runner, for a person who may use that computer", async () => {
     const { runtime } = await runtimesService.create(orgA, userId, { name: "files mac" });
     await runtimesService.setHost(runtime.id, true);
@@ -123,6 +149,7 @@ run("projectsService (postgres)", async () => {
         asked.push([runtimeId, folder]);
         return { readme: null };
       },
+      clone: noFolders.clone,
     };
 
     expect(await projectsService.folder(orgA, userId, project.id, "src", folders)).toEqual({
@@ -164,41 +191,11 @@ run("projectsService (postgres)", async () => {
   });
 
   afterAll(async () => {
-    repo.mockRestore();
     await cleanup();
   });
 
-  const importInput = (repository: string, runtimeId = runnerA.id) => ({
-    installationId: installation.id,
-    repository,
-    runtimeId,
-  });
-
-  test("importing records the repository and its runner, named after the repository", async () => {
-    const project = await projectsService.import(orgA, userId, importInput("acme/web"));
-    expect(project.name).toBe("web");
-    expect(project.repoFullName).toBe("acme/web");
-    expect(project.cloneUrl).toBe("https://github.com/acme/web.git");
-    expect(project.defaultBranch).toBe("main");
-    expect(project.runtimeId).toBe(runnerA.id);
-    expect((await projectsService.list(orgA)).map((row) => row.id)).toContain(project.id);
-  });
-
-  test("a repository can be imported once per organization", async () => {
-    await projectsService.import(orgA, userId, importInput("acme/api"));
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/api")),
-    ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
-  });
-
-  test("a repository the installation cannot see is refused", async () => {
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/secret")),
-    ).rejects.toBeInstanceOf(RepositoryNotFoundError);
-  });
-
   test("another organization cannot see the project or use the installation", async () => {
-    const project = (await projectsService.list(orgA))[0]!;
+    const project = seeded;
     expect(await projectsService.get(orgB, project.id)).toBeNull();
     expect((await projectsService.list(orgB)).map((row) => row.id)).not.toContain(project.id);
     expect(await githubService.get(orgB, installation.id)).toBeNull();
@@ -220,7 +217,7 @@ run("projectsService (postgres)", async () => {
       hasMore: true,
     }));
     try {
-      const project = (await projectsService.list(orgA))[0]!;
+      const project = seeded;
 
       expect(await projectsService.commits(orgA, userId, project.id, 2, noFolders)).toEqual({
         commits: [commit],
@@ -267,7 +264,7 @@ run("projectsService (postgres)", async () => {
       hasMore: true,
     }));
     try {
-      const project = (await projectsService.list(orgA))[0]!;
+      const project = seeded;
 
       expect(await projectsService.tracked(orgA, project.id, "pull", "closed", 2)).toEqual({
         items: [item],
@@ -435,18 +432,20 @@ run("projectsService (postgres)", async () => {
     );
   });
 
-  test("a deleted project lets its repository be imported again, as a project of its own", async () => {
-    const first = await projectsService.import(orgA, userId, importInput("acme/web-again"));
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/web-again")),
-    ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+  test("a deleted project lets its folder be added again, as a project of its own", async () => {
+    const { runtime } = await runtimesService.create(orgA, userId, { name: "again mac" });
+    await runtimesService.setDirectories(runtime.id, ["/srv/again"]);
+    const add = () =>
+      projectsService.addFolder(orgA, userId, { runtimeId: runtime.id, path: "/srv/again/web" });
+    const first = await add();
+    await expect(add()).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
     await projectsService.remove(orgA, userId, first.id, () => {});
 
-    const again = await projectsService.import(orgA, userId, importInput("acme/web-again"));
+    const again = await add();
 
     expect(again.id).not.toBe(first.id);
     expect(
-      (await projectsService.list(orgA)).filter((row) => row.repoFullName === "acme/web-again"),
+      (await projectsService.list(orgA)).filter((row) => row.directory === "/srv/again/web"),
     ).toHaveLength(1);
   });
 
@@ -481,7 +480,7 @@ run("projectsService (postgres)", async () => {
       truncated: false,
     }));
     try {
-      const project = (await projectsService.list(orgA))[0]!;
+      const project = seeded;
 
       expect(await projectsService.folder(orgA, userId, project.id, "src", noFolders)).toEqual({
         entries: [{ name: "src", path: "src", type: "directory" }],
@@ -516,18 +515,14 @@ run("projectsService (postgres)", async () => {
 
   test("the runner must belong to the organization and not be revoked", async () => {
     const before = (await projectsService.list(orgA)).length;
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/web", runnerB.id)),
-    ).rejects.toBeInstanceOf(RuntimeNotFoundError);
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/web", crypto.randomUUID())),
-    ).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    const add = (runtimeId: string) =>
+      projectsService.addFolder(orgA, userId, { runtimeId, path: "/srv/none/web" });
+    await expect(add(runnerB.id)).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    await expect(add(crypto.randomUUID())).rejects.toBeInstanceOf(RuntimeNotFoundError);
 
     const gone = (await runtimesService.create(orgA, userId, { name: "gone" })).runtime;
     await runtimesService.revoke(orgA, userId, gone.id);
-    await expect(
-      projectsService.import(orgA, userId, importInput("acme/web", gone.id)),
-    ).rejects.toBeInstanceOf(RuntimeNotFoundError);
+    await expect(add(gone.id)).rejects.toBeInstanceOf(RuntimeNotFoundError);
     expect((await projectsService.list(orgA)).length).toBe(before);
   });
 });

@@ -28,7 +28,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByText("Add a folder to get started.")).toBeVisible();
+    await expect(page.getByText("Add a project to get started.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );

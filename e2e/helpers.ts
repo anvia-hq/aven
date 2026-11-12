@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,20 +42,26 @@ export async function connectGithub(page: Page) {
   await expect(page).toHaveURL(/\/projects\?github=connected$/);
 }
 
-export async function importRepository(page: Page, name: string) {
+export async function seedGithubProject(
+  page: Page,
+  name: string,
+  which: "first" | "last" = "last",
+) {
   const installations = (await (await page.request.get("/api/github/installations")).json()) as {
     id: string;
   }[];
   const runtimes = (await (await page.request.get("/api/runtimes")).json()) as { id: string }[];
-  const created = await page.request.post("/api/projects", {
-    data: {
-      installationId: installations[0]!.id,
-      repository: `acme/${name}`,
-      runtimeId: runtimes.at(-1)!.id,
-    },
+  const runtime = which === "first" ? runtimes[0]! : runtimes.at(-1)!;
+  const seeded = spawnSync("bun", ["e2e/seed-project.ts", installations[0]!.id, runtime.id, name], {
+    env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL },
+    encoding: "utf8",
   });
-  expect(created.ok()).toBe(true);
-  const project = (await created.json()) as { id: string };
+  expect(seeded.status, seeded.stderr).toBe(0);
+  return { id: seeded.stdout.trim(), name };
+}
+
+export async function importRepository(page: Page, name: string) {
+  const project = await seedGithubProject(page, name);
   const here = new URL(page.url());
 
   if (here.pathname === "/threads") await page.goto(`/threads?project=${project.id}`);

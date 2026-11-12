@@ -95,24 +95,6 @@ function asPullRequest(pull: PullPayload): GithubPullRequest {
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-type RepoPayload = {
-  id: number;
-  full_name: string;
-  private: boolean;
-  default_branch: string;
-  clone_url: string;
-  description: string | null;
-};
-
-const toRepo = (repo: RepoPayload): GithubRepo => ({
-  id: repo.id,
-  fullName: repo.full_name,
-  private: repo.private,
-  defaultBranch: repo.default_branch,
-  cloneUrl: repo.clone_url,
-  description: repo.description,
-});
-
 import { BRANCH_CALLS_AT_ONCE, BRANCHES_SUMMARIZED, mapLimit, pullsByBranch } from "./branches";
 import { checksOf, latestReviews, shapeFiles, TEXT_MAX_CHARS } from "./detail";
 import type {
@@ -126,7 +108,6 @@ import type {
   GithubPullDetail,
   GithubPullRequest,
   GithubReadme,
-  GithubRepo,
   GithubTrackedFilters,
   GithubTrackedItem,
   GithubTrackedKind,
@@ -420,24 +401,6 @@ export class GithubClient {
       userToken,
     ).catch(nullWhenNotFound);
     return found?.permissions?.push === true;
-  }
-
-  async listRepos(installationId: number) {
-    const { token } = await this.installationToken(installationId);
-    const repos: GithubRepo[] = [];
-    const pages = this.#pages(
-      "/installation/repositories",
-      token,
-      (page: { repositories: RepoPayload[] }) => page.repositories,
-    );
-    for await (const repo of pages) repos.push(toRepo(repo));
-    return repos;
-  }
-
-  async repo(installationId: number, fullName: string) {
-    const { token } = await this.installationToken(installationId);
-    const payload = await this.#api<RepoPayload>(repoPath(fullName), token).catch(nullWhenNotFound);
-    return payload ? toRepo(payload) : null;
   }
 
   async folder(installationId: number, fullName: string, path: string) {

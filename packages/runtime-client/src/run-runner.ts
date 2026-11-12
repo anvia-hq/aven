@@ -55,6 +55,7 @@ export async function runRunner({
     build,
     host: true,
     dirs: sandbox.dirs,
+    clone: (repository) => sandbox.cloneRepository(repository),
     update,
     sandbox,
     journalPath: journalPathIn(process.env.AVEN_RUNTIME_HOME || undefined),

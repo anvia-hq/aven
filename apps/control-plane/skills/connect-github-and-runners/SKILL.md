@@ -1,6 +1,6 @@
 ---
 name: connect-github-and-runners
-description: Connect GitHub to Aven, import a repository, add or fix a runner (the machine that runs agents), and use aven doctor and aven update. Use when the user cannot import a repository, Connect GitHub or Ship is off or failing, an agent never starts, a runner shows offline, or Aven needs updating.
+description: Connect GitHub to Aven, add a project (a folder or a repository), add or fix a runner (the machine that runs agents), and use aven doctor and aven update. Use when the user cannot add a project, Connect GitHub or Ship is off or failing, an agent never starts, a runner shows offline, or Aven needs updating.
 ---
 
 # GitHub and runners
@@ -8,17 +8,12 @@ description: Connect GitHub to Aven, import a repository, add or fix a runner (t
 ## The pieces
 
 - **GitHub App**: Aven reads repositories through a GitHub App installation, and asks each person to connect their own GitHub account so that `git` and `gh` in their sandbox act as them. The platform's owner creates the app once, in **Settings > Platform**, with GitHub's manifest flow.
-- **Project**: a repository imported from the Projects page. Every thread belongs to one and starts from a clone of it, on a branch `aven/<thread id prefix>`.
+- **Project**: a folder on a runner's computer, added from **Add project** on the Projects page (its Repository tab has the runner clone a GitHub repository into its own repos folder). Every thread belongs to one and works in its own clone of it, on a branch `aven/<thread id prefix>`.
 - **Runner** (Settings > Runtimes): a machine with Docker and git that connects out to Aven and hosts a sandbox for each thread and each bot. A server installed with `aven install` has one on its own machine.
 
-## Importing a repository
+## Adding a project
 
-The Import dialog on the Projects page says what is missing:
-
-1. **GitHub is not set up**: the platform's owner opens Settings > Platform and creates the GitHub App there.
-2. **Connect a GitHub account** (the **Connect GitHub** button in the dialog): this installs the app on the account or organization that owns the repositories, so Aven can read them. Whoever presses it needs to be allowed to install apps there.
-3. **A project needs a runner**: add one first (see below).
-4. Then pick the repository and the runner it runs on.
+**Add project** on the Projects page takes a computer and either a folder it serves or a repository (`owner/name`, an https address or `git@host:owner/name`). The computer clones the repository itself, with the git sign-in it already has: a private repository needs that sign-in on the computer, and a failed clone says so. A project needs a runner first (see below); an older runner answers that it must be updated.
 
 A person who will ship pull requests also connects **their own** GitHub account, from the Ship button (**Connect GitHub to ship**), so that commits and `gh` in their sandbox are theirs. The app needs write access to **contents** and **pull requests** for that: GitHub asks the app's owner to approve it when it changes.
 

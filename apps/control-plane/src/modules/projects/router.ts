@@ -4,11 +4,11 @@ import { orNotFound } from "../../errors";
 import { authRouter } from "../auth/router";
 import {
   addFolderBody,
+  addRepositoryBody,
   commitParams,
   commitsQuery,
   pullParams,
   folderQuery,
-  importProjectBody,
   projectParams,
   trackedQuery,
   updateProjectBody,
@@ -25,14 +25,15 @@ export const projectsRouter = (putAway: PutAwayThread, folders: ProjectFolders) 
       org: true,
     })
     .post(
-      "/",
-      ({ body, organizationId, user }) => projectsService.import(organizationId, user.id, body),
-      { auth: true, org: true, body: importProjectBody },
-    )
-    .post(
       "/folder",
       ({ body, organizationId, user }) => projectsService.addFolder(organizationId, user.id, body),
       { auth: true, org: true, body: addFolderBody },
+    )
+    .post(
+      "/repository",
+      ({ body, organizationId, user }) =>
+        projectsService.addRepository(organizationId, user.id, body, folders),
+      { auth: true, org: true, body: addRepositoryBody },
     )
     .get(
       "/:id",

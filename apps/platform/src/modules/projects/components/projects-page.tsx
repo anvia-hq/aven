@@ -11,7 +11,7 @@ import { anyFilterSet, filterProjects, filtersOf } from "../filters";
 import { useProjectPalettes } from "../hooks/use-project-palettes";
 import { useProjects } from "../hooks/use-projects";
 import type { ProjectsSearch } from "../types";
-import { AddFolderDialog } from "./add-folder-dialog";
+import { AddProjectDialog } from "./add-project-dialog";
 import { ProjectFilterBar } from "./project-filters";
 import { ProjectListEmpty } from "./project-list-empty";
 import { ProjectList } from "./project-list";
@@ -50,7 +50,7 @@ export function ProjectsPage() {
     list = (
       <ProjectListEmpty>
         <p className="text-sm text-muted-foreground">
-          Add a folder to start your first project, with the button above.
+          Add a project to start, with the button above.
         </p>
       </ProjectListEmpty>
     );
@@ -76,7 +76,7 @@ export function ProjectsPage() {
       <PageHeader
         title="Projects"
         description="Open a project to see its files, README and threads. Each one is a folder on a computer that runs a runner."
-        actions={<AddFolderDialog />}
+        actions={<AddProjectDialog />}
       />
 
       <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-2">

@@ -18,7 +18,7 @@ import {
 import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
-import type { AddFolderBody, ImportProjectBody, UpdateProjectBody } from "./schema";
+import type { AddFolderBody, AddRepositoryBody, UpdateProjectBody } from "./schema";
 import type { ProjectFolders } from "./types";
 import type {
   GithubCommitFilters,
@@ -28,7 +28,6 @@ import type {
 } from "../github/types";
 
 export class RuntimeNotFoundError extends UnprocessableError {}
-export class RepositoryNotFoundError extends UnprocessableError {}
 export class RepositoryAlreadyImportedError extends ConflictError {}
 export class FolderNotServedError extends UnprocessableError {}
 
@@ -93,36 +92,6 @@ export const projectsService = {
       )
       .orderBy(desc(projects.updatedAt)),
 
-  async import(organizationId: string, userId: string, body: ImportProjectBody) {
-    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
-      throw new RuntimeNotFoundError("Runner not found");
-    }
-
-    const repo = await githubService.repo(organizationId, body.installationId, body.repository);
-
-    if (!repo)
-      throw new RepositoryNotFoundError("Repository not found on that GitHub installation");
-
-    const [project] = await db
-      .insert(projects)
-      .values({
-        organizationId,
-        createdBy: userId,
-        runtimeId: body.runtimeId,
-        githubInstallationId: body.installationId,
-        repoFullName: repo.fullName,
-        cloneUrl: repo.cloneUrl,
-        defaultBranch: repo.defaultBranch,
-        name: body.name ?? repo.fullName.split("/")[1]!,
-      })
-      .onConflictDoNothing()
-      .returning();
-
-    if (!project) throw new RepositoryAlreadyImportedError("This repository is already imported");
-
-    return project;
-  },
-
   async addFolder(organizationId: string, userId: string, body: AddFolderBody) {
     const runtime = await runtimesService.get(organizationId, body.runtimeId, userId);
 
@@ -155,6 +124,24 @@ export const projectsService = {
     if (!project) throw new RepositoryAlreadyImportedError("This folder is already a project");
 
     return project;
+  },
+
+  async addRepository(
+    organizationId: string,
+    userId: string,
+    body: AddRepositoryBody,
+    folders: Pick<ProjectFolders, "clone">,
+  ) {
+    if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
+      throw new RuntimeNotFoundError("Runner not found");
+    }
+
+    const { path } = await folders.clone(body.runtimeId, body.repository);
+    return projectsService.addFolder(organizationId, userId, {
+      runtimeId: body.runtimeId,
+      path,
+      name: body.name,
+    });
   },
 
   async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {

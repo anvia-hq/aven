@@ -29,15 +29,6 @@ export type GithubConfig = {
   webUrl: string;
 };
 
-export type GithubRepo = {
-  id: number;
-  fullName: string;
-  private: boolean;
-  defaultBranch: string;
-  cloneUrl: string;
-  description: string | null;
-};
-
 export type GithubPullRequest = {
   number: number;
   url: string;

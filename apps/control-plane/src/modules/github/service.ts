@@ -114,14 +114,6 @@ export function createGithubService(
     return { client, installationId: row.installationId, accountLogin: row.accountLogin };
   };
 
-  const require = async (organizationId: string, id: string) => {
-    const installation = await get(organizationId, id);
-
-    if (!installation) throw new InstallationNotFoundError();
-
-    return installation;
-  };
-
   return {
     get,
 
@@ -224,18 +216,6 @@ export function createGithubService(
 
       await userTokens.connect(userId, grant, state.appKey);
       return { next: state.next };
-    },
-
-    async repos(organizationId: string, id: string) {
-      const installation = await require(organizationId, id);
-      const { client } = await acting(installation.id);
-      return client.listRepos(installation.installationId);
-    },
-
-    async repo(organizationId: string, id: string, fullName: string) {
-      const installation = await require(organizationId, id);
-      const { client } = await acting(installation.id);
-      return client.repo(installation.installationId, fullName);
     },
 
     async cloneToken(installationRowId: string) {

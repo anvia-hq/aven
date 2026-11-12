@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
-import { AddFolderDialog } from "@/modules/projects/components/add-folder-dialog";
+import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -43,7 +43,7 @@ function NewThread() {
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
         {loaded && projects.length > 0 && (
-          <AddFolderDialog size="sm" onAdded={(project) => setProjectId(project.id)} />
+          <AddProjectDialog size="sm" onAdded={(project) => setProjectId(project.id)} />
         )}
       </header>
 
@@ -60,8 +60,8 @@ function NewThread() {
         {loaded &&
           (projects.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
-              <p className="text-sm text-muted-foreground">Add a folder to get started.</p>
-              <AddFolderDialog onAdded={(project) => setProjectId(project.id)} />
+              <p className="text-sm text-muted-foreground">Add a project to get started.</p>
+              <AddProjectDialog onAdded={(project) => setProjectId(project.id)} />
             </div>
           ) : (
             <>
