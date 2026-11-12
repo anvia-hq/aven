@@ -1,5 +1,6 @@
 import { createTool } from "@anvia/core";
 import { describe, expect, test } from "bun:test";
+import { createForkTools } from "@aven/agents/tools/forks";
 import { z } from "zod";
 
 import { callAvenTool, claudeMcpTools } from "./claude-mcp";
@@ -41,6 +42,38 @@ describe("Aven tools on the Claude agent's MCP server", () => {
     expect(await callAvenTool("ask_user", question, host)).toContain("color: red");
     expect(await callAvenTool("request_secret", question, host)).toContain("color: red");
     expect(parked).toEqual(["ask_user", "request_secret"]);
+  });
+
+  test("offers the fork tools, stop_fork among them, and runs it against the fork host", async () => {
+    const stopped: string[] = [];
+    const id = crypto.randomUUID();
+    const catalog = createForkTools({
+      start: async () => ({ id, title: "x" }),
+      status: async () => {
+        throw new Error("unused");
+      },
+      stop: async (forkId) => {
+        stopped.push(forkId);
+        return {
+          id: forkId,
+          title: "x",
+          running: false,
+          archived: false,
+          error: null,
+          lastMessage: "",
+          stopped: true,
+        };
+      },
+      take: async () => ({ empty: true }),
+    });
+    const host = { catalog } as ClaudeToolHost;
+
+    const names = (await claudeMcpTools(host)).map((tool) => tool.name);
+    expect(names).toContain("stop_fork");
+
+    const text = await callAvenTool("stop_fork", { id }, host);
+    expect(stopped).toEqual([id]);
+    expect(text).toContain("cancelled");
   });
 
   test("runs a sandbox tool and stops it when the run is cancelled", async () => {

@@ -231,7 +231,10 @@ export async function answerRuntimeCall(
 
   if (method === "fork.start") return forks.start(run.thread, parseForkStartParams(params));
 
-  if (method === "fork.status") return forks.status(run.thread, parseForkStatusParams(params).id);
+  if (method === "fork.status") {
+    const { id, stop } = parseForkStatusParams(params);
+    return forks.status(run.thread, id, stop);
+  }
 
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
 

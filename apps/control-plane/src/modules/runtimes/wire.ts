@@ -509,7 +509,7 @@ const forkStartParams = z.object({
   context: z.string().trim().min(1).max(FORK_TEXT_MAX),
   title: z.string().trim().min(1).max(120).optional(),
 });
-const forkStatusParams = z.object({ runId, id: z.string().uuid() });
+const forkStatusParams = z.object({ runId, id: z.string().uuid(), stop: z.boolean().optional() });
 const machineOp = z.object({
   op: z.enum(MACHINE_OPS),
   args: z.unknown().optional(),

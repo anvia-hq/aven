@@ -77,6 +77,9 @@ describe("toolsForRun", () => {
       status: async () => {
         throw new Error("unused");
       },
+      stop: async () => {
+        throw new Error("unused");
+      },
       take: async () => ({ empty: true as const }),
     };
     const without = toolsForRun(base).map((tool) => tool.name);
@@ -84,7 +87,13 @@ describe("toolsForRun", () => {
 
     const tools = toolsForRun({ ...base, forks });
     expect(tools.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining(["fork_thread", "fork_status", "wait_for_forks", "take_fork_changes"]),
+      expect.arrayContaining([
+        "fork_thread",
+        "fork_status",
+        "stop_fork",
+        "wait_for_forks",
+        "take_fork_changes",
+      ]),
     );
     const spawn = tools.find((tool) => tool.name === "spawn_agent") as AnyTool & {
       call(input: unknown): Promise<unknown>;

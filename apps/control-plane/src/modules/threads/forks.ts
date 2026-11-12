@@ -6,7 +6,7 @@ import { ConflictError, UnprocessableError } from "../../errors";
 import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
 import type { ThreadForks, ThreadMessages } from "./types";
-import type { RunThreadInfo } from "@aven/protocol/types";
+import type { ForkView, RunThreadInfo } from "@aven/protocol/types";
 
 const WAITING_NOTES_MAX = 512;
 
@@ -165,18 +165,23 @@ export function createThreadForks({
       await sendNote(parent, prompt);
     },
 
-    async status(thread, id) {
+    async status(thread, id, stop = false) {
       const fork = await forkOf(thread, id);
+      const stopped = stop && runs.cancel(fork.id);
       const history = await runs.history(fork);
       const last = threadTurns(history).turns.findLast((turn) => turn.role === "assistant");
-      return {
+      const view: ForkView = {
         id: fork.id,
         title: fork.title,
-        running: runs.isRunning(fork.id),
+        running: !stopped && runs.isRunning(fork.id),
         archived: fork.state === "archived",
         error: fork.lastError,
         lastMessage: last?.text ?? "",
       };
+
+      if (stopped) view.stopped = true;
+
+      return view;
     },
   };
 }

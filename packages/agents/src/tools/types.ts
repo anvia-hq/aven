@@ -66,6 +66,7 @@ export type ForkHost = {
     title?: string;
   }): Promise<{ id: string; title: string }>;
   status(id: string): Promise<ForkView>;
+  stop(id: string): Promise<ForkView>;
   take(id: string): Promise<TakenChanges>;
 };
 

@@ -23,12 +23,14 @@ run("a thread's forks (postgres)", async () => {
   let failSend = false;
   let running = new Set<string>();
   const asking = new Set<string>();
+  const cancelled: string[] = [];
   const transcript: ChatMessage[] = [
     { id: "1", role: "user", parts: [{ type: "text", text: "Try it" }] },
     { id: "2", role: "assistant", parts: [{ type: "text", text: "Done: it works." }] },
   ];
   const runs = {
     isRunning: (id: string) => running.has(id),
+    cancel: (id: string) => running.has(id) && cancelled.push(id) > 0,
     history: async () => transcript,
   };
   const messages = {
@@ -115,6 +117,29 @@ run("a thread's forks (postgres)", async () => {
     });
     await expect(forks.status(other, made.id)).rejects.toThrow("not a fork of this thread");
     running = new Set();
+  });
+
+  test("stops a fork's run when asked, only for the parent's own forks, and says when nothing was going", async () => {
+    const main = await parent();
+    const made = await forks.start(main, { task: "Try it", context: "Because" });
+    running = new Set([made.id]);
+
+    expect(await forks.status(main, made.id)).toMatchObject({ running: true });
+    expect(cancelled).toEqual([]);
+    expect(await forks.status(main, made.id, true)).toMatchObject({
+      running: false,
+      stopped: true,
+    });
+    expect(cancelled).toEqual([made.id]);
+
+    running = new Set();
+    const idle = await forks.status(main, made.id, true);
+    expect(idle.running).toBe(false);
+    expect(idle.stopped).toBeUndefined();
+
+    const other = await parent();
+    await expect(forks.status(other, made.id, true)).rejects.toThrow("not a fork of this thread");
+    expect(cancelled).toEqual([made.id]);
   });
 
   test("does not reach another workspace's thread", async () => {
