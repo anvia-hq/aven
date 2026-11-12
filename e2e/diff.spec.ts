@@ -46,6 +46,26 @@ test.describe("a thread's changes", () => {
     await expect(panel).toHaveCount(0);
   });
 
+  test("a very large diff draws only the rows in view and scrolls to the end", async ({ page }) => {
+    await registerUser(page, "big", "Big Diff");
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_DIFF_LINES: "30000" });
+    runner = child;
+
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto(`/threads/${threadId}`);
+    await page.getByRole("button", { name: "Changes", exact: true }).click();
+    const panel = page.getByRole("region", { name: "Changes" });
+
+    await panel.getByRole("button", { name: /src\/big.ts/ }).click();
+    await expect(panel.getByText("export const value0 = 0;")).toBeVisible();
+    expect(await panel.getByText(/export const value\d+ =/).count()).toBeLessThan(200);
+    await panel
+      .locator(".overflow-auto")
+      .first()
+      .evaluate((node) => node.scrollTo(0, node.scrollHeight));
+    await expect(panel.getByText("export const value29999 = 29999;")).toBeVisible();
+  });
+
   test("the changes badge opens the panel on the same unshipped changes", async ({ page }) => {
     await registerUser(page, "bad", "Badge User");
     const { child, threadId } = await threadOnFakeRunner(page);

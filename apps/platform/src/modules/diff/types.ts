@@ -1,3 +1,5 @@
+import type { HighlightedLine } from "@/modules/files/types";
+
 export type ThreadDiffResponse =
   | { available: false }
   | { available: true; patch: string; truncated: boolean };
@@ -51,3 +53,12 @@ export type ThreadDiff = {
   additions: number;
   deletions: number;
 };
+
+export type DiffItem =
+  | { kind: "file"; file: DiffFile; open: boolean; first: boolean }
+  | { kind: "note"; file: DiffFile }
+  | { kind: "hunk"; file: DiffFile; header: string }
+  | { kind: "unified"; file: DiffFile; row: DiffRow; last: boolean }
+  | { kind: "split"; file: DiffFile; pair: SplitRow; last: boolean };
+
+export type FileColours = { old: HighlightedLine[] | null; new: HighlightedLine[] | null };

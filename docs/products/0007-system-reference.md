@@ -104,6 +104,8 @@ Settings > General > Small models holds a per-person switch and model for follow
 
 `threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.
 
+The Changes panel (`apps/platform/src/modules/diff`) draws one virtual list (`@tanstack/react-virtual`, `components/diff-virtual-list.tsx`) of the items `flatten.ts` makes from the files, highlights only files in view (`hooks/use-file-colours.ts`), and keeps a file's object across polls when it did not change (`same-file.ts`). Decision 0249.
+
 ### A thread compares its changes with every branch it pushed (decision 0233)
 
 `refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch.
