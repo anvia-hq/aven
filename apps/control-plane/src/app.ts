@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 
 import {
+  botApi,
   botChats,
   botRuntimeId,
   runsService,
@@ -45,6 +46,8 @@ import { runnerFolders } from "./modules/runtimes/folders";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { schedulesRouter } from "./modules/schedules/router";
 import { mcpRouter } from "./modules/mcp/router";
+import { mcpEndpoint } from "./modules/mcp-access/endpoint";
+import { mcpAccessRouter } from "./modules/mcp-access/router";
 import { memoryRouter } from "./modules/memory/router";
 import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
@@ -86,6 +89,8 @@ export const app = new Elysia()
   .use(schedulesRouter)
   .use(skillsRouter)
   .use(mcpRouter)
+  .use(mcpAccessRouter)
+  .use(mcpEndpoint(botApi, process.env.AVEN_VERSION ?? "dev"))
   .use(memoryRouter)
   .use(terminalRouter(runtimeHub))
   .use(followUpsRouter(followUps))

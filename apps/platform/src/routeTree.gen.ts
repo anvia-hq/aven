@@ -36,6 +36,7 @@ import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsGithubRouteImport } from './routes/_authed/settings/github'
 import { Route as AuthedSettingsMcpRouteImport } from './routes/_authed/settings/mcp'
+import { Route as AuthedSettingsMcpAccessRouteImport } from './routes/_authed/settings/mcp-access'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsMemoryRouteImport } from './routes/_authed/settings/memory'
 import { Route as AuthedSettingsPeopleRouteImport } from './routes/_authed/settings/people'
@@ -187,6 +188,11 @@ const AuthedSettingsMcpRoute = AuthedSettingsMcpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsMcpAccessRoute = AuthedSettingsMcpAccessRouteImport.update({
+  id: '/mcp-access',
+  path: '/mcp-access',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
+  '/settings/mcp-access': typeof AuthedSettingsMcpAccessRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
   '/settings/people': typeof AuthedSettingsPeopleRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/github': typeof AuthedSettingsGithubRoute
   '/settings/mcp': typeof AuthedSettingsMcpRoute
+  '/settings/mcp-access': typeof AuthedSettingsMcpAccessRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/memory': typeof AuthedSettingsMemoryRoute
   '/settings/people': typeof AuthedSettingsPeopleRoute
@@ -358,6 +366,7 @@ export interface FileRoutesById {
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
   '/_authed/settings/github': typeof AuthedSettingsGithubRoute
   '/_authed/settings/mcp': typeof AuthedSettingsMcpRoute
+  '/_authed/settings/mcp-access': typeof AuthedSettingsMcpAccessRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/memory': typeof AuthedSettingsMemoryRoute
   '/_authed/settings/people': typeof AuthedSettingsPeopleRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/github'
     | '/settings/mcp'
+    | '/settings/mcp-access'
     | '/settings/members'
     | '/settings/memory'
     | '/settings/people'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/github'
     | '/settings/mcp'
+    | '/settings/mcp-access'
     | '/settings/members'
     | '/settings/memory'
     | '/settings/people'
@@ -478,6 +489,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/general'
     | '/_authed/settings/github'
     | '/_authed/settings/mcp'
+    | '/_authed/settings/mcp-access'
     | '/_authed/settings/members'
     | '/_authed/settings/memory'
     | '/_authed/settings/people'
@@ -696,6 +708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsMcpRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/mcp-access': {
+      id: '/_authed/settings/mcp-access'
+      path: '/mcp-access'
+      fullPath: '/settings/mcp-access'
+      preLoaderRoute: typeof AuthedSettingsMcpAccessRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/members': {
       id: '/_authed/settings/members'
       path: '/members'
@@ -863,6 +882,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
   AuthedSettingsGithubRoute: typeof AuthedSettingsGithubRoute
   AuthedSettingsMcpRoute: typeof AuthedSettingsMcpRoute
+  AuthedSettingsMcpAccessRoute: typeof AuthedSettingsMcpAccessRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
   AuthedSettingsMemoryRoute: typeof AuthedSettingsMemoryRoute
   AuthedSettingsPeopleRoute: typeof AuthedSettingsPeopleRoute
@@ -885,6 +905,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,
   AuthedSettingsGithubRoute: AuthedSettingsGithubRoute,
   AuthedSettingsMcpRoute: AuthedSettingsMcpRoute,
+  AuthedSettingsMcpAccessRoute: AuthedSettingsMcpAccessRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
   AuthedSettingsMemoryRoute: AuthedSettingsMemoryRoute,
   AuthedSettingsPeopleRoute: AuthedSettingsPeopleRoute,

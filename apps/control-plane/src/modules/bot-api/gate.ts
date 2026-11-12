@@ -9,6 +9,8 @@ const BLOCKED: RegExp[] = [
   /^\/runtimes\/gateway(\/|$)/,
   /^\/runtimes\/connect$/,
   /^\/workload-identity(\/|$)/,
+  /^\/mcp(\/|$)/,
+  /^\/mcp-access(\/|$)/,
   /^\/github\/(connect|callback|app)(\/|$)/,
   /\/events$/,
   /\/terminal(\/|$)/,
