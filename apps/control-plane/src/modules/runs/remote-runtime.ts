@@ -28,6 +28,7 @@ import type {
   RunIdentityCredential,
   RunModel,
   RunOutcome,
+  RunSecrets,
   RunThreadInfo,
 } from "@aven/protocol/types";
 
@@ -108,14 +109,12 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
+    claudeToken,
+    claudeModel,
   }: StartRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(
-      thread,
-      model,
-      extras,
-      undefined,
-      (runId, runModel, credential, placed) => ({
+    const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
+    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
+      const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
         type: "run.start",
         runId,
         thread: placed,
@@ -131,10 +130,17 @@ export class RemoteRuntime implements Runtime {
         webSearch,
         memory: memory?.index,
         cockpit: cockpit?.access,
-        model: runModel,
         backend: threadBackend(thread),
-      }),
-    );
+      };
+
+      if (runModel) message.model = runModel;
+
+      if (claudeToken) message.claudeToken = claudeToken;
+
+      if (claudeModel) message.claudeModel = claudeModel;
+
+      return message;
+    });
   }
 
   async resume({
@@ -150,30 +156,40 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
+    claudeToken,
+    claudeModel,
   }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit };
+    const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
     return this.#launch(
       thread,
       model,
       extras,
       askedBy(continuation),
-      (runId, runModel, credential, placed) => ({
-        type: "run.resume",
-        runId,
-        thread: placed,
-        continuation,
-        response,
-        skills: skills?.length ? skills : undefined,
-        mcp: mcp?.length ? mcp : undefined,
-        github,
-        env: env?.length ? env : undefined,
-        identity: credential,
-        webSearch,
-        memory: memory?.index,
-        cockpit: cockpit?.access,
-        model: runModel,
-        backend: threadBackend(thread),
-      }),
+      (runId, runModel, credential, placed) => {
+        const message: Extract<ControlPlaneToRuntime, { type: "run.resume" }> = {
+          type: "run.resume",
+          runId,
+          thread: placed,
+          continuation,
+          response,
+          skills: skills?.length ? skills : undefined,
+          mcp: mcp?.length ? mcp : undefined,
+          github,
+          env: env?.length ? env : undefined,
+          identity: credential,
+          webSearch,
+          memory: memory?.index,
+          cockpit: cockpit?.access,
+          model: runModel,
+          backend: threadBackend(thread),
+        };
+
+        if (claudeToken) message.claudeToken = claudeToken;
+
+        if (claudeModel) message.claudeModel = claudeModel;
+
+        return message;
+      },
     );
   }
 
@@ -188,11 +204,15 @@ export class RemoteRuntime implements Runtime {
       cockpit,
       github,
       env,
-    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env">,
+      claudeToken,
+    }: Pick<
+      StartRunInput,
+      "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env" | "claudeToken"
+    >,
     tokenOf: string | undefined,
     message: (
       runId: string,
-      runModel: RunModel,
+      runModel: RunModel | undefined,
       credential: RunIdentityCredential | undefined,
       placed: RunThreadInfo,
     ) => ControlPlaneToRuntime,
@@ -200,7 +220,11 @@ export class RemoteRuntime implements Runtime {
     const { connection, hostId, machine } = await this.#placementFor(thread);
     const placed = forkable(thread, machine);
     const runId = crypto.randomUUID();
-    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
+    const backend = threadBackend(thread);
+    const runModel =
+      backend === "claude"
+        ? undefined
+        : this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
@@ -214,12 +238,7 @@ export class RemoteRuntime implements Runtime {
       mcp?.map((server) => server.id),
       memory?.caller,
       cockpit,
-      {
-        github,
-        env: env?.length ? env : undefined,
-        identity: credential,
-        mcp: mcp?.length ? mcp : undefined,
-      },
+      keptSecrets(github, env, credential, mcp, claudeToken),
     );
     this.#post(connection, runId, message(runId, runModel, credential, placed));
 
@@ -301,6 +320,25 @@ export class RemoteRuntime implements Runtime {
 }
 
 const ASKING_AGENT = /^run-(.+)$/;
+
+function keptSecrets(
+  github: StartRunInput["github"],
+  env: StartRunInput["env"],
+  identity: RunIdentityCredential | undefined,
+  mcp: StartRunInput["mcp"],
+  claudeToken: string | undefined,
+): RunSecrets {
+  const secrets: RunSecrets = {
+    github,
+    env: env?.length ? env : undefined,
+    identity,
+    mcp: mcp?.length ? mcp : undefined,
+  };
+
+  if (claudeToken) secrets.claudeToken = claudeToken;
+
+  return secrets;
+}
 
 function threadBackend(thread: RunThread) {
   return thread.agentBackend ?? "native";

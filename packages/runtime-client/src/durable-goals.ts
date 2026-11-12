@@ -54,7 +54,10 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
   const state = goal.state ?? { sessions: {} };
   const saveState = goal.saveState ?? (() => undefined);
   const cursorOf = goal.cursorOf ?? (() => 0);
-  const agentId = input.agent.id;
+  const agentId = input.agent?.id;
+
+  if (!agentId) throw new Error("The native agent backend was started without an agent");
+
   journal.registerOrKeep(input);
   journal.contexts.set(agentId, { verify });
   const finished = () => {

@@ -20,6 +20,7 @@ import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
+import { claudeSetupRouter } from "./modules/claude-setup/router";
 import { cockpitRouter } from "./modules/cockpit/router";
 import { computerRouter } from "./modules/computer/router";
 import { diffRouter } from "./modules/diff/router";
@@ -60,6 +61,7 @@ export const app = new Elysia()
   .use(authRouter)
   .use(botsRouter(botChats))
   .use(botComputerRouter(runtimeHub, botRuntimeId))
+  .use(claudeSetupRouter)
   .use(cockpitRouter)
   .use(computerRouter(runtimeHub))
   .use(diffRouter(runtimeHub))

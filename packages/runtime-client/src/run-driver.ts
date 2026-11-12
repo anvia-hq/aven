@@ -4,8 +4,15 @@ import {
   parseAgentInteractionResponse,
 } from "@anvia/core/agent/interactions";
 import { sentPrompt } from "@aven/agents/attachments";
+import { environmentInstructions } from "@aven/agents/environment";
+import { forkInstructions } from "@aven/agents/fork-instruction";
+import { codingInstructions } from "@aven/agents/instruction";
+import { mcpInstructions } from "@aven/agents/mcp";
+import { memoryInstructions } from "@aven/agents/memory";
+import { skillsInstructions } from "@aven/agents/skills";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
 import { errorMessage } from "@aven/agents/values";
 
 import { keepAttachments, promptOf } from "./attachments";
@@ -19,6 +26,7 @@ import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
+import { backendRefusal } from "@aven/protocol/runtime-wire";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
   AgentBackend,
@@ -60,6 +68,7 @@ type RunScope = {
   save(changes: Partial<RunRecord>): void;
   current(): readonly AnyTool[] | undefined;
   build(id: string, attended: boolean): RunInput;
+  claudeInput(options?: { attended?: boolean }): Promise<RunInput>;
   forward: Emit;
   file(messages: Message[]): Promise<void>;
   stopIfCancelled(): void;
@@ -186,6 +195,10 @@ export function createRunDriver(context: DriverContext) {
     try {
       const chosen = await context.backend(initial.backend);
 
+      if (initial.compact && !chosen.capabilities.compaction) {
+        throw new Error(backendRefusal(chosen.kind, "compaction"));
+      }
+
       if (run.cancelReason) throw new Error(run.cancelReason);
 
       if (message?.type === "run.start" && message.attachments?.length) {
@@ -240,6 +253,7 @@ export function createRunDriver(context: DriverContext) {
     initial: RunRecord,
     state: { record: RunRecord },
     run: Live,
+    secrets: RunSecrets,
     clock: Timing,
     backend: AgentBackend,
   ): Promise<RunScope> {
@@ -259,6 +273,27 @@ export function createRunDriver(context: DriverContext) {
         ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
         contextWindow: model?.contextWindow,
       }),
+      async claudeInput() {
+        const token = secrets.claudeToken;
+        const cwd =
+          (await context.sandbox.workspace(thread.id).catch(() => undefined)) ??
+          context.sandbox.paths?.(thread.id)?.workspace ??
+          process.cwd();
+        return {
+          claude: {
+            token,
+            workspace: () => Promise.resolve(cwd),
+            redact: (text: string) => text,
+            env: [],
+            tools: {},
+            compact: true,
+            questions: false,
+            children: false,
+            model: state.record.claudeModel,
+            instructions: "Compact this conversation and reply with one short note that you did.",
+          },
+        };
+      },
       ...reporting(initial, state, run),
     };
   }
@@ -274,7 +309,7 @@ export function createRunDriver(context: DriverContext) {
     const { env } = secrets;
     const { runId, thread, model } = initial;
 
-    if (initial.compact) return compactionScope(initial, state, run, clock, backend);
+    if (initial.compact) return compactionScope(initial, state, run, secrets, clock, backend);
 
     const repoAccess = () => context.call("repo.access", { runId });
     const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
@@ -367,6 +402,67 @@ export function createRunDriver(context: DriverContext) {
       send(event, source);
     }) as Emit;
 
+    const assembled = (attended: boolean, agentId: string) => {
+      const skills = state.record.skillListing;
+      const envNames = env?.map(({ name }) => name);
+      const forking = attended && !thread.forkOf;
+      const tools = toolsForRun({
+        sandbox: context.sandbox,
+        thread,
+        tools: noted(box.tools),
+        computer,
+        current,
+        mcp: mcp && {
+          tools: mcp.tools,
+          current: () => mcpConnections.get(thread.id)?.tools,
+        },
+        attended,
+        repoAccess,
+        defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+        memory:
+          state.record.memory &&
+          (async (command) => {
+            const answer = await context.call("memory.notes", {
+              runId,
+              command: redact ? redact(command) : command,
+            });
+            return redact ? redact(answer) : answer;
+          }),
+        cockpit:
+          state.record.cockpit &&
+          (async (command) => {
+            const answer = await context.call("cockpit.read", { runId, command });
+            return redact ? redact(answer) : answer;
+          }),
+        forks: forking
+          ? createForkHost({
+              runId,
+              thread,
+              sandbox: context.sandbox,
+              call: context.call,
+              redact,
+            })
+          : undefined,
+        emit: (event) => forward(event),
+        createSubagent: ({ type, id: subagentId, tools }) =>
+          context.createAgent({
+            thread,
+            id: `${agentId}-${subagentId}`,
+            attended: false,
+            tools,
+            skills,
+            skillsUnavailable: run.skillsUnavailable,
+            envNames,
+            paths: context.sandbox.paths?.(thread.id),
+            mcp: mcp?.note,
+            webSearch: state.record.webSearch,
+            model,
+            role: type,
+          }).agent,
+      });
+      return { skills, envNames, forking, tools };
+    };
+
     return {
       runId,
       thread,
@@ -379,69 +475,14 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
-        const skills = state.record.skillListing;
-        const envNames = env?.map(({ name }) => name);
-        const forking = attended && !thread.forkOf;
+        const { skills, envNames, forking, tools } = assembled(attended, id);
         const { agent, compaction } = context.createAgent({
           thread,
           id,
           attended,
           forks: forking,
           paths: context.sandbox.paths?.(thread.id),
-          tools: toolsForRun({
-            sandbox: context.sandbox,
-            thread,
-            tools: noted(box.tools),
-            computer,
-            current,
-            mcp: mcp && {
-              tools: mcp.tools,
-              current: () => mcpConnections.get(thread.id)?.tools,
-            },
-            attended,
-            repoAccess,
-            defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
-            memory:
-              state.record.memory &&
-              (async (command) => {
-                const answer = await context.call("memory.notes", {
-                  runId,
-                  command: redact ? redact(command) : command,
-                });
-                return redact ? redact(answer) : answer;
-              }),
-            cockpit:
-              state.record.cockpit &&
-              (async (command) => {
-                const answer = await context.call("cockpit.read", { runId, command });
-                return redact ? redact(answer) : answer;
-              }),
-            forks: forking
-              ? createForkHost({
-                  runId,
-                  thread,
-                  sandbox: context.sandbox,
-                  call: context.call,
-                  redact,
-                })
-              : undefined,
-            emit: (event) => forward(event),
-            createSubagent: ({ type, id: subagentId, tools }) =>
-              context.createAgent({
-                thread,
-                id: `${id}-${subagentId}`,
-                attended: false,
-                tools,
-                skills,
-                skillsUnavailable: run.skillsUnavailable,
-                envNames,
-                paths: context.sandbox.paths?.(thread.id),
-                mcp: mcp?.note,
-                webSearch: state.record.webSearch,
-                model,
-                role: type,
-              }).agent,
-          }),
+          tools,
           skills,
           skillsUnavailable: run.skillsUnavailable,
           envNames,
@@ -451,6 +492,55 @@ export function createRunDriver(context: DriverContext) {
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
+      },
+      async claudeInput(options) {
+        const attended = options?.attended !== false;
+        await wake();
+        const cwd =
+          (await context.sandbox.workspace(thread.id)) ??
+          context.sandbox.paths?.(thread.id)?.workspace ??
+          process.cwd();
+        const token = secrets.claudeToken;
+        const variables = env ? [...env] : [];
+
+        if (token) {
+          variables.push({ name: "CLAUDE_CODE_OAUTH_TOKEN", value: token, secret: true });
+        }
+
+        const redact = secretRedactor(variables);
+        const hide = <T>(value: T): T => (redact ? redact(value) : value);
+        const hideText = (text: string) => hide(text);
+        const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
+        const parts = [
+          codingInstructions(CODING_MAX_TURNS, attended),
+          skillsInstructions(skills ?? [], run.skillsUnavailable ?? []),
+          environmentInstructions(envNames ?? []),
+          mcpInstructions(mcp?.note),
+          memoryInstructions(state.record.memory),
+        ];
+
+        if (forking) parts.push(forkInstructions());
+
+        parts.push(
+          "Use the aven tools for files, commands, git, processes, artifacts, memory and goals.",
+        );
+        return {
+          claude: {
+            token,
+            workspace: () => Promise.resolve(cwd),
+            redact: hideText,
+            env: env ?? [],
+            instructions: parts.filter((part) => part.length > 0).join("\n\n"),
+            model: state.record.claudeModel,
+            questions: attended,
+            tools: {
+              catalog: tools,
+              questions: attended,
+              emit: (event) => forward(event),
+              webSearch: state.record.webSearch,
+            },
+          },
+        };
       },
       forward,
       file,
@@ -474,12 +564,18 @@ export function createRunDriver(context: DriverContext) {
 
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build, forward } = scope;
+    const inputOf = (id: string, attended: boolean) =>
+      backend.kind === "claude"
+        ? scope.claudeInput({ attended })
+        : Promise.resolve(build(id, attended));
     let followed: FollowedRun;
 
     if (scope.record.durableId) {
+      if (!backend.capabilities.restart) throw new Error(backendRefusal(backend.kind, "restart"));
+
       followed = await backend.rejoin(
         scope.record.durableId,
-        build(scope.record.agentId, true),
+        await inputOf(scope.record.agentId, true),
         outbox.cursor(runId, scope.record.durableId),
         forward,
       );
@@ -492,10 +588,12 @@ export function createRunDriver(context: DriverContext) {
           context.sandbox,
           context.sandbox.paths?.(scope.record.thread.id),
         ),
-        build(scope.record.agentId, true),
+        await inputOf(scope.record.agentId, true),
         forward,
       );
     } else {
+      if (!backend.capabilities.question) throw new Error(backendRefusal(backend.kind, "question"));
+
       const asked = await backend.asked(thread.id);
 
       if (!asked) throw new Error("This thread has no question waiting for an answer");
@@ -503,11 +601,13 @@ export function createRunDriver(context: DriverContext) {
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
+      const restored =
+        backend.kind === "claude" ? await scope.claudeInput() : build(asked.agentId, true);
       followed = await backend.answer(
         asked,
         interaction,
         parseAgentInteractionResponse(resume?.response),
-        () => build(asked.agentId, true),
+        () => restored,
         forward,
       );
     }
@@ -544,12 +644,19 @@ export function createRunDriver(context: DriverContext) {
 
   async function runGoal(scope: RunScope, goal: GoalRequest): Promise<DurableEnd> {
     const { runId, run, backend, save, build, forward } = scope;
+
+    if (!backend.capabilities.goals) throw new Error(backendRefusal(backend.kind, "goals"));
+
     scope.stopIfCancelled();
     const exec = scope.current()?.find((tool) => tool.name === "exec_command");
+    const input =
+      backend.kind === "claude"
+        ? await scope.claudeInput({ attended: false })
+        : build(`goal-${runId}`, false);
     const working = await backend.startGoal({
       runId,
       request: goal,
-      input: build(`goal-${runId}`, false),
+      input,
       verify: verifyWith(exec, goal.verifyCommands ?? []),
       onEvent: forward,
       onSession: async (session, messages) =>
@@ -581,7 +688,10 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build, forward } = scope;
     scope.stopIfCancelled();
-    const reportAgent = build(`run-${runId}-report`, false);
+    const reportAgent =
+      backend.kind === "claude"
+        ? await scope.claudeInput({ attended: false })
+        : build(`run-${runId}-report`, false);
     let closing: FollowedRun;
     const { reportId } = scope.record;
 
@@ -640,6 +750,7 @@ export function createRunDriver(context: DriverContext) {
         runId: message.runId,
         thread: message.thread,
         model: message.model,
+        claudeModel: message.claudeModel,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
         compact: message.type === "run.start" ? message.compact : undefined,
@@ -678,6 +789,12 @@ export function createRunDriver(context: DriverContext) {
 
       if (!run || !record || record.done) return { status: "closed" };
 
+      const backend = await context.backend(record.backend);
+
+      if (!backend.capabilities.steering) {
+        return { status: "refused", reason: backendRefusal(backend.kind, "steering") };
+      }
+
       if (record.compact) {
         return { status: "refused", reason: "The conversation is being compacted" };
       }
@@ -705,9 +822,8 @@ export function createRunDriver(context: DriverContext) {
         return { status: "queued" };
       }
 
-      const taken = await (
-        await context.backend(record.backend)
-      ).steer(record.durableId, message, steerId);
+      const taken = await backend.steer(record.durableId, message, steerId);
+
       return { status: taken ? "queued" : "closed" };
     },
 

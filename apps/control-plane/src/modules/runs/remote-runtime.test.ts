@@ -211,6 +211,47 @@ describe("a run's message to its runtime", () => {
   });
 });
 
+describe("a Claude run", () => {
+  const token = "setup-token-remote-runtime-0001";
+
+  test("runs on the thread's machine, with that run's token, and does not ask the model gateway", async () => {
+    const claude = runtime({ backends: ["native", "claude"] });
+    const native = runtime();
+    await claude.remote.start({
+      thread: { ...thread, agentBackend: "claude" },
+      prompt: "go",
+      claudeToken: token,
+      claudeModel: "claude-opus-4-8",
+    });
+    await claude.remote.resume({
+      thread: { ...thread, agentBackend: "claude" },
+      continuation: {},
+      response: {},
+      claudeToken: token,
+      claudeModel: "claude-sonnet-5",
+    });
+    await native.remote.start({ thread, prompt: "go" });
+
+    expect(claude.issued).toEqual([]);
+    expect(claude.asked).toEqual([thread.runtimeId, thread.runtimeId]);
+    expect(claude.posted[0]).toMatchObject({
+      type: "run.start",
+      backend: "claude",
+      claudeToken: token,
+      claudeModel: "claude-opus-4-8",
+    });
+    expect(claude.posted[1]).toMatchObject({
+      type: "run.resume",
+      backend: "claude",
+      claudeToken: token,
+      claudeModel: "claude-sonnet-5",
+    });
+    expect(claude.posted[0]).not.toHaveProperty("model");
+    expect(JSON.stringify(native.posted[0])).not.toContain(token);
+    expect(native.issued).toHaveLength(1);
+  });
+});
+
 describe("where a run's agent runs (decision 0222)", () => {
   const sentThread = (posted: ControlPlaneToRuntime[]) =>
     (posted[0] as Extract<ControlPlaneToRuntime, { type: "run.start" }>).thread;
