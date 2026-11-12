@@ -2,9 +2,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const CLAUDE_MODELS = [
   { id: "default", label: "Default" },
-  { id: "claude-sonnet-5", label: "Sonnet" },
-  { id: "claude-opus-4-8", label: "Opus" },
-  { id: "claude-fable-5", label: "Fable" },
+  { id: "sonnet", label: "Sonnet" },
+  { id: "opus", label: "Opus" },
+  { id: "fable", label: "Fable" },
 ] as const;
 
 type Props = {

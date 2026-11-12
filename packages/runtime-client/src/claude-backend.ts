@@ -556,6 +556,14 @@ export class ClaudeRuns implements AgentBackend {
       if (live.abort.signal.aborted) reason = "The run was cancelled";
       else if (live.turn.error) reason = live.turn.error;
 
+      const parked = this.#parked.get(live.agentId);
+
+      if (parked) {
+        this.#parked.delete(live.agentId);
+        this.sessions.clearPark(live.threadId);
+        parked.reject(new Error(reason));
+      }
+
       live.gate.resolve({ type: "error", error: reason });
     } finally {
       live.queue.close();
