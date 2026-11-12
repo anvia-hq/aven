@@ -47,4 +47,3 @@ So a machine keeps a runner that answers calls, and the agent moves.
 - **An offline machine.** The run starts, with no skills from the machine, and a tool that cannot reach the machine fails alone with "The computer is offline" (`run-driver.ts`'s `wake`). The thread shows that on the tool's row and in the summary of its group, apart from the tool's own error (`tool-failure.ts`). `remote-machine.test.ts` runs this end to end with the built-in runner and a second runner as the machine. `e2e/control-plane-agent.spec.ts` sends a message in the browser: the reply is the agent's, the command's file is on the other machine, and the run's journal is the built-in runner's.
 
 ## What is not done yet
-
