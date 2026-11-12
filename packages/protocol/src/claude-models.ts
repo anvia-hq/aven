@@ -1,6 +1,12 @@
-export const CLAUDE_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+import type { ClaudeEffort } from "./types";
 
-export type ClaudeEffort = (typeof CLAUDE_EFFORTS)[number];
+export const CLAUDE_EFFORTS = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const satisfies readonly ClaudeEffort[];
 
 export const CLAUDE_DEFAULT_EFFORT: ClaudeEffort = "medium";
 

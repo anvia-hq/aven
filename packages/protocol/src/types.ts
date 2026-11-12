@@ -1033,3 +1033,5 @@ export type BotThreadDetail = BotThreadView & {
 };
 
 export type ContinuationPatch = "attached" | "none" | "unavailable";
+
+export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";
