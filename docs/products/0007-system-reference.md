@@ -103,3 +103,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### Unshipped is the nearer of the pushed copy and the default branch (decision 0232)
 
 `threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.
+
+### A thread compares its changes with every branch it pushed (decision 0233)
+
+`refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch.

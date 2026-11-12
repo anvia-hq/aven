@@ -14,6 +14,9 @@ export async function remoteBase(root: string, run: Git = git) {
   const branches = listed.stdout
     .split("\n")
     .map((name) => name.trim())
-    .filter((name) => name !== "" && name !== "origin" && name !== own);
+    .filter(
+      (name) =>
+        name !== "" && name !== "origin" && name !== own && !name.startsWith("origin/aven/"),
+    );
   return listed.code === 0 && branches.length === 1 ? branches[0]! : null;
 }

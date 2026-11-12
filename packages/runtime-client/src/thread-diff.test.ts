@@ -135,6 +135,31 @@ describe("a thread's changes", () => {
     expect(whole).not.toContain("c.txt");
   });
 
+  test("work already pushed to the folder under another of the thread's branch names is not unshipped", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    const remote = join(root, "..", "remote");
+    const commit = (message: string) =>
+      sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await sh(root, "branch", "-m", "aven/abcdef12");
+    await threadDiff(root, "unshipped");
+    await writeFile(join(root, "b.txt"), "first\n");
+    await sh(root, "add", ".");
+    await commit("first");
+    await sh(root, "push", "-q", "-u", "origin", "HEAD");
+    await writeFile(join(root, "c.txt"), "second\n");
+    await sh(root, "add", ".");
+    await commit("second");
+    await sh(remote, "fetch", "-q", root, "HEAD:refs/heads/aven/abcdef12-follow-up");
+
+    expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
+
+    await writeFile(join(root, "d.txt"), "edit\n");
+    const edited = (await threadDiff(root, "unshipped"))?.patch;
+    expect(edited).toContain("+++ b/d.txt");
+    expect(edited).not.toContain("c.txt");
+    expect((await threadDiff(root, "all"))?.patch).toContain("+++ b/c.txt");
+  });
+
   test("a project cloned from a server is not fetched from while its changes are read", async () => {
     const { root, sh } = await workspace({ branchClone: true });
     await sh(root, "remote", "set-url", "origin", "https://127.0.0.1:9/never.git");
