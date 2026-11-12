@@ -22,12 +22,10 @@ const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
 
 const milliseconds = (value: number) => (value < SECONDS_BELOW ? value * 1000 : value);
 
-export function limitFromRateLimitEvent(info: unknown): PlanLimit | undefined {
-  const data = record(info);
-  const window = typeof data.rateLimitType === "string" ? WINDOWS[data.rateLimitType] : undefined;
+function limitOf(window: PlanLimitWindow, data: Record<string, unknown>): PlanLimit | undefined {
   const status = STATUSES.find((item) => item === data.status);
 
-  if (!window || !status || !finite(data.utilization)) return undefined;
+  if (!status || !finite(data.utilization)) return undefined;
 
   const percent = clampPercent(data.utilization <= 1 ? data.utilization * 100 : data.utilization);
   const limit: PlanLimit = { window, status, percent };
@@ -35,6 +33,25 @@ export function limitFromRateLimitEvent(info: unknown): PlanLimit | undefined {
   if (finite(data.resetsAt)) limit.resetsAt = milliseconds(data.resetsAt);
 
   return limit;
+}
+
+export function limitsFromRateLimitEvent(info: unknown): PlanLimit[] {
+  const data = record(info);
+  const limits: PlanLimit[] = [];
+  const windows = record(data.unifiedWindows);
+
+  for (const [key, window] of Object.entries(WINDOWS)) {
+    const limit = limitOf(window, record(windows[key]));
+
+    if (limit) limits.push(limit);
+  }
+
+  if (limits.length > 0) return limits;
+
+  const window = typeof data.rateLimitType === "string" ? WINDOWS[data.rateLimitType] : undefined;
+  const single = window ? limitOf(window, data) : undefined;
+
+  return single ? [single] : [];
 }
 
 export function limitsFromUsage(usage: unknown): PlanLimit[] {
