@@ -11,11 +11,12 @@ export function useGithubSignIn({ invitation }: InvitationSearch) {
   async function signIn() {
     setError(null);
     setPending(true);
-    const callbackURL = invitation ? `/accept-invitation/${invitation}` : "/threads";
+    const encoded = invitation ? encodeURIComponent(invitation) : null;
+    const callbackURL = encoded ? `/accept-invitation/${encoded}` : "/threads";
     const result = await authClient.signIn.social({
       provider: "github",
       callbackURL,
-      errorCallbackURL: invitation ? `/login?invitation=${invitation}` : "/login",
+      errorCallbackURL: encoded ? `/login?invitation=${encoded}` : "/login",
     });
 
     if (result.error) {
