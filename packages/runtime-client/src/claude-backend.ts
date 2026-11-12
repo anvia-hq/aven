@@ -287,6 +287,8 @@ export class ClaudeRuns implements AgentBackend {
 
   async close() {
     for (const live of this.#byDurable.values()) this.#cancel(live);
+    for (const parked of this.#parked.values()) parked.reject(new Error("The runner is closing"));
+    this.#parked.clear();
     this.#byDurable.clear();
     this.#byThread.clear();
     this.#partial.clear();
@@ -329,6 +331,7 @@ export class ClaudeRuns implements AgentBackend {
       else options.signal.addEventListener("abort", () => abort.abort(), { once: true });
     }
 
+    const cwd = await context.workspace();
     const live: LiveRun = {
       durableId,
       threadId: options.threadId,
@@ -347,21 +350,29 @@ export class ClaudeRuns implements AgentBackend {
     options.onLive?.(live);
     const host = this.#host(live, context);
     live.queue.push(live.prompt);
-    const stream = this.query({
-      prompt: live.queue.stream(),
-      sessionId: options.sessionId ?? this.sessions.get(options.threadId),
-      token: context.token,
-      cwd: await context.workspace(),
-      configDir: join(this.home, "claude", options.threadId),
-      abortController: abort,
-      tools: host,
-      env: context.env,
-      redact: context.redact,
-      instructions: context.instructions,
-      model: context.model,
-      maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
-      resumeInterrupted: options.resumeInterrupted,
-    });
+    let stream: ReturnType<ClaudeQuery>;
+
+    try {
+      stream = this.query({
+        prompt: live.queue.stream(),
+        sessionId: options.sessionId ?? this.sessions.get(options.threadId),
+        token: context.token,
+        cwd,
+        configDir: join(this.home, "claude", options.threadId),
+        abortController: abort,
+        tools: host,
+        env: context.env,
+        redact: context.redact,
+        instructions: context.instructions,
+        model: context.model,
+        maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
+        resumeInterrupted: options.resumeInterrupted,
+      });
+    } catch (error) {
+      this.#release(live);
+      throw error;
+    }
+
     live.close = stream.close?.bind(stream);
     void this.#consume(live, stream, options.rememberSession !== false);
     return {
@@ -579,6 +590,14 @@ export class ClaudeRuns implements AgentBackend {
 
     this.#partial.delete(live.durableId);
     live.gate.resolve({ type: "response", messages });
+  }
+
+  #release(live: LiveRun) {
+    this.#byDurable.delete(live.durableId);
+
+    if (this.#byThread.get(live.threadId) === live) this.#byThread.delete(live.threadId);
+
+    live.queue.close();
   }
 
   #cancel(live: LiveRun) {

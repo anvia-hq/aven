@@ -66,6 +66,7 @@ import type {
   DurableRun,
   DurableRuntime,
 } from "@anvia/durable";
+import type { z } from "zod";
 import type { SandboxRuntime } from "@anvia/sandbox";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
@@ -188,6 +189,13 @@ export type Emit = (event: RunEvent, source?: Source) => void;
 export type ClaudeQuestion = {
   name: "ask_user" | "request_secret";
   questions: QuestionPrompt[];
+};
+
+export type ClaudeMcpTool = {
+  name: string;
+  description: string;
+  shape: Record<string, z.ZodType>;
+  handler(args: unknown): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }>;
 };
 
 export type ClaudeToolHost = {

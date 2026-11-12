@@ -402,7 +402,7 @@ export function createRunDriver(context: DriverContext) {
       send(event, source);
     }) as Emit;
 
-    const assembled = (attended: boolean) => {
+    const assembled = (attended: boolean, agentId: string) => {
       const skills = state.record.skillListing;
       const envNames = env?.map(({ name }) => name);
       const forking = attended && !thread.forkOf;
@@ -447,7 +447,7 @@ export function createRunDriver(context: DriverContext) {
         createSubagent: ({ type, id: subagentId, tools }) =>
           context.createAgent({
             thread,
-            id: `run-${runId}-${subagentId}`,
+            id: `${agentId}-${subagentId}`,
             attended: false,
             tools,
             skills,
@@ -475,7 +475,7 @@ export function createRunDriver(context: DriverContext) {
       },
       save: run.save,
       build(id, attended) {
-        const { skills, envNames, forking, tools } = assembled(attended);
+        const { skills, envNames, forking, tools } = assembled(attended, id);
         const { agent, compaction } = context.createAgent({
           thread,
           id,
@@ -510,7 +510,7 @@ export function createRunDriver(context: DriverContext) {
         const redact = secretRedactor(variables);
         const hide = <T>(value: T): T => (redact ? redact(value) : value);
         const hideText = (text: string) => hide(text);
-        const { skills, envNames, forking, tools } = assembled(attended);
+        const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
         const parts = [
           codingInstructions(CODING_MAX_TURNS, attended),
           skillsInstructions(skills ?? [], run.skillsUnavailable ?? []),

@@ -136,6 +136,29 @@ describe("the Claude backend", () => {
     expect(inputs[1]?.sessionId).toBe(`session-${TOKEN_A.slice(-4)}`);
   });
 
+  test("leaves no run registered when the workspace cannot be resolved", async () => {
+    const { query } = queryOf();
+    const backend = ClaudeRuns.open(journalPath(), query);
+    const refused = backend.start(
+      "run-1",
+      "thread-a",
+      "hello",
+      {
+        claude: {
+          token: TOKEN_A,
+          tools: {} as never,
+          workspace: async () => {
+            throw new Error("The workspace is gone");
+          },
+        },
+      } as never,
+      () => undefined,
+    );
+    await expect(refused).rejects.toThrow("The workspace is gone");
+    await backend.cancelRun("claude-run-1");
+    await backend.close();
+  });
+
   test("fails with a missing token and does not call Claude", async () => {
     const { query, inputs } = queryOf();
     const { driver, reported, backend } = driverFor(query);

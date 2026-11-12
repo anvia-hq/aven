@@ -6,7 +6,7 @@ import { QUESTION_TOOL_NAME, SECRET_TOOL_NAME, SPAWN_AGENT_TOOL_NAME } from "@av
 import type { QuestionPrompt, ToolArtifact } from "@aven/protocol/types";
 import { z } from "zod";
 
-import type { ClaudeQuestion, ClaudeToolHost } from "./types";
+import type { ClaudeMcpTool, ClaudeQuestion, ClaudeToolHost } from "./types";
 
 const choice = z.object({
   label: z.string().trim().min(1),
@@ -126,13 +126,6 @@ export async function callAvenTool(name: string, input: unknown, host: ClaudeToo
     return errorMessage(error);
   }
 }
-
-export type ClaudeMcpTool = {
-  name: string;
-  description: string;
-  shape: Record<string, z.ZodType>;
-  handler(args: unknown): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }>;
-};
 
 const questionShape = {
   questions: z
