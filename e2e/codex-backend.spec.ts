@@ -154,7 +154,7 @@ test.describe("a thread on the Codex backend", () => {
   test("saves a ChatGPT login and a thread answers on Codex", async ({ page }) => {
     await register(page);
     await page.goto(`${WEB}/settings/codex`);
-    await page.getByLabel("ChatGPT login").fill(TOKEN);
+    await page.getByRole("textbox", { name: "ChatGPT login" }).fill(TOKEN);
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText(`Saved, ending in ${TOKEN.slice(-4)}`)).toBeVisible();
 
