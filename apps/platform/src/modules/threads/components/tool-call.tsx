@@ -13,6 +13,7 @@ import { cn } from "cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 import { DiffStat } from "@/modules/diff/components/diff-stat";
 
+import { toolFailureNotice } from "../tool-failure";
 import type { ToolPart } from "../types";
 import { DiffBlock } from "./diff-block";
 
@@ -48,6 +49,7 @@ const fallback = (name: string): Meta => ({
 
 export function ToolCall({ tool }: { tool: ToolPart }) {
   const { icon: Icon, running, done } = meta[tool.name] ?? fallback(tool.name);
+  const notice = tool.status === "error" ? toolFailureNotice(tool.output) : undefined;
   const additions = tool.diff?.filter((line) => line.type === "add").length ?? 0;
   const deletions = tool.diff?.filter((line) => line.type === "del").length ?? 0;
   const expandable = Boolean(tool.diff?.length || tool.output);
@@ -59,8 +61,13 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className={cn("text-muted-foreground", tool.status === "running" && "shimmer")}>
-          {tool.status === "running" ? running : done}
+        <span
+          className={cn(
+            notice ? "text-destructive" : "text-muted-foreground",
+            tool.status === "running" && "shimmer",
+          )}
+        >
+          {tool.status === "running" ? running : (notice ?? done)}
         </span>
         <span
           className={cn(

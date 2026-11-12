@@ -21,6 +21,7 @@ export const MACHINE_OPS = [
   "putAway",
   "setProjectEnv",
   "exec",
+  "exec.abort",
   "readFile",
   "readTextFilePage",
   "writeFile",

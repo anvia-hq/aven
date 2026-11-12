@@ -24,11 +24,11 @@ Since the runner and the agent share a machine, a backend such as the Claude Age
 - **Starting a run waits for its runner.** `Runtime.start` and `resume` are asynchronous, so a provider can bring a machine up first. `RunManager` holds the thread from its busy check until the run has begun (`#reserved`), so a second start in between is busy and a start that fails leaves the thread free.
 - **A thread records its backend**, `threads.agent_backend`, `native` for every thread, and keeps it for its life, as it keeps its runner (0177).
 - **A runner names the backends it drives** in `hello` (`backends`, optional, so the wire version stays 56). A runner that names none is older and drives `native` only; names the control plane does not know are dropped. A run whose thread's backend its runner does not drive is refused with a 503 telling the person to update the runner, and nothing is sent to it.
+- **A run carries its thread's backend.** `run.start` and `run.resume` say `backend`, the thread's `agent_backend`, and the runner drives that run with the backend of that name (`backendFor` in `packages/runtime-client/src/agent-backends.ts`). The field is optional, so the wire version stays 56. A runner from before does not read it and drives native, which is the only backend it is sent. A run that leaves it out is native, which is what a control plane from before sends. A name this runner does not drive ends the run, and no other backend is started.
 
 ## What is not done yet
 
-- No provider other than `manual` and no backend other than `native`. The interfaces are shaped by their one implementation and will change when the second arrives; a provider's settings (its account, region, machine size) go on `runtimes` with it.
-- The runner drives every run with its one backend: it does not yet choose a backend by the thread's. That comes with the second backend, with `backend` on `run.start`.
+- No provider other than `manual` and no backend other than `native`. The interfaces are shaped by their one implementation and will change when the second arrives; a provider's settings (its account, region, machine size) go on `runtimes` with it. The runner selects by the thread's backend already, and today that selection has only `native` to choose.
 - A thread's backend cannot be chosen: every new thread is `native`.
 - A cloud machine has no folder of its own to serve, so a project on it is a repository that the runner clones (`repo.access`, `git-clone.ts`), which a project can already be.
 

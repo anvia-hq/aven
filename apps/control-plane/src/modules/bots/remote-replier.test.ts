@@ -5,6 +5,7 @@ import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { RemoteBotReplier } from "./remote-replier";
 import type { BotKeeper, BotLetter, BotMemoryNotes, BotSkills, NewBot } from "./types";
 import type { BotMcp } from "../mcp/types";
@@ -50,7 +51,6 @@ const store: MemoryStore = {
 
 function fakeRunner(
   options: {
-    online?: boolean;
     keyless?: boolean;
     store?: MemoryStore;
     bots?: Partial<BotKeeper>;
@@ -59,6 +59,9 @@ function fakeRunner(
     providers?: Partial<BotProviders>;
     threads?: Partial<BotThreads>;
     notes?: Partial<BotMemoryNotes>;
+    agentOnControlPlane?: boolean;
+    runtimeId?: string;
+    online?: boolean | ((runtimeId: string) => boolean);
   } = {},
 ) {
   const started: {
@@ -71,6 +74,7 @@ function fakeRunner(
     mcp?: RunMcpServer[];
     memory?: RunMemory;
     cockpit?: CockpitAccess;
+    machine?: string;
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
@@ -93,10 +97,12 @@ function fakeRunner(
     cancelBotReply: (replyId: string, reason: string) => void cancelled.push({ replyId, reason }),
   };
   const asked: string[] = [];
+  const up = (runtimeId: string) =>
+    typeof options.online === "function" ? options.online(runtimeId) : options.online !== false;
   const hub = {
     get: (runtimeId: string) => {
       asked.push(runtimeId);
-      return options.online === false ? undefined : connection;
+      return up(runtimeId) ? connection : undefined;
     },
   } as unknown as Pick<RuntimeHub, "get">;
   const grants: { checked: string[]; issued: string[]; revoked: string[] } = {
@@ -116,7 +122,7 @@ function fakeRunner(
     hub,
     gateway,
     options.store ?? store,
-    "runner-1",
+    options.runtimeId ?? "runner-1",
     {
       list: async () => [bot],
       create: async () => bot,
@@ -201,6 +207,7 @@ function fakeRunner(
       run: async () => "done",
       ...options.notes,
     },
+    options.agentOnControlPlane ?? false,
   );
   const only = () => [...sinks.values()][0]!;
   return { replier, started, cancelled, grants, asked, only, sinks: () => sinks.values() };
@@ -227,6 +234,62 @@ describe("RemoteBotReplier", () => {
     const { replier, asked } = fakeRunner({ online: false });
     expect(() => replier.ready(openai)).toThrow(RuntimeOfflineError);
     expect(asked).toEqual(["runner-1"]);
+  });
+
+  describe("where a reply's agent runs (decision 0222)", () => {
+    test("on the control plane's runner, naming the bot's computer, which can be offline", async () => {
+      const run = fakeRunner({
+        agentOnControlPlane: true,
+        online: (id) => id === LOCAL_RUNTIME_ID,
+      });
+      run.replier.ready(openai);
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      expect(run.started).toHaveLength(1);
+      expect(run.started[0]?.machine).toBe("runner-1");
+      expect(run.asked.every((id) => id === LOCAL_RUNTIME_ID)).toBe(true);
+
+      run.only().end();
+      await answering;
+    });
+
+    test("is refused when the control plane has no runner of its own", () => {
+      const { replier, asked } = fakeRunner({
+        agentOnControlPlane: true,
+        online: (id) => id !== LOCAL_RUNTIME_ID,
+      });
+      expect(() => replier.ready(openai)).toThrow("The control plane's own runner is not running");
+      expect(asked).toEqual([LOCAL_RUNTIME_ID]);
+    });
+
+    test("a bot whose computer is the control plane's runner names no machine", async () => {
+      const run = fakeRunner({ agentOnControlPlane: true, runtimeId: LOCAL_RUNTIME_ID });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      expect(run.started[0]?.machine).toBeUndefined();
+      expect(run.asked).toEqual([LOCAL_RUNTIME_ID]);
+
+      run.only().end();
+      await answering;
+    });
+
+    test("a cancel reaches the runner the agent is on", async () => {
+      const run = fakeRunner({ agentOnControlPlane: true });
+      const controller = new AbortController();
+      const answering = run.replier.answer(input(() => undefined, controller.signal));
+      await Bun.sleep(0);
+
+      controller.abort(new Error("Shutting down"));
+      expect(run.cancelled).toEqual([
+        { replyId: run.started[0]!.replyId, reason: "Shutting down" },
+      ]);
+      expect(run.asked.every((id) => id === LOCAL_RUNTIME_ID)).toBe(true);
+
+      run.only().end("Shutting down");
+      await expect(answering).rejects.toThrow("Shutting down");
+    });
   });
 
   test("is refused when the model has no key, before any grant is made", () => {

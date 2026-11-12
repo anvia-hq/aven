@@ -175,6 +175,30 @@ describe("a run's message to its runtime", () => {
     expect(revoked).toHaveLength(1);
   });
 
+  test("carries the backend the thread records, and native when the thread records none", async () => {
+    const { posted, remote } = runtime();
+    const offered = runtime({ backends: ["native", "other"] });
+
+    await remote.start({ thread, prompt: "hi" });
+    await remote.resume({ thread, continuation: {}, response: {} });
+    await remote.start({ thread: { ...thread, agentBackend: "native" }, prompt: "again" });
+    await offered.remote.start({
+      thread: { ...thread, agentBackend: "other" as "native" },
+      prompt: "elsewhere",
+    });
+    await offered.remote.resume({
+      thread: { ...thread, agentBackend: "other" as "native" },
+      continuation: {},
+      response: {},
+    });
+
+    expect(posted[0]).toMatchObject({ type: "run.start", backend: "native" });
+    expect(posted[1]).toMatchObject({ type: "run.resume", backend: "native" });
+    expect(posted[2]).toMatchObject({ type: "run.start", backend: "native" });
+    expect(offered.posted[0]).toMatchObject({ type: "run.start", backend: "other" });
+    expect(offered.posted[1]).toMatchObject({ type: "run.resume", backend: "other" });
+  });
+
   test("is never sent to a runner that cannot drive the thread's agent backend", async () => {
     const { posted, remote } = runtime({ backends: [] });
 

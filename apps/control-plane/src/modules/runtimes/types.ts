@@ -86,6 +86,8 @@ export type CallRun = {
 };
 
 export type CallBotReply = {
+  botId?: string;
+  machine?: string;
   memory(params: BotMemoryParams): Promise<unknown>;
   create(params: BotCreateParams): Promise<BotCreated>;
   update(params: BotUpdateParams): Promise<BotUpdated>;

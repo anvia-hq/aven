@@ -14,6 +14,7 @@ import type {
   FilesSearchParams,
   MachineCallParams,
   MessageMention,
+  ProcessWatchParams,
   ActionRunParams,
   ProcessesCallParams,
   RunnerUpdateParams,
@@ -126,6 +127,16 @@ export function foldersCommitsParams(params: unknown): FoldersCommitsParams {
     throw invalid();
   }
   return { folder, page };
+}
+
+const WATCH_PHASES = ["arm", "settle", "suspend"] as const;
+
+export function processWatchParams(params: unknown): ProcessWatchParams {
+  const { threadId, phase } = asRecord(params);
+  if (typeof threadId !== "string" || !(WATCH_PHASES as readonly unknown[]).includes(phase)) {
+    throw invalid();
+  }
+  return { threadId, phase: phase as ProcessWatchParams["phase"] };
 }
 
 export function machineCallParams(params: unknown): MachineCallParams {

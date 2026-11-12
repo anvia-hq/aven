@@ -128,6 +128,7 @@ export class RemoteRuntime implements Runtime {
         memory: memory?.index,
         cockpit: cockpit?.access,
         model: runModel,
+        backend: threadBackend(thread),
       }),
     );
   }
@@ -167,6 +168,7 @@ export class RemoteRuntime implements Runtime {
         memory: memory?.index,
         cockpit: cockpit?.access,
         model: runModel,
+        backend: threadBackend(thread),
       }),
     );
   }
@@ -237,7 +239,7 @@ export class RemoteRuntime implements Runtime {
   }
 
   async #placementFor(thread: RunThread): Promise<Placement> {
-    const backend = thread.agentBackend ?? "native";
+    const backend = threadBackend(thread);
     if (this.agentOnControlPlane && backend === "native" && thread.runtimeId !== LOCAL_RUNTIME_ID) {
       const connection = this.hub.get(LOCAL_RUNTIME_ID);
       if (!connection)
@@ -287,6 +289,10 @@ export class RemoteRuntime implements Runtime {
 }
 
 const ASKING_AGENT = /^run-(.+)$/;
+
+function threadBackend(thread: RunThread) {
+  return thread.agentBackend ?? "native";
+}
 
 function askedBy(continuation: unknown) {
   try {

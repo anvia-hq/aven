@@ -12,19 +12,19 @@ import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
 import { createControlPlaneCalls } from "./control-plane-calls";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
+import { createMachineProcessWatch } from "./machine-process-watch";
 import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
 import { machineCallWait } from "./machine-call-wait";
 import { PlacedWorkspaces } from "./placed-workspaces";
 import { RemoteWorkspaces } from "./remote-workspaces";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
-import { DurableRuns } from "./durable-runs";
+import { openAgentBackends } from "./agent-backends";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
 import type { ControlPlaneToRuntime, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
-  AgentBackend,
   CreateRuntimeAgent,
   DriverContext,
   RuntimeOptions,
@@ -106,11 +106,10 @@ export function startRuntime(options: RuntimeOptions) {
   const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
   const records = new RunRecords(state);
   const outbox = new RunOutbox(state);
-  const backend: Promise<AgentBackend> = DurableRuns.open(
+  const backends = openAgentBackends(
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
-  backend.catch(() => undefined);
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -157,19 +156,30 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => terminals.count(threadId) > 0,
   });
 
+  const guestRuns = new Set<string>();
   const processEnds = new ProcessEndWatch(
     {
       box: (threadId) => boxes.get(threadId),
       send,
-      hasRun: (threadId) => [...driver.live.values()].some((run) => run.threadId === threadId),
+      hasRun: (threadId) =>
+        guestRuns.has(threadId) ||
+        [...driver.live.values()].some((run) => run.threadId === threadId),
       stopped: () => stopped,
       pollMs: options.processPollMs,
     },
     new ProcessWatchRecords(state),
   );
+  const machineProcesses = createMachineProcessWatch(processEnds, guestRuns);
 
-  const bots = new BotReplies({
+  const botMachines = new RemoteWorkspaces((botId) => (op, args) => {
+    const replyId = bots.replyOnMachine(botId);
+    if (!replyId) return Promise.reject(new Error("The computer is reached only during a reply"));
+    return call("machine.call", { replyId, op, args }, machineCallWait(args));
+  });
+
+  const bots: BotReplies = new BotReplies({
     sandbox: options.sandbox,
+    machines: botMachines,
     createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),
     send,
     call,
@@ -191,7 +201,7 @@ export function startRuntime(options: RuntimeOptions) {
   );
 
   const driver = createRunDriver({
-    backend,
+    backend: (kind) => backends.get(kind),
     records,
     outbox,
     sandbox: placed,
@@ -201,7 +211,7 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     controlPlane: origin,
     starting: (threadId) => {
-      processEnds.arm(threadId);
+      if (!runOnMachine(threadId)) processEnds.arm(threadId);
       return idle.starting(threadId);
     },
     finished: (threadId, ended) => {
@@ -225,6 +235,7 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     idle,
     processEnds,
+    machineProcesses,
     update: options.update && {
       start: options.update,
       busy: () =>
@@ -311,7 +322,7 @@ export function startRuntime(options: RuntimeOptions) {
         canUpdate: options.update ? true : undefined,
         host: options.host ? true : undefined,
         dirs: options.dirs?.length ? options.dirs : undefined,
-        backends: ["native"],
+        backends: [...backends.offered],
       });
       resend();
       connected.resolve();
@@ -367,7 +378,7 @@ export function startRuntime(options: RuntimeOptions) {
       socket?.close();
       await idle.settled();
       await options.sandbox.dispose();
-      await backend.then((opened) => opened.close()).catch(() => undefined);
+      await backends.close();
       state.close();
     },
   };

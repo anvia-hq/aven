@@ -6,6 +6,7 @@ import { isGoalRoundNote } from "@aven/protocol/goals";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
+import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { answerBotMemory } from "./memory-answer";
 import { runCockpitCommand } from "../cockpit/commands";
 import type {
@@ -65,10 +66,11 @@ export class RemoteBotReplier implements BotReplier {
     private providers: BotProviders,
     private threads: BotThreads,
     private notes: BotMemoryNotes,
+    private agentOnControlPlane = true,
   ) {}
 
   ready(model: ModelConfig) {
-    this.#connection();
+    this.#place();
     this.gateway.check(model);
   }
 
@@ -96,7 +98,7 @@ export class RemoteBotReplier implements BotReplier {
     const keepsNotes = onPersonsWord;
     const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
-    const connection = this.#connection();
+    const { connection, machine } = this.#place();
     const replyId = crypto.randomUUID();
     const runModel = this.gateway.issue(replyId, model);
     const ended = Promise.withResolvers<void>();
@@ -331,6 +333,7 @@ export class RemoteBotReplier implements BotReplier {
           mcp: mcpServers.length ? mcpServers : undefined,
           memory: { folders, writable: keepsNotes },
           cockpit: "write",
+          machine,
         },
         sink,
       );
@@ -368,6 +371,16 @@ export class RemoteBotReplier implements BotReplier {
       .map(({ handle, name, description }) => ({ handle, name, description }));
   }
 
+  #place() {
+    if (this.agentOnControlPlane && this.runtimeId !== LOCAL_RUNTIME_ID) {
+      const connection = this.hub.get(LOCAL_RUNTIME_ID);
+      if (!connection)
+        throw new RuntimeOfflineError("The control plane's own runner is not running");
+      return { connection, machine: this.runtimeId };
+    }
+    return { connection: this.#connection(), machine: undefined };
+  }
+
   #connection() {
     const connection = this.hub.get(this.runtimeId);
     if (!connection) throw new RuntimeOfflineError("The bot's computer is offline");
@@ -376,7 +389,7 @@ export class RemoteBotReplier implements BotReplier {
 
   #cancel(replyId: string, signal: AbortSignal) {
     try {
-      this.hub.get(this.runtimeId)?.cancelBotReply(replyId, errorOf(signal));
+      this.#place().connection.cancelBotReply(replyId, errorOf(signal));
     } catch {}
   }
 }

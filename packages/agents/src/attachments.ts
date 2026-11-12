@@ -14,15 +14,47 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function fileLine(file: KeptAttachment) {
+  const shown = file.image ? ", shown to you below" : "";
+  return `- ${file.path} (${file.mediaType}, ${formatSize(file.size)}${shown})`;
+}
+
+function held(file: KeptAttachment) {
+  return !file.path.includes("/") && !file.path.includes("\\");
+}
+
+function sharedDirectory(files: readonly KeptAttachment[]) {
+  const directories = new Set(
+    files.map((file) => {
+      const slash = Math.max(file.path.lastIndexOf("/"), file.path.lastIndexOf("\\"));
+      return slash > 0 ? file.path.slice(0, slash) : "";
+    }),
+  );
+  directories.delete("");
+  return directories.size === 1 ? [...directories][0] : undefined;
+}
+
 function attachmentNote(kept: readonly KeptAttachment[], paths: SandboxPaths) {
-  const lines = kept.map((file) => {
-    const shown = file.image ? ", shown to you below" : "";
-    return `- ${file.path} (${file.mediaType}, ${formatSize(file.size)}${shown})`;
-  });
-  return [
-    `The user attached ${kept.length === 1 ? "a file" : `${kept.length} files`}. They are on this machine, read-only, in ${paths.uploads}:`,
-    ...lines,
-  ].join("\n");
+  const waiting = kept.filter(held);
+  const ready = kept.filter((file) => !held(file));
+  const parts: string[] = [];
+  if (ready.length > 0) {
+    const count = ready.length === 1 ? "a file" : `${ready.length} files`;
+    parts.push(
+      [
+        `The user attached ${count}. They are on this machine, read-only, in ${sharedDirectory(ready) ?? paths.uploads}:`,
+        ...ready.map(fileLine),
+      ].join("\n"),
+    );
+  }
+  if (waiting.length > 0) {
+    const intro =
+      waiting.length === 1
+        ? "A file is waiting to be written to the computer. When the computer is reached, it is written to that computer's uploads folder under this name:"
+        : `${waiting.length} files are waiting to be written to the computer. When the computer is reached, they are written to that computer's uploads folder under these names:`;
+    parts.push([intro, ...waiting.map(fileLine)].join("\n"));
+  }
+  return parts.join("\n\n");
 }
 
 function forTranscript({ name, mediaType, size, image }: KeptAttachment): MessageAttachment {

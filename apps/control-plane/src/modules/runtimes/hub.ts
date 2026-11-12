@@ -2,6 +2,7 @@ import type { MemoryStore } from "@anvia/core";
 import { AGENT_BACKENDS, CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "../../errors";
+import { MachineProcessWatch } from "./machine-process-watch";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
 import { runtimesService } from "./service";
@@ -151,12 +152,15 @@ export class RuntimeConnection {
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      machine?: string;
     },
     sink: BotReplySink,
   ) {
-    this.#botReplies.set(replyId, sink);
+    const { machine, ...body } = input;
+    const live = Object.assign(sink, { botId: input.bot.id, machine });
+    this.#botReplies.set(replyId, live);
     try {
-      this.post({ type: "bot.reply", replyId, ...input });
+      this.post({ type: "bot.reply", replyId, ...body, machine });
     } catch (error) {
       this.#botReplies.delete(replyId);
       throw error;
@@ -229,6 +233,7 @@ export class RuntimeConnection {
       void runtimesService.setHost(this.runtimeId, host === true);
       void runtimesService.setDirectories(this.runtimeId, dirs ?? []);
       this.hub.reclaim(this, runs);
+      void this.hub.machineWatches.hello(this.runtimeId);
       return;
     }
     this.close(
@@ -266,6 +271,10 @@ export class RuntimeConnection {
         this.#endBotReply(message.replyId, message.error);
         return;
       case "call":
+        if (message.method === "machine.call") {
+          void this.#answer(message.id, message.method, message.params);
+          return;
+        }
         await this.#answer(message.id, message.method, message.params);
         return;
       case "terminal.opened":
@@ -286,6 +295,7 @@ export class RuntimeConnection {
     if (!run || seq <= run.lastSeq) return;
     this.#runs.delete(runId);
     run.sink.end(outcome, error, continuation);
+    void this.hub.machineWatches.ended(run.thread.machine, run.thread.id, outcome);
   }
 
   #endBotReply(replyId: string, error?: string) {
@@ -330,7 +340,10 @@ export class RuntimeConnection {
     const runs = [...this.#runs.entries()];
     this.#runs.clear();
     if (endRuns) {
-      for (const [, run] of runs) run.sink.lost(new Error("The runtime disconnected"));
+      for (const [, run] of runs) {
+        void this.hub.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
+        run.sink.lost(new Error("The runtime disconnected"));
+      }
     } else if (runs.length > 0) {
       this.hub.hold(this.runtimeId, runs);
     }
@@ -363,6 +376,8 @@ export class RuntimeHub {
   };
 
   processEnds: ProcessEnds = { ended: async () => undefined };
+
+  readonly machineWatches = new MachineProcessWatch((runtimeId) => this.get(runtimeId));
 
   machines: MachineRelay = {
     reach: () => Promise.reject(new Error("Machines are not available")),
@@ -407,7 +422,10 @@ export class RuntimeHub {
         });
       }
     }
-    for (const run of runs.values()) run.sink.lost(new Error("The runtime restarted"));
+    for (const run of runs.values()) {
+      this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
+      run.sink.lost(new Error("The runtime restarted"));
+    }
   }
 
   cancelRun(runtimeId: string, runId: string, reason: string) {
@@ -425,7 +443,10 @@ export class RuntimeHub {
     if (!held) return;
     clearTimeout(held.timer);
     this.#held.delete(runtimeId);
-    for (const run of held.runs.values()) run.sink.lost(new Error(message));
+    for (const run of held.runs.values()) {
+      this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
+      run.sink.lost(new Error(message));
+    }
   }
 
   detach(connection: RuntimeConnection) {

@@ -125,7 +125,10 @@ const scripted = (body: string) => {
     return hasToolResult(body) ? answer("wrote fork.txt") : toolCall("echo from-fork > fork.txt");
   }
   if (body.includes(FORK_MARK)) return parentForkReply(body);
-  return hasToolResult(body) ? answer("done") : toolCall("pwd; echo made > proof.txt");
+  const command = body.includes("please sleep")
+    ? "echo up > ready; sleep 30"
+    : "pwd; echo made > proof.txt";
+  return hasToolResult(body) ? answer("done") : toolCall(command);
 };
 
 const answer = (text: string) =>
@@ -286,7 +289,10 @@ run(
       await until(() => !manager.isRunning(thread.id) && bodies.length === before + 2);
 
       const uploads = machineSandbox.paths(thread.id).uploads;
-      expect(bodies[before]).toMatch(new RegExp(`${uploads}/notes-[0-9a-f]{4}\\.txt`));
+      expect(bodies[before]).toContain("waiting to be written");
+      expect(bodies[before]).toMatch(/notes-[0-9a-f]{4}\.txt/);
+      expect(bodies[before]).not.toContain(`${uploads}/notes-`);
+      expect(bodies[before]).not.toContain("/uploads/notes-");
       expect(toolResultOf(bodies[before + 1])).toContain("The computer is offline");
       machineRunner = startRuntime({
         url,
@@ -308,6 +314,7 @@ run(
       const kept = (await readdir(uploads)).filter((name) => name.startsWith("notes-"));
       expect(kept).toHaveLength(1);
       expect(await readFile(join(uploads, kept[0]!), "utf8")).toBe("hello");
+      expect(toolResultOf(bodies[before + 1])).toContain(`${uploads}/${kept[0]}`);
     }, 30_000);
 
     test("an agent forks onto the machine and takes the fork's changes back", async () => {
@@ -350,5 +357,31 @@ run(
       expect(await readFile(wrote[0]!, "utf8")).toBe("from-fork\n");
       expect(JSON.stringify(await manager.history(parent))).toContain("taken");
     }, 60_000);
+
+    test("cancelling the run stops the command that is running on the machine", async () => {
+      await machineRunner.ready;
+      await until(() => hub.isOnline(LOCAL_RUNTIME_ID) && hub.isOnline(machine.id));
+      const started = Date.now();
+      await manager.start(thread, "please sleep", model);
+      const ready = join(machineSandbox.paths(thread.id).workspace, "ready");
+      const deadline = Date.now() + 15_000;
+      let wrote = false;
+      while (!wrote && Date.now() < deadline) {
+        try {
+          wrote = (await readFile(ready, "utf8")).includes("up");
+        } catch {
+          await Bun.sleep(25);
+        }
+      }
+      expect(wrote).toBe(true);
+
+      expect(manager.cancel(thread.id)).toBe(true);
+      await until(() => !manager.isRunning(thread.id), 10_000);
+      expect(Date.now() - started).toBeLessThan(20_000);
+      const listing = await new Response(
+        Bun.spawn(["ps", "-eo", "args"], { stdout: "pipe" }).stdout,
+      ).text();
+      expect(listing).not.toContain("echo up > ready");
+    }, 25_000);
   },
 );
