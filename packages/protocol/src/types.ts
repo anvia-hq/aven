@@ -442,6 +442,12 @@ export type SandboxCallMethod = "sandbox.release";
 
 export type MachineCallMethod = "machine.call";
 
+export type ProcessWatchPhase = "arm" | "settle" | "suspend";
+
+export type ProcessWatchParams = { threadId: string; phase: ProcessWatchPhase };
+
+export type ProcessWatchCallMethod = "process.watch";
+
 export type MachineOp = (typeof MACHINE_OPS)[number];
 
 export type MachineCallParams = { threadId: string; op: MachineOp; args?: unknown };
@@ -518,6 +524,7 @@ export type RunnerCallMethod =
   | RunCallMethod
   | SandboxCallMethod
   | MachineCallMethod
+  | ProcessWatchCallMethod
   | RunnerSelfCallMethod;
 
 export type DiffGetParams = { threadId: string; scope: DiffScope };

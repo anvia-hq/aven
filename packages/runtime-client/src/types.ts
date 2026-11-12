@@ -370,6 +370,12 @@ export type RunToolsInput = {
   computer?: ComputerHost;
 };
 
+export type MachineProcessWatch = {
+  begin(threadId: string): Promise<void>;
+  end(threadId: string, phase: "settle" | "suspend"): void;
+  has(threadId: string): boolean;
+};
+
 export type RunnerCallsContext = {
   sandbox: ThreadWorkspaces;
   boxes: Map<string, ThreadSandbox>;
@@ -379,15 +385,26 @@ export type RunnerCallsContext = {
     busy(): string | undefined;
   };
   processEnds: Pick<ProcessEndWatch, "ignore">;
+  machineProcesses: MachineProcessWatch;
   steer(params: SteerParams): Promise<SteerResult>;
   dirs?: string[];
 };
 
 export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
 
+export type UploadPlacement = {
+  settle(threadId: string): Promise<void>;
+  placed(threadId: string, name: string): string | undefined;
+  claim(threadId: string, name: string): void;
+  placedNote(threadId: string): string | undefined;
+};
+
 export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
 
-export type MachineCallsContext = Pick<RunnerCallsContext, "sandbox" | "boxes" | "idle">;
+export type MachineCallsContext = Pick<
+  RunnerCallsContext,
+  "sandbox" | "boxes" | "idle" | "machineProcesses"
+>;
 
 export type RuntimeOptions = {
   url: string;
@@ -449,7 +466,9 @@ export interface ThreadWorkspaces {
   ): Promise<void>;
   setProjectEnv?(threadId: string, env: readonly RunEnvVar[] | undefined): void;
   readonly artifacts?: ThreadArtifacts;
-  readonly uploads?: Pick<UploadStore, "save"> & Partial<Pick<UploadStore, "put">>;
+  readonly uploads?: Pick<UploadStore, "save"> &
+    Partial<Pick<UploadStore, "put">> &
+    Partial<UploadPlacement>;
   readonly skills?: Pick<SkillStore, "install">;
   dispose(): Promise<void>;
 }

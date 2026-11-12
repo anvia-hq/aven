@@ -13,6 +13,7 @@ import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
 import { wakingTools } from "./late-bound-tools";
+import { withPlacedUploads } from "./placed-uploads";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
@@ -303,9 +304,13 @@ export function createRunDriver(context: DriverContext) {
     if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
     clock.mark("skills");
     const redact = secretRedactor(env);
+    const noted = (tools: readonly AnyTool[]) =>
+      withPlacedUploads(wakingTools(tools, wake), () =>
+        context.sandbox.uploads?.placedNote?.(thread.id),
+      );
     const current = () => {
       const live = context.boxes.get(thread.id)?.tools;
-      const tools = live && wakingTools(live, wake);
+      const tools = live && noted(live);
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
@@ -343,7 +348,7 @@ export function createRunDriver(context: DriverContext) {
           tools: toolsForRun({
             sandbox: context.sandbox,
             thread,
-            tools: wakingTools(box.tools, wake),
+            tools: noted(box.tools),
             computer,
             current,
             mcp: mcp && {

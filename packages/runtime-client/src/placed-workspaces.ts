@@ -19,9 +19,14 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
   get uploads() {
     const { host } = this;
     if (!host.uploads) return undefined;
+    const of = (threadId: string) => this.#of(threadId).uploads ?? host.uploads!;
     return {
       save: (threadId: string, name: string, bytes: Uint8Array) =>
-        (this.#of(threadId).uploads ?? host.uploads!).save(threadId, name, bytes),
+        of(threadId).save(threadId, name, bytes),
+      settle: (threadId: string) => of(threadId).settle?.(threadId) ?? Promise.resolve(),
+      placed: (threadId: string, name: string) => of(threadId).placed?.(threadId, name),
+      claim: (threadId: string, name: string) => of(threadId).claim?.(threadId, name),
+      placedNote: (threadId: string) => of(threadId).placedNote?.(threadId),
     };
   }
 
