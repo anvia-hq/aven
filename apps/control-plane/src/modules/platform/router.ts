@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { authService } from "../auth/service";
+import { authService, githubLoginEnabled } from "../auth/service";
 import type { PutAwayThread } from "../threads/types";
 import { personParams, updateSettingsBody } from "./schema";
 import { platformService } from "./service";
@@ -13,6 +13,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
       const session = await authService.getSession(request.headers);
       return {
         registrationEnabled: await platformService.isRegistrationEnabled(),
+        githubLogin: githubLoginEnabled,
         isOwner: session ? await platformService.isOwner(session.user) : false,
       };
     })

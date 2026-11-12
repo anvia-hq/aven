@@ -6,6 +6,7 @@ import { validateInvitationSearch } from "@/modules/auth/invitation-search";
 import { redirectIfSignedIn } from "@/modules/auth/redirect-if-signed-in";
 import { AuthShell } from "@/modules/auth/components/auth-shell";
 import { AuthForm } from "@/modules/auth/components/auth-form";
+import { GithubSignIn } from "@/modules/auth/components/github-sign-in";
 
 export const Route = createFileRoute("/register")({
   validateSearch: validateInvitationSearch,
@@ -42,7 +43,10 @@ function Register() {
           Registration is closed. Ask a teammate for an invite link to join.
         </p>
       ) : (
-        <AuthForm mode="sign-up" onSuccess={onSuccess} />
+        <>
+          <AuthForm mode="sign-up" onSuccess={onSuccess} />
+          {config?.githubLogin && <GithubSignIn invitation={invitation} />}
+        </>
       )}
     </AuthShell>
   );

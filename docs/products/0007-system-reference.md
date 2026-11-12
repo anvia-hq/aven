@@ -107,3 +107,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### A thread compares its changes with every branch it pushed (decision 0233)
 
 `refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch.
+
+### Sign-in with GitHub (decision 0235)
+
+`auth/social.ts` (`socialProvidersOf`) gives Better Auth a `github` provider when `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` are both set, with the callback `<BETTER_AUTH_URL>/api/auth/callback/github`; `/platform/config` says `githubLogin`, and the sign-in and register pages show "Continue with GitHub" (`github-sign-in.tsx`, `use-github-sign-in.ts`). The registration hook runs for these accounts too, and signing in does not connect GitHub for runs (0044, 0192).

@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 
 import { platformService } from "../platform/service";
 import { parseOrigins } from "./origins";
+import { socialProvidersOf } from "./social";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 
@@ -38,11 +39,16 @@ export async function ensurePersonalOrganization(userId: string) {
   return organizationId;
 }
 
+const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:5173";
+const socialProviders = socialProvidersOf(process.env, baseURL);
+
+export const githubLoginEnabled = "github" in socialProviders;
+
 export const trustedOrigins = parseOrigins(process.env.TRUSTED_ORIGINS ?? "http://localhost:5173");
 
 export const auth = betterAuth({
   secret,
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:5173",
+  baseURL,
   basePath: "/auth",
   trustedOrigins,
   database: drizzleAdapter(db, {
@@ -58,6 +64,7 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: { enabled: true },
+  socialProviders,
   plugins: [organization(), bearer()],
   databaseHooks: {
     user: {
