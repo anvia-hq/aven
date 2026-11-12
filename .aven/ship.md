@@ -11,10 +11,10 @@ Ship this thread's work.
 2. **Update from the default branch.** `git fetch origin main && git rebase origin/main`. Resolve
    conflicts in code you touched; if one is in a place you cannot judge, stop and tell me.
 
-3. **Bring the database up.** `.aven/resume` starts the PostgreSQL 17 this repository uses and
-   makes the `aven` database. It runs when the container starts, so run it only if connecting
-   fails (`psql -h localhost -d aven -c 'select 1'`). Then apply the schema, which is safe to
-   repeat: `bun run --cwd packages/db db:migrate`.
+3. **Bring the database up.** `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
+   Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
+   it if connecting fails. Then apply the schema, which is also safe to repeat:
+   `bun run --cwd packages/db db:migrate`.
 
 4. **Run the checks, and fix what your change broke:**
    `bun run format && bun run typecheck && bun run lint && bun run format:check && bun test apps packages`.

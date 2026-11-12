@@ -10,7 +10,10 @@ playwright-report
 .aven/*
 !.aven/setup
 !.aven/resume
+!.aven/stack
+!.aven/actions.yml
 !.aven/ship.md
 !.aven/proof/
 !.aven/skills/
 .tanstack/
+.env.local
