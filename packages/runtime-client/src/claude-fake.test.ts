@@ -16,6 +16,7 @@ function input(): ClaudeQueryInput {
     prompt: onePrompt(),
     token: TOKEN,
     cwd: "/work",
+    binaryDir: "/unused",
     configDir: "/runner/claude/thread",
     abortController: new AbortController(),
     tools: { catalog: [] },

@@ -359,6 +359,7 @@ export class ClaudeRuns implements AgentBackend {
         token: context.token,
         cwd,
         configDir: join(this.home, "claude", options.threadId),
+        binaryDir: join(this.home, "claude-code"),
         abortController: abort,
         tools: host,
         env: context.env,
