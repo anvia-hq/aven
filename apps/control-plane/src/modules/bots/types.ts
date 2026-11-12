@@ -50,6 +50,7 @@ export type BotKeeper = {
     update(botId: string, action: GoalAction, reason?: string): Promise<BotGoalView | null>;
   };
   greet(userId: string, botId: string, hops: number): Promise<void>;
+  usableRuntime(userId: string, runtimeId: string): Promise<void>;
 };
 
 export type BotMemoryNotes = {
