@@ -61,6 +61,7 @@ function fakeRunner(
     threads?: Partial<BotThreads>;
     notes?: Partial<BotMemoryNotes>;
     agentOnControlPlane?: boolean;
+    refuseRuntime?: string;
     runtimeId?: string;
     online?: boolean | ((runtimeId: string) => boolean);
   } = {},
@@ -130,6 +131,10 @@ function fakeRunner(
       update: async () => bot,
       deliver: async () => ({ handle: "scout", name: "Scout" }),
       greet: async () => undefined,
+      usableRuntime: async (_userId: string, runtimeId: string) => {
+        if (options.refuseRuntime === runtimeId)
+          throw new Error("That runner is not one you can use");
+      },
       timezone: async () => "Asia/Jakarta",
       goals: {
         get: async () => null,
@@ -273,6 +278,19 @@ describe("RemoteBotReplier", () => {
 
       run.only().end();
       await answering;
+    });
+
+    test("a reply is refused when the bot's runner is no longer one its person may use", async () => {
+      const own: Bot = { ...bot, runtimeId: "runner-2" };
+      const run = fakeRunner({
+        agentOnControlPlane: true,
+        online: (id) => id === LOCAL_RUNTIME_ID,
+        refuseRuntime: "runner-2",
+      });
+      await expect(run.replier.answer(input(() => undefined, undefined, own))).rejects.toThrow(
+        "not one you can use",
+      );
+      expect(run.started).toHaveLength(0);
     });
 
     test("is refused when the control plane has no runner of its own", () => {

@@ -89,6 +89,7 @@ export class RemoteBotReplier implements BotReplier {
   }: BotReplyInput) {
     signal.throwIfAborted();
     if (isGoalRoundNote(prompt) && (await this.bots.goals.get(bot.id))?.phase !== "active") return;
+    if (bot.runtimeId) await this.bots.usableRuntime(userId, bot.runtimeId);
     const peers = await this.#peersOf(userId, bot.id);
     const timezone = await this.bots.timezone(userId);
     const skills = await this.skills.forRun(userId);

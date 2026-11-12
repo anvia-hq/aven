@@ -33,6 +33,7 @@ import { createDiffService } from "./modules/diff/service";
 import { createThreadContinuation } from "./modules/threads/continuation";
 import { createThreadForks } from "./modules/threads/forks";
 import { createProcessEnds } from "./modules/threads/process-ends";
+import { requireUsableRuntime } from "./modules/runtimes/usable";
 import { createFollowUps } from "./modules/follow-ups/service";
 import { suggestFollowUps } from "./modules/follow-ups/suggest";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -146,6 +147,7 @@ export const botRunner = new BotRunner({
       update: (userId, id, changes) => botsService.update(userId, id, changes),
       deliver: (letter) => botChats.deliver(letter),
       greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
+      usableRuntime: requireUsableRuntime,
       timezone: (userId) => preferencesService.timezone(userId),
       goals: {
         get: (botId) => goalsService.get(botId),

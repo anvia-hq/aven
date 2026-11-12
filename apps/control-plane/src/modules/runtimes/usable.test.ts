@@ -7,7 +7,7 @@ import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
 import { seedOrgPair } from "../../testing/seed-org-pair";
-import { LOCAL_RUNTIME_ID } from "./service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -43,6 +43,7 @@ run("requireUsableRuntime (real postgres)", async () => {
     });
     const own = await make({ host: true, ownerId: seed.userId, organizationId: seed.orgA });
     const shared = await make({ organizationId: seed.orgA });
+    await runtimesService.ensureLocal();
     await requireUsableRuntime(seed.userId, LOCAL_RUNTIME_ID);
     await requireUsableRuntime(seed.userId, own);
     await requireUsableRuntime(seed.userId, shared);
