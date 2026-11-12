@@ -14,12 +14,17 @@ export async function waitForHealthy(
   }
 }
 
-export function portIsFree(port: number) {
+type Listen = (options: { hostname: string; port: number }) => { stop(close?: boolean): void };
+
+const bindToProbe: Listen = ({ hostname, port }) =>
+  Bun.listen({ hostname, port, socket: { data() {} } });
+
+export function portIsFree(port: number, listen: Listen = bindToProbe) {
   for (const hostname of ["0.0.0.0", "127.0.0.1"]) {
     try {
-      Bun.listen({ hostname, port, socket: { data() {} } }).stop(true);
-    } catch {
-      return false;
+      listen({ hostname, port }).stop(true);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EACCES") return false;
     }
   }
   return true;

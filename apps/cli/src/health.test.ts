@@ -31,6 +31,20 @@ test("portIsFree sees a port that is taken", () => {
   expect(portIsFree(port)).toBe(true);
 });
 
+describe("portIsFree when the probe cannot bind", () => {
+  const failing = (code: string) => () => {
+    throw Object.assign(new Error(code), { code });
+  };
+
+  test("a port the person may not bind is not taken, as Docker binds it as root", () => {
+    expect(portIsFree(80, failing("EACCES"))).toBe(true);
+  });
+
+  test("a port that is in use is taken", () => {
+    expect(portIsFree(80, failing("EADDRINUSE"))).toBe(false);
+  });
+});
+
 describe("portIsFree and the addresses a port is held on", () => {
   const open: { stop(close?: boolean): void }[] = [];
   afterEach(() => {
