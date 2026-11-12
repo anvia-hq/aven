@@ -1116,6 +1116,39 @@ describe("startRuntime runs", () => {
         : [],
     );
 
+  test("drives the backend the run names, and native when it names none (decision 0220)", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    let made = 0;
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: (input) => {
+        made += 1;
+        return reply()(input);
+      },
+    });
+    await runtime.ready;
+    await until(() => hellos(plane).length === 1);
+    expect(hellos(plane)[0]).toMatchObject({ backends: ["native"] });
+
+    plane.send(runStart);
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+
+    plane.send({ ...runStart, runId: "run-2", backend: "native" });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
+
+    const before = made;
+    plane.send({ ...runStart, runId: "run-3", backend: "other" });
+    await until(() => ended(plane).length === 3);
+    expect(ended(plane)[2]).toMatchObject({
+      outcome: "error",
+      error: "This runner does not drive the other agent backend",
+    });
+    expect(made).toBe(before);
+  });
+
   test("a run reports its progress as events and hands its messages home", async () => {
     const { sandbox, up } = slowSandbox();
     up();

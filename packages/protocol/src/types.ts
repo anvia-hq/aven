@@ -596,6 +596,7 @@ export type ControlPlaneToRuntime =
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
+      backend?: AgentBackendKind;
     }
   | {
       type: "run.resume";
@@ -612,6 +613,7 @@ export type ControlPlaneToRuntime =
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
+      backend?: AgentBackendKind;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {
