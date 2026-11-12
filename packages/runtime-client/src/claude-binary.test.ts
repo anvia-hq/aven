@@ -149,9 +149,10 @@ describe("the manifest", () => {
   test("matches the SDK version and checksums in bun.lock", () => {
     const lock = readFileSync(join(import.meta.dir, "../../../bun.lock"), "utf8");
     const sdk = /"@anthropic-ai\/claude-agent-sdk@([^"]+)"/.exec(lock)?.[1];
+    expect(sdk).toBeDefined();
 
     for (const item of Object.values(CLAUDE_BINARIES)) {
-      expect(item.version).toBe(sdk);
+      expect(item.version).toBe(sdk!);
       const line = lock.split("\n").find((row) => row.trimStart().startsWith(`"${item.package}":`));
       expect(line).toContain(`${item.package}@${item.version}`);
       expect(line).toContain(item.integrity);
