@@ -7,17 +7,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 
+import { CLAUDE_GROUP, CLAUDE_MODELS, claudeModelLabel } from "../claude-models";
 import type { useModelSelection } from "../hooks/use-model-selection";
+import type { ClaudeControl } from "../types";
 import { EffortSlider, effortName } from "./effort-slider";
 
-type Props = { model: ReturnType<typeof useModelSelection> };
+type Props = { model: ReturnType<typeof useModelSelection>; claude?: ClaudeControl };
 
-export function ModelMenu({ model }: Props) {
+export function ModelMenu({ model, claude }: Props) {
   const { providers, provider, modelId, modelLabel, choices, loadingModels, levels, effort } =
     model;
-  const [choosing, setChoosing] = useState(false);
+  const [choosing, setChoosing] = useState(!provider);
+  const usingClaude = claude?.choice != null;
 
-  if (!provider) {
+  if (!provider && !claude) {
     return (
       <Link to="/settings/providers" className="text-xs text-muted-foreground underline">
         Add a provider to choose a model
@@ -25,7 +28,9 @@ export function ModelMenu({ model }: Props) {
     );
   }
 
-  const efforts = levels.length > 1;
+  const efforts = levels.length > 1 && !usingClaude;
+  const label = usingClaude ? claudeModelLabel(claude.choice?.modelId) : modelLabel;
+  const kind = usingClaude ? "anthropic" : provider?.kind;
 
   return (
     <Popover onOpenChange={(open) => !open && setChoosing(false)}>
@@ -39,9 +44,9 @@ export function ModelMenu({ model }: Props) {
           />
         }
       >
-        <ProviderLogo kind={provider.kind} />
+        {kind && <ProviderLogo kind={kind} />}
         <span className="truncate font-medium text-foreground">
-          {modelLabel ?? "Provider default"}
+          {usingClaude ? `Claude ${label}` : (label ?? "Provider default")}
         </span>
         {efforts && <span className="shrink-0">{effortName(effort)}</span>}
       </PopoverTrigger>
@@ -67,11 +72,23 @@ export function ModelMenu({ model }: Props) {
               providers={providers}
               choices={choices}
               loading={loadingModels}
-              selected={{ providerId: provider.id, modelId }}
+              selected={provider && !usingClaude ? { providerId: provider.id, modelId } : undefined}
               onSelect={(choice) => {
                 model.selectModel(choice);
+                claude?.onChange(null);
                 setChoosing(false);
               }}
+              extra={
+                claude && {
+                  heading: CLAUDE_GROUP,
+                  items: CLAUDE_MODELS,
+                  selected: usingClaude ? (claude.choice?.modelId ?? "default") : null,
+                  onSelect: (id) => {
+                    claude.onChange({ modelId: id === "default" ? undefined : id });
+                    setChoosing(false);
+                  },
+                }
+              }
             />
           </div>
         ) : (
@@ -87,8 +104,10 @@ export function ModelMenu({ model }: Props) {
               className="w-fit max-w-full rounded-full"
               onClick={() => setChoosing(true)}
             >
-              <ProviderLogo kind={provider.kind} />
-              <span className="truncate">{modelLabel ?? "Provider default"}</span>
+              {kind && <ProviderLogo kind={kind} />}
+              <span className="truncate">
+                {usingClaude ? `Claude ${label}` : (label ?? "Provider default")}
+              </span>
               <ChevronRight />
             </Button>
             {efforts && (

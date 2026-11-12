@@ -1,7 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { NativeSelect, NativeSelectOption } from "@/components/native-select";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
 import { AddFolderDialog } from "@/modules/projects/components/add-folder-dialog";
@@ -11,8 +10,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
-import type { AgentBackendKind } from "@aven/protocol/types";
+import type { ClaudeChoice, OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -33,12 +31,12 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const [backend, setBackend] = useState<AgentBackendKind>("native");
+  const [claude, setClaude] = useState<ClaudeChoice | null>(null);
   const credential = useClaudeSetup();
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, backend);
+    startThread(projectId, message, selection, claude ? "claude" : "native");
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-1rem-2px)]">
@@ -70,24 +68,10 @@ function NewThread() {
               <PromptInput
                 autoFocus
                 onSubmit={start}
-                showModel={backend !== "claude"}
-                claude={backend === "claude"}
-                tools={
-                  <>
-                    <ProjectPicker value={projectId} onChange={setProjectId} />
-                    <NativeSelect
-                      size="sm"
-                      aria-label="Agent"
-                      value={backend}
-                      onChange={(event) => setBackend(event.target.value as AgentBackendKind)}
-                    >
-                      <NativeSelectOption value="native">Aven</NativeSelectOption>
-                      <NativeSelectOption value="claude">Claude</NativeSelectOption>
-                    </NativeSelect>
-                  </>
-                }
+                claude={{ choice: claude, onChange: setClaude }}
+                tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
               />
-              {backend === "claude" && credential.loaded && !credential.setup.configured && (
+              {claude && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">
                   <Link to="/settings/claude" className="underline">
                     Set a Claude setup token

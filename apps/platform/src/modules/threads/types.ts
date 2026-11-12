@@ -176,3 +176,11 @@ export type SplitSide = "left" | "right";
 export type SplitPair = [string, string];
 
 export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: boolean };
+
+export type ClaudeChoice = { modelId?: string };
+
+export type ClaudeControl = {
+  choice: ClaudeChoice | null;
+  onChange: (choice: ClaudeChoice | null) => void;
+  only?: boolean;
+};

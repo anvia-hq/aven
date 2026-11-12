@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { backendSupports } from "@aven/protocol/runtime-wire";
@@ -26,6 +27,7 @@ import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
+import type { ClaudeChoice } from "@/modules/threads/types";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
 
@@ -57,6 +59,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   useFirstPrompt(threadId, send);
   const followUps = useFollowUps(threadId, loaded, running, messages);
   const { selection } = useModelSelection(threadId);
+  const [claudeChoice, setClaudeChoice] = useState<ClaudeChoice | null>({});
   const { compacting, compact } = useCompactThread(threadId);
   const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
   const canCompact = owned && !running && !question && supportsCompaction;
@@ -180,8 +183,11 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                             running={running}
                             onStop={cancel}
                             onCompact={compact}
-                            showModel={thread.agentBackend !== "claude"}
-                            claude={thread.agentBackend === "claude"}
+                            claude={
+                              thread.agentBackend === "claude"
+                                ? { choice: claudeChoice, onChange: setClaudeChoice, only: true }
+                                : undefined
+                            }
                             placeholder="Reply to the agent…"
                             onSubmit={send}
                             tools={<ProjectInfo projectId={thread.projectId} />}
