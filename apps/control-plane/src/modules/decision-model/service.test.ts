@@ -23,6 +23,7 @@ run("decisionModelService (postgres)", async () => {
       kind: "jev-openrouter",
       modelId: "typesafe/jev-1.13",
       keyHint: "1234",
+      source: "workspace",
     });
     expect(await decisionModelService.config(orgA)).toEqual({
       kind: "jev-openrouter",
@@ -36,7 +37,12 @@ run("decisionModelService (postgres)", async () => {
       kind: "jev-openrouter",
       modelId: "x/y",
     });
-    expect(changed).toEqual({ kind: "jev-openrouter", modelId: "x/y", keyHint: "1234" });
+    expect(changed).toEqual({
+      kind: "jev-openrouter",
+      modelId: "x/y",
+      keyHint: "1234",
+      source: "workspace",
+    });
     expect((await decisionModelService.config(orgA))?.apiKey).toBe("sk-or-v1-abcdef1234");
     await expect(decisionModelService.save(orgB, { kind: "jev" })).rejects.toBeInstanceOf(
       UnprocessableError,
@@ -48,5 +54,29 @@ run("decisionModelService (postgres)", async () => {
     expect(await decisionModelService.remove(orgA)).toBe(true);
     expect(await decisionModelService.remove(orgA)).toBe(false);
     expect(await decisionModelService.get(orgA)).toBeNull();
+  });
+
+  test("a workspace with none uses the server's, and its own wins over it", async () => {
+    process.env.DECISION_MODEL_API_KEY = "sk-or-v1-server0000";
+    try {
+      expect(await decisionModelService.get(orgA)).toEqual({
+        kind: "jev-openrouter",
+        modelId: "typesafe/jev-1.13",
+        keyHint: "",
+        source: "server",
+      });
+      expect(await decisionModelService.config(orgA)).toEqual({
+        kind: "jev-openrouter",
+        modelId: "typesafe/jev-1.13",
+        apiKey: "sk-or-v1-server0000",
+      });
+      await decisionModelService.save(orgA, { kind: "jev", apiKey: "own-key-9999" });
+      expect((await decisionModelService.get(orgA))?.source).toBe("workspace");
+      expect((await decisionModelService.config(orgA))?.apiKey).toBe("own-key-9999");
+      expect(await decisionModelService.remove(orgA)).toBe(true);
+      expect((await decisionModelService.get(orgA))?.source).toBe("server");
+    } finally {
+      delete process.env.DECISION_MODEL_API_KEY;
+    }
   });
 });

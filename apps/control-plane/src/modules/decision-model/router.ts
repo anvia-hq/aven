@@ -32,7 +32,7 @@ export const decisionModelRouter = new Elysia({ prefix: "/decision-model" })
       if (!(await isOwnerOrAdmin(organizationId, user.id))) throw new ForbiddenError(ONLY_ADMINS);
 
       if (!(await decisionModelService.remove(organizationId))) {
-        throw new NotFoundError("No decision model is set");
+        throw new NotFoundError("This workspace has no decision model of its own");
       }
 
       return { removed: true };

@@ -119,3 +119,7 @@ The control plane holds runner connections, runs, watched channels and run token
 ### Email sign-in off (decision 0239)
 
 `auth/email-login.ts` (`emailLoginOf`) reads `AVEN_EMAIL_LOGIN`: `off` disables Better Auth's `emailAndPassword` and refuses to start without GitHub sign-in. `/platform/config` says `emailLogin`, and the sign-in and register pages show the email form only when it is on.
+
+### A server's default decision model (decision 0240)
+
+`decision-model/server-default.ts` (`serverDecisionModel`) reads `DECISION_MODEL_API_KEY`, `_KIND` and `_ID`. `decisionModelService.get` and `config` fall back to it when a workspace has no row, and the view says `source: "server"`; the settings page then shows "Provided by this server".
