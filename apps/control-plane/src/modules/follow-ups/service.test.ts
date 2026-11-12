@@ -26,6 +26,13 @@ describe("followUpTranscript", () => {
     expect(followUpTranscript([])).toBeUndefined();
   });
 
+  test("keeps the end of a long reply, where its question or proposal is", () => {
+    const long = `${"x".repeat(3000)} Shall I go with Box cards?`;
+    const text = followUpTranscript([message("user", "Go"), message("assistant", long)]);
+    expect(text?.endsWith("Shall I go with Box cards?")).toBe(true);
+    expect(text?.includes("x".repeat(3000))).toBe(false);
+  });
+
   test("keeps only the last few messages", () => {
     const many = Array.from({ length: 8 }, (_, index) =>
       message(index % 2 === 0 ? "user" : "assistant", `m${index}`),

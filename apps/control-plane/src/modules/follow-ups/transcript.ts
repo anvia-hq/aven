@@ -22,7 +22,7 @@ export function followUpTranscript(messages: readonly ChatMessage[]) {
       if (text === "") return [];
       return message.role === "user"
         ? [`User: ${spoken(text).slice(0, USER_CHARACTERS)}`]
-        : [`Agent: ${text.slice(0, AGENT_CHARACTERS)}`];
+        : [`Agent: ${text.slice(-AGENT_CHARACTERS)}`];
     })
     .join("\n\n");
 }
