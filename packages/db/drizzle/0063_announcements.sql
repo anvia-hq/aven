@@ -9,4 +9,5 @@ CREATE TABLE "announcements" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX "announcements_active_idx" ON "announcements" USING btree ("active","created_at");
+CREATE INDEX "announcements_active_idx" ON "announcements" USING btree ("active","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "announcements_one_active_idx" ON "announcements" USING btree ("active") WHERE "announcements"."active";

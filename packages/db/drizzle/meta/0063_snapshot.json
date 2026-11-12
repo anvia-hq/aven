@@ -1,5 +1,5 @@
 {
-  "id": "0daeb8ce-93e1-43a1-bebc-61c158721ab0",
+  "id": "f54b7c98-f6f1-4479-ad13-abb770dc8716",
   "prevId": "b20c375c-9cbe-4b3e-a6ac-5d4dae5df97a",
   "version": "7",
   "dialect": "postgresql",
@@ -187,6 +187,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "announcements_one_active_idx": {
+          "name": "announcements_one_active_idx",
+          "columns": [
+            {
+              "expression": "active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"announcements\".\"active\"",
           "concurrently": false,
           "method": "btree",
           "with": {}

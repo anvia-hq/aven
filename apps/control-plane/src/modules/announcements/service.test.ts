@@ -26,4 +26,23 @@ run("announcements (real postgres)", () => {
     expect(rows.filter((row) => row.active).map((row) => row.id)).toEqual([second.id]);
     expect((await announcementsService.active())?.id).toBe(second.id);
   });
+
+  test("publishing at the same time still leaves one active", async () => {
+    const input = {
+      title: "C",
+      summary: "c",
+      details: "",
+      template: "waves" as const,
+      active: true,
+    };
+    const results = await Promise.allSettled([
+      announcementsService.create(input),
+      announcementsService.create({ ...input, title: "D" }),
+    ]);
+    for (const result of results) if (result.status === "fulfilled") made.push(result.value.id);
+
+    const live = (await announcementsService.list()).filter((row) => row.active);
+
+    expect(live).toHaveLength(1);
+  });
 });

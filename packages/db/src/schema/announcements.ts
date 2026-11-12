@@ -1,4 +1,5 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const announcements = pgTable(
   "announcements",
@@ -15,5 +16,10 @@ export const announcements = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("announcements_active_idx").on(table.active, table.createdAt)],
+  (table) => [
+    index("announcements_active_idx").on(table.active, table.createdAt),
+    uniqueIndex("announcements_one_active_idx")
+      .on(table.active)
+      .where(sql`${table.active}`),
+  ],
 );

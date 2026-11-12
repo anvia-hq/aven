@@ -1,6 +1,6 @@
 import { db } from "@aven/db/client";
 import { announcements } from "@aven/db/schema/announcements";
-import { desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
 
 import { NotFoundError } from "../../errors";
@@ -9,8 +9,17 @@ import type { createAnnouncementBody, updateAnnouncementBody } from "./schema";
 type Create = z.infer<typeof createAnnouncementBody>;
 type Update = z.infer<typeof updateAnnouncementBody>;
 
-async function deactivateOthers(id: string) {
-  await db.update(announcements).set({ active: false }).where(ne(announcements.id, id));
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function deactivateOthers(tx: Transaction, id?: string) {
+  await tx
+    .update(announcements)
+    .set({ active: false })
+    .where(
+      id
+        ? and(eq(announcements.active, true), ne(announcements.id, id))
+        : eq(announcements.active, true),
+    );
 }
 
 export const announcementsService = {
@@ -28,28 +37,32 @@ export const announcementsService = {
     return db.select().from(announcements).orderBy(desc(announcements.createdAt));
   },
 
-  async create(input: Create) {
-    const [row] = await db.insert(announcements).values(input).returning();
+  create(input: Create) {
+    return db.transaction(async (tx) => {
+      if (input.active) await deactivateOthers(tx);
 
-    if (!row) throw new Error("Announcement was not saved");
+      const [row] = await tx.insert(announcements).values(input).returning();
 
-    if (row.active) await deactivateOthers(row.id);
+      if (!row) throw new Error("Announcement was not saved");
 
-    return row;
+      return row;
+    });
   },
 
-  async update(id: string, input: Update) {
-    const [row] = await db
-      .update(announcements)
-      .set(input)
-      .where(eq(announcements.id, id))
-      .returning();
+  update(id: string, input: Update) {
+    return db.transaction(async (tx) => {
+      if (input.active) await deactivateOthers(tx, id);
 
-    if (!row) throw new NotFoundError("Announcement not found");
+      const [row] = await tx
+        .update(announcements)
+        .set(input)
+        .where(eq(announcements.id, id))
+        .returning();
 
-    if (row.active) await deactivateOthers(row.id);
+      if (!row) throw new NotFoundError("Announcement not found");
 
-    return row;
+      return row;
+    });
   },
 
   async remove(id: string) {
