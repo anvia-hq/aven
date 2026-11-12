@@ -51,3 +51,7 @@ The reply a run gives is one of five, in this order: subagents, then streamed wo
 A fake runner serves every thread the control plane gives it, so what a thread's computer is doing is kept per thread, in `sandboxes` of `e2e/fake-runner.ts`, which `sandbox.release` — what archiving a thread asks for — ends for that thread alone. Stream counters and a run's end are kept per run. Waking one thread's sandbox, or putting another one away, leaves every other thread as it was.
 
 The pretend background processes of `FAKE_PROCESSES` are still one list for the runner rather than one per thread: every test that asks for them starts a runner of its own, and no test puts two threads' processes beside each other. Give them a thread of their own the day one does.
+
+## A control-plane agent
+
+The suite's control plane has `AVEN_LOCAL_RUNNER=off`, so a thread's run stays on its fake runner. `e2e/control-plane-agent.spec.ts` is the one that covers an agent on the control plane. It starts a control plane of its own with the built-in runner on, a real runner as the machine, and a scripted model (`e2e/agent-model.ts`, reached with `AVEN_ANTHROPIC_BASE_URL`), and drives the browser against a second preview of the platform the suite already built. It is not a fake-runner switch. The other tests do not start those processes.
