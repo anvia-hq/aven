@@ -58,4 +58,4 @@ The suite's control plane has `AVEN_LOCAL_RUNNER=off`, so a thread's run stays o
 
 ## A Claude backend
 
-`e2e/claude-backend.spec.ts` covers a person saving a Claude setup token, starting a thread on the Claude backend, and seeing that thread's run answer. It starts the same kind of private control plane and machine runner. The machine is started with `AVEN_CLAUDE_FAKE=1`, so its Claude query is the local stand-in in `packages/runtime-client/src/claude-fake.ts` and never loads the Claude Agent SDK or calls Anthropic. The spec records video (`video: "on"`). CI uploads `test-results/**/video.webm` as `playwright-claude-video-<shard>` on every e2e job, including a green one.
+`e2e/claude-backend.spec.ts` covers a person saving a Claude setup token, starting a thread on the Claude backend, and seeing that thread's run answer. It starts the same kind of private control plane and machine runner. The machine is started with `AVEN_CLAUDE_FAKE=1`, so its Claude query is the local stand-in in `packages/runtime-client/src/claude-fake.ts` and never loads the Claude Agent SDK or calls Anthropic.

@@ -53,7 +53,7 @@ Each row is a native capability and how this backend provides it. A row marked e
 
 ## Tests
 
-`AVEN_CLAUDE_FAKE=1` on a runner selects `claudeFakeQuery` instead of the SDK. The stand-in answers one sentence and does not call Anthropic or repeat the setup token. The token is still required, still encrypted, and still handed to that runner. `e2e/claude-backend.spec.ts` saves a token in Settings, starts a Claude thread, and checks the reply. That spec records video. A runner that leaves the variable unset uses the SDK.
+`AVEN_CLAUDE_FAKE=1` on a runner selects `claudeFakeQuery` instead of the SDK. The stand-in answers one sentence and does not call Anthropic or repeat the setup token. The token is still required, still encrypted, and still handed to that runner. `e2e/claude-backend.spec.ts` saves a token in Settings, starts a Claude thread, and checks the reply. A runner that leaves the variable unset uses the SDK.
 
 ## License
 

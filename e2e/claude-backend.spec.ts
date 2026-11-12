@@ -6,8 +6,6 @@ import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
-test.use({ video: "on" });
-
 const API_PORT = 8220;
 const WEB_PORT = 5286;
 const API = `http://127.0.0.1:${API_PORT}`;
