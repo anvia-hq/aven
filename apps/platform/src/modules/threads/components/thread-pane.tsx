@@ -171,6 +171,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           {!owned && <div className="flex pb-2">{chips}</div>}
                           <PromptInput
                             threadId={thread.id}
+                            backend={thread.agentBackend}
                             running={running}
                             onStop={cancel}
                             onCompact={compact}

@@ -65,6 +65,7 @@ export type Thread = {
   drivingUntil: string | null;
   parentThreadId: string | null;
   runtimeId: string;
+  agentBackend: "native" | "codex";
   state: ThreadState;
   running: boolean;
   pullRequests: ThreadPullRequest[];

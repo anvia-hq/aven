@@ -5,6 +5,8 @@ import { attempt, postJson } from "@/lib/api";
 
 import { handOverFirstPrompt } from "../first-prompt";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
+
+type Backend = Thread["agentBackend"];
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -17,9 +19,9 @@ export function useStartThread() {
   const navigate = useNavigate();
   const { add, refresh } = useThreads();
 
-  function createThread(projectId: string, title: string) {
+  function createThread(projectId: string, title: string, backend: Backend) {
     return attempt("Could not start thread", () =>
-      postJson<Thread>("/threads", { projectId, title }),
+      postJson<Thread>("/threads", { projectId, title, backend }),
     );
   }
 
@@ -27,13 +29,14 @@ export function useStartThread() {
     projectId: string | undefined,
     message: OutgoingMessage,
     selection: RunSelection = {},
+    backend: Backend = "native",
   ) => {
     if (!projectId) {
       toast.add({ title: "Choose a project first", type: "error" });
       return false;
     }
 
-    const thread = await createThread(projectId, titleOf(message));
+    const thread = await createThread(projectId, titleOf(message), backend);
 
     if (!thread) return false;
 

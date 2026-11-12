@@ -6,7 +6,14 @@ import {
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
-import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import { Button } from "@/components/button";
 
@@ -19,11 +26,12 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
-import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
+import type { MentionPerson, OutgoingMessage, RunSelection, Thread } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { AgentChip, PersonAvatar, PersonChip } from "./person-chip";
+import { CodexModelMenu } from "./codex-model-menu";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
 
@@ -36,6 +44,7 @@ type Props = {
   autoFocus?: boolean;
   threadId?: string;
   tools?: ReactNode;
+  backend?: Thread["agentBackend"];
 };
 
 const renderEntity =
@@ -96,17 +105,20 @@ function Composer({
   threadId,
   tools,
   people,
+  backend,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
+  const [codexModelId, setCodexModelId] = useState<string | undefined>();
+  const selection = backend === "codex" ? { modelId: codexModelId } : model.selection;
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: model.selection,
+    selection,
     running,
     onSubmit,
     onCompact,
@@ -163,7 +175,11 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <ModelMenu model={model} />
+          {backend === "codex" ? (
+            <CodexModelMenu modelId={codexModelId} onChange={setCodexModelId} />
+          ) : (
+            <ModelMenu model={model} />
+          )}
           {running && (
             <Button
               size="icon-sm"

@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { NativeSelect, NativeSelectOption } from "@/components/native-select";
+import { useCodexLogin } from "@/modules/codex-setup/hooks/use-codex-login";
 import { AddFolderDialog } from "@/modules/projects/components/add-folder-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -9,7 +11,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
+import type { OutgoingMessage, RunSelection, Thread } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -30,10 +32,16 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
+  const [backend, setBackend] = useState<Thread["agentBackend"]>("native");
+  const codex = useCodexLogin();
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
+  const needsLogin = backend === "codex" && codex.loaded && !codex.login?.configured;
 
-  const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection);
+  const start = (message: OutgoingMessage, selection: RunSelection) => {
+    if (needsLogin) return false;
+
+    return startThread(projectId, message, selection, backend);
+  };
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-1rem-2px)]">
@@ -61,11 +69,30 @@ function NewThread() {
               <AddFolderDialog onAdded={(project) => setProjectId(project.id)} />
             </div>
           ) : (
-            <PromptInput
-              autoFocus
-              onSubmit={start}
-              tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
-            />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-center gap-2">
+                <NativeSelect
+                  aria-label="Agent"
+                  size="sm"
+                  value={backend}
+                  onChange={(event) => setBackend(event.target.value as Thread["agentBackend"])}
+                >
+                  <NativeSelectOption value="native">Aven</NativeSelectOption>
+                  <NativeSelectOption value="codex">Codex</NativeSelectOption>
+                </NativeSelect>
+                {needsLogin && (
+                  <Link to="/settings/codex" className="text-xs text-muted-foreground underline">
+                    Set a ChatGPT login in Settings before this thread can run on Codex
+                  </Link>
+                )}
+              </div>
+              <PromptInput
+                autoFocus
+                backend={backend}
+                onSubmit={start}
+                tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
+              />
+            </div>
           ))}
 
         <section aria-label="Recent threads" className="flex flex-col gap-1">
