@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { splitBotMentions, splitMentions, threadMentionText } from "./mentions";
+import {
+  botIdOfHref,
+  linkBotMentions,
+  splitBotMentions,
+  splitMentions,
+  threadMentionText,
+} from "./mentions";
 import type { Bot } from "./types";
 
 const bot = (id: string, name: string): Bot => ({
@@ -116,5 +122,26 @@ describe("a thread mention", () => {
     ]) {
       expect(splitMentions(text, [])).toEqual([{ type: "text", text }]);
     }
+  });
+});
+
+describe("linkBotMentions", () => {
+  const remy = bot("b9", "Remy");
+
+  test("links a bot named in a reply, in any case and after punctuation", () => {
+    expect(linkBotMentions("**Remy** (@remy): research, then @Remy.", [remy])).toBe(
+      "**Remy** ([@Remy](#bot-b9)): research, then [@Remy](#bot-b9).",
+    );
+  });
+
+  test("leaves code, emails and other words alone", () => {
+    expect(linkBotMentions("`@remy` and a@remy.dev and @remington", [remy])).toBe(
+      "`@remy` and a@remy.dev and @remington",
+    );
+  });
+
+  test("names the bot back from a link and ignores other links", () => {
+    expect(botIdOfHref("#bot-b9")).toBe("b9");
+    expect(botIdOfHref("https://example.com")).toBeUndefined();
   });
 });

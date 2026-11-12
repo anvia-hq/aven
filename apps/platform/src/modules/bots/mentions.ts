@@ -61,3 +61,36 @@ export function splitMentions(text: string, bots: readonly Bot[]): MentionPart[]
 
   return parts;
 }
+
+const CODE_SPAN = /(```[\s\S]*?```|`[^`\n]*`)/;
+
+const BOT_LINK_PREFIX = "#bot-";
+
+export const botIdOfHref = (href: string | undefined) =>
+  href?.startsWith(BOT_LINK_PREFIX) ? href.slice(BOT_LINK_PREFIX.length) : undefined;
+
+export function linkBotMentions(markdown: string, bots: readonly Bot[]) {
+  const byName = new Map<string, Bot>();
+  for (const bot of bots)
+    if (!byName.has(bot.name.toLowerCase())) byName.set(bot.name.toLowerCase(), bot);
+
+  if (byName.size === 0) return markdown;
+
+  const names = [...byName.values()].map((bot) => bot.name).sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(
+    `(?<![\\p{L}\\p{N}_@])@(${names.map(escape).join("|")})(?![\\p{L}\\p{N}_])`,
+    "giu",
+  );
+
+  return markdown
+    .split(CODE_SPAN)
+    .map((part, index) =>
+      index % 2 === 1
+        ? part
+        : part.replace(pattern, (whole, name: string) => {
+            const bot = byName.get(name.toLowerCase());
+            return bot ? `[@${bot.name}](${BOT_LINK_PREFIX}${bot.id})` : whole;
+          }),
+    )
+    .join("");
+}
