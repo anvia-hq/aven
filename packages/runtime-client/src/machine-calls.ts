@@ -17,7 +17,46 @@ const textOf = (value: unknown) => {
   return value;
 };
 
-export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext) {
+const OPERATION_ID_MAX = 512;
+const REMEMBERED_STOPS = 64;
+
+const operationIdOf = (value: unknown) => {
+  if (typeof value !== "string" || value.length === 0 || value.length > OPERATION_ID_MAX) {
+    throw new Error("Invalid parameters");
+  }
+  return value;
+};
+
+const commandKey = (threadId: string, operationId: string) => `${threadId}\0${operationId}`;
+
+export function createMachineCalls({
+  sandbox,
+  boxes,
+  idle,
+  machineProcesses,
+}: MachineCallsContext) {
+  const running = new Map<string, AbortController>();
+  const stopped = new Set<string>();
+
+  function rememberStop(key: string) {
+    stopped.add(key);
+    while (stopped.size > REMEMBERED_STOPS) {
+      const oldest = stopped.values().next().value;
+      if (oldest === undefined) return;
+      stopped.delete(oldest);
+    }
+  }
+
+  function stopExec(threadId: string, operationId: string) {
+    const key = commandKey(threadId, operationId);
+    const command = running.get(key);
+    if (command) {
+      command.abort();
+      return;
+    }
+    rememberStop(key);
+  }
+
   async function prepare(threadId: string, args: Record<string, unknown>) {
     const thread = { ...(asRecord(args.thread) as ThreadRef), id: threadId };
     const repo = args.repo as RepoAccess | undefined;
@@ -28,6 +67,7 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
       folder: async () => folder ?? null,
     });
     boxes.set(threadId, box);
+    await machineProcesses.begin(threadId);
     return { paths: sandbox.paths?.(threadId) ?? null };
   }
 
@@ -42,6 +82,27 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
     boxes.set(threadId, box);
     if (!box.runtime) throw new Error("This runner cannot lend its computer");
     return box.runtime;
+  }
+
+  async function runExec(threadId: string, args: Record<string, unknown>) {
+    const operationId =
+      args.operationId === undefined ? undefined : operationIdOf(args.operationId);
+    const key = operationId ? commandKey(threadId, operationId) : undefined;
+    const controller = new AbortController();
+    if (key) {
+      if (stopped.delete(key)) controller.abort();
+      running.set(key, controller);
+    }
+    const options: Record<string, unknown> = { ...args };
+    if (key) options.abortSignal = controller.signal;
+    try {
+      const result = await (
+        await runtimeOf(threadId)
+      ).exec(options as unknown as SandboxExecOptions);
+      return { ...result, stdout: result.stdout.toBase64(), stderr: result.stderr.toBase64() };
+    } finally {
+      if (key) running.delete(key);
+    }
   }
 
   async function onMachine(
@@ -66,12 +127,11 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
       case "setProjectEnv":
         sandbox.setProjectEnv?.(threadId, args.env as RunEnvVar[] | undefined);
         return null;
-      case "exec": {
-        const result = await (
-          await runtimeOf(threadId)
-        ).exec(args as unknown as SandboxExecOptions);
-        return { ...result, stdout: result.stdout.toBase64(), stderr: result.stderr.toBase64() };
-      }
+      case "exec":
+        return runExec(threadId, args);
+      case "exec.abort":
+        stopExec(threadId, operationIdOf(args.operationId));
+        return null;
       case "readFile":
         return {
           data: (
@@ -94,10 +154,13 @@ export function createMachineCalls({ sandbox, boxes, idle }: MachineCallsContext
         return null;
       case "listFiles":
         return (await runtimeOf(threadId)).listFiles({ path: args.path as string | undefined });
-      case "startProcess":
-        return (await runtimeOf(threadId)).startProcess(
+      case "startProcess": {
+        const runtime = await runtimeOf(threadId);
+        await machineProcesses.begin(threadId);
+        return runtime.startProcess(
           args as unknown as Parameters<SandboxRuntime["startProcess"]>[0],
         );
+      }
       case "listProcesses":
         return (await runtimeOf(threadId)).listProcesses();
       case "readProcessLogs": {

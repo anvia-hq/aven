@@ -12,6 +12,7 @@ import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
 import { createControlPlaneCalls } from "./control-plane-calls";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
+import { createMachineProcessWatch } from "./machine-process-watch";
 import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
 import { machineCallWait } from "./machine-call-wait";
 import { PlacedWorkspaces } from "./placed-workspaces";
@@ -157,16 +158,20 @@ export function startRuntime(options: RuntimeOptions) {
     isWatched: (threadId) => terminals.count(threadId) > 0,
   });
 
+  const guestRuns = new Set<string>();
   const processEnds = new ProcessEndWatch(
     {
       box: (threadId) => boxes.get(threadId),
       send,
-      hasRun: (threadId) => [...driver.live.values()].some((run) => run.threadId === threadId),
+      hasRun: (threadId) =>
+        guestRuns.has(threadId) ||
+        [...driver.live.values()].some((run) => run.threadId === threadId),
       stopped: () => stopped,
       pollMs: options.processPollMs,
     },
     new ProcessWatchRecords(state),
   );
+  const machineProcesses = createMachineProcessWatch(processEnds, guestRuns);
 
   const bots = new BotReplies({
     sandbox: options.sandbox,
@@ -201,7 +206,7 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     controlPlane: origin,
     starting: (threadId) => {
-      processEnds.arm(threadId);
+      if (!runOnMachine(threadId)) processEnds.arm(threadId);
       return idle.starting(threadId);
     },
     finished: (threadId, ended) => {
@@ -225,6 +230,7 @@ export function startRuntime(options: RuntimeOptions) {
     boxes,
     idle,
     processEnds,
+    machineProcesses,
     update: options.update && {
       start: options.update,
       busy: () =>

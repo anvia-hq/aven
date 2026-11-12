@@ -80,9 +80,9 @@ export class ProcessEndWatch {
   ) {}
 
   arm(threadId: string) {
-    if (this.context.stopped()) return;
+    if (this.context.stopped()) return Promise.resolve();
     const kept = this.#threads.get(threadId);
-    if (kept?.timer) return;
+    if (kept?.timer) return kept.ready;
     const saved = kept ? undefined : this.store?.load(threadId);
     const watch: Watch = kept ?? {
       baseline: new Set(saved?.baseline),
@@ -95,6 +95,7 @@ export class ProcessEndWatch {
     if (!kept) watch.ready = this.#prepare(threadId, watch, saved !== undefined);
     watch.timer = setInterval(() => void this.#look(threadId), this.context.pollMs ?? POLL_MS);
     this.#threads.set(threadId, watch);
+    return watch.ready;
   }
 
   settle(threadId: string) {

@@ -25,14 +25,36 @@ export async function keepAttachments(
 
 export async function promptOf(
   record: RunRecord,
-  { artifacts }: Stores,
+  stores: Stores,
   paths?: SandboxPaths,
 ): Promise<AgentPrompt> {
-  const { attachments = [], mentions, skillListing: skills } = record;
+  const attachments = await placedAttachments(stores, record.thread.id, record.attachments ?? []);
+  const { mentions, skillListing: skills } = record;
   const images = new Map<string, string>();
   for (const { image } of attachments) {
-    const content = image && (await artifacts?.read(record.thread.id, image));
+    const content = image && (await stores.artifacts?.read(record.thread.id, image));
     if (image && content) images.set(image, content.data);
   }
   return sentPrompt(record.prompt ?? "", { attachments, images, mentions, skills, paths });
+}
+
+async function placedAttachments(
+  stores: Stores,
+  threadId: string,
+  attachments: readonly KeptAttachment[],
+) {
+  const uploads = stores.uploads;
+  if (!uploads?.settle && !uploads?.placed) return attachments;
+  await uploads.settle?.(threadId);
+  const placed = uploads.placed;
+  if (!placed) return attachments;
+  return attachments.map((file) => {
+    const name = file.path.slice(
+      Math.max(file.path.lastIndexOf("/"), file.path.lastIndexOf("\\")) + 1,
+    );
+    const path = placed(threadId, name);
+    if (!path) return file;
+    uploads.claim?.(threadId, name);
+    return { ...file, path };
+  });
 }
