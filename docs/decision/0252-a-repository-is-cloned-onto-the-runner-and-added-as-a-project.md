@@ -1,4 +1,4 @@
-# 0251: A repository is cloned onto the runner and added as a project
+# 0252: A repository is cloned onto the runner and added as a project
 
 Status: accepted. Refines 0218 (a runner serves folders and a project is one of them); the GitHub import that 0219 stopped offering stays retired.
 
