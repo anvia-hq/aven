@@ -123,3 +123,7 @@ The control plane holds runner connections, runs, watched channels and run token
 ### A server's default decision model (decision 0240)
 
 `decision-model/server-default.ts` (`serverDecisionModel`) reads `DECISION_MODEL_API_KEY`, `_KIND` and `_ID`. `decisionModelService.get` and `config` fall back to it when a workspace has no row, and the view says `source: "server"`; the settings page then shows "Provided by this server".
+
+### A server's small model for follow-ups (decision 0241)
+
+`providers/server-small-model.ts` (`serverSmallModel`) reads `SMALL_MODEL_API_KEY`, `_PROVIDER` and `_ID`. `follow-ups/model.ts` (`followUpModel`) uses it when a person has no provider of their own, and `preferences` returns `followUps.serverModel` (provider and model, never the key), which the Small models settings show as "Provided by this server".
