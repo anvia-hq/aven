@@ -25,6 +25,8 @@ import type {
   BotSent,
   BotSkillParams,
   BotThreaded,
+  BotApiParams,
+  BotApiResult,
   BotThreadParams,
   BotUpdated,
   BotUpdateParams,
@@ -99,6 +101,7 @@ export type CallBotReply = {
   mcp(params: BotMcpParams): Promise<BotMcped>;
   provider(params: BotProviderParams): Promise<BotProvided>;
   thread(params: BotThreadParams): Promise<BotThreaded>;
+  api(params: BotApiParams): Promise<BotApiResult>;
   notes(params: BotNotesParams): Promise<string>;
   cockpit(params: Omit<BotCockpitParams, "command"> & { command: unknown }): Promise<string>;
 };

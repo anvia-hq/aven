@@ -40,6 +40,7 @@ import type {
   BotScheduleParams,
   BotSendParams,
   BotSkillParams,
+  BotApiParams,
   BotThreadParams,
   BotUpdateParams,
   CallMethod,
@@ -77,6 +78,7 @@ const callMethods = [
   "bot.notes",
   "memory.notes",
   "bot.cockpit",
+  "bot.api",
   "cockpit.read",
   "fork.start",
   "fork.status",
@@ -501,6 +503,18 @@ const machineOp = z.object({
 });
 const machineRelayParams = z.union([machineOp.extend({ runId }), machineOp.extend({ replyId })]);
 const botCockpitParams = z.object({ replyId, command: z.unknown() });
+const botApiParams = z.discriminatedUnion("op", [
+  z.object({ replyId, op: z.literal("search"), query: z.string().trim().max(200).optional() }),
+  z.object({
+    replyId,
+    op: z.literal("call"),
+    method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    path: z.string().min(1).max(2000),
+    body: z.unknown().optional(),
+    organizationId: z.string().min(1).max(100).optional(),
+    confirmed: z.boolean().optional(),
+  }),
+]);
 
 const botThreadParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("projects") }),
@@ -575,6 +589,8 @@ export const parseCockpitReadParams = (params: unknown) => parseParams(cockpitRe
 export const parseForkStartParams = (params: unknown) => parseParams(forkStartParams, params);
 export const parseForkStatusParams = (params: unknown) => parseParams(forkStatusParams, params);
 export const parseMachineRelayParams = (params: unknown) => parseParams(machineRelayParams, params);
+export const parseBotApiParams = (params: unknown) =>
+  parseParams(botApiParams, params) as BotApiParams;
 export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);

@@ -135,6 +135,7 @@ function fakeRunner(
         if (options.refuseRuntime === runtimeId)
           throw new Error("That runner is not one you can use");
       },
+      api: { answer: async () => ({ routes: [], organizations: [] }) },
       timezone: async () => "Asia/Jakarta",
       goals: {
         get: async () => null,

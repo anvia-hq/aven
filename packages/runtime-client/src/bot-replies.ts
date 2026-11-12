@@ -54,6 +54,7 @@ export const defaultCreateBotAgent =
     mcpServers,
     providers,
     threads,
+    api,
     notes,
     cockpit,
   }) =>
@@ -86,6 +87,7 @@ export const defaultCreateBotAgent =
       mcpServers,
       providers,
       threads,
+      api,
       notes,
       cockpit,
     });
@@ -382,6 +384,7 @@ export class BotReplies {
             }
           : undefined,
       },
+      api: async (params) => call("bot.api", { replyId, ...params }),
       threads: {
         projects: async () =>
           (await call("bot.thread", { replyId, op: "projects" })) as BotProjectView[],
