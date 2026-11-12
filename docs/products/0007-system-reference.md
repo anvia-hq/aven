@@ -135,3 +135,7 @@ The control plane holds runner connections, runs, watched channels and run token
 ### Claude models and effort
 
 `@aven/protocol/claude-models` holds the Claude aliases, the model each resolves to, the effort levels and the default effort; a runtime-client test checks it against the SDK. The model menu lists them as "Sonnet 5.5" and so on and shows the effort slider; the chosen effort travels as `claudeEffort` on `run.start` and `run.resume` and reaches the SDK's `effort`. The system prompt sets `excludeDynamicSections` for cross-thread prompt caching. Decision 0245.
+
+### The Claude binary on a runner
+
+`runtime-client/src/claude-binary.ts` (`claudeExecutable`) gives the SDK its Claude Code program. It uses the package installed beside the SDK when there is one, and otherwise downloads the platform's package from npm into `<home>/claude-code/<version>/claude` on the first Claude thread, checks it against the sha512 in `claude-binary-manifest.ts` (tested against `bun.lock`), and passes the path as `pathToClaudeCodeExecutable`. Decision 0246.

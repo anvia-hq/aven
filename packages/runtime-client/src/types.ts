@@ -269,6 +269,7 @@ export type ClaudeQueryInput = {
   token: string;
   cwd: string;
   configDir: string;
+  binaryDir: string;
   abortController: AbortController;
   tools: ClaudeToolHost;
   env: readonly RunEnvVar[];
@@ -631,4 +632,17 @@ export type HostSandboxConfig = {
   home?: string;
   dirs?: string[];
   git?: Git;
+};
+
+export type ClaudeBinaryEntry = { package: string; version: string; integrity: string };
+
+export type ClaudeBinaryOptions = {
+  dir: string;
+  platform?: string;
+  arch?: string;
+  musl?: boolean;
+  manifest?: Record<string, ClaudeBinaryEntry>;
+  registry?: string;
+  fetchTarball?: typeof fetch;
+  bundled?: (entry: ClaudeBinaryEntry) => string | undefined;
 };

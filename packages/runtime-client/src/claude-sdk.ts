@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 
+import { claudeExecutable } from "./claude-binary";
 import { claudeMcpTools } from "./claude-mcp";
 import { withoutRunnerSecrets } from "./runner-secrets";
 import type { ClaudeQuery, ClaudeSdkMessage } from "./types";
@@ -73,6 +74,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
   let closeQuery: (() => void) | undefined;
   const stream = (async function* () {
     mkdirSync(input.configDir, { recursive: true });
+    const executable = await claudeExecutable({ dir: input.binaryDir });
     const sdk = await import("@anthropic-ai/claude-agent-sdk");
     const own = await claudeMcpTools(input.tools);
     const server = sdk.createSdkMcpServer({
@@ -91,6 +93,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
       .join("\n\n");
     const options = {
       cwd: input.cwd,
+      pathToClaudeCodeExecutable: executable,
       resume: input.sessionId,
       abortController: input.abortController,
       permissionMode: "bypassPermissions" as const,
