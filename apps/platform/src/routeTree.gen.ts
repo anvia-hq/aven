@@ -28,6 +28,7 @@ import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit
 import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/tags'
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedSettingsAnnouncementsRouteImport } from './routes/_authed/settings/announcements'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsClaudeRouteImport } from './routes/_authed/settings/claude'
 import { Route as AuthedSettingsDecisionModelRouteImport } from './routes/_authed/settings/decision-model'
@@ -143,6 +144,12 @@ const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsAnnouncementsRoute =
+  AuthedSettingsAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 const AuthedSettingsBotsRoute = AuthedSettingsBotsRouteImport.update({
   id: '/bots',
   path: '/bots',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/claude': typeof AuthedSettingsClaudeRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -299,6 +307,7 @@ export interface FileRoutesByTo {
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/claude': typeof AuthedSettingsClaudeRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -341,6 +350,7 @@ export interface FileRoutesById {
   '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/_authed/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/claude': typeof AuthedSettingsClaudeRoute
   '/_authed/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/settings/announcements'
     | '/settings/bots'
     | '/settings/claude'
     | '/settings/decision-model'
@@ -417,6 +428,7 @@ export interface FileRouteTypes {
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/settings/announcements'
     | '/settings/bots'
     | '/settings/claude'
     | '/settings/decision-model'
@@ -458,6 +470,7 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/notes'
     | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
+    | '/_authed/settings/announcements'
     | '/_authed/settings/bots'
     | '/_authed/settings/claude'
     | '/_authed/settings/decision-model'
@@ -625,6 +638,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/announcements': {
+      id: '/_authed/settings/announcements'
+      path: '/announcements'
+      fullPath: '/settings/announcements'
+      preLoaderRoute: typeof AuthedSettingsAnnouncementsRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/settings/bots': {
@@ -835,6 +855,7 @@ const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
 )
 
 interface AuthedSettingsRouteChildren {
+  AuthedSettingsAnnouncementsRoute: typeof AuthedSettingsAnnouncementsRoute
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsClaudeRoute: typeof AuthedSettingsClaudeRoute
   AuthedSettingsDecisionModelRoute: typeof AuthedSettingsDecisionModelRoute
@@ -855,6 +876,7 @@ interface AuthedSettingsRouteChildren {
 }
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+  AuthedSettingsAnnouncementsRoute: AuthedSettingsAnnouncementsRoute,
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
   AuthedSettingsClaudeRoute: AuthedSettingsClaudeRoute,
   AuthedSettingsDecisionModelRoute: AuthedSettingsDecisionModelRoute,

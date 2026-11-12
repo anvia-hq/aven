@@ -12,6 +12,7 @@ import {
   Users,
   UsersGroup,
   BookmarkUser,
+  Bell,
   UserCircle,
 } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -57,6 +58,7 @@ const platformGroup = {
   items: [
     { to: "/settings/platform", label: "Platform", icon: Servers },
     { to: "/settings/people", label: "People", icon: UsersGroup },
+    { to: "/settings/announcements", label: "Announcements", icon: Bell },
   ],
 } as const;
 

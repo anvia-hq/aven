@@ -442,6 +442,13 @@
       "when": 1794484595213,
       "tag": "0062_confused_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794496617791,
+      "tag": "0063_announcements",
+      "breakpoints": true
     }
   ]
 }

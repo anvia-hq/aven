@@ -13,6 +13,7 @@ import type { environmentVariables } from "./environment-variables";
 import type { githubApps } from "./github-apps";
 import type { githubInstallations } from "./github-installations";
 import type { githubUserTokens } from "./github-user-tokens";
+import type { announcements } from "./announcements";
 import type { invitations } from "./invitations";
 import type { mcpServers } from "./mcp-servers";
 import type { members } from "./members";
@@ -115,3 +116,5 @@ export type NewVariableEventRow = typeof variableEvents.$inferInsert;
 export type Verification = typeof verifications.$inferSelect;
 
 export type DecisionModelRow = typeof decisionModels.$inferSelect;
+
+export type Announcement = typeof announcements.$inferSelect;
