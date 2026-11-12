@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
   "categories": {
     "correctness": "error"
   },
@@ -16,6 +16,21 @@
     "aven/no-conditional-spread": "error",
     "aven/no-barrel-file": "error",
     "aven/no-native-primitives": "error",
-    "no-nested-ternary": "error"
+    "aven/padded-if": "error",
+    "eqeqeq": ["error", "smart"],
+    "import/no-duplicates": "error",
+    "no-inline-comments": "error",
+    "no-lonely-if": "error",
+    "no-nested-ternary": "error",
+    "no-useless-return": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-import-type-side-effects": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-number-properties": "error",
+    "unicorn/prefer-structured-clone": "error",
+    "unicorn/throw-new-error": "error"
   }
 }
