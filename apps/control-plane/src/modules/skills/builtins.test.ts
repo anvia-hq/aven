@@ -22,6 +22,8 @@ import {
   LIST_THREADS_TOOL_NAME,
   START_THREAD_TOOL_NAME,
 } from "@aven/agents/tools/threads";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { parseActions } from "../actions/parse";
@@ -40,6 +42,7 @@ describe("the built-in skills", () => {
       "configure-variables",
       "connect-github-and-runners",
       "setup-actions",
+      "setup-env",
       "setup-ship",
       "writing-skills",
     ]);
@@ -57,6 +60,46 @@ describe("the built-in skills", () => {
 
     expect(parsed.problem).toBeNull();
     expect(parsed.actions.map((action) => action.kind)).toEqual(["run", "run", "prompt"]);
+  });
+
+  test("the example of the environment skill is an action the parser accepts, and its script is valid bash", async () => {
+    const skill = await text("setup-env");
+    const action = parseActions(/```yaml\n([\s\S]*?)```/.exec(skill)?.[1] ?? "");
+    expect(action.problem).toBeNull();
+    expect(action.actions).toEqual([
+      expect.objectContaining({ name: "Set up", kind: "run", body: "bash .aven/setup" }),
+    ]);
+
+    const script = /```bash\n([\s\S]*?)```/.exec(skill)?.[1] ?? "";
+    expect(script.startsWith("#!/usr/bin/env bash\n")).toBe(true);
+    const checked = Bun.spawnSync(["bash", "-n"], { stdin: new TextEncoder().encode(script) });
+    expect(checked.exitCode).toBe(0);
+  });
+
+  test("the environment skill's script, run with a bare PATH, finds a tool it put on the PATH itself and says what is missing", async () => {
+    const script = /```bash\n([\s\S]*?)```/.exec(await text("setup-env"))?.[1] ?? "";
+    const root = await mkdtemp(join(tmpdir(), "aven-setup-env-"));
+    try {
+      await mkdir(join(root, ".aven"));
+      await writeFile(
+        join(root, ".aven", "setup"),
+        script.replace("need bun ", "need nosuchtool "),
+      );
+      const run = Bun.spawnSync([
+        "/usr/bin/env",
+        "-i",
+        `HOME=${root}`,
+        "PATH=/usr/bin:/bin",
+        "bash",
+        join(root, ".aven", "setup"),
+      ]);
+      const out = run.stdout.toString();
+      expect(run.exitCode).toBe(1);
+      expect(out).toContain("missing  nosuchtool: ");
+      expect(out).toContain("Install what is missing above");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("the provider and MCP skills name the tools a bot has", async () => {
