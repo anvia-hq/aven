@@ -366,6 +366,44 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("menuitem", { name: /#8.*Fix the docs/ })).toBeVisible();
   });
 
+  test("a project with no GitHub app ships with the persistent runner's own login", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
+    runner = child;
+    await page.route(/\/api\/threads\/[^/]+\/ship$/, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: { ready: true, ship: true, appKey: null, machine: true } })
+        : route.fallback(),
+    );
+
+    await page.goto(`/threads/${threadId}`);
+
+    await expect(shipButton(page)).toBeEnabled();
+    await expect(connectButton(page)).toHaveCount(0);
+  });
+
+  test("a project with no GitHub app on a temporary runner is offered to connect, not left loading", async ({
+    page,
+  }) => {
+    await registerUser(page, "shp", "Ship User");
+    await provider(page);
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
+    runner = child;
+    await page.route(/\/api\/threads\/[^/]+\/ship$/, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: { ready: true, ship: true, appKey: null, machine: false } })
+        : route.fallback(),
+    );
+
+    await page.goto(`/threads/${threadId}`);
+
+    await expect(connectButton(page)).toBeVisible();
+    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
+  });
+
   test("a change with no lines of its own reads as its files, not +0 -0", async ({ page }) => {
     await registerUser(page, "shp", "Ship User");
     await provider(page);

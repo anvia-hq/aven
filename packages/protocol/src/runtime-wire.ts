@@ -13,6 +13,8 @@ export const AGENT_BACKENDS = ["native"] as const;
 
 export const RUNTIME_PROVIDERS = ["manual"] as const;
 
+export const RUNTIME_LIFETIMES = ["persistent", "ephemeral"] as const;
+
 export const MACHINE_OPS = [
   "prepare",
   "workspace",

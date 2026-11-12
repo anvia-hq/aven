@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { shipActionOf } from "./ship-state";
+import { connectionOf, shipActionOf } from "./ship-state";
 import type { ShipFacts } from "./types";
 
 const pull = { number: 658, url: "u", branch: "b", title: "t", state: "open" as const };
@@ -52,5 +52,37 @@ describe("Open a PR", () => {
     expect(shipActionOf(facts({ running: true, branch: unread }))).toEqual({ kind: "none" });
     expect(shipActionOf(facts({ shipping: true, branch: unread }))).toEqual({ kind: "none" });
     expect(shipActionOf(facts({ branch: unread }))).toEqual({ kind: "loading" });
+  });
+});
+
+describe("whether GitHub is connected", () => {
+  const account = { data: { connected: false } };
+
+  test("a runner's own login counts, with no account to ask about", () => {
+    expect(connectionOf({ machine: true, appKey: null, checked: true, account: null })).toBe(true);
+  });
+
+  test("a project with no app and no login of the runner's is not connected, rather than loading for ever", () => {
+    expect(connectionOf({ machine: false, appKey: null, checked: true, account: null })).toBe(
+      false,
+    );
+    expect(connectionOf({ machine: false, appKey: null, checked: false, account: null })).toBe(
+      null,
+    );
+  });
+
+  test("a project with an app asks GitHub for the account", () => {
+    expect(connectionOf({ machine: false, appKey: "app", checked: true, account: null })).toBe(
+      null,
+    );
+    expect(connectionOf({ machine: false, appKey: "app", checked: true, account })).toBe(false);
+    expect(
+      connectionOf({
+        machine: false,
+        appKey: "app",
+        checked: true,
+        account: { data: { connected: true } },
+      }),
+    ).toBe(true);
   });
 });

@@ -1,4 +1,10 @@
-import type { ShipAct, ShipFacts, ShipLabel, ThreadPullRequest } from "./types";
+import type {
+  ShipAct,
+  ShipConnectionFacts,
+  ShipFacts,
+  ShipLabel,
+  ThreadPullRequest,
+} from "./types";
 
 const shipLabel = (latest: ThreadPullRequest | undefined): ShipLabel => {
   if (!latest) return "Ship";
@@ -39,4 +45,16 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
   if (branchPulls.problem !== null || !branchPulls.known || branchPulls.any)
     return { kind: "none" };
   return { kind: "open", disabled: busy };
+}
+
+export function connectionOf({
+  machine,
+  appKey,
+  checked,
+  account,
+}: ShipConnectionFacts): boolean | null {
+  if (machine) return true;
+  if (appKey === null) return checked ? false : null;
+  if (account === null) return null;
+  return account.data?.connected !== false;
 }

@@ -100,6 +100,13 @@ export type ShipGate =
   | { kind: "unknown" }
   | { kind: "missing"; commands: string[] };
 
+export type ShipConnectionFacts = {
+  machine: boolean;
+  appKey: string | null;
+  checked: boolean;
+  account: { data: { connected?: boolean } | null } | null;
+};
+
 export type ShipLabel = "Ship" | "Update PR" | "New PR";
 
 export type ShipAct =

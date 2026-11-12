@@ -3,7 +3,7 @@ import { useCallback, useEffect } from "react";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 
-import { shipActionOf } from "../ship-state";
+import { connectionOf, shipActionOf } from "../ship-state";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
 import { useBranchPullRequests } from "./use-branch-pull-requests";
 import { useModelSelection } from "./use-model-selection";
@@ -20,10 +20,15 @@ export function useShipAction(
   send: Send,
 ) {
   const { shipping, ship } = useShipThread(thread, showShip);
-  const { gate, appKey } = useShipReadiness(thread.id, thread.running);
+  const { gate, appKey, machine } = useShipReadiness(thread.id, thread.running);
   const account = useGithubAccount(appKey);
   const { selection } = useModelSelection(thread.id);
-  const connected = account === null ? null : account.data?.connected !== false;
+  const connected = connectionOf({
+    machine,
+    appKey,
+    checked: gate.kind !== "checking",
+    account,
+  });
   const changes = {
     loaded: unshipped.loaded,
     available: unshipped.available,

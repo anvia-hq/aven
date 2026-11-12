@@ -126,12 +126,14 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       ready: false,
       ship: false,
       appKey: "platform",
+      machine: false,
     });
     workspaceFiles = [".aven/ship.md"];
     expect(await (await readiness(owner.token)).json()).toEqual({
       ready: true,
       ship: true,
       appKey: "platform",
+      machine: false,
     });
 
     expect((await readiness(undefined)).status).toBe(401);
