@@ -94,6 +94,10 @@ Settings > General > Small models holds a per-person switch and model for follow
 
 `aven_api_search` and `aven_api` (`packages/agents/src/tools/api.ts`) reach `bot.api` (`modules/bot-api`): the catalog comes from the app's routes and zod bodies, the gate (`gate.ts`) gives each route a tier (read, change, confirm, blocked), and a call runs through `app.handle` with a one-call grant (`modules/auth/acting.ts`, accepted by `sessionOf`) as the person in a workspace they belong to. Changes need the person's own message; confirm routes also `confirmed: true`.
 
+### Other tools reach Aven over MCP with an access token (decision 0256)
+
+`POST /mcp` (`modules/mcp-access/endpoint.ts`, `rpc.ts`) answers JSON-RPC statelessly for a client that sends `Authorization: Bearer avn_...`. Tokens are made in Settings > MCP access (`/mcp-access`, `service.ts`; table `mcp_access_tokens`, hash and last four only) with permissions `read`, `change` and `destructive`, which are the bot gate's tiers (`confirm` is `destructive`). The tools `aven_workspaces`, `aven_search_api` and `aven_call_api` run through `bot-api` as the token's owner; `aven://guide` and `aven://permissions` are resources. `/mcp` and `/mcp-access` are blocked in the gate.
+
 ### A persistent runner ships with its own GitHub login (decision 0229)
 
 `runtimes.lifetime` (`persistent` by default, or `ephemeral`; `RUNTIME_LIFETIMES`) says whether a runner is a machine someone keeps. `GET /threads/:id/ship` returns `machine: true` when the project has no GitHub app and the thread's runner is persistent: `connectionOf` (`ship-state.ts`) then counts GitHub as connected and the bar shows Ship, which has the agent use the machine's own `gh`. With no app on an ephemeral runner the bar offers Connect GitHub and `ship` refuses.

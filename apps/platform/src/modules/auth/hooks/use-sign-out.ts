@@ -4,6 +4,7 @@ import { authClient } from "@/lib/auth-client";
 import { clearUserState } from "@/lib/user-state";
 import { resetBots } from "@/modules/bots/hooks/use-bots";
 import { resetMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
+import { resetAccessTokens } from "@/modules/mcp-access/hooks/use-access-tokens";
 import { resetMemory } from "@/modules/memory/hooks/use-memory";
 import { resetCockpitTags } from "@/modules/cockpit/hooks/use-collection";
 import { resetInbox } from "@/modules/cockpit/hooks/use-inbox";
@@ -24,6 +25,7 @@ export function useSignOut() {
     resetProviders();
     resetSkills();
     resetMcpServers();
+    resetAccessTokens();
     resetMemory();
     resetInbox();
     resetTasks();

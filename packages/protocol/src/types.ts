@@ -1054,3 +1054,16 @@ export type BotThreadDetail = BotThreadView & {
 export type ContinuationPatch = "attached" | "none" | "unavailable";
 
 export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";
+
+export type AccessPermission = "read" | "change" | "destructive";
+
+export type AccessToken = {
+  id: string;
+  name: string;
+  hint: string;
+  permissions: AccessPermission[];
+  lastUsedAt: string | null;
+  createdAt: string;
+};
+
+export type AccessTokenCreated = AccessToken & { token: string };

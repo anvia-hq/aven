@@ -449,6 +449,13 @@
       "when": 1794496617791,
       "tag": "0063_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794499139242,
+      "tag": "0064_wakeful_mad_thinker",
+      "breakpoints": true
     }
   ]
 }
