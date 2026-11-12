@@ -1,7 +1,7 @@
 import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
 import { timing } from "@aven/runtime-client/timing";
 
-import { codexModelId } from "@aven/protocol/codex-login";
+import { codexAccessToken, codexModelId } from "@aven/protocol/codex-login";
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments } from "../../attachments";
@@ -37,8 +37,10 @@ async function codexFor(
 ) {
   if (thread.agentBackend !== "codex") return {};
 
+  const login = await codexSetupService.requireFor(ownerId);
+
   return {
-    codexLogin: await codexSetupService.requireFor(ownerId),
+    codexLogin: codexAccessToken(login) ?? login,
     codexModel: codexModelId(selection.modelId),
   };
 }

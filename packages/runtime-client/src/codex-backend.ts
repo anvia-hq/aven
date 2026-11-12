@@ -16,7 +16,7 @@ import {
 import { SPAWN_AGENT_TOOL_NAME } from "@aven/protocol/events";
 import type { QuestionPrompt, RunEvent } from "@aven/protocol/types";
 import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,6 +71,7 @@ type Live = {
   settled: boolean;
   server?: Server;
   socketPath?: string;
+  socketFolder?: string;
   park?: { pending: PromiseWithResolvers<string> };
 };
 
@@ -297,9 +298,19 @@ export class CodexRuns implements AgentBackend {
     live.host = new CodexToolHost(tools, sink);
     live.host.bind(abort.signal);
     this.#lives.set(durableId, live);
-    const socketPath = join(tmpdir(), `aven-codex-${durableId}.sock`);
+    const socketFolder = mkdtempSync(join(tmpdir(), "aven-codex-"));
+    const socketPath = join(socketFolder, "tools.sock");
+    live.socketFolder = socketFolder;
     live.socketPath = socketPath;
-    live.server = await serveCodexTools(socketPath, live.host);
+
+    try {
+      live.server = await serveCodexTools(socketPath, live.host);
+    } catch (error) {
+      this.#lives.delete(durableId);
+      rmSync(socketFolder, { recursive: true, force: true });
+      throw error;
+    }
+
     void this.#drive(live, options.prompt, options.images, options.sessionId);
     return followed(live);
   }
@@ -513,7 +524,7 @@ export class CodexRuns implements AgentBackend {
     this.#lives.delete(live.durableId);
     live.server?.close();
 
-    if (live.socketPath) rmSync(live.socketPath, { force: true });
+    if (live.socketFolder) rmSync(live.socketFolder, { recursive: true, force: true });
 
     live.gate.resolve(end.type === "error" ? end : { ...end, messages: this.#unfiled(live) });
   }
