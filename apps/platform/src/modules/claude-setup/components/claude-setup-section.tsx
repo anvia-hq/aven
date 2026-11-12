@@ -27,7 +27,7 @@ export function ClaudeSetupSection() {
   return (
     <SettingsSection
       title="Setup token"
-      description="From claude setup-token. It is stored encrypted for you alone, and it is the only credential a Claude thread of yours can run with."
+      description="From claude setup-token, which starts with sk-ant-oat01-. It is stored encrypted for you alone, and a Claude thread runs with its creator's token."
     >
       <Form
         className="flex max-w-md flex-col gap-4"

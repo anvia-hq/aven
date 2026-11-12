@@ -28,7 +28,7 @@ Since the runner and the agent share a machine, a backend such as the Claude Age
 
 ## What is not done yet
 
-- No provider other than `manual`. A provider's settings (its account, region, machine size) go on `runtimes` with it. The Claude agent is a backend (0241); the runner selects by the thread's backend.
+- No provider other than `manual`. A provider's settings (its account, region, machine size) go on `runtimes` with it. The Claude agent is a backend (0242); the runner selects by the thread's backend.
 - A new thread's backend can be chosen. A thread that names none stays `native`.
 - A cloud machine has no folder of its own to serve, so a project on it is a repository that the runner clones (`repo.access`, `git-clone.ts`), which a project can already be.
 

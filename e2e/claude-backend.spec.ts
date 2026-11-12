@@ -10,7 +10,7 @@ const API_PORT = 8220;
 const WEB_PORT = 5286;
 const API = `http://127.0.0.1:${API_PORT}`;
 const WEB = `http://localhost:${WEB_PORT}`;
-const TOKEN = "e2e-claude-setup-token-9f3a";
+const TOKEN = "sk-ant-oat01-e2e-claude-setup-9f3a";
 const PROMPT = "Say which backend is answering";
 const REPLY = "The Claude backend is answering this thread.";
 
