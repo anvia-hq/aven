@@ -236,6 +236,7 @@ export type ThreadRef = {
   forkOf?: string;
   projectId?: string;
   ownerId?: string;
+  bot?: boolean;
 };
 
 export type Fetched = { branch: string; commit: string; previous: string | null };

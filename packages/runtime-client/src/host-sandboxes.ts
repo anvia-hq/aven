@@ -1,8 +1,8 @@
 import { SHELL_START } from "./shell-start";
 import { withoutRunnerSecrets } from "./runner-secrets";
-import { mkdirSync, realpathSync } from "node:fs";
-import { lstat, mkdir, realpath, rmdir, symlink } from "node:fs/promises";
-import { join, sep } from "node:path";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
+import { lstat, mkdir, realpath, rename, rmdir, symlink } from "node:fs/promises";
+import { dirname, join, sep } from "node:path";
 
 import type { SandboxPaths } from "@aven/agents/types";
 import type { ComputerState, RepoAccess, RunEnvVar } from "@aven/protocol/types";
@@ -66,8 +66,23 @@ export class HostSandboxes implements ThreadWorkspaces {
     return [...this.#dirs];
   }
 
+  #botDir(id: string) {
+    return join(this.#home, "bots", id);
+  }
+
   #workspaceDir(threadId: string) {
-    return join(this.#home, "workspaces", threadId);
+    const bot = this.#botDir(threadId);
+    return existsSync(bot) ? bot : join(this.#home, "workspaces", threadId);
+  }
+
+  async #claimBotFolder(id: string) {
+    const folder = this.#botDir(id);
+    if (existsSync(folder)) return;
+    const legacy = join(this.#home, "workspaces", id);
+    this.#roots.delete(id);
+    await mkdir(dirname(folder), { recursive: true });
+    if (existsSync(legacy)) await rename(legacy, folder);
+    else await mkdir(folder, { recursive: true });
   }
 
   paths(threadId: string): SandboxPaths {
@@ -163,6 +178,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
     { lazy = false, folder }: AcquireOptions = {},
   ): Promise<ThreadSandbox> {
+    if (thread.bot) await this.#claimBotFolder(thread.id);
     const start = async () => {
       await this.#workspace(thread, repo, folder);
     };

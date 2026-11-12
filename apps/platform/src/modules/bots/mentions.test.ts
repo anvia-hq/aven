@@ -13,6 +13,7 @@ const bot = (id: string, name: string): Bot => ({
   modelId: null,
   reasoningEffort: null,
   compactAfterTokens: null,
+  runtimeId: null,
   isMain: false,
   createdAt: "",
   updatedAt: "",

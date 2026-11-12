@@ -92,7 +92,7 @@ export function createRunnerCalls({
     const { threadId, bot } = computerCallParams(params);
     await idle.starting(threadId);
     const box = await sandbox.acquire(
-      { id: threadId },
+      { id: threadId, bot },
       bot
         ? undefined
         : async () => {

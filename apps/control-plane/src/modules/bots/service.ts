@@ -6,6 +6,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { resolveModel } from "../providers/resolve-model";
+import { requireUsableRuntime } from "../runtimes/usable";
 import type { UpdateBotBody } from "./schema";
 import type { NewBot } from "./types";
 import type { BotRow } from "@aven/db/schema/types";
@@ -29,6 +30,7 @@ const view = (row: BotRow): Bot => ({
   modelId: row.providerId ? row.modelId : null,
   reasoningEffort: row.providerId ? row.reasoningEffort : null,
   compactAfterTokens: row.compactAfterTokens,
+  runtimeId: row.runtimeId,
   isMain: row.isMain,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
@@ -87,14 +89,15 @@ export const botsService = {
     const [current] = await db.select().from(bots).where(ownBot(userId, id));
     if (!current) return null;
 
-    const { providerId, modelId, reasoningEffort, ...details } = body;
+    const { providerId, modelId, reasoningEffort, runtimeId, ...details } = body;
+    if (runtimeId) await requireUsableRuntime(userId, runtimeId);
     const touchesModel = [providerId, modelId, reasoningEffort].some(
       (value) => value !== undefined,
     );
     const model = touchesModel
       ? await checkedModel(userId, current, { providerId, modelId, reasoningEffort })
       : {};
-    const changes = { ...details, ...model };
+    const changes = { ...details, ...model, runtimeId };
     if (Object.values(changes).every((value) => value === undefined)) return view(current);
 
     const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();

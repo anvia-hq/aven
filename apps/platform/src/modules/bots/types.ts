@@ -12,6 +12,7 @@ export type BotPatch = {
   modelId?: string | null;
   reasoningEffort?: string | null;
   compactAfterTokens?: number | null;
+  runtimeId?: string | null;
 };
 
 export type ChatItem =
