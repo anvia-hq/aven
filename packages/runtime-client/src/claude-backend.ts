@@ -82,6 +82,10 @@ export class PromptQueue {
     return true;
   }
 
+  get empty() {
+    return this.#pending.length === 0;
+  }
+
   close() {
     if (this.#closed) return;
 
@@ -545,6 +549,8 @@ export class ClaudeRuns implements AgentBackend {
         }
 
         this.#partial.set(live.durableId, live.turn.messages(""));
+
+        if (message.type === "result" && live.queue.empty) live.queue.close();
 
         if (live.abort.signal.aborted) break;
       }
