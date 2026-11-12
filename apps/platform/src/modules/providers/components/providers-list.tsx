@@ -33,11 +33,9 @@ const detail = (provider: Provider, label: string | undefined) =>
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5">
-      <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
-      <ul className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card/50">
-        {children}
-      </ul>
+    <section className="flex flex-col gap-4 border-t py-6 md:py-8">
+      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+      <ul className="flex flex-col divide-y">{children}</ul>
     </section>
   );
 }
@@ -91,14 +89,14 @@ export function ProvidersList() {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col">
       {providers.length > 0 && (
         <Group title="Connected">
           {providers.map((provider) => (
             <li
               key={provider.id}
               aria-label={provider.name}
-              className="flex items-center gap-3.5 px-4 py-3.5"
+              className="flex items-center gap-3.5 py-3.5"
             >
               <Tile kind={provider.kind} baseUrl={provider.baseUrl} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -134,11 +132,7 @@ export function ProvidersList() {
       )}
       <Group title={providers.length > 0 ? "Add a provider" : "Set up a provider"}>
         {rows.map((row) => (
-          <li
-            key={row.key}
-            aria-label={row.title}
-            className="flex items-center gap-3.5 px-4 py-3.5"
-          >
+          <li key={row.key} aria-label={row.title} className="flex items-center gap-3.5 py-3.5">
             <Tile kind={row.kind} preset={row.preset?.id} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
               <span className="text-sm font-medium">{row.title}</span>
