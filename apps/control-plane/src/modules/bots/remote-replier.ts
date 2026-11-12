@@ -7,6 +7,7 @@ import { isGoalRoundNote } from "@aven/protocol/goals";
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
+import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
 import { runCockpitCommand } from "../cockpit/commands";
 import type {
@@ -38,6 +39,8 @@ import type {
   BotSendParams,
   BotSkillParams,
   BotThreaded,
+  BotApiParams,
+  BotApiResult,
   BotThreadParams,
   BotUpdateParams,
 } from "@aven/protocol/types";
@@ -109,6 +112,7 @@ export class RemoteBotReplier implements BotReplier {
     let written = 0;
     let asked = false;
     let threadRuns = 0;
+    let apiCalls = 0;
     const inspected = new Set<string>();
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -258,6 +262,17 @@ export class RemoteBotReplier implements BotReplier {
         }
         const { kind, name, baseUrl, modelId, isDefault } = params;
         return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
+      },
+      api: async (params: BotApiParams): Promise<BotApiResult> => {
+        if (params.op === "call") {
+          apiCalls += 1;
+          if (apiCalls > API_CALLS_PER_REPLY) {
+            throw new Error(
+              `You have made ${API_CALLS_PER_REPLY} API calls in this reply. Tell the person what is left.`,
+            );
+          }
+        }
+        return this.bots.api.answer({ userId, params, onPersonsWord: makesBotsOnTheirWord });
       },
       thread: async (params: BotThreadParams): Promise<BotThreaded> => {
         if (params.op === "projects") return this.threads.projects(userId);

@@ -34,6 +34,9 @@ import { createThreadContinuation } from "./modules/threads/continuation";
 import { createThreadForks } from "./modules/threads/forks";
 import { createProcessEnds } from "./modules/threads/process-ends";
 import { requireUsableRuntime } from "./modules/runtimes/usable";
+import { organizationsOf } from "./modules/bot-api/organizations";
+import { createBotApi } from "./modules/bot-api/service";
+import type { KnownRoute } from "./modules/bot-api/types";
 import { createFollowUps } from "./modules/follow-ups/service";
 import { suggestFollowUps } from "./modules/follow-ups/suggest";
 import { createThreadMessages } from "./modules/threads/messages";
@@ -132,6 +135,19 @@ const botThreads = createBotThreads({
 export const actionsService = createActionsService(runtimeHub, { send: threadMessages.start });
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });
 
+export const botApiApp: {
+  current?: { routes(): KnownRoute[]; handle(request: Request): Promise<Response> };
+} = {};
+
+export const botApi = createBotApi({
+  routes: () => botApiApp.current?.routes() ?? [],
+  handle: async (request) => {
+    if (!botApiApp.current) throw new Error("The server is not ready");
+    return botApiApp.current.handle(request);
+  },
+  organizationsOf,
+});
+
 export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
 export const botRunner = new BotRunner({
@@ -148,6 +164,7 @@ export const botRunner = new BotRunner({
       deliver: (letter) => botChats.deliver(letter),
       greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
       usableRuntime: requireUsableRuntime,
+      api: botApi,
       timezone: (userId) => preferencesService.timezone(userId),
       goals: {
         get: (botId) => goalsService.get(botId),

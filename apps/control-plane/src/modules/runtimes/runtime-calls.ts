@@ -9,6 +9,7 @@ import {
   parseBotGoalParams,
   parseBotMcpParams,
   parseBotProviderParams,
+  parseBotApiParams,
   parseBotThreadParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
@@ -151,6 +152,9 @@ export async function answerRuntimeCall(
     return answerBotCall(params, parseBotThreadParams, findBotReply, (reply, call) =>
       reply.thread(call),
     );
+  }
+  if (method === "bot.api") {
+    return answerBotCall(params, parseBotApiParams, findBotReply, (reply, call) => reply.api(call));
   }
   if (method === "bot.notes") {
     return answerBotCall(params, parseBotNotesParams, findBotReply, (reply, call) =>

@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import { actingSession } from "./acting";
 import { auth, authService } from "./service";
 
 type AuthSession = Awaited<ReturnType<typeof authService.getSession>>;
@@ -9,7 +10,8 @@ const pending = new WeakMap<Request, Promise<AuthSession>>();
 
 async function lookUp(request: Request) {
   try {
-    const session = await authService.getSession(request.headers);
+    const session =
+      (await actingSession(request.headers)) ?? (await authService.getSession(request.headers));
     sessions.set(request, session);
     return session;
   } finally {

@@ -12,11 +12,13 @@ import {
   actionsService,
   shipService,
   threadMessages,
+  botApiApp,
   followUps,
   putAwayThread,
   threadContinuation,
 } from "./composition";
 import { errorsRouter } from "./errors";
+import type { KnownRoute } from "./modules/bot-api/types";
 import { followUpsRouter } from "./modules/follow-ups/router";
 import { foreignOrigin } from "./origin-guard";
 import { trustedOrigins } from "./modules/auth/service";
@@ -92,6 +94,16 @@ export const app = new Elysia()
   .use(variablesRouter)
   .use(projectVariablesRouter)
   .use(workloadIdentityRouter);
+
+botApiApp.current = {
+  routes: () =>
+    app.routes.map((route) => ({
+      method: route.method as KnownRoute["method"],
+      path: route.path,
+      body: route.hooks?.body,
+    })),
+  handle: (request) => app.handle(request),
+};
 
 const port = Number(process.env.PORT ?? 8000);
 if (!Number.isInteger(port) || port <= 0)
