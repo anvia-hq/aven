@@ -184,7 +184,18 @@ export type TokenUsage = {
   cacheReadTokens: number;
 };
 
-export type ThreadUsage = { totals: TokenUsage; context?: ContextUsage };
+export type PlanLimitWindow = "five_hour" | "seven_day";
+
+export type PlanLimitStatus = "allowed" | "allowed_warning" | "rejected";
+
+export type PlanLimit = {
+  window: PlanLimitWindow;
+  status: PlanLimitStatus;
+  percent: number;
+  resetsAt?: number;
+};
+
+export type ThreadUsage = { totals: TokenUsage; context?: ContextUsage; limits?: PlanLimit[] };
 
 export type MessagePart =
   | { type: "text"; text: string }
@@ -249,6 +260,7 @@ export type RunEvent =
       artifacts?: ToolArtifact[];
     }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
+  | { type: "limits"; limits: PlanLimit[] }
   | { type: "subagent"; index: number; event: SubagentEvent }
   | { type: "done"; workedMs?: number }
   | { type: "error"; message: string };

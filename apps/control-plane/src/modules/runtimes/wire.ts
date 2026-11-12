@@ -174,6 +174,19 @@ const runEvent = z.discriminatedUnion("type", [
       .object({ usedTokens: tokenCount, contextWindow: z.number().int().positive() })
       .optional(),
   }),
+  z.object({
+    type: z.literal("limits"),
+    limits: z
+      .array(
+        z.object({
+          window: z.enum(["five_hour", "seven_day"]),
+          status: z.enum(["allowed", "allowed_warning", "rejected"]),
+          percent: z.number().min(0).max(100),
+          resetsAt: z.number().nonnegative().optional(),
+        }),
+      )
+      .max(2),
+  }),
 ]);
 
 const bytes = z

@@ -79,3 +79,15 @@ export const elapsed = (ms: number) => {
 
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
+
+export function resetsIn(resetsAt: number, now = Date.now()) {
+  const left = Math.max(0, resetsAt - now);
+
+  if (left < MINUTE) return "less than a minute";
+
+  if (left < HOUR) return `${Math.floor(left / MINUTE)}m`;
+
+  if (left < DAY) return `${Math.floor(left / HOUR)}h ${Math.floor((left % HOUR) / MINUTE)}m`;
+
+  return `${Math.floor(left / DAY)}d ${Math.floor((left % DAY) / HOUR)}h`;
+}

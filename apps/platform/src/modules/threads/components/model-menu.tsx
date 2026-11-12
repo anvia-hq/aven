@@ -7,6 +7,7 @@ import { Button } from "@/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
+import { SubsSpark } from "@/modules/providers/components/subs-mark";
 
 import { CLAUDE_GROUP, CLAUDE_ITEMS, claudeTriggerLabel } from "../claude-models";
 import type { useModelSelection } from "../hooks/use-model-selection";
@@ -49,11 +50,12 @@ export function ModelMenu({ model, claude }: Props) {
               variant="ghost"
               size="sm"
               aria-label="Model and reasoning effort"
+              title={usingClaude ? "Runs on your Claude subscription (Agent SDK)" : undefined}
               className="max-w-full min-w-0 bg-muted/50 px-2 text-muted-foreground"
             />
           }
         >
-          {kind && <ProviderLogo kind={kind} />}
+          {usingClaude ? <SubsSpark /> : kind && <ProviderLogo kind={kind} />}
           <span className="truncate font-medium text-foreground">
             {label ?? "Provider default"}
           </span>

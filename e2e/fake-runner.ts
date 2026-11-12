@@ -258,6 +258,16 @@ ws.onmessage = ({ data }) => {
       mentions: message.mentions,
       compact: message.compact,
     });
+
+    if (plain.limits) {
+      send({
+        type: "run.event",
+        runId: message.runId,
+        seq: numbered(message.runId),
+        event: { type: "limits", limits: JSON.parse(plain.limits) },
+      });
+    }
+
     const finish = () => {
       const { runId } = message;
 

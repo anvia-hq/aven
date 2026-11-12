@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { elapsed, shortTimeAgo, storageSize, storageUsage } from "./format";
+import { elapsed, resetsIn, shortTimeAgo, storageSize, storageUsage } from "./format";
 
 describe("elapsed", () => {
   test("is seconds under a minute", () => {
@@ -63,5 +63,15 @@ describe("shortTimeAgo", () => {
 
   test("is now for a time a little ahead of the clock", () => {
     expect(ago(-5_000)).toBe("now");
+  });
+});
+
+describe("resetsIn", () => {
+  test("reads minutes, hours with minutes, and days with hours", () => {
+    expect(resetsIn(30_000, 0)).toBe("less than a minute");
+    expect(resetsIn(25 * 60_000, 0)).toBe("25m");
+    expect(resetsIn((2 * 60 + 10) * 60_000, 0)).toBe("2h 10m");
+    expect(resetsIn((3 * 24 + 5) * 3_600_000, 0)).toBe("3d 5h");
+    expect(resetsIn(0, 1000)).toBe("less than a minute");
   });
 });

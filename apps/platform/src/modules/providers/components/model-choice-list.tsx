@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import type { ModelChoice, Provider } from "../types";
 import { ProviderLogo } from "./provider-logo";
+import { SubsSpark } from "./subs-mark";
 
 type Props = {
   providers: Provider[];
@@ -67,7 +68,9 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
                 data-checked={item.id === extra.selected}
                 onSelect={() => extra.onSelect(item.id)}
               >
+                <SubsSpark />
                 <span className="truncate">{item.label}</span>
+                <span className="ml-auto text-xs text-muted-foreground">Subs</span>
               </CommandItem>
             ))}
           </CommandGroup>

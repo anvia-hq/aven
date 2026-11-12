@@ -12,6 +12,7 @@ export type FakeRunnerSwitch =
   | "FAKE_RUN_ENDS_AFTER"
   | "FAKE_DIFF_LINES"
   | "FAKE_RUN_FAILS"
+  | "FAKE_LIMITS"
   | "FAKE_AVEN_FILES"
   | "FAKE_BRANCH"
   | "FAKE_PROCESSES"
@@ -34,7 +35,12 @@ export type FakeRunnerRun =
   | { kind: "stream"; unit: "word" | "line"; count: number; everyMs: number }
   | { kind: "secret" }
   | { kind: "questions"; count: 1 | 2 }
-  | { kind: "plain"; ending: FakeRunEnding; failure: string | undefined };
+  | {
+      kind: "plain";
+      ending: FakeRunEnding;
+      failure: string | undefined;
+      limits: string | undefined;
+    };
 
 export type FakeRunnerSelf = {
   build: string | undefined;

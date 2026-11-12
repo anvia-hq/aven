@@ -1,5 +1,11 @@
 import { isDriving } from "@aven/protocol/drivers";
-import { answerableQuestion, applyEvent, applyUsage, isRunning } from "@aven/protocol/events";
+import {
+  answerableQuestion,
+  applyEvent,
+  applyLimits,
+  applyUsage,
+  isRunning,
+} from "@aven/protocol/events";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "@/components/toast";
@@ -132,11 +138,16 @@ export function useThread(threadId: string) {
           setError(event.error ?? null);
           setThreadRunning(threadId, event.running);
           setSynced(true);
-          setUsage(event.usage ?? null);
+          setUsage((current) =>
+            event.usage ? { ...event.usage, limits: event.usage.limits ?? current?.limits } : null,
+          );
           setStartedAt(event.running ? Date.now() - (event.runningMs ?? 0) : null);
           break;
         case "usage":
           setUsage((current) => applyUsage(current, event));
+          break;
+        case "limits":
+          setUsage((current) => applyLimits(current, event.limits));
           break;
         case "run_start":
         case "run_resume":
