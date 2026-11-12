@@ -3,6 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("claudeSetupService (postgres)", async () => {
+  if (!process.env.DATABASE_URL) return;
   const { db } = await import("@aven/db/client");
   const { claudeSetupTokens } = await import("@aven/db/schema/claude-setup-tokens");
   const { users } = await import("@aven/db/schema/users");

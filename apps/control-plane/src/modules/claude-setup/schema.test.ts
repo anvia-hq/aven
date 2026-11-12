@@ -10,6 +10,9 @@ describe("a Claude setup token", () => {
     expect(
       saveClaudeSetupBody.safeParse({ token: `${"x".repeat(20)} ${"y".repeat(4)}` }).success,
     ).toBe(false);
-    expect(saveClaudeSetupBody.safeParse({ token: `${"x".repeat(20)}\n` }).success).toBe(false);
+    expect(saveClaudeSetupBody.safeParse({ token: `${"x".repeat(20)}\n` }).success).toBe(true);
+    expect(
+      saveClaudeSetupBody.safeParse({ token: `${"x".repeat(10)}\n${"y".repeat(10)}` }).success,
+    ).toBe(false);
   });
 });
