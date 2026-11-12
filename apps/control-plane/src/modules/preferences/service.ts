@@ -3,6 +3,7 @@ import { userSettings } from "@aven/db/schema/user-settings";
 import { eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
+import type { FollowUpSettings } from "./types";
 import { checkTimezone, CronError, systemTimezone } from "../schedules/cron";
 
 export const preferencesService = {
@@ -13,7 +14,32 @@ export const preferencesService = {
 
   async get(userId: string) {
     const [row] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
-    return { timezone: row?.timezone ?? null, defaultTimezone: systemTimezone() };
+    return {
+      timezone: row?.timezone ?? null,
+      defaultTimezone: systemTimezone(),
+      followUps: {
+        enabled: row?.followUpsEnabled ?? false,
+        providerId: row?.followUpsProviderId ?? null,
+        modelId: row?.followUpsModelId ?? null,
+      },
+    };
+  },
+
+  async followUps(userId: string) {
+    return (await this.get(userId)).followUps;
+  },
+
+  async setFollowUps(userId: string, followUps: FollowUpSettings) {
+    const values = {
+      followUpsEnabled: followUps.enabled,
+      followUpsProviderId: followUps.providerId,
+      followUpsModelId: followUps.modelId,
+    };
+    await db
+      .insert(userSettings)
+      .values({ userId, ...values })
+      .onConflictDoUpdate({ target: userSettings.userId, set: values });
+    return followUps;
   },
 
   async setDefaultTimezone(userId: string, timezone: string) {

@@ -19,3 +19,9 @@ export type Member = {
   image?: string | null;
   status: "active" | "pending";
 };
+
+export type FollowUpSettings = {
+  enabled: boolean;
+  providerId: string | null;
+  modelId: string | null;
+};

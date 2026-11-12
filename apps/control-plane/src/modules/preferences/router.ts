@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { timezoneBody } from "./schema";
+import { followUpsBody, timezoneBody } from "./schema";
 import { preferencesService } from "./service";
 
 export const preferencesRouter = new Elysia({ prefix: "/preferences" })
@@ -15,4 +15,8 @@ export const preferencesRouter = new Elysia({ prefix: "/preferences" })
   .put("/timezone", ({ user, body }) => preferencesService.setTimezone(user.id, body.timezone), {
     auth: true,
     body: timezoneBody,
+  })
+  .put("/follow-ups", ({ user, body }) => preferencesService.setFollowUps(user.id, body), {
+    auth: true,
+    body: followUpsBody,
   });

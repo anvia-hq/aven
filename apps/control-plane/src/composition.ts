@@ -33,6 +33,8 @@ import { createDiffService } from "./modules/diff/service";
 import { createThreadContinuation } from "./modules/threads/continuation";
 import { createThreadForks } from "./modules/threads/forks";
 import { createProcessEnds } from "./modules/threads/process-ends";
+import { createFollowUps } from "./modules/follow-ups/service";
+import { suggestFollowUps } from "./modules/follow-ups/suggest";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
@@ -88,6 +90,12 @@ export const runsService = new RunManager({
 });
 
 export const threadMessages = createThreadMessages(runsService);
+
+export const followUps = createFollowUps({
+  messagesOf: async (viewer, threadId) =>
+    (await runsService.latest(await threadsService.readable(viewer, threadId))).messages,
+  suggest: suggestFollowUps,
+});
 
 runtimeHub.forks = createThreadForks({ runs: runsService, messages: threadMessages });
 
