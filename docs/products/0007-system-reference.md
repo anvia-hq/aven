@@ -115,3 +115,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### One control-plane replica (decision 0236)
 
 The control plane holds runner connections, runs, watched channels and run tokens in process memory, so it runs as one replica. More are by runtime affinity at the edge (a runner and the requests for its runtime go to one replica, hashed on the runtime id), not by replicas calling each other.
+
+### A thread can run on Codex with the person's ChatGPT login (decision 0237)
+
+Settings > Codex stores that login encrypted (`codex-setup`, `codex_logins`); the API returns only whether one is saved and the last four characters of the access token. A new thread chooses `native` or `codex` (`threads.agent_backend`). A Codex run is placed on the thread's own runtime, skips the model gateway, and the runner drives it with `CodexRuns`: the same sandbox tools, through a stdio MCP server named `aven`, with the access token only in that process's environment. Where Codex cannot do what the native agent does, the equivalent is in decision 0237.
