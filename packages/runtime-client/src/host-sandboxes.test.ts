@@ -41,6 +41,21 @@ describe("a bot's computer", () => {
     await expect(lstat(join(home, "workspaces", "b1"))).rejects.toThrow();
   });
 
+  test("a reply and a wake arriving together move the old folder once, and both succeed", async () => {
+    const { sandbox, home } = await runner();
+    await mkdir(join(home, "workspaces", "b1"), { recursive: true });
+    await writeFile(join(home, "workspaces", "b1", "notes.txt"), "kept");
+
+    await Promise.all([
+      sandbox.acquire({ id: "b1", bot: true }),
+      sandbox.acquire({ id: "b1", bot: true }),
+      sandbox.acquire({ id: "b1", bot: true }),
+    ]);
+
+    expect(await readFile(join(home, "bots", "b1", "notes.txt"), "utf8")).toBe("kept");
+    await expect(lstat(join(home, "workspaces", "b1"))).rejects.toThrow();
+  });
+
   test("a folder a bot had under workspaces/ moves to bots/ on first use, with its files", async () => {
     const { sandbox, home } = await runner();
     await mkdir(join(home, "workspaces", "b1"), { recursive: true });

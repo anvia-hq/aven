@@ -75,14 +75,32 @@ export class HostSandboxes implements ThreadWorkspaces {
     return existsSync(bot) ? bot : join(this.#home, "workspaces", threadId);
   }
 
-  async #claimBotFolder(id: string) {
+  #claims = new Map<string, Promise<void>>();
+
+  #claimBotFolder(id: string) {
+    const known = this.#claims.get(id);
+    if (known) return known;
+    const moving = this.#moveBotFolder(id);
+    this.#claims.set(id, moving);
+    moving.catch(() => this.#claims.delete(id));
+    return moving;
+  }
+
+  async #moveBotFolder(id: string) {
     const folder = this.#botDir(id);
     if (existsSync(folder)) return;
     const legacy = join(this.#home, "workspaces", id);
     this.#roots.delete(id);
     await mkdir(dirname(folder), { recursive: true });
-    if (existsSync(legacy)) await rename(legacy, folder);
-    else await mkdir(folder, { recursive: true });
+    if (!existsSync(legacy)) {
+      await mkdir(folder, { recursive: true });
+      return;
+    }
+    try {
+      await rename(legacy, folder);
+    } catch (error) {
+      if (!existsSync(folder)) throw error;
+    }
   }
 
   paths(threadId: string): SandboxPaths {
