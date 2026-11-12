@@ -4,6 +4,7 @@ import { claudeMcpTools } from "./claude-mcp";
 import { withoutRunnerSecrets } from "./runner-secrets";
 import type { ClaudeQuery, ClaudeSdkMessage } from "./types";
 import type { RunEnvVar } from "@aven/protocol/types";
+import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 
 const AVEN_NOTE =
   "You are running inside Aven, on the person's computer, in this thread's folder. Call the aven MCP tools for files, commands, git, processes, artifacts, memory, questions and goals. ask_user and request_secret pause the run until the person answers. Do not use a built-in shell or file tool.";
@@ -102,9 +103,15 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
       tools: [] as string[],
       disallowedTools: CLAUDE_DISALLOWED_TOOLS,
       env: claudeProcessEnv(input.env, input.token, input.configDir, process.env, extra),
-      systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append },
+      systemPrompt: {
+        type: "preset" as const,
+        preset: "claude_code" as const,
+        append,
+        excludeDynamicSections: true,
+      },
       maxTurns: input.maxTurns,
       model: input.model,
+      effort: input.effort as EffortLevel | undefined,
     };
     const query = sdk.query({ prompt: userMessages(input.prompt), options });
     closeQuery = () => query.close();

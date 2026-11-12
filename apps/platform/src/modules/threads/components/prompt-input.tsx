@@ -1,3 +1,4 @@
+import { CLAUDE_DEFAULT_EFFORT } from "@aven/protocol/claude-models";
 import {
   ChatProvider,
   ComposerPrimitive,
@@ -24,7 +25,6 @@ import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { AgentChip, PersonAvatar, PersonChip } from "./person-chip";
-import { ClaudeModelMenu } from "./claude-model-menu";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
 
@@ -109,7 +109,12 @@ function Composer({
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: claude?.choice ? { modelId: claude.choice.modelId } : model.selection,
+    selection: claude?.choice
+      ? {
+          modelId: claude.choice.modelId,
+          reasoningEffort: claude.choice.effort ?? CLAUDE_DEFAULT_EFFORT,
+        }
+      : model.selection,
     running,
     onSubmit,
     onCompact,
@@ -166,14 +171,7 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {claude?.only ? (
-            <ClaudeModelMenu
-              modelId={claude.choice?.modelId}
-              onChange={(modelId) => claude.onChange({ modelId })}
-            />
-          ) : (
-            <ModelMenu model={model} claude={claude} />
-          )}
+          <ModelMenu model={model} claude={claude} />
           {running && (
             <Button
               size="icon-sm"

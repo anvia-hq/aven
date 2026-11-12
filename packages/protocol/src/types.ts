@@ -607,6 +607,7 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       claudeToken?: string;
       claudeModel?: string;
+      claudeEffort?: string;
     }
   | {
       type: "run.resume";
@@ -626,6 +627,7 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       claudeToken?: string;
       claudeModel?: string;
+      claudeEffort?: string;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {

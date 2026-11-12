@@ -177,7 +177,7 @@ export type SplitPair = [string, string];
 
 export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: boolean };
 
-export type ClaudeChoice = { modelId?: string };
+export type ClaudeChoice = { modelId?: string; effort?: string };
 
 export type ClaudeControl = {
   choice: ClaudeChoice | null;

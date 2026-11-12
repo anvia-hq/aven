@@ -22,7 +22,7 @@ test.describe("prompt composer", () => {
       page.getByRole("link", { name: "Add a provider to choose a model" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Model and reasoning effort" }).click();
-    await expect(page.getByRole("option", { name: "Sonnet" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Sonnet 5.5", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Back" })).toHaveCount(0);
   });
 
