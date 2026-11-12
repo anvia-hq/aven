@@ -43,7 +43,6 @@ const placesOf = (file: DiffFile) => {
 export function useFileColours(visible: DiffFile[]) {
   const [, setTick] = useState(0);
   const wanted = visible.filter((file) => !made.has(file));
-  const key = wanted.map((file) => file.path).join("\0");
 
   useEffect(() => {
     for (const file of wanted) {
@@ -65,9 +64,7 @@ export function useFileColours(visible: DiffFile[]) {
           setTick((count) => count + 1);
         });
     }
-
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  });
 
   return (file: DiffFile, row: DiffRow): HighlightedLine | null => {
     const coloured = made.get(file);
