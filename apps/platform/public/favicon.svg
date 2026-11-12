@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <style>
-    .tile { fill: #f4f4f5; }
-    .mark { fill: #0f1117; }
+    .tile { fill: #0f1117; }
+    .mark { fill: #f4f4f5; }
     @media (prefers-color-scheme: light) {
-      .tile { fill: #0f1117; }
-      .mark { fill: #f4f4f5; }
+      .tile { fill: #f4f4f5; }
+      .mark { fill: #0f1117; }
     }
   </style>
-  <rect class="tile" width="100" height="100" rx="22" />
-  <svg x="17" y="25" width="66" height="51" viewBox="296 367 642 501">
+  <rect class="tile" x="5" y="5" width="90" height="90" rx="20" />
+  <svg x="20.3" y="27.5" width="59.4" height="45.9" viewBox="296 367 642 501">
     <path class="mark" fill-rule="evenodd" d="M475 367H896A42 42 0 0 1 938 409V826A42 42 0 0 1 896 868H820A42 42 0 0 1 778 826V778A40 40 0 0 0 738 738H515A40 40 0 0 0 475 778V826A42 42 0 0 1 433 868H338A42 42 0 0 1 296 826V527A42 42 0 0 1 338 485H390A43 43 0 0 0 433 442V409A42 42 0 0 1 475 367ZM513 487H740A38 38 0 0 1 778 525V596A38 38 0 0 1 740 634H513A38 38 0 0 1 475 596V525A38 38 0 0 1 513 487Z" />
   </svg>
 </svg>
