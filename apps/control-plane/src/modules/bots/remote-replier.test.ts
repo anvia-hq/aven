@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MemoryStore } from "@anvia/core";
-import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY } from "@aven/protocol/bots";
+import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, botNote } from "@aven/protocol/bots";
 import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 
 import { ModelUnavailableError } from "../providers/resolve-model";
@@ -1463,6 +1463,41 @@ describe("RemoteBotReplier", () => {
         `stop note u1 ${id}`,
         `get u1 ${other}`,
       ]);
+    });
+
+    test("a webhook note to the main bot may start the thread that verifies it, and nothing else", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      const answering = run.replier.answer({
+        ...input(() => undefined),
+        prompt: botNote('Webhook "Issues" (webhook id w1) arrived.'),
+        onPersonsWord: false,
+      });
+      await Bun.sleep(0);
+      const sink = run.only();
+      expect(await sink.thread(start)).toEqual(thread);
+      await expect(sink.thread(next)).rejects.toThrow("This note is not about that thread");
+      await expect(sink.thread(archive)).rejects.toThrow("only when the person asks you to");
+      sink.end();
+      await answering;
+      expect(calls).toEqual([`start u1 b1 ${start.prompt}`]);
+    });
+
+    test("a webhook note to another bot may look and no more", async () => {
+      const calls: string[] = [];
+      const run = fakeRunner({ threads: keeper(calls) });
+      const other = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
+      const answering = run.replier.answer({
+        ...input(() => undefined, new AbortController().signal, other),
+        prompt: botNote('Webhook "Issues" (webhook id w1) arrived.'),
+        onPersonsWord: false,
+      });
+      await Bun.sleep(0);
+      const sink = run.only();
+      await expect(sink.thread(start)).rejects.toThrow("only when the person asks you to");
+      sink.end();
+      await answering;
+      expect(calls).toEqual([]);
     });
 
     test("a reply starts, continues or stops only so many threads, whatever a thread told it, and may still archive and look", async () => {

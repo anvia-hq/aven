@@ -10,6 +10,7 @@ import { BotRunner } from "./modules/bots/runner";
 import { botsService } from "./modules/bots/service";
 import { preferencesService } from "./modules/preferences/service";
 import { createScheduler } from "./modules/schedules/scheduler";
+import { createWebhooks } from "./modules/webhooks/service";
 import { schedulesService } from "./modules/schedules/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
@@ -200,6 +201,10 @@ export const botRunner = new BotRunner({
 });
 
 export const botChats = createBotChats(botRunner);
+
+export const webhooks = createWebhooks({
+  fire: (userId, botId, note) => botChats.fire(userId, botId, note),
+});
 
 export const scheduler = createScheduler({
   fire: ({ userId, botId }, note) => botChats.fire(userId, botId, note),

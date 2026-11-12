@@ -70,6 +70,15 @@ describe("botInstructions", () => {
     expect(botInstructions({ ...pip, instruction: "", computer: true })).toContain("/uploads");
     expect(botInstructions({ ...pip, instruction: "" })).not.toContain("/uploads");
   });
+
+  test("gives the main bot the webhook rules and no other bot", () => {
+    const main = botInstructions({ ...pip, handle: "main", instruction: "" });
+    expect(main).toContain("<webhooks>");
+    expect(main).toContain("You are the main bot. Incoming webhooks always come to you.");
+    expect(main).toContain("what “verified” means");
+    expect(main).toContain("Do not ask it to patch or open a PR unless I explicitly say so.");
+    expect(botInstructions({ ...pip, instruction: "" })).not.toContain("<webhooks>");
+  });
 });
 
 describe("createBotAgent", () => {

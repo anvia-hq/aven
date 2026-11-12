@@ -268,6 +268,16 @@ Bun.serve({
       );
     }
 
+    if (heard.startsWith("[note] Webhook ")) {
+      return reply(
+        {
+          content: null,
+          tool_calls: [sendMessage("call_1", "Webhook received: checking the report")],
+        },
+        "tool_calls",
+      );
+    }
+
     if (/need a decision/i.test(heard)) {
       return reply({ content: null, tool_calls: [askQuestion("call_1")] }, "tool_calls");
     }
