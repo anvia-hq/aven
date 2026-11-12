@@ -53,8 +53,11 @@ export function backendSupports(
 
 export function backendRefusal(kind: string, capability: AgentBackendCapability) {
   let name = `The ${kind} agent`;
+
   if (kind === "claude") name = "The Claude agent";
+
   if (kind === "native") name = "The native agent";
+
   return `${name} does not ${BACKEND_ACT[capability]}`;
 }
 

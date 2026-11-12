@@ -19,7 +19,9 @@ export const claudeSetupService = {
       .select({ tokenHint: claudeSetupTokens.tokenHint })
       .from(claudeSetupTokens)
       .where(eq(claudeSetupTokens.userId, userId));
+
     if (!row) return { configured: false, hint: null };
+
     return { configured: true, hint: row.tokenHint };
   },
 
@@ -28,7 +30,9 @@ export const claudeSetupService = {
       .select({ tokenEncrypted: claudeSetupTokens.tokenEncrypted })
       .from(claudeSetupTokens)
       .where(eq(claudeSetupTokens.userId, userId));
+
     if (!row) return undefined;
+
     return decryptOrUnavailable(row.tokenEncrypted, UNREADABLE);
   },
 

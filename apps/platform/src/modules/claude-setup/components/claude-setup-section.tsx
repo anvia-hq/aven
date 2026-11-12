@@ -11,13 +11,16 @@ export function ClaudeSetupSection() {
   const { setup, loaded, failed, save, remove } = useClaudeSetup();
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
+
   if (failed) return <p className="py-6 text-sm text-muted-foreground">{failed}</p>;
+
   if (!loaded) return null;
 
   async function run(action: () => Promise<boolean>) {
     setBusy(true);
     const done = await action();
     setBusy(false);
+
     if (done) setToken("");
   }
 

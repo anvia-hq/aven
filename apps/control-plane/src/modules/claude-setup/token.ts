@@ -13,7 +13,9 @@ export async function claudeTokenOf(
   read: (userId: string) => Promise<string | undefined>,
 ) {
   const token = await read(ownerId);
+
   if (!token) throw new ClaudeTokenMissingError();
+
   return token;
 }
 
@@ -22,5 +24,6 @@ export async function claudeTokenForRun(
   read: (userId: string) => Promise<string | undefined>,
 ) {
   if (thread.agentBackend !== "claude") return undefined;
+
   return claudeTokenOf(thread.createdBy, read);
 }

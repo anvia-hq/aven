@@ -134,7 +134,9 @@ describe("Claude parity with the native agent", () => {
     const end = await goal.done;
     await runs.close();
     expect(end.type).toBe("complete");
+
     if (end.type === "complete") expect(end.evidence).toEqual(["`bun test` passed"]);
+
     expect(inputs).toHaveLength(1);
   });
 
@@ -257,6 +259,7 @@ describe("Claude parity with the native agent", () => {
     const query: ClaudeQuery = async function* (input) {
       const iterator = input.prompt[Symbol.asyncIterator]();
       await iterator.next();
+
       if (!nested && input.tools.runSubagent) {
         nested = true;
         const output = await input.tools.runSubagent(
@@ -275,6 +278,7 @@ describe("Claude parity with the native agent", () => {
           message: { content: [{ type: "text", text: "login is in auth.ts" }] },
         };
       }
+
       yield { type: "result", subtype: "success" };
     };
     const runs = ClaudeRuns.open(journalPath(), query);
@@ -288,6 +292,7 @@ describe("Claude parity with the native agent", () => {
     const end = await followed.done;
     await runs.close();
     expect(end.type).toBe("response");
+
     if (end.type === "response")
       expect(JSON.stringify(end.messages)).toContain("login is in auth.ts");
   });
@@ -302,7 +307,9 @@ describe("Claude parity with the native agent", () => {
       await iterator.next();
       yield { type: "assistant", message: { content: [{ type: "text", text: "working" }] } };
       await gate;
+
       if (input.abortController.signal.aborted) return;
+
       yield { type: "result", subtype: "success" };
     };
     const runs = ClaudeRuns.open(journalPath(), query);
@@ -328,6 +335,7 @@ describe("Claude parity with the native agent", () => {
       const iterator = input.prompt[Symbol.asyncIterator]();
       const first = await iterator.next();
       const text = first.done ? "" : String(first.value);
+
       if (inputs.length > 1) {
         yield {
           type: "assistant",
@@ -337,6 +345,7 @@ describe("Claude parity with the native agent", () => {
         yield { type: "result", subtype: "success", session_id: "sess-q" };
         return;
       }
+
       yield { type: "assistant", session_id: "sess-q", message: { content: [] } };
       const pending = input.tools.onPark?.({
         name: "ask_user",
@@ -372,6 +381,7 @@ describe("Claude parity with the native agent", () => {
     await runs.close();
     expect(inputs[1]?.sessionId).toBe("sess-q");
     expect(end.type).toBe("response");
+
     if (end.type === "response") expect(JSON.stringify(end.messages)).toContain("color: red");
   });
 });
@@ -400,6 +410,7 @@ function driverFor(query: ClaudeQuery) {
     call: async () => null as never,
     report: (runId, make) => {
       const message = outbox.push(runId, make);
+
       if (message) reported.push(message);
     },
     boxes: new Map(),
@@ -437,7 +448,9 @@ describe("Claude runs with the same preparation as native", () => {
       seen.push(input);
       const iterator = input.prompt[Symbol.asyncIterator]();
       const first = await iterator.next();
+
       if (!first.done) prompts.push(String(first.value));
+
       const exec = input.tools.catalog?.find((tool) => tool.name === "exec_command");
       const ran = await exec?.call(
         { command: "pwd" },
@@ -466,7 +479,9 @@ describe("Claude runs with the same preparation as native", () => {
       const next = iterator.next();
       release();
       const second = await next;
+
       if (!second.done) prompts.push(String(second.value));
+
       yield {
         type: "assistant",
         session_id: "sess-rich",
@@ -491,6 +506,7 @@ describe("Claude runs with the same preparation as native", () => {
               ],
             };
           }
+
           return { stdout: args.command ?? name };
         },
       });
@@ -677,6 +693,7 @@ function driverWith(query: ClaudeQuery, sandbox: ThreadWorkspaces) {
     call: async () => null as never,
     report: (runId, make) => {
       const message = outbox.push(runId, make);
+
       if (message) reported.push(message);
     },
     boxes: new Map(),

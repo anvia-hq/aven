@@ -79,7 +79,9 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
       ),
     });
     const extra: Record<string, string> = {};
+
     if (input.resumeInterrupted) extra.CLAUDE_CODE_RESUME_INTERRUPTED_TURN = "1";
+
     const append = [AVEN_NOTE, input.instructions]
       .filter((part) => part && part.length > 0)
       .join("\n\n");
@@ -104,6 +106,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
     closeQuery = () => query.close();
     for await (const message of query) {
       const mapped = asSdkMessage(message);
+
       if (mapped) yield mapped;
     }
   })();
@@ -117,6 +120,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
 
 function asSdkMessage(message: unknown): ClaudeSdkMessage | undefined {
   const record = message as { type?: unknown };
+
   if (
     record?.type === "assistant" ||
     record?.type === "user" ||
@@ -126,5 +130,6 @@ function asSdkMessage(message: unknown): ClaudeSdkMessage | undefined {
   ) {
     return message as ClaudeSdkMessage;
   }
+
   return undefined;
 }

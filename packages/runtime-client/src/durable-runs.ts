@@ -217,7 +217,9 @@ export class DurableRuns implements AgentBackend {
       return this.#follow(run, input, onEvent);
     } catch (error) {
       const agent = input.agent;
+
       if (agent) this.#runtime.unregisterAgent(agent.id);
+
       throw error;
     }
   }
@@ -363,6 +365,7 @@ export class DurableRuns implements AgentBackend {
 
   #agent(input: RunInput) {
     if (!input.agent) throw new Error("The native agent backend was started without an agent");
+
     return input.agent;
   }
 

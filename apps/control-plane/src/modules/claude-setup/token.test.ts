@@ -25,8 +25,11 @@ describe("a Claude setup token belongs to the thread's owner", () => {
       { agentBackend: "claude", createdBy: "alice" },
       async (userId) => {
         read.push(userId);
+
         if (userId === "alice") return TOKEN_A;
+
         if (userId === "bob") return TOKEN_B;
+
         return undefined;
       },
     );

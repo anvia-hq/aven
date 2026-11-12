@@ -14,7 +14,9 @@ export function useClaudeSetup() {
     const saved = await attempt("Could not save the Claude setup token", () =>
       postJson<ClaudeSetup>("/claude-setup-token", { token }, "PUT"),
     );
+
     if (!saved) return false;
+
     toast.add({ title: "Claude setup token saved", type: "success" });
     setRefreshKey((key) => key + 1);
     return true;
@@ -24,7 +26,9 @@ export function useClaudeSetup() {
     const removed = await attempt("Could not remove the Claude setup token", () =>
       api("/claude-setup-token", { method: "DELETE" }),
     );
+
     if (!removed) return false;
+
     toast.add({ title: "Claude setup token removed", type: "success" });
     setRefreshKey((key) => key + 1);
     return true;

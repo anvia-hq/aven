@@ -18,6 +18,7 @@ export const claudeSetupRouter = new Elysia({ prefix: "/claude-setup-token" })
       if (!(await claudeSetupService.remove(user.id))) {
         throw new NotFoundError("No Claude setup token is set");
       }
+
       return { removed: true };
     },
     { auth: true },

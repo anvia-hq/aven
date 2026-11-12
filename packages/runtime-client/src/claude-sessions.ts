@@ -38,9 +38,11 @@ export class ClaudeSessions {
     const columns = this.#db
       .query<{ name: string }, []>("pragma table_info(claude_sessions)")
       .all();
+
     if (!columns.some((column) => column.name === "durable_id")) {
       this.#db.run("alter table claude_sessions add column durable_id text");
     }
+
     this.#db.run(
       "create table if not exists claude_parked (thread_id text primary key, agent_id text not null, run_id text not null, session_id text not null, tool_call_id text not null, tool_name text not null, questions text not null)",
     );
@@ -118,9 +120,11 @@ export class ClaudeSessions {
 
   #read(row: ParkRow | null) {
     if (!row) return undefined;
+
     let questions: QuestionPrompt[] = [];
     try {
       const parsed: unknown = JSON.parse(row.questions);
+
       if (Array.isArray(parsed)) questions = parsed as QuestionPrompt[];
     } catch {
       questions = [];

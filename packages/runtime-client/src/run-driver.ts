@@ -502,9 +502,11 @@ export function createRunDriver(context: DriverContext) {
           process.cwd();
         const token = secrets.claudeToken;
         const variables = env ? [...env] : [];
+
         if (token) {
           variables.push({ name: "CLAUDE_CODE_OAUTH_TOKEN", value: token, secret: true });
         }
+
         const redact = secretRedactor(variables);
         const hide = <T>(value: T): T => (redact ? redact(value) : value);
         const hideText = (text: string) => hide(text);
@@ -516,7 +518,9 @@ export function createRunDriver(context: DriverContext) {
           mcpInstructions(mcp?.note),
           memoryInstructions(state.record.memory),
         ];
+
         if (forking) parts.push(forkInstructions());
+
         parts.push(
           "Use the aven tools for files, commands, git, processes, artifacts, memory and goals.",
         );
@@ -568,6 +572,7 @@ export function createRunDriver(context: DriverContext) {
 
     if (scope.record.durableId) {
       if (!backend.capabilities.restart) throw new Error(backendRefusal(backend.kind, "restart"));
+
       followed = await backend.rejoin(
         scope.record.durableId,
         await inputOf(scope.record.agentId, true),
@@ -588,6 +593,7 @@ export function createRunDriver(context: DriverContext) {
       );
     } else {
       if (!backend.capabilities.question) throw new Error(backendRefusal(backend.kind, "question"));
+
       const asked = await backend.asked(thread.id);
 
       if (!asked) throw new Error("This thread has no question waiting for an answer");
@@ -638,7 +644,9 @@ export function createRunDriver(context: DriverContext) {
 
   async function runGoal(scope: RunScope, goal: GoalRequest): Promise<DurableEnd> {
     const { runId, run, backend, save, build, forward } = scope;
+
     if (!backend.capabilities.goals) throw new Error(backendRefusal(backend.kind, "goals"));
+
     scope.stopIfCancelled();
     const exec = scope.current()?.find((tool) => tool.name === "exec_command");
     const input =

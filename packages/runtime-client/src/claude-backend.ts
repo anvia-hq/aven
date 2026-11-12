@@ -73,14 +73,18 @@ export class PromptQueue {
 
   push(text: string) {
     if (this.#closed) return false;
+
     const waiter = this.#waiters.shift();
+
     if (waiter) waiter({ value: text, done: false });
     else this.#pending.push(text);
+
     return true;
   }
 
   close() {
     if (this.#closed) return;
+
     this.#closed = true;
     for (const waiter of this.#waiters.splice(0)) waiter({ value: undefined, done: true });
   }
@@ -90,8 +94,11 @@ export class PromptQueue {
       [Symbol.asyncIterator]: () => ({
         next: (): Promise<IteratorResult<string>> => {
           const next = this.#pending.shift();
+
           if (next !== undefined) return Promise.resolve({ value: next, done: false });
+
           if (this.#closed) return Promise.resolve({ value: undefined, done: true });
+
           return new Promise((resolve) => this.#waiters.push(resolve));
         },
       }),
@@ -120,7 +127,9 @@ export class ClaudeRuns implements AgentBackend {
   asked(threadId: string) {
     const live = this.#byThread.get(threadId);
     const parked = live ? this.#parked.get(live.agentId) : undefined;
+
     if (parked) return Promise.resolve({ runId: parked.live.runId, agentId: parked.live.agentId });
+
     const stored = this.sessions.parked(threadId);
     return Promise.resolve(stored && { runId: stored.runId, agentId: stored.agentId });
   }
@@ -166,6 +175,7 @@ export class ClaudeRuns implements AgentBackend {
   ): Promise<FollowedRun> {
     const text = answered(response);
     const parked = this.#parked.get(asked.agentId);
+
     if (parked) {
       this.#parked.delete(asked.agentId);
       this.sessions.clearPark(parked.live.threadId);
@@ -177,8 +187,11 @@ export class ClaudeRuns implements AgentBackend {
         cancel: async () => this.#cancel(parked.live),
       };
     }
+
     const stored = this.sessions.parkedAgent(asked.agentId);
+
     if (!stored) throw new Error("This thread has no question waiting for an answer");
+
     this.sessions.clearPark(stored.threadId);
     const context = restore().claude;
     return this.#open({
@@ -194,13 +207,17 @@ export class ClaudeRuns implements AgentBackend {
 
   steer(durableId: string, prompt: AgentPrompt) {
     const live = this.#byDurable.get(durableId);
+
     if (!live || live.abort.signal.aborted) return Promise.resolve(false);
+
     return Promise.resolve(live.queue.push(promptText(prompt)));
   }
 
   startGoal(spec: GoalSpec): Promise<FollowedGoal> {
     const context = spec.input.claude;
+
     if (!context?.token) return Promise.reject(new Error(CLAUDE_TOKEN_MISSING));
+
     const abort = new AbortController();
     const waiting: string[] = [];
     let current: LiveRun | undefined;
@@ -221,7 +238,9 @@ export class ClaudeRuns implements AgentBackend {
         });
         const end = await followed.done;
         current = undefined;
+
         if (end.type === "error") throw new Error(end.error);
+
         return { summary: assistantText(end.messages), messages: end.messages };
       },
       abort.signal,
@@ -236,11 +255,14 @@ export class ClaudeRuns implements AgentBackend {
       done,
       cancel: async () => {
         abort.abort();
+
         if (current) this.#cancel(current);
       },
       steer: async (prompt) => {
         const text = promptText(prompt);
+
         if (current?.queue.push(text)) return true;
+
         waiting.push(text);
         return true;
       },
@@ -259,6 +281,7 @@ export class ClaudeRuns implements AgentBackend {
 
   async cancelRun(durableId: string) {
     const live = this.#byDurable.get(durableId);
+
     if (live) this.#cancel(live);
   }
 
@@ -285,19 +308,27 @@ export class ClaudeRuns implements AgentBackend {
     maxTurns?: number;
   }): Promise<FollowedRun> {
     const context = options.context;
+
     if (!context?.token) throw new Error(CLAUDE_TOKEN_MISSING);
+
     const durableId = options.durableId ?? `claude-${options.runId}`;
+
     if (context.compact) {
       const sessionId = options.sessionId ?? this.sessions.get(options.threadId);
+
       if (!sessionId) return this.#note(options.onEvent, NOTHING_TO_COMPACT);
+
       options.sessionId = sessionId;
       options.prompt = "/compact";
     }
+
     const abort = new AbortController();
+
     if (options.signal) {
       if (options.signal.aborted) abort.abort();
       else options.signal.addEventListener("abort", () => abort.abort(), { once: true });
     }
+
     const live: LiveRun = {
       durableId,
       threadId: options.threadId,
@@ -347,10 +378,13 @@ export class ClaudeRuns implements AgentBackend {
       signal: live.abort.signal,
       shown: (artifacts) => live.turn.queueArtifacts(artifacts),
     };
+
     if (host.questions !== false) host.onPark = (question) => this.#park(live, question);
+
     if (context.children !== false) {
       host.runSubagent = (task, meta) => this.#child(context, task, meta);
     }
+
     return host;
   }
 
@@ -361,7 +395,9 @@ export class ClaudeRuns implements AgentBackend {
     const existing = live.turn.openQuestion(question.name);
     const id = existing ?? crypto.randomUUID();
     const event = live.turn.ensureQuestion(id, question.name, question.questions);
+
     if (event) live.onEvent(event);
+
     const parked: Parked = {
       live,
       toolCallId: id,
@@ -443,7 +479,9 @@ export class ClaudeRuns implements AgentBackend {
         maxTurns: SUBAGENT_MAX_TURNS,
       });
       const end = await followed.done;
+
       if (end.type === "error") throw new Error(end.error);
+
       const output = assistantText(end.messages);
       emit?.({
         type: "subagent",
@@ -467,16 +505,19 @@ export class ClaudeRuns implements AgentBackend {
     stream: AsyncIterable<Parameters<ClaudeTurn["take"]>[0]>,
     remember: boolean,
   ) {
-    let prompt = live.prompt;
+    const prompt = live.prompt;
     try {
       for await (const message of stream) {
         if (live.turn.sessionId && remember) {
           this.sessions.set(live.threadId, live.turn.sessionId, live.durableId);
         }
+
         for (const event of live.turn.take(message)) live.onEvent(event);
+
         if (live.turn.sessionId && remember) {
           this.sessions.set(live.threadId, live.turn.sessionId, live.durableId);
           const parked = this.#parked.get(live.agentId);
+
           if (parked) {
             this.sessions.park({
               threadId: live.threadId,
@@ -489,7 +530,9 @@ export class ClaudeRuns implements AgentBackend {
             });
           }
         }
+
         this.#partial.set(live.durableId, live.turn.messages(""));
+
         if (live.abort.signal.aborted) break;
       }
       this.#settle(live, prompt);
@@ -498,44 +541,54 @@ export class ClaudeRuns implements AgentBackend {
       live.promptPending = false;
       this.#partial.set(live.durableId, messages);
       let reason = errorMessage(error);
+
       if (live.abort.signal.aborted) reason = "The run was cancelled";
       else if (live.turn.error) reason = live.turn.error;
+
       live.gate.resolve({ type: "error", error: reason });
     } finally {
       live.queue.close();
       this.#byDurable.delete(live.durableId);
+
       if (this.#byThread.get(live.threadId) === live) this.#byThread.delete(live.threadId);
     }
   }
 
   #settle(live: LiveRun, prompt: string) {
     const parked = this.#parked.get(live.agentId);
+
     if (parked) {
       this.#parked.delete(live.agentId);
       parked.reject(new Error("The question closed before it was answered"));
     }
+
     const messages = live.turn.release(live.promptPending ? prompt : "");
     live.promptPending = false;
+
     if (live.abort.signal.aborted) {
       this.#partial.set(live.durableId, messages);
       live.gate.resolve({ type: "error", error: "The run was cancelled" });
       return;
     }
+
     if (live.turn.error) {
       this.#partial.set(live.durableId, messages);
       live.gate.resolve({ type: "error", error: live.turn.error });
       return;
     }
+
     this.#partial.delete(live.durableId);
     live.gate.resolve({ type: "response", messages });
   }
 
   #cancel(live: LiveRun) {
     const parked = this.#parked.get(live.agentId);
+
     if (parked) {
       this.#parked.delete(live.agentId);
       parked.reject(new Error("The run was cancelled"));
     }
+
     live.queue.close();
     live.abort.abort();
     live.close?.();
@@ -577,13 +630,16 @@ function continuationOf(
           choices?: { label: string; value: string }[];
           allowCustom?: boolean;
         } = { id: question.id, text: question.text };
+
         if (question.choices?.length) {
           prompt.choices = question.choices.map((choice) => ({
             label: choice.label,
             value: choice.value,
           }));
         }
+
         if (question.allowCustom === true) prompt.allowCustom = true;
+
         return prompt;
       }),
     },
@@ -593,14 +649,18 @@ function continuationOf(
 
 function answered(response: AgentInteractionResponse) {
   if (response.type !== "tool-question") return "The person did not answer.";
+
   const lines = response.answers.map((answer) => `${answer.questionId}: ${answer.value}`);
   return `The person answered:\n${lines.join("\n")}`;
 }
 
 function assistantText(messages: readonly Message[]) {
   const last = [...messages].reverse().find((message) => message.role === "assistant");
+
   if (!last) return "";
+
   if (typeof last.content === "string") return last.content;
+
   return last.content
     .map((part) => (part.type === "text" ? part.text : ""))
     .filter((text) => text.length > 0)
@@ -609,8 +669,11 @@ function assistantText(messages: readonly Message[]) {
 
 function promptText(prompt: AgentPrompt) {
   if (typeof prompt === "string") return prompt;
+
   const content = prompt.content;
+
   if (typeof content === "string") return content;
+
   return content
     .map((part) => (part.type === "text" ? part.text : ""))
     .filter((text) => text.length > 0)

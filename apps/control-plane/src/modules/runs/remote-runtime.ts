@@ -132,9 +132,13 @@ export class RemoteRuntime implements Runtime {
         cockpit: cockpit?.access,
         backend: threadBackend(thread),
       };
+
       if (runModel) message.model = runModel;
+
       if (claudeToken) message.claudeToken = claudeToken;
+
       if (claudeModel) message.claudeModel = claudeModel;
+
       return message;
     });
   }
@@ -179,8 +183,11 @@ export class RemoteRuntime implements Runtime {
           model: runModel,
           backend: threadBackend(thread),
         };
+
         if (claudeToken) message.claudeToken = claudeToken;
+
         if (claudeModel) message.claudeModel = claudeModel;
+
         return message;
       },
     );
@@ -327,7 +334,9 @@ function keptSecrets(
     identity,
     mcp: mcp?.length ? mcp : undefined,
   };
+
   if (claudeToken) secrets.claudeToken = claudeToken;
+
   return secrets;
 }
 

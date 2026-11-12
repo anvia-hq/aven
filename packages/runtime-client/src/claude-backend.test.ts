@@ -29,7 +29,9 @@ function queryOf(gate?: Promise<void>) {
       session_id: `session-${input.token.slice(-4)}`,
       message: { content: [{ type: "text", text: `hello ${input.token}` }] },
     };
+
     if (gate) await gate;
+
     yield {
       type: "result",
       subtype: "success",
@@ -72,6 +74,7 @@ function driverFor(query: ClaudeQuery, workspace = "/work/alice") {
     },
     report: (runId, make) => {
       const message = outbox.push(runId, make);
+
       if (message) reported.push(message);
     },
     boxes: new Map(),
@@ -91,7 +94,9 @@ const start = (runId: string, threadId: string, token?: string): RunMessage => {
     prompt: "look here",
     backend: "claude",
   };
+
   if (token) message.claudeToken = token;
+
   return message;
 };
 
@@ -165,6 +170,7 @@ describe("the Claude backend", () => {
         gate.then(() => undefined),
         iterator.next().then((item) => (item.done ? undefined : item.value)),
       ]);
+
       if (steered) {
         prompts.push(steered);
         yield {
@@ -173,6 +179,7 @@ describe("the Claude backend", () => {
           message: { content: [{ type: "text", text: steered }] },
         };
       }
+
       yield { type: "result", subtype: "success", session_id: "sess-steer" };
     };
     const { driver, reported, backend } = driverFor(query);
