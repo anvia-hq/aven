@@ -157,6 +157,7 @@ export type Block =
   | { type: "question"; tool: ToolPart }
   | { type: "artifacts"; artifacts: ToolArtifact[] }
   | { type: "subagents"; tool: ToolPart }
+  | { type: "fork"; tool: ToolPart; forkId: string }
   | { type: "tools"; entries: ToolGroupEntry[] };
 
 export type MentionPerson = { id: string; name: string; email: string; image: string | null };

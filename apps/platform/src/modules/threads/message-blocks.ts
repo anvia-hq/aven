@@ -1,3 +1,4 @@
+import { forkIdOf } from "./fork-id";
 import type { Block, MessagePart, ToolGroupEntry } from "./types";
 
 export function messageBlocks(parts: MessagePart[]) {
@@ -14,6 +15,8 @@ export function messageBlocks(parts: MessagePart[]) {
     else if (part.tool.questions) result.push({ type: "question", tool: part.tool });
     else if (part.tool.artifacts)
       result.push({ type: "artifacts", artifacts: part.tool.artifacts });
+    else if (forkIdOf(part.tool))
+      result.push({ type: "fork", tool: part.tool, forkId: forkIdOf(part.tool)! });
     else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
     else group({ type: "tool", tool: part.tool });
   }
@@ -24,7 +27,8 @@ export function foldedSteps(blocks: Block[]) {
   const answer = blocks.at(-1);
   if (answer?.type !== "text") return undefined;
   const before = blocks.slice(0, -1);
-  const stays = (block: Block) => block.type === "question" || block.type === "artifacts";
+  const stays = (block: Block) =>
+    block.type === "question" || block.type === "artifacts" || block.type === "fork";
   const kept = before.filter(stays);
   const steps = before.filter((block) => !stays(block));
   if (steps.length === 0) return undefined;

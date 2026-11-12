@@ -12,6 +12,7 @@ import {
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { EDIT_TOOL_NAME } from "./tools/edit";
+import { FORK_THREAD_TOOL_NAME } from "./tools/forks";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
@@ -79,6 +80,8 @@ export function toolTarget(name: string, input: unknown) {
   }
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
+  if (name === FORK_THREAD_TOOL_NAME)
+    return asString(args.task).replace(/\s+/g, " ").trim().slice(0, 200);
   if (name === GIT_FETCH_TOOL_NAME) return asString(args.branch) || "default branch";
   if (name === PORT_TOOL) return String(args.containerPort ?? "");
   return "";

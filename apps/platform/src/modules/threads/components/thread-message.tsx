@@ -14,6 +14,7 @@ import { markMentions } from "../mentions";
 import { foldedSteps, messageBlocks } from "../message-blocks";
 import type { Block, ChatMessage, Viewer } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
+import { ForkCard } from "./fork-card";
 import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
@@ -38,6 +39,7 @@ function AssistantBlock({
   if (block.type === "artifacts") {
     return <ArtifactGrid threadId={threadId} artifacts={block.artifacts} />;
   }
+  if (block.type === "fork") return <ForkCard tool={block.tool} forkId={block.forkId} />;
   if (block.type === "subagents") {
     return (
       <div className="flex min-w-0 flex-col">
