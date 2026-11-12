@@ -51,6 +51,7 @@ export function AddFolderDialog({ onAdded, variant, size }: Props) {
                 placeholder="Choose a computer"
               />
               <FolderPicker
+                key={state.chosenRunner}
                 runtimeId={state.chosenRunner}
                 path={state.path}
                 onChange={state.setPath}
