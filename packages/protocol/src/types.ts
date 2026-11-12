@@ -20,6 +20,7 @@ export type Bot = {
   modelId: string | null;
   reasoningEffort: string | null;
   compactAfterTokens: number | null;
+  runtimeId: string | null;
   isMain: boolean;
   createdAt: string;
   updatedAt: string;
@@ -722,7 +723,8 @@ export type BotCallMethod =
   | "bot.provider"
   | "bot.thread"
   | "bot.notes"
-  | "bot.cockpit";
+  | "bot.cockpit"
+  | "bot.api";
 
 export type McpReportCallMethod = "mcp.report";
 
@@ -817,6 +819,31 @@ export type BotThreadParams = { replyId: string } & (
 );
 
 export type BotThreaded = BotProjectView[] | BotThreadView[] | BotThreadDetail | BotThreadView;
+
+export type BotApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type BotApiParams = { replyId: string } & (
+  | { op: "search"; query?: string }
+  | {
+      op: "call";
+      method: BotApiMethod;
+      path: string;
+      body?: unknown;
+      organizationId?: string;
+      confirmed?: boolean;
+    }
+);
+
+export type BotApiRoute = {
+  method: BotApiMethod;
+  path: string;
+  tier: "read" | "change" | "confirm";
+  body?: unknown;
+};
+
+export type BotApiResult =
+  | { routes: BotApiRoute[]; organizations: { id: string; name: string }[] }
+  | { status: number; body: unknown };
 
 export type BotSkillParams = { replyId: string; digest: string };
 
@@ -927,6 +954,7 @@ export type RuntimeCalls = {
   "bot.notes": { params: BotNotesParams; result: string };
   "memory.notes": { params: MemoryNotesParams; result: string };
   "bot.cockpit": { params: BotCockpitParams; result: string };
+  "bot.api": { params: BotApiParams; result: BotApiResult };
   "cockpit.read": { params: CockpitReadParams; result: string };
   "fork.start": { params: ForkStartParams; result: { id: string; title: string } };
   "fork.status": { params: ForkStatusParams; result: ForkView };

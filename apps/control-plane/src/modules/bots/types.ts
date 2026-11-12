@@ -32,6 +32,9 @@ export type BotLetter = {
 
 export type BotChats = ReturnType<typeof createBotChats>;
 
+import type { BotApiAsk } from "../bot-api/service";
+import type { BotApiResult } from "@aven/protocol/types";
+
 export type BotKeeper = {
   list(userId: string): Promise<Bot[]>;
   create(userId: string, bot: NewBot): Promise<Bot>;
@@ -50,6 +53,8 @@ export type BotKeeper = {
     update(botId: string, action: GoalAction, reason?: string): Promise<BotGoalView | null>;
   };
   greet(userId: string, botId: string, hops: number): Promise<void>;
+  usableRuntime(userId: string, runtimeId: string): Promise<void>;
+  api: { answer(ask: BotApiAsk): Promise<BotApiResult> };
 };
 
 export type BotMemoryNotes = {
@@ -77,7 +82,7 @@ export type BotReplyInput = {
 };
 
 export type BotReplier = {
-  ready(model: ModelConfig): void;
+  ready(model: ModelConfig, bot: Pick<Bot, "runtimeId">): void;
   answer(input: BotReplyInput): Promise<void>;
 };
 

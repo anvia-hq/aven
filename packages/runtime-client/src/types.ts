@@ -37,6 +37,7 @@ import type {
   ScheduleHost,
   SendMessage,
   TakenChanges,
+  ApiHost,
   ThreadsHost,
   UpdateSelf,
 } from "@aven/agents/tools/types";
@@ -93,6 +94,7 @@ export type CreateBotReplyAgent = (input: {
   mcpServers: McpServersHost;
   providers: ProvidersHost;
   threads: ThreadsHost;
+  api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
 }) => Pick<Agent<unknown>, "generate">;
@@ -236,6 +238,7 @@ export type ThreadRef = {
   forkOf?: string;
   projectId?: string;
   ownerId?: string;
+  bot?: boolean;
 };
 
 export type Fetched = { branch: string; commit: string; previous: string | null };

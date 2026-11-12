@@ -1,0 +1,2 @@
+ALTER TABLE "bots" ADD COLUMN "runtime_id" uuid;--> statement-breakpoint
+ALTER TABLE "bots" ADD CONSTRAINT "bots_runtime_id_runtimes_id_fk" FOREIGN KEY ("runtime_id") REFERENCES "public"."runtimes"("id") ON DELETE set null ON UPDATE no action;

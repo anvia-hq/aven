@@ -431,6 +431,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
           ),
           notes: async (params) => (asked.push(params), "noted"),
           cockpit: async () => "cockpit",
+          api: async (params) => (asked.push(params), { routes: [], organizations: [] }),
         },
       );
       return { ws, received, connection, heard, asked, runtime };

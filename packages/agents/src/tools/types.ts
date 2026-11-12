@@ -32,6 +32,19 @@ export type Clock = {
   sleep(ms: number, abortSignal?: AbortSignal): Promise<void>;
 };
 
+export type ApiHost = (
+  params:
+    | { op: "search"; query?: string | undefined }
+    | {
+        op: "call";
+        method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+        path: string;
+        body?: unknown;
+        organizationId?: string | undefined;
+        confirmed?: boolean | undefined;
+      },
+) => Promise<unknown>;
+
 export type CockpitHost = (command: CockpitCommand) => Promise<string>;
 
 export type CreateBot = (

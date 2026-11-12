@@ -83,3 +83,11 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 ### Small models and fork cards (decision 0226)
 
 Settings > General > Small models holds a per-person switch and model for follow-up suggestions (`preferences` module, `user_settings`). When a reply settles, the thread page calls `POST /threads/:id/follow-ups` (`modules/follow-ups`), which asks that model for one to three short replies and shows them as buttons above the composer (`components/follow-up-chips.tsx`, `hooks/use-follow-ups.ts`); pressing one sends it. A finished `fork_thread` call renders as `components/fork-card.tsx` in the parent's transcript.
+
+### A bot's computer is on a runner of its choice (decision 0227)
+
+`bots.runtime_id` (null: the built-in runner, or `AVEN_BOT_RUNNER`) is set in the bot's settings under Computer and checked by `requireUsableRuntime`. `RemoteBotReplier` and the bot's computer and artifact routes use the bot's runner; the folder is `<runner home>/bots/<id>`, moved from `workspaces/<id>` on first use (`HostSandboxes`, `ThreadRef.bot`).
+
+### A bot uses Aven's API as the person (decision 0228)
+
+`aven_api_search` and `aven_api` (`packages/agents/src/tools/api.ts`) reach `bot.api` (`modules/bot-api`): the catalog comes from the app's routes and zod bodies, the gate (`gate.ts`) gives each route a tier (read, change, confirm, blocked), and a call runs through `app.handle` with a one-call grant (`modules/auth/acting.ts`, accepted by `sessionOf`) as the person in a workspace they belong to. Changes need the person's own message; confirm routes also `confirmed: true`.

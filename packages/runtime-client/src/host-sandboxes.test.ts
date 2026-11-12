@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
@@ -27,6 +27,48 @@ const call = (tools: readonly AnyTool[], name: string, input: unknown) =>
   tools.find((tool) => tool.name === name)!.call(input as never, undefined as never) as Promise<
     Record<string, unknown>
   >;
+
+describe("a bot's computer", () => {
+  test("is a folder under bots/ of the runner's home, and a thread's stays under workspaces/", async () => {
+    const { sandbox, home } = await runner();
+
+    const box = await sandbox.acquire({ id: "b1", bot: true });
+    await box.start?.();
+    await sandbox.acquire({ id: "t1" }, undefined);
+
+    expect(sandbox.paths("b1").workspace).toBe(join(home, "bots", "b1"));
+    expect(sandbox.paths("t1").workspace).toBe(join(home, "workspaces", "t1"));
+    await expect(lstat(join(home, "workspaces", "b1"))).rejects.toThrow();
+  });
+
+  test("a reply and a wake arriving together move the old folder once, and both succeed", async () => {
+    const { sandbox, home } = await runner();
+    await mkdir(join(home, "workspaces", "b1"), { recursive: true });
+    await writeFile(join(home, "workspaces", "b1", "notes.txt"), "kept");
+
+    await Promise.all([
+      sandbox.acquire({ id: "b1", bot: true }),
+      sandbox.acquire({ id: "b1", bot: true }),
+      sandbox.acquire({ id: "b1", bot: true }),
+    ]);
+
+    expect(await readFile(join(home, "bots", "b1", "notes.txt"), "utf8")).toBe("kept");
+    await expect(lstat(join(home, "workspaces", "b1"))).rejects.toThrow();
+  });
+
+  test("a folder a bot had under workspaces/ moves to bots/ on first use, with its files", async () => {
+    const { sandbox, home } = await runner();
+    await mkdir(join(home, "workspaces", "b1"), { recursive: true });
+    await writeFile(join(home, "workspaces", "b1", "notes.txt"), "kept");
+
+    expect(sandbox.paths("b1").workspace).toBe(join(home, "workspaces", "b1"));
+    await sandbox.acquire({ id: "b1", bot: true });
+
+    expect(sandbox.paths("b1").workspace).toBe(join(home, "bots", "b1"));
+    expect(await readFile(join(home, "bots", "b1", "notes.txt"), "utf8")).toBe("kept");
+    await expect(lstat(join(home, "workspaces", "b1"))).rejects.toThrow();
+  });
+});
 
 describe("a runner that works on this machine", () => {
   test("clones the repository into a folder of the thread and tells the agent that real path", async () => {

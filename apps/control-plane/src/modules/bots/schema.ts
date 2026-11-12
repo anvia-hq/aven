@@ -21,6 +21,7 @@ export const updateBotBody = z.object({
   instruction: z.string().trim().max(BOT_INSTRUCTION_MAX).optional(),
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
   avatar: z.string().trim().max(BOT_AVATAR_MAX).optional(),
+  runtimeId: z.uuid().nullable().optional(),
   providerId: z.uuid().nullable().optional(),
   modelId: z.string().trim().min(1).max(200).nullable().optional(),
   reasoningEffort: z.string().trim().min(1).max(50).nullable().optional(),

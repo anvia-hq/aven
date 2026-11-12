@@ -54,6 +54,7 @@ export const defaultCreateBotAgent =
     mcpServers,
     providers,
     threads,
+    api,
     notes,
     cockpit,
   }) =>
@@ -86,6 +87,7 @@ export const defaultCreateBotAgent =
       mcpServers,
       providers,
       threads,
+      api,
       notes,
       cockpit,
     });
@@ -279,7 +281,7 @@ export class BotReplies {
     const sandbox = this.#computer(bot.id);
     await starting(bot.id);
     abort.signal.throwIfAborted();
-    const box = await sandbox.acquire({ id: bot.id });
+    const box = await sandbox.acquire({ id: bot.id, bot: true });
     boxes.set(bot.id, box);
     const skillListing = await this.#installSkills(replyId, bot.id, skills);
     const peers = [...bot.peers];
@@ -382,6 +384,7 @@ export class BotReplies {
             }
           : undefined,
       },
+      api: async (params) => call("bot.api", { replyId, ...params }),
       threads: {
         projects: async () =>
           (await call("bot.thread", { replyId, op: "projects" })) as BotProjectView[],

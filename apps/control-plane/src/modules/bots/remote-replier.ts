@@ -7,6 +7,7 @@ import { isGoalRoundNote } from "@aven/protocol/goals";
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
+import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
 import { runCockpitCommand } from "../cockpit/commands";
 import type {
@@ -38,6 +39,8 @@ import type {
   BotSendParams,
   BotSkillParams,
   BotThreaded,
+  BotApiParams,
+  BotApiResult,
   BotThreadParams,
   BotUpdateParams,
 } from "@aven/protocol/types";
@@ -59,7 +62,7 @@ export class RemoteBotReplier implements BotReplier {
     private hub: Pick<RuntimeHub, "get">,
     private gateway: Pick<RunGateway, "check" | "issue" | "revoke">,
     private store: MemoryStore,
-    private runtimeId: string,
+    private defaultRuntimeId: string,
     private bots: BotKeeper,
     private skills: BotSkills,
     private mcp: BotMcp,
@@ -69,8 +72,8 @@ export class RemoteBotReplier implements BotReplier {
     private agentOnControlPlane = true,
   ) {}
 
-  ready(model: ModelConfig) {
-    this.#place();
+  ready(model: ModelConfig, bot: Pick<Bot, "runtimeId">) {
+    this.#place(this.#runtimeOf(bot));
     this.gateway.check(model);
   }
 
@@ -89,6 +92,7 @@ export class RemoteBotReplier implements BotReplier {
   }: BotReplyInput) {
     signal.throwIfAborted();
     if (isGoalRoundNote(prompt) && (await this.bots.goals.get(bot.id))?.phase !== "active") return;
+    if (bot.runtimeId) await this.bots.usableRuntime(userId, bot.runtimeId);
     const peers = await this.#peersOf(userId, bot.id);
     const timezone = await this.bots.timezone(userId);
     const skills = await this.skills.forRun(userId);
@@ -98,7 +102,8 @@ export class RemoteBotReplier implements BotReplier {
     const keepsNotes = onPersonsWord;
     const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
-    const { connection, machine } = this.#place();
+    const runtimeId = this.#runtimeOf(bot);
+    const { connection, machine } = this.#place(runtimeId);
     const replyId = crypto.randomUUID();
     const runModel = this.gateway.issue(replyId, model);
     const ended = Promise.withResolvers<void>();
@@ -107,6 +112,7 @@ export class RemoteBotReplier implements BotReplier {
     let written = 0;
     let asked = false;
     let threadRuns = 0;
+    let apiCalls = 0;
     const inspected = new Set<string>();
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
@@ -257,6 +263,17 @@ export class RemoteBotReplier implements BotReplier {
         const { kind, name, baseUrl, modelId, isDefault } = params;
         return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
       },
+      api: async (params: BotApiParams): Promise<BotApiResult> => {
+        if (params.op === "call") {
+          apiCalls += 1;
+          if (apiCalls > API_CALLS_PER_REPLY) {
+            throw new Error(
+              `You have made ${API_CALLS_PER_REPLY} API calls in this reply. Tell the person what is left.`,
+            );
+          }
+        }
+        return this.bots.api.answer({ userId, params, onPersonsWord: makesBotsOnTheirWord });
+      },
       thread: async (params: BotThreadParams): Promise<BotThreaded> => {
         if (params.op === "projects") return this.threads.projects(userId);
         if (params.op === "list") {
@@ -310,7 +327,7 @@ export class RemoteBotReplier implements BotReplier {
       cockpit: ({ command }: { command: unknown }) =>
         runCockpitCommand({ userId, access: "write", onPersonsWord }, command),
     };
-    const cancel = () => this.#cancel(replyId, signal);
+    const cancel = () => this.#cancel(replyId, signal, runtimeId);
     try {
       connection.startBotReply(
         replyId,
@@ -371,25 +388,25 @@ export class RemoteBotReplier implements BotReplier {
       .map(({ handle, name, description }) => ({ handle, name, description }));
   }
 
-  #place() {
-    if (this.agentOnControlPlane && this.runtimeId !== LOCAL_RUNTIME_ID) {
+  #runtimeOf(bot: Pick<Bot, "runtimeId">) {
+    return bot.runtimeId ?? this.defaultRuntimeId;
+  }
+
+  #place(runtimeId: string) {
+    if (this.agentOnControlPlane && runtimeId !== LOCAL_RUNTIME_ID) {
       const connection = this.hub.get(LOCAL_RUNTIME_ID);
       if (!connection)
         throw new RuntimeOfflineError("The control plane's own runner is not running");
-      return { connection, machine: this.runtimeId };
+      return { connection, machine: runtimeId };
     }
-    return { connection: this.#connection(), machine: undefined };
-  }
-
-  #connection() {
-    const connection = this.hub.get(this.runtimeId);
+    const connection = this.hub.get(runtimeId);
     if (!connection) throw new RuntimeOfflineError("The bot's computer is offline");
-    return connection;
+    return { connection, machine: undefined };
   }
 
-  #cancel(replyId: string, signal: AbortSignal) {
+  #cancel(replyId: string, signal: AbortSignal, runtimeId: string) {
     try {
-      this.#place().connection.cancelBotReply(replyId, errorOf(signal));
+      this.#place(runtimeId).connection.cancelBotReply(replyId, errorOf(signal));
     } catch {}
   }
 }

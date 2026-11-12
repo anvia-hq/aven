@@ -3,6 +3,7 @@ import { SettingsEmpty, SettingsRow, SettingsSection } from "@/components/settin
 import { useBots } from "../hooks/use-bots";
 import { BotAvatar } from "./bot-avatar";
 import { BotCompactionRow } from "./bot-compaction-row";
+import { BotRuntimeRow } from "./bot-runtime-row";
 import { BotEffortRow } from "./bot-effort-row";
 import { BotModelSelect } from "./bot-model-select";
 
@@ -26,6 +27,7 @@ export function BotsSettingsList() {
             </SettingsRow>
             <BotEffortRow bot={bot} />
             <BotCompactionRow bot={bot} />
+            <BotRuntimeRow bot={bot} />
           </div>
         </SettingsSection>
       ))}

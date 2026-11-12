@@ -3,6 +3,7 @@ import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
 import { compactionFor, resolveAgentModel } from "./agent-model";
 import { botInstructions } from "./bot-instruction";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
+import { createApiTools } from "./tools/api";
 import { createAskQuestionTool } from "./tools/ask-question";
 import { createCreateBotTool } from "./tools/create-bot";
 import { createGoalTools } from "./tools/goals";
@@ -26,6 +27,7 @@ import type {
   ProvidersHost,
   ScheduleHost,
   SendMessage,
+  ApiHost,
   ThreadsHost,
   UpdateSelf,
 } from "./tools/types";
@@ -58,6 +60,7 @@ type BotAgentOptions = ModelSource & {
   mcpServers?: McpServersHost;
   providers?: ProvidersHost;
   threads?: ThreadsHost;
+  api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
 };
@@ -84,6 +87,7 @@ export function createBotAgent({
   mcpServers,
   providers,
   threads,
+  api,
   notes,
   cockpit,
   paths,
@@ -111,6 +115,7 @@ export function createBotAgent({
         mcpServers: Boolean(mcpServers),
         providers: providers ? { keyForm: Boolean(providers.askKey) } : undefined,
         threads: Boolean(threads),
+        api: Boolean(api),
         notes: notes?.memory,
       }),
       paths ?? SANDBOX_PATHS,
@@ -130,12 +135,14 @@ export function createBotAgent({
       ...keepingMcpServers(mcpServers),
       ...keepingProviders(providers),
       ...workingThreads(threads),
+      ...usingApi(api),
       ...keepingNotes(notes?.host),
       ...workingCockpit(cockpit),
     ],
   });
 }
 
+const usingApi = (host?: ApiHost) => (host ? createApiTools(host) : []);
 const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
 const workingCockpit = (cockpit?: { access: CockpitAccess; host: CockpitHost }) =>
   cockpit ? [createCockpitTool(cockpit.host, cockpit.access)] : [];
