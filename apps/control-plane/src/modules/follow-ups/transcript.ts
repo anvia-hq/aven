@@ -12,6 +12,12 @@ const textOf = (message: ChatMessage) =>
     .join("")
     .trim();
 
+export const agentReply = (messages: readonly ChatMessage[]) => {
+  const last = messages.at(-1);
+
+  return last?.role === "assistant" ? textOf(last) : "";
+};
+
 export function followUpTranscript(messages: readonly ChatMessage[]) {
   const last = messages.at(-1);
 

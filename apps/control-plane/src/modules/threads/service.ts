@@ -9,6 +9,7 @@ import { isDriving } from "@aven/protocol/drivers";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
+import { claudeSetupService } from "../claude-setup/service";
 import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
@@ -228,6 +229,8 @@ export const threadsService = {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
 
+    if (body.backend === "claude") await claudeSetupService.requireFor(userId);
+
     if (body.backend === "codex") await codexSetupService.requireFor(userId);
 
     const [thread] = await db
@@ -237,8 +240,8 @@ export const threadsService = {
         projectId: project.id,
         createdBy: userId,
         runtimeId,
-        parentThreadId: placement?.parentThreadId,
         agentBackend: body.backend ?? "native",
+        parentThreadId: placement?.parentThreadId,
         title: body.title ?? project.name,
       })
       .returning(columns);

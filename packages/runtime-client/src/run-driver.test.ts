@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { AGENT_BACKEND_CAPABILITIES } from "@aven/protocol/runtime-wire";
+
 import { backendFor } from "./agent-backends";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -55,6 +57,7 @@ function fakeBackend(kind = "native") {
   };
   const backend: AgentBackend = {
     kind: kind as AgentBackend["kind"],
+    capabilities: AGENT_BACKEND_CAPABILITIES[kind as AgentBackend["kind"]],
     asked: async () => parked,
     async start(runId, _threadId, _prompt, input) {
       const run = followed(runId);

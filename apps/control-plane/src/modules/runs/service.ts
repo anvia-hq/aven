@@ -118,6 +118,8 @@ export class RunManager {
       senderId,
       codexLogin,
       codexModel,
+      claudeToken,
+      claudeModel,
     }: RunExtras = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -138,6 +140,8 @@ export class RunManager {
         model: model ?? undefined,
         codexLogin,
         codexModel,
+        claudeToken,
+        claudeModel,
       });
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
 
@@ -167,6 +171,8 @@ export class RunManager {
       cockpit,
       codexLogin,
       codexModel,
+      claudeToken,
+      claudeModel,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -197,6 +203,8 @@ export class RunManager {
         model: model ?? undefined,
         codexLogin,
         codexModel,
+        claudeToken,
+        claudeModel,
       });
       await this.#begin(channel, handle, { type: "run_resume" }, () =>
         this.#continuations.clear(thread.id),

@@ -1,5 +1,6 @@
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { backendSupports } from "@aven/protocol/runtime-wire";
 import { cn } from "cn";
 
 import { NotFound } from "@/components/not-found";
@@ -57,7 +58,8 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const followUps = useFollowUps(threadId, loaded, running, messages);
   const { selection } = useModelSelection(threadId);
   const { compacting, compact } = useCompactThread(threadId);
-  const canCompact = owned && !running && !question;
+  const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
+  const canCompact = owned && !running && !question && supportsCompaction;
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
   const { overview, diff, files, terminal } = panels;
@@ -129,11 +131,15 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                         usage={usage}
                         synced={synced}
                         owned={owned}
-                        onCompact={{
-                          run: () => void compact(),
-                          busy: compacting,
-                          disabled: !canCompact,
-                        }}
+                        onCompact={
+                          supportsCompaction
+                            ? {
+                                run: () => void compact(),
+                                busy: compacting,
+                                disabled: !canCompact,
+                              }
+                            : undefined
+                        }
                       />
                     )
                   }

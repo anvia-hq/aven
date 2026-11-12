@@ -1,3 +1,4 @@
+import type { AgentBackendCapabilities } from "@aven/protocol/runtime-wire";
 import type {
   AgentBackendKind,
   BotMemoryParams,
@@ -19,8 +20,10 @@ import type {
   RunMemory,
   RunModel,
   RunSkill,
+  QuestionPrompt,
   RunThreadInfo,
   RunWebSearch,
+  ToolArtifact,
   RuntimeCalls,
   RuntimeToControlPlane,
   SteerResult,
@@ -34,6 +37,7 @@ import type {
   McpServersHost,
   MemoryHost,
   ProvidersHost,
+  RunSubagent,
   ScheduleHost,
   SendMessage,
   TakenChanges,
@@ -62,6 +66,7 @@ import type {
   DurableRun,
   DurableRuntime,
 } from "@anvia/durable";
+import type { z } from "zod";
 import type { SandboxRuntime } from "@anvia/sandbox";
 import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
@@ -181,6 +186,102 @@ export type GoalJournal = {
 
 export type Emit = (event: RunEvent, source?: Source) => void;
 
+export type ClaudeQuestion = {
+  name: "ask_user" | "request_secret";
+  questions: QuestionPrompt[];
+};
+
+export type ClaudeMcpTool = {
+  name: string;
+  description: string;
+  shape: Record<string, z.ZodType>;
+  handler(args: unknown): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }>;
+};
+
+export type ClaudeToolHost = {
+  memory?(command: unknown): Promise<unknown>;
+  cockpit?(command: unknown): Promise<unknown>;
+  fork?(input: {
+    task: string;
+    context: string;
+    title?: string;
+  }): Promise<{ id: string; title: string }>;
+  catalog?: readonly AnyTool[];
+  questions?: boolean;
+  webSearch?: RunWebSearch;
+  signal?: AbortSignal;
+  emit?(event: RunEvent): void;
+  onPark?(question: ClaudeQuestion): Promise<string>;
+  runSubagent?: RunSubagent;
+  shown?(artifacts: ToolArtifact[]): void;
+};
+
+export type ClaudeRunContext = {
+  token?: string;
+  workspace(): Promise<string>;
+  tools: ClaudeToolHost;
+  redact(text: string): string;
+  env: readonly RunEnvVar[];
+  instructions?: string;
+  model?: string;
+  compact?: boolean;
+  questions?: boolean;
+  children?: boolean;
+};
+
+export type ClaudeUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+};
+
+export type ClaudeSdkMessage =
+  | {
+      type: "assistant";
+      session_id?: string;
+      error?: string;
+      message?: { content?: unknown; usage?: ClaudeUsage };
+    }
+  | { type: "user"; session_id?: string; message?: { content?: unknown } }
+  | { type: "system"; session_id?: string }
+  | {
+      type: "result";
+      session_id?: string;
+      subtype?: string;
+      result?: string;
+      errors?: string[];
+      usage?: ClaudeUsage;
+    }
+  | {
+      type: "stream_event";
+      session_id?: string;
+      event?: {
+        type?: string;
+        delta?: { type?: string; text?: string; thinking?: string };
+      };
+    };
+
+export type ClaudeQueryInput = {
+  prompt: AsyncIterable<string>;
+  sessionId?: string;
+  token: string;
+  cwd: string;
+  configDir: string;
+  abortController: AbortController;
+  tools: ClaudeToolHost;
+  env: readonly RunEnvVar[];
+  redact(text: string): string;
+  instructions?: string;
+  model?: string;
+  maxTurns?: number;
+  resumeInterrupted?: boolean;
+};
+
+export type ClaudeQuery = (
+  input: ClaudeQueryInput,
+) => AsyncIterable<ClaudeSdkMessage> & { close?(): void };
+
 export type CodexInstructionExtras = {
   skills?: readonly SkillListing[];
   skillsUnavailable?: readonly string[];
@@ -209,6 +310,7 @@ export type RunInput = {
   agent?: Agent<unknown>;
   compaction?: DurableAgentRegistration["compaction"];
   contextWindow?: number;
+  claude?: ClaudeRunContext;
   codex?: CodexRunContext;
 };
 
@@ -232,6 +334,7 @@ export type AskedQuestion = { id: string; toolCallId: string };
 
 export interface AgentBackend {
   readonly kind: AgentBackendKind;
+  readonly capabilities: AgentBackendCapabilities;
   asked(threadId: string): Promise<AskedRun | undefined>;
   start(
     runId: string,
@@ -386,6 +489,7 @@ export type RunRecord = {
   reportId?: string;
   done?: boolean;
   backend?: string;
+  claudeModel?: string;
 };
 
 export type RunToolsInput = {

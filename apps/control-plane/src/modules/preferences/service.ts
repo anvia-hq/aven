@@ -3,8 +3,17 @@ import { userSettings } from "@aven/db/schema/user-settings";
 import { eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
-import type { FollowUpSettings } from "./types";
+import { serverSmallModel } from "../providers/server-small-model";
+import { serverModelsService } from "../server-models/service";
+import type { FollowUpSettings, FollowUpView, ServerSmallModelView } from "./types";
 import { checkTimezone, CronError, systemTimezone } from "../schedules/cron";
+
+serverSmallModel(process.env);
+
+async function serverModelView(): Promise<ServerSmallModelView | null> {
+  const { small } = await serverModelsService.view();
+  return small ? { provider: small.kind, modelId: small.modelId } : null;
+}
 
 export const preferencesService = {
   async timezone(userId: string) {
@@ -21,7 +30,8 @@ export const preferencesService = {
         enabled: row?.followUpsEnabled ?? false,
         providerId: row?.followUpsProviderId ?? null,
         modelId: row?.followUpsModelId ?? null,
-      },
+        serverModel: await serverModelView(),
+      } satisfies FollowUpView,
     };
   },
 
@@ -39,7 +49,7 @@ export const preferencesService = {
       .insert(userSettings)
       .values({ userId, ...values })
       .onConflictDoUpdate({ target: userSettings.userId, set: values });
-    return followUps;
+    return { ...followUps, serverModel: await serverModelView() } satisfies FollowUpView;
   },
 
   async setDefaultTimezone(userId: string, timezone: string) {

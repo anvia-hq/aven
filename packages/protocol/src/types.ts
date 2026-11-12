@@ -571,6 +571,7 @@ export type RunSecrets = {
   mcp?: RunMcpServer[];
   codexLogin?: string;
   codexModel?: string;
+  claudeToken?: string;
 };
 
 export type BotReplyInfo = {
@@ -608,6 +609,8 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       codexLogin?: string;
       codexModel?: string;
+      claudeToken?: string;
+      claudeModel?: string;
     }
   | {
       type: "run.resume";
@@ -627,6 +630,8 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       codexLogin?: string;
       codexModel?: string;
+      claudeToken?: string;
+      claudeModel?: string;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {

@@ -5,8 +5,7 @@ import { attempt, postJson } from "@/lib/api";
 
 import { handOverFirstPrompt } from "../first-prompt";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
-
-type Backend = Thread["agentBackend"];
+import type { AgentBackendKind } from "@aven/protocol/types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -19,7 +18,7 @@ export function useStartThread() {
   const navigate = useNavigate();
   const { add, refresh } = useThreads();
 
-  function createThread(projectId: string, title: string, backend: Backend) {
+  function createThread(projectId: string, title: string, backend: AgentBackendKind) {
     return attempt("Could not start thread", () =>
       postJson<Thread>("/threads", { projectId, title, backend }),
     );
@@ -29,7 +28,7 @@ export function useStartThread() {
     projectId: string | undefined,
     message: OutgoingMessage,
     selection: RunSelection = {},
-    backend: Backend = "native",
+    backend: AgentBackendKind = "native",
   ) => {
     if (!projectId) {
       toast.add({ title: "Choose a project first", type: "error" });

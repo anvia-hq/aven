@@ -9,7 +9,69 @@ export const PROVIDERS = [
 ] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 
-export const AGENT_BACKENDS = ["native", "codex"] as const;
+export const AGENT_BACKENDS = ["native", "claude", "codex"] as const;
+
+export const AGENT_BACKEND_CAPABILITIES = {
+  native: {
+    question: true,
+    restart: true,
+    steering: true,
+    goals: true,
+    compaction: true,
+  },
+  claude: {
+    question: true,
+    restart: true,
+    steering: true,
+    goals: true,
+    compaction: true,
+  },
+  codex: {
+    question: true,
+    restart: true,
+    steering: true,
+    goals: true,
+    compaction: true,
+  },
+} as const satisfies Record<
+  (typeof AGENT_BACKENDS)[number],
+  Readonly<Record<AgentBackendCapability, boolean>>
+>;
+
+export type AgentBackendCapability = "question" | "restart" | "steering" | "goals" | "compaction";
+
+export type AgentBackendCapabilities = Readonly<Record<AgentBackendCapability, boolean>>;
+
+const BACKEND_ACT: Record<AgentBackendCapability, string> = {
+  question: "pause for a question",
+  restart: "continue a run after the runner restarts",
+  steering: "take a message while it is working",
+  goals: "run a goal",
+  compaction: "compact a thread",
+};
+
+export function backendSupports(
+  kind: string | null | undefined,
+  capability: AgentBackendCapability,
+) {
+  const name = kind === "claude" || kind === "codex" ? kind : "native";
+  return AGENT_BACKEND_CAPABILITIES[name][capability];
+}
+
+export function backendRefusal(kind: string, capability: AgentBackendCapability) {
+  let name = `The ${kind} agent`;
+
+  if (kind === "claude") name = "The Claude agent";
+
+  if (kind === "codex") name = "The Codex agent";
+
+  if (kind === "native") name = "The native agent";
+
+  return `${name} does not ${BACKEND_ACT[capability]}`;
+}
+
+export const CLAUDE_TOKEN_MISSING =
+  "Set a Claude setup token in Settings before this thread can run on the Claude agent";
 
 export const RUNTIME_PROVIDERS = ["manual"] as const;
 

@@ -15,6 +15,8 @@ import { existsSync, mkdirSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname } from "node:path";
 
+import { AGENT_BACKEND_CAPABILITIES } from "@aven/protocol/runtime-wire";
+
 import { createDurableEventMapper } from "./durable-events";
 import { defineAvenGoal, startGoal } from "./durable-goals";
 import { assertDurableToolConcurrency } from "./durable-tool-concurrency";
@@ -105,14 +107,9 @@ const INTERRUPTED =
 
 const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 };
 
-function nativeAgent(input: RunInput) {
-  if (!input.agent) throw new Error("This run has no native agent");
-
-  return input.agent;
-}
-
 export class DurableRuns implements AgentBackend {
-  readonly kind = "native";
+  readonly kind = "native" as const;
+  readonly capabilities = AGENT_BACKEND_CAPABILITIES.native;
   #runtime: DurableRuntime;
   #goals: GoalJournal;
   #turns: TranscriptTurns;
@@ -210,16 +207,19 @@ export class DurableRuns implements AgentBackend {
     input: RunInput,
     onEvent: Emit,
   ) {
-    const agent = nativeAgent(input);
     this.#register(input);
     try {
+      const agent = this.#agent(input);
       const run = await this.#runtime.submit(
         { agentId: agent.id, sessionId: threadId, requestId: runId, prompt },
         { enqueue: true },
       );
       return this.#follow(run, input, onEvent);
     } catch (error) {
-      this.#runtime.unregisterAgent(agent.id);
+      const agent = input.agent;
+
+      if (agent) this.#runtime.unregisterAgent(agent.id);
+
       throw error;
     }
   }
@@ -280,7 +280,7 @@ export class DurableRuns implements AgentBackend {
     const run = await this.#runtime.getRun(durableId);
     const followed = this.#follow(run, input, onEvent, { after });
     followed.done.catch(() => undefined);
-    await this.#revive([nativeAgent(input).id]);
+    await this.#revive([this.#agent(input).id]);
     return followed;
   }
 
@@ -363,8 +363,14 @@ export class DurableRuns implements AgentBackend {
     }
   }
 
+  #agent(input: RunInput) {
+    if (!input.agent) throw new Error("The native agent backend was started without an agent");
+
+    return input.agent;
+  }
+
   #register(input: RunInput) {
-    const agent = nativeAgent(input);
+    const agent = this.#agent(input);
     this.#runtime.registerAgents([
       {
         agent,
@@ -392,7 +398,7 @@ export class DurableRuns implements AgentBackend {
     onEvent: Emit,
     options: FollowOptions = {},
   ): FollowedRun {
-    const { agentId = nativeAgent(input).id, after, keepAgent } = options;
+    const { agentId = this.#agent(input).id, after, keepAgent } = options;
     const mapper = createDurableEventMapper({ contextWindow: input.contextWindow });
 
     if (after) this.#replay(run.id, after, mapper);

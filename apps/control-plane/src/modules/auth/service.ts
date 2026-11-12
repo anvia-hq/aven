@@ -13,6 +13,7 @@ import { bearer, organization } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
 
 import { platformService } from "../platform/service";
+import { emailLoginOf } from "./email-login";
 import { parseOrigins } from "./origins";
 import { socialProvidersOf } from "./social";
 
@@ -43,6 +44,7 @@ const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:5173";
 const socialProviders = socialProvidersOf(process.env, baseURL);
 
 export const githubLoginEnabled = "github" in socialProviders;
+export const emailLoginEnabled = emailLoginOf(process.env, githubLoginEnabled);
 
 export const trustedOrigins = parseOrigins(process.env.TRUSTED_ORIGINS ?? "http://localhost:5173");
 
@@ -63,7 +65,7 @@ export const auth = betterAuth({
       invitation: invitations,
     },
   }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: emailLoginEnabled },
   socialProviders,
   plugins: [organization(), bearer()],
   databaseHooks: {

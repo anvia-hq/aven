@@ -35,9 +35,9 @@ describe("backendFor (decision 0220)", () => {
     );
   });
 
-  test("a runner offers native and Codex", async () => {
+  test("a runner offers native, Claude and Codex", async () => {
     const opened = openAgentBackends(journalPath(), new Set());
-    expect(opened.offered).toEqual(["native", "codex"]);
+    expect(opened.offered).toEqual(["native", "claude", "codex"]);
     expect((await opened.get("codex")).kind).toBe("codex");
     expect((await opened.get("native")).kind).toBe("native");
     await opened.close();

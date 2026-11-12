@@ -1,5 +1,6 @@
 import type { useThreadPanels } from "./hooks/use-thread-panels";
 import type {
+  AgentBackendKind,
   ChatMessage,
   DiffLine,
   MessageAttachment,
@@ -57,6 +58,7 @@ export type Thread = {
   id: string;
   projectId: string;
   title: string;
+  agentBackend: AgentBackendKind;
   createdBy: string;
   createdByName: string;
   createdByImage: string | null;
@@ -65,7 +67,6 @@ export type Thread = {
   drivingUntil: string | null;
   parentThreadId: string | null;
   runtimeId: string;
-  agentBackend: "native" | "codex";
   state: ThreadState;
   running: boolean;
   pullRequests: ThreadPullRequest[];

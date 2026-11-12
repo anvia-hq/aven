@@ -1,3 +1,4 @@
+import { AGENT_BACKEND_CAPABILITIES } from "@aven/protocol/runtime-wire";
 import type { AgentPrompt, JsonValue, Message } from "@anvia/core";
 import { createSpawnAgentTool, type SubagentTask } from "@aven/agents/tools/spawn-agent";
 import { subagentTools } from "@aven/agents/subagents";
@@ -75,6 +76,7 @@ type Live = {
 
 export class CodexRuns implements AgentBackend {
   readonly kind = "codex";
+  readonly capabilities = AGENT_BACKEND_CAPABILITIES.codex;
   #sessions: CodexSessions;
   #home: string;
   #query: CodexQuery;

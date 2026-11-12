@@ -3,8 +3,7 @@ import { resolveAgentModel } from "@aven/agents/agent-model";
 import { z } from "zod";
 
 import { preferencesService } from "../preferences/service";
-import { resolveModel } from "../providers/resolve-model";
-import type { ModelSelection } from "../providers/types";
+import { followUpModel } from "./model";
 
 export const FOLLOW_UP_COUNT = 3;
 export const FOLLOW_UP_TIMEOUT_MS = 12_000;
@@ -26,14 +25,10 @@ export const clean = (suggestions: readonly string[]) => [
 export async function suggestFollowUps(userId: string, transcript: string) {
   const settings = await preferencesService.followUps(userId);
 
-  if (!settings.enabled || !settings.providerId) return [];
+  if (!settings.enabled) return [];
 
   try {
-    const selection: ModelSelection = { providerId: settings.providerId };
-
-    if (settings.modelId) selection.modelId = settings.modelId;
-
-    const config = await resolveModel(userId, selection);
+    const config = await followUpModel(userId, settings);
 
     if (!config) return [];
 

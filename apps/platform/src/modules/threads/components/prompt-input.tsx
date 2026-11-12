@@ -26,11 +26,13 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
-import type { MentionPerson, OutgoingMessage, RunSelection, Thread } from "../types";
+import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
+import type { AgentBackendKind } from "@aven/protocol/types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { AgentChip, PersonAvatar, PersonChip } from "./person-chip";
+import { ClaudeModelMenu } from "./claude-model-menu";
 import { CodexModelMenu } from "./codex-model-menu";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
@@ -44,7 +46,7 @@ type Props = {
   autoFocus?: boolean;
   threadId?: string;
   tools?: ReactNode;
-  backend?: Thread["agentBackend"];
+  backend?: AgentBackendKind;
 };
 
 const renderEntity =
@@ -110,8 +112,13 @@ function Composer({
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
+  const [claudeModelId, setClaudeModelId] = useState<string | undefined>();
   const [codexModelId, setCodexModelId] = useState<string | undefined>();
-  const selection = backend === "codex" ? { modelId: codexModelId } : model.selection;
+  const chosenModelId = { claude: claudeModelId, codex: codexModelId };
+  const selection =
+    backend === "claude" || backend === "codex"
+      ? { modelId: chosenModelId[backend] }
+      : model.selection;
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
@@ -175,11 +182,13 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {backend === "codex" ? (
-            <CodexModelMenu modelId={codexModelId} onChange={setCodexModelId} />
-          ) : (
-            <ModelMenu model={model} />
+          {backend === "claude" && (
+            <ClaudeModelMenu modelId={claudeModelId} onChange={setClaudeModelId} />
           )}
+          {backend === "codex" && (
+            <CodexModelMenu modelId={codexModelId} onChange={setCodexModelId} />
+          )}
+          {(!backend || backend === "native") && <ModelMenu model={model} />}
           {running && (
             <Button
               size="icon-sm"

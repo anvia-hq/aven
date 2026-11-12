@@ -36,8 +36,8 @@ function Login() {
         </>
       }
     >
-      <AuthForm mode="sign-in" onSuccess={onSuccess} />
-      {config?.githubLogin && <GithubSignIn invitation={invitation} />}
+      {config?.emailLogin && <AuthForm mode="sign-in" onSuccess={onSuccess} />}
+      {config?.githubLogin && <GithubSignIn invitation={invitation} divided={config.emailLogin} />}
     </AuthShell>
   );
 }

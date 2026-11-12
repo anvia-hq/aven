@@ -50,6 +50,8 @@ export type RunExtras = Pick<
   | "cockpit"
   | "codexLogin"
   | "codexModel"
+  | "claudeToken"
+  | "claudeModel"
 > & { senderId?: string };
 
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
@@ -71,6 +73,8 @@ export type StartRunInput = {
   model?: ModelConfig;
   codexLogin?: string;
   codexModel?: string;
+  claudeToken?: string;
+  claudeModel?: string;
 };
 
 export type ResumeRunInput = {
@@ -88,6 +92,8 @@ export type ResumeRunInput = {
   model?: ModelConfig;
   codexLogin?: string;
   codexModel?: string;
+  claudeToken?: string;
+  claudeModel?: string;
 };
 
 export type RunResult = { type: RunOutcome; continuation?: unknown };

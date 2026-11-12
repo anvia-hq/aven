@@ -1134,7 +1134,7 @@ describe("startRuntime runs", () => {
     });
     await runtime.ready;
     await until(() => hellos(plane).length === 1);
-    expect(hellos(plane)[0]).toMatchObject({ backends: ["native", "codex"] });
+    expect(hellos(plane)[0]).toMatchObject({ backends: ["native", "claude", "codex"] });
 
     plane.send(runStart);
     await until(() => ended(plane).length === 1);

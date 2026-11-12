@@ -20,8 +20,12 @@ export type Member = {
   status: "active" | "pending";
 };
 
-export type FollowUpSettings = {
+export type FollowUpChoice = {
   enabled: boolean;
   providerId: string | null;
   modelId: string | null;
+};
+
+export type FollowUpSettings = FollowUpChoice & {
+  serverModel: { provider: string; modelId: string } | null;
 };

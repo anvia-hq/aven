@@ -38,7 +38,10 @@ import { organizationsOf } from "./modules/bot-api/organizations";
 import { createBotApi } from "./modules/bot-api/service";
 import type { KnownRoute } from "./modules/bot-api/types";
 import { createFollowUps } from "./modules/follow-ups/service";
+import { createFollowUpGate } from "./modules/follow-ups/gate";
 import { suggestFollowUps } from "./modules/follow-ups/suggest";
+import { decisionModelService } from "./modules/decision-model/service";
+import { followUpDecider, jevModel } from "./modules/decision-model/jev";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
@@ -98,6 +101,10 @@ export const threadMessages = createThreadMessages(runsService);
 export const followUps = createFollowUps({
   messagesOf: async (viewer, threadId) =>
     (await runsService.latest(await threadsService.readable(viewer, threadId))).messages,
+  worthSuggesting: createFollowUpGate({
+    configOf: (organizationId) => decisionModelService.config(organizationId),
+    deciderFor: (config) => followUpDecider(jevModel(config)),
+  }),
   suggest: suggestFollowUps,
 });
 
