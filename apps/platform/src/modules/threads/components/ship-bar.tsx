@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { ChangesBadge } from "@/modules/diff/components/changes-badge";
 import { useDiffPreferences } from "@/modules/diff/hooks/use-diff-preferences";
 import type { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
@@ -15,9 +17,18 @@ type Props = {
   send: (message: OutgoingMessage, selection?: RunSelection) => Promise<boolean>;
   panels: ThreadPanels;
   split?: boolean;
+  suggestions?: ReactNode;
 };
 
-export function ShipBar({ thread, unshipped, showShip, send, panels, split = false }: Props) {
+export function ShipBar({
+  thread,
+  unshipped,
+  showShip,
+  send,
+  panels,
+  split = false,
+  suggestions,
+}: Props) {
   const { action, ship, setUp, retry } = useShipAction(thread, unshipped, showShip, send);
   const { setScope } = useDiffPreferences();
 
@@ -27,8 +38,8 @@ export function ShipBar({ thread, unshipped, showShip, send, panels, split = fal
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 pb-2">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 pb-2">
+      <div className="flex shrink-0 items-center gap-2">
         <ShipButton
           action={action}
           threadId={thread.id}
@@ -39,7 +50,8 @@ export function ShipBar({ thread, unshipped, showShip, send, panels, split = fal
         <PullRequestChip pullRequests={thread.pullRequests} />
         {!split && <ChangesBadge diff={unshipped} onOpen={showChanges} />}
       </div>
-      <div className="flex items-center gap-2">
+      {suggestions}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <ActionButtons thread={thread} />
       </div>
     </div>

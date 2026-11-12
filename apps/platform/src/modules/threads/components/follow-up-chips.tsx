@@ -12,21 +12,22 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
     <ul
       aria-label="Suggested replies"
       data-slot="follow-ups"
-      className="mb-2 flex min-w-0 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]"
+      className="flex h-9 min-w-0 flex-1 flex-wrap gap-2 overflow-hidden p-1"
     >
       {suggestions.map((text, index) => (
         <li
           key={text}
           style={{ transitionDelay: `${index * 40}ms` } as CSSProperties}
-          className="min-w-0 shrink-0 transition-[opacity] duration-200 ease-out starting:opacity-0 motion-reduce:transition-none"
+          className="max-w-[16rem] min-w-0 transition-[opacity] duration-200 ease-out starting:opacity-0 motion-reduce:transition-none"
         >
           <Button
-            variant="ghost"
+            variant="outline"
+            size="sm"
+            className="max-w-full gap-1.5 pr-2.5 pl-1.5 shadow-md"
             onClick={() => onPick(text)}
-            className="h-auto flex max-w-[min(20rem,80vw)] items-center gap-2 rounded-full border bg-card py-1.5 pr-4 pl-1.5 text-left text-sm transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-              <ArrowUp className="size-4" />
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+              <ArrowUp className="size-3" />
             </span>
             <span className="truncate">{text}</span>
           </Button>
