@@ -25,7 +25,7 @@ Use them as Tailwind utilities: `bg-primary text-primary-foreground`, `text-mute
 
 ## Changing the theme
 
-Edit the CSS variables in `:root` and `.dark` in `src/index.css`. Add a new token in both blocks and map it in `@theme inline` as `--color-<name>`. Dark mode is class based and **the default**. The `theme` module (`src/modules/theme`) holds the light/dark choice in a persisted jotai atom, an inline script in `index.html` applies it before first paint, and `ThemeSelector` (a single toggle button in the authenticated header) flips it. Also define sidebar tokens (`--sidebar-*`) when you change the theme.
+Edit the CSS variables in `:root` and `.dark` in `src/index.css`. Add a new token in both blocks and map it in `@theme inline` as `--color-<name>`. Dark mode is class based and **the default**. The `theme` module (`src/modules/theme`) holds the light, dark or system choice in a persisted jotai atom, an inline script in `index.html` applies it before first paint, and `ModePicker` (a select in Settings > Appearance, decision 0224) changes it. Also define sidebar tokens (`--sidebar-*`) when you change the theme.
 
 ## Base UI
 
