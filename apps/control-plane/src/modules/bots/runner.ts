@@ -115,7 +115,7 @@ export class BotRunner {
     },
   ) {
     const { shown, ...reply } = input;
-    this.#replier.ready(reply.model);
+    this.#replier.ready(reply.model, reply.bot);
     const channel = await this.#open(reply.bot.id, reply.userId);
     if (channel.pending >= MAX_PENDING) {
       throw new ConflictError("The bot has a lot to answer already; give it a moment");

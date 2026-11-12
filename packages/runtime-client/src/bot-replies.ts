@@ -279,7 +279,7 @@ export class BotReplies {
     const sandbox = this.#computer(bot.id);
     await starting(bot.id);
     abort.signal.throwIfAborted();
-    const box = await sandbox.acquire({ id: bot.id });
+    const box = await sandbox.acquire({ id: bot.id, bot: true });
     boxes.set(bot.id, box);
     const skillListing = await this.#installSkills(replyId, bot.id, skills);
     const peers = [...bot.peers];

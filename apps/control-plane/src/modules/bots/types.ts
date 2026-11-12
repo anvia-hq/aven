@@ -77,7 +77,7 @@ export type BotReplyInput = {
 };
 
 export type BotReplier = {
-  ready(model: ModelConfig): void;
+  ready(model: ModelConfig, bot: Pick<Bot, "runtimeId">): void;
   answer(input: BotReplyInput): Promise<void>;
 };
 

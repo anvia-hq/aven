@@ -414,6 +414,13 @@
       "when": 1794450264923,
       "tag": "0058_same_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794451005146,
+      "tag": "0059_shocking_roxanne_simpson",
+      "breakpoints": true
     }
   ]
 }

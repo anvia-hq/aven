@@ -20,6 +20,7 @@ export type Bot = {
   modelId: string | null;
   reasoningEffort: string | null;
   compactAfterTokens: number | null;
+  runtimeId: string | null;
   isMain: boolean;
   createdAt: string;
   updatedAt: string;

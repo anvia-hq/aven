@@ -11,6 +11,7 @@ import {
 import { sql } from "drizzle-orm";
 
 import { providers } from "./providers";
+import { runtimes } from "./runtimes";
 import { users } from "./users";
 
 export const bots = pgTable(
@@ -29,6 +30,7 @@ export const bots = pgTable(
     modelId: text("model_id"),
     reasoningEffort: text("reasoning_effort"),
     compactAfterTokens: integer("compact_after_tokens"),
+    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "set null" }),
     isMain: boolean("is_main").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

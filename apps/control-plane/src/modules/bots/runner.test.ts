@@ -26,6 +26,7 @@ const bot: Bot = {
   modelId: null,
   reasoningEffort: null,
   compactAfterTokens: null,
+  runtimeId: null,
   isMain: true,
   createdAt: "",
   updatedAt: "",
