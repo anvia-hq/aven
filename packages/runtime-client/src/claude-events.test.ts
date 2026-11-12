@@ -71,6 +71,34 @@ describe("Claude stream events become thread events", () => {
     expect(JSON.stringify(filed)).toContain("Hello");
   });
 
+  test("reports the context size from the last call and the model's window", () => {
+    const turn = new ClaudeTurn();
+    turn.take({
+      type: "assistant",
+      parent_tool_use_id: null,
+      message: {
+        content: [{ type: "text", text: "hi" }],
+        usage: {
+          input_tokens: 10,
+          output_tokens: 5,
+          cache_creation_input_tokens: 100,
+          cache_read_input_tokens: 1000,
+        },
+      },
+    });
+    const events = turn.take({
+      type: "result",
+      subtype: "success",
+      usage: { input_tokens: 30, output_tokens: 9 },
+      modelUsage: { "claude-opus-4-8": { contextWindow: 200000 } },
+    });
+    expect(events).toContainEqual({
+      type: "usage",
+      turn: { inputTokens: 30, outputTokens: 9, cacheWriteTokens: 0, cacheReadTokens: 0 },
+      context: { usedTokens: 1115, contextWindow: 200000 },
+    });
+  });
+
   test("does not repeat text that was already streamed", () => {
     const turn = new ClaudeTurn();
     turn.take({

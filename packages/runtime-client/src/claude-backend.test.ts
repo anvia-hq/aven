@@ -189,21 +189,20 @@ describe("the Claude backend", () => {
         session_id: "sess-steer",
         message: { content: [{ type: "text", text: first.done ? "" : first.value }] },
       };
-      const steered = await Promise.race([
-        gate.then(() => undefined),
-        iterator.next().then((item) => (item.done ? undefined : item.value)),
-      ]);
-
-      if (steered) {
-        prompts.push(steered);
-        yield {
-          type: "assistant",
-          session_id: "sess-steer",
-          message: { content: [{ type: "text", text: steered }] },
-        };
-      }
-
+      await gate;
       yield { type: "result", subtype: "success", session_id: "sess-steer" };
+      const steered = await iterator.next();
+
+      if (steered.done) return;
+
+      prompts.push(steered.value);
+      yield {
+        type: "assistant",
+        session_id: "sess-steer",
+        message: { content: [{ type: "text", text: steered.value }] },
+      };
+      yield { type: "result", subtype: "success", session_id: "sess-steer" };
+      await iterator.next();
     };
     const { driver, reported, backend } = driverFor(query);
     const running = driver.start(start("run-1", "thread-a", TOKEN_A));

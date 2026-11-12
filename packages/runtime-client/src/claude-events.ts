@@ -6,7 +6,7 @@ import {
   SHOW_ARTIFACT_TOOL_NAME,
 } from "@aven/protocol/events";
 
-import type { ClaudeSdkMessage, ClaudeUsage } from "./types";
+import type { ClaudeModelUsage, ClaudeSdkMessage, ClaudeUsage } from "./types";
 import type {
   QuestionPrompt,
   RunEvent,
@@ -109,7 +109,7 @@ export class ClaudeTurn {
   #announced = new Set<string>();
   #names = new Map<string, string>();
   #sawText = false;
-  #usageSent = false;
+  #lastCall: ClaudeUsage | undefined;
   #assistant: Part[] = [];
   #tools: Part[] = [];
   #filed: Message[] = [];
@@ -163,7 +163,7 @@ export class ClaudeTurn {
     this.#streamedText = false;
     this.#streamedThinking = false;
     this.#sawText = false;
-    this.#usageSent = false;
+    this.#lastCall = undefined;
     return messages;
   }
 
@@ -210,11 +210,32 @@ export class ClaudeTurn {
     return [];
   }
 
+  #context(modelUsage: Record<string, ClaudeModelUsage> | undefined) {
+    const call = this.#lastCall;
+    const contextWindow = Math.max(
+      0,
+      ...Object.values(modelUsage ?? {}).map((item) => item.contextWindow ?? 0),
+    );
+
+    if (!call || contextWindow <= 0) return undefined;
+
+    const usedTokens =
+      (call.input_tokens ?? 0) +
+      (call.cache_creation_input_tokens ?? 0) +
+      (call.cache_read_input_tokens ?? 0) +
+      (call.output_tokens ?? 0);
+    return usedTokens > 0 ? { usedTokens, contextWindow } : undefined;
+  }
+
   #assistantMessage(message: Extract<ClaudeSdkMessage, { type: "assistant" }>): RunEvent[] {
     if (message.error === "authentication_failed") {
       this.error = "The Claude setup token was rejected. Replace it in Settings.";
     } else if (message.error) {
       this.#fail(message.error);
+    }
+
+    if (!message.parent_tool_use_id && message.message?.usage) {
+      this.#lastCall = message.message.usage;
     }
 
     const events: RunEvent[] = [];
@@ -304,9 +325,11 @@ export class ClaudeTurn {
     const events: RunEvent[] = [];
     const usage = usageOf(message.usage);
 
-    if (usage && !this.#usageSent) {
-      this.#usageSent = true;
-      events.push({ type: "usage", turn: usage });
+    if (usage) {
+      const context = this.#context(message.modelUsage);
+      events.push(
+        context ? { type: "usage", turn: usage, context } : { type: "usage", turn: usage },
+      );
     }
 
     if (message.subtype && message.subtype !== "success") {

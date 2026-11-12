@@ -139,3 +139,5 @@ The control plane holds runner connections, runs, watched channels and run token
 ### The Claude binary on a runner
 
 `runtime-client/src/claude-binary.ts` (`claudeExecutable`) gives the SDK its Claude Code program. It uses the package installed beside the SDK when there is one, and otherwise downloads the platform's package from npm into `<home>/claude-code/<version>/claude` on the first Claude thread, checks it against the sha512 in `claude-binary-manifest.ts` (tested against `bun.lock`), and passes the path as `pathToClaudeCodeExecutable`. Decision 0246.
+
+A message sent during a Claude run is held in `LiveRun.steers`, appended to the next Aven tool result (`ClaudeToolHost.steered`, `claude-mcp.ts`) and reported as `steer_applied`; one left when the answer completes becomes the next turn, and the run ends only when none is. `ClaudeTurn` reports `usage` with `context` (the last main-thread call's tokens and the model's `contextWindow`), and `claudeInput` runs the instructions through `forPaths`. Decision 0247.
