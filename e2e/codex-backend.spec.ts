@@ -201,8 +201,12 @@ test.describe("a thread on the Codex backend", () => {
     const project = JSON.parse(addedText) as { id: string };
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
-    await page.getByLabel("Agent").selectOption("codex");
-    await expect(page.getByText("Set a ChatGPT login in Settings")).toHaveCount(0);
+    await page.getByRole("button", { name: "Model and reasoning effort" }).click();
+    await page.getByRole("option", { name: "Default" }).last().click();
+    await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toContainText(
+      "Codex Default",
+    );
+    await expect(page.getByText("Set a ChatGPT login")).toHaveCount(0);
     await page.getByRole("textbox", { name: "Prompt" }).fill("Say hello from Codex");
     await page.getByRole("button", { name: "Send" }).click();
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { backendSupports } from "@aven/protocol/runtime-wire";
@@ -26,8 +27,19 @@ import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
+import type { AgentChoice, Thread } from "@/modules/threads/types";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
+
+function agentOf(
+  backend: Thread["agentBackend"],
+  modelId: string | undefined,
+  onChange: (choice: AgentChoice | null) => void,
+) {
+  if (backend !== "claude" && backend !== "codex") return undefined;
+
+  return { choice: { backend, modelId }, onChange, only: true };
+}
 
 export function ThreadPane({ threadId, split, onClose }: Props) {
   const {
@@ -57,6 +69,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   useFirstPrompt(threadId, send);
   const followUps = useFollowUps(threadId, loaded, running, messages);
   const { selection } = useModelSelection(threadId);
+  const [agentModelId, setAgentModelId] = useState<string | undefined>();
   const { compacting, compact } = useCompactThread(threadId);
   const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
   const canCompact = owned && !running && !question && supportsCompaction;
@@ -177,10 +190,12 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           {!owned && <div className="flex pb-2">{chips}</div>}
                           <PromptInput
                             threadId={thread.id}
-                            backend={thread.agentBackend}
                             running={running}
                             onStop={cancel}
                             onCompact={compact}
+                            agent={agentOf(thread.agentBackend, agentModelId, (choice) =>
+                              setAgentModelId(choice?.modelId),
+                            )}
                             placeholder="Reply to the agent…"
                             onSubmit={send}
                             tools={<ProjectInfo projectId={thread.projectId} />}

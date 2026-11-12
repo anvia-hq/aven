@@ -1,6 +1,6 @@
-import { CODEX_MODELS } from "@aven/protocol/codex-login";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
 
-import { NativeSelect, NativeSelectOption } from "@/components/native-select";
+import { CODEX_CHOICES } from "../codex-models";
 
 type Props = {
   modelId?: string;
@@ -9,18 +9,20 @@ type Props = {
 
 export function CodexModelMenu({ modelId, onChange }: Props) {
   return (
-    <NativeSelect
-      size="sm"
-      aria-label="Codex model"
-      value={modelId ?? ""}
-      onChange={(event) => onChange(event.target.value || undefined)}
+    <Select
+      value={modelId ?? "default"}
+      onValueChange={(value) => onChange(!value || value === "default" ? undefined : value)}
     >
-      <NativeSelectOption value="">Default</NativeSelectOption>
-      {CODEX_MODELS.map((model) => (
-        <NativeSelectOption key={model.id} value={model.id}>
-          {model.label}
-        </NativeSelectOption>
-      ))}
-    </NativeSelect>
+      <SelectTrigger aria-label="Codex model" className="w-auto min-w-0 bg-muted/50">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CODEX_CHOICES.map((model) => (
+          <SelectItem key={model.id} value={model.id}>
+            {model.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

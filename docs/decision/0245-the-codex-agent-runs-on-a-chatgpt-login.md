@@ -4,6 +4,10 @@ Status: accepted
 
 A thread can run on Codex, with the person's own ChatGPT login, beside the native agent of decision 0220. Adds to 0220 and 0222. For the Codex backend only, this supersedes the consequences in 0220 that an SDK backend calls its provider through the model gateway and that it may lack questions, restart, steering, goals and compaction.
 
+## Choosing Codex
+
+Codex is not a separate Agent select. Its models are the model menu's last group, "ChatGPT login · Codex" (Default, then the models of `CODEX_MODELS`), after the Claude group of decision 0244. Choosing one starts the thread on Codex, and any other model starts it on Aven's own agent. A thread keeps its backend, so inside a Codex thread the menu offers only the Codex models. A person who has no ChatGPT login is told to set one and the thread does not start.
+
 ## The login
 
 The login belongs to one person. Settings stores the pasted access token, or a Codex `auth.json`, encrypted with `PROVIDER_ENCRYPTION_KEY`, the same key as a provider key. The API returns `{ configured, hint }`, and the hint is the last four characters of the access token. The ciphertext is never returned and never logged. There is no global token and no token shared across a workspace.

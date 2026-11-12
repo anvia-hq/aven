@@ -6,14 +6,7 @@ import {
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
 
@@ -26,8 +19,7 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
-import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
-import type { AgentBackendKind } from "@aven/protocol/types";
+import type { AgentControl, MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
@@ -46,7 +38,7 @@ type Props = {
   autoFocus?: boolean;
   threadId?: string;
   tools?: ReactNode;
-  backend?: AgentBackendKind;
+  agent?: AgentControl;
 };
 
 const renderEntity =
@@ -106,26 +98,19 @@ function Composer({
   autoFocus,
   threadId,
   tools,
+  agent,
   people,
-  backend,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId);
-  const [claudeModelId, setClaudeModelId] = useState<string | undefined>();
-  const [codexModelId, setCodexModelId] = useState<string | undefined>();
-  const chosenModelId = { claude: claudeModelId, codex: codexModelId };
-  const selection =
-    backend === "claude" || backend === "codex"
-      ? { modelId: chosenModelId[backend] }
-      : model.selection;
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection,
+    selection: agent?.choice ? { modelId: agent.choice.modelId } : model.selection,
     running,
     onSubmit,
     onCompact,
@@ -182,13 +167,19 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {backend === "claude" && (
-            <ClaudeModelMenu modelId={claudeModelId} onChange={setClaudeModelId} />
+          {agent?.only && agent.choice?.backend === "claude" && (
+            <ClaudeModelMenu
+              modelId={agent.choice.modelId}
+              onChange={(modelId) => agent.onChange({ backend: "claude", modelId })}
+            />
           )}
-          {backend === "codex" && (
-            <CodexModelMenu modelId={codexModelId} onChange={setCodexModelId} />
+          {agent?.only && agent.choice?.backend === "codex" && (
+            <CodexModelMenu
+              modelId={agent.choice.modelId}
+              onChange={(modelId) => agent.onChange({ backend: "codex", modelId })}
+            />
           )}
-          {(!backend || backend === "native") && <ModelMenu model={model} />}
+          {!agent?.only && <ModelMenu model={model} agent={agent} />}
           {running && (
             <Button
               size="icon-sm"

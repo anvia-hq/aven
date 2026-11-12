@@ -1,7 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { NativeSelect, NativeSelectOption } from "@/components/native-select";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
 import { useCodexLogin } from "@/modules/codex-setup/hooks/use-codex-login";
@@ -12,8 +11,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
-import type { AgentBackendKind } from "@aven/protocol/types";
+import type { AgentChoice, OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -34,16 +32,17 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const [backend, setBackend] = useState<AgentBackendKind>("native");
+  const [agent, setAgent] = useState<AgentChoice | null>(null);
   const credential = useClaudeSetup();
   const codex = useCodexLogin();
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
-  const needsLogin = backend === "codex" && codex.loaded && !codex.login?.configured;
+
+  const needsLogin = agent?.backend === "codex" && codex.loaded && !codex.login?.configured;
 
   const start = (message: OutgoingMessage, selection: RunSelection) => {
     if (needsLogin) return false;
 
-    return startThread(projectId, message, selection, backend);
+    return startThread(projectId, message, selection, agent?.backend ?? "native");
   };
 
   return (
@@ -75,25 +74,11 @@ function NewThread() {
             <>
               <PromptInput
                 autoFocus
-                backend={backend}
                 onSubmit={start}
-                tools={
-                  <>
-                    <ProjectPicker value={projectId} onChange={setProjectId} />
-                    <NativeSelect
-                      size="sm"
-                      aria-label="Agent"
-                      value={backend}
-                      onChange={(event) => setBackend(event.target.value as AgentBackendKind)}
-                    >
-                      <NativeSelectOption value="native">Aven</NativeSelectOption>
-                      <NativeSelectOption value="claude">Claude</NativeSelectOption>
-                      <NativeSelectOption value="codex">Codex</NativeSelectOption>
-                    </NativeSelect>
-                  </>
-                }
+                agent={{ choice: agent, onChange: setAgent }}
+                tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
               />
-              {backend === "claude" && credential.loaded && !credential.setup.configured && (
+              {agent?.backend === "claude" && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">
                   <Link to="/settings/claude" className="underline">
                     Set a Claude setup token

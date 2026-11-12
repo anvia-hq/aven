@@ -209,9 +209,12 @@ test.describe("a thread on the Claude backend", () => {
     await expect(page.getByText(TOKEN)).toHaveCount(0);
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
-    await page.getByLabel("Agent").selectOption("claude");
+    await page.getByRole("button", { name: "Model and reasoning effort" }).click();
+    await page.getByRole("option", { name: "Default" }).first().click();
+    await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toContainText(
+      "Claude Default",
+    );
     await expect(page.getByText("Set a Claude setup token")).toHaveCount(0);
-    await expect(page.getByRole("combobox", { name: "Claude model" })).toBeVisible();
     await page.getByRole("textbox", { name: "Prompt" }).fill(PROMPT);
     await page.getByRole("button", { name: "Send" }).click();
 

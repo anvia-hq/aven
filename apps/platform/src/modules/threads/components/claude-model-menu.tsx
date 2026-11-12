@@ -1,11 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
 
-const CLAUDE_MODELS = [
-  { id: "default", label: "Default" },
-  { id: "sonnet", label: "Sonnet" },
-  { id: "opus", label: "Opus" },
-  { id: "fable", label: "Fable" },
-] as const;
+import { CLAUDE_MODELS } from "../claude-models";
 
 type Props = {
   modelId?: string;
