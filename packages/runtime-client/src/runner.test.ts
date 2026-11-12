@@ -2396,6 +2396,76 @@ describe("startRuntime answering for a bot", () => {
       tools: [createSendMessageTool(send)],
     });
 
+  test("a reply that names a machine runs its tools there, not on this computer", async () => {
+    const acquired: string[] = [];
+    const sandbox: ThreadWorkspaces = {
+      acquire: async (thread) => {
+        acquired.push(thread.id);
+        return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
+      },
+      workspace: async () => undefined,
+      release: async () => undefined,
+      dispose: async () => undefined,
+    };
+    const paths = { workspace: "/m/bot-1", uploads: "/m/up", skills: "/m/sk" };
+    const plane = fakeControlPlane({
+      answer: (message) => {
+        if (message.type !== "call" || message.method !== "machine.call") return undefined;
+        const { op } = message.params as { op: string };
+        if (op === "paths") return paths;
+        if (op === "prepare") return { paths };
+        if (op === "skills.install") return { listings: [] };
+        if (op === "exec") {
+          return {
+            status: "exited",
+            exitCode: 0,
+            stdout: new TextEncoder().encode("/m/bot-1\n").toBase64(),
+            stderr: new Uint8Array().toBase64(),
+          };
+        }
+        return null;
+      },
+    });
+    const runtime = startRuntime({
+      url: plane.url,
+      token: "t",
+      journalPath: journalPath(),
+      sandbox,
+      typingPause: async () => undefined,
+      createBotAgent: ({ send, computer, memory }) =>
+        new Agent({
+          id: "bot",
+          model: scriptedModel([
+            [toolCall("exec_command", { command: "pwd" })],
+            [toolCall("send_message", { text: "ran" })],
+            [text("")],
+          ]),
+          instructions: "x",
+          memory,
+          tools: [createSendMessageTool(send), ...computer],
+        }),
+    });
+    cleanups.push(() => runtime.stop(), plane.stop);
+    await runtime.ready;
+
+    plane.send({ ...botReply, machine: "rt-bot" });
+    await until(() => plane.received.some((message) => message.type === "bot.end"));
+
+    expect(acquired).toEqual([]);
+    const calls = plane.received.flatMap((message) =>
+      message.type === "call" && message.method === "machine.call"
+        ? [message.params as { replyId?: string; op: string }]
+        : [],
+    );
+    expect(calls.map((call) => call.op)).toEqual(["paths", "skills.install", "prepare", "exec"]);
+    expect(calls.every((call) => call.replyId === "reply-1")).toBe(true);
+    expect(plane.received.find((message) => message.type === "bot.say")).toEqual({
+      type: "bot.say",
+      replyId: "reply-1",
+      text: "ran",
+    });
+  });
+
   test("a message to another bot is a call to the control plane, and only what the person is sent is shown", async () => {
     const { sandbox, up } = slowSandbox();
     up();

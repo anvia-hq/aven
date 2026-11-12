@@ -159,6 +159,7 @@ export const botRunner = new BotRunner({
       folders: (owner) => memoryService.folders(owner),
       run: (caller, command) => runMemoryCommand(caller, command),
     },
+    localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
   ),
   settled: (reply) => goalDriver.settled(reply),
 });

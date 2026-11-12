@@ -15,6 +15,7 @@ import {
   parseBotSendParams,
   parseBotThreadParams,
   parseBotUpdateParams,
+  parseMachineRelayParams,
   parseRuntimeFrame,
 } from "./wire";
 import type { RunEvent } from "@aven/protocol/types";
@@ -133,6 +134,26 @@ describe("calls from a runtime", () => {
     ]) {
       expect(parseRuntimeFrame(call(method))).not.toBeNull();
     }
+  });
+
+  test("a machine call names a run or a bot reply, and nothing else", () => {
+    expect(parseMachineRelayParams({ runId: "r1", threadId: "other", op: "workspace" })).toEqual({
+      runId: "r1",
+      op: "workspace",
+    });
+    expect(parseMachineRelayParams({ runId: "r1", op: "exec", args: { command: "pwd" } })).toEqual({
+      runId: "r1",
+      op: "exec",
+      args: { command: "pwd" },
+    });
+    expect(parseMachineRelayParams({ replyId: "reply-1", op: "paths" })).toEqual({
+      replyId: "reply-1",
+      op: "paths",
+    });
+    expect(() => parseMachineRelayParams({ op: "exec" })).toThrow("Invalid parameters");
+    expect(() => parseMachineRelayParams({ replyId: "reply-1", op: "rm" })).toThrow(
+      "Invalid parameters",
+    );
   });
 
   test("the transcript cannot be read, cleared or rewritten (wire version 22)", () => {

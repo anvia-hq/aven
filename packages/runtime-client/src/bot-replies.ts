@@ -105,7 +105,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
 const UNSENT_NOTE =
   "You answered without sending anything: the person sees only what you send with send_message, and nothing of what you wrote outside it. Send your answer now with send_message, the way you would text it, and do not repeat what you did.";
 
-type Reply = { botId: string; abort: AbortController; spoke: boolean };
+type Reply = { botId: string; abort: AbortController; spoke: boolean; machine?: string };
 
 export class BotReplies {
   #live = new Map<string, Reply>();
@@ -125,9 +125,21 @@ export class BotReplies {
     return [...this.#live.values()].some((reply) => reply.botId === botId);
   }
 
+  replyOnMachine(botId: string) {
+    for (const [replyId, reply] of this.#live) {
+      if (reply.botId === botId && reply.machine) return replyId;
+    }
+    return undefined;
+  }
+
   start(message: BotReplyMessage) {
     const abort = new AbortController();
-    this.#live.set(message.replyId, { botId: message.bot.id, abort, spoke: false });
+    this.#live.set(message.replyId, {
+      botId: message.bot.id,
+      abort,
+      spoke: false,
+      machine: message.machine || undefined,
+    });
     void this.#answer(message, abort);
   }
 
@@ -157,7 +169,7 @@ export class BotReplies {
     const { signal } = abort;
     let mcp: ConnectedMcp | undefined;
     try {
-      mcp = await this.#connectMcp(replyId, servers);
+      mcp = await this.#connectMcp(replyId, servers, Boolean(this.#live.get(replyId)?.machine));
       const agent = await this.#agentFor(
         replyId,
         { bot, prompt, model, skills: skills ?? [], memory, cockpit },
@@ -181,9 +193,17 @@ export class BotReplies {
     }
   }
 
-  async #connectMcp(replyId: string, servers: BotReplyMessage["mcp"]) {
+  #computer(botId: string) {
+    if (!this.replyOnMachine(botId)) return this.#context.sandbox;
+    const { machines } = this.#context;
+    if (!machines) throw new Error("This runner cannot reach another computer");
+    return machines;
+  }
+
+  async #connectMcp(replyId: string, servers: BotReplyMessage["mcp"], onMachine: boolean) {
     if (!servers?.length) return undefined;
-    const connected = await connectMcpServers(servers);
+    const asked = onMachine ? servers.map((server) => ({ ...server, allowLocal: false })) : servers;
+    const connected = await connectMcpServers(asked);
     this.#context
       .call("bot.mcp", { replyId, op: "report", results: connected.results })
       .catch((error: unknown) => {
@@ -198,19 +218,19 @@ export class BotReplies {
     attachments: BotReplyMessage["attachments"],
   ): Promise<AgentPrompt> {
     if (!attachments?.length) return prompt;
-    const kept = await keepAttachments(this.#context.sandbox, botId, attachments);
+    const kept = await keepAttachments(this.#computer(botId), botId, attachments);
     const images = new Map(
       attachments.flatMap(({ image, data }) => (image ? [[image, data] as const] : [])),
     );
     return sentPrompt(prompt, {
       attachments: kept,
       images,
-      paths: this.#context.sandbox.paths?.(botId),
+      paths: this.#computer(botId).paths?.(botId),
     });
   }
 
   async #installSkills(replyId: string, botId: string, skills: readonly RunSkill[]) {
-    const store = this.#context.sandbox.skills;
+    const store = this.#computer(botId).skills;
     if (!store) return [];
     const fetch = async (digest: string) =>
       Uint8Array.fromBase64((await this.#context.call("bot.skill", { replyId, digest })).data);
@@ -237,7 +257,8 @@ export class BotReplies {
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
   ) {
-    const { sandbox, boxes, starting, call, send: post, createAgent } = this.#context;
+    const { boxes, starting, call, send: post, createAgent } = this.#context;
+    const sandbox = this.#computer(bot.id);
     await starting(bot.id);
     abort.signal.throwIfAborted();
     const box = await sandbox.acquire({ id: bot.id });

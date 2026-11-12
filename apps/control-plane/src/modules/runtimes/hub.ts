@@ -152,12 +152,15 @@ export class RuntimeConnection {
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      machine?: string;
     },
     sink: BotReplySink,
   ) {
-    this.#botReplies.set(replyId, sink);
+    const { machine, ...body } = input;
+    const live = Object.assign(sink, { botId: input.bot.id, machine });
+    this.#botReplies.set(replyId, live);
     try {
-      this.post({ type: "bot.reply", replyId, ...input });
+      this.post({ type: "bot.reply", replyId, ...body, machine });
     } catch (error) {
       this.#botReplies.delete(replyId);
       throw error;

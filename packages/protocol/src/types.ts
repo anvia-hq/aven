@@ -452,7 +452,10 @@ export type MachineOp = (typeof MACHINE_OPS)[number];
 
 export type MachineCallParams = { threadId: string; op: MachineOp; args?: unknown };
 
-export type MachineRelayParams = { runId: string; op: MachineOp; args?: unknown };
+export type MachineRelayParams = {
+  op: MachineOp;
+  args?: unknown;
+} & ({ runId: string } | { replyId: string });
 
 export type RunnerSelfCallMethod =
   | "runner.update"
@@ -627,6 +630,7 @@ export type ControlPlaneToRuntime =
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      machine?: string;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }
   | { type: "run.attach"; runId: string; after: number; secrets?: RunSecrets }

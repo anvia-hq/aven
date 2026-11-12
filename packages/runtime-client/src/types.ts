@@ -99,6 +99,7 @@ export type CreateBotReplyAgent = (input: {
 
 export type BotRepliesContext = {
   sandbox: ThreadWorkspaces;
+  machines?: ThreadWorkspaces;
   createAgent: CreateBotReplyAgent;
   send(message: RuntimeToControlPlane): boolean;
   call<M extends keyof RuntimeCalls>(

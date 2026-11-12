@@ -373,7 +373,11 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       timezone: "UTC",
     };
 
-    const replying = async (name: string, answerMemory = async (): Promise<unknown> => null) => {
+    const replying = async (
+      name: string,
+      answerMemory = async (): Promise<unknown> => null,
+      machine?: string,
+    ) => {
       const { runtime, token } = await runtimesService.create(seed.orgA, seed.userId, { name });
       const ws = await open(server.server?.port, token);
       const received = inbox(ws);
@@ -387,7 +391,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       const asked: unknown[] = [];
       connection.startBotReply(
         "reply-1",
-        { bot: info, prompt: "hi", model },
+        { bot: info, prompt: "hi", model, machine },
         {
           say: (text) => heard.said.push(text),
           end: (error) => heard.ended.push(error),
@@ -415,6 +419,61 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       );
       return { ws, received, connection, heard, asked, runtime };
     };
+
+    test("a reply reaches the machine it names, for that bot only, and an offline one is said so", async () => {
+      const machine = crypto.randomUUID();
+      const reached: unknown[] = [];
+      const sent: unknown[] = [];
+      hub.machines = {
+        reach: async (place) => {
+          reached.push(place);
+          if (place.runtimeId !== machine) throw new Error("The computer is offline");
+          return {
+            call: async (method, params, timeoutMs) => {
+              sent.push({ method, params, timeoutMs });
+              return { path: "/bots/pip" };
+            },
+          };
+        },
+      };
+      const { ws, received } = await replying("bot-machine", async () => null, machine);
+      await until(() => received.some((m) => m.type === "bot.reply"));
+      expect(received.find((m) => m.type === "bot.reply")).toMatchObject({ machine });
+
+      const answered = await ask(ws, received, "machine.call", {
+        replyId: "reply-1",
+        op: "exec",
+        args: { command: "pwd", timeoutMs: 1000 },
+      });
+      expect(answered).toMatchObject({ ok: true, result: { path: "/bots/pip" } });
+      expect(reached).toEqual([{ runtimeId: machine, threadId: info.id }]);
+      expect(sent).toEqual([
+        {
+          method: "machine.call",
+          params: { threadId: info.id, op: "exec", args: { command: "pwd", timeoutMs: 1000 } },
+          timeoutMs: 31_000,
+        },
+      ]);
+
+      const own = await replying("bot-own");
+      const refused = await ask(own.ws, own.received, "machine.call", {
+        replyId: "reply-1",
+        op: "workspace",
+      });
+      expect(refused).toMatchObject({
+        ok: false,
+        error: "This reply's tools act on its own runner",
+      });
+      const away = await replying("bot-away", async () => null, crypto.randomUUID());
+      const offline = await ask(away.ws, away.received, "machine.call", {
+        replyId: "reply-1",
+        op: "workspace",
+      });
+      expect(offline).toMatchObject({ ok: false, error: "The computer is offline" });
+      const missing = await ask(ws, received, "machine.call", { replyId: "nope", op: "workspace" });
+      expect(missing).toMatchObject({ ok: false, error: "Unknown or finished reply" });
+      expect(sent).toHaveLength(1);
+    });
 
     test("is sent to the runner, and what the bot says comes back in order, then the end", async () => {
       const { ws, received, heard } = await replying("bot-say");
