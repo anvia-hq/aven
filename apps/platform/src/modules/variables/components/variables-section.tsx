@@ -75,7 +75,10 @@ export function VariablesSection({ scope, title, empty, framed = false }: Props)
       <p className={cn("text-sm text-muted-foreground", framed && "p-4")}>{empty}</p>
     ) : (
       <ul
-        className={cn("flex flex-col", framed ? "px-4 [&>li:last-child]:border-b-0" : "border-t")}
+        className={cn(
+          "flex flex-col",
+          framed ? "px-4 [&>li:last-child]:border-b-0" : "[&>li:last-child]:border-b-0",
+        )}
       >
         {variables.map((variable) => (
           <VariableRow
@@ -97,9 +100,9 @@ export function VariablesSection({ scope, title, empty, framed = false }: Props)
   }
 
   return (
-    <section aria-label={title} className="flex flex-col gap-2">
+    <section aria-label={title} className="flex flex-col gap-4 border-t py-6 md:py-8">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm text-muted-foreground">{title}</h2>
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
         <div className="flex items-center gap-1">{actions}</div>
       </div>
       {list}

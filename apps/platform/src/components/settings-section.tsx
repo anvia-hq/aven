@@ -35,14 +35,11 @@ type SectionProps = {
 
 export function SettingsSection({ title, description, leading, children }: SectionProps) {
   return (
-    <section
-      aria-label={title}
-      className="grid gap-3 border-t py-6 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-10 md:py-8"
-    >
+    <section aria-label={title} className="flex flex-col gap-4 border-t py-6 md:py-8">
       <div className="flex flex-col gap-1">
         {leading && <div className="mb-2">{leading}</div>}
-        <h2 className="text-sm font-medium">{title}</h2>
-        {description && <p className="text-xs text-balance text-muted-foreground">{description}</p>}
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        {description && <p className="text-xs text-pretty text-muted-foreground">{description}</p>}
       </div>
       <div className="min-w-0">{children}</div>
     </section>
