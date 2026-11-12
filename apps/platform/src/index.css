@@ -504,6 +504,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* A dot of the working indicator swells and brightens as the wave passes it. */
