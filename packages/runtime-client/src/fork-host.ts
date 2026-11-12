@@ -28,6 +28,10 @@ export function createForkHost({
   return {
     start: (input) => call("fork.start", { runId, ...input }),
     status,
+    async stop(id) {
+      const view = await call("fork.status", { runId, id, stop: true });
+      return redact ? { ...view, lastMessage: redact(view.lastMessage) } : view;
+    },
     async take(id) {
       await status(id);
       return sandbox.takeFork ? sandbox.takeFork(thread.id, id) : takeFork(sandbox, thread.id, id);

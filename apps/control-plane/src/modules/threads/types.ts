@@ -40,7 +40,7 @@ export type ThreadForks = {
     thread: RunThreadInfo,
     input: { task: string; context: string; title?: string },
   ): Promise<{ id: string; title: string }>;
-  status(thread: RunThreadInfo, id: string): Promise<ForkView>;
+  status(thread: RunThreadInfo, id: string, stop?: boolean): Promise<ForkView>;
   ended(
     fork: { id: string; organizationId: string; parentThreadId?: string | null },
     ending: RunEnding,

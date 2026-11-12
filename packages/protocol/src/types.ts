@@ -272,6 +272,7 @@ export type ForkView = {
   archived: boolean;
   error: string | null;
   lastMessage: string;
+  stopped?: boolean;
 };
 
 export type GoalPhase = "active" | "paused" | "blocked" | "complete" | "cleared";
@@ -885,7 +886,7 @@ export type CockpitReadParams = { runId: string; command: CockpitCommand };
 
 export type ForkStartParams = { runId: string; task: string; context: string; title?: string };
 
-export type ForkStatusParams = { runId: string; id: string };
+export type ForkStatusParams = { runId: string; id: string; stop?: boolean };
 
 export type BotCockpitParams = { replyId: string; command: CockpitCommand };
 

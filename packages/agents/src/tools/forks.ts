@@ -8,6 +8,7 @@ import type { ForkHost } from "./types";
 export const FORK_THREAD_TOOL_NAME = "fork_thread";
 export const FORK_STATUS_TOOL_NAME = "fork_status";
 export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
+export const STOP_FORK_TOOL_NAME = "stop_fork";
 
 const forkId = z.string().uuid().describe("The id fork_thread gave you.");
 
@@ -55,6 +56,25 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     execute: async ({ id }) => host.status(id),
   });
 
+  const stopFork = createTool({
+    name: STOP_FORK_TOOL_NAME,
+    description:
+      "Stop a fork of this thread that is working, as the person's Stop button does: its current run is cancelled. The fork stays as a thread under this one, what it already did stays in its folder (take_fork_changes still reads it), and it can be given a new message later. Use it when the user asks you to stop, cancel or abandon a fork.",
+    inputSchema: z.object({ id: forkId }),
+    execute: async ({ id }) => {
+      const view = await host.stop(id);
+      let note = "The fork was not working, so nothing was stopped.";
+
+      if (view.stopped) note = "The fork's run was cancelled.";
+      else if (view.running) {
+        note =
+          "The fork is still working: it could not be stopped. Tell the user to stop it from the sidebar.";
+      }
+
+      return { ...view, note };
+    },
+  });
+
   const takeForkChanges = createTool({
     name: TAKE_FORK_CHANGES_TOOL_NAME,
     description: `Take what a fork changed: everything it changed since it was forked, committed or not, as a patch file in your workspace. Read it, and apply it with \`git apply --3way <patchPath>\` (or \`git apply --check\` first) in /workspace; nothing is applied for you. It can be called while the fork still works, and again for what it has done since.`,
@@ -62,5 +82,11 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     execute: async ({ id }) => host.take(id),
   });
 
-  return [forkThread, forkStatus, createWaitForForksTool((id) => host.status(id)), takeForkChanges];
+  return [
+    forkThread,
+    forkStatus,
+    stopFork,
+    createWaitForForksTool((id) => host.status(id)),
+    takeForkChanges,
+  ];
 }
