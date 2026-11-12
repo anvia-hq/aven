@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
@@ -10,6 +10,11 @@ const ids: Record<string, string> = {
   "One Dark": "one-dark",
   Solarized: "solarized",
 };
+
+async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {
+  await page.getByRole("combobox", { name: "Mode" }).click();
+  await page.getByRole("option", { name, exact: true }).click();
+}
 
 test.describe("themes", () => {
   test("every theme can be picked, in light and dark, and is remembered", async ({ page }) => {
@@ -32,11 +37,11 @@ test.describe("themes", () => {
     await expect(html).toHaveAttribute("data-theme", "catppuccin");
     await expect(page.getByRole("combobox", { name: "Theme" })).toContainText("Catppuccin");
 
-    await page.getByRole("switch", { name: "Dark mode" }).click();
+    await chooseMode(page, "Light");
     await expect(html).not.toHaveClass(/dark/);
     await expect(html).toHaveAttribute("data-theme", "catppuccin");
 
-    await page.getByRole("switch", { name: "Dark mode" }).click();
+    await chooseMode(page, "Dark");
     await expect(html).toHaveClass(/dark/);
     const border = await html.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("--border").trim(),
@@ -52,6 +57,50 @@ test.describe("themes", () => {
     expect(
       await html.evaluate((el) => getComputedStyle(el).getPropertyValue("--brand").trim()),
     ).toBe(brand);
+  });
+
+  test("the mode is light, dark or the device's, and system follows the device as it changes", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await registerUser(page, "mode", "Mode User");
+    await page.goto("/settings/general");
+    const html = page.locator("html");
+    const mode = page.getByRole("combobox", { name: "Mode" });
+
+    await expect(mode).toContainText("Dark");
+    await expect(html).toHaveClass(/dark/);
+    await mode.click();
+    await expect(page.getByRole("option")).toHaveText(["Light", "Dark", "System"]);
+    await page.getByRole("option", { name: "System", exact: true }).click();
+    await expect(mode).toContainText("System");
+    await expect(html).not.toHaveClass(/dark/);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(html).toHaveClass(/dark/);
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(html).not.toHaveClass(/dark/);
+
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Mode" })).toContainText("System");
+    await expect(html).not.toHaveClass(/dark/);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.reload();
+    await expect(html).toHaveClass(/dark/);
+
+    await chooseMode(page, "Light");
+    await expect(html).not.toHaveClass(/dark/);
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Mode" })).toContainText("Light");
+    await expect(html).not.toHaveClass(/dark/);
+  });
+
+  test("the sidebar has no theme toggle, on the rail or in the drawer", async ({ page }) => {
+    await registerUser(page, "notoggle", "No Toggle User");
+    await page.goto("/threads");
+    await expect(page.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect(page.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
   });
 
   test("the interface font can be chosen and is remembered", async ({ page }) => {
@@ -72,10 +121,8 @@ test.describe("themes", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await registerUser(page, "shots", "Theme User");
     await page.goto("/settings/general");
-    const dark = page.getByRole("switch", { name: "Dark mode" });
     for (const mode of ["light", "dark"] as const) {
-      if ((await dark.getAttribute("aria-checked")) === String(mode === "light"))
-        await dark.click();
+      await chooseMode(page, mode === "light" ? "Light" : "Dark");
       for (const name of palettes) {
         await page.getByRole("combobox", { name: "Theme" }).click();
         await page.getByRole("option", { name, exact: true }).click();

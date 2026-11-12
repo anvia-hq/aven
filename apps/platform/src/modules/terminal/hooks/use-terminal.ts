@@ -41,7 +41,7 @@ export function useTerminal({ path }: Computer) {
   const [phase, setPhase] = useState<TerminalPhase>("connecting");
   const [reason, setReason] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const element = target.current;
@@ -96,7 +96,7 @@ export function useTerminal({ path }: Computer) {
 
   useEffect(() => {
     if (terminal.current) terminal.current.options.theme = terminalTheme();
-  }, [theme]);
+  }, [resolvedTheme]);
 
   return { target, phase, reason, reconnect: () => setAttempt((count) => count + 1) };
 }

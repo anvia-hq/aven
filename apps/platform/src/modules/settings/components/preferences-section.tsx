@@ -6,8 +6,8 @@ import { Switch } from "@/components/switch";
 
 import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { FontPicker } from "@/modules/theme/components/font-picker";
+import { ModePicker } from "@/modules/theme/components/mode-picker";
 import { PalettePicker } from "@/modules/theme/components/palette-picker";
-import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 import { useTimezone } from "../hooks/use-timezone";
 
@@ -17,7 +17,6 @@ const zones = (current: string) => {
 };
 
 export function PreferencesSection() {
-  const { theme, setTheme } = useTheme();
   const { timezone, save } = useTimezone();
   const [sound, setSound] = useState(finishedSoundOn);
 
@@ -36,12 +35,8 @@ export function PreferencesSection() {
         >
           <FontPicker />
         </SettingsRow>
-        <SettingsRow title="Dark mode" description="Use the dark theme across the app.">
-          <Switch
-            aria-label="Dark mode"
-            checked={theme === "dark"}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-          />
+        <SettingsRow title="Mode" description="Light, dark, or whichever this device is set to.">
+          <ModePicker />
         </SettingsRow>
       </SettingsSection>
       <SettingsSection title="Sound" description="Only affects this device.">

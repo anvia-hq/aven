@@ -44,39 +44,38 @@ test.describe("platform auth", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("Settings and the theme toggle sit at the bottom of the narrow rail", async ({ page }) => {
+  test("Settings sits at the bottom of the narrow rail, with no theme toggle", async ({ page }) => {
     await registerUser(page, "rail", "Rail User");
 
     const rail = page.getByRole("navigation", { name: "Aven" });
     await expect(rail.getByRole("link", { name: "Settings" })).toBeVisible();
-    await expect(rail.getByRole("button", { name: "Toggle theme" })).toBeVisible();
+    await expect(rail.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
     await expect(
       page.locator("[data-slot=sidebar]").getByRole("button", { name: "Settings" }),
     ).toBeHidden();
-
-    await rail.getByRole("button", { name: "Toggle theme" }).hover();
-    await expect(
-      page.locator('[data-slot="tooltip-content"]', { hasText: "Toggle theme" }),
-    ).toBeVisible();
 
     await rail.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings\/general/);
   });
 
-  test("theme defaults to dark and the toggle switches and persists it", async ({ page }) => {
+  test("theme defaults to dark, and the mode select in Settings switches and persists it", async ({
+    page,
+  }) => {
     await page.goto("/register");
     await expect(page.locator("html")).toHaveClass(/dark/);
     await registerUser(page, "ui", "Theme User");
 
     await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeHidden();
-    const toggle = page.getByRole("button", { name: "Toggle theme" });
-    await toggle.click();
+    await page.goto("/settings/general");
+    await page.getByRole("combobox", { name: "Mode" }).click();
+    await page.getByRole("option", { name: "Light", exact: true }).click();
     await expect(page.locator("html")).not.toHaveClass(/dark/);
 
     await page.reload();
     await expect(page.locator("html")).not.toHaveClass(/dark/);
 
-    await toggle.click();
+    await page.getByRole("combobox", { name: "Mode" }).click();
+    await page.getByRole("option", { name: "Dark", exact: true }).click();
     await expect(page.locator("html")).toHaveClass(/dark/);
   });
 

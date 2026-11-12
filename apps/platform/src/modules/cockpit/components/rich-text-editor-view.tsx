@@ -35,7 +35,7 @@ export default function RichTextEditorView({
   label,
   className,
 }: RichTextEditorProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const blocks = blocksOf(value);
   const editor = useCreateBlockNote({
     initialContent: blocks && blocks.length > 0 ? (blocks as Block[]) : undefined,
@@ -71,7 +71,7 @@ export default function RichTextEditorView({
       <BlockNoteView
         editor={editor}
         editable={editable}
-        theme={theme === "light" ? "light" : "dark"}
+        theme={resolvedTheme}
         className={className}
         onChange={() => {
           if (loading.current || !onChange) return;

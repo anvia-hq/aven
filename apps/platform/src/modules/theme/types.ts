@@ -1,4 +1,9 @@
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
+
+export type ThemeOption = {
+  id: Theme;
+  label: string;
+};
 
 export type Palette = "mint" | "catppuccin" | "tokyo-night" | "github" | "one-dark" | "solarized";
 
@@ -11,6 +16,12 @@ export type PaletteOption = {
 
 export const THEME_STORAGE_KEY = "theme";
 export const DEFAULT_THEME: Theme = "dark";
+
+export const THEMES: ThemeOption[] = [
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+  { id: "system", label: "System" },
+];
 
 export const PALETTE_STORAGE_KEY = "palette";
 export const DEFAULT_PALETTE: Palette = "mint";

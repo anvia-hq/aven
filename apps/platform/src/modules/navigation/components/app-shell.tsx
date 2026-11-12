@@ -15,14 +15,13 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/sidebar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/tooltip";
+import { TooltipProvider } from "@/components/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CenterRailLink } from "@/modules/center/components/center-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
-import { ThemeSelector } from "@/modules/theme/components/theme-selector";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
@@ -72,12 +71,6 @@ export function AppShell({ user, sidebar }: Props) {
             <CenterRailLink />
           </div>
           <div className="mt-auto flex flex-col items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger render={<ThemeSelector className="size-11 rounded-xl" />} />
-              <TooltipContent side="right" sideOffset={10}>
-                Toggle theme
-              </TooltipContent>
-            </Tooltip>
             <RailLink
               to="/settings/general"
               label="Settings"
@@ -134,7 +127,6 @@ export function AppShell({ user, sidebar }: Props) {
                 <Cog />
                 <span>Settings</span>
               </Button>
-              <ThemeSelector />
             </div>
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
