@@ -55,3 +55,7 @@ The pretend background processes of `FAKE_PROCESSES` are still one list for the 
 ## A control-plane agent
 
 The suite's control plane has `AVEN_LOCAL_RUNNER=off`, so a thread's run stays on its fake runner. `e2e/control-plane-agent.spec.ts` is the one that covers an agent on the control plane. It starts a control plane of its own with the built-in runner on, a real runner as the machine, and a scripted model (`e2e/agent-model.ts`, reached with `AVEN_ANTHROPIC_BASE_URL`), and drives the browser against a second preview of the platform the suite already built. It is not a fake-runner switch. The other tests do not start those processes.
+
+## A Codex thread
+
+`e2e/codex-backend.spec.ts` covers a thread whose backend is `codex`. It starts a control plane of its own with `AVEN_LOCAL_RUNNER=off`, a real runner as the machine, and a second preview of the platform. `AVEN_CODEX_FAKE=1` on that runner selects `codexFakeQuery` (`packages/runtime-client/src/codex-fake.ts`) instead of the Codex CLI, so the test needs no ChatGPT account and no Codex binary. The login is still saved in Settings and still handed to the runner; the spec checks the runner's files and logs do not contain it. This is not a fake-runner switch.

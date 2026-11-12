@@ -28,8 +28,8 @@ Since the runner and the agent share a machine, a backend such as the Claude Age
 
 ## What is not done yet
 
-- No provider other than `manual` and no backend other than `native`. The interfaces are shaped by their one implementation and will change when the second arrives; a provider's settings (its account, region, machine size) go on `runtimes` with it. The runner selects by the thread's backend already, and today that selection has only `native` to choose.
-- A thread's backend cannot be chosen: every new thread is `native`.
+- No provider other than `manual`. `codex` is the second backend (decision 0236): a thread can be started on it, and a runner that names it in `hello` drives it. A provider's settings (its account, region, machine size) still go on `runtimes` with a future provider. Decision 0236 supersedes, for Codex only, the consequences below that an SDK backend calls its provider through the model gateway and that it may lack questions, restart, steering, goals and compaction.
+- A thread's backend is chosen when the thread is created (`native` or `codex`, decision 0236) and then kept.
 - A cloud machine has no folder of its own to serve, so a project on it is a repository that the runner clones (`repo.access`, `git-clone.ts`), which a project can already be.
 
 ## Consequences for the backends to come
